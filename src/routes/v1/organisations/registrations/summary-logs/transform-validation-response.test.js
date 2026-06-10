@@ -768,21 +768,21 @@ describe('transformValidationResponse', () => {
           openPeriodLoads: {
             added: {
               balanceAffecting: { count: 0, tonnageDelta: 0 },
-              nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
+              nonBalanceAffecting: { count: 0 }
             },
             adjusted: {
               balanceAffecting: { count: 0, tonnageDelta: 0 },
-              nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
+              nonBalanceAffecting: { count: 0 }
             }
           },
           closedPeriodLoads: {
             added: {
               balanceAffecting: { count: 0, tonnageDelta: 0 },
-              nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
+              nonBalanceAffecting: { count: 0 }
             },
             adjusted: {
               balanceAffecting: { count: 0, tonnageDelta: 0 },
-              nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
+              nonBalanceAffecting: { count: 0 }
             }
           }
         }

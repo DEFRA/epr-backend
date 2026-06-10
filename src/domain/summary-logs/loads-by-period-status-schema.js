@@ -6,14 +6,18 @@ import Joi from 'joi'
  * Used by both repository (storage validation) and route (response validation).
  */
 
-const periodStatusBucketSchema = Joi.object({
+const balanceAffectingBucketSchema = Joi.object({
   count: Joi.number().integer().min(0).required(),
   tonnageDelta: Joi.number().required()
 })
 
+const nonBalanceAffectingBucketSchema = Joi.object({
+  count: Joi.number().integer().min(0).required()
+})
+
 const periodStatusGroupSchema = Joi.object({
-  balanceAffecting: periodStatusBucketSchema.required(),
-  nonBalanceAffecting: periodStatusBucketSchema.required()
+  balanceAffecting: balanceAffectingBucketSchema.required(),
+  nonBalanceAffecting: nonBalanceAffectingBucketSchema.required()
 })
 
 const periodStatusByChangeSchema = Joi.object({
@@ -26,10 +30,9 @@ export const loadsByReportingPeriodSchema = Joi.object({
   closedPeriodLoads: periodStatusByChangeSchema.required()
 })
 
-const emptyBucket = () => ({ count: 0, tonnageDelta: 0 })
 const emptyGroup = () => ({
-  balanceAffecting: emptyBucket(),
-  nonBalanceAffecting: emptyBucket()
+  balanceAffecting: { count: 0, tonnageDelta: 0 },
+  nonBalanceAffecting: { count: 0 }
 })
 const emptyChange = () => ({ added: emptyGroup(), adjusted: emptyGroup() })
 

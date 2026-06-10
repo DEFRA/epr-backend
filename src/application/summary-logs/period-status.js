@@ -15,11 +15,15 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 /** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
 
 /**
- * @typedef {{ count: number, tonnageDelta: number }} PeriodStatusBucket
+ * @typedef {{ count: number, tonnageDelta: number }} BalanceAffectingBucket
  */
 
 /**
- * @typedef {{ balanceAffecting: PeriodStatusBucket, nonBalanceAffecting: PeriodStatusBucket }} PeriodStatusGroup
+ * @typedef {{ count: number }} NonBalanceAffectingBucket
+ */
+
+/**
+ * @typedef {{ balanceAffecting: BalanceAffectingBucket, nonBalanceAffecting: NonBalanceAffectingBucket }} PeriodStatusGroup
  */
 
 /**
@@ -37,37 +41,32 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
  */
 
 /**
- * A single fold entry produced by classifying one record.
+ * A single fold entry produced by classifying one record. Each entry is one
+ * leg: a record's net contribution to a single period's balance. Inclusion is
+ * derived from tonnageDelta at fold time, not stored here.
  * @typedef {Object} PeriodStatusEntry
  * @property {'open' | 'closed'} period
  * @property {'added' | 'adjusted'} change
- * @property {'balanceAffecting' | 'nonBalanceAffecting'} inclusion
- * @property {number} count - 1 for the record's home bucket, 0 for reversal-only entries
- * @property {number} tonnageDelta
+ * @property {number} count - 1 for the record's home leg, 0 for reversal-only legs
+ * @property {number} tonnageDelta - rounded to 2dp; non-zero means balanceAffecting
  */
+
+/** @returns {PeriodStatusByRecordChange} */
+const emptyChange = () => ({
+  added: {
+    balanceAffecting: { count: 0, tonnageDelta: 0 },
+    nonBalanceAffecting: { count: 0 }
+  },
+  adjusted: {
+    balanceAffecting: { count: 0, tonnageDelta: 0 },
+    nonBalanceAffecting: { count: 0 }
+  }
+})
 
 /** @returns {LoadsByReportingPeriod} */
 const emptyResult = () => ({
-  openPeriodLoads: {
-    added: {
-      balanceAffecting: { count: 0, tonnageDelta: 0 },
-      nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
-    },
-    adjusted: {
-      balanceAffecting: { count: 0, tonnageDelta: 0 },
-      nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
-    }
-  },
-  closedPeriodLoads: {
-    added: {
-      balanceAffecting: { count: 0, tonnageDelta: 0 },
-      nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
-    },
-    adjusted: {
-      balanceAffecting: { count: 0, tonnageDelta: 0 },
-      nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
-    }
-  }
+  openPeriodLoads: emptyChange(),
+  closedPeriodLoads: emptyChange()
 })
 
 /** Position of the year portion end in an ISO date string (YYYY-MM-DD) */
@@ -204,35 +203,34 @@ const getTransactionAmount = (schema, data, context) => {
 }
 
 /**
- * Classifies an added record into a single entry.
+ * Classifies an added record into a single leg. The transaction amount is
+ * already 0 for records excluded from the waste balance, so a zero delta
+ * naturally falls into nonBalanceAffecting at fold time.
  *
  * @param {Object} params
  * @param {'open' | 'closed'} params.period
- * @param {boolean} params.isIncluded
  * @param {number} params.transactionAmount
  * @returns {PeriodStatusEntry[]}
  */
-const classifyAddedRecord = ({ period, isIncluded, transactionAmount }) => [
+const classifyAddedRecord = ({ period, transactionAmount }) => [
   {
     period,
     change: 'added',
-    inclusion: isIncluded ? 'balanceAffecting' : 'nonBalanceAffecting',
     count: 1,
-    tonnageDelta: isIncluded ? transactionAmount : 0
+    tonnageDelta: roundToTwoDecimalPlaces(transactionAmount)
   }
 ]
 
 /**
- * Classifies an adjusted record into 1-2 entries.
- *
- * When old and new dates map to the same period, this produces a single
- * entry with the net delta (newAmount - oldAmount). When they differ,
- * the old period gets -oldAmount and the new period gets +newAmount.
+ * Classifies an adjusted record into 1-2 legs by accumulating each period's
+ * net delta. When old and new dates map to the same period the reversal
+ * (-oldAmount) and addition (+newAmount) merge into one net leg; when they
+ * differ the old period gets -oldAmount and the new period gets +newAmount.
+ * Each leg's delta is rounded to 2dp so the fold can decide inclusion from it.
  *
  * @param {Object} params
  * @param {'open' | 'closed' | null} params.oldPeriod
  * @param {'open' | 'closed' | null} params.newPeriod
- * @param {boolean} params.isIncluded
  * @param {number} params.oldAmount
  * @param {number} params.newAmount
  * @returns {PeriodStatusEntry[]}
@@ -240,43 +238,28 @@ const classifyAddedRecord = ({ period, isIncluded, transactionAmount }) => [
 const classifyAdjustedRecord = ({
   oldPeriod,
   newPeriod,
-  isIncluded,
   oldAmount,
   newAmount
 }) => {
-  const inclusion = isIncluded ? 'balanceAffecting' : 'nonBalanceAffecting'
-  const countedPeriod = newPeriod ?? oldPeriod
-  /** @type {PeriodStatusEntry[]} */
-  const entries = []
-
+  /** @type {Map<'open' | 'closed', number>} */
+  const legs = new Map()
   if (oldPeriod) {
-    entries.push({
-      period: oldPeriod,
-      change: 'adjusted',
-      inclusion,
-      count: 0,
-      tonnageDelta: -oldAmount
-    })
+    legs.set(oldPeriod, (legs.get(oldPeriod) ?? 0) - oldAmount)
   }
-
   if (newPeriod) {
-    entries.push({
-      period: newPeriod,
-      change: 'adjusted',
-      inclusion,
-      count: 0,
-      tonnageDelta: newAmount
-    })
+    legs.set(newPeriod, (legs.get(newPeriod) ?? 0) + newAmount)
   }
 
-  // Assign the count to the record's "home" bucket (new period, or old if new is null).
-  // The caller guards with (newPeriod || oldPeriod), so countedPeriod is always defined.
-  const countEntry = /** @type {PeriodStatusEntry} */ (
-    entries.find((e) => e.period === countedPeriod)
-  )
-  countEntry.count = 1
+  // The record's count lives on its "home" leg (new period, or old if new is
+  // null). The caller guards with (newPeriod || oldPeriod), so it is defined.
+  const homePeriod = newPeriod ?? oldPeriod
 
-  return entries
+  return [...legs].map(([period, tonnageDelta]) => ({
+    period,
+    change: 'adjusted',
+    count: period === homePeriod ? 1 : 0,
+    tonnageDelta: roundToTwoDecimalPlaces(tonnageDelta)
+  }))
 }
 
 /**
@@ -294,20 +277,24 @@ const PERIOD_TO_KEY = { open: 'openPeriodLoads', closed: 'closedPeriodLoads' }
 const reduceEntries = (entries) => {
   const result = emptyResult()
 
-  for (const { period, change, inclusion, count, tonnageDelta } of entries) {
-    const bucket = result[PERIOD_TO_KEY[period]][change][inclusion]
-    bucket.count += count
-    bucket.tonnageDelta += tonnageDelta
+  for (const { period, change, count, tonnageDelta } of entries) {
+    const group = result[PERIOD_TO_KEY[period]][change]
+    // A leg is balanceAffecting iff its (rounded) net delta moved the balance.
+    if (tonnageDelta !== 0) {
+      group.balanceAffecting.count += count
+      group.balanceAffecting.tonnageDelta += tonnageDelta
+    } else {
+      group.nonBalanceAffecting.count += count
+    }
   }
 
-  // Tonnages are reported to 2dp, so each bucket's accumulated delta is
-  // mathematically a multiple of 0.01. Rounding the summed float recovers
-  // the exact value and strips IEEE-754 noise (eg 0.1 + 0.2 = 0.30000…004).
+  // Each leg's delta is already 2dp, but summing many of them can reintroduce
+  // IEEE-754 noise (eg 0.1 + 0.2 = 0.30000…004); round each bucket total once.
   for (const period of Object.values(result)) {
     for (const change of Object.values(period)) {
-      for (const bucket of Object.values(change)) {
-        bucket.tonnageDelta = roundToTwoDecimalPlaces(bucket.tonnageDelta)
-      }
+      change.balanceAffecting.tonnageDelta = roundToTwoDecimalPlaces(
+        change.balanceAffecting.tonnageDelta
+      )
     }
   }
 
@@ -321,7 +308,6 @@ const reduceEntries = (entries) => {
  * @param {ValidatedWasteRecord} params.wasteRecord
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {TableSchema} params.schema
- * @param {boolean} params.isIncluded
  * @param {Set<string>} params.closedPeriods
  * @param {'monthly' | 'quarterly'} params.cadence
  * @param {ClassificationContext} params.context
@@ -331,7 +317,6 @@ const classifyAdjustedWasteRecord = ({
   wasteRecord,
   existingRecordsMap,
   schema,
-  isIncluded,
   closedPeriods,
   cadence,
   context
@@ -368,7 +353,6 @@ const classifyAdjustedWasteRecord = ({
   return classifyAdjustedRecord({
     oldPeriod,
     newPeriod,
-    isIncluded,
     oldAmount,
     newAmount
   })
@@ -413,8 +397,6 @@ export const classifyByPeriodStatus = ({
       continue
     }
 
-    const isIncluded = outcome === ROW_OUTCOME.INCLUDED
-
     if (status === 'added') {
       const period = classifyPeriodStatus(
         record.data,
@@ -431,7 +413,6 @@ export const classifyByPeriodStatus = ({
         entries.push(
           ...classifyAddedRecord({
             period,
-            isIncluded,
             transactionAmount: amount
           })
         )
@@ -442,7 +423,6 @@ export const classifyByPeriodStatus = ({
           wasteRecord,
           existingRecordsMap,
           schema,
-          isIncluded,
           closedPeriods,
           cadence,
           context: classificationContext

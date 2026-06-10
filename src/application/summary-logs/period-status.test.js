@@ -107,10 +107,9 @@ const REGISTERED_ONLY_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
   })
 )
 
-const emptyBucket = () => ({ count: 0, tonnageDelta: 0 })
 const emptyChange = () => ({
-  balanceAffecting: emptyBucket(),
-  nonBalanceAffecting: emptyBucket()
+  balanceAffecting: { count: 0, tonnageDelta: 0 },
+  nonBalanceAffecting: { count: 0 }
 })
 const emptyPeriod = () => ({
   added: emptyChange(),
@@ -209,16 +208,34 @@ describe('classifyByPeriodStatus', () => {
       })
     })
 
-    it('classifies an added excluded record with zero tonnageDelta', () => {
+    it('classifies an added record excluded from the balance as nonBalanceAffecting', () => {
+      // A PRN-issued row passes validation (outcome INCLUDED) but is excluded
+      // from the waste balance, so its transaction amount is 0. It moves no
+      // balance and must land in nonBalanceAffecting.
+      const excludedFromBalanceSchemas = /** @type {ProcessingTypeSchemas} */ (
+        /** @type {unknown} */ ({
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
+            wasteRecordType: 'received',
+            classifyForWasteBalance: () => ({
+              outcome: ROW_OUTCOME.EXCLUDED,
+              reasons: [],
+              transactionAmount: 0
+            })
+          }
+        })
+      )
+
       const result = classifyByPeriodStatus({
         ...baseParams,
-        wasteRecords: [buildWasteRecord({ outcome: ROW_OUTCOME.EXCLUDED })]
+        tableSchemas: excludedFromBalanceSchemas,
+        wasteRecords: [buildWasteRecord()]
       })
 
       expect(result.openPeriodLoads.added.nonBalanceAffecting).toEqual({
-        count: 1,
-        tonnageDelta: 0
+        count: 1
       })
+      expect(result.openPeriodLoads.added.balanceAffecting.count).toBe(0)
     })
 
     it('rounds summed tonnageDelta to 2dp so no float noise leaks out', () => {
@@ -298,6 +315,52 @@ describe('classifyByPeriodStatus', () => {
         count: 1,
         tonnageDelta: 20
       })
+    })
+
+    it('classifies a same-period adjust that nets to zero as nonBalanceAffecting', () => {
+      const existingRecordsMap = new Map([
+        [
+          'received:10001',
+          /** @type {WasteRecord} */ (
+            /** @type {unknown} */ ({
+              type: 'received',
+              rowId: '10001',
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-10',
+                GROSS_WEIGHT: '30'
+              }
+            })
+          )
+        ]
+      ])
+
+      const result = classifyByPeriodStatus({
+        ...baseParams,
+        existingRecordsMap,
+        wasteRecords: [
+          buildWasteRecord({
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: '2026-02-15',
+              GROSS_WEIGHT: '30'
+            },
+            versionStatus: VERSION_STATUS.UPDATED,
+            previousVersions: [
+              {
+                summaryLog: { id: 'sl-old' },
+                status: VERSION_STATUS.CREATED,
+                data: {
+                  DATE_RECEIVED_FOR_REPROCESSING: '2026-02-10',
+                  GROSS_WEIGHT: '30'
+                }
+              }
+            ]
+          })
+        ]
+      })
+
+      // Net delta = 30 - 30 = 0, so the row did not affect the balance.
+      expect(result.openPeriodLoads.adjusted.balanceAffecting.count).toBe(0)
+      expect(result.openPeriodLoads.adjusted.nonBalanceAffecting.count).toBe(1)
     })
 
     it('splits into two entries when old and new dates are in different periods', () => {
@@ -435,7 +498,7 @@ describe('classifyByPeriodStatus', () => {
       })
     })
 
-    it('handles included-to-excluded reversal with negative delta in old period', () => {
+    it('keeps an included-to-excluded reversal in balanceAffecting', () => {
       const existingRecordsMap = new Map([
         [
           'received:10001',
@@ -477,12 +540,15 @@ describe('classifyByPeriodStatus', () => {
         ]
       })
 
-      // Record is now excluded, so it goes to excluded bucket
-      // Old amount was 30 (included), new amount is 0 (excluded)
-      // Net delta: 0 - 30 = -30
-      expect(result.openPeriodLoads.adjusted.nonBalanceAffecting).toEqual({
+      // Old amount was 30 (included), new amount is 0 (excluded), same period.
+      // Net delta -30 moved the balance, so the row is balanceAffecting even
+      // though its new version is excluded from the waste balance.
+      expect(result.openPeriodLoads.adjusted.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: -30
+      })
+      expect(result.openPeriodLoads.adjusted.nonBalanceAffecting).toEqual({
+        count: 0
       })
     })
 
