@@ -406,6 +406,36 @@ describe('streamCsvExport', () => {
     expect(cells[9]).toBe('"false"')
   })
 
+  it('reads Accredited "Yes" with the number for a suspended accreditation', async () => {
+    const suspendedAccreditation = {
+      id: 'acc-1',
+      status: 'suspended',
+      accreditationNumber: 'ACC-SUS-1',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    }
+    const org = baseOrg({
+      accreditations: [suspendedAccreditation],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([reprocessorReceivedRecord()])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[5]).toBe('"Yes"') // Accredited
+    expect(cells[6]).toBe('"ACC-SUS-1"') // Accreditation Number
+  })
+
   it('iterates organisations and registrations sorted by id for deterministic output', async () => {
     const orgB = baseOrg({
       id: 'org-b',
