@@ -143,22 +143,22 @@ describe('Summary logs upload lifecycle', () => {
           loadsByPeriodStatus: {
             open: {
               added: {
-                included: { count: 0, tonnageDelta: 0 },
-                excluded: { count: 0, tonnageDelta: 0 }
+                balanceAffecting: { count: 0, tonnageDelta: 0 },
+                nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
               },
               adjusted: {
-                included: { count: 0, tonnageDelta: 0 },
-                excluded: { count: 0, tonnageDelta: 0 }
+                balanceAffecting: { count: 0, tonnageDelta: 0 },
+                nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
               }
             },
             closed: {
               added: {
-                included: { count: 0, tonnageDelta: 0 },
-                excluded: { count: 0, tonnageDelta: 0 }
+                balanceAffecting: { count: 0, tonnageDelta: 0 },
+                nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
               },
               adjusted: {
-                included: { count: 0, tonnageDelta: 0 },
-                excluded: { count: 0, tonnageDelta: 0 }
+                balanceAffecting: { count: 0, tonnageDelta: 0 },
+                nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
               }
             }
           },

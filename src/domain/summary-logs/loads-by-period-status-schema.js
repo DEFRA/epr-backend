@@ -12,8 +12,8 @@ const periodStatusBucketSchema = Joi.object({
 })
 
 const periodStatusGroupSchema = Joi.object({
-  included: periodStatusBucketSchema.required(),
-  excluded: periodStatusBucketSchema.required()
+  balanceAffecting: periodStatusBucketSchema.required(),
+  nonBalanceAffecting: periodStatusBucketSchema.required()
 })
 
 const periodStatusByChangeSchema = Joi.object({
@@ -28,8 +28,8 @@ export const loadsByPeriodStatusSchema = Joi.object({
 
 const emptyBucket = () => ({ count: 0, tonnageDelta: 0 })
 const emptyGroup = () => ({
-  included: emptyBucket(),
-  excluded: emptyBucket()
+  balanceAffecting: emptyBucket(),
+  nonBalanceAffecting: emptyBucket()
 })
 const emptyChange = () => ({ added: emptyGroup(), adjusted: emptyGroup() })
 

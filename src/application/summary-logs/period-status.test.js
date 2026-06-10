@@ -109,8 +109,8 @@ const REGISTERED_ONLY_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
 
 const emptyBucket = () => ({ count: 0, tonnageDelta: 0 })
 const emptyChange = () => ({
-  included: emptyBucket(),
-  excluded: emptyBucket()
+  balanceAffecting: emptyBucket(),
+  nonBalanceAffecting: emptyBucket()
 })
 const emptyPeriod = () => ({
   added: emptyChange(),
@@ -190,7 +190,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords: [buildWasteRecord()]
       })
 
-      expect(result.open.added.included).toEqual({
+      expect(result.open.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 42.5
       })
@@ -203,7 +203,7 @@ describe('classifyByPeriodStatus', () => {
         periodicReports: [buildSubmittedReport()]
       })
 
-      expect(result.closed.added.included).toEqual({
+      expect(result.closed.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 42.5
       })
@@ -215,7 +215,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords: [buildWasteRecord({ outcome: ROW_OUTCOME.EXCLUDED })]
       })
 
-      expect(result.open.added.excluded).toEqual({
+      expect(result.open.added.nonBalanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 0
       })
@@ -244,7 +244,7 @@ describe('classifyByPeriodStatus', () => {
         ]
       })
 
-      expect(result.open.added.included).toEqual({
+      expect(result.open.added.balanceAffecting).toEqual({
         count: 2,
         tonnageDelta: 0.3
       })
@@ -294,7 +294,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       // Same period (February, open) so net delta = 50 - 30 = 20
-      expect(result.open.adjusted.included).toEqual({
+      expect(result.open.adjusted.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 20
       })
@@ -344,12 +344,12 @@ describe('classifyByPeriodStatus', () => {
       })
 
       // Old period (January, closed): -30
-      expect(result.closed.adjusted.included.tonnageDelta).toBe(-30)
+      expect(result.closed.adjusted.balanceAffecting.tonnageDelta).toBe(-30)
       // New period (February, open): +50
-      expect(result.open.adjusted.included.tonnageDelta).toBe(50)
+      expect(result.open.adjusted.balanceAffecting.tonnageDelta).toBe(50)
       // Count goes to the new period
-      expect(result.open.adjusted.included.count).toBe(1)
-      expect(result.closed.adjusted.included.count).toBe(0)
+      expect(result.open.adjusted.balanceAffecting.count).toBe(1)
+      expect(result.closed.adjusted.balanceAffecting.count).toBe(0)
     })
 
     it('assigns count to old period when new date is blanked out', () => {
@@ -394,8 +394,8 @@ describe('classifyByPeriodStatus', () => {
       })
 
       // New date is null so newPeriod is null; count goes to old period
-      expect(result.open.adjusted.included.count).toBe(1)
-      expect(result.open.adjusted.included.tonnageDelta).toBe(-30)
+      expect(result.open.adjusted.balanceAffecting.count).toBe(1)
+      expect(result.open.adjusted.balanceAffecting.tonnageDelta).toBe(-30)
     })
 
     it('handles adjusted record with no existing record in the map', () => {
@@ -423,7 +423,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       // No existing record so oldPeriod is null, oldAmount is 0
-      expect(result.open.adjusted.included).toEqual({
+      expect(result.open.adjusted.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 50
       })
@@ -474,7 +474,7 @@ describe('classifyByPeriodStatus', () => {
       // Record is now excluded, so it goes to excluded bucket
       // Old amount was 30 (included), new amount is 0 (excluded)
       // Net delta: 0 - 30 = -30
-      expect(result.open.adjusted.excluded).toEqual({
+      expect(result.open.adjusted.nonBalanceAffecting).toEqual({
         count: 1,
         tonnageDelta: -30
       })
@@ -545,8 +545,8 @@ describe('classifyByPeriodStatus', () => {
         ]
       })
 
-      expect(result.closed.added.included.count).toBe(1)
-      expect(result.open.added.included.count).toBe(0)
+      expect(result.closed.added.balanceAffecting.count).toBe(1)
+      expect(result.open.added.balanceAffecting.count).toBe(0)
     })
 
     it('classifies a row as open when all dates are in open periods', () => {
@@ -565,8 +565,8 @@ describe('classifyByPeriodStatus', () => {
         ]
       })
 
-      expect(result.open.added.included.count).toBe(1)
-      expect(result.closed.added.included.count).toBe(0)
+      expect(result.open.added.balanceAffecting.count).toBe(1)
+      expect(result.closed.added.balanceAffecting.count).toBe(0)
     })
   })
 
@@ -640,11 +640,11 @@ describe('classifyByPeriodStatus', () => {
         ]
       })
 
-      expect(result.closed.added.included).toEqual({
+      expect(result.closed.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 10
       })
-      expect(result.open.added.included).toEqual({
+      expect(result.open.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 20
       })
@@ -671,7 +671,7 @@ describe('classifyByPeriodStatus', () => {
         ]
       })
 
-      expect(result.closed.added.included).toEqual({
+      expect(result.closed.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 10
       })
@@ -705,7 +705,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       // The report is quarterly but cadence is monthly, so no periods are closed
-      expect(result.open.added.included.count).toBe(1)
+      expect(result.open.added.balanceAffecting.count).toBe(1)
     })
   })
 
@@ -736,8 +736,8 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords: [buildWasteRecord()]
       })
 
-      expect(result.open.added.included.count).toBe(1)
-      expect(result.closed.added.included.count).toBe(0)
+      expect(result.open.added.balanceAffecting.count).toBe(1)
+      expect(result.closed.added.balanceAffecting.count).toBe(0)
     })
   })
 
@@ -763,7 +763,7 @@ describe('classifyByPeriodStatus', () => {
 
       // Record is INCLUDED per outcome but schema returns EXCLUDED for amount
       // so tonnageDelta should be 0
-      expect(result.open.added.included.tonnageDelta).toBe(0)
+      expect(result.open.added.balanceAffecting.tonnageDelta).toBe(0)
     })
   })
 
@@ -794,7 +794,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords: [buildWasteRecord()]
       })
 
-      expect(result.closed.added.included.count).toBe(1)
+      expect(result.closed.added.balanceAffecting.count).toBe(1)
     })
   })
 
@@ -814,7 +814,7 @@ describe('classifyByPeriodStatus', () => {
         ]
       })
 
-      expect(result.open.added.included).toEqual({
+      expect(result.open.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 10
       })
@@ -843,7 +843,7 @@ describe('classifyByPeriodStatus', () => {
         ]
       })
 
-      expect(result.open.added.included).toEqual({
+      expect(result.open.added.balanceAffecting).toEqual({
         count: 2,
         tonnageDelta: 50
       })

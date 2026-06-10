@@ -19,7 +19,7 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
  */
 
 /**
- * @typedef {{ included: PeriodStatusBucket, excluded: PeriodStatusBucket }} PeriodStatusGroup
+ * @typedef {{ balanceAffecting: PeriodStatusBucket, nonBalanceAffecting: PeriodStatusBucket }} PeriodStatusGroup
  */
 
 /**
@@ -41,7 +41,7 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
  * @typedef {Object} PeriodStatusEntry
  * @property {'open' | 'closed'} period
  * @property {'added' | 'adjusted'} change
- * @property {'included' | 'excluded'} inclusion
+ * @property {'balanceAffecting' | 'nonBalanceAffecting'} inclusion
  * @property {number} count - 1 for the record's home bucket, 0 for reversal-only entries
  * @property {number} tonnageDelta
  */
@@ -50,22 +50,22 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 const emptyResult = () => ({
   open: {
     added: {
-      included: { count: 0, tonnageDelta: 0 },
-      excluded: { count: 0, tonnageDelta: 0 }
+      balanceAffecting: { count: 0, tonnageDelta: 0 },
+      nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
     },
     adjusted: {
-      included: { count: 0, tonnageDelta: 0 },
-      excluded: { count: 0, tonnageDelta: 0 }
+      balanceAffecting: { count: 0, tonnageDelta: 0 },
+      nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
     }
   },
   closed: {
     added: {
-      included: { count: 0, tonnageDelta: 0 },
-      excluded: { count: 0, tonnageDelta: 0 }
+      balanceAffecting: { count: 0, tonnageDelta: 0 },
+      nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
     },
     adjusted: {
-      included: { count: 0, tonnageDelta: 0 },
-      excluded: { count: 0, tonnageDelta: 0 }
+      balanceAffecting: { count: 0, tonnageDelta: 0 },
+      nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
     }
   }
 })
@@ -216,7 +216,7 @@ const classifyAddedRecord = ({ period, isIncluded, transactionAmount }) => [
   {
     period,
     change: 'added',
-    inclusion: isIncluded ? 'included' : 'excluded',
+    inclusion: isIncluded ? 'balanceAffecting' : 'nonBalanceAffecting',
     count: 1,
     tonnageDelta: isIncluded ? transactionAmount : 0
   }
@@ -244,7 +244,7 @@ const classifyAdjustedRecord = ({
   oldAmount,
   newAmount
 }) => {
-  const inclusion = isIncluded ? 'included' : 'excluded'
+  const inclusion = isIncluded ? 'balanceAffecting' : 'nonBalanceAffecting'
   const countedPeriod = newPeriod ?? oldPeriod
   /** @type {PeriodStatusEntry[]} */
   const entries = []
