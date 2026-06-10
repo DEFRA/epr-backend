@@ -21,21 +21,19 @@ const objectId = () =>
     .required()
 
 /**
- * Resolves a registration's overseas-site map into detail records, sorted by
- * their three-digit ORS id. Each entry carries validFrom — the approved-from
- * date, null when the site is not yet approved. Detail is null for any site
- * whose record cannot be found.
+ * Resolves a registration's overseas-site map into detail records keyed by
+ * their three-digit ORS id — the natural key scoped to the accreditation. Each
+ * entry carries validFrom — the approved-from date, null when the site is not
+ * yet approved. Detail is null for any site whose record cannot be found.
  *
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {Record<string, { overseasSiteId: string }> | undefined} overseasSites
  */
 const resolveOverseasSites = async (overseasSitesRepository, overseasSites) => {
-  const entries = Object.entries(overseasSites ?? {}).sort(([a], [b]) =>
-    a.localeCompare(b)
-  )
+  const entries = Object.entries(overseasSites ?? {})
 
   if (entries.length === 0) {
-    return []
+    return {}
   }
 
   const sites = await overseasSitesRepository.findByIds(
@@ -43,17 +41,21 @@ const resolveOverseasSites = async (overseasSitesRepository, overseasSites) => {
   )
   const sitesById = new Map(sites.map((site) => [site.id, site]))
 
-  return entries.map(([orsId, { overseasSiteId }]) => {
-    const site = sitesById.get(overseasSiteId)
-    return {
-      orsId,
-      name: site?.name ?? null,
-      country: site?.country ?? null,
-      address: site?.address ?? null,
-      coordinates: site?.coordinates ?? null,
-      validFrom: site?.validFrom ?? null
-    }
-  })
+  return Object.fromEntries(
+    entries.map(([orsId, { overseasSiteId }]) => {
+      const site = sitesById.get(overseasSiteId)
+      return [
+        orsId,
+        {
+          name: site?.name ?? null,
+          country: site?.country ?? null,
+          address: site?.address ?? null,
+          coordinates: site?.coordinates ?? null,
+          validFrom: site?.validFrom ?? null
+        }
+      ]
+    })
+  )
 }
 
 export const accreditationOverseasSitesList = {
@@ -106,7 +108,7 @@ export const accreditationOverseasSitesList = {
       )
 
       logger.info({
-        message: `Overseas sites listed for accreditation: ${accreditationId}, count=${sites.length}`,
+        message: `Overseas sites listed for accreditation: ${accreditationId}, count=${Object.keys(sites).length}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,

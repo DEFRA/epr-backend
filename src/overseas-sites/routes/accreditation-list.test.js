@@ -117,9 +117,8 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual([
-      {
-        orsId: '001',
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      '001': {
         name: 'Beta Reprocessor',
         country: 'Germany',
         address: {
@@ -132,8 +131,7 @@ describe('GET accreditation overseas-sites', () => {
         coordinates: '52.5200,13.4050',
         validFrom: approvedFrom.toISOString()
       },
-      {
-        orsId: '002',
+      '002': {
         name: 'Alpha Reprocessor',
         country: 'France',
         address: {
@@ -143,7 +141,7 @@ describe('GET accreditation overseas-sites', () => {
         coordinates: null,
         validFrom: null
       }
-    ])
+    })
   })
 
   it('carries the approved-from date for an approved site and null for an unapproved one', async () => {
@@ -161,18 +159,12 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(
-      JSON.parse(response.payload).map(({ orsId, validFrom }) => ({
-        orsId,
-        validFrom
-      }))
-    ).toStrictEqual([
-      { orsId: '001', validFrom: approvedFrom.toISOString() },
-      { orsId: '002', validFrom: null }
-    ])
+    const payload = JSON.parse(response.payload)
+    expect(payload['001'].validFrom).toBe(approvedFrom.toISOString())
+    expect(payload['002'].validFrom).toBeNull()
   })
 
-  it('sorts entries by their three-digit ORS id', async () => {
+  it('keys each entry by its three-digit ORS id', async () => {
     const { organisation, registration, accreditation } = buildScenario({
       overseasSites: {
         '010': { overseasSiteId: SITE_TWO_ID },
@@ -192,10 +184,10 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload).map((entry) => entry.orsId)).toEqual([
-      '002',
-      '010'
-    ])
+    const payload = JSON.parse(response.payload)
+    expect(Object.keys(payload).sort()).toEqual(['002', '010'])
+    expect(payload['002'].name).toBe('Beta Reprocessor')
+    expect(payload['010'].name).toBe('Alpha Reprocessor')
   })
 
   it('returns null detail for an overseas site whose record is missing', async () => {
@@ -217,19 +209,18 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual([
-      {
-        orsId: '001',
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      '001': {
         name: null,
         country: null,
         address: null,
         coordinates: null,
         validFrom: null
       }
-    ])
+    })
   })
 
-  it('returns an empty array when the registration has no overseas sites', async () => {
+  it('returns an empty object when the registration has no overseas sites', async () => {
     const { organisation, registration, accreditation } = buildScenario({
       overseasSites: {}
     })
@@ -246,10 +237,10 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual([])
+    expect(JSON.parse(response.payload)).toStrictEqual({})
   })
 
-  it('returns an empty array when the registration holds no overseas-sites map', async () => {
+  it('returns an empty object when the registration holds no overseas-sites map', async () => {
     const { organisation, registration, accreditation } = buildScenario({
       overseasSites: null
     })
@@ -266,7 +257,7 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual([])
+    expect(JSON.parse(response.payload)).toStrictEqual({})
   })
 
   it('401s when not authenticated', async () => {
@@ -300,7 +291,7 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload).map((entry) => entry.orsId)).toEqual([
+    expect(Object.keys(JSON.parse(response.payload)).sort()).toEqual([
       '001',
       '002'
     ])
