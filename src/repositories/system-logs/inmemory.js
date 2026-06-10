@@ -17,6 +17,13 @@ const performInsert = (storage, state) => async (systemLog) => {
   state.nextId++
 }
 
+const performInsertMany = (storage, state) => async (systemLogs) => {
+  for (const systemLog of systemLogs) {
+    storage.push({ ...systemLog, _internalId: state.nextId })
+    state.nextId++
+  }
+}
+
 const performFind =
   (storage) =>
   async ({ organisationId, userId, subCategory, limit, cursor, direction }) => {
@@ -94,6 +101,7 @@ export function createSystemLogsRepository() {
 
   return () => ({
     insert: performInsert(storage, state),
+    insertMany: performInsertMany(storage, state),
     find: performFind(storage),
     findSummaryLogSubmitActors: performFindSummaryLogSubmitActors(storage)
   })

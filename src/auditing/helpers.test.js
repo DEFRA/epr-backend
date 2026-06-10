@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { audit } from '@defra/cdp-auditing'
 import { logger } from '#common/helpers/logging/logger.js'
-import { safeAudit } from './helpers.js'
+import { safeAudit, recordSystemLogs } from './helpers.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -105,5 +105,51 @@ describe('safeAudit', () => {
     expect(audit).toHaveBeenCalledWith({
       event: payload.event
     })
+  })
+})
+
+describe('recordSystemLogs', () => {
+  const mockInsert = vi.fn()
+  const mockInsertMany = vi.fn()
+
+  const buildPayload = (id) => ({
+    user: { id: `user-${id}`, email: `user${id}@example.com`, scope: [] },
+    event: { category: 'test', subCategory: 'test', action: 'test' },
+    context: { id }
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockInsert.mockResolvedValue(undefined)
+    mockInsertMany.mockResolvedValue(undefined)
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-06-01T12:00:00.000Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('calls insertMany when the repository supports it', async () => {
+    const repository =
+      /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
+        /** @type {unknown} */ ({
+          insert: mockInsert,
+          insertMany: mockInsertMany
+        })
+      )
+    const payload = buildPayload(1)
+
+    await recordSystemLogs(repository, [payload])
+
+    expect(mockInsertMany).toHaveBeenCalledExactlyOnceWith([
+      {
+        createdAt: new Date('2025-06-01T12:00:00.000Z'),
+        createdBy: payload.user,
+        event: payload.event,
+        context: payload.context
+      }
+    ])
+    expect(mockInsert).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,4 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { buildWasteBalance } from './test-data.js'
 import { STREAM_EVENT_KIND } from '../stream-schema.js'
 
 /**
@@ -20,16 +19,15 @@ export const testAppendStreamEventBehaviour = (it) => {
     )
 
     it('appends a status-only stream event when a balance exists', async ({
-      insertWasteBalance,
+      seedBalance,
       streamRepository
     }) => {
-      const wasteBalance = buildWasteBalance({
+      await seedBalance({
         accreditationId: 'acc-append-1',
         registrationId: 'reg-1',
-        organisationId: 'org-1'
+        organisationId: 'org-1',
+        closingBalance: { amount: 100, availableAmount: 100 }
       })
-
-      await insertWasteBalance(wasteBalance)
 
       const createdBy = {
         id: 'user-abc',

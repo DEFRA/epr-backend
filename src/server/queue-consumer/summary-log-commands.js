@@ -24,6 +24,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {WasteBalancesRepository} wasteBalancesRepository
  * @property {SummaryLogExtractor} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
+ * @property {(organisationId: string, registrationId: string) => Promise<void>} onSummaryLogSubmittedReportHook
  */
 
 const userSchema = Joi.object({
@@ -90,7 +91,8 @@ export const summaryLogCommandHandlers = [
     execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
       await submitSummaryLog(payload.summaryLogId, {
         ...deps,
-        user: payload.user
+        user: payload.user,
+        onSummaryLogSubmittedReportHook: deps.onSummaryLogSubmittedReportHook
       })
     },
     onFailure: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {

@@ -4,17 +4,18 @@ import {
   PRN_STATUS,
   PRN_ACTOR,
   StatusConflictError,
-  SuspendedAccreditationError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
-import { REGULATOR } from '#domain/organisations/model.js'
+import { REGULATOR, ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
-  createMockOrganisationsRepository,
-  createMockPackagingRecyclingNotesRepository,
-  createMockWasteBalancesRepository
-} from '#test/mock-repositories.js'
+  buildOrganisation,
+  buildAccreditation
+} from '#repositories/organisations/contract/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
 const mockRecordStatusTransition = vi.fn()
@@ -27,38 +28,145 @@ vi.mock('./metrics.js', () => ({
 
 const { updatePrnStatus } = await import('./update-status.js')
 
-const defaultOrganisationsRepository = createMockOrganisationsRepository({
-  findAccreditationById: vi.fn().mockResolvedValue({
+const ORG_ID = '507f1f77bcf86cd799439aaa'
+const ACC_ID = 'acc-456'
+const REG_ID = 'reg-789'
+const PRN_ID = '507f1f77bcf86cd799439011'
+const USER = { id: 'user-789', name: 'Test User' }
+const EVENT_AT = new Date('2026-02-01T12:00:00.000Z')
+
+/**
+ * @param {Object} [overrides]
+ * @returns {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote}
+ */
+const buildPrn = (overrides = {}) => ({
+  id: PRN_ID,
+  schemaVersion: 2,
+  version: 1,
+  registrationId: REG_ID,
+  organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+  accreditation: {
+    id: ACC_ID,
+    accreditationNumber: 'ACC-1',
+    accreditationYear: 2026,
+    material: 'plastic',
     submittedToRegulator: REGULATOR.EA
+  },
+  tonnage: 100,
+  isExport: false,
+  status: {
+    currentStatus: PRN_STATUS.DRAFT,
+    currentStatusAt: EVENT_AT,
+    history: []
+  },
+  createdAt: EVENT_AT,
+  createdBy: USER,
+  updatedAt: EVENT_AT,
+  updatedBy: USER,
+  ...overrides
+})
+
+/**
+ * Seed an opening waste balance as a single stream event. `findBalance`
+ * resolves the latest event's closing balance, so this is the balance the
+ * transition opens against.
+ *
+ * @param {{ amount: number, availableAmount: number }} closingBalance
+ * @returns {import('#waste-balances/repository/stream-schema.js').StreamEvent}
+ */
+const buildOpeningBalanceEvent = ({ amount, availableAmount }) => ({
+  id: 'opening-balance',
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationId: ORG_ID,
+  number: 1,
+  kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+  payload: { summaryLogId: 'seed-summary-log', creditTotal: amount },
+  openingBalance: { amount: 0, availableAmount: 0 },
+  closingBalance: { amount, availableAmount },
+  createdAt: EVENT_AT,
+  createdBy: USER
+})
+
+/**
+ * An organisation carrying the accreditation under test, with `ORG_ID` and
+ * `ACC_ID` pinned so the seeded PRN's links resolve. `withAccreditation: false`
+ * removes the accreditation so issuance can't find it.
+ *
+ * @param {Object} [options]
+ * @param {Object} [options.accreditation] - accreditation field overrides
+ * @param {boolean} [options.withAccreditation]
+ */
+const buildOrgWithAccreditation = ({
+  accreditation = {},
+  withAccreditation = true
+} = {}) => ({
+  // `status` is derived from `statusHistory` on read; the seeded value only
+  // satisfies the constructor's Organisation type.
+  status: ORGANISATION_STATUS.APPROVED,
+  ...buildOrganisation({
+    id: ORG_ID,
+    accreditations: withAccreditation
+      ? [
+          buildAccreditation({
+            id: ACC_ID,
+            accreditationYear: 2026,
+            submittedToRegulator: REGULATOR.EA,
+            ...accreditation
+          })
+        ]
+      : []
   })
 })
 
-const mockLogger = createMockLogger()
-
-const createMockPrnRepository = createMockPackagingRecyclingNotesRepository
-
-const APPENDED_EVENT_NUMBER = 7
-
 /**
- * A valid appended stream event, as the ledger-path balance effects return one.
- * The fold reads `kind`, `number`, `createdAt` and `createdBy` off it, so each
- * field must be present for the projection to form.
+ * Wire up the three real in-memory adapters for one case. The PRN doc and the
+ * waste balance are seeded; the organisation always carries the accreditation
+ * unless `withAccreditation: false` removes it.
  *
- * @param {import('#waste-balances/repository/stream-schema.js').StreamEventKind} kind
+ * @param {Object} [options]
+ * @param {Object} [options.prn] - PRN to seed, or omitted for an empty repo
+ * @param {{ amount: number, availableAmount: number }} [options.balance] - opening balance, or omitted for none
+ * @param {Object} [options.accreditation] - accreditation field overrides
+ * @param {boolean} [options.withAccreditation]
  */
-const buildAppendedEvent = (kind) => ({
-  id: `event-${APPENDED_EVENT_NUMBER}`,
-  registrationId: 'reg-123',
-  accreditationId: 'acc-456',
-  organisationId: 'org-123',
-  number: APPENDED_EVENT_NUMBER,
-  kind,
-  payload: { prnId: '507f1f77bcf86cd799439011', amount: 50 },
-  openingBalance: { amount: 1000, availableAmount: 1000 },
-  closingBalance: { amount: 1000, availableAmount: 950 },
-  createdAt: new Date('2026-02-03T10:00:00.000Z'),
-  createdBy: { id: 'user-789', name: 'Test User' }
-})
+const seedRepositories = ({
+  prn,
+  balance,
+  accreditation,
+  withAccreditation = true
+} = {}) => {
+  const prnRepository = createInMemoryPackagingRecyclingNotesRepository(
+    prn ? [prn] : []
+  )(createMockLogger())
+  const streamRepository = createInMemoryStreamRepository(
+    balance ? [buildOpeningBalanceEvent(balance)] : []
+  )()
+  const wasteBalancesRepository = createWasteBalancesRepository({
+    streamRepository
+  })()
+  const organisationsRepository = createInMemoryOrganisationsRepository([
+    buildOrgWithAccreditation({ accreditation, withAccreditation })
+  ])()
+  return { prnRepository, wasteBalancesRepository, organisationsRepository }
+}
+
+const readBalance = (wasteBalancesRepository) =>
+  wasteBalancesRepository.findBalance({
+    registrationId: REG_ID,
+    accreditationId: ACC_ID
+  })
+
+const callUpdate = (overrides) =>
+  updatePrnStatus({
+    logger: createMockLogger(),
+    id: PRN_ID,
+    organisationId: ORG_ID,
+    registrationId: REG_ID,
+    accreditationId: ACC_ID,
+    user: USER,
+    ...overrides
+  })
 
 describe('updatePrnStatus', () => {
   beforeEach(() => {
@@ -68,1571 +176,486 @@ describe('updatePrnStatus', () => {
   afterEach(() => {
     vi.clearAllMocks()
   })
-  it('throws not found when PRN does not exist', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue(null)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository()
 
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow('PRN not found')
-  })
-
-  it('throws not found when PRN belongs to different organisation', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'different-org' },
-        accreditation: { id: 'acc-456' },
-        status: { currentStatus: PRN_STATUS.DRAFT }
-      })
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository()
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow('PRN not found')
-  })
-
-  it('throws not found when PRN belongs to different accreditation', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'different-acc' },
-        status: { currentStatus: PRN_STATUS.DRAFT }
-      })
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository()
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow('PRN not found')
-  })
-
-  it('throws StatusConflictError when no transition exists between statuses', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456' },
-        status: { currentStatus: PRN_STATUS.DRAFT }
-      })
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository()
-
-    // DRAFT cannot transition directly to AWAITING_ACCEPTANCE (must go via AWAITING_AUTHORISATION)
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow(StatusConflictError)
-  })
-
-  it('throws UnauthorisedTransitionError when actor is not permitted for transition', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456' },
-        status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
-      })
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository()
-
-    // Only PRODUCER can transition from awaiting_acceptance to accepted
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.ACCEPTED,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow(UnauthorisedTransitionError)
-  })
-
-  it('throws UnauthorisedTransitionError when signatory tries producer transition', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456' },
-        status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
-      })
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository()
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.ACCEPTED,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow(UnauthorisedTransitionError)
-  })
-
-  it('deducts available waste balance when transitioning to awaiting_authorisation', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456' },
-        tonnage: 100,
-        version: 1,
-        status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-      }),
-      persistProjection: vi
-        .fn()
-        .mockImplementation(async ({ projection }) => projection)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductAvailableBalanceForPrnCreation: vi
-        .fn()
-        .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED))
-    })
-
-    await updatePrnStatus({
-      prnRepository,
-      wasteBalancesRepository,
-      organisationsRepository: defaultOrganisationsRepository,
-      logger: mockLogger,
-      id: '507f1f77bcf86cd799439011',
-      organisationId: 'org-123',
-      registrationId: 'reg-123',
-      accreditationId: 'acc-456',
-      newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-      actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-      user: { id: 'user-789', name: 'Test User' }
-    })
-
-    expect(
-      wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-    ).toHaveBeenCalledWith({
-      accreditationId: 'acc-456',
-      organisationId: 'org-123',
-      prnId: '507f1f77bcf86cd799439011',
-      tonnage: 100,
-      registrationId: 'reg-123',
-      createdBy: { id: 'user-789', name: 'Test User' }
-    })
-  })
-
-  it('throws error when creating PRN without waste balance', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456' },
-        tonnage: 100,
-        status: { currentStatus: PRN_STATUS.DRAFT }
-      })
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue(null)
-    })
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow('No waste balance found for accreditation: acc-456')
-  })
-
-  it('uses the provided updatedAt timestamp on a discard write', async () => {
-    const explicitTimestamp = new Date('2026-01-15T12:00:00Z')
-    const updatedPrn = {
-      id: '507f1f77bcf86cd799439011',
-      organisation: { id: 'org-123' },
-      accreditation: { id: 'acc-456' },
-      tonnage: 100,
-      status: { currentStatus: PRN_STATUS.DISCARDED }
-    }
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456' },
-        tonnage: 100,
-        version: 1,
-        status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-      }),
-      updateStatus: vi.fn().mockResolvedValue(updatedPrn)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository()
-
-    await updatePrnStatus({
-      prnRepository,
-      wasteBalancesRepository,
-      organisationsRepository: defaultOrganisationsRepository,
-      logger: mockLogger,
-      id: '507f1f77bcf86cd799439011',
-      organisationId: 'org-123',
-      registrationId: 'reg-123',
-      accreditationId: 'acc-456',
-      newStatus: PRN_STATUS.DISCARDED,
-      actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-      user: { id: 'user-789', name: 'Test User' },
-      updatedAt: explicitTimestamp
-    })
-
-    expect(prnRepository.updateStatus).toHaveBeenCalledWith(
-      expect.objectContaining({
-        updatedAt: explicitTimestamp
-      })
-    )
-  })
-
-  it('persists the folded projection and returns it on a creation', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456' },
-        tonnage: 100,
-        version: 1,
-        status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-      }),
-      persistProjection: vi
-        .fn()
-        .mockImplementation(async ({ projection }) => projection)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductAvailableBalanceForPrnCreation: vi
-        .fn()
-        .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED))
-    })
-
-    const result = await updatePrnStatus({
-      prnRepository,
-      wasteBalancesRepository,
-      organisationsRepository: defaultOrganisationsRepository,
-      logger: mockLogger,
-      id: '507f1f77bcf86cd799439011',
-      organisationId: 'org-123',
-      registrationId: 'reg-123',
-      accreditationId: 'acc-456',
-      newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-      actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-      user: { id: 'user-789', name: 'Test User' }
-    })
-
-    expect(result.status.currentStatus).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
-    expect(result.lastAppliedEventNumber).toBe(APPENDED_EVENT_NUMBER)
-    expect(prnRepository.persistProjection).toHaveBeenCalledWith({
-      projection: expect.objectContaining({
-        status: expect.objectContaining({
-          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION
-        }),
-        lastAppliedEventNumber: APPENDED_EVENT_NUMBER
-      }),
-      expectedVersion: 1
-    })
-  })
-
-  it('generates PRN number when issuing (transitioning to awaiting_acceptance)', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456', accreditationYear: 2026 },
-        isExport: false,
-        tonnage: 50,
-        version: 1,
-        status: {
-          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          history: []
-        }
-      }),
-      persistProjection: vi
-        .fn()
-        .mockImplementation(async ({ projection }) => projection)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductTotalBalanceForPrnIssue: vi
-        .fn()
-        .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-    })
-
-    const result = await updatePrnStatus({
-      prnRepository,
-      wasteBalancesRepository,
-      organisationsRepository: defaultOrganisationsRepository,
-      logger: mockLogger,
-      id: '507f1f77bcf86cd799439011',
-      organisationId: 'org-123',
-      registrationId: 'reg-123',
-      accreditationId: 'acc-456',
-      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      actor: PRN_ACTOR.SIGNATORY,
-      user: { id: 'user-789', name: 'Test User' }
-    })
-
-    expect(result.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
-    expect(result.prnNumber).toMatch(/^ER26\d{5}$/)
-    expect(prnRepository.persistProjection).toHaveBeenCalledWith({
-      projection: expect.objectContaining({
-        status: expect.objectContaining({
-          currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE
-        }),
-        prnNumber: expect.stringMatching(/^ER26\d{5}$/)
-      }),
-      expectedVersion: 1
-    })
-  })
-
-  it('deducts total waste balance when issuing PRN (transitioning to awaiting_acceptance)', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456', accreditationYear: 2026 },
-        isExport: false,
-        tonnage: 75,
-        version: 1,
-        status: {
-          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          history: []
-        }
-      }),
-      persistProjection: vi
-        .fn()
-        .mockImplementation(async ({ projection }) => projection)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductTotalBalanceForPrnIssue: vi
-        .fn()
-        .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-    })
-
-    await updatePrnStatus({
-      prnRepository,
-      wasteBalancesRepository,
-      organisationsRepository: defaultOrganisationsRepository,
-      logger: mockLogger,
-      id: '507f1f77bcf86cd799439011',
-      organisationId: 'org-123',
-      registrationId: 'reg-123',
-      accreditationId: 'acc-456',
-      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      actor: PRN_ACTOR.SIGNATORY,
-      user: { id: 'user-789', name: 'Test User' }
-    })
-
-    expect(
-      wasteBalancesRepository.deductTotalBalanceForPrnIssue
-    ).toHaveBeenCalledWith({
-      accreditationId: 'acc-456',
-      organisationId: 'org-123',
-      prnId: '507f1f77bcf86cd799439011',
-      tonnage: 75,
-      registrationId: 'reg-123',
-      createdBy: { id: 'user-789', name: 'Test User' }
-    })
-  })
-
-  it('throws error when issuing PRN without waste balance', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456', accreditationYear: 2026 },
-        isExport: false,
-        tonnage: 75,
-        status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
-      }),
-      updateStatus: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        prnNumber: 'ER2600001',
-        status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
-      })
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue(null)
-    })
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow('No waste balance found for accreditation: acc-456')
-  })
-
-  it('retries with suffix when PRN number collision occurs', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456', accreditationYear: 2026 },
-        isExport: false,
-        tonnage: 50,
-        version: 1,
-        status: {
-          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          history: []
-        }
-      }),
-      persistProjection: vi
-        .fn()
-        .mockRejectedValueOnce(new PrnNumberConflictError('ER2600001'))
-        .mockImplementation(async ({ projection }) => projection)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductTotalBalanceForPrnIssue: vi
-        .fn()
-        .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-    })
-
-    const result = await updatePrnStatus({
-      prnRepository,
-      wasteBalancesRepository,
-      organisationsRepository: defaultOrganisationsRepository,
-      logger: mockLogger,
-      id: '507f1f77bcf86cd799439011',
-      organisationId: 'org-123',
-      registrationId: 'reg-123',
-      accreditationId: 'acc-456',
-      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      actor: PRN_ACTOR.SIGNATORY,
-      user: { id: 'user-789', name: 'Test User' }
-    })
-
-    expect(result.prnNumber).toMatch(/^ER26\d{5}A$/)
-    expect(prnRepository.persistProjection).toHaveBeenCalledTimes(2)
-    // The deduct effect is applied once; only the projection persist retries.
-    expect(
-      wasteBalancesRepository.deductTotalBalanceForPrnIssue
-    ).toHaveBeenCalledTimes(1)
-    expect(prnRepository.persistProjection).toHaveBeenLastCalledWith({
-      projection: expect.objectContaining({
-        prnNumber: expect.stringMatching(/^ER26\d{5}A$/)
-      }),
-      expectedVersion: 1
-    })
-  })
-
-  it('throws error when all PRN number suffixes exhausted', async () => {
-    const persistProjection = vi
-      .fn()
-      .mockRejectedValue(new PrnNumberConflictError('collision'))
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456', accreditationYear: 2026 },
-        isExport: false,
-        tonnage: 50,
-        version: 1,
-        status: {
-          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          history: []
-        }
-      }),
-      // Reject all 27 attempts (no suffix + A-Z)
-      persistProjection
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductTotalBalanceForPrnIssue: vi
-        .fn()
-        .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-    })
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow('Unable to generate unique PRN number after all retries')
-
-    expect(persistProjection).toHaveBeenCalledTimes(27) // 1 + 26 letters
-  })
-
-  it('throws error when accreditation not found during PRN issuance', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456', accreditationYear: 2026 },
-        isExport: false,
-        tonnage: 50,
-        status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
-      }),
-      updateStatus: vi.fn()
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    })
-    const organisationsRepository = createMockOrganisationsRepository({
-      findAccreditationById: vi.fn().mockResolvedValue(null)
-    })
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow()
-
-    expect(prnRepository.updateStatus).not.toHaveBeenCalled()
-  })
-
-  it('throws forbidden when issuing a PRN on a suspended accreditation', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456', accreditationYear: 2026 },
-        isExport: false,
-        tonnage: 50,
-        status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
-      }),
-      updateStatus: vi.fn()
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    })
-    const organisationsRepository = createMockOrganisationsRepository({
-      findAccreditationById: vi.fn().mockResolvedValue({
-        submittedToRegulator: REGULATOR.EA,
-        status: 'suspended'
-      })
-    })
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow(SuspendedAccreditationError)
-
-    expect(prnRepository.updateStatus).not.toHaveBeenCalled()
-  })
-
-  it('throws non-collision errors immediately without retry', async () => {
-    const dbError = new Error('Database connection failed')
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456', accreditationYear: 2026 },
-        isExport: false,
-        tonnage: 50,
-        version: 1,
-        status: {
-          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          history: []
-        }
-      }),
-      persistProjection: vi.fn().mockRejectedValue(dbError)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductTotalBalanceForPrnIssue: vi
-        .fn()
-        .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-    })
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow('Database connection failed')
-
-    expect(prnRepository.persistProjection).toHaveBeenCalledTimes(1)
-  })
-
-  it('throws bad implementation when projection persist returns null on creation', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456' },
-        tonnage: 100,
-        version: 1,
-        status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-      }),
-      persistProjection: vi.fn().mockResolvedValue(null)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductAvailableBalanceForPrnCreation: vi
-        .fn()
-        .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED))
-    })
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow('Failed to persist PRN projection')
-  })
-
-  it('throws error when projection persist returns null during PRN issuing', async () => {
-    const prnRepository = createMockPrnRepository({
-      findById: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        organisation: { id: 'org-123' },
-        accreditation: { id: 'acc-456', accreditationYear: 2026 },
-        isExport: false,
-        tonnage: 50,
-        version: 1,
-        status: {
-          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          history: []
-        }
-      }),
-      persistProjection: vi.fn().mockResolvedValue(null)
-    })
-    const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
-        accreditationId: 'acc-456',
-        amount: 1000,
-        availableAmount: 1000
-      }),
-      deductTotalBalanceForPrnIssue: vi
-        .fn()
-        .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-    })
-
-    await expect(
-      updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-    ).rejects.toThrow('Failed to persist PRN projection')
-  })
-
-  describe('negative waste balance prevention', () => {
-    it('throws conflict when PRN tonnage exceeds available waste balance at creation', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
-          tonnage: 100,
-          status: { currentStatus: PRN_STATUS.DRAFT }
-        }),
-        updateStatus: vi.fn()
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
-          accreditationId: 'acc-456',
-          amount: 500,
-          availableAmount: 50
-        }),
-        deductAvailableBalanceForPrnCreation: vi.fn()
-      })
+  describe('PRN lookup and tenancy', () => {
+    it('throws not found when the PRN does not exist', async () => {
+      const repositories = seedRepositories()
 
       await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
+        callUpdate({
+          ...repositories,
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-          user: { id: 'user-789', name: 'Test User' }
-        })
-      ).rejects.toThrow('Insufficient available waste balance')
-
-      expect(
-        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-      ).not.toHaveBeenCalled()
-      expect(prnRepository.updateStatus).not.toHaveBeenCalled()
-    })
-
-    it('throws conflict when PRN tonnage exceeds total waste balance at issue', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456', accreditationYear: 2026 },
-          isExport: false,
-          tonnage: 100,
-          version: 1,
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-            history: []
-          }
-        }),
-        persistProjection: vi.fn()
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
-          accreditationId: 'acc-456',
-          amount: 50,
-          availableAmount: 200
-        }),
-        deductTotalBalanceForPrnIssue: vi.fn()
-      })
-
-      await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
-          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
-        })
-      ).rejects.toThrow('Insufficient total waste balance')
-
-      expect(
-        wasteBalancesRepository.deductTotalBalanceForPrnIssue
-      ).not.toHaveBeenCalled()
-      expect(prnRepository.persistProjection).not.toHaveBeenCalled()
-    })
-
-    it('allows creation when tonnage equals available waste balance exactly', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
-          tonnage: 100,
-          version: 1,
-          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-        }),
-        persistProjection: vi
-          .fn()
-          .mockImplementation(async ({ projection }) => projection)
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
-          accreditationId: 'acc-456',
-          amount: 500,
-          availableAmount: 100
-        }),
-        deductAvailableBalanceForPrnCreation: vi
-          .fn()
-          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED))
-      })
-
-      await updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-
-      expect(
-        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-      ).toHaveBeenCalled()
-    })
-
-    it('treats undefined available balance as zero', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
-          tonnage: 1,
-          status: { currentStatus: PRN_STATUS.DRAFT }
-        }),
-        updateStatus: vi.fn()
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
-          accreditationId: 'acc-456',
-          amount: 500
-        })
-      })
-
-      await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
-          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-          user: { id: 'user-789', name: 'Test User' }
-        })
-      ).rejects.toThrow('Insufficient available waste balance')
-    })
-
-    it('treats undefined total balance as zero', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456', accreditationYear: 2026 },
-          isExport: false,
-          tonnage: 1,
-          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
-        }),
-        updateStatus: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          prnNumber: 'ER2600001',
-          status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
-        })
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
-          accreditationId: 'acc-456',
-          availableAmount: 200
-        })
-      })
-
-      await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
-          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
-        })
-      ).rejects.toThrow('Insufficient total waste balance')
-    })
-
-    it('allows issue when tonnage equals total waste balance exactly', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456', accreditationYear: 2026 },
-          isExport: false,
-          tonnage: 50,
-          version: 1,
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-            history: []
-          }
-        }),
-        persistProjection: vi
-          .fn()
-          .mockImplementation(async ({ projection }) => projection)
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
-          accreditationId: 'acc-456',
-          amount: 50,
-          availableAmount: 200
-        }),
-        deductTotalBalanceForPrnIssue: vi
-          .fn()
-          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-      })
-
-      await updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-
-      expect(
-        wasteBalancesRepository.deductTotalBalanceForPrnIssue
-      ).toHaveBeenCalled()
-    })
-  })
-
-  describe('metrics', () => {
-    it('records status transition metric on successful update', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456', material: 'paper' },
-          tonnage: 100,
-          isExport: false,
-          version: 1,
-          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-        }),
-        persistProjection: vi
-          .fn()
-          .mockImplementation(async ({ projection }) => projection)
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
-          accreditationId: 'acc-456',
-          amount: 1000,
-          availableAmount: 1000
-        }),
-        deductAvailableBalanceForPrnCreation: vi
-          .fn()
-          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED))
-      })
-
-      await updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
-        fromStatus: PRN_STATUS.DRAFT,
-        toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        material: 'paper',
-        isExport: false
-      })
-    })
-
-    it('records status transition metric when issuing PRN', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: {
-            id: 'acc-456',
-            material: 'plastic',
-            accreditationYear: 2026
-          },
-          tonnage: 50,
-          isExport: true,
-          version: 1,
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-            history: []
-          }
-        }),
-        persistProjection: vi
-          .fn()
-          .mockImplementation(async ({ projection }) => projection)
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
-          accreditationId: 'acc-456',
-          amount: 1000,
-          availableAmount: 1000
-        }),
-        deductTotalBalanceForPrnIssue: vi
-          .fn()
-          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-      })
-
-      await updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
-        fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        toStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        material: 'plastic',
-        isExport: true
-      })
-    })
-
-    it('does not record metric when PRN not found', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue(null)
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository()
-
-      await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
-          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-          user: { id: 'user-789', name: 'Test User' }
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
         })
       ).rejects.toThrow('PRN not found')
-
-      expect(mockRecordStatusTransition).not.toHaveBeenCalled()
     })
 
-    it('does not record metric when status transition is invalid', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
-          status: { currentStatus: PRN_STATUS.DRAFT }
-        })
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository()
+    it('throws not found when the PRN belongs to a different organisation', async () => {
+      const repositories = seedRepositories({ prn: buildPrn() })
 
       await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
-          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-          user: { id: 'user-789', name: 'Test User' }
+        callUpdate({
+          ...repositories,
+          organisationId: '507f1f77bcf86cd799439bbb',
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
         })
-      ).rejects.toThrow(StatusConflictError)
+      ).rejects.toThrow('PRN not found')
+    })
 
-      expect(mockRecordStatusTransition).not.toHaveBeenCalled()
+    it('throws not found when the PRN belongs to a different accreditation', async () => {
+      const repositories = seedRepositories({ prn: buildPrn() })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          accreditationId: 'different-acc',
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+        })
+      ).rejects.toThrow('PRN not found')
     })
   })
 
-  describe('discarding from draft', () => {
-    it('allows transition from draft to discarded', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
-          tonnage: 50,
-          material: 'plastic',
-          isExport: false,
-          status: { currentStatus: PRN_STATUS.DRAFT }
-        }),
-        updateStatus: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          status: { currentStatus: PRN_STATUS.DISCARDED }
+  describe('transition rules', () => {
+    it('throws StatusConflictError when the transition is not permitted', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
         })
       })
-      const wasteBalancesRepository = createMockWasteBalancesRepository()
 
-      const result = await updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.DISCARDED,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-
-      expect(result.status.currentStatus).toBe(PRN_STATUS.DISCARDED)
-      expect(prnRepository.updateStatus).toHaveBeenCalledWith({
-        id: '507f1f77bcf86cd799439011',
-        status: PRN_STATUS.DISCARDED,
-        updatedBy: { id: 'user-789', name: 'Test User' },
-        updatedAt: expect.any(Date)
-      })
+      // DRAFT can only reach AWAITING_AUTHORISATION, never AWAITING_ACCEPTANCE
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+        })
+      ).rejects.toThrow(StatusConflictError)
     })
 
-    it('throws when the discard write does not return the updated PRN', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
-          tonnage: 50,
-          material: 'plastic',
-          isExport: false,
-          status: { currentStatus: PRN_STATUS.DRAFT }
-        }),
-        updateStatus: vi.fn().mockResolvedValue(null)
+    it('throws UnauthorisedTransitionError when the actor may not perform the transition', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+            history: []
+          }
+        })
       })
-      const wasteBalancesRepository = createMockWasteBalancesRepository()
+
+      // Only the producer may accept; a reprocessor/exporter may not
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.ACCEPTED,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+        })
+      ).rejects.toThrow(UnauthorisedTransitionError)
+    })
+  })
+
+  describe('creating a PRN (draft to awaiting authorisation)', () => {
+    it('ringfences the available balance and advances the PRN', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+      })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(
+        PRN_STATUS.AWAITING_AUTHORISATION
+      )
+      expect(reread?.version).toBe(2)
+
+      expect(
+        await readBalance(repositories.wasteBalancesRepository)
+      ).toMatchObject({ amount: 1000, availableAmount: 900 })
+    })
+
+    it('allows creation when the tonnage equals the available balance exactly', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: { amount: 500, availableAmount: 100 }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+      })
+
+      expect(
+        await readBalance(repositories.wasteBalancesRepository)
+      ).toMatchObject({ amount: 500, availableAmount: 0 })
+    })
+
+    it('throws conflict and leaves the balance untouched when the tonnage exceeds the available balance', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: { amount: 500, availableAmount: 50 }
+      })
 
       await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+        })
+      ).rejects.toThrow('Insufficient available waste balance')
+
+      expect(
+        await readBalance(repositories.wasteBalancesRepository)
+      ).toMatchObject({ amount: 500, availableAmount: 50 })
+    })
+
+    it('throws when creating a PRN with no waste balance', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        })
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+        })
+      ).rejects.toThrow('No waste balance found for accreditation: acc-456')
+    })
+
+    it('treats an absent available amount as zero when creating', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 1,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        })
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          // The stream-backed balance always carries both amounts; a partial
+          // balance only arises from a hand-built double, exercising the guard.
+          wasteBalancesRepository: {
+            findBalance: vi
+              .fn()
+              .mockResolvedValue({ accreditationId: ACC_ID, amount: 500 })
+          },
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+        })
+      ).rejects.toThrow('Insufficient available waste balance')
+    })
+  })
+
+  describe('issuing a PRN (awaiting authorisation to awaiting acceptance)', () => {
+    it('generates a PRN number and deducts the total balance when issuing', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 75,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      expect(reread?.prnNumber).toMatch(/^ER26\d{5}$/)
+
+      expect(
+        await readBalance(repositories.wasteBalancesRepository)
+      ).toMatchObject({ amount: 925, availableAmount: 1000 })
+    })
+
+    it('throws conflict and leaves the balance untouched when the tonnage exceeds the total balance', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: { amount: 50, availableAmount: 200 }
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toThrow('Insufficient total waste balance')
+
+      expect(
+        await readBalance(repositories.wasteBalancesRepository)
+      ).toMatchObject({ amount: 50, availableAmount: 200 })
+    })
+
+    it('throws when issuing a PRN with no waste balance', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        })
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toThrow('No waste balance found for accreditation: acc-456')
+    })
+
+    it('treats an absent total amount as zero when issuing', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 1,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        })
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          // The stream-backed balance always carries both amounts; a partial
+          // balance only arises from a hand-built double, exercising the guard.
+          wasteBalancesRepository: {
+            findBalance: vi.fn().mockResolvedValue({
+              accreditationId: ACC_ID,
+              availableAmount: 200
+            })
+          },
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toThrow('Insufficient total waste balance')
+    })
+
+    it('throws when the accreditation cannot be found when issuing', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 },
+        withAccreditation: false
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('discarding a draft PRN', () => {
+    it('discards at the provided timestamp without touching the balance', async () => {
+      const explicitTimestamp = new Date('2026-01-15T12:00:00Z')
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.DISCARDED,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
+        updatedAt: explicitTimestamp
+      })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(PRN_STATUS.DISCARDED)
+      expect(reread?.status.currentStatusAt).toEqual(explicitTimestamp)
+      expect(reread?.version).toBe(2)
+
+      expect(
+        await readBalance(repositories.wasteBalancesRepository)
+      ).toMatchObject({ amount: 1000, availableAmount: 1000 })
+    })
+
+    it('throws when the discard write reports no updated PRN', async () => {
+      const prn = buildPrn({
+        status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+      })
+
+      await expect(
+        callUpdate({
+          // A successful findById guarantees the document exists, so the real
+          // twin's updateStatus never returns null; this double exercises the
+          // defensive guard.
+          prnRepository: {
+            findById: vi.fn().mockResolvedValue(prn),
+            updateStatus: vi.fn().mockResolvedValue(null)
+          },
+          wasteBalancesRepository: {},
+          organisationsRepository: {},
           newStatus: PRN_STATUS.DISCARDED,
-          actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-          user: { id: 'user-789', name: 'Test User' }
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
         })
       ).rejects.toThrow('Failed to update PRN status')
     })
-
-    it('does not credit waste balance when discarding from draft', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
-          tonnage: 50,
-          material: 'plastic',
-          isExport: false,
-          status: { currentStatus: PRN_STATUS.DRAFT }
-        }),
-        updateStatus: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          status: { currentStatus: PRN_STATUS.DISCARDED }
-        })
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        creditAvailableBalanceForPrnCancellation: vi.fn()
-      })
-
-      await updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
-        newStatus: PRN_STATUS.DISCARDED,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
-      })
-
-      expect(
-        wasteBalancesRepository.creditAvailableBalanceForPrnCancellation
-      ).not.toHaveBeenCalled()
-    })
-
-    it('rejects discard transition from non-draft status', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
-          tonnage: 50,
-          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
-        })
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository()
-
-      await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
-          newStatus: PRN_STATUS.DISCARDED,
-          actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
-        })
-      ).rejects.toThrow(StatusConflictError)
-    })
   })
 
-  describe('post-issue cancellation waste balance reversal', () => {
-    it('credits both amount and availableAmount when confirming cancellation of issued PRN', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
+  describe('cancelling an issued PRN (awaiting cancellation to cancelled)', () => {
+    it('credits the full balance when the cancellation completes', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
           tonnage: 60,
-          version: 1,
           status: {
             currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
             history: []
           }
         }),
-        persistProjection: vi
-          .fn()
-          .mockImplementation(async ({ projection }) => projection)
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi
-          .fn()
-          .mockResolvedValue({ accreditationId: 'acc-456' }),
-        creditFullBalanceForIssuedPrnCancellation: vi
-          .fn()
-          .mockResolvedValue(
-            buildAppendedEvent(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
-          )
+        balance: { amount: 440, availableAmount: 940 }
       })
 
-      await updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
+      await callUpdate({
+        ...repositories,
         newStatus: PRN_STATUS.CANCELLED,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        actor: PRN_ACTOR.SIGNATORY
       })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
 
       expect(
-        wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation
-      ).toHaveBeenCalledWith({
-        accreditationId: 'acc-456',
-        organisationId: 'org-123',
-        prnId: '507f1f77bcf86cd799439011',
-        tonnage: 60,
-        registrationId: 'reg-123',
-        createdBy: { id: 'user-789', name: 'Test User' }
-      })
+        await readBalance(repositories.wasteBalancesRepository)
+      ).toMatchObject({ amount: 500, availableAmount: 1000 })
     })
 
-    it('throws error when cancelling issued PRN without waste balance', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
+    it('throws when cancelling an issued PRN with no waste balance', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
           tonnage: 60,
-          status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
-        }),
-        updateStatus: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          status: { currentStatus: PRN_STATUS.CANCELLED }
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            history: []
+          }
         })
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue(null)
       })
 
       await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
+        callUpdate({
+          ...repositories,
           newStatus: PRN_STATUS.CANCELLED,
-          actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
+          actor: PRN_ACTOR.SIGNATORY
         })
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })
   })
 
-  describe('deletion waste balance credit', () => {
-    it('credits available waste balance when deleting from awaiting_authorisation', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
+  describe('deleting a pending PRN (awaiting authorisation to deleted)', () => {
+    it('credits the available balance when the pending PRN is deleted', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
           tonnage: 75,
-          material: 'paper',
-          isExport: false,
-          version: 1,
           status: {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
             history: []
           }
         }),
-        persistProjection: vi
-          .fn()
-          .mockImplementation(async ({ projection }) => projection)
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi
-          .fn()
-          .mockResolvedValue({ accreditationId: 'acc-456' }),
-        creditAvailableBalanceForPrnCancellation: vi
-          .fn()
-          .mockResolvedValue(
-            buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATION_CANCELLED)
-          )
+        balance: { amount: 1000, availableAmount: 925 }
       })
 
-      await updatePrnStatus({
-        prnRepository,
-        wasteBalancesRepository,
-        organisationsRepository: defaultOrganisationsRepository,
-        logger: mockLogger,
-        id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: 'acc-456',
+      await callUpdate({
+        ...repositories,
         newStatus: PRN_STATUS.DELETED,
-        actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        actor: PRN_ACTOR.SIGNATORY
       })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(PRN_STATUS.DELETED)
 
       expect(
-        wasteBalancesRepository.creditAvailableBalanceForPrnCancellation
-      ).toHaveBeenCalledWith({
-        accreditationId: 'acc-456',
-        organisationId: 'org-123',
-        prnId: '507f1f77bcf86cd799439011',
-        tonnage: 75,
-        registrationId: 'reg-123',
-        createdBy: { id: 'user-789', name: 'Test User' }
-      })
+        await readBalance(repositories.wasteBalancesRepository)
+      ).toMatchObject({ amount: 1000, availableAmount: 1000 })
     })
 
-    it('throws error when deleting awaiting_authorisation PRN without waste balance', async () => {
-      const prnRepository = createMockPrnRepository({
-        findById: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
+    it('throws when deleting a pending PRN with no waste balance', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
           tonnage: 50,
-          material: 'paper',
-          isExport: false,
-          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
-        }),
-        updateStatus: vi.fn().mockResolvedValue({
-          id: '507f1f77bcf86cd799439011',
-          version: 2,
-          status: { currentStatus: PRN_STATUS.DELETED }
-        }),
-        rollbackPendingCancellation: vi.fn().mockResolvedValue({})
-      })
-      const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue(null)
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        })
       })
 
       await expect(
-        updatePrnStatus({
-          prnRepository,
-          wasteBalancesRepository,
-          organisationsRepository: defaultOrganisationsRepository,
-          logger: mockLogger,
-          id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-456',
+        callUpdate({
+          ...repositories,
           newStatus: PRN_STATUS.DELETED,
-          actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
+          actor: PRN_ACTOR.SIGNATORY
         })
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
+    })
+  })
+
+  describe('metrics', () => {
+    it('records the status transition metric on a successful update', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+      })
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        fromStatus: PRN_STATUS.DRAFT,
+        toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        material: 'plastic',
+        isExport: false
+      })
     })
   })
 })

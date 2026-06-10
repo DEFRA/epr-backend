@@ -1,23 +1,13 @@
-import { createInMemoryWasteBalancesRepository } from './inmemory.js'
+import { createWasteBalancesRepository } from './repository.js'
 import { createInMemoryStreamRepository } from './stream-inmemory.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
-/**
- * @param {Object[]} [initialWasteBalances]
- */
-export function createInMemoryWasteBalancesRepositoryPlugin(
-  initialWasteBalances
-) {
+export function createInMemoryWasteBalancesRepositoryPlugin() {
   return {
     name: 'wasteBalancesRepository',
     register: (server) => {
       const streamRepository = createInMemoryStreamRepository()()
-      const factory = createInMemoryWasteBalancesRepository(
-        initialWasteBalances ?? [],
-        {
-          streamRepository
-        }
-      )
+      const factory = createWasteBalancesRepository({ streamRepository })
       const repository = factory()
       registerRepository(server, 'wasteBalancesRepository', () => repository)
       registerRepository(server, 'streamRepository', () => streamRepository)

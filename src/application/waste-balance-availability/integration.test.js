@@ -9,11 +9,10 @@ import {
 
 const DATABASE_NAME = 'epr-backend'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
-const WASTE_BALANCES_COLLECTION = 'waste-balances'
 const WASTE_BALANCE_EVENTS_COLLECTION = 'waste-balance-events'
 
 const it = mongoIt.extend({
-  mongoClient: async (/** @type {{ db: string }} */ { db }, use) => {
+  mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
     await use(client)
     await client.close()
@@ -39,21 +38,6 @@ const createRegistration = (
   status: 'approved',
   ...(glassRecyclingProcess && { glassRecyclingProcess }),
   ...(accreditationId && { accreditationId })
-})
-
-const createWasteBalance = (
-  organisationId,
-  registrationId,
-  accreditationId,
-  staleAvailableAmount = 0
-) => ({
-  organisationId,
-  registrationId,
-  accreditationId,
-  amount: staleAvailableAmount,
-  availableAmount: staleAvailableAmount,
-  version: 1,
-  schemaVersion: 1
 })
 
 const createStreamEvent = (
@@ -88,7 +72,6 @@ describe('aggregateAvailableBalance - Integration', () => {
     ) => {
       db = mongoClient.db(DATABASE_NAME)
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-      await db.collection(WASTE_BALANCES_COLLECTION).deleteMany({})
       await db.collection(WASTE_BALANCE_EVENTS_COLLECTION).deleteMany({})
     }
   )
@@ -103,18 +86,8 @@ describe('aggregateAvailableBalance - Integration', () => {
       )
 
     await db
-      .collection(WASTE_BALANCES_COLLECTION)
-      .insertMany([
-        createWasteBalance(orgId1, regId1, accId1),
-        createWasteBalance(orgId1, 'REG-OTHER', 'ACC-OTHER')
-      ])
-
-    await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertMany([
-        createStreamEvent(regId1, accId1, 1, 100),
-        createStreamEvent('REG-OTHER', 'ACC-OTHER', 1, 50)
-      ])
+      .insertOne(createStreamEvent(regId1, accId1, 1, 100))
 
     const result = await aggregateAvailableBalance(db)
 
@@ -137,10 +110,6 @@ describe('aggregateAvailableBalance - Integration', () => {
           )
         ])
       )
-
-    await db
-      .collection(WASTE_BALANCES_COLLECTION)
-      .insertOne(createWasteBalance(orgId1, regId1, accId1))
 
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
@@ -168,10 +137,6 @@ describe('aggregateAvailableBalance - Integration', () => {
           )
         ])
       )
-
-    await db
-      .collection(WASTE_BALANCES_COLLECTION)
-      .insertOne(createWasteBalance(orgId1, regId1, accId1))
 
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
@@ -208,13 +173,6 @@ describe('aggregateAvailableBalance - Integration', () => {
           )
         ])
       )
-
-    await db
-      .collection(WASTE_BALANCES_COLLECTION)
-      .insertMany([
-        createWasteBalance(orgId1, regId1, accId1),
-        createWasteBalance(orgId1, regId4, accId4)
-      ])
 
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
@@ -255,14 +213,6 @@ describe('aggregateAvailableBalance - Integration', () => {
       ])
 
     await db
-      .collection(WASTE_BALANCES_COLLECTION)
-      .insertMany([
-        createWasteBalance(orgId1, regId1, accId1),
-        createWasteBalance(orgId1, regId2, accId2),
-        createWasteBalance(orgId2, regId3, accId3)
-      ])
-
-    await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
       .insertMany([
         createStreamEvent(regId1, accId1, 1, 100),
@@ -283,7 +233,7 @@ describe('aggregateAvailableBalance - Integration', () => {
     expect(result.total).toBe(350)
   })
 
-  it('excludes balances with no matching registration', async () => {
+  it('excludes stream events with no matching registration', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
@@ -293,18 +243,34 @@ describe('aggregateAvailableBalance - Integration', () => {
       )
 
     await db
-      .collection(WASTE_BALANCES_COLLECTION)
-      .insertMany([
-        createWasteBalance(orgId1, regId1, accId1),
-        createWasteBalance(orgId1, 'REG-NO-REG', 'ACC-NO-REG')
-      ])
-
-    await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
       .insertMany([
         createStreamEvent(regId1, accId1, 1, 100),
         createStreamEvent('REG-NO-REG', 'ACC-NO-REG', 1, 999)
       ])
+
+    const result = await aggregateAvailableBalance(db)
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      availableAmount: 100
+    })
+    expect(result.total).toBe(100)
+  })
+
+  it('excludes registrations with no accreditation', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1),
+          createRegistration(regId2, MATERIAL.PLASTIC, null, null)
+        ])
+      )
+
+    await db
+      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
+      .insertOne(createStreamEvent(regId1, accId1, 1, 100))
 
     const result = await aggregateAvailableBalance(db)
 
@@ -340,7 +306,7 @@ describe('aggregateAvailableBalance - Integration', () => {
     expect(result.generatedAt <= after).toBe(true)
   })
 
-  it('excludes waste balances from test organisations', async () => {
+  it('excludes accreditations from test organisations', async () => {
     const testOrgId = '507f1f77bcf86cd799439013'
     const testRegId = 'REG-TEST'
     const testAccId = 'ACC-TEST'
@@ -358,13 +324,6 @@ describe('aggregateAvailableBalance - Integration', () => {
     ])
 
     await db
-      .collection(WASTE_BALANCES_COLLECTION)
-      .insertMany([
-        createWasteBalance(testOrgId, testRegId, testAccId),
-        createWasteBalance(orgId1, regId1, accId1)
-      ])
-
-    await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
       .insertMany([
         createStreamEvent(testRegId, testAccId, 1, 500),
@@ -380,7 +339,7 @@ describe('aggregateAvailableBalance - Integration', () => {
     expect(result.total).toBe(100)
   })
 
-  it('uses the latest stream closing balance, not the stale document field', async () => {
+  it('uses the latest stream closing balance', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
@@ -388,10 +347,6 @@ describe('aggregateAvailableBalance - Integration', () => {
           createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
         ])
       )
-
-    await db
-      .collection(WASTE_BALANCES_COLLECTION)
-      .insertOne(createWasteBalance(orgId1, regId1, accId1, 100))
 
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
@@ -409,7 +364,7 @@ describe('aggregateAvailableBalance - Integration', () => {
     expect(result.total).toBe(175)
   })
 
-  it('reports zero when the stream is empty, ignoring the stale document field', async () => {
+  it('reports zero when the stream is empty', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
@@ -417,10 +372,6 @@ describe('aggregateAvailableBalance - Integration', () => {
           createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
         ])
       )
-
-    await db
-      .collection(WASTE_BALANCES_COLLECTION)
-      .insertOne(createWasteBalance(orgId1, regId1, accId1, 100))
 
     const result = await aggregateAvailableBalance(db)
 

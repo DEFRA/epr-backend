@@ -55,7 +55,7 @@ const appendPrnStreamEvent = async ({
  * @param {number} params.appendParams.tonnage
  * @param {import('./stream-schema.js').StreamUserSummary} params.appendParams.createdBy
  * @param {import('./stream-schema.js').StreamEventKind} params.appendParams.streamKind
- * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(partition: { registrationId: string, accreditationId: string }) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {Object} params.dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} params.dependencies.streamRepository
  * @returns {Promise<import('./stream-port.js').StreamEvent>}
@@ -76,7 +76,10 @@ export const performAppendPrnStreamEvent = async ({
   } = appendParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
-  const wasteBalance = await findBalance(validatedAccreditationId)
+  const wasteBalance = await findBalance({
+    registrationId,
+    accreditationId: validatedAccreditationId
+  })
 
   if (!wasteBalance) {
     throw Boom.badImplementation(
@@ -101,7 +104,7 @@ export const performAppendPrnStreamEvent = async ({
  *
  * @param {Object} params
  * @param {import('./port.js').DeductAvailableBalanceParams} params.deductParams
- * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(partition: { registrationId: string, accreditationId: string }) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {Object} params.dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} params.dependencies.streamRepository
  * @returns {Promise<import('./stream-port.js').StreamEvent | null>} The appended
@@ -122,7 +125,10 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
   } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
-  const wasteBalance = await findBalance(validatedAccreditationId)
+  const wasteBalance = await findBalance({
+    registrationId,
+    accreditationId: validatedAccreditationId
+  })
 
   if (!wasteBalance) {
     return null
@@ -145,7 +151,7 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
  *
  * @param {Object} params
  * @param {import('./port.js').DeductTotalBalanceParams} params.deductParams
- * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(partition: { registrationId: string, accreditationId: string }) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {Object} params.dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} params.dependencies.streamRepository
  * @returns {Promise<import('./stream-port.js').StreamEvent | null>} The appended
@@ -166,7 +172,10 @@ export const performDeductTotalBalanceForPrnIssue = async ({
   } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
-  const wasteBalance = await findBalance(validatedAccreditationId)
+  const wasteBalance = await findBalance({
+    registrationId,
+    accreditationId: validatedAccreditationId
+  })
 
   if (!wasteBalance) {
     return null
@@ -190,7 +199,7 @@ export const performDeductTotalBalanceForPrnIssue = async ({
  *
  * @param {Object} params
  * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
- * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(partition: { registrationId: string, accreditationId: string }) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {Object} params.dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} params.dependencies.streamRepository
  * @returns {Promise<import('./stream-port.js').StreamEvent>} The appended stream
@@ -211,7 +220,10 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
   } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
-  const wasteBalance = await findBalance(validatedAccreditationId)
+  const wasteBalance = await findBalance({
+    registrationId,
+    accreditationId: validatedAccreditationId
+  })
 
   if (!wasteBalance) {
     throw Boom.internal(
@@ -237,7 +249,7 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
  *
  * @param {Object} params
  * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
- * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(partition: { registrationId: string, accreditationId: string }) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {Object} params.dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} params.dependencies.streamRepository
  * @returns {Promise<import('./stream-port.js').StreamEvent>} The appended stream
@@ -258,7 +270,10 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
   } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
-  const wasteBalance = await findBalance(validatedAccreditationId)
+  const wasteBalance = await findBalance({
+    registrationId,
+    accreditationId: validatedAccreditationId
+  })
 
   if (!wasteBalance) {
     throw Boom.internal(

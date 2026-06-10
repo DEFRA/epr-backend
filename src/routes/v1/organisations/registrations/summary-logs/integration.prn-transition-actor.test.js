@@ -45,25 +45,10 @@ const sharedMeta = createWasteBalanceMeta('EXPORTER')
 const setupLedgerEnv = () => {
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
-  /** @type {import('#waste-balances/domain/model.js').WasteBalance[]} */
-  const existingWasteBalances = [
-    {
-      id: 'seeded-ledger-balance',
-      accreditationId: LEDGER_ACCREDITATION_ID,
-      registrationId,
-      organisationId,
-      schemaVersion: 1,
-      version: 0,
-      amount: 0,
-      availableAmount: 0
-    }
-  ]
   return setupWasteBalanceIntegrationEnvironment({
     processingType: 'exporter',
     organisationId,
-    registrationId,
-    // @ts-expect-error -- existingWasteBalances defaults to never[]; WasteBalance[] is correct at runtime
-    existingWasteBalances
+    registrationId
   })
 }
 

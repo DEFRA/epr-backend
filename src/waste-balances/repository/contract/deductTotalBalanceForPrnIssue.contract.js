@@ -1,6 +1,4 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { buildWasteBalance } from './test-data.js'
-import { buildStreamEvent } from '../stream-test-data.js'
 import { STREAM_EVENT_KIND } from '../stream-schema.js'
 
 /**
@@ -21,26 +19,16 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
     )
 
     it('deducts tonnage from total balance only, resolved from the stream', async ({
-      insertWasteBalance,
-      streamRepository
+      seedBalance
     }) => {
       // Available was already deducted when the PRN was created; issuing
       // deducts from the total amount.
-      const wasteBalance = buildWasteBalance({
+      await seedBalance({
         accreditationId: 'acc-issue-1',
         registrationId: 'reg-1',
-        organisationId: 'org-1'
+        organisationId: 'org-1',
+        closingBalance: { amount: 500, availableAmount: 450 }
       })
-
-      await insertWasteBalance(wasteBalance)
-      await streamRepository.appendEvent(
-        buildStreamEvent({
-          accreditationId: 'acc-issue-1',
-          registrationId: 'reg-1',
-          number: 1,
-          closingBalance: { amount: 500, availableAmount: 450 }
-        })
-      )
 
       await repository.deductTotalBalanceForPrnIssue({
         accreditationId: 'acc-issue-1',
@@ -51,23 +39,25 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         createdBy: { id: 'user-abc' }
       })
 
-      const result = await repository.findByAccreditationId('acc-issue-1')
+      const result = await repository.findBalance({
+        registrationId: 'reg-1',
+        accreditationId: 'acc-issue-1'
+      })
 
       expect(result.amount).toBe(450) // Total deducted
       expect(result.availableAmount).toBe(450) // Available unchanged
     })
 
     it('appends a PRN_ISSUED event carrying the prn and tonnage', async ({
-      insertWasteBalance,
+      seedBalance,
       streamRepository
     }) => {
-      const wasteBalance = buildWasteBalance({
+      await seedBalance({
         accreditationId: 'acc-issue-2',
         registrationId: 'reg-1',
-        organisationId: 'org-1'
+        organisationId: 'org-1',
+        closingBalance: { amount: 100, availableAmount: 100 }
       })
-
-      await insertWasteBalance(wasteBalance)
 
       const appended = await repository.deductTotalBalanceForPrnIssue({
         accreditationId: 'acc-issue-2',
@@ -100,21 +90,23 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
 
       expect(appended).toBeNull()
 
-      const result = await repository.findByAccreditationId('acc-nonexistent')
+      const result = await repository.findBalance({
+        registrationId: 'reg-1',
+        accreditationId: 'acc-nonexistent'
+      })
       expect(result).toBeNull()
     })
 
-    it('returns the appended stream event', async ({
-      insertWasteBalance,
+    it('appends the PRN event after the balance-establishing event', async ({
+      seedBalance,
       streamRepository
     }) => {
-      const wasteBalance = buildWasteBalance({
+      await seedBalance({
         accreditationId: 'acc-issue-ledger',
         registrationId: 'reg-1',
-        organisationId: 'org-1'
+        organisationId: 'org-1',
+        closingBalance: { amount: 100, availableAmount: 100 }
       })
-
-      await insertWasteBalance(wasteBalance)
 
       const appended = await repository.deductTotalBalanceForPrnIssue({
         accreditationId: 'acc-issue-ledger',
@@ -130,7 +122,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         'acc-issue-ledger'
       )
       expect(appended.number).toBe(latest.number)
-      expect(appended.number).toBe(1)
+      expect(appended.number).toBe(2)
     })
   })
 }

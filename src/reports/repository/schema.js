@@ -214,3 +214,10 @@ export const findPeriodicReportsSchema = Joi.object({
 export const findReportByIdSchema = Joi.string()
   .guid({ version: 'uuidv4' })
   .required()
+
+export const markActiveReportsStaleSchema = Joi.object({
+  organisationId: MONGO_ID_SCHEMA,
+  registrationId: MONGO_ID_SCHEMA,
+  summaryLogId: Joi.string().required(),
+  uploadedAt: Joi.string().isoDate().required()
+})

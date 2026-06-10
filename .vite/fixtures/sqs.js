@@ -20,8 +20,27 @@ const DLQ_NAME_PREFIX = 'epr_backend_commands_dlq'
 
 let testCounter = 0
 
+/**
+ * @typedef {object} Floci
+ * @property {import('testcontainers').StartedTestContainer} container
+ * @property {string} endpoint
+ * @property {string} region
+ * @property {{ accessKeyId: string, secretAccessKey: string }} credentials
+ */
+
+/**
+ * The SQS client a test receives, carrying the unique queue names provisioned
+ * for that test so handlers can address them by name.
+ *
+ * @typedef {SQSClient & { queueName: string, dlqName: string }} TestSqsClient
+ */
+
 const flociFixture = {
   floci: [
+    /**
+     * @param {Record<string, never>} _deps
+     * @param {(value: Floci) => Promise<void>} use
+     */
     // eslint-disable-next-line no-empty-pattern -- vitest fixtures require object destructuring
     async ({}, use) => {
       const container = await new GenericContainer(FLOCI_IMAGE)
@@ -51,6 +70,10 @@ const flociFixture = {
 }
 
 const sqsClientFixture = {
+  /**
+   * @param {{ floci: Floci }} deps
+   * @param {(value: TestSqsClient) => Promise<void>} use
+   */
   sqsClient: async ({ floci }, use) => {
     const client = new SQSClient({
       region: floci.region,
@@ -107,6 +130,8 @@ const sqsClientFixture = {
  * - sqsClient: fresh client with unique queues per test (test scope)
  *
  * Access queue names via sqsClient.queueName and sqsClient.dlqName
+ *
+ * @type {import('vitest').TestAPI<{ floci: Floci, sqsClient: TestSqsClient }>}
  */
 export const it = baseTest.extend({
   ...flociFixture,

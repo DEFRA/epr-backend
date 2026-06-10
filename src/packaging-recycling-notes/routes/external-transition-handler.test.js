@@ -12,8 +12,9 @@ import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { config } from '#root/config.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
   setupAuthContext,
@@ -96,17 +97,6 @@ const buildEvent = (kind, number) => ({
   createdBy: { id: 'signatory', name: 'Signatory' }
 })
 
-const buildBalance = () => ({
-  id: 'wb-1',
-  accreditationId: ACC_ID,
-  registrationId: REG_ID,
-  organisationId: ORG_ID,
-  amount: 100,
-  availableAmount: 100,
-  version: 0,
-  schemaVersion: 1
-})
-
 let server
 let streamRepository
 
@@ -134,10 +124,9 @@ const startServer = async ({ currentStatus, events }) => {
         createInMemoryPackagingRecyclingNotesRepository([
           buildPrn(currentStatus)
         ]),
-      wasteBalancesRepository: createInMemoryWasteBalancesRepository(
-        [buildBalance()],
-        { streamRepository }
-      ),
+      wasteBalancesRepository: createWasteBalancesRepository({
+        streamRepository
+      }),
       organisationsRepository: () => ({})
     },
     featureFlags: createInMemoryFeatureFlags()
@@ -174,7 +163,14 @@ describe('external PRN transition read-side fold', () => {
   it('attributes a live RPD accept to the RPD service with no email', async () => {
     await startServer({
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      events: []
+      events: [
+        buildStreamEvent({
+          registrationId: REG_ID,
+          accreditationId: ACC_ID,
+          organisationId: ORG_ID,
+          number: 1
+        })
+      ]
     })
 
     const response = await server.inject({

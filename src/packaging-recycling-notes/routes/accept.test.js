@@ -1,29 +1,25 @@
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi
-} from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { config } from '#root/config.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
   setupAuthContext,
   cognitoJwksUrl
 } from '#vite/helpers/setup-auth-mocking.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import {
-  createMockIssuedPrn,
-  generateExternalApiToken
-} from './test-helpers.js'
+import { generateExternalApiToken } from './test-helpers.js'
+
+/** @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
 const mockCdpAuditing = vi.fn()
 
@@ -33,7 +29,11 @@ vi.mock('@defra/cdp-auditing', () => ({
 
 const prnId = '507f1f77bcf86cd799439011'
 const prnNumber = 'ER2600001'
+const registrationId = 'reg-456'
+const accreditationId = 'acc-789'
+const organisationId = 'org-123'
 const externalApiClientId = randomUUID()
+const rpd = { id: externalApiClientId, name: 'RPD' }
 
 const acceptUrl = `/v1/packaging-recycling-notes/${prnNumber}/accept`
 const authHeaders = {
@@ -41,352 +41,235 @@ const authHeaders = {
 }
 
 /**
- * The PRN_ACCEPTED stream event the ledger-path accept appends. The read-side
- * fold projects this onto the PRN doc.
+ * Seeds the partition's waste balance with a single opening summary-log event.
+ * It carries no `prnId`, so the read-side fold leaves the seeded PRN untouched
+ * while `findBalance` still resolves a balance for the status-only append.
  */
-const buildAcceptedEvent = () => ({
-  id: 'event-4',
-  registrationId: 'reg-456',
-  accreditationId: 'acc-789',
-  organisationId: 'org-123',
-  number: 4,
-  kind: STREAM_EVENT_KIND.PRN_ACCEPTED,
-  payload: { prnId, amount: 100 },
-  openingBalance: { amount: 100, availableAmount: 100 },
-  closingBalance: { amount: 100, availableAmount: 100 },
-  createdAt: new Date('2026-02-03T10:00:00.000Z'),
-  createdBy: { id: externalApiClientId, name: 'RPD' }
+const openingBalanceEvent = () =>
+  buildStreamEvent({
+    registrationId,
+    accreditationId,
+    organisationId,
+    number: 1
+  })
+
+let server
+let streamRepository
+let packagingRecyclingNotesRepository
+
+/**
+ * Wires a server with real in-memory adapters: a PRN store seeded with the
+ * supplied PRN, an event stream seeded with an opening balance, and the
+ * waste-balance store reading that stream. Captures the stream and PRN
+ * repositories so tests can read state back after a transition.
+ *
+ * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null} prn
+ */
+const startServer = async (prn) => {
+  streamRepository = createInMemoryStreamRepository([openingBalanceEvent()])()
+  const prnRepositoryFactory = createInMemoryPackagingRecyclingNotesRepository(
+    prn ? [prn] : []
+  )
+  packagingRecyclingNotesRepository = prnRepositoryFactory(createMockLogger())
+  server = await createTestServer({
+    config: {
+      packagingRecyclingNotesExternalApi: {
+        clientId: externalApiClientId,
+        jwksUrl: cognitoJwksUrl
+      }
+    },
+    repositories: {
+      packagingRecyclingNotesRepository: prnRepositoryFactory,
+      wasteBalancesRepository: createWasteBalancesRepository({
+        streamRepository
+      }),
+      organisationsRepository: () => ({})
+    },
+    featureFlags: createInMemoryFeatureFlags()
+  })
+  return server
+}
+
+/**
+ * Builds an issued PRN seeded at the given status.
+ *
+ * @param {PrnStatus} [currentStatus]
+ * @returns {PackagingRecyclingNote}
+ */
+const buildPrn = (currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE) => ({
+  id: prnId,
+  schemaVersion: 2,
+  version: 1,
+  prnNumber,
+  organisation: { id: organisationId, name: 'Test Organisation' },
+  registrationId,
+  accreditation: {
+    id: accreditationId,
+    accreditationNumber: 'ACC-2026-001',
+    accreditationYear: 2026,
+    material: MATERIAL.PLASTIC,
+    submittedToRegulator: REGULATOR.EA
+  },
+  issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
+  tonnage: 100,
+  isExport: false,
+  isDecemberWaste: false,
+  createdAt: new Date('2026-01-10T10:00:00Z'),
+  createdBy: { id: 'user-123', name: 'Test User' },
+  updatedAt: new Date('2026-01-15T10:00:00Z'),
+  updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+  status: {
+    currentStatus,
+    currentStatusAt: new Date('2026-01-15T10:00:00Z'),
+    history: []
+  }
 })
 
 describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
   setupAuthContext()
 
-  describe('when feature flag is enabled', () => {
-    let server
-    let packagingRecyclingNotesRepository
-    let wasteBalancesRepository
+  afterEach(async () => {
+    await server.stop()
+    config.reset('packagingRecyclingNotesExternalApi.clientId')
+    vi.clearAllMocks()
+  })
 
-    beforeAll(async () => {
-      packagingRecyclingNotesRepository = {
-        findById: vi.fn(),
-        findByPrnNumber: vi.fn(),
-        create: vi.fn(),
-        findByAccreditation: vi.fn(),
-        updateStatus: vi.fn(),
-        persistProjection: vi.fn()
-      }
+  it('persists ACCEPTED, appends a balance-neutral PRN_ACCEPTED event attributed to RPD, and audits', async () => {
+    await startServer(buildPrn())
 
-      wasteBalancesRepository = {
-        findByAccreditationId: vi.fn(),
-        findByAccreditationIds: vi.fn(),
-        getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
-        appendStreamEvent: vi.fn(),
-        deductAvailableBalanceForPrnCreation: vi.fn(),
-        deductTotalBalanceForPrnIssue: vi.fn(),
-        creditAvailableBalanceForPrnCancellation: vi.fn()
-      }
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      headers: authHeaders
+    })
 
-      server = await createTestServer({
-        config: {
-          packagingRecyclingNotesExternalApi: {
-            clientId: externalApiClientId,
-            jwksUrl: cognitoJwksUrl
+    expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+    expect(response.payload).toBe('')
+
+    const stored = await packagingRecyclingNotesRepository.findById(prnId)
+    expect(stored?.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
+    expect(stored?.updatedBy).toEqual(rpd)
+    expect(stored?.status.accepted?.by).toEqual(rpd)
+
+    const latestEvent = await streamRepository.findLatestByPartition(
+      registrationId,
+      accreditationId
+    )
+    expect(latestEvent.kind).toBe(STREAM_EVENT_KIND.PRN_ACCEPTED)
+    expect(latestEvent.createdBy).toEqual(rpd)
+    // Acceptance is balance-neutral: the closing balance matches the opening one.
+    expect(latestEvent.closingBalance).toEqual(latestEvent.openingBalance)
+
+    expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+    expect(mockCdpAuditing.mock.calls[0][0].user).toStrictEqual(
+      expect.objectContaining(rpd)
+    )
+  })
+
+  it('honours a caller-provided acceptedAt timestamp in the payload', async () => {
+    await startServer(buildPrn())
+
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      headers: authHeaders,
+      payload: { acceptedAt: '2026-02-01T10:30:00Z' }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+    const stored = await packagingRecyclingNotesRepository.findById(prnId)
+    expect(stored?.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
+  })
+
+  it.each([
+    PRN_STATUS.ACCEPTED,
+    PRN_STATUS.AWAITING_CANCELLATION,
+    PRN_STATUS.CANCELLED
+  ])('returns 409 when the PRN is already %s', async (currentStatus) => {
+    await startServer(buildPrn(currentStatus))
+
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      headers: authHeaders
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    const payload = JSON.parse(response.payload)
+    expect(payload.code).toBe('CONFLICT')
+    expect(payload.message).toEqual(expect.any(String))
+    expect(Object.keys(payload)).toEqual(['code', 'message'])
+  })
+
+  it('returns 404 with spec error format when the PRN does not exist', async () => {
+    await startServer(null)
+
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      headers: authHeaders
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(JSON.parse(response.payload)).toEqual({
+      code: 'NOT_FOUND',
+      message: `Packaging recycling note not found: ${prnNumber}`
+    })
+  })
+
+  it('returns 400 with spec error format for an invalid acceptedAt format', async () => {
+    await startServer(buildPrn())
+
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      headers: authHeaders,
+      payload: { acceptedAt: 'not-a-date' }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+    const payload = JSON.parse(response.payload)
+    expect(payload.code).toBe('BAD_REQUEST')
+    expect(payload.message).toEqual(expect.any(String))
+    expect(Object.keys(payload)).toEqual(['code', 'message'])
+  })
+
+  it('returns 500 with spec error format when the repository throws unexpectedly', async () => {
+    // No in-memory adapter can simulate an infrastructure failure, so an
+    // unexpected throw is injected directly to drive the handler's 500 mapping.
+    streamRepository = createInMemoryStreamRepository([openingBalanceEvent()])()
+    server = await createTestServer({
+      config: {
+        packagingRecyclingNotesExternalApi: {
+          clientId: externalApiClientId,
+          jwksUrl: cognitoJwksUrl
+        }
+      },
+      repositories: {
+        packagingRecyclingNotesRepository: () => ({
+          findByPrnNumber: async () => {
+            throw new Error('Database connection lost')
           }
-        },
-        repositories: {
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository,
-          wasteBalancesRepository: () => wasteBalancesRepository,
-          organisationsRepository: () => ({})
-        },
-        featureFlags: createInMemoryFeatureFlags()
-      })
+        }),
+        wasteBalancesRepository: createWasteBalancesRepository({
+          streamRepository
+        }),
+        organisationsRepository: () => ({})
+      },
+      featureFlags: createInMemoryFeatureFlags()
     })
 
-    afterEach(() => {
-      vi.resetAllMocks()
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      headers: authHeaders
     })
 
-    beforeEach(() => {
-      // resetAllMocks wipes implementations between tests; the read-side fold
-      // needs a stream-tail response on every transition.
-      wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValue([])
+    expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    expect(JSON.parse(response.payload)).toEqual({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'An internal server error occurred'
     })
-
-    afterAll(async () => {
-      await server.stop()
-      config.reset('packagingRecyclingNotesExternalApi.clientId')
-    })
-
-    describe('successful acceptance', () => {
-      it('returns 204 when PRN is awaiting acceptance', async () => {
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          mockPrn
-        )
-        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
-          buildAcceptedEvent()
-        )
-        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
-          async ({ projection }) => projection
-        )
-
-        const response = await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
-        expect(response.payload).toBe('')
-      })
-
-      it('accepts a caller-provided acceptedAt timestamp in the payload', async () => {
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          mockPrn
-        )
-        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
-          buildAcceptedEvent()
-        )
-        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
-          async ({ projection }) => projection
-        )
-
-        const response = await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders,
-          payload: { acceptedAt: '2026-02-01T10:30:00Z' }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
-      })
-
-      it('appends a PRN_ACCEPTED stream event and persists the accepted projection attributed to RPD', async () => {
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          mockPrn
-        )
-        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
-          buildAcceptedEvent()
-        )
-        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
-          async ({ projection }) => projection
-        )
-
-        await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders
-        })
-
-        expect(wasteBalancesRepository.appendStreamEvent).toHaveBeenCalledWith(
-          expect.objectContaining({
-            prnId,
-            streamKind: STREAM_EVENT_KIND.PRN_ACCEPTED,
-            createdBy: expect.objectContaining({
-              id: externalApiClientId,
-              name: 'RPD'
-            })
-          })
-        )
-        expect(
-          packagingRecyclingNotesRepository.persistProjection
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            projection: expect.objectContaining({
-              id: prnId,
-              status: expect.objectContaining({
-                currentStatus: PRN_STATUS.ACCEPTED
-              })
-            })
-          })
-        )
-
-        // CDP audit event
-        expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
-        const auditPayload = mockCdpAuditing.mock.calls[0][0]
-        expect(auditPayload.user).toStrictEqual(
-          expect.objectContaining({
-            id: externalApiClientId,
-            name: 'RPD'
-          })
-        )
-      })
-
-      it('does not affect the waste balance', async () => {
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          mockPrn
-        )
-        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
-          buildAcceptedEvent()
-        )
-        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
-          async ({ projection }) => projection
-        )
-
-        const response = await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
-        expect(
-          wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-        ).not.toHaveBeenCalled()
-        expect(
-          wasteBalancesRepository.deductTotalBalanceForPrnIssue
-        ).not.toHaveBeenCalled()
-        expect(
-          wasteBalancesRepository.creditAvailableBalanceForPrnCancellation
-        ).not.toHaveBeenCalled()
-      })
-    })
-
-    describe('error handling', () => {
-      it('returns 404 with spec error format when PRN not found', async () => {
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          null
-        )
-
-        const response = await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-        expect(JSON.parse(response.payload)).toEqual({
-          code: 'NOT_FOUND',
-          message: `Packaging recycling note not found: ${prnNumber}`
-        })
-      })
-
-      it('returns 409 with spec error format when PRN is already accepted', async () => {
-        const acceptedPrn = createMockIssuedPrn({
-          status: {
-            currentStatus: PRN_STATUS.ACCEPTED,
-            history: [
-              {
-                status: PRN_STATUS.ACCEPTED,
-                at: new Date(),
-                by: { id: 'rpd', name: 'RPD' }
-              }
-            ]
-          }
-        })
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          acceptedPrn
-        )
-
-        const response = await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        const payload = JSON.parse(response.payload)
-        expect(payload.code).toBe('CONFLICT')
-        expect(payload.message).toEqual(expect.any(String))
-        expect(Object.keys(payload)).toEqual(['code', 'message'])
-      })
-
-      it('returns 409 when PRN is awaiting cancellation', async () => {
-        const rejectedPrn = createMockIssuedPrn({
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-            history: [
-              {
-                status: PRN_STATUS.AWAITING_CANCELLATION,
-                at: new Date(),
-                by: { id: 'rpd', name: 'RPD' }
-              }
-            ]
-          }
-        })
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          rejectedPrn
-        )
-
-        const response = await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        const payload = JSON.parse(response.payload)
-        expect(payload.code).toBe('CONFLICT')
-        expect(payload.message).toEqual(expect.any(String))
-        expect(Object.keys(payload)).toEqual(['code', 'message'])
-      })
-
-      it('returns 409 when PRN is cancelled', async () => {
-        const cancelledPrn = createMockIssuedPrn({
-          status: {
-            currentStatus: PRN_STATUS.CANCELLED,
-            history: [
-              {
-                status: PRN_STATUS.CANCELLED,
-                at: new Date(),
-                by: { id: 'rpd', name: 'RPD' }
-              }
-            ]
-          }
-        })
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          cancelledPrn
-        )
-
-        const response = await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        const payload = JSON.parse(response.payload)
-        expect(payload.code).toBe('CONFLICT')
-        expect(payload.message).toEqual(expect.any(String))
-        expect(Object.keys(payload)).toEqual(['code', 'message'])
-      })
-
-      it('returns 400 with spec error format for invalid acceptedAt format', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders,
-          payload: { acceptedAt: 'not-a-date' }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        const payload = JSON.parse(response.payload)
-        expect(payload.code).toBe('BAD_REQUEST')
-        expect(payload.message).toEqual(expect.any(String))
-        expect(Object.keys(payload)).toEqual(['code', 'message'])
-      })
-
-      it('returns 500 with spec error format when repository throws unexpected error', async () => {
-        packagingRecyclingNotesRepository.findByPrnNumber.mockRejectedValueOnce(
-          new Error('Database connection lost')
-        )
-
-        const response = await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-        expect(JSON.parse(response.payload)).toEqual({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'An internal server error occurred'
-        })
-      })
-    })
+    expect(server.loggerMocks.error).toHaveBeenCalled()
   })
 })
