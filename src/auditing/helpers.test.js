@@ -110,16 +110,17 @@ describe('safeAudit', () => {
 
 describe('extractUserDetails', () => {
   it('records the role alongside id, email and scope for a human actor', () => {
-    const request = {
-      auth: {
-        credentials: {
-          id: 'contact-123',
-          email: 'maintainer@example.com',
-          scope: ['admin.read', 'admin.dlq.purge'],
-          role: 'service_maintainer'
+    const request =
+      /** @type {import('#common/hapi-types.js').HapiRequest} */ ({
+        auth: {
+          credentials: {
+            id: 'contact-123',
+            email: 'maintainer@example.com',
+            scope: ['admin.read', 'admin.dlq.purge'],
+            role: 'service_maintainer'
+          }
         }
-      }
-    }
+      })
 
     expect(extractUserDetails(request)).toEqual({
       id: 'contact-123',
@@ -130,16 +131,17 @@ describe('extractUserDetails', () => {
   })
 
   it('records a null role for a human actor with no resolved role', () => {
-    const request = {
-      auth: {
-        credentials: {
-          id: 'contact-456',
-          email: 'operator@example.com',
-          scope: ['inquirer'],
-          role: null
+    const request =
+      /** @type {import('#common/hapi-types.js').HapiRequest} */ ({
+        auth: {
+          credentials: {
+            id: 'contact-456',
+            email: 'operator@example.com',
+            scope: ['inquirer'],
+            role: null
+          }
         }
-      }
-    }
+      })
 
     expect(extractUserDetails(request)).toEqual({
       id: 'contact-456',
@@ -150,15 +152,16 @@ describe('extractUserDetails', () => {
   })
 
   it('does not record a role for a machine actor', () => {
-    const request = {
-      auth: {
-        credentials: {
-          id: 'machine-1',
-          isMachine: true,
-          name: 'batch-job'
+    const request =
+      /** @type {import('#common/hapi-types.js').HapiRequest} */ ({
+        auth: {
+          credentials: {
+            id: 'machine-1',
+            isMachine: true,
+            name: 'batch-job'
+          }
         }
-      }
-    }
+      })
 
     expect(extractUserDetails(request)).toEqual({
       id: 'machine-1',
