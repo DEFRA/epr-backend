@@ -1,7 +1,9 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { MONTHS_PER_PERIOD } from '#reports/domain/cadence.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  buildSubmittedPeriods,
+  isDateInSubmittedPeriod
+} from '#reports/domain/submitted-periods.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /** Internal reporting-period status. Not serialised: mapped to output keys via PERIOD_TO_KEY. */
@@ -72,91 +74,21 @@ const emptyResult = () => ({
   closedPeriodLoads: emptyChange()
 })
 
-/** Position of the year portion end in an ISO date string (YYYY-MM-DD) */
-const YEAR_END = 4
-/** Start and end of the month portion in an ISO date string */
-const MONTH_START = 5
-const MONTH_END = 7
-
 /**
- * @param {string | Date} dateValue
- * @returns {string}
- */
-const toIsoDate = (dateValue) =>
-  dateValue instanceof Date
-    ? dateValue.toISOString().slice(0, 10)
-    : String(dateValue)
-
-/**
- * @param {string | Date} dateValue
- * @returns {number}
- */
-const extractMonth = (dateValue) => {
-  const str = toIsoDate(dateValue)
-  return Number(str.slice(MONTH_START, MONTH_END))
-}
-
-/**
- * @param {string | Date} dateValue
- * @returns {number}
- */
-const extractYear = (dateValue) =>
-  Number(toIsoDate(dateValue).slice(0, YEAR_END))
-
-/**
- * Maps a month to its reporting period number.
- * @param {number} month - 1-12
- * @param {string} cadence - 'monthly' or 'quarterly'
- * @returns {number}
- */
-const monthToPeriod = (month, cadence) => {
-  const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
-  return Math.ceil(month / monthsPerPeriod)
-}
-
-/**
- * Builds a set of closed period keys from submitted reports.
- * A period is closed when it has been submitted: either the current
- * report has status 'submitted', or there are previous submissions.
- *
- * @param {PeriodicReport[]} periodicReports
- * @param {string} cadence
- * @returns {Set<string>}
- */
-const buildClosedPeriods = (periodicReports, cadence) => {
-  const closed = new Set()
-  for (const periodicReport of periodicReports) {
-    const slots = periodicReport.reports[cadence]
-    if (!slots) {
-      continue
-    }
-    for (const [period, slot] of Object.entries(slots)) {
-      const hasBeenSubmitted =
-        slot.current?.status === REPORT_STATUS.SUBMITTED ||
-        slot.previousSubmissions?.length > 0
-      if (hasBeenSubmitted) {
-        closed.add(`${periodicReport.year}:${period}`)
-      }
-    }
-  }
-  return closed
-}
-
-/**
- * Applies the closed-wins rule: if ANY date field maps to a closed
- * period, the record is classified as closed.
+ * Applies the closed-wins rule: if ANY date field falls in a submitted
+ * (closed) period, the record is classified as closed.
  * Returns null if no date fields have a value.
  *
  * @param {Record<string, string | Date | null | undefined>} data
  * @param {string[]} reportingDateFields
- * @param {Set<string>} closedPeriods
+ * @param {Set<string>} submittedPeriods
  * @param {string} cadence
  * @returns {'open' | 'closed' | null}
  */
 const classifyPeriodStatus = (
   data,
   reportingDateFields,
-  closedPeriods,
+  submittedPeriods,
   cadence
 ) => {
   let hasAnyDate = false
@@ -168,9 +100,7 @@ const classifyPeriodStatus = (
     }
 
     hasAnyDate = true
-    const period = monthToPeriod(extractMonth(dateValue), cadence)
-    const periodKey = `${extractYear(dateValue)}:${period}`
-    if (closedPeriods.has(periodKey)) {
+    if (isDateInSubmittedPeriod(submittedPeriods, dateValue, cadence)) {
       return PERIOD_STATUS.CLOSED
     }
   }
@@ -315,7 +245,7 @@ const reduceEntries = (entries) => {
  * @param {ValidatedWasteRecord} params.wasteRecord
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {TableSchema} params.schema
- * @param {Set<string>} params.closedPeriods
+ * @param {Set<string>} params.submittedPeriods
  * @param {'monthly' | 'quarterly'} params.cadence
  * @param {ClassificationContext} params.context
  * @returns {PeriodStatusEntry[]}
@@ -324,7 +254,7 @@ const classifyAdjustedWasteRecord = ({
   wasteRecord,
   existingRecordsMap,
   schema,
-  closedPeriods,
+  submittedPeriods,
   cadence,
   context
 }) => {
@@ -334,7 +264,7 @@ const classifyAdjustedWasteRecord = ({
   const newPeriod = classifyPeriodStatus(
     record.data,
     reportingDateFields,
-    closedPeriods,
+    submittedPeriods,
     cadence
   )
   const existingKey = `${record.type}:${record.rowId}`
@@ -343,7 +273,7 @@ const classifyAdjustedWasteRecord = ({
     ? classifyPeriodStatus(
         existing.data,
         reportingDateFields,
-        closedPeriods,
+        submittedPeriods,
         cadence
       )
     : null
@@ -390,7 +320,7 @@ export const classifyByPeriodStatus = ({
   tableSchemas,
   classificationContext
 }) => {
-  const closedPeriods = buildClosedPeriods(periodicReports, cadence)
+  const submittedPeriods = buildSubmittedPeriods(periodicReports, cadence)
 
   /** @type {PeriodStatusEntry[]} */
   const entries = []
@@ -408,7 +338,7 @@ export const classifyByPeriodStatus = ({
       const period = classifyPeriodStatus(
         record.data,
         schema.reportingDateFields,
-        closedPeriods,
+        submittedPeriods,
         cadence
       )
       if (period) {
@@ -430,7 +360,7 @@ export const classifyByPeriodStatus = ({
           wasteRecord,
           existingRecordsMap,
           schema,
-          closedPeriods,
+          submittedPeriods,
           cadence,
           context: classificationContext
         })
