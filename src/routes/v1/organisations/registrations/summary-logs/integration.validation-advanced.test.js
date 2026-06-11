@@ -387,7 +387,10 @@ describe('Advanced validation scenarios', () => {
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor,
-        logger: mockLogger
+        logger: mockLogger,
+        reportsRepository: /** @type {any} */ ({
+          findPeriodicReports: async () => []
+        })
       })
       const featureFlags = createInMemoryFeatureFlags()
 
@@ -569,7 +572,10 @@ describe('Advanced validation scenarios', () => {
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor,
-        logger: mockLogger
+        logger: mockLogger,
+        reportsRepository: /** @type {any} */ ({
+          findPeriodicReports: async () => []
+        })
       })
       const featureFlags = createInMemoryFeatureFlags()
 

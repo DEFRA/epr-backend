@@ -249,6 +249,9 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockResolvedValue([])
+      }),
       summaryLogExtractor
     })
   })
@@ -672,6 +675,9 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockResolvedValue([])
+      }),
       summaryLogExtractor
     })
 
@@ -703,6 +709,31 @@ describe('SummaryLogsValidator', () => {
     const result = await validateSummaryLog(summaryLogId).catch((err) => err)
 
     expect(result).toBe(databaseError)
+  })
+
+  it('should throw and not persist when fetching periodic reports fails', async () => {
+    const fetchError = new Error('Database connection lost')
+
+    const validateWithBrokenReports = createSummaryLogsValidator({
+      logger,
+      summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
+      organisationsRepository: /** @type {any} */ (organisationsRepository),
+      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
+      }),
+      summaryLogExtractor
+    })
+
+    const result = await validateWithBrokenReports(summaryLogId).catch(
+      (err) => err
+    )
+
+    // The reports lookup is core flow: a failure must fail validation (the
+    // consumer's onFailure then marks the log validation_failed) rather than
+    // persist a result with every load misclassified as open.
+    expect(result).toBe(fetchError)
+    expect(summaryLogsRepository.update).not.toHaveBeenCalled()
   })
 
   describe('Four-level validation hierarchy short-circuit behavior', () => {

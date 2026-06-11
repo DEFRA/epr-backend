@@ -478,6 +478,9 @@ export const createTestInfrastructure = async (
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
+    reportsRepository: /** @type {any} */ ({
+      findPeriodicReports: async () => []
+    }),
     summaryLogExtractor,
     logger: mockLogger
   })
@@ -534,6 +537,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const systemLogsForBalanceAudit = {
     insert: vi.fn().mockResolvedValue(undefined),
+    insertMany: vi.fn().mockResolvedValue(undefined),
     find: vi.fn(),
     findSummaryLogSubmitActors: vi.fn()
   }
@@ -561,6 +565,9 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
+    reportsRepository: /** @type {any} */ ({
+      findPeriodicReports: async () => []
+    }),
     summaryLogExtractor: dynamicExtractor,
     logger: mockLogger
   })

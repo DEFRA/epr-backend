@@ -6,7 +6,6 @@ import {
   VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/index.js'
-import { isNil } from '#common/helpers/is-nil.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
@@ -18,17 +17,16 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
-  PROCESSING_TYPE_TABLES,
-  findSchemaForProcessingType
+  findSchemaForProcessingType,
+  PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
-  countByValidity,
-  countByWasteBalanceInclusion,
-  countByWasteRecordType,
-  mergeLoads
-} from './load-counts.js'
+  classifyLoads,
+  fetchPeriodicReports,
+  filterWasteBalanceRecords
+} from './classify-and-persist.js'
 import {
   logValidationIssues,
   MAX_VALIDATION_ISSUES
@@ -56,6 +54,9 @@ export const MAX_ACTUAL_LENGTH = 200
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
+/** @import {LoadsByReportingPeriod} from './period-status.js' */
+/** @import {ReportsRepository} from '#reports/repository/port.js' */
+/** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
  * @param {{
@@ -94,6 +95,7 @@ const extractSummaryLog = async ({
  * }} params
  * @returns {Promise<{
  *   wasteRecords: ValidatedWasteRecord[],
+ *   existingRecordsMap: Map<string, WasteRecord>,
  *   issues: ValidationIssuesCollector
  * }>}
  */
@@ -137,7 +139,7 @@ const transformAndValidateData = async ({
   // Data business validation using waste records
   const issues = validateDataBusiness({ wasteRecords, existingWasteRecords })
 
-  return { wasteRecords, issues }
+  return { wasteRecords, existingRecordsMap, issues }
 }
 
 /**
@@ -183,6 +185,8 @@ const fetchRegistration = async ({
  * @property {ValidationIssuesCollector} issues - Validation issues object with methods like getAllIssues(), isFatal()
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
+ * @property {Registration} [registration] - Registration fetched during validation
+ * @property {Map<string, WasteRecord>} [existingRecordsMap] - Existing records map for adjusted record lookup
  */
 
 /**
@@ -304,7 +308,12 @@ const performValidationChecks = async ({
 }) => {
   const issues = createValidationIssues()
   let wasteRecords = null
+  /** @type {ExtractedMeta | undefined} */
   let meta
+  /** @type {Registration | undefined} */
+  let registration
+  /** @type {Map<string, WasteRecord> | undefined} */
+  let existingRecordsMap
 
   try {
     const parsed = await extractSummaryLog({
@@ -322,7 +331,7 @@ const performValidationChecks = async ({
       return { issues, wasteRecords, meta }
     }
 
-    const registration = await fetchRegistration({
+    registration = await fetchRegistration({
       organisationsRepository,
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
@@ -339,7 +348,7 @@ const performValidationChecks = async ({
     )
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta }
+      return { issues, wasteRecords, meta, registration }
     }
 
     // Data syntax validation returns validated data with issues attached to rows
@@ -348,7 +357,7 @@ const performValidationChecks = async ({
     issues.merge(dataSyntaxIssues)
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta }
+      return { issues, wasteRecords, meta, registration }
     }
 
     const dataResult = await transformAndValidateData({
@@ -359,6 +368,7 @@ const performValidationChecks = async ({
     })
 
     wasteRecords = dataResult.wasteRecords
+    existingRecordsMap = dataResult.existingRecordsMap
 
     markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
 
@@ -372,7 +382,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, wasteRecords, meta }
+  return { issues, wasteRecords, meta, registration, existingRecordsMap }
 }
 
 /**
@@ -504,6 +514,7 @@ const recordValidationMetrics = async ({
  * @param {Object} params
  * @param {ValidationIssuesCollector} params.issues
  * @param {Loads | null} params.loads
+ * @param {LoadsByReportingPeriod | null} params.loadsByReportingPeriod
  * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
  * @param {ExtractedMeta | undefined} params.meta
  * @param {SummaryLogStatus} params.status
@@ -515,6 +526,7 @@ const recordValidationMetrics = async ({
 const persistValidationResult = async ({
   issues,
   loads,
+  loadsByReportingPeriod,
   loadsByWasteRecordType,
   meta,
   status,
@@ -533,64 +545,61 @@ const persistValidationResult = async ({
       counts: issues.getCounts()
     },
     ...(loads && { loads }),
+    ...(loadsByReportingPeriod && { loadsByReportingPeriod }),
     ...(loadsByWasteRecordType && { loadsByWasteRecordType }),
     ...(meta && { meta })
   })
 }
 
 /**
- * Filters waste records to only those from tables that participate in waste balance.
- *
- * @param {ValidatedWasteRecord[] | null} wasteRecords
- * @param {string} processingType
- * @returns {ValidatedWasteRecord[]}
+ * Fetches periodic reports, classifies loads, and persists the validation result.
  */
-const filterWasteBalanceRecords = (wasteRecords, processingType) =>
-  wasteRecords?.filter((wr) => {
-    const schema = findSchemaForProcessingType(processingType, wr.record.type)
-    return !isNil(schema?.classifyForWasteBalance)
-  }) ?? []
-
-/**
- * Computes aggregate and per-waste-record-type load counts for validated summary logs.
- *
- * @param {Object} params
- * @param {string} params.status - Summary log status after validation
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {string} params.summaryLogId
- * @param {ProcessingType} params.processingType
- * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null }}
- */
-const classifyLoads = ({
+const classifyAndPersistResult = async ({
+  issues,
   processingType,
   status,
   summaryLogId,
   wasteBalanceRecords,
-  wasteRecords
+  wasteRecords,
+  registration,
+  existingRecordsMap,
+  meta,
+  summaryLog,
+  summaryLogsRepository,
+  version,
+  reportsRepository
 }) => {
-  if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
-    return { loads: null, loadsByWasteRecordType: null }
-  }
-
-  const loads = mergeLoads(
-    countByValidity({ wasteRecords, summaryLogId }),
-    countByWasteBalanceInclusion({
-      wasteRecords: wasteBalanceRecords,
-      summaryLogId
-    })
-  )
-
-  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
-
-  const loadsByWasteRecordType = countByWasteRecordType({
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    tableSchemas
+  const periodicReports = await fetchPeriodicReports({
+    registration,
+    status,
+    summaryLog,
+    reportsRepository
   })
 
-  return { loads, loadsByWasteRecordType }
+  const { loads, loadsByWasteRecordType, loadsByReportingPeriod } =
+    classifyLoads({
+      processingType,
+      status,
+      summaryLogId,
+      wasteBalanceRecords,
+      wasteRecords,
+      periodicReports,
+      registration,
+      existingRecordsMap
+    })
+
+  await persistValidationResult({
+    issues,
+    loads,
+    loadsByReportingPeriod,
+    loadsByWasteRecordType,
+    meta,
+    status,
+    summaryLog,
+    summaryLogId,
+    summaryLogsRepository,
+    version
+  })
 }
 
 /**
@@ -601,6 +610,7 @@ const classifyLoads = ({
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   wasteRecordsRepository: WasteRecordsRepository,
+ *   reportsRepository: ReportsRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
  * @returns {(summaryLogId: string) => Promise<void>}
@@ -610,6 +620,7 @@ export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
   wasteRecordsRepository,
+  reportsRepository,
   summaryLogExtractor
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
@@ -621,10 +632,7 @@ export const createSummaryLogsValidator = ({
       /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
         result
       )
-    const {
-      file: { id: fileId, name: filename }
-    } = summaryLog
-
+    const { id: fileId, name: filename } = summaryLog.file
     const loggingContext = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
 
     logger.info({
@@ -636,26 +644,24 @@ export const createSummaryLogsValidator = ({
     })
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta } = await performValidationChecks({
-      summaryLogId,
-      summaryLog,
-      loggingContext,
-      logger,
-      summaryLogExtractor,
-      organisationsRepository,
-      wasteRecordsRepository,
-      validateDataSyntax
-    })
-    const validationDurationMs = Date.now() - validationStart
+    const { issues, wasteRecords, meta, registration, existingRecordsMap } =
+      await performValidationChecks({
+        summaryLogId,
+        summaryLog,
+        loggingContext,
+        logger,
+        summaryLogExtractor,
+        organisationsRepository,
+        wasteRecordsRepository,
+        validateDataSyntax
+      })
 
     logValidationIssues({ summaryLogId, summaryLog, issues, logger })
 
     const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
-
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
-
     const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
       processingType
@@ -665,28 +671,24 @@ export const createSummaryLogsValidator = ({
       issues,
       processingType,
       status,
-      validationDurationMs,
+      validationDurationMs: Date.now() - validationStart,
       wasteBalanceRecords
     })
 
-    const { loads, loadsByWasteRecordType } = classifyLoads({
+    await classifyAndPersistResult({
+      issues,
       processingType,
       status,
       summaryLogId,
       wasteBalanceRecords,
-      wasteRecords
-    })
-
-    await persistValidationResult({
-      issues,
-      loads,
-      loadsByWasteRecordType,
+      wasteRecords,
+      registration,
+      existingRecordsMap,
       meta,
-      status,
       summaryLog,
-      summaryLogId,
       summaryLogsRepository,
-      version
+      version,
+      reportsRepository
     })
 
     logger.info({
