@@ -191,6 +191,34 @@ describe('summaryLogCommandHandlers', () => {
         expect(error.message).toContain('"user.email" is required')
       })
 
+      it('accepts a user carrying a resolved role', () => {
+        const { error } = handler.payloadSchema.validate({
+          summaryLogId: 'log-123',
+          user: {
+            id: 'user-1',
+            email: 'maintainer@example.com',
+            scope: ['admin.read'],
+            role: 'service_maintainer'
+          }
+        })
+
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts a user with a null role', () => {
+        const { error } = handler.payloadSchema.validate({
+          summaryLogId: 'log-123',
+          user: {
+            id: 'user-1',
+            email: 'operator@example.com',
+            scope: ['operator'],
+            role: null
+          }
+        })
+
+        expect(error).toBeUndefined()
+      })
+
       it('rejects unknown fields', () => {
         const error = validationErrorFrom(
           handler.payloadSchema.validate({
