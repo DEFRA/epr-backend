@@ -15,7 +15,11 @@ import {
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
-import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
+import {
+  PROCESSING_TYPES,
+  SUMMARY_LOG_META_FIELDS
+} from '#domain/summary-logs/meta-fields.js'
 import {
   findSchemaForProcessingType,
   PROCESSING_TYPE_TABLES
@@ -49,6 +53,7 @@ export const MAX_ACTUAL_LENGTH = 200
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
@@ -552,6 +557,36 @@ const persistValidationResult = async ({
 }
 
 /**
+ * Resolves the overseas-sites context for ORS validation (VAL014). Only
+ * exporters carry overseas sites, so other processing types skip the lookup
+ * and disable the check, mirroring the submit-time path in
+ * sync-from-summary-log.js. Without this, loads requiring ORS approval would
+ * be misclassified in the predicted waste-balance delta shown on the check
+ * page.
+ *
+ * @param {Object} params
+ * @param {ProcessingType} params.processingType
+ * @param {SubmittedSummaryLog} params.summaryLog
+ * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @returns {Promise<import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext>}
+ */
+const resolveOverseasSitesContext = async ({
+  processingType,
+  summaryLog,
+  organisationsRepository,
+  overseasSitesRepository
+}) =>
+  processingType === PROCESSING_TYPES.EXPORTER
+    ? resolveOverseasSites(
+        organisationsRepository,
+        overseasSitesRepository,
+        summaryLog.organisationId,
+        summaryLog.registrationId
+      )
+    : ORS_VALIDATION_DISABLED
+
+/**
  * Fetches periodic reports, classifies loads, and persists the validation result.
  */
 const classifyAndPersistResult = async ({
@@ -567,13 +602,22 @@ const classifyAndPersistResult = async ({
   summaryLog,
   summaryLogsRepository,
   version,
-  reportsRepository
+  reportsRepository,
+  organisationsRepository,
+  overseasSitesRepository
 }) => {
   const periodicReports = await fetchPeriodicReports({
     registration,
     status,
     summaryLog,
     reportsRepository
+  })
+
+  const overseasSites = await resolveOverseasSitesContext({
+    processingType,
+    summaryLog,
+    organisationsRepository,
+    overseasSitesRepository
   })
 
   const { loads, loadsByWasteRecordType, loadsByReportingPeriod } =
@@ -584,6 +628,7 @@ const classifyAndPersistResult = async ({
       wasteBalanceRecords,
       wasteRecords,
       periodicReports,
+      overseasSites,
       registration,
       existingRecordsMap
     })
@@ -611,6 +656,7 @@ const classifyAndPersistResult = async ({
  *   organisationsRepository: OrganisationsRepository,
  *   wasteRecordsRepository: WasteRecordsRepository,
  *   reportsRepository: ReportsRepository,
+ *   overseasSitesRepository: OverseasSitesRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
  * @returns {(summaryLogId: string) => Promise<void>}
@@ -621,6 +667,7 @@ export const createSummaryLogsValidator = ({
   organisationsRepository,
   wasteRecordsRepository,
   reportsRepository,
+  overseasSitesRepository,
   summaryLogExtractor
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
@@ -688,7 +735,9 @@ export const createSummaryLogsValidator = ({
       summaryLog,
       summaryLogsRepository,
       version,
-      reportsRepository
+      reportsRepository,
+      organisationsRepository,
+      overseasSitesRepository
     })
 
     logger.info({

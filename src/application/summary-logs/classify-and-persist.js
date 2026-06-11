@@ -5,7 +5,6 @@ import {
   PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { classifyByPeriodStatus } from './period-status.js'
 import {
@@ -47,6 +46,7 @@ export const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {string} params.summaryLogId
  * @param {ProcessingType} params.processingType
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {Registration} [params.registration]
  * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
  * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
@@ -58,6 +58,7 @@ export const classifyLoads = ({
   wasteBalanceRecords,
   wasteRecords,
   periodicReports,
+  overseasSites,
   registration,
   existingRecordsMap
 }) => {
@@ -100,7 +101,7 @@ export const classifyLoads = ({
           tableSchemas,
           classificationContext: {
             accreditation: registration.accreditation ?? null,
-            overseasSites: ORS_VALIDATION_DISABLED
+            overseasSites
           }
         })
       : null
