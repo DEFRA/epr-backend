@@ -3,8 +3,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
   VALIDATION_CATEGORY,
-  VALIDATION_CODE,
-  VALIDATION_SEVERITY
+  VALIDATION_CODE
 } from '#common/enums/index.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
@@ -15,11 +14,7 @@ import {
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
-import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
-import {
-  PROCESSING_TYPES,
-  SUMMARY_LOG_META_FIELDS
-} from '#domain/summary-logs/meta-fields.js'
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   findSchemaForProcessingType,
   PROCESSING_TYPE_TABLES
@@ -29,7 +24,8 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import {
   classifyLoads,
   fetchPeriodicReports,
-  filterWasteBalanceRecords
+  filterWasteBalanceRecords,
+  resolveOverseasSitesContext
 } from './classify-and-persist.js'
 import {
   logValidationIssues,
@@ -39,14 +35,16 @@ import { validateDataBusiness } from './validations/data-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
+import {
+  capIssuesForStorage,
+  MAX_ACTUAL_LENGTH
+} from './cap-issues-for-storage.js'
 
-export { MAX_VALIDATION_ISSUES }
-
-export const MAX_ACTUAL_LENGTH = 200
+export { MAX_VALIDATION_ISSUES, MAX_ACTUAL_LENGTH }
 
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+/** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
@@ -557,36 +555,6 @@ const persistValidationResult = async ({
 }
 
 /**
- * Resolves the overseas-sites context for ORS validation (VAL014). Only
- * exporters carry overseas sites, so other processing types skip the lookup
- * and disable the check, mirroring the submit-time path in
- * sync-from-summary-log.js. Without this, loads requiring ORS approval would
- * be misclassified in the predicted waste-balance delta shown on the check
- * page.
- *
- * @param {Object} params
- * @param {ProcessingType} params.processingType
- * @param {SubmittedSummaryLog} params.summaryLog
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {OverseasSitesRepository} params.overseasSitesRepository
- * @returns {Promise<import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext>}
- */
-const resolveOverseasSitesContext = async ({
-  processingType,
-  summaryLog,
-  organisationsRepository,
-  overseasSitesRepository
-}) =>
-  processingType === PROCESSING_TYPES.EXPORTER
-    ? resolveOverseasSites(
-        organisationsRepository,
-        overseasSitesRepository,
-        summaryLog.organisationId,
-        summaryLog.registrationId
-      )
-    : ORS_VALIDATION_DISABLED
-
-/**
  * Fetches periodic reports, classifies loads, and persists the validation result.
  */
 const classifyAndPersistResult = async ({
@@ -748,56 +716,4 @@ export const createSummaryLogsValidator = ({
       }
     })
   }
-}
-
-/** @param {ValidationIssue[]} issues */
-const truncateActualValues = (issues) => {
-  for (const issue of issues) {
-    if (
-      typeof issue.context?.actual === 'string' &&
-      issue.context.actual.length > MAX_ACTUAL_LENGTH
-    ) {
-      issue.context.actual =
-        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
-    }
-  }
-}
-
-/**
- * Caps the issues array and truncates long actual values for MongoDB storage.
- *
- * Both the issue count and per-issue actual values are bounded to prevent
- * the summary log document exceeding MongoDB's 16 MiB BSON limit.
- * @see https://eaflood.atlassian.net/browse/PAE-1244
- *
- * Fatal issues are always preserved — they determine the summary log status
- * and are required by the frontend to render specific error messages.
- * Non-fatal issues fill the remaining capacity.
- *
- * @param {ValidationIssue[]} allIssues - All validation issues
- * @returns {ValidationIssue[]} The capped, actual-value-truncated issues
- */
-const capIssuesForStorage = (allIssues) => {
-  let cappedIssues
-
-  if (allIssues.length <= MAX_VALIDATION_ISSUES) {
-    cappedIssues = allIssues
-  } else {
-    const fatal = allIssues.filter(
-      (issue) => issue.severity === VALIDATION_SEVERITY.FATAL
-    )
-    const nonFatal = allIssues.filter(
-      (issue) => issue.severity !== VALIDATION_SEVERITY.FATAL
-    )
-    const cappedFatal = fatal.slice(0, MAX_VALIDATION_ISSUES)
-    const nonFatalSlots = Math.max(
-      0,
-      MAX_VALIDATION_ISSUES - cappedFatal.length
-    )
-    cappedIssues = [...cappedFatal, ...nonFatal.slice(0, nonFatalSlots)]
-  }
-
-  truncateActualValues(cappedIssues)
-
-  return cappedIssues
 }

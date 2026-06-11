@@ -5,6 +5,9 @@ import {
   PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { classifyByPeriodStatus } from './period-status.js'
 import {
@@ -17,6 +20,8 @@ import {
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @typedef {import('./load-counts.js').Loads} Loads */
 /** @typedef {import('./period-status.js').LoadsByReportingPeriod} LoadsByReportingPeriod */
@@ -139,3 +144,33 @@ export const fetchPeriodicReports = async ({
   }
   return []
 }
+
+/**
+ * Resolves the overseas-sites context for ORS validation (VAL014). Only
+ * exporters carry overseas sites, so other processing types skip the lookup
+ * and disable the check, mirroring the submit-time path in
+ * sync-from-summary-log.js. Without this, loads requiring ORS approval would
+ * be misclassified in the predicted waste-balance delta shown on the check
+ * page.
+ *
+ * @param {Object} params
+ * @param {ProcessingType} params.processingType
+ * @param {SubmittedSummaryLog} params.summaryLog
+ * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @returns {Promise<import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext>}
+ */
+export const resolveOverseasSitesContext = async ({
+  processingType,
+  summaryLog,
+  organisationsRepository,
+  overseasSitesRepository
+}) =>
+  processingType === PROCESSING_TYPES.EXPORTER
+    ? resolveOverseasSites(
+        organisationsRepository,
+        overseasSitesRepository,
+        summaryLog.organisationId,
+        summaryLog.registrationId
+      )
+    : ORS_VALIDATION_DISABLED
