@@ -17,6 +17,7 @@
  *   id: string,
  *   email: string,
  *   scope: string[],
+ *   role: string | null,
  *   issuer: string,
  *   name?: string,
  *   currentRelationshipId?: string,

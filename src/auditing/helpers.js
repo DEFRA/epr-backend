@@ -18,7 +18,8 @@ function extractUserDetails(request) {
     : {
         id: request.auth?.credentials?.id,
         email: request.auth?.credentials?.email,
-        scope: request.auth?.credentials?.scope
+        scope: request.auth?.credentials?.scope,
+        role: request.auth?.credentials?.role
       }
 }
 
