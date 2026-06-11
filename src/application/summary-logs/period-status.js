@@ -52,7 +52,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
  * @typedef {Object} PeriodStatusEntry
  * @property {'open' | 'closed'} period
  * @property {'added' | 'adjusted'} change
- * @property {number} count - 1 for the record's home leg, 0 for reversal-only legs
+ * @property {number} count - 1 per leg, so a record counts once per period it touches
  * @property {number} tonnageDelta - rounded to 2dp; non-zero means balanceAffecting
  */
 
@@ -183,14 +183,13 @@ const classifyAdjustedRecord = ({
     legs.set(newPeriod, (legs.get(newPeriod) ?? 0) + newAmount)
   }
 
-  // The record's count lives on its "home" leg (new period, or old if new is
-  // null). The caller guards with (newPeriod || oldPeriod), so it is defined.
-  const homePeriod = newPeriod ?? oldPeriod
-
+  // Every period a record touches counts once. A cross-period amendment thus
+  // reads count:1 in both periods with signed deltas (outflow from the old,
+  // inflow into the new), so the period it left does not look empty.
   return [...legs].map(([period, tonnageDelta]) => ({
     period,
     change: 'adjusted',
-    count: period === homePeriod ? 1 : 0,
+    count: 1,
     tonnageDelta: roundToTwoDecimalPlaces(tonnageDelta)
   }))
 }
