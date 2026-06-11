@@ -10,6 +10,7 @@ import {
 } from '#domain/summary-logs/table-schemas/index.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { classifyByPeriodStatus } from './period-status.js'
 import {
   countByValidity,
@@ -98,8 +99,8 @@ export const classifyLoads = ({
           existingRecordsMap,
           periodicReports,
           cadence: isRegistrationAccredited(registration)
-            ? 'monthly'
-            : 'quarterly',
+            ? CADENCE.monthly
+            : CADENCE.quarterly,
           summaryLogId,
           tableSchemas,
           classificationContext: {

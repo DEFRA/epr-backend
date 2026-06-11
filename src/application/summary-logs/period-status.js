@@ -4,6 +4,9 @@ import { MONTHS_PER_PERIOD } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
+/** Internal reporting-period status. Not serialised: mapped to output keys via PERIOD_TO_KEY. */
+const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
+
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
@@ -168,11 +171,11 @@ const classifyPeriodStatus = (
     const period = monthToPeriod(extractMonth(dateValue), cadence)
     const periodKey = `${extractYear(dateValue)}:${period}`
     if (closedPeriods.has(periodKey)) {
-      return 'closed'
+      return PERIOD_STATUS.CLOSED
     }
   }
 
-  return hasAnyDate ? 'open' : null
+  return hasAnyDate ? PERIOD_STATUS.OPEN : null
 }
 
 /**
@@ -266,7 +269,10 @@ const classifyAdjustedRecord = ({
  * Maps a record's internal period status to its output bucket key.
  * @type {Record<'open' | 'closed', 'openPeriodLoads' | 'closedPeriodLoads'>}
  */
-const PERIOD_TO_KEY = { open: 'openPeriodLoads', closed: 'closedPeriodLoads' }
+const PERIOD_TO_KEY = {
+  [PERIOD_STATUS.OPEN]: 'openPeriodLoads',
+  [PERIOD_STATUS.CLOSED]: 'closedPeriodLoads'
+}
 
 /**
  * Folds an array of entries into the LoadsByReportingPeriod structure.
