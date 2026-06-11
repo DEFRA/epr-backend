@@ -17,7 +17,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @param {object} deps.organisationsRepository
  * @param {SystemLogsRepository} deps.systemLogsRepository
  * @param {TypedLogger} deps.logger
- * @param {{ id: string, email: string, scope: string[] }} deps.user
+ * @param {{ id: string, email: string, scope: string[], role?: string | null }} deps.user
  * @returns {Promise<{status: string, sitesCreated: number, mappingsUpdated: number, registrationNumber: string|null, errors: Array}>}
  */
 export const processImportFile = async (
