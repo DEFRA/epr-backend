@@ -375,7 +375,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(systemLogPayload.createdBy).toEqual({
             id: VALID_TOKEN_CONTACT_ID,
             email: USER_PRESENT_IN_ORG1_EMAIL,
-            scope: ['linker']
+            scope: ['linker'],
+            role: null
           })
 
           expect(
@@ -407,7 +408,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(auditPayload.user).toEqual({
             id: VALID_TOKEN_CONTACT_ID,
             email: USER_PRESENT_IN_ORG1_EMAIL,
-            scope: ['linker']
+            scope: ['linker'],
+            role: null
           })
 
           expect(auditPayload.event).toEqual({

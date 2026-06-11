@@ -33,6 +33,7 @@ describe('GET /v1/system-logs/search', () => {
    *   userId?: string,
    *   email?: string,
    *   subCategory?: string,
+   *   role?: string,
    *   id?: number
    * }} [overrides]
    */
@@ -42,6 +43,7 @@ describe('GET /v1/system-logs/search', () => {
     userId = 'user-id',
     email = 'user@email.com',
     subCategory = 'test',
+    role,
     id
   } = {}) => {
     await systemLogsRepository.insert({
@@ -51,7 +53,12 @@ describe('GET /v1/system-logs/search', () => {
         ...(id !== undefined && { id })
       },
       createdAt,
-      createdBy: { id: userId, email, scope: [] }
+      createdBy: {
+        id: userId,
+        email,
+        scope: [],
+        ...(role !== undefined && { role })
+      }
     })
   }
 
@@ -81,6 +88,16 @@ describe('GET /v1/system-logs/search', () => {
       const result = JSON.parse(response.payload)
       expect(result.systemLogs).toHaveLength(1)
       expect(result.systemLogs[0].createdBy.id).toBe('alice')
+    })
+
+    it('returns the user role recorded on the log', async () => {
+      await addSystemLog({ userId: 'alice', role: 'service_maintainer', id: 1 })
+
+      const response = await makeRequest({ userId: 'alice' })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result.systemLogs[0].createdBy.role).toBe('service_maintainer')
     })
 
     it('returns logs filtered by sub-category', async () => {
