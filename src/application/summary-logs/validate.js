@@ -27,20 +27,15 @@ import {
   filterWasteBalanceRecords,
   resolveOverseasSitesContext
 } from './classify-and-persist.js'
-import {
-  logValidationIssues,
-  MAX_VALIDATION_ISSUES
-} from './validate-issue-logging.js'
+import { logValidationIssues } from './validate-issue-logging.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
-import {
-  capIssuesForStorage,
-  MAX_ACTUAL_LENGTH
-} from './cap-issues-for-storage.js'
+import { capIssuesForStorage } from './cap-issues-for-storage.js'
 
-export { MAX_VALIDATION_ISSUES, MAX_ACTUAL_LENGTH }
+export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
+export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
