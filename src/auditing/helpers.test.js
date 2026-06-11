@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { audit } from '@defra/cdp-auditing'
 import { logger } from '#common/helpers/logging/logger.js'
-import { safeAudit, recordSystemLogs } from './helpers.js'
+import { extractUserDetails, safeAudit, recordSystemLogs } from './helpers.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -104,6 +104,65 @@ describe('safeAudit', () => {
 
     expect(audit).toHaveBeenCalledWith({
       event: payload.event
+    })
+  })
+})
+
+describe('extractUserDetails', () => {
+  it('records the role alongside id, email and scope for a human actor', () => {
+    const request = {
+      auth: {
+        credentials: {
+          id: 'contact-123',
+          email: 'maintainer@example.com',
+          scope: ['admin.read', 'admin.dlq.purge'],
+          role: 'service_maintainer'
+        }
+      }
+    }
+
+    expect(extractUserDetails(request)).toEqual({
+      id: 'contact-123',
+      email: 'maintainer@example.com',
+      scope: ['admin.read', 'admin.dlq.purge'],
+      role: 'service_maintainer'
+    })
+  })
+
+  it('records a null role for a human actor with no resolved role', () => {
+    const request = {
+      auth: {
+        credentials: {
+          id: 'contact-456',
+          email: 'operator@example.com',
+          scope: ['inquirer'],
+          role: null
+        }
+      }
+    }
+
+    expect(extractUserDetails(request)).toEqual({
+      id: 'contact-456',
+      email: 'operator@example.com',
+      scope: ['inquirer'],
+      role: null
+    })
+  })
+
+  it('does not record a role for a machine actor', () => {
+    const request = {
+      auth: {
+        credentials: {
+          id: 'machine-1',
+          isMachine: true,
+          name: 'batch-job'
+        }
+      }
+    }
+
+    expect(extractUserDetails(request)).toEqual({
+      id: 'machine-1',
+      name: 'batch-job'
     })
   })
 })
