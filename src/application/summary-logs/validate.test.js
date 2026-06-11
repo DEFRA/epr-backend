@@ -711,7 +711,7 @@ describe('SummaryLogsValidator', () => {
     expect(result).toBe(databaseError)
   })
 
-  it('should log a warning when fetching periodic reports fails', async () => {
+  it('should throw and not persist when fetching periodic reports fails', async () => {
     const fetchError = new Error('Database connection lost')
 
     const validateWithBrokenReports = createSummaryLogsValidator({
@@ -725,19 +725,15 @@ describe('SummaryLogsValidator', () => {
       summaryLogExtractor
     })
 
-    await validateWithBrokenReports(summaryLogId)
-
-    expect(mockLoggerWarn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message:
-          'Failed to fetch periodic reports: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
-        event: expect.objectContaining({
-          category: 'server',
-          action: 'process_failure'
-        }),
-        err: fetchError
-      })
+    const result = await validateWithBrokenReports(summaryLogId).catch(
+      (err) => err
     )
+
+    // The reports lookup is core flow: a failure must fail validation (the
+    // consumer's onFailure then marks the log validation_failed) rather than
+    // persist a result with every load misclassified as open.
+    expect(result).toBe(fetchError)
+    expect(summaryLogsRepository.update).not.toHaveBeenCalled()
   })
 
   describe('Four-level validation hierarchy short-circuit behavior', () => {

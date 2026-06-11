@@ -1,7 +1,3 @@
-import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
 import { isNil } from '#common/helpers/is-nil.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
@@ -19,7 +15,6 @@ import {
   mergeLoads
 } from './load-counts.js'
 
-/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
@@ -115,40 +110,30 @@ export const classifyLoads = ({
 }
 
 /**
- * Fetches periodic reports for the validated summary log, swallowing errors.
+ * Fetches periodic reports for the validated summary log.
+ *
+ * The period-status split is core flow once the feature is live, so a failure
+ * here must propagate: the queue consumer's onFailure marks the log
+ * validation_failed rather than persisting a result with every load
+ * misclassified as open.
  *
  * @param {Object} params
  * @param {Registration} [params.registration]
  * @param {string} params.status
  * @param {SubmittedSummaryLog} params.summaryLog
  * @param {ReportsRepository} params.reportsRepository
- * @param {string} params.loggingContext
- * @param {TypedLogger} params.logger
  * @returns {Promise<import('#reports/repository/port.js').PeriodicReport[]>}
  */
-export const fetchPeriodicReportsSafe = async ({
+export const fetchPeriodicReports = async ({
   registration,
   status,
   summaryLog,
-  reportsRepository,
-  loggingContext,
-  logger
+  reportsRepository
 }) => {
-  try {
-    if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
-      return await reportsRepository.findPeriodicReports({
-        organisationId: summaryLog.organisationId,
-        registrationId: summaryLog.registrationId
-      })
-    }
-  } catch (err) {
-    logger.warn({
-      message: `Failed to fetch periodic reports: ${loggingContext}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      },
-      err
+  if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
+    return await reportsRepository.findPeriodicReports({
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId
     })
   }
   return []

@@ -24,7 +24,7 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
   classifyLoads,
-  fetchPeriodicReportsSafe,
+  fetchPeriodicReports,
   filterWasteBalanceRecords
 } from './classify-and-persist.js'
 import {
@@ -567,17 +567,13 @@ const classifyAndPersistResult = async ({
   summaryLog,
   summaryLogsRepository,
   version,
-  reportsRepository,
-  loggingContext,
-  logger
+  reportsRepository
 }) => {
-  const periodicReports = await fetchPeriodicReportsSafe({
+  const periodicReports = await fetchPeriodicReports({
     registration,
     status,
     summaryLog,
-    reportsRepository,
-    loggingContext,
-    logger
+    reportsRepository
   })
 
   const { loads, loadsByWasteRecordType, loadsByReportingPeriod } =
@@ -692,9 +688,7 @@ export const createSummaryLogsValidator = ({
       summaryLog,
       summaryLogsRepository,
       version,
-      reportsRepository,
-      loggingContext,
-      logger
+      reportsRepository
     })
 
     logger.info({
