@@ -131,7 +131,7 @@ export const fetchPeriodicReports = async ({
   reportsRepository
 }) => {
   if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
-    return await reportsRepository.findPeriodicReports({
+    return reportsRepository.findPeriodicReports({
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId
     })
