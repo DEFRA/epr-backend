@@ -32,8 +32,9 @@ function findReportIdBySubmissionNumber(
     cadence
   ]?.[period]
   if (!slot) return null
-  if (slot.current?.submissionNumber === submissionNumber)
-    {return slot.current.id}
+  if (slot.current?.submissionNumber === submissionNumber) {
+    return slot.current.id
+  }
   const previous = slot.previousSubmissions?.find(
     (s) => s.submissionNumber === submissionNumber
   )
