@@ -5,7 +5,10 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
+import {
+  MONTHLY_PERIODS,
+  QUARTERLY_PERIODS
+} from '#reports/domain/period-labels.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -47,10 +50,16 @@ describe('loadsByReportingPeriod population at validate time', () => {
     }
   })
 
-  const upload = async (env, summaryLogId, fileId, uploadData) => {
+  const upload = async (
+    env,
+    summaryLogId,
+    fileId,
+    uploadData,
+    meta = sharedMeta
+  ) => {
     const { server, fileDataMap, organisationId, registrationId } = env
 
-    fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
+    fileDataMap[fileId] = { meta, data: uploadData }
 
     await server.inject({
       method: 'POST',
@@ -84,8 +93,14 @@ describe('loadsByReportingPeriod population at validate time', () => {
     return JSON.parse(response.payload).loadsByReportingPeriod
   }
 
-  const uploadAndValidate = async (env, summaryLogId, fileId, uploadData) => {
-    await upload(env, summaryLogId, fileId, uploadData)
+  const uploadAndValidate = async (
+    env,
+    summaryLogId,
+    fileId,
+    uploadData,
+    meta
+  ) => {
+    await upload(env, summaryLogId, fileId, uploadData, meta)
     return getLoadsByReportingPeriod(env, summaryLogId)
   }
 
@@ -302,6 +317,116 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(
       loadsByReportingPeriod.openPeriodLoads.adjusted.balanceAffecting
     ).toEqual({ count: 1, tonnageDelta: 50 })
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
+    ).toBe(0)
+  })
+
+  // A registered-only operator has no accreditation, so it reports on a
+  // quarterly cadence and its loads carry no waste-balance classifier.
+  const registeredOnlyMeta = {
+    REGISTRATION_NUMBER: {
+      value: 'REG-123',
+      location: { sheet: 'Cover', row: 1, column: 'B' }
+    },
+    PROCESSING_TYPE: {
+      value: 'REPROCESSOR_REGISTERED_ONLY',
+      location: { sheet: 'Cover', row: 2, column: 'B' }
+    },
+    MATERIAL: {
+      value: 'Paper_and_board',
+      location: { sheet: 'Cover', row: 3, column: 'B' }
+    },
+    TEMPLATE_VERSION: {
+      value: 2.1,
+      location: { sheet: 'Cover', row: 4, column: 'B' }
+    }
+  }
+
+  const REGISTERED_ONLY_RECEIVED_HEADERS = [
+    'ROW_ID',
+    'MONTH_RECEIVED_FOR_REPROCESSING',
+    'NET_WEIGHT',
+    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+    'RECYCLABLE_PROPORTION_PERCENTAGE',
+    'TONNAGE_RECEIVED_FOR_RECYCLING',
+    'SUPPLIER_NAME',
+    'SUPPLIER_ADDRESS',
+    'SUPPLIER_POSTCODE',
+    'SUPPLIER_EMAIL',
+    'SUPPLIER_PHONE_NUMBER',
+    'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
+  ]
+
+  const createRegisteredOnlyUploadData = (rows) => ({
+    RECEIVED_LOADS_FOR_REPROCESSING: {
+      location: { sheet: 'Received', row: 7, column: 'A' },
+      headers: REGISTERED_ONLY_RECEIVED_HEADERS,
+      rows: rows.map(({ rowId, month }, index) => ({
+        rowNumber: 8 + index,
+        values: [
+          rowId,
+          month,
+          10.5,
+          'Actual weight (100%)',
+          0.95,
+          9.975,
+          'Supplier Co',
+          '1 High St',
+          'SW1A 1AA',
+          'supplier@example.com',
+          '01234567',
+          'Sorting'
+        ]
+      }))
+    }
+  })
+
+  it('classifies registered-only loads by quarter, closing a submitted quarter', async () => {
+    const organisationId = new ObjectId().toString()
+    const registrationId = new ObjectId().toString()
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      accredited: false,
+      organisationId,
+      registrationId
+    })
+
+    // Submit Q1 2025 so a load received in January is closed, while a load
+    // received in April (Q2) stays open.
+    await createAndSubmitReport(env.reportsRepository, {
+      organisationId,
+      registrationId,
+      year: 2025,
+      cadence: 'quarterly',
+      period: QUARTERLY_PERIODS.Q1,
+      startDate: '2025-01-01T00:00:00.000Z',
+      endDate: '2025-03-31T00:00:00.000Z',
+      dueDate: '2025-05-20T00:00:00.000Z'
+    })
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-quarterly',
+      'file-quarterly',
+      createRegisteredOnlyUploadData([
+        { rowId: 1001, month: '2025-01-01' },
+        { rowId: 1002, month: '2025-04-01' }
+      ]),
+      registeredOnlyMeta
+    )
+
+    // Registered-only loads have no balance classifier, so both are
+    // nonBalanceAffecting; the quarterly split puts Q1 closed and Q2 open.
+    expect(
+      loadsByReportingPeriod.closedPeriodLoads.added.nonBalanceAffecting.count
+    ).toBe(1)
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.nonBalanceAffecting.count
+    ).toBe(1)
+    expect(
+      loadsByReportingPeriod.closedPeriodLoads.added.balanceAffecting.count
+    ).toBe(0)
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
     ).toBe(0)

@@ -174,40 +174,6 @@ describe('classifyByPeriodStatus', () => {
     // routes/.../summary-logs/integration.loads-by-period-status.test.js.
     // Only edges unreachable there remain here.
 
-    it('classifies registered-only loads (no balance classifier) as nonBalanceAffecting', () => {
-      // Registered-only schemas have no classifyForWasteBalance, so no load can
-      // contribute to a waste balance. Every transaction amount is 0 and every
-      // load must land in nonBalanceAffecting with no tonnage.
-      const registeredOnlySchemas = /** @type {ProcessingTypeSchemas} */ (
-        /** @type {unknown} */ ({
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            reportingDateFields: ['MONTH_RECEIVED_FOR_REPROCESSING'],
-            wasteRecordType: 'received',
-            classifyForWasteBalance: null
-          }
-        })
-      )
-
-      const result = classifyByPeriodStatus({
-        ...baseParams,
-        tableSchemas: registeredOnlySchemas,
-        wasteRecords: [
-          buildWasteRecord({
-            outcome: ROW_OUTCOME.EXCLUDED,
-            data: {
-              MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
-              GROSS_WEIGHT: '42.5'
-            }
-          })
-        ]
-      })
-
-      expect(result.openPeriodLoads.added.nonBalanceAffecting).toEqual({
-        count: 1
-      })
-      expect(result.openPeriodLoads.added.balanceAffecting.count).toBe(0)
-    })
-
     it('rounds summed tonnageDelta to 2dp so no float noise leaks out', () => {
       // 0.1 + 0.2 = 0.30000000000000004 in IEEE-754. Tonnages are reported
       // to 2dp, so the aggregate must be the exact 0.3, not the noisy float.
@@ -569,45 +535,11 @@ describe('classifyByPeriodStatus', () => {
     })
   })
 
-  describe('quarterly cadence', () => {
-    it('maps months to quarterly periods correctly', () => {
-      // March is Q1, April is Q2
-      // Submit Q1 report, so March is closed, April is open
-      const result = classifyByPeriodStatus({
-        ...baseParams,
-        cadence: 'quarterly',
-        periodicReports: [
-          buildSubmittedReport({ cadence: 'quarterly', period: 1 })
-        ],
-        wasteRecords: [
-          buildWasteRecord({
-            rowId: '10001',
-            data: {
-              DATE_RECEIVED_FOR_REPROCESSING: '2026-03-15',
-              GROSS_WEIGHT: '10'
-            }
-          }),
-          buildWasteRecord({
-            rowId: '10002',
-            data: {
-              DATE_RECEIVED_FOR_REPROCESSING: '2026-04-15',
-              GROSS_WEIGHT: '20'
-            }
-          })
-        ]
-      })
-
-      expect(result.closedPeriodLoads.added.balanceAffecting).toEqual({
-        count: 1,
-        tonnageDelta: 10
-      })
-      expect(result.openPeriodLoads.added.balanceAffecting).toEqual({
-        count: 1,
-        tonnageDelta: 20
-      })
-    })
-  })
-
+  // Quarterly-cadence month-to-quarter bucketing (Q1 closed, Q2 open) is
+  // exercised end to end by the registered-only scenario in
+  // routes/.../summary-logs/integration.loads-by-period-status.test.js. This
+  // unit case remains to pin the registered-only YYYY-MM month-only date
+  // string, which the integration data (first-of-month dates) does not cover.
   describe('registered-only YYYY-MM date format', () => {
     it('handles month-only dates correctly', () => {
       const result = classifyByPeriodStatus({

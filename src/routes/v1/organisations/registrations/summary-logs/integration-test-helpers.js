@@ -511,7 +511,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   organisationId = new ObjectId().toString(),
   registrationId = new ObjectId().toString(),
   featureFlagOverrides = {},
-  reportsRepository = createInMemoryReportsRepository()()
+  reportsRepository = createInMemoryReportsRepository()(),
+  accredited = true
 } = {}) => {
   const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -524,7 +525,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     accreditationId,
     processingType,
     reprocessingType,
-    material
+    material,
+    accredited
   })
   testOrg.id = organisationId
 
@@ -675,6 +677,7 @@ const createTestSubmitterWorker = ({
  * @param {string} options.processingType
  * @param {string} options.reprocessingType
  * @param {string} options.material
+ * @param {boolean} [options.accredited] - When false, builds a registered-only registration (no accreditation, quarterly cadence)
  * @returns {Object} Test organisation with registrations and accreditations
  */
 const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
@@ -684,7 +687,8 @@ const buildComplexTestOrg = ({
   accreditationId,
   processingType,
   reprocessingType,
-  material
+  material,
+  accredited = true
 }) => {
   const registration = {
     id: registrationId,
@@ -701,37 +705,38 @@ const buildComplexTestOrg = ({
     submittedToRegulator: 'ea',
     validFrom: VALID_FROM,
     validTo: VALID_TO,
-    accreditationId
-  }
-
-  if (processingType === 'exporter') {
-    registration.overseasSites = {
-      100: { overseasSiteId: TEST_OVERSEAS_SITE_ID }
-    }
+    // A registered-only operator has no accreditation, which makes the
+    // registration report on a quarterly cadence rather than monthly.
+    ...(accredited && { accreditationId }),
+    ...(processingType === 'exporter' && {
+      overseasSites: { 100: { overseasSiteId: TEST_OVERSEAS_SITE_ID } }
+    })
   }
 
   return buildOrganisation({
     status: 'active',
     registrations: [registration],
-    accreditations: [
-      {
-        id: accreditationId,
-        accreditationNumber: 'ACC-123',
-        validFrom: VALID_FROM,
-        validTo: VALID_TO,
-        material,
-        submittedToRegulator: 'ea',
-        site: {
-          address: {
-            line1: '123 Test Street',
-            postcode: 'AB1 2CD'
+    accreditations: accredited
+      ? [
+          {
+            id: accreditationId,
+            accreditationNumber: 'ACC-123',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            material,
+            submittedToRegulator: 'ea',
+            site: {
+              address: {
+                line1: '123 Test Street',
+                postcode: 'AB1 2CD'
+              }
+            },
+            statusHistory: [
+              { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+            ]
           }
-        },
-        statusHistory: [
-          { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
         ]
-      }
-    ]
+      : []
   })
 }
