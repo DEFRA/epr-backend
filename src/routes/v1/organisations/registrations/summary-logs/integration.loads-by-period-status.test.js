@@ -322,6 +322,133 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toBe(0)
   })
 
+  it('debits the closed period and credits the open period when a re-upload moves a load across periods', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+    await closeJanuary2025(env)
+
+    // Establish the load wholly within closed January.
+    await upload(
+      env,
+      'sl-move-original',
+      'file-move-original',
+      createUploadData([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 100,
+          dateReceived: '2025-01-15T00:00:00.000Z',
+          dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
+          exportDate: '2025-01-20T00:00:00.000Z'
+        }
+      ])
+    )
+    await submitAndPoll(env, 'sl-move-original')
+
+    // Re-upload the same row moved wholly into open February.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-move-reupload',
+      'file-move-reupload',
+      createUploadData([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 100,
+          dateReceived: '2025-02-15T00:00:00.000Z',
+          dateReceivedByOsr: '2025-02-18T00:00:00.000Z',
+          exportDate: '2025-02-20T00:00:00.000Z'
+        }
+      ])
+    )
+
+    // The load leaves closed January (-100) and arrives in open February
+    // (+100); each period it touches counts the load once.
+    expect(
+      loadsByReportingPeriod.closedPeriodLoads.adjusted.balanceAffecting
+    ).toEqual({ count: 1, tonnageDelta: -100 })
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.adjusted.balanceAffecting
+    ).toEqual({ count: 1, tonnageDelta: 100 })
+  })
+
+  it('classifies a re-upload that nets to zero as nonBalanceAffecting', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+
+    await upload(
+      env,
+      'sl-zero-original',
+      'file-zero-original',
+      createUploadData([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 100,
+          dateReceived: '2025-01-15T00:00:00.000Z'
+        }
+      ])
+    )
+    await submitAndPoll(env, 'sl-zero-original')
+
+    // Re-upload the same row with a corrected received date (still open
+    // January) but unchanged tonnage: a real amendment whose net delta is
+    // zero, so it moves no balance and lands in nonBalanceAffecting.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-zero-reupload',
+      'file-zero-reupload',
+      createUploadData([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 100,
+          dateReceived: '2025-01-16T00:00:00.000Z'
+        }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.openPeriodLoads.adjusted).toEqual({
+      balanceAffecting: { count: 0, tonnageDelta: 0 },
+      nonBalanceAffecting: { count: 1 }
+    })
+  })
+
+  it('keeps a load amended to PRN-excluded in balanceAffecting as a reversal', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+
+    // Establish an included load contributing 100t to the balance.
+    await upload(
+      env,
+      'sl-reverse-original',
+      'file-reverse-original',
+      createUploadData([{ rowId: 1001, osrId: 100, exportTonnage: 100 }])
+    )
+    await submitAndPoll(env, 'sl-reverse-original')
+
+    // Re-upload the same row PRN-issued, so its new contribution is zero. The
+    // net delta of -100 still moved the balance, so it stays balanceAffecting.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-reverse-reupload',
+      'file-reverse-reupload',
+      createUploadData([
+        { rowId: 1001, osrId: 100, exportTonnage: 100, prnIssued: 'Yes' }
+      ])
+    )
+
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.adjusted.balanceAffecting
+    ).toEqual({ count: 1, tonnageDelta: -100 })
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.adjusted.nonBalanceAffecting.count
+    ).toBe(0)
+  })
+
   // A registered-only operator has no accreditation, so it reports on a
   // quarterly cadence and its loads carry no waste-balance classifier.
   const registeredOnlyMeta = {
