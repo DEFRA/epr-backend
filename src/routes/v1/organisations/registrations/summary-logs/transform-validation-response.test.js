@@ -763,6 +763,7 @@ describe('transformValidationResponse', () => {
 
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.VALIDATED,
+        processingType: 'EXPORTER',
         ...transformValidationResponse(validation),
         loadsByReportingPeriod: {
           openPeriodLoads: {

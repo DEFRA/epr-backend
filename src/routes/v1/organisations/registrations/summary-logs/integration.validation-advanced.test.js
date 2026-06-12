@@ -793,7 +793,8 @@ describe('Advanced validation scenarios', () => {
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          validation: {}
+          validation: {},
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
         })
       )
 

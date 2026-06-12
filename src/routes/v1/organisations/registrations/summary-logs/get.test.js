@@ -86,7 +86,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
         summaryLogId,
-        summaryLogFactory.validated({ organisationId, registrationId })
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
+        })
       )
 
       const response = await makeRequest(server)
@@ -124,7 +128,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const loads = createLoads()
       await summaryLogsRepository.insert(
         summaryLogId,
-        summaryLogFactory.validated({ organisationId, registrationId })
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
+        })
       )
       await summaryLogsRepository.update(summaryLogId, 1, { loads })
       await waitForVersion(summaryLogsRepository, summaryLogId, 2)
@@ -140,7 +148,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
         summaryLogId,
-        summaryLogFactory.validated({ organisationId, registrationId })
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
+        })
       )
 
       const response = await makeRequest(server)
