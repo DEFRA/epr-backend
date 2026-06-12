@@ -77,21 +77,6 @@ const SINGLE_DATE_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
   })
 )
 
-/** @type {ProcessingTypeSchemas} Multi-date-field table schemas (exporter received-loads). */
-const MULTI_DATE_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
-  /** @type {unknown} */ ({
-    RECEIVED_LOADS_FOR_EXPORT: {
-      reportingDateFields: ['DATE_RECEIVED_FOR_EXPORT', 'DATE_OF_EXPORT'],
-      wasteRecordType: 'received',
-      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: Number(data.GROSS_WEIGHT) || 0
-      })
-    }
-  })
-)
-
 /** @type {ProcessingTypeSchemas} Registered-only table schemas (monthly dates as YYYY-MM). */
 const REGISTERED_ONLY_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
   /** @type {unknown} */ ({
@@ -183,60 +168,11 @@ describe('classifyByPeriodStatus', () => {
   })
 
   describe('added records', () => {
-    it('classifies an added included record into the open period', () => {
-      const result = classifyByPeriodStatus({
-        ...baseParams,
-        wasteRecords: [buildWasteRecord()]
-      })
-
-      expect(result.openPeriodLoads.added.balanceAffecting).toEqual({
-        count: 1,
-        tonnageDelta: 42.5
-      })
-    })
-
-    it('classifies an added included record into the closed period', () => {
-      const result = classifyByPeriodStatus({
-        ...baseParams,
-        wasteRecords: [buildWasteRecord()],
-        periodicReports: [buildSubmittedReport()]
-      })
-
-      expect(result.closedPeriodLoads.added.balanceAffecting).toEqual({
-        count: 1,
-        tonnageDelta: 42.5
-      })
-    })
-
-    it('classifies an added record excluded from the balance as nonBalanceAffecting', () => {
-      // A PRN-issued row passes validation (outcome INCLUDED) but is excluded
-      // from the waste balance, so its transaction amount is 0. It moves no
-      // balance and must land in nonBalanceAffecting.
-      const excludedFromBalanceSchemas = /** @type {ProcessingTypeSchemas} */ (
-        /** @type {unknown} */ ({
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
-            wasteRecordType: 'received',
-            classifyForWasteBalance: () => ({
-              outcome: ROW_OUTCOME.EXCLUDED,
-              reasons: [],
-              transactionAmount: 0
-            })
-          }
-        })
-      )
-
-      const result = classifyByPeriodStatus({
-        ...baseParams,
-        tableSchemas: excludedFromBalanceSchemas,
-        wasteRecords: [buildWasteRecord()]
-      })
-
-      expect(result.openPeriodLoads.added.nonBalanceAffecting).toEqual({
-        count: 1
-      })
-      expect(result.openPeriodLoads.added.balanceAffecting.count).toBe(0)
-    })
+    // Operator-meaningful added-load behaviour (open period, closed period, and
+    // the balance-excluded -> nonBalanceAffecting split) is exercised at
+    // integration level in
+    // routes/.../summary-logs/integration.loads-by-period-status.test.js.
+    // Only edges unreachable there remain here.
 
     it('classifies registered-only loads (no balance classifier) as nonBalanceAffecting', () => {
       // Registered-only schemas have no classifyForWasteBalance, so no load can
@@ -303,53 +239,11 @@ describe('classifyByPeriodStatus', () => {
   })
 
   describe('adjusted records', () => {
-    it('computes net delta when the period is unchanged', () => {
-      const existingRecordsMap = new Map([
-        [
-          'received:10001',
-          /** @type {WasteRecord} */ (
-            /** @type {unknown} */ ({
-              type: 'received',
-              rowId: '10001',
-              data: {
-                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-10',
-                GROSS_WEIGHT: '30'
-              }
-            })
-          )
-        ]
-      ])
-
-      const result = classifyByPeriodStatus({
-        ...baseParams,
-        existingRecordsMap,
-        wasteRecords: [
-          buildWasteRecord({
-            data: {
-              DATE_RECEIVED_FOR_REPROCESSING: '2026-02-15',
-              GROSS_WEIGHT: '50'
-            },
-            versionStatus: VERSION_STATUS.UPDATED,
-            previousVersions: [
-              {
-                summaryLog: { id: 'sl-old' },
-                status: VERSION_STATUS.CREATED,
-                data: {
-                  DATE_RECEIVED_FOR_REPROCESSING: '2026-02-10',
-                  GROSS_WEIGHT: '30'
-                }
-              }
-            ]
-          })
-        ]
-      })
-
-      // Same period (February, open) so net delta = 50 - 30 = 20
-      expect(result.openPeriodLoads.adjusted.balanceAffecting).toEqual({
-        count: 1,
-        tonnageDelta: 20
-      })
-    })
+    // The same-period net-delta happy path (re-upload of an existing load) is
+    // exercised at integration level. The cases below cover edges that the
+    // integration submit-then-reupload flow cannot reach directly: net-zero
+    // adjustments, cross-period moves, blanked dates and missing existing
+    // records.
 
     it('classifies a same-period adjust that nets to zero as nonBalanceAffecting', () => {
       const existingRecordsMap = new Map([
@@ -633,49 +527,6 @@ describe('classifyByPeriodStatus', () => {
     })
   })
 
-  describe('closed-wins rule (multiple reporting date fields)', () => {
-    it('classifies a row as closed when one date is in a closed period and another is open', () => {
-      const result = classifyByPeriodStatus({
-        ...baseParams,
-        tableSchemas: MULTI_DATE_TABLE_SCHEMAS,
-        periodicReports: [buildSubmittedReport({ period: 1 })],
-        wasteRecords: [
-          buildWasteRecord({
-            data: {
-              DATE_RECEIVED_FOR_EXPORT: '2026-01-15',
-              DATE_OF_EXPORT: '2026-02-10',
-              GROSS_WEIGHT: '42.5'
-            },
-            tableName: 'RECEIVED_LOADS_FOR_EXPORT'
-          })
-        ]
-      })
-
-      expect(result.closedPeriodLoads.added.balanceAffecting.count).toBe(1)
-      expect(result.openPeriodLoads.added.balanceAffecting.count).toBe(0)
-    })
-
-    it('classifies a row as open when all dates are in open periods', () => {
-      const result = classifyByPeriodStatus({
-        ...baseParams,
-        tableSchemas: MULTI_DATE_TABLE_SCHEMAS,
-        wasteRecords: [
-          buildWasteRecord({
-            data: {
-              DATE_RECEIVED_FOR_EXPORT: '2026-02-15',
-              DATE_OF_EXPORT: '2026-03-10',
-              GROSS_WEIGHT: '42.5'
-            },
-            tableName: 'RECEIVED_LOADS_FOR_EXPORT'
-          })
-        ]
-      })
-
-      expect(result.openPeriodLoads.added.balanceAffecting.count).toBe(1)
-      expect(result.closedPeriodLoads.added.balanceAffecting.count).toBe(0)
-    })
-  })
-
   describe('skipped records', () => {
     it('skips IGNORED records', () => {
       const result = classifyByPeriodStatus({
@@ -923,35 +774,6 @@ describe('classifyByPeriodStatus', () => {
       expect(result.openPeriodLoads.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 10
-      })
-    })
-  })
-
-  describe('aggregation across multiple records', () => {
-    it('sums counts and tonnageDelta across multiple records in the same bucket', () => {
-      const result = classifyByPeriodStatus({
-        ...baseParams,
-        wasteRecords: [
-          buildWasteRecord({
-            rowId: '10001',
-            data: {
-              DATE_RECEIVED_FOR_REPROCESSING: '2026-02-10',
-              GROSS_WEIGHT: '20'
-            }
-          }),
-          buildWasteRecord({
-            rowId: '10002',
-            data: {
-              DATE_RECEIVED_FOR_REPROCESSING: '2026-02-15',
-              GROSS_WEIGHT: '30'
-            }
-          })
-        ]
-      })
-
-      expect(result.openPeriodLoads.added.balanceAffecting).toEqual({
-        count: 2,
-        tonnageDelta: 50
       })
     })
   })

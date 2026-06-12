@@ -16,6 +16,7 @@ import { createWasteBalancesRepository } from '#waste-balances/repository/reposi
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -509,7 +510,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   material = 'paper',
   organisationId = new ObjectId().toString(),
   registrationId = new ObjectId().toString(),
-  featureFlagOverrides = {}
+  featureFlagOverrides = {},
+  reportsRepository = createInMemoryReportsRepository()()
 } = {}) => {
   const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -582,9 +584,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
-    reportsRepository: /** @type {any} */ ({
-      findPeriodicReports: async () => []
-    }),
+    reportsRepository,
     overseasSitesRepository,
     summaryLogExtractor: dynamicExtractor,
     logger: mockLogger
@@ -637,7 +637,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     accreditationId,
     fileDataMap,
     streamRepository,
-    systemLogsForBalanceAudit
+    systemLogsForBalanceAudit,
+    reportsRepository
   }
 }
 
