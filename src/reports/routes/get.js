@@ -31,8 +31,8 @@ const toReportListItem = (current) => {
   if (!current) {
     return null
   }
-  const { id, status, submittedAt, submittedBy } = current
-  return { id, status, submittedAt, submittedBy }
+  const { id, status, submissionNumber, submittedAt, submittedBy } = current
+  return { id, status, submissionNumber, submittedAt, submittedBy }
 }
 
 export const reportsGet = {

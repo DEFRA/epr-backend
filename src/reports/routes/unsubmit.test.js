@@ -31,9 +31,10 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
     regId,
     year = 2024,
     cadence = 'monthly',
-    period = 1
+    period = 1,
+    submissionNumber = 1
   ) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/unsubmit`
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/${submissionNumber}/unsubmit`
 
   const buildServerWithSubmittedReport = async () => {
     const registration = buildRegistration({
