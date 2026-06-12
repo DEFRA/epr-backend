@@ -3,8 +3,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
   VALIDATION_CATEGORY,
-  VALIDATION_CODE,
-  VALIDATION_SEVERITY
+  VALIDATION_CODE
 } from '#common/enums/index.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
@@ -25,30 +24,29 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import {
   classifyLoads,
   fetchPeriodicReports,
-  filterWasteBalanceRecords
+  filterWasteBalanceRecords,
+  resolveOverseasSitesContext
 } from './classify-and-persist.js'
-import {
-  logValidationIssues,
-  MAX_VALIDATION_ISSUES
-} from './validate-issue-logging.js'
+import { logValidationIssues } from './validate-issue-logging.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
+import { capIssuesForStorage } from './cap-issues-for-storage.js'
 
-export { MAX_VALIDATION_ISSUES }
-
-export const MAX_ACTUAL_LENGTH = 200
+export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
+export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+/** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
@@ -567,13 +565,22 @@ const classifyAndPersistResult = async ({
   summaryLog,
   summaryLogsRepository,
   version,
-  reportsRepository
+  reportsRepository,
+  organisationsRepository,
+  overseasSitesRepository
 }) => {
   const periodicReports = await fetchPeriodicReports({
     registration,
     status,
     summaryLog,
     reportsRepository
+  })
+
+  const overseasSites = await resolveOverseasSitesContext({
+    processingType,
+    summaryLog,
+    organisationsRepository,
+    overseasSitesRepository
   })
 
   const { loads, loadsByWasteRecordType, loadsByReportingPeriod } =
@@ -584,6 +591,7 @@ const classifyAndPersistResult = async ({
       wasteBalanceRecords,
       wasteRecords,
       periodicReports,
+      overseasSites,
       registration,
       existingRecordsMap
     })
@@ -611,6 +619,7 @@ const classifyAndPersistResult = async ({
  *   organisationsRepository: OrganisationsRepository,
  *   wasteRecordsRepository: WasteRecordsRepository,
  *   reportsRepository: ReportsRepository,
+ *   overseasSitesRepository: OverseasSitesRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
  * @returns {(summaryLogId: string) => Promise<void>}
@@ -621,6 +630,7 @@ export const createSummaryLogsValidator = ({
   organisationsRepository,
   wasteRecordsRepository,
   reportsRepository,
+  overseasSitesRepository,
   summaryLogExtractor
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
@@ -688,7 +698,9 @@ export const createSummaryLogsValidator = ({
       summaryLog,
       summaryLogsRepository,
       version,
-      reportsRepository
+      reportsRepository,
+      organisationsRepository,
+      overseasSitesRepository
     })
 
     logger.info({
@@ -699,56 +711,4 @@ export const createSummaryLogsValidator = ({
       }
     })
   }
-}
-
-/** @param {ValidationIssue[]} issues */
-const truncateActualValues = (issues) => {
-  for (const issue of issues) {
-    if (
-      typeof issue.context?.actual === 'string' &&
-      issue.context.actual.length > MAX_ACTUAL_LENGTH
-    ) {
-      issue.context.actual =
-        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
-    }
-  }
-}
-
-/**
- * Caps the issues array and truncates long actual values for MongoDB storage.
- *
- * Both the issue count and per-issue actual values are bounded to prevent
- * the summary log document exceeding MongoDB's 16 MiB BSON limit.
- * @see https://eaflood.atlassian.net/browse/PAE-1244
- *
- * Fatal issues are always preserved — they determine the summary log status
- * and are required by the frontend to render specific error messages.
- * Non-fatal issues fill the remaining capacity.
- *
- * @param {ValidationIssue[]} allIssues - All validation issues
- * @returns {ValidationIssue[]} The capped, actual-value-truncated issues
- */
-const capIssuesForStorage = (allIssues) => {
-  let cappedIssues
-
-  if (allIssues.length <= MAX_VALIDATION_ISSUES) {
-    cappedIssues = allIssues
-  } else {
-    const fatal = allIssues.filter(
-      (issue) => issue.severity === VALIDATION_SEVERITY.FATAL
-    )
-    const nonFatal = allIssues.filter(
-      (issue) => issue.severity !== VALIDATION_SEVERITY.FATAL
-    )
-    const cappedFatal = fatal.slice(0, MAX_VALIDATION_ISSUES)
-    const nonFatalSlots = Math.max(
-      0,
-      MAX_VALIDATION_ISSUES - cappedFatal.length
-    )
-    cappedIssues = [...cappedFatal, ...nonFatal.slice(0, nonFatalSlots)]
-  }
-
-  truncateActualValues(cappedIssues)
-
-  return cappedIssues
 }

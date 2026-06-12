@@ -63,6 +63,7 @@ export const summaryLogCommandHandlers = [
         organisationsRepository,
         wasteRecordsRepository,
         reportsRepository,
+        overseasSitesRepository,
         summaryLogExtractor
       } = deps
 
@@ -72,6 +73,7 @@ export const summaryLogCommandHandlers = [
         organisationsRepository,
         wasteRecordsRepository,
         reportsRepository,
+        overseasSitesRepository,
         summaryLogExtractor
       })
 

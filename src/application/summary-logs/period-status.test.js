@@ -448,9 +448,9 @@ describe('classifyByPeriodStatus', () => {
       expect(
         result.openPeriodLoads.adjusted.balanceAffecting.tonnageDelta
       ).toBe(50)
-      // Count goes to the new period
+      // Each leg the record touches counts once, so both periods read count:1
       expect(result.openPeriodLoads.adjusted.balanceAffecting.count).toBe(1)
-      expect(result.closedPeriodLoads.adjusted.balanceAffecting.count).toBe(0)
+      expect(result.closedPeriodLoads.adjusted.balanceAffecting.count).toBe(1)
     })
 
     it('assigns count to old period when new date is blanked out', () => {
