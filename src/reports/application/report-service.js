@@ -31,7 +31,9 @@ function findReportIdBySubmissionNumber(
   const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
     cadence
   ]?.[period]
-  if (!slot) return null
+  if (!slot) {
+    return null
+  }
   if (slot.current?.submissionNumber === submissionNumber) {
     return slot.current.id
   }
