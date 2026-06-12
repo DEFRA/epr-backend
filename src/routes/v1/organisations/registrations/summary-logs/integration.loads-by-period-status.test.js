@@ -22,8 +22,14 @@ import {
   createWasteBalanceMeta,
   EXPORTER_HEADERS,
   pollForValidation,
+  pollWhileStatus,
   setupWasteBalanceIntegrationEnvironment
 } from './integration-test-helpers.js'
+
+// Data tables start with their header at row 7, so data rows begin at row 8.
+const TABLE_HEADER_ROW = 7
+const FIRST_DATA_ROW = TABLE_HEADER_ROW + 1
+const SUBMIT_MAX_POLL_ATTEMPTS = 10
 
 describe('loadsByReportingPeriod population at validate time', () => {
   const { getServer } = setupAuthContext()
@@ -41,10 +47,10 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
   const createUploadData = (rows) => ({
     RECEIVED_LOADS_FOR_EXPORT: {
-      location: { sheet: 'Received', row: 7, column: 'A' },
+      location: { sheet: 'Received', row: TABLE_HEADER_ROW, column: 'A' },
       headers: EXPORTER_HEADERS,
       rows: rows.map((row, index) => ({
-        rowNumber: 8 + index,
+        rowNumber: FIRST_DATA_ROW + index,
         values: createExporterRowValues(row)
       }))
     }
@@ -113,18 +119,16 @@ describe('loadsByReportingPeriod population at validate time', () => {
       ...asStandardUser({ linkedOrgId: organisationId })
     })
 
-    let attempts = 0
-    let status = SUMMARY_LOG_STATUS.SUBMITTING
-    while (status === SUMMARY_LOG_STATUS.SUBMITTING && attempts < 10) {
-      await new Promise((resolve) => setTimeout(resolve, 50))
-      const response = await env.server.inject({
-        method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
-      })
-      status = JSON.parse(response.payload).status
-      attempts++
-    }
+    await pollWhileStatus(
+      server,
+      organisationId,
+      registrationId,
+      summaryLogId,
+      {
+        waitWhile: SUMMARY_LOG_STATUS.SUBMITTING,
+        maxAttempts: SUBMIT_MAX_POLL_ATTEMPTS
+      }
+    )
   }
 
   // Submits a January 2025 monthly report so loads dated in January fall into a
@@ -487,10 +491,10 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
   const createRegisteredOnlyUploadData = (rows) => ({
     RECEIVED_LOADS_FOR_REPROCESSING: {
-      location: { sheet: 'Received', row: 7, column: 'A' },
+      location: { sheet: 'Received', row: TABLE_HEADER_ROW, column: 'A' },
       headers: REGISTERED_ONLY_RECEIVED_HEADERS,
       rows: rows.map(({ rowId, month }, index) => ({
-        rowNumber: 8 + index,
+        rowNumber: FIRST_DATA_ROW + index,
         values: [
           rowId,
           month,
