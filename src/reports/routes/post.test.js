@@ -29,7 +29,7 @@ describe(`POST ${reportsPostPath}`, () => {
   setupAuthContext()
 
   const makeUrl = (orgId, regId, year, cadence, period, submissionNumber) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/${submissionNumber}`
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}`
 
   const createServer = async (registrationOverrides = {}) => {
     const registration = buildRegistration(registrationOverrides)

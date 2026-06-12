@@ -11,7 +11,7 @@ import {
 import { periodParamsSchema, extractChangedBy } from './shared.js'
 
 export const reportsUnsubmitPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/{submissionNumber}/unsubmit'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/unsubmit'
 
 export const reportsUnsubmit = {
   method: 'POST',

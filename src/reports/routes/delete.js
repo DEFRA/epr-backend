@@ -11,7 +11,7 @@ import {
 } from './shared.js'
 
 export const reportsDeletePath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/{submissionNumber}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
 
 export const reportsDelete = {
   method: 'DELETE',

@@ -17,7 +17,7 @@ import {
 } from './shared.js'
 
 export const reportsPatchPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/{submissionNumber}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
 
 const MAX_SUPPORTING_INFO_LENGTH = 2000
 

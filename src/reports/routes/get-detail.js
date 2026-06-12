@@ -16,7 +16,7 @@ import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
  */
 
 export const reportsGetDetailPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/{submissionNumber}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
 
 export const reportsGetDetail = {
   method: 'GET',

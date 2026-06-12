@@ -16,7 +16,7 @@ import {
 } from './shared.js'
 
 export const reportsStatusPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/{submissionNumber}/status'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/status'
 
 const payloadSchema = Joi.object({
   status: Joi.string()

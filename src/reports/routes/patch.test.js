@@ -20,7 +20,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
   setupAuthContext()
 
   const makeUrl = (orgId, regId, year, cadence, period, submissionNumber = 1) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/${submissionNumber}`
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}`
 
   const createServer = async (
     registrationOverrides = {},
