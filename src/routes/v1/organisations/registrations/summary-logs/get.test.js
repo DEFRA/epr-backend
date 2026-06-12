@@ -8,6 +8,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -22,12 +23,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
   const createServer = async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-    const summaryLogsRepository = summaryLogsRepositoryFactory({
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    })
+    const summaryLogsRepository =
+      summaryLogsRepositoryFactory(createMockLogger())
 
     const server = await createTestServer({
       repositories: {
@@ -251,13 +248,14 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         summaryLogId,
         summaryLogFactory.invalid({ organisationId, registrationId })
       )
-      await summaryLogsRepository.update(summaryLogId, 1, {
-        meta: {
-          PROCESSING_TYPE: null,
-          MATERIAL: null,
-          ACCREDITATION_NUMBER: null
-        }
-      })
+      // Raw storage can hold null meta values; the response must omit them.
+      /** @type {Record<string, unknown>} */
+      const dirtyMeta = {
+        PROCESSING_TYPE: null,
+        MATERIAL: null,
+        ACCREDITATION_NUMBER: null
+      }
+      await summaryLogsRepository.update(summaryLogId, 1, { meta: dirtyMeta })
       await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
