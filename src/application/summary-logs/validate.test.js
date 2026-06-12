@@ -14,6 +14,7 @@ import {
   createEmptyLoadCategory,
   createEmptyLoadValidity
 } from './load-counts.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 
@@ -252,6 +253,7 @@ describe('SummaryLogsValidator', () => {
       reportsRepository: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
+      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
   })
@@ -678,6 +680,7 @@ describe('SummaryLogsValidator', () => {
       reportsRepository: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
+      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
 
@@ -722,6 +725,7 @@ describe('SummaryLogsValidator', () => {
       reportsRepository: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
       }),
+      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
 

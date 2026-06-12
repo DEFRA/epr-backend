@@ -473,6 +473,7 @@ export const createTestInfrastructure = async (
   ])()
   const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
   const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+  const overseasSitesRepository = createInMemoryOverseasSitesRepository([])()
 
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
@@ -481,6 +482,7 @@ export const createTestInfrastructure = async (
     reportsRepository: /** @type {any} */ ({
       findPeriodicReports: async () => []
     }),
+    overseasSitesRepository,
     summaryLogExtractor,
     logger: mockLogger
   })
@@ -561,17 +563,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     }
   }
 
-  const validateSummaryLog = createSummaryLogsValidator({
-    summaryLogsRepository,
-    organisationsRepository,
-    wasteRecordsRepository,
-    reportsRepository: /** @type {any} */ ({
-      findPeriodicReports: async () => []
-    }),
-    summaryLogExtractor: dynamicExtractor,
-    logger: mockLogger
-  })
-
   const overseasSitesRepository = createInMemoryOverseasSitesRepository([
     {
       id: TEST_OVERSEAS_SITE_ID,
@@ -586,6 +577,18 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       updatedAt: new Date()
     }
   ])()
+
+  const validateSummaryLog = createSummaryLogsValidator({
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    reportsRepository: /** @type {any} */ ({
+      findPeriodicReports: async () => []
+    }),
+    overseasSitesRepository,
+    summaryLogExtractor: dynamicExtractor,
+    logger: mockLogger
+  })
 
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
