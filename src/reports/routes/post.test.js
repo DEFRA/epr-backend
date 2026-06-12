@@ -28,8 +28,8 @@ vi.mock('#reports/application/audit.js', () => ({
 describe(`POST ${reportsPostPath}`, () => {
   setupAuthContext()
 
-  const makeUrl = (orgId, regId, year, cadence, period) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}`
+  const makeUrl = (orgId, regId, year, cadence, period, submissionNumber) =>
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/${submissionNumber}`
 
   const createServer = async (registrationOverrides = {}) => {
     const registration = buildRegistration(registrationOverrides)
@@ -80,11 +80,12 @@ describe(`POST ${reportsPostPath}`, () => {
     regId,
     year = 2025,
     cadence = 'quarterly',
-    period = 1
+    period = 1,
+    submissionNumber = 1
   ) =>
     server.inject({
       method: 'POST',
-      url: makeUrl(orgId, regId, year, cadence, period),
+      url: makeUrl(orgId, regId, year, cadence, period, submissionNumber),
       ...asStandardUser({ linkedOrgId: orgId })
     })
 
@@ -449,7 +450,7 @@ describe(`POST ${reportsPostPath}`, () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: makeUrl(organisationId, registrationId, 2025, 'biweekly', 1),
+      url: makeUrl(organisationId, registrationId, 2025, 'biweekly', 1, 1),
       ...asStandardUser({ linkedOrgId: organisationId })
     })
 
@@ -615,7 +616,7 @@ describe(`POST ${reportsPostPath}`, () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: makeUrl(org.id, registration.id, 2025, 'monthly', 1),
+      url: makeUrl(org.id, registration.id, 2025, 'monthly', 1, 1),
       ...asStandardUser({ linkedOrgId: org.id })
     })
 

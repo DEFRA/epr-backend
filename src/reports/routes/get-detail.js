@@ -12,11 +12,11 @@ import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
  * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
- * @import { PeriodPathParams } from './shared.js'
+ * @import { PeriodWithSubmissionPathParams } from './shared.js'
  */
 
 export const reportsGetDetailPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/{submissionNumber}'
 
 export const reportsGetDetail = {
   method: 'GET',
@@ -30,7 +30,7 @@ export const reportsGetDetail = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: PeriodPathParams,
+   *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
    *   wasteRecordsRepository: WasteRecordsRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
@@ -48,7 +48,14 @@ export const reportsGetDetail = {
       overseasSitesRepository,
       params
     } = request
-    const { organisationId, registrationId, year, cadence, period } = params
+    const {
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber
+    } = params
 
     const registration = await organisationsRepository.findRegistrationById(
       organisationId,
@@ -65,7 +72,8 @@ export const reportsGetDetail = {
       registration,
       year,
       cadence,
-      period
+      period,
+      submissionNumber
     })
 
     // The 'diagnostics' in report check acts as a type discriminator:

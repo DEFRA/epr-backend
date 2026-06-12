@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import Boom from '@hapi/boom'
 import { auditReportDelete } from '#reports/application/audit.js'
-import { fetchCurrentReport } from '#reports/application/report-service.js'
+import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   periodParamsSchema,
@@ -11,7 +11,7 @@ import {
 } from './shared.js'
 
 export const reportsDeletePath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/{submissionNumber}'
 
 export const reportsDelete = {
   method: 'DELETE',
@@ -32,14 +32,16 @@ export const reportsDelete = {
     const { organisationId, registrationId, cadence } = params
     const year = Number(params.year)
     const period = Number(params.period)
+    const submissionNumber = Number(params.submissionNumber)
 
-    const report = await fetchCurrentReport(
+    const report = await fetchReportBySubmissionNumber(
       reportsRepository,
       organisationId,
       registrationId,
       year,
       cadence,
-      period
+      period,
+      submissionNumber
     )
 
     if (!report) {
