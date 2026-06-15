@@ -12,7 +12,8 @@ export const periodParamsSchema = Joi.object({
   registrationId: Joi.string().required(),
   year: Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR).required(),
   cadence: cadenceSchema,
-  period: periodSchema
+  period: periodSchema,
+  submissionNumber: Joi.number().integer().valid(1).required()
 })
 
 /**
@@ -25,6 +26,8 @@ export const periodParamsSchema = Joi.object({
  *   cadence: Cadence,
  *   period: number
  * }} PeriodPathParams
+ *
+ * @typedef {PeriodPathParams & { submissionNumber: number }} PeriodWithSubmissionPathParams
  */
 
 export const standardUserAuth = getAuthConfig([ROLES.standardUser])

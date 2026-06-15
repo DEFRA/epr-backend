@@ -19,8 +19,8 @@ import { reportsGetDetailPath } from './get-detail.js'
 describe(`GET ${reportsGetDetailPath}`, () => {
   setupAuthContext()
 
-  const makeUrl = (orgId, regId, year, cadence, period) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}`
+  const makeUrl = (orgId, regId, year, cadence, period, submissionNumber = 1) =>
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}`
 
   describe('when feature flag is enabled', () => {
     const createServer = async (

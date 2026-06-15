@@ -148,7 +148,7 @@
 /**
  * Curated subset of ReportSummary used for list-style responses
  * (e.g. the reports calendar). Excludes heavy activity payloads.
- * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submittedAt' | 'submittedBy'>} ReportListItem
+ * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submissionNumber' | 'submittedAt' | 'submittedBy'>} ReportListItem
  */
 
 /**

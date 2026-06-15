@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
-import { fetchCurrentReport } from '#reports/application/report-service.js'
+import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -11,7 +11,7 @@ import {
 import { periodParamsSchema, extractChangedBy } from './shared.js'
 
 export const reportsUnsubmitPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/unsubmit'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/unsubmit'
 
 export const reportsUnsubmit = {
   method: 'POST',
@@ -34,14 +34,16 @@ export const reportsUnsubmit = {
     const { organisationId, registrationId, cadence } = params
     const year = Number(params.year)
     const period = Number(params.period)
+    const submissionNumber = Number(params.submissionNumber)
 
-    const report = await fetchCurrentReport(
+    const report = await fetchReportBySubmissionNumber(
       reportsRepository,
       organisationId,
       registrationId,
       year,
       cadence,
-      period
+      period,
+      submissionNumber
     )
 
     if (!report) {
