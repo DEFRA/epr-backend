@@ -43,6 +43,7 @@ import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consume
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
+import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -222,6 +223,7 @@ async function createServer(options = {}) {
     runFormsDataMigration(server)
     copyFormFilesToS3(server)
     runOrganisationValidationSweep(server)
+    runDuplicateAccreditationLinkMigration(server)
   })
 
   return server
