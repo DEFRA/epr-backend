@@ -4,6 +4,7 @@
  * @param {Date} [overrides.createdAt]
  * @param {string} [overrides.userId]
  * @param {string} [overrides.email]
+ * @param {string | null} [overrides.role]
  * @param {string} [overrides.subCategory]
  * @param {string} [overrides.action]
  * @param {*} [overrides.id]
@@ -14,13 +15,14 @@ export const buildSystemLog = ({
   createdAt = new Date(),
   userId = 'user-001',
   email = 'user@email.com',
+  role = null,
   subCategory = 'test-sub-category',
   action = 'test-action',
   id,
   summaryLogId
 } = {}) => ({
   createdAt,
-  createdBy: { id: userId, email, scope: [] },
+  createdBy: { id: userId, email, scope: [], role },
   event: {
     category: 'test-category',
     subCategory,

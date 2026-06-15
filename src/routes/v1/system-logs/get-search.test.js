@@ -57,7 +57,7 @@ describe('GET /v1/system-logs/search', () => {
         id: userId,
         email,
         scope: [],
-        ...(role !== undefined && { role })
+        role: role ?? null
       }
     })
   }

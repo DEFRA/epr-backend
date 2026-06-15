@@ -259,7 +259,7 @@ describe('auditReportDelete', () => {
 })
 
 describe('auditMarkReportsStale', () => {
-  const systemActor = { id: 'system', email: 'system', scope: [] }
+  const systemActor = { id: 'system', email: 'system', scope: [], role: null }
   const mockInsertMany = vi.fn()
 
   /** @type {import('#reports/repository/port.js').ReportStale} */

@@ -290,7 +290,7 @@ describe('performUpdateViaStream', () => {
       const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
       expect(systemLogs).toHaveLength(1)
       const [entry] = systemLogs
-      expect(entry.createdBy).toEqual(user)
+      expect(entry.createdBy).toEqual({ ...user, role: null })
       expect(entry.createdAt).toBeInstanceOf(Date)
       expect(entry.event).toEqual({
         category: 'waste-reporting',

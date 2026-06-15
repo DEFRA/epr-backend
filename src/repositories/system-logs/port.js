@@ -1,11 +1,10 @@
 /**
  * The actor on a system log. A human session carries an email, scope and the
  * role it resolved to (null when none); a machine credential carries a name
- * instead. Both always carry an id. Role is optional because logs predating
- * role capture carry only email and scope.
+ * instead. Both always carry an id.
  *
  * @typedef {(
- *   | { id: string, email: string, scope: string[], role?: string | null }
+ *   | { id: string, email: string, scope: string[], role: string | null }
  *   | { id: string, name: string }
  * )} SystemLogActor
  */

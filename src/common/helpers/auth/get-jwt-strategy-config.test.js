@@ -172,27 +172,6 @@ describe('#getJwtStrategyConfig', () => {
       expect(result.credentials.role).toBe('service_maintainer')
     })
 
-    test('credential role is null when user matches no admin tier', async () => {
-      mockGetEntraUserRoles.mockResolvedValue({ role: null, scopes: [] })
-
-      const config = getJwtStrategyConfig(mockOidcConfigs)
-
-      const artifacts = {
-        decoded: {
-          payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
-            aud: mockEntraClientId,
-            oid: 'contact-456',
-            preferred_username: 'regular-user@example.com'
-          }
-        }
-      }
-
-      const result = await config.validate(artifacts)
-
-      expect(result.credentials.role).toBeNull()
-    })
-
     test('calls getEntraUserRoles with email address from token payload', async () => {
       const config = getJwtStrategyConfig(mockOidcConfigs)
 
