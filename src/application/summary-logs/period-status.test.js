@@ -94,19 +94,13 @@ const REGISTERED_ONLY_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
   })
 )
 
-// added.balanceAffecting stays count-only; the other three buckets carry an
-// expandable rows list, so empty added and adjusted groups differ in shape.
-const emptyAdded = () => ({
-  balanceAffecting: { count: 0, tonnageDelta: 0 },
-  nonBalanceAffecting: { count: 0, rows: [] }
-})
-const emptyAdjusted = () => ({
+const emptyChange = () => ({
   balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
   nonBalanceAffecting: { count: 0, rows: [] }
 })
 const emptyPeriod = () => ({
-  added: emptyAdded(),
-  adjusted: emptyAdjusted()
+  added: emptyChange(),
+  adjusted: emptyChange()
 })
 const emptyResult = () => ({
   openPeriodLoads: emptyPeriod(),
@@ -207,7 +201,11 @@ describe('classifyByPeriodStatus', () => {
 
       expect(result.openPeriodLoads.added.balanceAffecting).toEqual({
         count: 2,
-        tonnageDelta: 0.3
+        tonnageDelta: 0.3,
+        rows: [
+          { rowId: '10001', tableName: 'Received', reasons: [] },
+          { rowId: '10002', tableName: 'Received', reasons: [] }
+        ]
       })
     })
 
@@ -435,7 +433,8 @@ describe('classifyByPeriodStatus', () => {
 
       expect(result.closedPeriodLoads.added.balanceAffecting).toEqual({
         count: 1,
-        tonnageDelta: 10
+        tonnageDelta: 10,
+        rows: [{ rowId: '10001', tableName: 'Received', reasons: [] }]
       })
     })
   })
@@ -578,7 +577,8 @@ describe('classifyByPeriodStatus', () => {
 
       expect(result.openPeriodLoads.added.balanceAffecting).toEqual({
         count: 1,
-        tonnageDelta: 10
+        tonnageDelta: 10,
+        rows: [{ rowId: '10001', tableName: 'Received', reasons: [] }]
       })
     })
   })

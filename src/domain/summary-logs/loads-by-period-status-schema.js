@@ -14,7 +14,8 @@ const rowDetailSchema = Joi.object({
   reasons: Joi.array().items(Joi.string()).required()
 })
 
-// rows is optional: the count-only added.balanceAffecting bucket omits it.
+// rows is optional for backward compatibility: summary logs validated before
+// this field existed have no rows. Newly validated logs always populate it.
 const rowsSchema = Joi.array().items(rowDetailSchema).max(100)
 
 const balanceAffectingBucketSchema = Joi.object({
@@ -43,18 +44,13 @@ export const loadsByReportingPeriodSchema = Joi.object({
   closedPeriodLoads: periodStatusByChangeSchema.required()
 })
 
-// added.balanceAffecting stays count-only; the other three buckets carry an
-// empty rows list, matching the populated shape in period-status.js.
-const emptyChange = () => ({
-  added: {
-    balanceAffecting: { count: 0, tonnageDelta: 0 },
-    nonBalanceAffecting: { count: 0, rows: [] }
-  },
-  adjusted: {
-    balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
-    nonBalanceAffecting: { count: 0, rows: [] }
-  }
+// Every bucket carries an empty rows list, matching the uniform populated
+// shape produced in period-status.js.
+const emptyGroup = () => ({
+  balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+  nonBalanceAffecting: { count: 0, rows: [] }
 })
+const emptyChange = () => ({ added: emptyGroup(), adjusted: emptyGroup() })
 
 /** Default loadsByReportingPeriod for validated logs without period-status data. */
 export const emptyLoadsByReportingPeriod = () => ({

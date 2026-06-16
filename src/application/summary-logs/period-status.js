@@ -29,11 +29,11 @@ const MAX_ROWS = 100
  */
 
 /**
- * @typedef {{ count: number, tonnageDelta: number, rows?: RowDetail[] }} BalanceAffectingBucket
+ * @typedef {{ count: number, tonnageDelta: number, rows: RowDetail[] }} BalanceAffectingBucket
  */
 
 /**
- * @typedef {{ count: number, rows?: RowDetail[] }} NonBalanceAffectingBucket
+ * @typedef {{ count: number, rows: RowDetail[] }} NonBalanceAffectingBucket
  */
 
 /**
@@ -68,12 +68,12 @@ const MAX_ROWS = 100
  * @property {string[]} reasons - distinct exclusion reason codes from the current row
  */
 
-// added.balanceAffecting stays count-only (no rows); the other three buckets
-// carry an expandable rows list.
+// Every bucket carries an expandable rows list, so the structure is uniform;
+// the frontend renders rows only where its design calls for them.
 /** @returns {PeriodStatusByRecordChange} */
 const emptyChange = () => ({
   added: {
-    balanceAffecting: { count: 0, tonnageDelta: 0 },
+    balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
     nonBalanceAffecting: { count: 0, rows: [] }
   },
   adjusted: {
@@ -231,15 +231,13 @@ const PERIOD_TO_KEY = {
 
 /**
  * Appends a row to a bucket's list, capped at MAX_ROWS. The bucket's count
- * still reflects the true total even when the list is truncated. The
- * count-only added.balanceAffecting bucket has no rows array, so a missing
- * list is simply skipped.
+ * still reflects the true total even when the list is truncated.
  *
- * @param {RowDetail[] | undefined} rows
+ * @param {RowDetail[]} rows
  * @param {RowDetail} row
  */
 const pushRow = (rows, row) => {
-  if (rows && rows.length < MAX_ROWS) {
+  if (rows.length < MAX_ROWS) {
     rows.push(row)
   }
 }
@@ -263,8 +261,6 @@ const reduceEntries = (entries) => {
     } else {
       group.balanceAffecting.count += count
       group.balanceAffecting.tonnageDelta += tonnageDelta
-      // added.balanceAffecting carries no rows array, so pushRow skips it;
-      // adjusted.balanceAffecting lists its rows.
       pushRow(group.balanceAffecting.rows, identity)
     }
   }

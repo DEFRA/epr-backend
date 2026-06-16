@@ -143,7 +143,7 @@ describe('Summary logs upload lifecycle', () => {
           loadsByReportingPeriod: {
             openPeriodLoads: {
               added: {
-                balanceAffecting: { count: 0, tonnageDelta: 0 },
+                balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
                 nonBalanceAffecting: { count: 0, rows: [] }
               },
               adjusted: {
@@ -153,7 +153,7 @@ describe('Summary logs upload lifecycle', () => {
             },
             closedPeriodLoads: {
               added: {
-                balanceAffecting: { count: 0, tonnageDelta: 0 },
+                balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
                 nonBalanceAffecting: { count: 0, rows: [] }
               },
               adjusted: {

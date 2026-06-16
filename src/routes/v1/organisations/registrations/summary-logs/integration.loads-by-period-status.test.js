@@ -146,13 +146,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       dueDate: '2025-02-20T00:00:00.000Z'
     })
 
-  // added.balanceAffecting stays count-only; the other three buckets carry an
-  // expandable rows list, so empty added and adjusted groups differ in shape.
-  const emptyAdded = () => ({
-    balanceAffecting: { count: 0, tonnageDelta: 0 },
-    nonBalanceAffecting: { count: 0, rows: [] }
-  })
-  const emptyAdjusted = () => ({
+  const emptyChange = () => ({
     balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
     nonBalanceAffecting: { count: 0, rows: [] }
   })
@@ -180,7 +174,11 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(loadsByReportingPeriod).toEqual({
       openPeriodLoads: {
         added: {
-          balanceAffecting: { count: 1, tonnageDelta: 100 },
+          balanceAffecting: {
+            count: 1,
+            tonnageDelta: 100,
+            rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+          },
           nonBalanceAffecting: {
             count: 1,
             rows: [
@@ -192,11 +190,11 @@ describe('loadsByReportingPeriod population at validate time', () => {
             ]
           }
         },
-        adjusted: emptyAdjusted()
+        adjusted: emptyChange()
       },
       closedPeriodLoads: {
-        added: emptyAdded(),
-        adjusted: emptyAdjusted()
+        added: emptyChange(),
+        adjusted: emptyChange()
       }
     })
   })
@@ -218,7 +216,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     )
 
     expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual({
-      balanceAffecting: { count: 0, tonnageDelta: 0 },
+      balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
       nonBalanceAffecting: {
         count: 1,
         rows: [
@@ -280,7 +278,11 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
     expect(
       loadsByReportingPeriod.closedPeriodLoads.added.balanceAffecting
-    ).toEqual({ count: 1, tonnageDelta: 100 })
+    ).toEqual({
+      count: 1,
+      tonnageDelta: 100,
+      rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+    })
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
     ).toBe(0)
@@ -341,7 +343,11 @@ describe('loadsByReportingPeriod population at validate time', () => {
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting
     ).toEqual({
       count: 2,
-      tonnageDelta: 300
+      tonnageDelta: 300,
+      rows: [
+        { rowId: '1001', tableName: 'Exported', reasons: [] },
+        { rowId: '1002', tableName: 'Exported', reasons: [] }
+      ]
     })
   })
 
