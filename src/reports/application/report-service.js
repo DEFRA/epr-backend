@@ -12,48 +12,68 @@ import { errorCodes } from '#reports/enums/error-codes.js'
  */
 
 /**
- * Finds the current report ID for a specific period slot within periodic reports.
- * @param {import('#reports/repository/port.js').PeriodicReport[]} periodicReports
+ * Finds the report ID for a specific submission number within periodic reports,
+ * checking both the current slot and previous submissions.
+ * @param {PeriodicReport[]} periodicReports
  * @param {number} year
  * @param {string} cadence
  * @param {number} period
+ * @param {number} submissionNumber
  * @returns {string|null}
  */
-function findCurrentReportId(periodicReports, year, cadence, period) {
+function findReportIdBySubmissionNumber(
+  periodicReports,
+  year,
+  cadence,
+  period,
+  submissionNumber
+) {
   const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
     cadence
   ]?.[period]
-  return slot?.current?.id ?? slot?.previousSubmissions?.[0]?.id ?? null
+  if (!slot) {
+    return null
+  }
+  if (slot.current?.submissionNumber === submissionNumber) {
+    return slot.current.id
+  }
+  const previous = slot.previousSubmissions?.find(
+    (s) => s.submissionNumber === submissionNumber
+  )
+  return previous?.id ?? null
 }
 
 /**
- * Looks up the stored report for a period, if one exists.
+ * Looks up a stored report for a specific period and submission number.
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {string} organisationId
  * @param {string} registrationId
  * @param {number} year
  * @param {string} cadence
  * @param {number} period
+ * @param {number} submissionNumber
  * @returns {Promise<import('#reports/repository/port.js').Report | null>}
  */
-export async function fetchCurrentReport(
+export async function fetchReportBySubmissionNumber(
   reportsRepository,
   organisationId,
   registrationId,
   year,
   cadence,
-  period
+  period,
+  submissionNumber
 ) {
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationId,
     registrationId
   })
 
-  const currentReportId = findCurrentReportId(
+  const currentReportId = findReportIdBySubmissionNumber(
     periodicReports,
     year,
     cadence,
-    period
+    period,
+    submissionNumber
   )
 
   if (!currentReportId) {
@@ -154,8 +174,20 @@ const assertPeriodEnded = (periodInfo, period, cadence) => {
  * @param {number} period
  * @returns {void}
  */
-const assertNoExistingReport = (periodicReports, year, cadence, period) => {
-  const id = findCurrentReportId(periodicReports, year, cadence, period)
+const assertNoExistingReport = (
+  periodicReports,
+  year,
+  cadence,
+  period,
+  submissionNumber
+) => {
+  const id = findReportIdBySubmissionNumber(
+    periodicReports,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  )
   if (id) {
     throw conflict(
       `Report already exists for ${cadence} period ${period} of ${year}`,
@@ -222,6 +254,7 @@ function buildReportData(aggregated, registration) {
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
+ * @param {number} params.submissionNumber
  * @returns {Promise<import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail>}
  */
 export async function fetchOrGenerateReportForPeriod({
@@ -234,15 +267,17 @@ export async function fetchOrGenerateReportForPeriod({
   registration,
   year,
   cadence,
-  period
+  period,
+  submissionNumber
 }) {
-  const storedReport = await fetchCurrentReport(
+  const storedReport = await fetchReportBySubmissionNumber(
     reportsRepository,
     organisationId,
     registrationId,
     year,
     cadence,
-    period
+    period,
+    submissionNumber
   )
 
   if (storedReport) {
@@ -327,6 +362,7 @@ async function getAggregatedReportDetail({
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
+ * @param {number} params.submissionNumber
  * @param {import('#reports/repository/port.js').UserSummary} params.changedBy
  * @returns {Promise<import('#reports/repository/port.js').Report>}
  */
@@ -341,6 +377,7 @@ export async function createReportForPeriod({
   year,
   cadence,
   period,
+  submissionNumber,
   changedBy
 }) {
   const { startDate, endDate, dueDate } = getValidatedPeriodInfo(
@@ -354,7 +391,13 @@ export async function createReportForPeriod({
     registrationId
   })
 
-  assertNoExistingReport(periodicReports, year, cadence, period)
+  assertNoExistingReport(
+    periodicReports,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  )
 
   const operatorCategory = getOperatorCategory(registration)
   const wasteRecords = await wasteRecordsRepository.findByRegistration(
@@ -382,6 +425,7 @@ export async function createReportForPeriod({
     startDate,
     endDate,
     dueDate,
+    submissionNumber,
     changedBy,
     ...buildReportData(aggregatedReportData, registration)
   })

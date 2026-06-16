@@ -23,8 +23,8 @@ vi.mock('#reports/application/audit.js', () => ({
 describe(`POST ${reportsStatusPath}`, () => {
   setupAuthContext()
 
-  const makeUrl = (orgId, regId, year, cadence, period) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/status`
+  const makeUrl = (orgId, regId, year, cadence, period, submissionNumber = 1) =>
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}/status`
 
   describe('when feature flag is enabled', () => {
     // Defaults to a report whose manual-entry fields are populated enough

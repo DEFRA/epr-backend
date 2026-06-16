@@ -357,6 +357,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
+    },
+    fixDuplicateAccreditationLinks: {
+      doc: 'Feature Flag: Fix duplicate accreditation links in existing organisation data on startup',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_FIX_DUPLICATE_ACCREDITATION_LINKS'
     }
   },
   formSubmissionOverrides: {

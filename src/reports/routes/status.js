@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { assertReportComplete } from '#reports/application/assert-report-complete.js'
-import { fetchCurrentReport } from '#reports/application/report-service.js'
+import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS, STATUS_TO_SLOT } from '#reports/domain/report-status.js'
 import { assertNotStale } from '#reports/domain/stale.js'
@@ -16,7 +16,7 @@ import {
 } from './shared.js'
 
 export const reportsStatusPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/status'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/status'
 
 const payloadSchema = Joi.object({
   status: Joi.string()
@@ -49,6 +49,7 @@ export const reportsStatus = {
     const { organisationId, registrationId, cadence } = params
     const year = Number(params.year)
     const period = Number(params.period)
+    const submissionNumber = Number(params.submissionNumber)
     const { status, version } = request.payload
 
     const [registration, report] = await Promise.all([
@@ -56,13 +57,14 @@ export const reportsStatus = {
         organisationId,
         registrationId
       ),
-      fetchCurrentReport(
+      fetchReportBySubmissionNumber(
         reportsRepository,
         organisationId,
         registrationId,
         year,
         cadence,
-        period
+        period,
+        submissionNumber
       )
     ])
 
