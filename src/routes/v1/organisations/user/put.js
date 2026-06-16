@@ -1,4 +1,7 @@
-import { addOrUpdateOrganisationUser } from '#common/helpers/auth/add-or-update-organisation-user.js'
+import {
+  addOrUpdateOrganisationUser,
+  ORGANISATION_USER_RESULTS
+} from '#common/helpers/auth/add-or-update-organisation-user.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { auditOrganisationUserAdded } from '#root/auditing/organisation-user.js'
 import { StatusCodes } from 'http-status-codes'
@@ -29,8 +32,17 @@ export const organisationsUserPut = {
     )
 
     const organisation = await organisationsRepository.findById(organisationId)
-    await addOrUpdateOrganisationUser(request, tokenPayload, organisation)
-    await auditOrganisationUserAdded(request, organisationId)
+    const result = await addOrUpdateOrganisationUser(
+      request,
+      tokenPayload,
+      organisation
+    )
+    if (
+      result.outcome === ORGANISATION_USER_RESULTS.USER_ADDED ||
+      result.outcome === ORGANISATION_USER_RESULTS.USER_UPDATED
+    ) {
+      await auditOrganisationUserAdded(request, organisationId, result)
+    }
 
     return h.response().code(StatusCodes.OK)
   }

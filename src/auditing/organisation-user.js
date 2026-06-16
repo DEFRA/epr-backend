@@ -7,16 +7,24 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
  * @param {string} organisationId
+ * @param {import('#common/helpers/auth/add-or-update-organisation-user.js').OrganisationUserResult} result
+ * @returns {Promise<void>}
  */
-export async function auditOrganisationUserAdded(request, organisationId) {
+export async function auditOrganisationUserAdded(
+  request,
+  organisationId,
+  result
+) {
   const payload = {
     event: {
       category: 'entity',
       subCategory: 'epr-organisations',
-      action: 'user-added'
+      action: result.outcome
     },
     context: {
-      organisationId
+      organisationId,
+      before: result.userBefore,
+      after: result.userAfter
     },
     user: extractUserDetails(request)
   }

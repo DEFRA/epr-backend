@@ -3,17 +3,16 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import {
   defraIdMockAuthTokens,
-  USER_PRESENT_IN_ORG1_EMAIL,
-  VALID_TOKEN_CONTACT_ID
+  generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 
-const { validToken } = defraIdMockAuthTokens
 const { validToken: serviceMaintainerToken } = entraIdMockAuthTokens
 const mockCdpAuditing = vi.fn()
 
@@ -83,6 +82,17 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         description:
           'Defra user with a relationship pointing to the organisation',
         expectedStatus: StatusCodes.OK
+      },
+      {
+        token: generateValidTokenWith({
+          currentRelationshipId: 'org-relationship-id',
+          relationships: [
+            `org-relationship-id:company-002:another-company-name`
+          ]
+        }),
+        description:
+          'Defra user with a relationship pointing to a different organisation',
+        expectedStatus: StatusCodes.UNAUTHORIZED
       }
     ])(
       'returns $expectedStatus for $description',
@@ -99,125 +109,302 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
   })
 
   describe('when an authorised user hits the endpoint', () => {
-    it('adds the user to the organisation when they are not already present', async () => {
+    /** @type {import('#domain/organisations/model.js').Organisation} */
+    let orgBefore
+
+    /** @type {import('#domain/organisations/model.js').CollatedUser} */
+    let initialUser
+
+    beforeEach(async () => {
       const org = await buildActiveOrg(organisationsRepository)
+      orgBefore = await organisationsRepository.findById(org.id)
+      initialUser = orgBefore.users[0]
+    })
 
-      const orgBefore = await organisationsRepository.findById(org.id)
-      expect(
-        orgBefore.users?.find((u) => u.contactId === VALID_TOKEN_CONTACT_ID)
-      ).toBeUndefined()
-
+    async function addUser(/** @type {Object} */ user) {
+      const newUserToken = generateValidTokenWith(user)
       const response = await server.inject({
         method: 'PUT',
-        url: `/v1/organisations/${org.id}/user`,
-        headers: { Authorization: `Bearer ${validToken}` }
+        url: `/v1/organisations/${orgBefore.id}/user`,
+        headers: { Authorization: `Bearer ${newUserToken}` }
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
+    }
 
-      const orgAfter = await organisationsRepository.findById(org.id)
-      expect(
-        orgAfter.users?.find((u) => u.contactId === VALID_TOKEN_CONTACT_ID)
-      ).toMatchObject({
-        contactId: VALID_TOKEN_CONTACT_ID,
-        email: USER_PRESENT_IN_ORG1_EMAIL
+    describe('when user not present in organisation', () => {
+      const newUser = {
+        contactId: 'new-user-id',
+        email: 'newUser@email.com',
+        firstName: 'New',
+        lastName: 'Person'
+      }
+
+      it('adds the user to the organisation', async () => {
+        expect(orgBefore.users).not.toContainEqual(
+          expect.objectContaining({
+            email: newUser.email
+          })
+        )
+
+        await addUser(newUser)
+
+        const orgAfter = await waitForVersion(
+          organisationsRepository,
+          orgBefore.id,
+          orgBefore.version + 1
+        )
+
+        expect(orgAfter.users).toContainEqual(
+          expect.objectContaining({
+            contactId: newUser.contactId,
+            email: newUser.email
+          })
+        )
+      })
+
+      it('captures an audit event', async () => {
+        await addUser(newUser)
+
+        expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+
+        const auditPayload = mockCdpAuditing.mock.calls[0][0]
+
+        expect(auditPayload.event).toEqual({
+          category: 'entity',
+          subCategory: 'epr-organisations',
+          action: 'user-added'
+        })
+
+        /**
+         * This is a bug
+         * request.auth.credentials is not available when user added within auth layer, so the system log is missing info on which user initiated the action
+         * This will be fixed when the auth layer user addition is removed (and instead the handler implementation fires)
+         */
+        expect(auditPayload.user).toEqual({})
+
+        expect(auditPayload.context).toEqual({
+          organisationId: orgBefore.id,
+          before: null,
+          after: {
+            contactId: newUser.contactId,
+            fullName: `${newUser.firstName} ${newUser.lastName}`,
+            email: newUser.email,
+            roles: ['standard_user']
+          }
+        })
+      })
+
+      it('captures a system log', async () => {
+        const start = new Date()
+
+        await addUser(newUser)
+
+        await waitForVersion(
+          organisationsRepository,
+          orgBefore.id,
+          orgBefore.version + 1
+        ) // this is needed while the user is added fire-and-forget in the auth layer
+
+        const systemLogsResponse = await server.inject({
+          method: 'GET',
+          url: `/v1/system-logs/search?organisationId=${orgBefore.id}`,
+          headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
+        })
+
+        expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
+
+        const { systemLogs } = JSON.parse(systemLogsResponse.payload)
+        expect(systemLogs).toHaveLength(1)
+
+        const [log] = systemLogs
+
+        expect(log.event).toEqual({
+          category: 'entity',
+          subCategory: 'epr-organisations',
+          action: 'user-added'
+        })
+
+        expect(log.context).toEqual({
+          organisationId: orgBefore.id,
+          before: null,
+          after: {
+            contactId: newUser.contactId,
+            fullName: `${newUser.firstName} ${newUser.lastName}`,
+            email: newUser.email,
+            roles: ['standard_user']
+          }
+        })
+
+        // This is a bug - request.auth.credentials is not available when user added within auth layer, so the system log is missing info on which user initiated the action
+        expect(log.createdBy).toEqual({})
+
+        expect(new Date(log.createdAt).getTime()).toBeGreaterThanOrEqual(
+          start.getTime()
+        )
       })
     })
 
-    it('is idempotent — does not create a duplicate if the user already exists', async () => {
-      const org = await buildActiveOrg(organisationsRepository)
+    describe('when user exists in organisation but details have changed', () => {
+      const updatedUser = () => {
+        return {
+          contactId: 'new-contact-id',
+          firstName: initialUser.fullName.split(' ')[0],
+          lastName: 'UpdatedLastName',
+          email: initialUser.email
+        }
+      }
 
-      await server.inject({
-        method: 'PUT',
-        url: `/v1/organisations/${org.id}/user`,
-        headers: { Authorization: `Bearer ${validToken}` }
+      it('updates the user in the organisation', async () => {
+        expect(orgBefore.users).not.toContainEqual(
+          expect.objectContaining({
+            contactId: updatedUser().contactId,
+            email: updatedUser().email
+          })
+        )
+
+        await addUser(updatedUser())
+
+        const orgAfter = await waitForVersion(
+          organisationsRepository,
+          orgBefore.id,
+          orgBefore.version + 1
+        )
+
+        expect(orgAfter.users).toContainEqual(
+          expect.objectContaining({
+            contactId: updatedUser().contactId,
+            email: updatedUser().email
+          })
+        )
       })
 
-      const response = await server.inject({
-        method: 'PUT',
-        url: `/v1/organisations/${org.id}/user`,
-        headers: { Authorization: `Bearer ${validToken}` }
+      it('captures an audit event', async () => {
+        await addUser(updatedUser())
+
+        expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+
+        const auditPayload = mockCdpAuditing.mock.calls[0][0]
+
+        expect(auditPayload.event).toEqual({
+          category: 'entity',
+          subCategory: 'epr-organisations',
+          action: 'user-updated'
+        })
+
+        /**
+         * This is a bug
+         * request.auth.credentials is not available when user added within auth layer, so the system log is missing info on which user initiated the action
+         * This will be fixed when the auth layer user addition is removed (and instead the handler implementation fires)
+         */
+        expect(auditPayload.user).toEqual({})
+
+        expect(auditPayload.context).toEqual({
+          organisationId: orgBefore.id,
+          before: {
+            fullName: initialUser.fullName,
+            email: initialUser.email,
+            roles: initialUser.roles
+          },
+          after: {
+            contactId: updatedUser().contactId,
+            fullName: `${updatedUser().firstName} ${updatedUser().lastName}`,
+            email: updatedUser().email,
+            roles: ['initial_user', 'standard_user']
+          }
+        })
       })
 
-      expect(response.statusCode).toBe(StatusCodes.OK)
+      it('captures a system log', async () => {
+        const start = new Date()
 
-      const orgAfter = await organisationsRepository.findById(org.id)
-      const usersWithContactId = orgAfter.users?.filter(
-        (u) => u.contactId === VALID_TOKEN_CONTACT_ID
-      )
-      expect(usersWithContactId).toHaveLength(1)
+        await addUser(updatedUser())
+
+        await waitForVersion(
+          organisationsRepository,
+          orgBefore.id,
+          orgBefore.version + 1
+        ) // this is needed while the user is added fire-and-forget in the auth layer
+
+        const systemLogsResponse = await server.inject({
+          method: 'GET',
+          url: `/v1/system-logs/search?organisationId=${orgBefore.id}`,
+          headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
+        })
+
+        expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
+
+        const { systemLogs } = JSON.parse(systemLogsResponse.payload)
+        expect(systemLogs).toHaveLength(1)
+
+        const [log] = systemLogs
+
+        expect(log.event).toEqual({
+          category: 'entity',
+          subCategory: 'epr-organisations',
+          action: 'user-updated'
+        })
+
+        expect(log.context).toEqual({
+          organisationId: orgBefore.id,
+          before: {
+            fullName: initialUser.fullName,
+            email: initialUser.email,
+            roles: initialUser.roles
+          },
+          after: {
+            contactId: updatedUser().contactId,
+            fullName: `${updatedUser().firstName} ${updatedUser().lastName}`,
+            email: updatedUser().email,
+            roles: ['initial_user', 'standard_user']
+          }
+        })
+
+        // This is a bug - request.auth.credentials is not available when user added within auth layer, so the system log is missing info on which user initiated the action
+        expect(log.createdBy).toEqual({})
+
+        expect(new Date(log.createdAt).getTime()).toBeGreaterThanOrEqual(
+          start.getTime()
+        )
+      })
     })
 
-    it('captures an audit event', async () => {
-      const org = await buildActiveOrg(organisationsRepository)
-
-      await server.inject({
-        method: 'PUT',
-        url: `/v1/organisations/${org.id}/user`,
-        headers: { Authorization: `Bearer ${validToken}` }
+    describe('when user already exists in organisation', () => {
+      const userNotChanged = () => ({
+        contactId: orgBefore.users[0].contactId,
+        firstName: orgBefore.users[0].fullName.split(' ')[0],
+        lastName: orgBefore.users[0].fullName.split(' ')[1],
+        email: orgBefore.users[0].email
       })
 
-      expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+      it('does not update the user in the organisation', async () => {
+        await addUser(userNotChanged())
 
-      const auditPayload = mockCdpAuditing.mock.calls[0][0]
+        const orgAfter = await organisationsRepository.findById(orgBefore.id)
 
-      expect(auditPayload.event).toEqual({
-        category: 'entity',
-        subCategory: 'epr-organisations',
-        action: 'user-added'
+        expect(orgAfter.users).toEqual(orgBefore.users)
       })
 
-      expect(auditPayload.user).toEqual({
-        id: VALID_TOKEN_CONTACT_ID,
-        email: USER_PRESENT_IN_ORG1_EMAIL,
-        scope: ['standard_user']
+      it('does not captures an audit event', async () => {
+        await addUser(userNotChanged())
+
+        expect(mockCdpAuditing).toHaveBeenCalledTimes(0)
       })
 
-      expect(auditPayload.context).toEqual({
-        organisationId: org.id
+      it('does not capture a system log', async () => {
+        await addUser(userNotChanged())
+
+        const systemLogsResponse = await server.inject({
+          method: 'GET',
+          url: `/v1/system-logs/search?organisationId=${orgBefore.id}`,
+          headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
+        })
+
+        expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
+
+        const { systemLogs } = JSON.parse(systemLogsResponse.payload)
+        expect(systemLogs).toHaveLength(0)
       })
-    })
-
-    it('captures a system log', async () => {
-      const start = new Date()
-      const org = await buildActiveOrg(organisationsRepository)
-
-      await server.inject({
-        method: 'PUT',
-        url: `/v1/organisations/${org.id}/user`,
-        headers: { Authorization: `Bearer ${validToken}` }
-      })
-
-      const systemLogsResponse = await server.inject({
-        method: 'GET',
-        url: `/v1/system-logs/search?organisationId=${org.id}`,
-        headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
-      })
-
-      expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
-
-      const { systemLogs } = JSON.parse(systemLogsResponse.payload)
-      expect(systemLogs).toHaveLength(1)
-
-      const [log] = systemLogs
-
-      expect(log.event).toEqual({
-        category: 'entity',
-        subCategory: 'epr-organisations',
-        action: 'user-added'
-      })
-
-      expect(log.context).toEqual({ organisationId: org.id })
-
-      expect(log.createdBy).toEqual({
-        id: VALID_TOKEN_CONTACT_ID,
-        email: USER_PRESENT_IN_ORG1_EMAIL,
-        scope: ['standard_user']
-      })
-
-      expect(new Date(log.createdAt).getTime()).toBeGreaterThanOrEqual(
-        start.getTime()
-      )
     })
   })
 })

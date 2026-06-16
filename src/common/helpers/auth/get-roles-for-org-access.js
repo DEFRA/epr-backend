@@ -5,7 +5,11 @@ import {
 } from '#common/enums/event.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
-import { addOrUpdateOrganisationUser } from './add-or-update-organisation-user.js'
+import {
+  addOrUpdateOrganisationUser,
+  ORGANISATION_USER_RESULTS
+} from './add-or-update-organisation-user.js'
+import { auditOrganisationUserAdded } from '#root/auditing/organisation-user.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
@@ -40,8 +44,16 @@ export const getRolesForOrganisationAccess = async (
     throw Boom.forbidden('Access denied: organisation status not accessible')
   }
 
-  addOrUpdateOrganisationUser(request, tokenPayload, organisationById).catch(
-    (err) => {
+  addOrUpdateOrganisationUser(request, tokenPayload, organisationById)
+    .then(async (result) => {
+      if (
+        result.outcome === ORGANISATION_USER_RESULTS.USER_ADDED ||
+        result.outcome === ORGANISATION_USER_RESULTS.USER_UPDATED
+      ) {
+        await auditOrganisationUserAdded(request, organisationId, result)
+      }
+    })
+    .catch((err) => {
       request.logger.warn({
         message: `User sync failed: ${err.message}`,
         err,
@@ -50,8 +62,7 @@ export const getRolesForOrganisationAccess = async (
           action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED
         }
       })
-    }
-  )
+    })
 
   return [ROLES.standardUser]
 }

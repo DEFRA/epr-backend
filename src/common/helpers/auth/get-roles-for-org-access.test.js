@@ -6,12 +6,16 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { userPresentInOrg1DefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { logger } from '#common/helpers/logging/logger.js'
 
 describe('#getRolesForOrganisationAccess', () => {
   const mockOrganisationId = new ObjectId().toString()
   const mockLinkedEprOrg = mockOrganisationId
 
   let mockRequest
+
+  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
   let mockOrganisationsRepository
 
   beforeEach(() => {
@@ -27,6 +31,7 @@ describe('#getRolesForOrganisationAccess', () => {
         organisationId: mockOrganisationId
       },
       organisationsRepository: mockOrganisationsRepository,
+      systemLogsRepository: createSystemLogsRepository()(logger),
       logger: {
         warn: vi.fn()
       }

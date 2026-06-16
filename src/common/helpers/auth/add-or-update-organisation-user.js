@@ -6,6 +6,18 @@ import partition from 'lodash.partition'
 /** @import {DefraIdTokenPayload} from './types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 
+export const ORGANISATION_USER_RESULTS = Object.freeze(
+  /** @type {const} */ ({
+    NO_CHANGE: 'no-change',
+    USER_ADDED: 'user-added',
+    USER_UPDATED: 'user-updated'
+  })
+)
+
+/** @typedef {(typeof ORGANISATION_USER_RESULTS)[keyof typeof ORGANISATION_USER_RESULTS]} OrganisationUserModification */
+
+/** @typedef {{outcome: OrganisationUserModification, userBefore: CollatedUser | null, userAfter: CollatedUser}} OrganisationUserResult */
+
 export const getDisplayName = ({ firstName, lastName }) =>
   [firstName, lastName].filter(Boolean).join(' ')
 
@@ -47,7 +59,7 @@ const extractUserAndOthers = (organisation, { email, contactId }) => {
  * @param {HapiRequest} request - The Hapi request object
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user information
  * @param {Organisation} organisation - The organisation object
- * @returns {Promise<void>}
+ * @returns {Promise<OrganisationUserResult>} - Result indicating if a user was added, updated, or no change
  */
 export const addOrUpdateOrganisationUser = async (
   request,
@@ -61,6 +73,12 @@ export const addOrUpdateOrganisationUser = async (
 
   /* v8 ignore next */
   if (noUser(user) || withChangedDetails(user, tokenPayload)) {
+    const newUser = {
+      contactId,
+      email,
+      fullName: getDisplayName({ firstName, lastName }),
+      roles: user?.roles ?? [USER_ROLES.STANDARD]
+    }
     const { id: _, version: _v, ...org } = organisation
 
     await organisationsRepository.replace(
@@ -68,16 +86,20 @@ export const addOrUpdateOrganisationUser = async (
       organisation.version,
       {
         ...org,
-        users: [
-          {
-            contactId,
-            email,
-            fullName: getDisplayName({ firstName, lastName }),
-            roles: user?.roles ?? [USER_ROLES.STANDARD]
-          },
-          ...otherUsers
-        ]
+        users: [newUser, ...otherUsers]
       }
     )
+    return {
+      outcome: noUser(user)
+        ? ORGANISATION_USER_RESULTS.USER_ADDED
+        : ORGANISATION_USER_RESULTS.USER_UPDATED,
+      userBefore: user,
+      userAfter: newUser
+    }
+  }
+  return {
+    outcome: ORGANISATION_USER_RESULTS.NO_CHANGE,
+    userBefore: user,
+    userAfter: user
   }
 }
