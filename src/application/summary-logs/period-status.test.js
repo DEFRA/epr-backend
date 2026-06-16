@@ -203,8 +203,8 @@ describe('classifyByPeriodStatus', () => {
         count: 2,
         tonnageDelta: 0.3,
         rows: [
-          { rowId: '10001', tableName: 'Received', reasons: [] },
-          { rowId: '10002', tableName: 'Received', reasons: [] }
+          { rowId: '10001', tableName: 'Received', exclusionReasons: [] },
+          { rowId: '10002', tableName: 'Received', exclusionReasons: [] }
         ]
       })
     })
@@ -313,7 +313,7 @@ describe('classifyByPeriodStatus', () => {
       expect(result.openPeriodLoads.adjusted.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 50,
-        rows: [{ rowId: '10001', tableName: 'Received', reasons: [] }]
+        rows: [{ rowId: '10001', tableName: 'Received', exclusionReasons: [] }]
       })
     })
 
@@ -434,7 +434,7 @@ describe('classifyByPeriodStatus', () => {
       expect(result.closedPeriodLoads.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 10,
-        rows: [{ rowId: '10001', tableName: 'Received', reasons: [] }]
+        rows: [{ rowId: '10001', tableName: 'Received', exclusionReasons: [] }]
       })
     })
   })
@@ -578,7 +578,7 @@ describe('classifyByPeriodStatus', () => {
       expect(result.openPeriodLoads.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 10,
-        rows: [{ rowId: '10001', tableName: 'Received', reasons: [] }]
+        rows: [{ rowId: '10001', tableName: 'Received', exclusionReasons: [] }]
       })
     })
   })

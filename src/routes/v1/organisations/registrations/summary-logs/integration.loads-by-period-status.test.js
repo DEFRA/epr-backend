@@ -177,7 +177,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
           balanceAffecting: {
             count: 1,
             tonnageDelta: 100,
-            rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+            rows: [
+              { rowId: '1001', tableName: 'Exported', exclusionReasons: [] }
+            ]
           },
           nonBalanceAffecting: {
             count: 1,
@@ -185,7 +187,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
               {
                 rowId: '2001',
                 tableName: 'Exported',
-                reasons: [CLASSIFICATION_REASON.ORS_NOT_APPROVED]
+                exclusionReasons: [CLASSIFICATION_REASON.ORS_NOT_APPROVED]
               }
             ]
           }
@@ -223,7 +225,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
           {
             rowId: '1001',
             tableName: 'Exported',
-            reasons: [CLASSIFICATION_REASON.PRN_ISSUED]
+            exclusionReasons: [CLASSIFICATION_REASON.PRN_ISSUED]
           }
         ]
       }
@@ -253,7 +255,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       {
         rowId: '1001',
         tableName: 'Exported',
-        reasons: [CLASSIFICATION_REASON.PRN_ISSUED]
+        exclusionReasons: [CLASSIFICATION_REASON.PRN_ISSUED]
       }
     ])
   })
@@ -281,7 +283,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toEqual({
       count: 1,
       tonnageDelta: 100,
-      rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+      rows: [{ rowId: '1001', tableName: 'Exported', exclusionReasons: [] }]
     })
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
@@ -345,8 +347,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
       count: 2,
       tonnageDelta: 300,
       rows: [
-        { rowId: '1001', tableName: 'Exported', reasons: [] },
-        { rowId: '1002', tableName: 'Exported', reasons: [] }
+        { rowId: '1001', tableName: 'Exported', exclusionReasons: [] },
+        { rowId: '1002', tableName: 'Exported', exclusionReasons: [] }
       ]
     })
   })
@@ -382,7 +384,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toEqual({
       count: 1,
       tonnageDelta: 50,
-      rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+      rows: [{ rowId: '1001', tableName: 'Exported', exclusionReasons: [] }]
     })
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
@@ -437,14 +439,14 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toEqual({
       count: 1,
       tonnageDelta: -100,
-      rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+      rows: [{ rowId: '1001', tableName: 'Exported', exclusionReasons: [] }]
     })
     expect(
       loadsByReportingPeriod.openPeriodLoads.adjusted.balanceAffecting
     ).toEqual({
       count: 1,
       tonnageDelta: 100,
-      rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+      rows: [{ rowId: '1001', tableName: 'Exported', exclusionReasons: [] }]
     })
   })
 
@@ -489,7 +491,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
       nonBalanceAffecting: {
         count: 1,
-        rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+        rows: [{ rowId: '1001', tableName: 'Exported', exclusionReasons: [] }]
       }
     })
   })
@@ -528,7 +530,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
         {
           rowId: '1001',
           tableName: 'Exported',
-          reasons: [CLASSIFICATION_REASON.PRN_ISSUED]
+          exclusionReasons: [CLASSIFICATION_REASON.PRN_ISSUED]
         }
       ]
     })

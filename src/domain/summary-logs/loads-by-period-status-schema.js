@@ -11,12 +11,12 @@ import Joi from 'joi'
 const rowDetailSchema = Joi.object({
   rowId: Joi.string().required(),
   tableName: Joi.string().required(),
-  reasons: Joi.array().items(Joi.string()).required()
+  exclusionReasons: Joi.array().items(Joi.string()).required()
 })
 
-// rows is optional for backward compatibility: summary logs validated before
-// this field existed have no rows. Newly validated logs always populate it.
-const rowsSchema = Joi.array().items(rowDetailSchema).max(100)
+// Every bucket carries a rows list; the frontend renders it only where its
+// design calls for them.
+const rowsSchema = Joi.array().items(rowDetailSchema).max(100).required()
 
 const balanceAffectingBucketSchema = Joi.object({
   count: Joi.number().integer().min(0).required(),

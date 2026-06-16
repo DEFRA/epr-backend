@@ -23,9 +23,9 @@ const MAX_ROWS = 100
 /** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
 
 /**
- * A single load's identity and exclusion reasons, listed under an expandable
- * bucket. reasons is empty for an included row.
- * @typedef {{ rowId: string, tableName: string, reasons: string[] }} RowDetail
+ * A single load's identity and exclusion reason codes, listed under an
+ * expandable bucket. exclusionReasons is empty for an included row.
+ * @typedef {{ rowId: string, tableName: string, exclusionReasons: string[] }} RowDetail
  */
 
 /**
@@ -65,7 +65,7 @@ const MAX_ROWS = 100
  * @property {number} tonnageDelta - rounded to 2dp; non-zero means balanceAffecting
  * @property {string} rowId - the record's row ID; carried onto every leg
  * @property {string} tableName - the schema's human sheet name
- * @property {string[]} reasons - distinct exclusion reason codes from the current row
+ * @property {string[]} exclusionReasons - distinct exclusion reason codes from the current row
  */
 
 // Every bucket carries an expandable rows list, so the structure is uniform;
@@ -144,16 +144,16 @@ const determineRecordStatus = (record, summaryLogId) => {
  * @param {import('#domain/summary-logs/table-schemas/index.js').TableSchema | null} schema
  * @param {Record<string, any>} data
  * @param {ClassificationContext} context
- * @returns {{ transactionAmount: number, reasons: string[] }}
+ * @returns {{ transactionAmount: number, exclusionReasons: string[] }}
  */
 const classifyRow = (schema, data, context) => {
   const result = schema?.classifyForWasteBalance?.(data, context)
   const transactionAmount =
     result?.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
-  const reasons = result?.reasons
+  const exclusionReasons = result?.reasons
     ? [...new Set(result.reasons.map((reason) => reason.code))]
     : []
-  return { transactionAmount, reasons }
+  return { transactionAmount, exclusionReasons }
 }
 
 /**
@@ -324,7 +324,7 @@ const classifyAdjustedWasteRecord = ({
 
   // Reasons come from the current row, so both legs (including the old-period
   // reversal) reflect what the operator is uploading now.
-  const { transactionAmount: newAmount, reasons } = classifyRow(
+  const { transactionAmount: newAmount, exclusionReasons } = classifyRow(
     schema,
     record.data,
     context
@@ -341,7 +341,7 @@ const classifyAdjustedWasteRecord = ({
     identity: {
       rowId: String(record.rowId),
       tableName: schema.sheetName,
-      reasons
+      exclusionReasons
     }
   })
 }
@@ -393,7 +393,7 @@ export const classifyByPeriodStatus = ({
         cadence
       )
       if (period) {
-        const { transactionAmount, reasons } = classifyRow(
+        const { transactionAmount, exclusionReasons } = classifyRow(
           schema,
           record.data,
           classificationContext
@@ -405,7 +405,7 @@ export const classifyByPeriodStatus = ({
             identity: {
               rowId: String(record.rowId),
               tableName: schema.sheetName,
-              reasons
+              exclusionReasons
             }
           })
         )
