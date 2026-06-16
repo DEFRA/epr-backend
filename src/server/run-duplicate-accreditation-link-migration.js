@@ -30,15 +30,85 @@ const resolveKeepAndUnlink = (regs) => {
   const keepReg =
     nonCreated.length === 1
       ? nonCreated[0]
-      : regs.reduce((latest, r) =>
-          new Date(r.formSubmission.time) > new Date(latest.formSubmission.time)
-            ? r
-            : latest
+      : regs.reduce(
+          (latest, r) =>
+            new Date(r.formSubmission.time) >
+            new Date(latest.formSubmission.time)
+              ? r
+              : latest,
+          regs[0]
         )
 
   return {
     keepId: keepReg.id,
     unlinkIds: regs.filter((r) => r.id !== keepReg.id).map((r) => r.id)
+  }
+}
+
+/**
+ * Groups an organisation's registrations by accreditationId, ignoring
+ * registrations that aren't linked to an accreditation.
+ *
+ * @param {Organisation} org
+ * @returns {Map<string, {id: string, status: string, formSubmission: {time: Date}}[]>}
+ */
+const groupRegistrationsByAccreditation = (org) => {
+  /** @type {Map<string, {id: string, status: string, formSubmission: {time: Date}}[]>} */
+  const accToRegs = new Map()
+
+  for (const reg of org.registrations) {
+    if (!reg.accreditationId) {
+      continue
+    }
+    const existing = accToRegs.get(reg.accreditationId) ?? []
+    existing.push({
+      id: reg.id,
+      status: reg.status,
+      formSubmission: reg.formSubmission
+    })
+    accToRegs.set(reg.accreditationId, existing)
+  }
+
+  return accToRegs
+}
+
+/**
+ * Builds a fix for one accreditation's set of linked registrations, logging
+ * the duplicate and, if ambiguous, a warning. Returns null when there is
+ * nothing to fix (skipped due to ambiguity).
+ *
+ * @param {string} organisationId
+ * @param {string} accreditationId
+ * @param {{id: string, status: string, formSubmission: {time: Date}}[]} regs
+ * @returns {{
+ *   accreditationId: string,
+ *   registrations: {id: string, status: string}[],
+ *   keepId: string,
+ *   unlinkIds: string[]
+ * } | null}
+ */
+const buildFixForAccreditation = (organisationId, accreditationId, regs) => {
+  const regSummary = regs.map(({ id, status }) => ({ id, status }))
+  const regSummaryStr = regSummary.map((r) => `${r.id}(${r.status})`).join(', ')
+
+  logger.info({
+    message: `Duplicate accreditation link: organisationId=${organisationId} accreditationId=${accreditationId} registrations=[${regSummaryStr}]`
+  })
+
+  const resolution = resolveKeepAndUnlink(regs)
+
+  if (!resolution) {
+    logger.warn({
+      message: `Duplicate accreditation link skipped (multiple non-created registrations): organisationId=${organisationId} accreditationId=${accreditationId} registrations=[${regSummaryStr}]`
+    })
+    return null
+  }
+
+  return {
+    accreditationId,
+    registrations: regSummary,
+    keepId: resolution.keepId,
+    unlinkIds: resolution.unlinkIds
   }
 }
 
@@ -59,59 +129,17 @@ const resolveKeepAndUnlink = (regs) => {
  * }}
  */
 const findFixes = (org) => {
-  /** @type {Map<string, {id: string, status: string, formSubmission: {time: Date}}[]>} */
-  const accToRegs = new Map()
+  const accToRegs = groupRegistrationsByAccreditation(org)
 
-  for (const reg of org.registrations) {
-    if (!reg.accreditationId) {
-      continue
-    }
-    const existing = accToRegs.get(reg.accreditationId) ?? []
-    existing.push({
-      id: reg.id,
-      status: reg.status,
-      formSubmission: reg.formSubmission
-    })
-    accToRegs.set(reg.accreditationId, existing)
-  }
+  const duplicateEntries = [...accToRegs].filter(([, regs]) => regs.length >= 2)
 
-  const fixes = []
-  let duplicatesFound = 0
+  const fixes = duplicateEntries
+    .map(([accreditationId, regs]) =>
+      buildFixForAccreditation(org.id, accreditationId, regs)
+    )
+    .filter((fix) => fix !== null)
 
-  for (const [accreditationId, regs] of accToRegs) {
-    if (regs.length < 2) {
-      continue
-    }
-
-    duplicatesFound += 1
-    const regSummary = regs.map(({ id, status }) => ({ id, status }))
-
-    const regSummaryStr = regSummary
-      .map((r) => `${r.id}(${r.status})`)
-      .join(', ')
-
-    logger.info({
-      message: `Duplicate accreditation link: organisationId=${org.id} accreditationId=${accreditationId} registrations=[${regSummaryStr}]`
-    })
-
-    const resolution = resolveKeepAndUnlink(regs)
-
-    if (!resolution) {
-      logger.warn({
-        message: `Duplicate accreditation link skipped (multiple non-created registrations): organisationId=${org.id} accreditationId=${accreditationId} registrations=[${regSummaryStr}]`
-      })
-      continue
-    }
-
-    fixes.push({
-      accreditationId,
-      registrations: regSummary,
-      keepId: resolution.keepId,
-      unlinkIds: resolution.unlinkIds
-    })
-  }
-
-  return { fixes, duplicatesFound }
+  return { fixes, duplicatesFound: duplicateEntries.length }
 }
 
 /**
@@ -139,6 +167,77 @@ const applyFixes = (org, fixes) => {
 }
 
 /**
+ * Logs the fixes that would be applied to an organisation without writing
+ * anything, for dry-run mode.
+ *
+ * @param {Organisation} org
+ * @param {{accreditationId: string, keepId: string, unlinkIds: string[]}[]} fixes
+ */
+const logDryRunFixes = (org, fixes) => {
+  const fixSummary = fixes
+    .map(
+      (f) =>
+        `accreditationId=${f.accreditationId} keep=${f.keepId} unlink=[${f.unlinkIds.join(',')}]`
+    )
+    .join('; ')
+  logger.info({
+    message: `Dry run — would fix duplicate accreditation links: organisationId=${org.id} fixes=[${fixSummary}]`
+  })
+}
+
+/**
+ * Analyses and, unless in dry-run mode, applies duplicate accreditation link
+ * fixes for a single organisation.
+ *
+ * @param {object} params
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} params.organisationsRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} params.systemLogsRepository
+ * @param {Organisation} params.org
+ * @param {boolean} params.isDryRun
+ * @returns {Promise<{duplicatesFound: number, updated: boolean, failed: boolean}>}
+ */
+const processOrganisation = async ({
+  organisationsRepository,
+  systemLogsRepository,
+  org,
+  isDryRun
+}) => {
+  const { fixes, duplicatesFound } = findFixes(org)
+
+  if (duplicatesFound === 0) {
+    return { duplicatesFound, updated: false, failed: false }
+  }
+
+  if (isDryRun) {
+    logDryRunFixes(org, fixes)
+    return { duplicatesFound, updated: false, failed: false }
+  }
+
+  if (fixes.length === 0) {
+    return { duplicatesFound, updated: false, failed: false }
+  }
+
+  try {
+    const updatedOrg = applyFixes(org, fixes)
+    await organisationsRepository.replace(org.id, org.version, updatedOrg)
+    await auditDuplicateAccreditationLinkMigration(
+      systemLogsRepository,
+      org.id,
+      org,
+      updatedOrg
+    )
+
+    return { duplicatesFound, updated: true, failed: false }
+  } catch (error) {
+    logger.error({
+      message: `Failed to fix duplicate accreditation links for organisation: organisationId=${org.id}`,
+      err: error
+    })
+    return { duplicatesFound, updated: false, failed: true }
+  }
+}
+
+/**
  * @param {object} server
  * @param {boolean} isDryRun
  */
@@ -157,49 +256,16 @@ const runMigration = async (server, isDryRun) => {
   let totalOrgsFailed = 0
 
   for (const org of organisations) {
-    const { fixes, duplicatesFound } = findFixes(org)
+    const result = await processOrganisation({
+      organisationsRepository,
+      systemLogsRepository,
+      org,
+      isDryRun
+    })
 
-    if (duplicatesFound === 0) {
-      continue
-    }
-
-    totalDuplicateAccreditations += duplicatesFound
-
-    if (isDryRun) {
-      const fixSummary = fixes
-        .map(
-          (f) =>
-            `accreditationId=${f.accreditationId} keep=${f.keepId} unlink=[${f.unlinkIds.join(',')}]`
-        )
-        .join('; ')
-      logger.info({
-        message: `Dry run — would fix duplicate accreditation links: organisationId=${org.id} fixes=[${fixSummary}]`
-      })
-      continue
-    }
-
-    if (fixes.length === 0) {
-      continue
-    }
-
-    try {
-      const updatedOrg = applyFixes(org, fixes)
-      await organisationsRepository.replace(org.id, org.version, updatedOrg)
-      await auditDuplicateAccreditationLinkMigration(
-        systemLogsRepository,
-        org.id,
-        org,
-        updatedOrg
-      )
-
-      totalOrgsUpdated += 1
-    } catch (error) {
-      totalOrgsFailed += 1
-      logger.error({
-        message: `Failed to fix duplicate accreditation links for organisation: organisationId=${org.id}`,
-        err: error
-      })
-    }
+    totalDuplicateAccreditations += result.duplicatesFound
+    totalOrgsUpdated += result.updated ? 1 : 0
+    totalOrgsFailed += result.failed ? 1 : 0
   }
 
   logger.info({

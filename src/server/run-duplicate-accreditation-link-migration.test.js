@@ -300,6 +300,13 @@ describe('runDuplicateAccreditationLinkMigration', () => {
       )
       expect(olderUpdated.accreditationId).toBeUndefined()
       expect(newerUpdated.accreditationId).toBe(accId)
+      // The kept registration must be untouched in every other field, not just accreditationId
+      expect(newerUpdated).toEqual(newerReg)
+      // The unlinked registration must only have accreditationId removed, nothing else changed
+      expect(olderUpdated).toEqual({
+        ...olderReg,
+        accreditationId: undefined
+      })
 
       expect(auditDuplicateAccreditationLinkMigration).toHaveBeenCalledWith(
         expect.anything(),
@@ -320,6 +327,55 @@ describe('runDuplicateAccreditationLinkMigration', () => {
         message:
           'Duplicate accreditation link migration complete: isDryRun=false totalDuplicateAccreditations=1 totalOrgsUpdated=1 totalOrgsFailed=0'
       })
+    })
+
+    it('leaves registrations linked to a different accreditation completely unchanged', async () => {
+      const server = buildServer(true)
+      const accId = buildAccreditationId()
+      const otherAccId = buildAccreditationId()
+      const acc = buildAccreditation({ id: accId })
+      const otherAcc = buildAccreditation({ id: otherAccId })
+      const olderReg = buildRegistrationWithStatus('created', {
+        accreditationId: accId,
+        formSubmission: {
+          id: new ObjectId().toString(),
+          time: new Date('2024-01-01')
+        }
+      })
+      const newerReg = buildRegistrationWithStatus('created', {
+        accreditationId: accId,
+        formSubmission: {
+          id: new ObjectId().toString(),
+          time: new Date('2024-06-01')
+        }
+      })
+      const unrelatedReg = buildRegistrationWithStatus('created', {
+        accreditationId: otherAccId,
+        formSubmission: {
+          id: new ObjectId().toString(),
+          time: new Date('2024-03-01')
+        }
+      })
+      const org = buildOrganisation({
+        registrations: [olderReg, newerReg, unrelatedReg],
+        accreditations: [acc, otherAcc]
+      })
+      const spy = seedRepositories([org])
+
+      await runDuplicateAccreditationLinkMigration(server)
+
+      expect(spy.replace).toHaveBeenCalledOnce()
+      const [, , updatedOrg] = /** @type {import('vitest').MockInstance} */ (
+        spy.replace
+      ).mock.calls[0]
+      const unrelatedUpdated = updatedOrg.registrations.find(
+        (r) => r.id === unrelatedReg.id
+      )
+      // The registration linked to a different (non-duplicated) accreditation
+      // must be passed through completely unchanged.
+      expect(unrelatedUpdated).toEqual(unrelatedReg)
+
+      expect(updatedOrg.accreditations).toEqual(org.accreditations)
     })
   })
 
