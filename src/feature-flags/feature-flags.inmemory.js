@@ -8,5 +8,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
+  },
+  isFixDuplicateAccreditationLinksEnabled() {
+    return flags.fixDuplicateAccreditationLinks ?? false
   }
 })
