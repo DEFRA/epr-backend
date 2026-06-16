@@ -144,12 +144,11 @@ const findFixes = (org) => {
 
 /**
  * Applies fixes to an organisation's registrations by clearing accreditationId
- * from all registrations in unlinkIds. Strips `id` so the result is suitable
- * as the `updates` argument to `repository.replace()`.
+ * from all registrations in unlinkIds.
  *
  * @param {Organisation} org
  * @param {{accreditationId: string, unlinkIds: string[]}[]} fixes
- * @returns {Omit<Organisation, 'id'>}
+ * @returns {Organisation}
  */
 const applyFixes = (org, fixes) => {
   const unlinkSet = new Set(fixes.flatMap((f) => f.unlinkIds))
@@ -162,8 +161,7 @@ const applyFixes = (org, fixes) => {
     return rest
   })
 
-  const { id: _id, ...orgWithoutId } = org
-  return { ...orgWithoutId, registrations: updatedRegistrations }
+  return { ...org, registrations: updatedRegistrations }
 }
 
 /**
@@ -219,7 +217,8 @@ const processOrganisation = async ({
 
   try {
     const updatedOrg = applyFixes(org, fixes)
-    await organisationsRepository.replace(org.id, org.version, updatedOrg)
+    const { id: _id, ...updates } = updatedOrg
+    await organisationsRepository.replace(org.id, org.version, updates)
     await auditDuplicateAccreditationLinkMigration(
       systemLogsRepository,
       org.id,
