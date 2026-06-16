@@ -52,6 +52,16 @@ updates:
       # Include direct package.json updates
       - dependency-type: direct
 
+    ignore:
+      # global-agent 4.x and undici 8.x break the service (reverted in #1327);
+      # hold both on their current major line until the breakage is resolved.
+      - dependency-name: global-agent
+        update-types:
+          - version-update:semver-major
+      - dependency-name: undici
+        update-types:
+          - version-update:semver-major
+
   # Update GitHub Actions
   - package-ecosystem: github-actions
     directory: /
