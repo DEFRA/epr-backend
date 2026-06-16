@@ -46,29 +46,26 @@ const extractUserAndOthers = (organisation, { email, contactId }) => {
  * Adds a user to an organisation if they are not there
  * @param {HapiRequest} request - The Hapi request object
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user information
- * @param {Organisation} organisationById - The organisation object
+ * @param {Organisation} organisation - The organisation object
  * @returns {Promise<void>}
  */
 export const addOrUpdateOrganisationUser = async (
   request,
   tokenPayload,
-  organisationById
+  organisation
 ) => {
   const { organisationsRepository } = request
   const { email, firstName, lastName, contactId } = tokenPayload
 
-  const { user, otherUsers } = extractUserAndOthers(
-    organisationById,
-    tokenPayload
-  )
+  const { user, otherUsers } = extractUserAndOthers(organisation, tokenPayload)
 
   /* v8 ignore next */
   if (noUser(user) || withChangedDetails(user, tokenPayload)) {
-    const { id: _, version: _v, ...org } = organisationById
+    const { id: _, version: _v, ...org } = organisation
 
     await organisationsRepository.replace(
-      organisationById.id,
-      organisationById.version,
+      organisation.id,
+      organisation.version,
       {
         ...org,
         users: [
