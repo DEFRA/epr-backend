@@ -60,7 +60,13 @@ describe(`POST ${reportsStatusPath}`, () => {
       registrationOverrides,
       accreditationStatus
     ) => {
-      const registration = buildRegistration(registrationOverrides)
+      const accreditationId = accreditationStatus
+        ? new ObjectId().toString()
+        : undefined
+      const registration = buildRegistration({
+        ...registrationOverrides,
+        ...(accreditationId && { accreditationId })
+      })
       const org = buildOrganisationWithRegistration(
         registration,
         accreditationStatus

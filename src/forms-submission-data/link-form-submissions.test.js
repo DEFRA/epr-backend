@@ -12,6 +12,16 @@ import {
   linkRegistrationToAccreditations
 } from './link-form-submissions.js'
 
+/**
+ * @typedef {{
+ *   id: string;
+ *   orgId: number;
+ *   name: string;
+ *   registrations?: Record<string, unknown>[];
+ *   accreditations?: Record<string, unknown>[];
+ * }} LinkableOrgFixture
+ */
+
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     error: vi.fn(),
@@ -142,11 +152,13 @@ describe('linkItemsToOrganisations', () => {
 
     linkItemsToOrganisations(allOrgs, [], 'registrations', new Set())
 
-    const logCall = logger.info.mock.calls.find(([arg]) =>
-      arg.message?.includes('organisations without registrations')
-    )
+    const logCall = vi
+      .mocked(logger.info)
+      .mock.calls.find(([arg]) =>
+        arg.message?.includes('organisations without registrations')
+      )
     expect(logCall).toBeDefined()
-    const [{ message }] = logCall
+    const [{ message }] = /** @type {[{message: string}]} */ (logCall)
     expect(message).toMatch(/^12 organisations without registrations:/)
     expect(message).toContain('...and 2 more')
   })
@@ -203,11 +215,13 @@ describe('linkItemsToOrganisations', () => {
       new Set()
     )
 
-    const logCall = logger.warn.mock.calls.find(([arg]) =>
-      arg.message?.includes('not linked to an organisation')
-    )
+    const logCall = vi
+      .mocked(logger.warn)
+      .mock.calls.find(([arg]) =>
+        arg.message?.includes('not linked to an organisation')
+      )
     expect(logCall).toBeDefined()
-    const [{ message }] = logCall
+    const [{ message }] = /** @type {[{message: string}]} */ (logCall)
     expect(message).toMatch(/^11 registrations not linked to an organisation:/)
     expect(message).toContain('...and 1 more')
   })
@@ -306,7 +320,7 @@ describe('linkRegistrationToAccreditations', () => {
     const org1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -328,9 +342,11 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
     expect(logger.warn).not.toHaveBeenCalled()
@@ -346,7 +362,7 @@ describe('linkRegistrationToAccreditations', () => {
     const org1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -374,9 +390,11 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     expect(logger.warn).not.toHaveBeenCalled()
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
@@ -394,7 +412,7 @@ describe('linkRegistrationToAccreditations', () => {
     const acc1Id = new ObjectId().toString()
     const reg2Id = new ObjectId().toString()
     const acc2Id = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -432,9 +450,11 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     for (const reg of result[0].registrations) {
       expect(reg.accreditationId).toBeUndefined()
@@ -443,10 +463,10 @@ describe('linkRegistrationToAccreditations', () => {
     const expectedMessage =
       `Organisation has accreditations that cant be linked to registrations: ` +
       `orgId=100,orgDbId=${org1Id},unlinked accreditations count=2,` +
-      `unlinked accreditations=[id=${acc1Id},type=reprocessor,material=aluminium,${siteInfoToLog(organisations[0].accreditations[0].site)};` +
+      `unlinked accreditations=[id=${acc1Id},type=reprocessor,material=aluminium,${siteInfoToLog(/** @type {any} */ (organisations[0]).accreditations[0].site)};` +
       `id=${acc2Id},type=exporter,material=paper],` +
       `unlinked registrations=[id=${reg1Id},type=exporter,material=wood;` +
-      `id=${reg2Id},type=reprocessor,material=aluminium,${siteInfoToLog(organisations[0].registrations[1].site)}]`
+      `id=${reg2Id},type=reprocessor,material=aluminium,${siteInfoToLog(/** @type {any} */ (organisations[0]).registrations[1].site)}]`
     expect(logger.warn).toHaveBeenCalledWith({ message: expectedMessage })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 0/2 linked'
@@ -476,7 +496,7 @@ describe('linkRegistrationToAccreditations', () => {
         formSubmission: { id, time: oneDayAgo }
       }
     })
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -484,15 +504,18 @@ describe('linkRegistrationToAccreditations', () => {
         registrations,
         accreditations
       }
-    ]
+    ])
 
+    // @ts-expect-error test fixtures use minimal data
     linkRegistrationToAccreditations(organisations)
 
-    const logCall = logger.warn.mock.calls.find(([arg]) =>
-      arg.message?.includes('cant be linked to registrations')
-    )
+    const logCall = vi
+      .mocked(logger.warn)
+      .mock.calls.find(([arg]) =>
+        arg.message?.includes('cant be linked to registrations')
+      )
     expect(logCall).toBeDefined()
-    const [{ message }] = logCall
+    const [{ message }] = /** @type {[{message: string}]} */ (logCall)
     expect(message).toContain('unlinked accreditations count=12')
     expect(message).toContain('; ...and 2 more')
   })
@@ -504,7 +527,7 @@ describe('linkRegistrationToAccreditations', () => {
     const acc1Id = new ObjectId().toString()
     const reg2Id = new ObjectId().toString()
     const acc2Id = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -553,9 +576,11 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(2)
     expect(result[0].registrations[0].accreditationId).toEqual(acc1Id)
     expect(result[1].registrations[0].accreditationId).toEqual(acc2Id)
@@ -568,12 +593,12 @@ describe('linkRegistrationToAccreditations', () => {
     })
   })
 
-  it('link when multiple registrations match to single accreditation', () => {
+  it('links only the first matching registration when multiple registrations match a single accreditation', () => {
     const org1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const reg2Id = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -610,24 +635,76 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toBe(
       result[0].accreditations[0].id
     )
-    expect(result[0].registrations[1].accreditationId).toBe(
-      result[0].accreditations[0].id
-    )
+    expect(result[0].registrations[1].accreditationId).toBeUndefined()
 
-    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 1/1 linked'
     })
     expect(logger.info).toHaveBeenCalledWith({
-      message: 'Registrations : 2/2 linked to accreditations'
+      message: 'Registrations : 1/2 linked to accreditations'
     })
+  })
+
+  it('does not link an accreditation already linked to a different existing registration', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const reg2Id = new ObjectId().toString()
+    const accId1 = new ObjectId().toString()
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            },
+            formSubmission: { id: reg1Id, time: oneDayAgo },
+            accreditationId: accId1
+          },
+          {
+            id: reg2Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            },
+            formSubmission: { id: reg2Id, time: oneDayAgo }
+          }
+        ],
+        accreditations: [
+          {
+            id: accId1,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            },
+            formSubmission: { id: accId1, time: oneDayAgo }
+          }
+        ]
+      }
+    ])
+
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
+    expect(result).toHaveLength(1)
+    expect(result[0].registrations[0].accreditationId).toBe(accId1)
+    expect(result[0].registrations[1].accreditationId).toBeUndefined()
   })
 
   it('links to latest accreditation when multiple accreditations match a registration', () => {
@@ -636,7 +713,7 @@ describe('linkRegistrationToAccreditations', () => {
     const accId2 = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
     const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -673,32 +750,36 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toBe(accId2)
 
     const expectedMessage =
       `Multiple accreditations match registration, picking latest by formSubmission.time: ` +
       `orgId=100,orgDbId=${org1Id},` +
-      `registration=[id=${reg1Id},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].registrations[0].site)}],` +
-      `selected accreditation=[id=${accId2},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].accreditations[1].site)}]`
+      `registration=[id=${reg1Id},type=reprocessor,material=wood,${siteInfoToLog(/** @type {any} */ (organisations[0]).registrations[0].site)}],` +
+      `selected accreditation=[id=${accId2},type=reprocessor,material=wood,${siteInfoToLog(/** @type {any} */ (organisations[0]).accreditations[1].site)}]`
     expect(logger.warn).toHaveBeenCalledWith({ message: expectedMessage })
   })
 
   it('handle organisations without any registrations or accreditations', () => {
     const org1Id = new ObjectId().toString()
 
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
         orgId: 100
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 0/0 linked'
@@ -712,7 +793,7 @@ describe('linkRegistrationToAccreditations', () => {
     const org1Id = new ObjectId().toString()
     const acc1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -736,9 +817,11 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result[0].registrations[0].accreditationId).toBeUndefined()
   })
 
@@ -747,7 +830,7 @@ describe('linkRegistrationToAccreditations', () => {
     const reg1Id = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
     const accId2 = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -779,9 +862,11 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
     expect(logger.warn).toHaveBeenCalledWith({
@@ -793,7 +878,7 @@ describe('linkRegistrationToAccreditations', () => {
     const org1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -817,9 +902,11 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
   })
@@ -829,7 +916,7 @@ describe('linkRegistrationToAccreditations', () => {
     const reg1Id = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
     const accId2 = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -861,9 +948,11 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toEqual(accId2)
   })
@@ -873,7 +962,7 @@ describe('linkRegistrationToAccreditations', () => {
     const reg1Id = new ObjectId().toString()
     const reg2Id = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
-    const organisations = [
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
       {
         id: org1Id,
         name: 'Org 1',
@@ -905,9 +994,11 @@ describe('linkRegistrationToAccreditations', () => {
           }
         ]
       }
-    ]
+    ])
 
-    const result = linkRegistrationToAccreditations(organisations)
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toBe(accId1)
     expect(result[0].registrations[1].accreditationId).toBeUndefined()

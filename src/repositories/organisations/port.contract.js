@@ -1,3 +1,4 @@
+import { testAccreditationLinkValidation } from './contract/accreditation-link.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
 import { testFindAllBySchemaVersionBehaviour } from './contract/find-all-by-schema-version.contract.js'
 import { testFindByIdsBehaviour } from './contract/find-by-ids.contract.js'
@@ -31,6 +32,7 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testFindAccreditationByIdBehaviour(repositoryFactory)
   testDataIsolationBehaviour(repositoryFactory)
   testRegAccApprovalValidation(repositoryFactory)
+  testAccreditationLinkValidation(repositoryFactory)
   testOrgStatusTransitionBehaviour(repositoryFactory)
   testRegAccStatusTransitionBehaviour(repositoryFactory)
 }

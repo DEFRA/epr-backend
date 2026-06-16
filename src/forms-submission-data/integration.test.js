@@ -1,17 +1,21 @@
-import exporterAccreditation from '#data/fixtures/ea/accreditation/exporter.json'
-import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json'
+import exporterAccreditation from '#data/fixtures/ea/accreditation/exporter.json' with { type: 'json' }
+import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json' with { type: 'json' }
+import { logger } from '#common/helpers/logging/logger.js'
 import { MATERIAL } from '#domain/organisations/model.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createFormDataMigrator } from './migration/migration-orchestrator.js'
 
 describe('Migration Integration Tests with Fixtures', () => {
   let sharedOrganisationsRepo
   let sharedSystemLogsRepo
+  const formsFileUploadsRepo = {
+    copyFormFileToS3: vi.fn().mockResolvedValue(undefined)
+  }
 
   function loadFixtures(fixtureType) {
     const fixturesDir = join(
@@ -57,7 +61,7 @@ describe('Migration Integration Tests with Fixtures', () => {
 
   beforeAll(() => {
     sharedOrganisationsRepo = createInMemoryOrganisationsRepository()()
-    sharedSystemLogsRepo = createSystemLogsRepository()()
+    sharedSystemLogsRepo = createSystemLogsRepository()(logger)
   })
 
   function createFormsRepo(includeAllAccreditations) {
@@ -100,7 +104,8 @@ describe('Migration Integration Tests with Fixtures', () => {
       const formsDataMigration = createFormDataMigrator(
         formsRepo,
         sharedOrganisationsRepo,
-        sharedSystemLogsRepo
+        sharedSystemLogsRepo,
+        formsFileUploadsRepo
       )
       await formsDataMigration.migrate()
 
@@ -150,7 +155,8 @@ describe('Migration Integration Tests with Fixtures', () => {
       const formsDataMigration = createFormDataMigrator(
         formsRepo,
         sharedOrganisationsRepo,
-        sharedSystemLogsRepo
+        sharedSystemLogsRepo,
+        formsFileUploadsRepo
       )
       await formsDataMigration.migrate()
 
@@ -171,10 +177,17 @@ describe('Migration Integration Tests with Fixtures', () => {
 
       const org503181 = allOrgs.find((o) => o.orgId === 503181)
       expect(org503181.accreditations).toHaveLength(1)
-      // Both split glass registrations (remelt + other) link to the same accreditation
-      for (const reg of org503181.registrations) {
-        expect(reg.accreditationId).toBe(exporterAccreditation._id.$oid)
-      }
+      // Registration is split into remelt + other (source submission selected "Both"),
+      // but the accreditation only covers "Glass other", so only that sibling links;
+      // the "Glass re-melt" sibling has no matching accreditation and stays unlinked.
+      const glassOtherReg = org503181.registrations.find(
+        (reg) => reg.glassRecyclingProcess?.[0] === 'glass_other'
+      )
+      const glassRemeltReg = org503181.registrations.find(
+        (reg) => reg.glassRecyclingProcess?.[0] === 'glass_re_melt'
+      )
+      expect(glassOtherReg.accreditationId).toBe(exporterAccreditation._id.$oid)
+      expect(glassRemeltReg.accreditationId).toBeUndefined()
 
       const org503176 = allOrgs.find((o) => o.orgId === 503176)
       expect(org503176.accreditations).toHaveLength(3)
