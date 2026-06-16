@@ -9,6 +9,7 @@ import {
   MONTHLY_PERIODS,
   QUARTERLY_PERIODS
 } from '#reports/domain/period-labels.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -145,9 +146,15 @@ describe('loadsByReportingPeriod population at validate time', () => {
       dueDate: '2025-02-20T00:00:00.000Z'
     })
 
-  const emptyChange = () => ({
+  // added.balanceAffecting stays count-only; the other three buckets carry an
+  // expandable rows list, so empty added and adjusted groups differ in shape.
+  const emptyAdded = () => ({
     balanceAffecting: { count: 0, tonnageDelta: 0 },
-    nonBalanceAffecting: { count: 0 }
+    nonBalanceAffecting: { count: 0, rows: [] }
+  })
+  const emptyAdjusted = () => ({
+    balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+    nonBalanceAffecting: { count: 0, rows: [] }
   })
 
   it('splits added loads into balanceAffecting and nonBalanceAffecting by ORS approval', async () => {
@@ -174,13 +181,22 @@ describe('loadsByReportingPeriod population at validate time', () => {
       openPeriodLoads: {
         added: {
           balanceAffecting: { count: 1, tonnageDelta: 100 },
-          nonBalanceAffecting: { count: 1 }
+          nonBalanceAffecting: {
+            count: 1,
+            rows: [
+              {
+                rowId: '2001',
+                tableName: 'Exported',
+                reasons: [CLASSIFICATION_REASON.ORS_NOT_APPROVED]
+              }
+            ]
+          }
         },
-        adjusted: emptyChange()
+        adjusted: emptyAdjusted()
       },
       closedPeriodLoads: {
-        added: emptyChange(),
-        adjusted: emptyChange()
+        added: emptyAdded(),
+        adjusted: emptyAdjusted()
       }
     })
   })
@@ -203,8 +219,45 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
     expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual({
       balanceAffecting: { count: 0, tonnageDelta: 0 },
-      nonBalanceAffecting: { count: 1 }
+      nonBalanceAffecting: {
+        count: 1,
+        rows: [
+          {
+            rowId: '1001',
+            tableName: 'Exported',
+            reasons: [CLASSIFICATION_REASON.PRN_ISSUED]
+          }
+        ]
+      }
     })
+  })
+
+  it('records each nonBalanceAffecting row with its identity and exclusion reason', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+
+    // A PRN/PERN-issued load is excluded from the waste balance for a known
+    // reason. The expandable bucket must carry the row's identity and the
+    // exclusion reason code so the check page can list it.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-prn-rows',
+      'file-prn-rows',
+      createUploadData([
+        { rowId: 1001, osrId: 100, exportTonnage: 100, prnIssued: 'Yes' }
+      ])
+    )
+
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.nonBalanceAffecting.rows
+    ).toEqual([
+      {
+        rowId: '1001',
+        tableName: 'Exported',
+        reasons: [CLASSIFICATION_REASON.PRN_ISSUED]
+      }
+    ])
   })
 
   it('classifies an added load dated in a closed period as a closed-period load', async () => {
@@ -320,7 +373,11 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
     expect(
       loadsByReportingPeriod.openPeriodLoads.adjusted.balanceAffecting
-    ).toEqual({ count: 1, tonnageDelta: 50 })
+    ).toEqual({
+      count: 1,
+      tonnageDelta: 50,
+      rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+    })
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
     ).toBe(0)
@@ -371,10 +428,18 @@ describe('loadsByReportingPeriod population at validate time', () => {
     // (+100); each period it touches counts the load once.
     expect(
       loadsByReportingPeriod.closedPeriodLoads.adjusted.balanceAffecting
-    ).toEqual({ count: 1, tonnageDelta: -100 })
+    ).toEqual({
+      count: 1,
+      tonnageDelta: -100,
+      rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+    })
     expect(
       loadsByReportingPeriod.openPeriodLoads.adjusted.balanceAffecting
-    ).toEqual({ count: 1, tonnageDelta: 100 })
+    ).toEqual({
+      count: 1,
+      tonnageDelta: 100,
+      rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+    })
   })
 
   it('classifies a re-upload that nets to zero as nonBalanceAffecting', async () => {
@@ -415,8 +480,11 @@ describe('loadsByReportingPeriod population at validate time', () => {
     )
 
     expect(loadsByReportingPeriod.openPeriodLoads.adjusted).toEqual({
-      balanceAffecting: { count: 0, tonnageDelta: 0 },
-      nonBalanceAffecting: { count: 1 }
+      balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+      nonBalanceAffecting: {
+        count: 1,
+        rows: [{ rowId: '1001', tableName: 'Exported', reasons: [] }]
+      }
     })
   })
 
@@ -447,7 +515,17 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
     expect(
       loadsByReportingPeriod.openPeriodLoads.adjusted.balanceAffecting
-    ).toEqual({ count: 1, tonnageDelta: -100 })
+    ).toEqual({
+      count: 1,
+      tonnageDelta: -100,
+      rows: [
+        {
+          rowId: '1001',
+          tableName: 'Exported',
+          reasons: [CLASSIFICATION_REASON.PRN_ISSUED]
+        }
+      ]
+    })
     expect(
       loadsByReportingPeriod.openPeriodLoads.adjusted.nonBalanceAffecting.count
     ).toBe(0)

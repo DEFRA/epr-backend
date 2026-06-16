@@ -9,6 +9,9 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 /** Internal reporting-period status. Not serialised: mapped to output keys via PERIOD_TO_KEY. */
 const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 
+/** Per-bucket cap on listed rows; mirrors MAX_ROW_IDS in load-counts.js. */
+const MAX_ROWS = 100
+
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
@@ -20,11 +23,17 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
 
 /**
- * @typedef {{ count: number, tonnageDelta: number }} BalanceAffectingBucket
+ * A single load's identity and exclusion reasons, listed under an expandable
+ * bucket. reasons is empty for an included row.
+ * @typedef {{ rowId: string, tableName: string, reasons: string[] }} RowDetail
  */
 
 /**
- * @typedef {{ count: number }} NonBalanceAffectingBucket
+ * @typedef {{ count: number, tonnageDelta: number, rows?: RowDetail[] }} BalanceAffectingBucket
+ */
+
+/**
+ * @typedef {{ count: number, rows?: RowDetail[] }} NonBalanceAffectingBucket
  */
 
 /**
@@ -54,17 +63,22 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
  * @property {'added' | 'adjusted'} change
  * @property {number} count - 1 per leg, so a record counts once per period it touches
  * @property {number} tonnageDelta - rounded to 2dp; non-zero means balanceAffecting
+ * @property {string} rowId - the record's row ID; carried onto every leg
+ * @property {string} tableName - the schema's human sheet name
+ * @property {string[]} reasons - distinct exclusion reason codes from the current row
  */
 
+// added.balanceAffecting stays count-only (no rows); the other three buckets
+// carry an expandable rows list.
 /** @returns {PeriodStatusByRecordChange} */
 const emptyChange = () => ({
   added: {
     balanceAffecting: { count: 0, tonnageDelta: 0 },
-    nonBalanceAffecting: { count: 0 }
+    nonBalanceAffecting: { count: 0, rows: [] }
   },
   adjusted: {
-    balanceAffecting: { count: 0, tonnageDelta: 0 },
-    nonBalanceAffecting: { count: 0 }
+    balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+    nonBalanceAffecting: { count: 0, rows: [] }
   }
 })
 
@@ -122,17 +136,24 @@ const determineRecordStatus = (record, summaryLogId) => {
 }
 
 /**
- * Computes the transaction amount for a record via classifyForWasteBalance.
- * Returns 0 if the schema has no classifier or the outcome is not INCLUDED.
+ * Classifies a record via classifyForWasteBalance, returning both the
+ * transaction amount (0 unless the outcome is INCLUDED) and the distinct
+ * exclusion reason codes. Code-only and deduped: a row missing several fields
+ * yields a single MISSING_REQUIRED_FIELD code, and an included row yields [].
  *
  * @param {import('#domain/summary-logs/table-schemas/index.js').TableSchema | null} schema
  * @param {Record<string, any>} data
  * @param {ClassificationContext} context
- * @returns {number}
+ * @returns {{ transactionAmount: number, reasons: string[] }}
  */
-const getTransactionAmount = (schema, data, context) => {
+const classifyRow = (schema, data, context) => {
   const result = schema?.classifyForWasteBalance?.(data, context)
-  return result?.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
+  const transactionAmount =
+    result?.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
+  const reasons = result?.reasons
+    ? [...new Set(result.reasons.map((reason) => reason.code))]
+    : []
+  return { transactionAmount, reasons }
 }
 
 /**
@@ -143,14 +164,16 @@ const getTransactionAmount = (schema, data, context) => {
  * @param {Object} params
  * @param {'open' | 'closed'} params.period
  * @param {number} params.transactionAmount
+ * @param {RowDetail} params.identity
  * @returns {PeriodStatusEntry[]}
  */
-const classifyAddedRecord = ({ period, transactionAmount }) => [
+const classifyAddedRecord = ({ period, transactionAmount, identity }) => [
   {
     period,
     change: 'added',
     count: 1,
-    tonnageDelta: roundToTwoDecimalPlaces(transactionAmount)
+    tonnageDelta: roundToTwoDecimalPlaces(transactionAmount),
+    ...identity
   }
 ]
 
@@ -166,13 +189,15 @@ const classifyAddedRecord = ({ period, transactionAmount }) => [
  * @param {'open' | 'closed' | null} params.newPeriod
  * @param {number} params.oldAmount
  * @param {number} params.newAmount
+ * @param {RowDetail} params.identity
  * @returns {PeriodStatusEntry[]}
  */
 const classifyAdjustedRecord = ({
   oldPeriod,
   newPeriod,
   oldAmount,
-  newAmount
+  newAmount,
+  identity
 }) => {
   /** @type {Map<'open' | 'closed', number>} */
   const legs = new Map()
@@ -190,7 +215,8 @@ const classifyAdjustedRecord = ({
     period,
     change: 'adjusted',
     count: 1,
-    tonnageDelta: roundToTwoDecimalPlaces(tonnageDelta)
+    tonnageDelta: roundToTwoDecimalPlaces(tonnageDelta),
+    ...identity
   }))
 }
 
@@ -204,6 +230,21 @@ const PERIOD_TO_KEY = {
 }
 
 /**
+ * Appends a row to a bucket's list, capped at MAX_ROWS. The bucket's count
+ * still reflects the true total even when the list is truncated. The
+ * count-only added.balanceAffecting bucket has no rows array, so a missing
+ * list is simply skipped.
+ *
+ * @param {RowDetail[] | undefined} rows
+ * @param {RowDetail} row
+ */
+const pushRow = (rows, row) => {
+  if (rows && rows.length < MAX_ROWS) {
+    rows.push(row)
+  }
+}
+
+/**
  * Folds an array of entries into the LoadsByReportingPeriod structure.
  *
  * @param {PeriodStatusEntry[]} entries
@@ -212,15 +253,19 @@ const PERIOD_TO_KEY = {
 const reduceEntries = (entries) => {
   const result = emptyResult()
 
-  for (const { period, change, count, tonnageDelta } of entries) {
+  for (const { period, change, count, tonnageDelta, ...identity } of entries) {
     const group = result[PERIOD_TO_KEY[period]][change]
     // A leg with no net delta is nonBalanceAffecting; any movement (rounded)
     // goes to balanceAffecting.
     if (tonnageDelta === 0) {
       group.nonBalanceAffecting.count += count
+      pushRow(group.nonBalanceAffecting.rows, identity)
     } else {
       group.balanceAffecting.count += count
       group.balanceAffecting.tonnageDelta += tonnageDelta
+      // added.balanceAffecting carries no rows array, so pushRow skips it;
+      // adjusted.balanceAffecting lists its rows.
+      pushRow(group.balanceAffecting.rows, identity)
     }
   }
 
@@ -281,16 +326,27 @@ const classifyAdjustedWasteRecord = ({
     return []
   }
 
-  const newAmount = getTransactionAmount(schema, record.data, context)
+  // Reasons come from the current row, so both legs (including the old-period
+  // reversal) reflect what the operator is uploading now.
+  const { transactionAmount: newAmount, reasons } = classifyRow(
+    schema,
+    record.data,
+    context
+  )
   const oldAmount = existing
-    ? getTransactionAmount(schema, existing.data, context)
+    ? classifyRow(schema, existing.data, context).transactionAmount
     : 0
 
   return classifyAdjustedRecord({
     oldPeriod,
     newPeriod,
     oldAmount,
-    newAmount
+    newAmount,
+    identity: {
+      rowId: String(record.rowId),
+      tableName: schema.sheetName,
+      reasons
+    }
   })
 }
 
@@ -341,7 +397,7 @@ export const classifyByPeriodStatus = ({
         cadence
       )
       if (period) {
-        const amount = getTransactionAmount(
+        const { transactionAmount, reasons } = classifyRow(
           schema,
           record.data,
           classificationContext
@@ -349,7 +405,12 @@ export const classifyByPeriodStatus = ({
         entries.push(
           ...classifyAddedRecord({
             period,
-            transactionAmount: amount
+            transactionAmount,
+            identity: {
+              rowId: String(record.rowId),
+              tableName: schema.sheetName,
+              reasons
+            }
           })
         )
       }

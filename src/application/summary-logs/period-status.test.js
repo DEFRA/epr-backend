@@ -68,6 +68,7 @@ const SINGLE_DATE_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
     RECEIVED_LOADS_FOR_REPROCESSING: {
       reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
       wasteRecordType: 'received',
+      sheetName: 'Received',
       classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
         outcome: ROW_OUTCOME.INCLUDED,
         reasons: [],
@@ -83,6 +84,7 @@ const REGISTERED_ONLY_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
     RECEIVED_LOADS_FOR_REPROCESSING: {
       reportingDateFields: ['MONTH_RECEIVED_FOR_REPROCESSING'],
       wasteRecordType: 'received',
+      sheetName: 'Received',
       classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
         outcome: ROW_OUTCOME.INCLUDED,
         reasons: [],
@@ -92,13 +94,19 @@ const REGISTERED_ONLY_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
   })
 )
 
-const emptyChange = () => ({
+// added.balanceAffecting stays count-only; the other three buckets carry an
+// expandable rows list, so empty added and adjusted groups differ in shape.
+const emptyAdded = () => ({
   balanceAffecting: { count: 0, tonnageDelta: 0 },
-  nonBalanceAffecting: { count: 0 }
+  nonBalanceAffecting: { count: 0, rows: [] }
+})
+const emptyAdjusted = () => ({
+  balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+  nonBalanceAffecting: { count: 0, rows: [] }
 })
 const emptyPeriod = () => ({
-  added: emptyChange(),
-  adjusted: emptyChange()
+  added: emptyAdded(),
+  adjusted: emptyAdjusted()
 })
 const emptyResult = () => ({
   openPeriodLoads: emptyPeriod(),
@@ -202,6 +210,26 @@ describe('classifyByPeriodStatus', () => {
         tonnageDelta: 0.3
       })
     })
+
+    it('caps a bucket rows list at 100 while count keeps the true total', () => {
+      // Zero-tonnage loads are balance-neutral, so they land in
+      // nonBalanceAffecting, which lists rows. 101 of them exceed the cap.
+      const wasteRecords = Array.from({ length: 101 }, (_, index) =>
+        buildWasteRecord({
+          rowId: String(10001 + index),
+          data: {
+            DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15',
+            GROSS_WEIGHT: '0'
+          }
+        })
+      )
+
+      const result = classifyByPeriodStatus({ ...baseParams, wasteRecords })
+
+      const bucket = result.openPeriodLoads.added.nonBalanceAffecting
+      expect(bucket.count).toBe(101)
+      expect(bucket.rows).toHaveLength(100)
+    })
   })
 
   describe('adjusted records', () => {
@@ -286,7 +314,8 @@ describe('classifyByPeriodStatus', () => {
       // No existing record so oldPeriod is null, oldAmount is 0
       expect(result.openPeriodLoads.adjusted.balanceAffecting).toEqual({
         count: 1,
-        tonnageDelta: 50
+        tonnageDelta: 50,
+        rows: [{ rowId: '10001', tableName: 'Received', reasons: [] }]
       })
     })
 
