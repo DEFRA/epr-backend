@@ -23,7 +23,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /**
  * A single load's identity and exclusion reason codes, listed under an
  * expandable bucket. exclusionReasons is empty for an included row.
- * @typedef {{ rowId: string, tableName: string, exclusionReasons: string[] }} RowDetail
+ * @typedef {{ rowId: string, wasteRecordType: string, exclusionReasons: string[] }} RowDetail
  */
 
 /**
@@ -62,7 +62,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
  * @property {number} count - 1 per leg, so a record counts once per period it touches
  * @property {number} tonnageDelta - rounded to 2dp; non-zero means balanceAffecting
  * @property {string} rowId - the record's row ID; carried onto every leg
- * @property {string} tableName - the schema's human sheet name
+ * @property {string} wasteRecordType - the schema's waste record type code (e.g. 'received', 'exported')
  * @property {string[]} exclusionReasons - distinct exclusion reason codes from the current row
  */
 
@@ -338,7 +338,7 @@ const classifyAdjustedWasteRecord = ({
     newAmount,
     identity: {
       rowId: String(record.rowId),
-      tableName: schema.sheetName,
+      wasteRecordType: schema.wasteRecordType,
       exclusionReasons
     }
   })
@@ -402,7 +402,7 @@ export const classifyByPeriodStatus = ({
             transactionAmount,
             identity: {
               rowId: String(record.rowId),
-              tableName: schema.sheetName,
+              wasteRecordType: schema.wasteRecordType,
               exclusionReasons
             }
           })

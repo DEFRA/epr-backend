@@ -1,5 +1,7 @@
 import Joi from 'joi'
 
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+
 /**
  * Shared Joi schema for loads classified by reporting period status.
  *
@@ -15,7 +17,9 @@ export const MAX_ROWS_PER_BUCKET = 100
 // an included load).
 const rowDetailSchema = Joi.object({
   rowId: Joi.string().required(),
-  tableName: Joi.string().required(),
+  wasteRecordType: Joi.string()
+    .valid(...Object.values(WASTE_RECORD_TYPE))
+    .required(),
   exclusionReasons: Joi.array().items(Joi.string()).required()
 })
 

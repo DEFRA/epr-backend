@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { classifyByPeriodStatus } from './period-status.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import {
+  VERSION_STATUS,
+  WASTE_RECORD_TYPE
+} from '#domain/waste-records/model.js'
 import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
@@ -204,8 +207,16 @@ describe('classifyByPeriodStatus', () => {
         count: 2,
         tonnageDelta: 0.3,
         rows: [
-          { rowId: '10001', tableName: 'Received', exclusionReasons: [] },
-          { rowId: '10002', tableName: 'Received', exclusionReasons: [] }
+          {
+            rowId: '10001',
+            wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+            exclusionReasons: []
+          },
+          {
+            rowId: '10002',
+            wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+            exclusionReasons: []
+          }
         ]
       })
     })
@@ -315,7 +326,13 @@ describe('classifyByPeriodStatus', () => {
       expect(result.openPeriodLoads.adjusted.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 50,
-        rows: [{ rowId: '10001', tableName: 'Received', exclusionReasons: [] }]
+        rows: [
+          {
+            rowId: '10001',
+            wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+            exclusionReasons: []
+          }
+        ]
       })
     })
 
@@ -436,7 +453,13 @@ describe('classifyByPeriodStatus', () => {
       expect(result.closedPeriodLoads.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 10,
-        rows: [{ rowId: '10001', tableName: 'Received', exclusionReasons: [] }]
+        rows: [
+          {
+            rowId: '10001',
+            wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+            exclusionReasons: []
+          }
+        ]
       })
     })
   })
@@ -580,7 +603,13 @@ describe('classifyByPeriodStatus', () => {
       expect(result.openPeriodLoads.added.balanceAffecting).toEqual({
         count: 1,
         tonnageDelta: 10,
-        rows: [{ rowId: '10001', tableName: 'Received', exclusionReasons: [] }]
+        rows: [
+          {
+            rowId: '10001',
+            wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+            exclusionReasons: []
+          }
+        ]
       })
     })
   })
