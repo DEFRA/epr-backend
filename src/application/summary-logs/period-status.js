@@ -5,12 +5,10 @@ import {
   isDateInSubmittedPeriod
 } from '#reports/domain/submitted-periods.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 /** Internal reporting-period status. Not serialised: mapped to output keys via PERIOD_TO_KEY. */
 const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
-
-/** Per-bucket cap on listed rows; mirrors MAX_ROW_IDS in load-counts.js. */
-const MAX_ROWS = 100
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
@@ -230,14 +228,14 @@ const PERIOD_TO_KEY = {
 }
 
 /**
- * Appends a row to a bucket's list, capped at MAX_ROWS. The bucket's count
- * still reflects the true total even when the list is truncated.
+ * Appends a row to a bucket's list, capped at MAX_ROWS_PER_BUCKET. The bucket's
+ * count still reflects the true total even when the list is truncated.
  *
  * @param {RowDetail[]} rows
  * @param {RowDetail} row
  */
 const pushRow = (rows, row) => {
-  if (rows.length < MAX_ROWS) {
+  if (rows.length < MAX_ROWS_PER_BUCKET) {
     rows.push(row)
   }
 }

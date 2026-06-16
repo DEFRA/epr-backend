@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { classifyByPeriodStatus } from './period-status.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
@@ -211,8 +212,9 @@ describe('classifyByPeriodStatus', () => {
 
     it('caps a bucket rows list at 100 while count keeps the true total', () => {
       // Zero-tonnage loads are balance-neutral, so they land in
-      // nonBalanceAffecting, which lists rows. 101 of them exceed the cap.
-      const wasteRecords = Array.from({ length: 101 }, (_, index) =>
+      // nonBalanceAffecting, which lists rows. One more than the cap overflows.
+      const overCap = MAX_ROWS_PER_BUCKET + 1
+      const wasteRecords = Array.from({ length: overCap }, (_, index) =>
         buildWasteRecord({
           rowId: String(10001 + index),
           data: {
@@ -225,8 +227,8 @@ describe('classifyByPeriodStatus', () => {
       const result = classifyByPeriodStatus({ ...baseParams, wasteRecords })
 
       const bucket = result.openPeriodLoads.added.nonBalanceAffecting
-      expect(bucket.count).toBe(101)
-      expect(bucket.rows).toHaveLength(100)
+      expect(bucket.count).toBe(overCap)
+      expect(bucket.rows).toHaveLength(MAX_ROWS_PER_BUCKET)
     })
   })
 

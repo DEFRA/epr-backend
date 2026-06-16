@@ -6,8 +6,13 @@ import Joi from 'joi'
  * Used by both repository (storage validation) and route (response validation).
  */
 
+// Per-bucket cap on listed rows. The producer (period-status.js) truncates to
+// this and the schema validates it; sharing one constant keeps them in step.
+// Matches MAX_ROW_IDS in load-counts.js.
+export const MAX_ROWS_PER_BUCKET = 100
+
 // One listed load: its identity and distinct exclusion reason codes (empty for
-// an included load). Capped at 100 per bucket, mirroring MAX_ROW_IDS.
+// an included load).
 const rowDetailSchema = Joi.object({
   rowId: Joi.string().required(),
   tableName: Joi.string().required(),
@@ -16,7 +21,10 @@ const rowDetailSchema = Joi.object({
 
 // Every bucket carries a rows list; the frontend renders it only where its
 // design calls for them.
-const rowsSchema = Joi.array().items(rowDetailSchema).max(100).required()
+const rowsSchema = Joi.array()
+  .items(rowDetailSchema)
+  .max(MAX_ROWS_PER_BUCKET)
+  .required()
 
 const balanceAffectingBucketSchema = Joi.object({
   count: Joi.number().integer().min(0).required(),
