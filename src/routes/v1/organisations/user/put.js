@@ -37,12 +37,15 @@ export const organisationsUserPut = {
       tokenPayload,
       organisation
     )
+
+    /* v8 ignore start -- this code can't be executed (in tests) while user addition still happens in the auth layer */
     if (
       result.outcome === ORGANISATION_USER_RESULTS.USER_ADDED ||
       result.outcome === ORGANISATION_USER_RESULTS.USER_UPDATED
     ) {
       await auditOrganisationUserAdded(request, organisationId, result)
     }
+    /* v8 ignore stop */
 
     return h.response().code(StatusCodes.OK)
   }
