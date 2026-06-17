@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
+import { createInMemoryRowStateRepository } from '../repository/row-states-inmemory.js'
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { performUpdateViaStream } from './update-via-stream.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -35,6 +36,7 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 const includingSchema = /** @type {*} */ ({
   classifyForWasteBalance: (data) => ({
     outcome: ROW_OUTCOME.INCLUDED,
+    reasons: [],
     transactionAmount: data.tonnage
   })
 })
@@ -85,10 +87,12 @@ const buildExporterRecord = ({
 
 describe('performUpdateViaStream', () => {
   let streamRepository
+  let rowStateRepository
   let systemLogsRepository
 
   beforeEach(async () => {
     streamRepository = createInMemoryStreamRepository()()
+    rowStateRepository = createInMemoryRowStateRepository()()
     systemLogsRepository = createSystemLogsRepository()(logger)
     const { findSchemaForProcessingType } =
       await import('#domain/summary-logs/table-schemas/index.js')
@@ -106,6 +110,7 @@ describe('performUpdateViaStream', () => {
         wasteRecords: records,
         accreditation,
         streamRepository,
+        rowStateRepository,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -138,6 +143,7 @@ describe('performUpdateViaStream', () => {
         ],
         accreditation,
         streamRepository,
+        rowStateRepository,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -152,6 +158,7 @@ describe('performUpdateViaStream', () => {
         ],
         accreditation,
         streamRepository,
+        rowStateRepository,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -188,6 +195,7 @@ describe('performUpdateViaStream', () => {
         wasteRecords: records,
         accreditation,
         streamRepository,
+        rowStateRepository,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -202,6 +210,40 @@ describe('performUpdateViaStream', () => {
     })
   })
 
+  describe('credit total invariant', () => {
+    it('sums exactly the INCLUDED transaction amounts, dropping excluded rows', async () => {
+      const includedTonnages = [120, 30, 45]
+      const records = [
+        buildExporterRecord({ rowId: '1', tonnage: includedTonnages[0] }),
+        buildExporterRecord({ rowId: '2', tonnage: includedTonnages[1] }),
+        {
+          ...buildExporterRecord({ rowId: '3', tonnage: 999 }),
+          excludedFromWasteBalance: true
+        },
+        buildExporterRecord({ rowId: '4', tonnage: includedTonnages[2] })
+      ]
+
+      await performUpdateViaStream({
+        wasteRecords: records,
+        accreditation,
+        streamRepository,
+        rowStateRepository,
+        dependencies: { systemLogsRepository },
+        user,
+        overseasSites,
+        summaryLogId: 'log-A'
+      })
+
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        accreditationId
+      )
+      expect(latest.payload.creditTotal).toBe(
+        includedTonnages.reduce((sum, tonnage) => sum + tonnage, 0)
+      )
+    })
+  })
+
   describe('empty input', () => {
     it('does not touch the stream when no waste records are provided', async () => {
       const appendSpy = vi.spyOn(streamRepository, 'appendEvent')
@@ -210,6 +252,7 @@ describe('performUpdateViaStream', () => {
         wasteRecords: [],
         accreditation,
         streamRepository,
+        rowStateRepository,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -231,6 +274,7 @@ describe('performUpdateViaStream', () => {
         ],
         accreditation,
         streamRepository,
+        rowStateRepository,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -268,7 +312,7 @@ describe('performUpdateViaStream', () => {
       vi.mocked(findSchemaForProcessingType).mockReturnValue(
         /** @type {*} */ ({
           classifyForWasteBalance: () => ({
-            outcome: 'ignored',
+            outcome: ROW_OUTCOME.IGNORED,
             reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
           })
         })
@@ -278,6 +322,7 @@ describe('performUpdateViaStream', () => {
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         streamRepository,
+        rowStateRepository,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -298,6 +343,7 @@ describe('performUpdateViaStream', () => {
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         streamRepository,
+        rowStateRepository,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -320,6 +366,7 @@ describe('performUpdateViaStream', () => {
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         streamRepository,
+        rowStateRepository,
         dependencies: { systemLogsRepository },
         user: { id: 'user-2', email: 'noname@example.test', scope: [] },
         overseasSites,
@@ -334,6 +381,140 @@ describe('performUpdateViaStream', () => {
         id: 'user-2',
         email: 'noname@example.test'
       })
+    })
+  })
+
+  describe('committed row states', () => {
+    const submit = (wasteRecords, summaryLogId) =>
+      performUpdateViaStream({
+        wasteRecords,
+        accreditation,
+        streamRepository,
+        rowStateRepository,
+        dependencies: { systemLogsRepository },
+        user,
+        overseasSites,
+        summaryLogId
+      })
+
+    it('persists the full committed row state of the submission, including excluded rows', async () => {
+      await submit(
+        [
+          buildExporterRecord({ rowId: '1', tonnage: 100 }),
+          buildExporterRecord({ rowId: '2', tonnage: 50 }),
+          {
+            ...buildExporterRecord({ rowId: '3', tonnage: 999 }),
+            excludedFromWasteBalance: true
+          }
+        ],
+        'log-A'
+      )
+
+      const committed = await rowStateRepository.findBySummaryLogId('log-A')
+      expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1', '2', '3'])
+      expect(committed.find((doc) => doc.rowId === '1')).toMatchObject({
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId,
+        wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+        data: { processingType: 'EXPORTER', tonnage: 100 },
+        classification: {
+          outcome: ROW_OUTCOME.INCLUDED,
+          reasons: [],
+          transactionAmount: 100
+        },
+        summaryLogIds: ['log-A']
+      })
+      expect(committed.find((doc) => doc.rowId === '3').classification).toEqual(
+        {
+          outcome: ROW_OUTCOME.EXCLUDED,
+          reasons: [],
+          transactionAmount: 0
+        }
+      )
+    })
+
+    it('is idempotent — re-submitting the same content adds no duplicate document or membership entry', async () => {
+      const records = [buildExporterRecord({ rowId: '1', tonnage: 100 })]
+
+      await submit(records, 'log-A')
+      await submit(records, 'log-A')
+
+      const committed = await rowStateRepository.findBySummaryLogId('log-A')
+      expect(committed).toHaveLength(1)
+      expect(committed[0].summaryLogIds).toEqual(['log-A'])
+    })
+
+    it('grows membership for an unchanged row and inserts a new state for a changed row', async () => {
+      await submit([buildExporterRecord({ rowId: '1', tonnage: 100 })], 'log-A')
+      await submit(
+        [buildExporterRecord({ rowId: '1', tonnage: 100, versionId: 'v2' })],
+        'log-B'
+      )
+      await submit(
+        [buildExporterRecord({ rowId: '1', tonnage: 250, versionId: 'v3' })],
+        'log-C'
+      )
+
+      const history = await rowStateRepository.findRowHistory(
+        'org-1',
+        'reg-1',
+        '1',
+        WASTE_RECORD_TYPE.EXPORTED
+      )
+      expect(history).toHaveLength(2)
+      expect(
+        history.find((doc) => doc.classification.transactionAmount === 100)
+          .summaryLogIds
+      ).toEqual(['log-A', 'log-B'])
+      expect(
+        history.find((doc) => doc.classification.transactionAmount === 250)
+          .summaryLogIds
+      ).toEqual(['log-C'])
+    })
+
+    it('writes row states without disturbing the event payload or closing balance', async () => {
+      await submit(
+        [
+          buildExporterRecord({ rowId: '1', tonnage: 100 }),
+          buildExporterRecord({ rowId: '2', tonnage: 50 })
+        ],
+        'log-A'
+      )
+
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        accreditationId
+      )
+      expect(latest.payload).toEqual({
+        summaryLogId: 'log-A',
+        creditTotal: 150
+      })
+      expect(latest.closingBalance).toEqual({
+        amount: 150,
+        availableAmount: 150
+      })
+      expect(await rowStateRepository.findBySummaryLogId('log-A')).toHaveLength(
+        2
+      )
+    })
+
+    it('persists row states before appending the event, so a failed append leaves the row state written for an idempotent retry', async () => {
+      const records = [buildExporterRecord({ rowId: '1', tonnage: 100 })]
+      vi.spyOn(streamRepository, 'appendEvent').mockRejectedValueOnce(
+        new Error('append boom')
+      )
+
+      await expect(submit(records, 'log-A')).rejects.toThrow('append boom')
+      expect(await rowStateRepository.findBySummaryLogId('log-A')).toHaveLength(
+        1
+      )
+
+      await submit(records, 'log-A')
+
+      const committed = await rowStateRepository.findBySummaryLogId('log-A')
+      expect(committed).toHaveLength(1)
+      expect(committed[0].summaryLogIds).toEqual(['log-A'])
     })
   })
 })
