@@ -2,17 +2,30 @@ import { StatusCodes } from 'http-status-codes'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
 
+const accreditationFixture = {
+  id: 'acc-1',
+  status: 'approved',
+  accreditationNumber: 'ACC-001',
+  validFrom: '2026-01-01',
+  validTo: '2026-12-31',
+  statusHistory: []
+}
+
 const buildOrganisation = (overrides = {}) => ({
   id: 'org-1',
+  orgId: 123456,
   companyDetails: { name: 'Acme Ltd' },
   submittedToRegulator: 'ea',
   registrations: [],
+  accreditations: [accreditationFixture],
   ...overrides
 })
 
@@ -20,56 +33,81 @@ const buildRegistration = (overrides = {}) => ({
   id: 'reg-1',
   material: 'plastic',
   submittedToRegulator: 'ea',
-  accreditation: null,
-  overseasSites: {},
+  accreditationId: 'acc-1',
   ...overrides
 })
 
-const buildReceivedRecord = (overrides = {}) => ({
-  type: WASTE_RECORD_TYPE.RECEIVED,
+const PARTITION = {
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  accreditationId: 'acc-1'
+}
+
+const includedReceivedEntry = (overrides = {}) => ({
   rowId: '1001',
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   data: {
     processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
     DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01'
   },
-  versions: [{ summaryLog: { id: 'sl-1' } }],
+  classification: {
+    outcome: ROW_OUTCOME.INCLUDED,
+    reasons: [],
+    transactionAmount: 10
+  },
   ...overrides
 })
 
-const createServerWithRepos = ({
+/**
+ * @param {{ organisations?: any[], committed?: any[], summaryLogs?: any[], observedKeys?: string[] }} [opts]
+ */
+const createServerWithRepos = async ({
   organisations = [],
-  wasteRecords = [],
+  committed = [],
   summaryLogs = [],
-  overseasSites = []
+  observedKeys = []
 } = {}) => {
   const organisationsRepository = {
     findAll: vi.fn().mockResolvedValue(organisations)
   }
-  const observedKeys = new Set()
-  for (const record of wasteRecords) {
-    for (const key of Object.keys(record.data ?? {})) {
-      observedKeys.add(key)
-    }
-  }
   const wasteRecordsRepository = {
-    findByRegistration: vi.fn().mockResolvedValue(wasteRecords),
-    findDistinctDataKeys: vi.fn().mockResolvedValue([...observedKeys])
+    findDistinctDataKeys: vi.fn().mockResolvedValue(observedKeys)
   }
   const summaryLogsRepository = {
     findAllByOrgReg: vi.fn().mockResolvedValue(summaryLogs)
   }
-  const overseasSitesRepository = {
-    findAll: vi.fn().mockResolvedValue(overseasSites)
-  }
 
-  return createTestServer({
+  const server = await createTestServer({
     repositories: {
       organisationsRepository: () => organisationsRepository,
       wasteRecordsRepository: () => wasteRecordsRepository,
-      summaryLogsRepository: () => summaryLogsRepository,
-      overseasSitesRepository: () => overseasSitesRepository
+      summaryLogsRepository: () => summaryLogsRepository
     }
   })
+
+  const rowStateRepository =
+    /** @type {import('#waste-balances/repository/row-states-port.js').RowStateRepository} */ (
+      server.app.rowStateRepository
+    )
+  const streamRepository =
+    /** @type {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} */ (
+      server.app.streamRepository
+    )
+  for (const submission of committed) {
+    await rowStateRepository.upsertRowStates(
+      PARTITION,
+      submission.entries,
+      submission.summaryLogId
+    )
+    await streamRepository.appendEvent(
+      buildStreamEvent({
+        number: submission.number,
+        payload: { summaryLogId: submission.summaryLogId, creditTotal: 100 }
+      })
+    )
+  }
+
+  return server
 }
 
 describe(`GET ${getWasteRecordsExportPath}`, () => {
@@ -105,23 +143,25 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const lines = response.payload.split('\n').filter((line) => line !== '')
       expect(lines).toHaveLength(1)
-      // Header includes well-known metadata column names
       expect(lines[0]).toContain('Organisation Name')
       expect(lines[0]).toContain('Regulator')
     })
 
-    it('streams a header row plus one data row for a single waste record', async () => {
+    it('streams a header row plus one data row for a single committed row state', async () => {
       const organisation = buildOrganisation({
         registrations: [buildRegistration()]
       })
       const server = await createServerWithRepos({
         organisations: [organisation],
-        wasteRecords: [buildReceivedRecord()],
-        summaryLogs: [
+        committed: [
           {
-            id: 'sl-1',
-            summaryLog: { submittedAt: '2026-04-15T09:00:00Z' }
+            summaryLogId: 'log-1',
+            number: 1,
+            entries: [includedReceivedEntry()]
           }
+        ],
+        summaryLogs: [
+          { id: 'log-1', summaryLog: { submittedAt: '2026-04-15T09:00:00Z' } }
         ]
       })
 
@@ -152,7 +192,13 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       })
       const server = await createServerWithRepos({
         organisations: [organisation],
-        wasteRecords: [buildReceivedRecord()]
+        committed: [
+          {
+            summaryLogId: 'log-1',
+            number: 1,
+            entries: [includedReceivedEntry()]
+          }
+        ]
       })
 
       const response = await server.inject({
@@ -164,9 +210,6 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       await server.stop()
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      // Each generator-yielded chunk ends with its own '\n', so the body must
-      // contain at least one internal newline separator on top of the trailing
-      // newline of the last row.
       const trimmed = response.payload.replace(/\n$/, '')
       expect(trimmed.split('\n').length).toBeGreaterThan(1)
     })

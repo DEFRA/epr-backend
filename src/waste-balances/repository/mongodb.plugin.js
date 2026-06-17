@@ -23,5 +23,6 @@ export const mongoWasteBalancesRepositoryPlugin = {
 
     registerRepository(server, 'wasteBalancesRepository', () => repository)
     registerRepository(server, 'streamRepository', () => streamRepository)
+    registerRepository(server, 'rowStateRepository', () => rowStateRepository)
   }
 }

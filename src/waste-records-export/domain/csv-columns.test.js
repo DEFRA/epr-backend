@@ -192,14 +192,13 @@ describe('csv-columns', () => {
     /** @returns {Registration} */
     const buildReg = (overrides = {}) => ({ ...regFixture, ...overrides })
 
-    /** @returns {WasteRecord} */
-    const buildRecord = (overrides = {}) => ({ ...recordFixture, ...overrides })
-
     const baseInput = {
       org: orgFixture,
       registration: regFixture,
       accreditation: accreditationFixture,
-      record: recordFixture,
+      data: recordFixture.data,
+      wasteRecordType: recordFixture.type,
+      rowId: recordFixture.rowId,
       summaryLogEntry: {
         submittedAt: '2026-04-15T09:00:00Z'
       },
@@ -271,12 +270,10 @@ describe('csv-columns', () => {
       const cols = buildDataFieldColumns(observedKeys)
       const row = buildDataRow({
         ...baseInput,
-        record: buildRecord({
-          data: {
-            ...recordFixture.data,
-            BILL_OF_LANDING_REFERENCE_NUMBER: 'BL-99'
-          }
-        }),
+        data: {
+          ...recordFixture.data,
+          BILL_OF_LANDING_REFERENCE_NUMBER: 'BL-99'
+        },
         dataFieldColumns: cols
       })
       const idx =

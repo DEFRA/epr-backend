@@ -6,7 +6,8 @@ import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { WasteRecordsRepository } from '#repositories/waste-records/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { WasteBalanceStreamRepository } from '#waste-balances/repository/stream-port.js' */
+/** @import { RowStateRepository } from '#waste-balances/repository/row-states-port.js' */
 
 export const getWasteRecordsExportPath = '/v1/admin/waste-records/export.csv'
 
@@ -36,7 +37,8 @@ export const wasteRecordsExportRoute = {
    *   organisationsRepository: OrganisationsRepository,
    *   wasteRecordsRepository: WasteRecordsRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
-   *   overseasSitesRepository: OverseasSitesRepository
+   *   streamRepository: WasteBalanceStreamRepository,
+   *   rowStateRepository: RowStateRepository
    * }} request
    */
   handler: (request, h) => {
@@ -44,7 +46,8 @@ export const wasteRecordsExportRoute = {
       organisationsRepository: request.organisationsRepository,
       wasteRecordsRepository: request.wasteRecordsRepository,
       summaryLogsRepository: request.summaryLogsRepository,
-      overseasSitesRepository: request.overseasSitesRepository
+      streamRepository: request.streamRepository,
+      rowStateRepository: request.rowStateRepository
     })
 
     return h
