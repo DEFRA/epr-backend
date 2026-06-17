@@ -5,8 +5,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { logger } from '#common/helpers/logging/logger.js'
 
 describe('#getRolesForOrganisationAccess', () => {
   const mockOrganisationId = new ObjectId().toString()
@@ -30,7 +28,6 @@ describe('#getRolesForOrganisationAccess', () => {
         organisationId: mockOrganisationId
       },
       organisationsRepository: mockOrganisationsRepository,
-      systemLogsRepository: createSystemLogsRepository()(logger),
       logger: {
         warn: vi.fn()
       }
