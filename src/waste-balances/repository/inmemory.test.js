@@ -1,6 +1,7 @@
 import { describe, it as base, expect, it } from 'vitest'
 import { createWasteBalancesRepository } from './repository.js'
 import { createInMemoryStreamRepository } from './stream-inmemory.js'
+import { createInMemoryRowStateRepository } from './row-states-inmemory.js'
 import { buildStreamEvent } from './stream-test-data.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 
@@ -10,12 +11,20 @@ const extendedIt = base.extend({
     const repository = createInMemoryStreamRepository()()
     await use(repository)
   },
+  // eslint-disable-next-line no-empty-pattern
+  rowStateRepository: async ({}, use) => {
+    const repository = createInMemoryRowStateRepository()()
+    await use(repository)
+  },
   wasteBalancesRepository: async (
     // @ts-expect-error -- vitest .extend() fixture typing
-    { streamRepository },
+    { streamRepository, rowStateRepository },
     use
   ) => {
-    const factory = createWasteBalancesRepository({ streamRepository })
+    const factory = createWasteBalancesRepository({
+      streamRepository,
+      rowStateRepository
+    })
     await use(factory)
   },
   seedBalance: async (

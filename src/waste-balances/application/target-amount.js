@@ -22,7 +22,7 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  *
  * @typedef {Object} ClassifiedRow
  * @property {string} rowId
- * @property {string} wasteRecordType
+ * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
  * @property {Record<string, any>} data
  * @property {RowClassification} classification
  */

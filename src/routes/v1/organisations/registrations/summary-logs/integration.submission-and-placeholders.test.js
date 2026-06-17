@@ -458,8 +458,8 @@ describe('Submission and placeholder tests', () => {
       )
 
       expect(wasteRecords).toHaveLength(2)
-      expect(wasteRecords[0].rowId).toBe(1001)
-      expect(wasteRecords[1].rowId).toBe(1002)
+      expect(wasteRecords[0].rowId).toBe('1001')
+      expect(wasteRecords[1].rowId).toBe('1002')
     })
 
     it('should update summary log status to SUBMITTED', async () => {
@@ -526,13 +526,13 @@ describe('Submission and placeholder tests', () => {
       expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
 
       expect(payload.loads.added.valid.count).toBe(1)
-      expect(payload.loads.added.valid.rowIds).toContain(1003)
+      expect(payload.loads.added.valid.rowIds).toContain('1003')
 
       expect(payload.loads.adjusted.valid.count).toBe(1)
-      expect(payload.loads.adjusted.valid.rowIds).toContain(1002)
+      expect(payload.loads.adjusted.valid.rowIds).toContain('1002')
 
       expect(payload.loads.unchanged.valid.count).toBe(1)
-      expect(payload.loads.unchanged.valid.rowIds).toContain(1001)
+      expect(payload.loads.unchanged.valid.rowIds).toContain('1001')
 
       expect(payload.loadsByWasteRecordType).toEqual([
         expect.objectContaining({
