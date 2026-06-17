@@ -18,6 +18,7 @@ import { findBalanceByPartition } from './read-balance.js'
  *
  * @param {Object} dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} dependencies.streamRepository
+ * @param {import('./row-states-port.js').RowStateRepository} [dependencies.rowStateRepository]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
  * @returns {import('./port.js').WasteBalancesRepositoryFactory}
  */
