@@ -219,8 +219,7 @@ describe('#getDefraUserRoles', () => {
       )
       expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledWith(
         mockRequest,
-        mockLinkedEprOrg.id,
-        tokenPayload
+        mockLinkedEprOrg.id
       )
     })
 
@@ -258,8 +257,7 @@ describe('#getDefraUserRoles', () => {
 
       expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledWith(
         customRequest,
-        mockLinkedEprOrg.id,
-        tokenPayload
+        mockLinkedEprOrg.id
       )
       expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledTimes(1)
     })

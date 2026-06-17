@@ -4,7 +4,10 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { ObjectId } from 'mongodb'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { addOrUpdateOrganisationUser } from './add-or-update-organisation-user.js'
+import {
+  addOrUpdateOrganisationUser,
+  ORGANISATION_USER_RESULTS
+} from './add-or-update-organisation-user.js'
 
 /**
  * @import {HapiRequest} from '#common/hapi-types.js'
@@ -48,11 +51,13 @@ describe('addOrUpdateOrganisationUser', () => {
 
   describe('when user does not exist in organisation', () => {
     test('should add user to organisation with correct details', async () => {
-      await addOrUpdateOrganisationUser(
+      const result = await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation
       )
+
+      expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.USER_ADDED)
 
       expect(
         mockOrganisationsRepository.replace
@@ -118,7 +123,7 @@ describe('addOrUpdateOrganisationUser', () => {
       /** @type {Object & Partial<HapiRequest>} */
       const fakeRequest = { organisationsRepository }
 
-      await addOrUpdateOrganisationUser(
+      const result = await addOrUpdateOrganisationUser(
         fakeRequest,
         /** @type {any} */ ({
           contactId: 'contact-123',
@@ -128,6 +133,8 @@ describe('addOrUpdateOrganisationUser', () => {
         }),
         org
       )
+
+      expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.USER_UPDATED)
 
       const updated = await waitForVersion(organisationsRepository, org.id, 2)
 
@@ -182,7 +189,7 @@ describe('addOrUpdateOrganisationUser', () => {
       /** @type {Object & Partial<HapiRequest>} */
       const fakeRequest = { organisationsRepository }
 
-      await addOrUpdateOrganisationUser(
+      const result = await addOrUpdateOrganisationUser(
         fakeRequest,
         /** @type {any} */ ({
           email: 'new.email.for.me@example.com',
@@ -192,6 +199,8 @@ describe('addOrUpdateOrganisationUser', () => {
         }),
         org
       )
+
+      expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.USER_UPDATED)
 
       const updated = await waitForVersion(organisationsRepository, org.id, 2)
 
@@ -215,6 +224,43 @@ describe('addOrUpdateOrganisationUser', () => {
           }
         ])
       )
+    })
+
+    test('should not update when user exists and details have not changed', async () => {
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const organisationsRepository = organisationsRepositoryFactory()
+
+      /** @type {Object & Partial<Organisation>} */
+      const org = buildOrganisation({
+        users: [
+          {
+            email: 'existing.user@example.com',
+            fullName: 'Existing User',
+            contactId: 'contact-123',
+            roles: [USER_ROLES.STANDARD]
+          }
+        ]
+      })
+
+      await organisationsRepository.insert(org)
+      await waitForVersion(organisationsRepository, org.id, 1)
+
+      /** @type {Object & Partial<HapiRequest>} */
+      const fakeRequest = { organisationsRepository }
+
+      const result = await addOrUpdateOrganisationUser(
+        fakeRequest,
+        /** @type {any} */ ({
+          email: 'existing.user@example.com',
+          firstName: 'Existing',
+          lastName: 'User',
+          contactId: 'contact-123'
+        }),
+        org
+      )
+
+      expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.NO_CHANGE)
     })
   })
 

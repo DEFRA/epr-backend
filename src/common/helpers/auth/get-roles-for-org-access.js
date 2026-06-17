@@ -1,11 +1,6 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
-import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/event.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
-import { addOrUpdateOrganisationUser } from './add-or-update-organisation-user.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
@@ -14,13 +9,11 @@ import { addOrUpdateOrganisationUser } from './add-or-update-organisation-user.j
  * Determines roles for organization access based on token and organization status
  * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request - The Hapi request object
  * @param {string} linkedEprOrgId - The linked EPR organization ID
- * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
  * @returns {Promise<string[]>} Array of role strings
  */
 export const getRolesForOrganisationAccess = async (
   request,
-  linkedEprOrgId,
-  tokenPayload
+  linkedEprOrgId
 ) => {
   const { organisationId } = request.params
 
@@ -33,25 +26,12 @@ export const getRolesForOrganisationAccess = async (
     throw Boom.forbidden('Access denied: organisation mismatch')
   }
 
-  const organisationById =
+  const organisation =
     await request.organisationsRepository.findById(organisationId)
 
-  if (organisationById.status !== ORGANISATION_STATUS.ACTIVE) {
+  if (organisation.status !== ORGANISATION_STATUS.ACTIVE) {
     throw Boom.forbidden('Access denied: organisation status not accessible')
   }
-
-  addOrUpdateOrganisationUser(request, tokenPayload, organisationById).catch(
-    (err) => {
-      request.logger.warn({
-        message: `User sync failed: ${err.message}`,
-        err,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED
-        }
-      })
-    }
-  )
 
   return [ROLES.standardUser]
 }
