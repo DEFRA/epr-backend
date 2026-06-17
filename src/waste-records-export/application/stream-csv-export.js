@@ -3,38 +3,43 @@ import { Readable } from 'node:stream'
 
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
+import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+import {
+  coerceRowData,
+  ROW_OUTCOME
+} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { committedRowStatesForRegistration } from '#waste-balances/application/read-committed-row-states.js'
+import { latestCommittedSummaryLogId } from '#waste-balances/application/latest-committed-summary-log-id.js'
 import {
   buildHeaderRow,
   buildDataRow,
   buildDataFieldColumns
 } from '../domain/csv-columns.js'
-import { isIncludedInWasteBalance } from '../domain/is-included-in-waste-balance.js'
-import { buildOverseasSitesContext } from '../domain/overseas-sites-context.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {WasteRecord, WasteRecordVersion} from '#domain/waste-records/model.js' */
-/** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
+/** @import {WasteBalanceStreamRepository} from '#waste-balances/repository/stream-port.js' */
+/** @import {RowStateRepository} from '#waste-balances/repository/row-states-port.js' */
 
 /**
  * @typedef {Object} StreamCsvExportDeps
  * @property {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
- * @property {Pick<WasteRecordsRepository, 'findByRegistration' | 'findDistinctDataKeys'>} wasteRecordsRepository
+ * @property {Pick<WasteRecordsRepository, 'findDistinctDataKeys'>} wasteRecordsRepository
  * @property {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
- * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
+ * @property {WasteBalanceStreamRepository} streamRepository
+ * @property {RowStateRepository} rowStateRepository
  */
 
 const sortById = (a, b) => a.id.localeCompare(b.id)
 
-const sortRecords = (a, b) => {
-  const t = a.type.localeCompare(b.type)
+const sortRowStates = (a, b) => {
+  const t = a.wasteRecordType.localeCompare(b.wasteRecordType)
   // `numeric: true` gives natural ordering ('9' before '10') while still
   // working for non-numeric rowIds.
   return (
@@ -43,6 +48,28 @@ const sortRecords = (a, b) => {
       numeric: true
     })
   )
+}
+
+/**
+ * Surface a committed row's data in the schema's canonical types — the same
+ * read-time coercion the rest of the system applies. A column that arrives
+ * mixed-typed from ExcelJS (a number in one submission, a numeric-string in
+ * another) is committed verbatim, so coercing on read is what makes the
+ * exported column hold a single type across rows.
+ *
+ * @param {Record<string, any>} data
+ * @param {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
+ * @returns {Record<string, any>}
+ */
+const coerceForExport = (data, wasteRecordType) => {
+  const schema = findSchemaForProcessingType(
+    data?.processingType,
+    wasteRecordType
+  )
+  if (!schema) {
+    return data
+  }
+  return coerceRowData(data, schema).data
 }
 
 /**
@@ -60,94 +87,72 @@ const encodeRow = async (cells) => {
 }
 
 /**
- * Build one CSV data row for a record under a given (org, registration) pair.
+ * Yield one CSV row per committed row state under a single (org, registration)
+ * pair. Inclusion and the row's data are read from the committed state stamped
+ * at submission — not recomputed — so the export reflects exactly what counted
+ * toward the waste balance when it committed.
  *
  * @param {Object} input
  * @param {Organisation} input.org
  * @param {Registration} input.registration
- * @param {import('#domain/organisations/accreditation.js').Accreditation | null} input.accreditation
- * @param {Record<string, { validFrom: Date | null }>} input.overseasSites
- * @param {Map<string, { submittedAt: string }>} input.summaryLogMap
- * @param {WasteRecord} input.record
  * @param {string[]} input.dataFieldColumns
- * @returns {string[]}
- */
-const rowForRecord = ({
-  org,
-  registration,
-  accreditation,
-  overseasSites,
-  summaryLogMap,
-  record,
-  dataFieldColumns
-}) => {
-  // `record.versions` is a non-empty array per the WasteRecord schema, so
-  // `.at(-1)` is always defined here. The cast tells tsc to drop the
-  // `| undefined` from the .at() return type rather than adding a guard
-  // for a state that cannot occur.
-  const lastVersion = /** @type {WasteRecordVersion} */ (record.versions.at(-1))
-  const summaryLogEntry = summaryLogMap.get(lastVersion.summaryLog.id) ?? null
-  const includedInWasteBalance = isIncludedInWasteBalance(
-    record,
-    accreditation,
-    overseasSites
-  )
-  return buildDataRow({
-    org,
-    registration,
-    accreditation,
-    record,
-    summaryLogEntry,
-    includedInWasteBalance,
-    dataFieldColumns
-  })
-}
-
-/**
- * Yield one CSV row per waste record under a single (org, registration) pair.
- * Records for the pair are fetched into memory together (bounded by the count
- * per registration, not the whole system) and yielded one row at a time.
- *
- * @param {Object} input
- * @param {Organisation} input.org
- * @param {Registration} input.registration
- * @param {Map<string, OverseasSite>} input.sitesById
- * @param {string[]} input.dataFieldColumns
- * @param {Pick<WasteRecordsRepository, 'findByRegistration'>} input.wasteRecordsRepository
+ * @param {WasteBalanceStreamRepository} input.streamRepository
+ * @param {RowStateRepository} input.rowStateRepository
  * @param {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} input.summaryLogsRepository
  * @returns {AsyncGenerator<string>}
  */
 async function* streamRegistrationRows({
   org,
   registration,
-  sitesById,
   dataFieldColumns,
-  wasteRecordsRepository,
+  streamRepository,
+  rowStateRepository,
   summaryLogsRepository
 }) {
   const accreditation = resolveAccreditation(registration, org)
-  const overseasSites = buildOverseasSitesContext(registration, sitesById)
+  const accreditationId = accreditation?.id ?? null
+
+  // Every committed row in the snapshot belongs to the head submission, so the
+  // head's timestamp is the "Submitted At" column. A registration with no
+  // committed submission contributes no rows.
+  const head = await latestCommittedSummaryLogId(streamRepository, {
+    registrationId: registration.id,
+    accreditationId
+  })
+
+  if (head === null) {
+    return
+  }
+
+  const rowStates = await committedRowStatesForRegistration({
+    streamRepository,
+    rowStateRepository,
+    organisationId: org.id,
+    registrationId: registration.id,
+    accreditationId
+  })
+
   const summaryLogMap = await loadSummaryLogMap(
     summaryLogsRepository,
     org.id,
     registration.id
   )
+  const summaryLogEntry = summaryLogMap.get(head) ?? null
 
-  const records = await wasteRecordsRepository.findByRegistration(
-    org.id,
-    registration.id
-  )
-  const recordsSorted = [...records].sort(sortRecords)
+  const rowStatesSorted = [...rowStates].sort(sortRowStates)
 
-  for (const record of recordsSorted) {
+  for (const rowState of rowStatesSorted) {
     yield await encodeRow(
-      rowForRecord({
+      buildDataRow({
         org,
         registration,
         accreditation,
-        overseasSites,
-        summaryLogMap,
-        record,
+        data: coerceForExport(rowState.data, rowState.wasteRecordType),
+        wasteRecordType: rowState.wasteRecordType,
+        rowId: rowState.rowId,
+        summaryLogEntry,
+        includedInWasteBalance:
+          rowState.classification.outcome === ROW_OUTCOME.INCLUDED,
         dataFieldColumns
       })
     )
@@ -155,7 +160,7 @@ async function* streamRegistrationRows({
 }
 
 /**
- * Yields CSV-encoded lines (header first, then one per waste record).
+ * Yields CSV-encoded lines (header first, then one per committed row state).
  * Hard-fails on any iterator error — caller must close the response stream.
  *
  * The header row is dynamically composed from the union of schema-declared
@@ -164,7 +169,7 @@ async function* streamRegistrationRows({
  * (`findDistinctDataKeys`) so the export does not need to materialise any
  * waste-record document to compose the header. Rows are then streamed one
  * registration at a time — memory is bounded by the largest single
- * registration's record count, not the total record count in the system.
+ * registration's committed-state count, not the total in the system.
  *
  * @param {StreamCsvExportDeps} deps
  * @returns {AsyncGenerator<string>}
@@ -174,16 +179,15 @@ export async function* streamCsvExport(deps) {
     organisationsRepository,
     wasteRecordsRepository,
     summaryLogsRepository,
-    overseasSitesRepository
+    streamRepository,
+    rowStateRepository
   } = deps
 
-  const [allSites, orgs, observedKeys] = await Promise.all([
-    overseasSitesRepository.findAll(),
+  const [orgs, observedKeys] = await Promise.all([
     organisationsRepository.findAll(),
     wasteRecordsRepository.findDistinctDataKeys()
   ])
 
-  const sitesById = new Map(allSites.map((s) => [s.id, s]))
   const dataFieldColumns = buildDataFieldColumns(observedKeys)
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
@@ -196,9 +200,9 @@ export async function* streamCsvExport(deps) {
       yield* streamRegistrationRows({
         org,
         registration,
-        sitesById,
         dataFieldColumns,
-        wasteRecordsRepository,
+        streamRepository,
+        rowStateRepository,
         summaryLogsRepository
       })
     }

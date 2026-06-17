@@ -11,7 +11,7 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 
 export const METADATA_COLUMNS = Object.freeze([
   'Regulator',
@@ -99,7 +99,9 @@ export const buildHeaderRow = (dataFieldColumns) => [
  * @property {Organisation} org
  * @property {Registration} registration
  * @property {Accreditation | null} accreditation
- * @property {WasteRecord} record
+ * @property {Record<string, any>} data
+ * @property {WasteRecordType} wasteRecordType
+ * @property {string} rowId
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
  * @property {boolean} includedInWasteBalance
  * @property {string[]} dataFieldColumns
@@ -116,13 +118,14 @@ export const buildDataRow = ({
   org,
   registration,
   accreditation,
-  record,
+  data,
+  wasteRecordType,
+  rowId,
   summaryLogEntry,
   includedInWasteBalance,
   dataFieldColumns
 }) => {
   const accredited = accreditation !== null ? 'Yes' : 'No'
-  const data = record.data
 
   const metadata = [
     uppercaseString(registration.submittedToRegulator),
@@ -132,10 +135,10 @@ export const buildDataRow = ({
     data.processingType,
     accredited,
     accreditation?.accreditationNumber ?? '',
-    record.type,
+    wasteRecordType,
     summaryLogEntry?.submittedAt ?? '',
     includedInWasteBalance ? 'true' : 'false',
-    String(record.rowId)
+    String(rowId)
   ]
 
   const dataCells = dataFieldColumns.map((field) => {
