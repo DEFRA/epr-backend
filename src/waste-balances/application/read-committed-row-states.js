@@ -174,6 +174,7 @@ const streamPositionsForDocuments = async (
  *   rowStateRepository: import('../repository/row-states-port.js').RowStateRepository,
  *   organisationId: string,
  *   registrationId: string,
+ *   accreditationId: string | null,
  *   rowId: string,
  *   wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType
  * }} context
@@ -184,15 +185,18 @@ export const rowHistory = async ({
   rowStateRepository,
   organisationId,
   registrationId,
+  accreditationId,
   rowId,
   wasteRecordType
 }) => {
-  const documents = await rowStateRepository.findRowHistory(
-    organisationId,
-    registrationId,
-    rowId,
-    wasteRecordType
-  )
+  const documents = (
+    await rowStateRepository.findRowHistory(
+      organisationId,
+      registrationId,
+      rowId,
+      wasteRecordType
+    )
+  ).filter((document) => document.accreditationId === accreditationId)
 
   if (documents.length === 0) {
     return []
