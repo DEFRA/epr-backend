@@ -5,7 +5,7 @@ import { add, toNumber } from '#common/helpers/decimal-utils.js'
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { appendToStream } from './append-to-stream.js'
 import { recordWasteBalanceUpdateAudit } from './audit.js'
-import { getTargetAmount } from './target-amount.js'
+import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 
 /**
  * Apply a summary-log submission to the event stream.
@@ -41,11 +41,13 @@ export const performUpdateViaStream = async ({
   const organisationId = wasteRecords[0].organisationId
   const registrationId = wasteRecords[0].registrationId
 
+  const classifiedRows = wasteRecords.map((record) =>
+    classifyWasteRecord(record, accreditation, overseasSites)
+  )
+
   let creditTotal = 0
-  for (const record of wasteRecords) {
-    creditTotal = toNumber(
-      add(creditTotal, getTargetAmount(record, accreditation, overseasSites))
-    )
+  for (const { classification } of classifiedRows) {
+    creditTotal = toNumber(add(creditTotal, getTargetAmount(classification)))
   }
 
   const event = await appendToStream(

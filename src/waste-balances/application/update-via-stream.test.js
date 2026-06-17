@@ -202,6 +202,39 @@ describe('performUpdateViaStream', () => {
     })
   })
 
+  describe('credit total invariant', () => {
+    it('sums exactly the INCLUDED transaction amounts, dropping excluded rows', async () => {
+      const includedTonnages = [120, 30, 45]
+      const records = [
+        buildExporterRecord({ rowId: '1', tonnage: includedTonnages[0] }),
+        buildExporterRecord({ rowId: '2', tonnage: includedTonnages[1] }),
+        {
+          ...buildExporterRecord({ rowId: '3', tonnage: 999 }),
+          excludedFromWasteBalance: true
+        },
+        buildExporterRecord({ rowId: '4', tonnage: includedTonnages[2] })
+      ]
+
+      await performUpdateViaStream({
+        wasteRecords: records,
+        accreditation,
+        streamRepository,
+        dependencies: { systemLogsRepository },
+        user,
+        overseasSites,
+        summaryLogId: 'log-A'
+      })
+
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        accreditationId
+      )
+      expect(latest.payload.creditTotal).toBe(
+        includedTonnages.reduce((sum, tonnage) => sum + tonnage, 0)
+      )
+    })
+  })
+
   describe('empty input', () => {
     it('does not touch the stream when no waste records are provided', async () => {
       const appendSpy = vi.spyOn(streamRepository, 'appendEvent')
