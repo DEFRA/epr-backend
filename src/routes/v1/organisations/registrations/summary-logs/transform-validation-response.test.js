@@ -2,6 +2,7 @@ import { transformValidationResponse } from './transform-validation-response.js'
 import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 import { summaryLogResponseSchema } from './response.schema.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 describe('transformValidationResponse', () => {
   describe('when validation is empty or has no issues', () => {
@@ -765,28 +766,7 @@ describe('transformValidationResponse', () => {
         status: SUMMARY_LOG_STATUS.VALIDATED,
         processingType: 'EXPORTER',
         ...transformValidationResponse(validation),
-        loadsByReportingPeriod: {
-          openPeriodLoads: {
-            added: {
-              balanceAffecting: { count: 0, tonnageDelta: 0 },
-              nonBalanceAffecting: { count: 0 }
-            },
-            adjusted: {
-              balanceAffecting: { count: 0, tonnageDelta: 0 },
-              nonBalanceAffecting: { count: 0 }
-            }
-          },
-          closedPeriodLoads: {
-            added: {
-              balanceAffecting: { count: 0, tonnageDelta: 0 },
-              nonBalanceAffecting: { count: 0 }
-            },
-            adjusted: {
-              balanceAffecting: { count: 0, tonnageDelta: 0 },
-              nonBalanceAffecting: { count: 0 }
-            }
-          }
-        }
+        loadsByReportingPeriod: emptyLoadsByReportingPeriod()
       }
       const { error } = summaryLogResponseSchema.validate(httpResponse)
       expect(error).toBeUndefined()
