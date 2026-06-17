@@ -41,10 +41,6 @@ vi.mock('./get-users-org-info.js', () => ({
   getOrgMatchingUsersToken: (...args) => mockGetOrgMatchingUsersToken(...args)
 }))
 
-vi.mock('#root/auditing/organisation-user.js', () => ({
-  auditOrganisationUserAdded: vi.fn()
-}))
-
 describe('#getJwtStrategyConfig', () => {
   const mockOidcConfigs = {
     entraIdOidcConfig: entraIdMockOidcWellKnownResponse,

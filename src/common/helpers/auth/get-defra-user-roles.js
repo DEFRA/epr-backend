@@ -56,12 +56,7 @@ export async function getDefraUserRoles(tokenPayload, request) {
   // - the request does not have an organisationId param
   // - or if the linkedEprOrg does not match the organisationId param
   // - or if the organisation status is not accessible
-  // Adds the user to the organisation if they are not already present
-  const roles = await getRolesForOrganisationAccess(
-    request,
-    linkedEprOrg.id,
-    tokenPayload
-  )
+  const roles = await getRolesForOrganisationAccess(request, linkedEprOrg.id)
 
   return { role: null, scopes: roles } // this highlights how this code has mixed up roles/scopes - needs fixing!
 }
