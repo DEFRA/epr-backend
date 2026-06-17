@@ -16,6 +16,11 @@ const PARTITION = {
   accreditationId: 'acc-1'
 }
 
+/**
+ * @param {{ organisationId: string, registrationId: string }} [partition]
+ * @param {string} [rowId]
+ * @param {string} [type]
+ */
 const makePath = (
   { organisationId, registrationId } = PARTITION,
   rowId = 'row-1',
