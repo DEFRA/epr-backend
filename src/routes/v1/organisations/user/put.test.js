@@ -3,7 +3,6 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
-import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import {
   defraIdMockAuthTokens,
   generateValidTokenWith
@@ -149,8 +148,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
 
         await addUser(newUser)
 
-        const orgAfter = await waitForVersion(
-          organisationsRepository,
+        const orgAfter = await organisationsRepository.findById(
           orgBefore.id,
           orgBefore.version + 1
         )
@@ -197,13 +195,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
       it('captures a system log', async () => {
         const start = new Date()
 
-        await addUser(newUser)
-
-        await waitForVersion(
-          organisationsRepository,
-          orgBefore.id,
-          orgBefore.version + 1
-        ) // this is needed while the user is added fire-and-forget in the auth layer
+        await addUser(newUser) // this is needed while the user is added fire-and-forget in the auth layer
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
@@ -267,8 +259,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
 
         await addUser(updatedUser())
 
-        const orgAfter = await waitForVersion(
-          organisationsRepository,
+        const orgAfter = await organisationsRepository.findById(
           orgBefore.id,
           orgBefore.version + 1
         )
@@ -321,12 +312,6 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
 
         await addUser(updatedUser())
 
-        await waitForVersion(
-          organisationsRepository,
-          orgBefore.id,
-          orgBefore.version + 1
-        ) // this is needed while the user is added fire-and-forget in the auth layer
-
         const systemLogsResponse = await server.inject({
           method: 'GET',
           url: `/v1/system-logs/search?organisationId=${orgBefore.id}`,
@@ -375,21 +360,24 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
 
     describe('when user already exists in organisation', () => {
       const userNotChanged = () => ({
-        contactId: orgBefore.users[0].contactId,
-        firstName: orgBefore.users[0].fullName.split(' ')[0],
-        lastName: orgBefore.users[0].fullName.split(' ')[1],
-        email: orgBefore.users[0].email
+        contactId: initialUser.contactId,
+        firstName: initialUser.fullName.split(' ')[0],
+        lastName: initialUser.fullName.split(' ')[1],
+        email: initialUser.email
       })
 
       it('does not update the user in the organisation', async () => {
         await addUser(userNotChanged())
 
-        const orgAfter = await organisationsRepository.findById(orgBefore.id)
+        const orgAfter = await organisationsRepository.findById(
+          orgBefore.id,
+          orgBefore.version
+        )
 
         expect(orgAfter.users).toEqual(orgBefore.users)
       })
 
-      it('does not captures an audit event', async () => {
+      it('does not capture an audit event', async () => {
         await addUser(userNotChanged())
 
         expect(mockCdpAuditing).toHaveBeenCalledTimes(0)
