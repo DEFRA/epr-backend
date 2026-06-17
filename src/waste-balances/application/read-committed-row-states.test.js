@@ -161,6 +161,7 @@ describe('rowHistory', () => {
       rowStateRepository,
       organisationId: 'org-1',
       registrationId: 'reg-1',
+      accreditationId: 'acc-1',
       rowId: 'row-1',
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
       ...overrides
@@ -259,8 +260,68 @@ describe('rowHistory', () => {
       { ...submissionEvent(1, 'log-1'), accreditationId: null }
     ])()
 
-    const history = await historyFor(streamRepository, rowStateRepository)
+    const history = await historyFor(streamRepository, rowStateRepository, {
+      accreditationId: null
+    })
 
     expect(history.map((h) => h.streamPosition)).toEqual([1])
+  })
+
+  it('scopes history to the requested accreditation partition', async () => {
+    const rowStateRepository = createInMemoryRowStateRepository()()
+    await rowStateRepository.upsertRowStates(
+      { ...DEFAULT_PARTITION, accreditationId: 'acc-1' },
+      [buildRowStateEntry({ data: { tonnage: 10 } })],
+      'log-1'
+    )
+    await rowStateRepository.upsertRowStates(
+      { ...DEFAULT_PARTITION, accreditationId: null },
+      [buildRowStateEntry({ data: { tonnage: 20 } })],
+      'log-2'
+    )
+
+    const streamRepository = createInMemoryStreamRepository([
+      submissionEvent(1, 'log-1'),
+      { ...submissionEvent(2, 'log-2'), accreditationId: null }
+    ])()
+
+    const accredited = await historyFor(streamRepository, rowStateRepository, {
+      accreditationId: 'acc-1'
+    })
+    const registeredOnly = await historyFor(
+      streamRepository,
+      rowStateRepository,
+      { accreditationId: null }
+    )
+
+    expect(accredited.map((h) => h.data.tonnage)).toEqual([10])
+    expect(registeredOnly.map((h) => h.data.tonnage)).toEqual([20])
+  })
+
+  it('returns empty history when the row exists only under another accreditation', async () => {
+    const rowStateRepository = createInMemoryRowStateRepository()()
+    await rowStateRepository.upsertRowStates(
+      { ...DEFAULT_PARTITION, accreditationId: 'acc-1' },
+      [buildRowStateEntry({ data: { tonnage: 10 } })],
+      'log-1'
+    )
+
+    const streamRepository = createInMemoryStreamRepository([
+      submissionEvent(1, 'log-1')
+    ])()
+
+    const otherAccreditation = await historyFor(
+      streamRepository,
+      rowStateRepository,
+      { accreditationId: 'acc-2' }
+    )
+    const registeredOnly = await historyFor(
+      streamRepository,
+      rowStateRepository,
+      { accreditationId: null }
+    )
+
+    expect(otherAccreditation).toEqual([])
+    expect(registeredOnly).toEqual([])
   })
 })
