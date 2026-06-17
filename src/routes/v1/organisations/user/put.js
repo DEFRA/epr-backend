@@ -1,9 +1,9 @@
 import {
   addOrUpdateOrganisationUser,
   ORGANISATION_USER_RESULTS
-} from '#common/helpers/auth/add-or-update-organisation-user.js'
+} from './add-or-update-organisation-user.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { auditOrganisationUserAdded } from '#root/auditing/organisation-user.js'
+import { auditOrganisationUserAdded } from './audit-organisation-user.js'
 import { StatusCodes } from 'http-status-codes'
 
 export const organisationsUserPut = {

@@ -1,13 +1,13 @@
-import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
+import {
+  extractUserDetails,
+  recordSystemLog,
+  safeAudit
+} from '#root/auditing/helpers.js'
 
 /**
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
- */
-
-/**
- * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
+ * @param {import('#common/hapi-types.js').HapiRequest} request
  * @param {string} organisationId
- * @param {import('#common/helpers/auth/add-or-update-organisation-user.js').OrganisationUserResult} result
+ * @param {import('./add-or-update-organisation-user.js').OrganisationUserResult} result
  * @returns {Promise<void>}
  */
 export async function auditOrganisationUserAdded(
