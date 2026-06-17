@@ -11,7 +11,7 @@ import { rowHistory } from '#waste-balances/application/read-committed-row-state
 /** @import { RowStateRepository } from '#waste-balances/repository/row-states-port.js' */
 
 export const rowHistoryGetPath =
-  '/v1/admin/waste-records/{organisationId}/{registrationId}/rows/{rowId}/history'
+  '/v1/admin/waste-records/{organisationId}/{registrationId}/waste-balance-row-states/{rowId}/history'
 
 export const rowHistoryGet = {
   method: 'GET',
