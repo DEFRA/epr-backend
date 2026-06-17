@@ -50,7 +50,24 @@ export const getRolesForOrganisationAccess = async (
         result.outcome === ORGANISATION_USER_RESULTS.USER_ADDED ||
         result.outcome === ORGANISATION_USER_RESULTS.USER_UPDATED
       ) {
-        await auditOrganisationUserAdded(request, organisationId, result)
+        // this is a hack (removed in followup PR) to put the user details into the request for auditing purposes
+        const requestWithUser = {
+          ...request,
+          auth: {
+            ...request.auth,
+            credentials: {
+              id: tokenPayload.contactId,
+              email: tokenPayload.email,
+              scope: [ROLES.standardUser]
+            }
+          }
+        }
+        await auditOrganisationUserAdded(
+          // @ts-ignore
+          requestWithUser,
+          organisationId,
+          result
+        )
       }
     })
     .catch((err) => {

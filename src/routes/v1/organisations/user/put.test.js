@@ -176,12 +176,11 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
           action: 'user-added'
         })
 
-        /**
-         * This is a bug
-         * request.auth.credentials is not available when user added within auth layer, so the system log is missing info on which user initiated the action
-         * This will be fixed when the auth layer user addition is removed (and instead the handler implementation fires)
-         */
-        expect(auditPayload.user).toEqual({})
+        expect(auditPayload.user).toEqual({
+          id: newUser.contactId,
+          email: newUser.email,
+          scope: ['standard_user']
+        })
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
@@ -236,8 +235,11 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
           }
         })
 
-        // This is a bug - request.auth.credentials is not available when user added within auth layer, so the system log is missing info on which user initiated the action
-        expect(log.createdBy).toEqual({})
+        expect(log.createdBy).toEqual({
+          id: newUser.contactId,
+          email: newUser.email,
+          scope: ['standard_user']
+        })
 
         expect(new Date(log.createdAt).getTime()).toBeGreaterThanOrEqual(
           start.getTime()
@@ -292,12 +294,11 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
           action: 'user-updated'
         })
 
-        /**
-         * This is a bug
-         * request.auth.credentials is not available when user added within auth layer, so the system log is missing info on which user initiated the action
-         * This will be fixed when the auth layer user addition is removed (and instead the handler implementation fires)
-         */
-        expect(auditPayload.user).toEqual({})
+        expect(auditPayload.user).toEqual({
+          id: updatedUser().contactId,
+          email: updatedUser().email,
+          scope: ['standard_user']
+        })
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
@@ -360,8 +361,11 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
           }
         })
 
-        // This is a bug - request.auth.credentials is not available when user added within auth layer, so the system log is missing info on which user initiated the action
-        expect(log.createdBy).toEqual({})
+        expect(log.createdBy).toEqual({
+          id: updatedUser().contactId,
+          email: updatedUser().email,
+          scope: ['standard_user']
+        })
 
         expect(new Date(log.createdAt).getTime()).toBeGreaterThanOrEqual(
           start.getTime()
