@@ -17,6 +17,9 @@ const ORGANISATION_ID = 'org-1'
 const REGISTRATION_ID = 'reg-1'
 const ACCREDITATION_ID = 'acc-1'
 
+/**
+ * @param {{ organisationId?: string, registrationId?: string, wasteRecordType?: string, rowId?: string }} [params]
+ */
 const registrationPath = ({
   organisationId = ORGANISATION_ID,
   registrationId = REGISTRATION_ID,
@@ -29,6 +32,9 @@ const registrationPath = ({
     .replace('{wasteRecordType}', wasteRecordType)
     .replace('{rowId}', rowId)
 
+/**
+ * @param {{ organisationId?: string, registrationId?: string, accreditationId?: string, wasteRecordType?: string, rowId?: string }} [params]
+ */
 const accreditationPath = ({
   organisationId = ORGANISATION_ID,
   registrationId = REGISTRATION_ID,
