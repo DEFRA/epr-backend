@@ -15,11 +15,7 @@ export const organisationsUserPut = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
-   *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
-   *   params: { organisationId: string }
-   * }} request
+   * @param {import('#common/hapi-types.js').HapiRequest & { params: { organisationId: string } }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    */
   handler: async (request, h) => {
