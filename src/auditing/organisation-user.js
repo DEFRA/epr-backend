@@ -23,8 +23,8 @@ export async function auditOrganisationUserAdded(
     },
     context: {
       organisationId,
-      before: result.userBefore,
-      after: result.userAfter
+      previous: result.userBefore,
+      next: result.userAfter
     },
     user: extractUserDetails(request)
   }

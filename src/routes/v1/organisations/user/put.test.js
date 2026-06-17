@@ -184,8 +184,8 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
-          before: null,
-          after: {
+          previous: null,
+          next: {
             contactId: newUser.contactId,
             fullName: `${newUser.firstName} ${newUser.lastName}`,
             email: newUser.email,
@@ -226,8 +226,8 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
 
         expect(log.context).toEqual({
           organisationId: orgBefore.id,
-          before: null,
-          after: {
+          previous: null,
+          next: {
             contactId: newUser.contactId,
             fullName: `${newUser.firstName} ${newUser.lastName}`,
             email: newUser.email,
@@ -302,12 +302,12 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
-          before: {
+          previous: {
             fullName: initialUser.fullName,
             email: initialUser.email,
             roles: initialUser.roles
           },
-          after: {
+          next: {
             contactId: updatedUser().contactId,
             fullName: `${updatedUser().firstName} ${updatedUser().lastName}`,
             email: updatedUser().email,
@@ -348,12 +348,12 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
 
         expect(log.context).toEqual({
           organisationId: orgBefore.id,
-          before: {
+          previous: {
             fullName: initialUser.fullName,
             email: initialUser.email,
             roles: initialUser.roles
           },
-          after: {
+          next: {
             contactId: updatedUser().contactId,
             fullName: `${updatedUser().firstName} ${updatedUser().lastName}`,
             email: updatedUser().email,
