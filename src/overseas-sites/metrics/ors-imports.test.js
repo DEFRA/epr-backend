@@ -8,10 +8,12 @@ import {
 const mockTimed = vi.fn(async (_name, _dimensions, fn) => fn())
 
 vi.mock('#common/helpers/metrics.js', async (importOriginal) => {
-  const original = await importOriginal()
+  const original = /** @type {Record<string, unknown>} */ (
+    await importOriginal()
+  )
   return {
     ...original,
-    timed: (...args) => mockTimed(...args)
+    timed: mockTimed
   }
 })
 
