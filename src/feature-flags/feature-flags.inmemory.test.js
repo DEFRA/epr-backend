@@ -32,33 +32,22 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isDevEndpointsEnabled()).toBe(false)
   })
 
-  it('returns true when wasteBalanceLedger flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({ wasteBalanceLedger: true })
-    expect(flags.isWasteBalanceLedgerEnabled()).toBe(true)
+  it('returns true when fixDuplicateAccreditationLinks flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      fixDuplicateAccreditationLinks: true
+    })
+    expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(true)
   })
 
-  it('returns false when wasteBalanceLedger flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({ wasteBalanceLedger: false })
-    expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
+  it('returns false when fixDuplicateAccreditationLinks flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      fixDuplicateAccreditationLinks: false
+    })
+    expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(false)
   })
 
-  it('returns false when wasteBalanceLedger flag is not provided', () => {
+  it('returns false when fixDuplicateAccreditationLinks flag is not provided', () => {
     const flags = createInMemoryFeatureFlags({})
-    expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
-  })
-
-  it('returns true when reportUnsubmit flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({ reportUnsubmit: true })
-    expect(flags.isReportUnsubmitEnabled()).toBe(true)
-  })
-
-  it('returns false when reportUnsubmit flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({ reportUnsubmit: false })
-    expect(flags.isReportUnsubmitEnabled()).toBe(false)
-  })
-
-  it('returns false when reportUnsubmit flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isReportUnsubmitEnabled()).toBe(false)
+    expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(false)
   })
 })

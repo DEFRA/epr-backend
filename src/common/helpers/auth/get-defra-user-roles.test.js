@@ -6,27 +6,44 @@ import { ROLES } from './constants.js'
 const mockIsAuthorisedOrgLinkingReq = vi.fn()
 const mockIsOrganisationsDiscoveryReq = vi.fn()
 const mockGetOrgMatchingUsersToken = vi.fn()
-const mockGetRolesForOrganisationAccess = vi.fn()
 const mockGetDefraTokenSummary = vi.fn()
 
 vi.mock('./is-authorised-org-linking-req.js', () => ({
-  isAuthorisedOrgLinkingReq: (...args) => mockIsAuthorisedOrgLinkingReq(...args)
+  isAuthorisedOrgLinkingReq: (/** @type {any} */ ...args) =>
+    mockIsAuthorisedOrgLinkingReq(...args)
 }))
 
 vi.mock('./roles/helpers.js', () => ({
-  isOrganisationsDiscoveryReq: (...args) =>
+  isOrganisationsDiscoveryReq: (/** @type {any} */ ...args) =>
     mockIsOrganisationsDiscoveryReq(...args),
-  getDefraTokenSummary: (...args) => mockGetDefraTokenSummary(...args)
+  getDefraTokenSummary: (/** @type {any} */ ...args) =>
+    mockGetDefraTokenSummary(...args)
 }))
 
 vi.mock('./get-users-org-info.js', () => ({
-  getOrgMatchingUsersToken: (...args) => mockGetOrgMatchingUsersToken(...args)
+  getOrgMatchingUsersToken: (/** @type {any} */ ...args) =>
+    mockGetOrgMatchingUsersToken(...args)
 }))
 
-vi.mock('./get-roles-for-org-access.js', () => ({
-  getRolesForOrganisationAccess: (...args) =>
-    mockGetRolesForOrganisationAccess(...args)
-}))
+/**
+ *
+ * @returns {import('#auth/types.js').DefraIdTokenPayload}
+ */
+function createTokenPayload(overrides = {}) {
+  return {
+    contactId: '',
+    email: '',
+    currentRelationshipId: '',
+    relationships: [],
+    firstName: '',
+    lastName: '',
+    iss: '',
+    aud: '',
+    exp: 0,
+    iat: 0,
+    ...overrides
+  }
+}
 
 describe('#getDefraUserRoles', () => {
   const mockOrganisationsRepository = {}
@@ -57,31 +74,31 @@ describe('#getDefraUserRoles', () => {
 
       const result = await getDefraUserRoles(tokenPayload, mockRequest)
 
-      expect(result).toEqual([])
+      expect(result.scopes).toEqual([])
       expect(mockIsAuthorisedOrgLinkingReq).not.toHaveBeenCalled()
     })
 
     test('returns empty array when email is null', async () => {
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: null
-      }
+      })
 
       const result = await getDefraUserRoles(tokenPayload, mockRequest)
 
-      expect(result).toEqual([])
+      expect(result.scopes).toEqual([])
       expect(mockIsAuthorisedOrgLinkingReq).not.toHaveBeenCalled()
     })
 
     test('returns empty array when email is empty string', async () => {
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: ''
-      }
+      })
 
       const result = await getDefraUserRoles(tokenPayload, mockRequest)
 
-      expect(result).toEqual([])
+      expect(result.scopes).toEqual([])
       expect(mockIsAuthorisedOrgLinkingReq).not.toHaveBeenCalled()
     })
   })
@@ -92,14 +109,14 @@ describe('#getDefraUserRoles', () => {
     })
 
     test('returns linker role when linking request is valid', async () => {
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: 'user@example.com'
-      }
+      })
 
       const result = await getDefraUserRoles(tokenPayload, mockRequest)
 
-      expect(result).toEqual([ROLES.linker])
+      expect(result.scopes).toEqual([ROLES.linker])
       expect(mockIsAuthorisedOrgLinkingReq).toHaveBeenCalledWith(
         mockRequest,
         tokenPayload
@@ -109,10 +126,10 @@ describe('#getDefraUserRoles', () => {
     })
 
     test('calls isAuthorisedOrgLinkingReq with correct parameters', async () => {
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-456',
         email: 'another@example.com'
-      }
+      })
       const customRequest = {
         ...mockRequest,
         path: '/api/v1/organisations/link'
@@ -134,24 +151,24 @@ describe('#getDefraUserRoles', () => {
     })
 
     test('returns inquirer role for discovery request', async () => {
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: 'user@example.com'
-      }
+      })
 
       const result = await getDefraUserRoles(tokenPayload, mockRequest)
 
-      expect(result).toEqual([ROLES.inquirer])
+      expect(result.scopes).toEqual([ROLES.inquirer])
       expect(mockIsOrganisationsDiscoveryReq).toHaveBeenCalledWith(mockRequest)
       expect(mockIsOrganisationsDiscoveryReq).toHaveBeenCalledTimes(1)
       expect(mockGetOrgMatchingUsersToken).not.toHaveBeenCalled()
     })
 
     test('calls isOrganisationsDiscoveryReq with correct request', async () => {
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-456',
         email: 'another@example.com'
-      }
+      })
       const customRequest = {
         ...mockRequest,
         path: '/api/v1/organisations/linked'
@@ -169,47 +186,28 @@ describe('#getDefraUserRoles', () => {
     const mockLinkedEprOrg = {
       id: 'org-123',
       name: 'Test Organisation',
-      users: [{ email: 'user@example.com', roles: ['initial_user'] }]
+      users: [{ email: 'user@example.com', roles: ['initial_user'] }],
+      status: 'active'
     }
+
+    const requestForOrg = {
+      ...mockRequest,
+      params: { organisationId: mockLinkedEprOrg.id }
+    }
+
+    const tokenPayload = createTokenPayload({
+      id: 'user-123',
+      email: 'user@example.com'
+    })
 
     beforeEach(() => {
       mockIsAuthorisedOrgLinkingReq.mockResolvedValue(false)
       mockIsOrganisationsDiscoveryReq.mockReturnValue(false)
-      mockGetOrgMatchingUsersToken.mockResolvedValue(mockLinkedEprOrg)
+      mockGetOrgMatchingUsersToken.mockReset()
     })
 
-    test('returns roles for organisation access', async () => {
-      const expectedRoles = [ROLES.editor, ROLES.viewer]
-      mockGetRolesForOrganisationAccess.mockResolvedValue(expectedRoles)
-
-      const tokenPayload = {
-        id: 'user-123',
-        email: 'user@example.com'
-      }
-
-      const result = await getDefraUserRoles(tokenPayload, mockRequest)
-
-      expect(result).toEqual(expectedRoles)
-      expect(mockGetOrgMatchingUsersToken).toHaveBeenCalledWith(
-        tokenPayload,
-        mockOrganisationsRepository
-      )
-      expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledWith(
-        mockRequest,
-        mockLinkedEprOrg.id,
-        tokenPayload
-      )
-    })
-
-    test('calls getUsersOrganisationInfo with correct parameters', async () => {
-      mockGetRolesForOrganisationAccess.mockResolvedValue([ROLES.viewer])
-
-      const tokenPayload = {
-        id: 'user-456',
-        email: 'another@example.com'
-      }
-
-      await getDefraUserRoles(tokenPayload, mockRequest)
+    test('calls getOrgMatchingUsersToken with correct parameters', async () => {
+      await getDefraUserRoles(tokenPayload, requestForOrg)
 
       expect(mockGetOrgMatchingUsersToken).toHaveBeenCalledWith(
         tokenPayload,
@@ -218,105 +216,53 @@ describe('#getDefraUserRoles', () => {
       expect(mockGetOrgMatchingUsersToken).toHaveBeenCalledTimes(1)
     })
 
-    test('calls getRolesForOrganisationAccess with request and linked org', async () => {
-      const customRoles = [ROLES.editor]
-      mockGetRolesForOrganisationAccess.mockResolvedValue(customRoles)
+    test('returns single scope when user is linked to organisation specified in request, and organisation is active', async () => {
+      mockGetOrgMatchingUsersToken.mockResolvedValue(mockLinkedEprOrg)
 
-      const tokenPayload = {
-        id: 'user-789',
-        email: 'third@example.com'
-      }
-      const customRequest = {
-        ...mockRequest,
-        params: { organisationId: 'org-123' }
-      }
+      const result = await getDefraUserRoles(tokenPayload, requestForOrg)
 
-      await getDefraUserRoles(tokenPayload, customRequest)
-
-      expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledWith(
-        customRequest,
-        mockLinkedEprOrg.id,
-        tokenPayload
-      )
-      expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledTimes(1)
+      expect(result.scopes).toEqual([ROLES.standardUser])
     })
 
-    test('returns empty array when getRolesForOrganisationAccess returns empty', async () => {
-      mockGetRolesForOrganisationAccess.mockResolvedValue([])
-
-      const tokenPayload = {
-        id: 'user-123',
-        email: 'user@example.com'
-      }
-
-      const result = await getDefraUserRoles(tokenPayload, mockRequest)
-
-      expect(result).toEqual([])
-    })
-
-    test('returns single role when user has one permission', async () => {
-      mockGetRolesForOrganisationAccess.mockResolvedValue([ROLES.viewer])
-
-      const tokenPayload = {
-        id: 'user-123',
-        email: 'user@example.com'
-      }
-
-      const result = await getDefraUserRoles(tokenPayload, mockRequest)
-
-      expect(result).toEqual([ROLES.viewer])
-    })
-
-    test('returns multiple roles when user has multiple permissions', async () => {
-      const multipleRoles = [ROLES.editor, ROLES.viewer, ROLES.admin]
-      mockGetRolesForOrganisationAccess.mockResolvedValue(multipleRoles)
-
-      const tokenPayload = {
-        id: 'user-123',
-        email: 'user@example.com'
-      }
-
-      const result = await getDefraUserRoles(tokenPayload, mockRequest)
-
-      expect(result).toEqual(multipleRoles)
-    })
-  })
-
-  describe('when user is not linked to any organisation', () => {
-    beforeEach(() => {
-      mockIsAuthorisedOrgLinkingReq.mockResolvedValue(false)
-      mockIsOrganisationsDiscoveryReq.mockReturnValue(false)
+    test('returns empty array of scopes when user token is not linked to an organisation', async () => {
       mockGetOrgMatchingUsersToken.mockResolvedValue(null)
+
+      const result = await getDefraUserRoles(tokenPayload, requestForOrg)
+
+      expect(result.scopes).toEqual([])
     })
 
-    test('throws forbidden error when user token is not linked to an organisation', async () => {
-      const tokenPayload = {
-        id: 'user-123',
-        email: 'user@example.com'
-      }
-
-      await expect(
-        getDefraUserRoles(tokenPayload, mockRequest)
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: { statusCode: 403 },
-        message: 'User is not linked to an organisation'
+    test('returns empty array of scopes when user is linked to a different organisation than the one being requested', async () => {
+      mockGetOrgMatchingUsersToken.mockResolvedValue({
+        ...mockLinkedEprOrg,
+        id: 'another-org-id'
       })
+
+      const result = await getDefraUserRoles(tokenPayload, requestForOrg)
+
+      expect(result.scopes).toEqual([])
     })
 
-    test('does not call getRolesForOrganisationAccess', async () => {
-      const tokenPayload = {
-        id: 'user-123',
-        email: 'user@example.com'
-      }
+    test('returns empty array of scopes when user is linked to organisation specified in request, and organisation is not active', async () => {
+      mockGetOrgMatchingUsersToken.mockResolvedValue({
+        ...mockLinkedEprOrg,
+        status: 'created'
+      })
 
-      try {
-        await getDefraUserRoles(tokenPayload, mockRequest)
-      } catch {
-        // Expected to throw
-      }
+      const result = await getDefraUserRoles(tokenPayload, requestForOrg)
 
-      expect(mockGetRolesForOrganisationAccess).not.toHaveBeenCalled()
+      expect(result.scopes).toEqual([])
+    })
+
+    test('returns empty array of scopes when user is linked to an active organisation, but request does not specify an organisation', async () => {
+      mockGetOrgMatchingUsersToken.mockResolvedValue(mockLinkedEprOrg)
+
+      const result = await getDefraUserRoles(tokenPayload, {
+        ...requestForOrg,
+        params: {}
+      })
+
+      expect(result.scopes).toEqual([])
     })
   })
 
@@ -326,43 +272,28 @@ describe('#getDefraUserRoles', () => {
       mockIsOrganisationsDiscoveryReq.mockReturnValue(false)
     })
 
-    test('propagates error from getUsersOrganisationInfo', async () => {
+    test('propagates error from getOrgMatchingUsersToken', async () => {
       const error = new Error('Organisation not found')
       mockGetOrgMatchingUsersToken.mockRejectedValue(error)
 
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: 'user@example.com'
-      }
+      })
 
       await expect(
         getDefraUserRoles(tokenPayload, mockRequest)
       ).rejects.toThrow('Organisation not found')
     })
 
-    test('propagates error from getRolesForOrganisationAccess', async () => {
-      const error = new Error('Access denied')
-      mockGetOrgMatchingUsersToken.mockResolvedValue({ id: 'org-123' })
-      mockGetRolesForOrganisationAccess.mockRejectedValue(error)
-
-      const tokenPayload = {
-        id: 'user-123',
-        email: 'user@example.com'
-      }
-
-      await expect(
-        getDefraUserRoles(tokenPayload, mockRequest)
-      ).rejects.toThrow('Access denied')
-    })
-
     test('propagates error from isAuthorisedOrgLinkingReq', async () => {
       const error = new Error('Unauthorised linking request')
       mockIsAuthorisedOrgLinkingReq.mockRejectedValue(error)
 
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: 'user@example.com'
-      }
+      })
 
       await expect(
         getDefraUserRoles(tokenPayload, mockRequest)
@@ -372,69 +303,64 @@ describe('#getDefraUserRoles', () => {
 
   describe('flow control', () => {
     test('short-circuits at email check before calling any other functions', async () => {
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: ''
-      }
+      })
 
       await getDefraUserRoles(tokenPayload, mockRequest)
 
       expect(mockIsAuthorisedOrgLinkingReq).not.toHaveBeenCalled()
       expect(mockIsOrganisationsDiscoveryReq).not.toHaveBeenCalled()
       expect(mockGetOrgMatchingUsersToken).not.toHaveBeenCalled()
-      expect(mockGetRolesForOrganisationAccess).not.toHaveBeenCalled()
     })
 
     test('short-circuits at linking check when valid linking request', async () => {
       mockIsAuthorisedOrgLinkingReq.mockResolvedValue(true)
 
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: 'user@example.com'
-      }
+      })
 
       await getDefraUserRoles(tokenPayload, mockRequest)
 
       expect(mockIsAuthorisedOrgLinkingReq).toHaveBeenCalledTimes(1)
       expect(mockIsOrganisationsDiscoveryReq).not.toHaveBeenCalled()
       expect(mockGetOrgMatchingUsersToken).not.toHaveBeenCalled()
-      expect(mockGetRolesForOrganisationAccess).not.toHaveBeenCalled()
     })
 
     test('short-circuits at discovery check when discovery request', async () => {
       mockIsAuthorisedOrgLinkingReq.mockResolvedValue(false)
       mockIsOrganisationsDiscoveryReq.mockReturnValue(true)
 
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: 'user@example.com'
-      }
+      })
 
       await getDefraUserRoles(tokenPayload, mockRequest)
 
       expect(mockIsAuthorisedOrgLinkingReq).toHaveBeenCalledTimes(1)
       expect(mockIsOrganisationsDiscoveryReq).toHaveBeenCalledTimes(1)
       expect(mockGetOrgMatchingUsersToken).not.toHaveBeenCalled()
-      expect(mockGetRolesForOrganisationAccess).not.toHaveBeenCalled()
     })
 
     test('executes full flow when accessing specific organisation', async () => {
       mockIsAuthorisedOrgLinkingReq.mockResolvedValue(false)
       mockIsOrganisationsDiscoveryReq.mockReturnValue(false)
       mockGetOrgMatchingUsersToken.mockResolvedValue({ id: 'org-123' })
-      mockGetRolesForOrganisationAccess.mockResolvedValue([ROLES.viewer])
 
-      const tokenPayload = {
+      const tokenPayload = createTokenPayload({
         id: 'user-123',
         email: 'user@example.com'
-      }
+      })
 
       await getDefraUserRoles(tokenPayload, mockRequest)
 
       expect(mockIsAuthorisedOrgLinkingReq).toHaveBeenCalledTimes(1)
       expect(mockIsOrganisationsDiscoveryReq).toHaveBeenCalledTimes(1)
       expect(mockGetOrgMatchingUsersToken).toHaveBeenCalledTimes(1)
-      expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledTimes(1)
     })
   })
 })

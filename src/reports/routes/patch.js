@@ -5,7 +5,8 @@ import { StatusCodes } from 'http-status-codes'
 import { isNil } from '#common/helpers/is-nil.js'
 
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import { fetchCurrentReport } from '#reports/application/report-service.js'
+import { assertNotStale } from '#reports/domain/stale.js'
+import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { maxTwoDecimalPlaces } from '#reports/repository/schema.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
@@ -16,7 +17,7 @@ import {
 } from './shared.js'
 
 export const reportsPatchPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
 
 const MAX_SUPPORTING_INFO_LENGTH = 2000
 
@@ -154,19 +155,21 @@ export const reportsPatch = {
     const { organisationId, registrationId, cadence } = params
     const year = Number(params.year)
     const period = Number(params.period)
+    const submissionNumber = Number(params.submissionNumber)
 
     const [registration, report] = await Promise.all([
       organisationsRepository.findRegistrationById(
         organisationId,
         registrationId
       ),
-      fetchCurrentReport(
+      fetchReportBySubmissionNumber(
         reportsRepository,
         organisationId,
         registrationId,
         year,
         cadence,
-        period
+        period,
+        submissionNumber
       )
     ])
 
@@ -175,6 +178,8 @@ export const reportsPatch = {
         `No report found for ${cadence} period ${period} of ${year}`
       )
     }
+
+    assertNotStale(report)
 
     request.logger.info({
       message: 'PATCH guard: report found',

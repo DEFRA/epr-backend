@@ -612,4 +612,31 @@ export const testSystemLogsRepositoryContract = (it) => {
       expect(actors[0].createdBy.id).toBe('latest-user')
     })
   })
+
+  describe('insertMany', () => {
+    it('inserts all provided system logs', async ({ systemLogsRepository }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      const userId = randomUUID()
+
+      await repository.insertMany([
+        buildSystemLog({ userId, id: 1 }),
+        buildSystemLog({ userId, id: 2 })
+      ])
+
+      const result = await repository.find({ userId, limit: DEFAULT_LIMIT })
+
+      expect(result.systemLogs).toHaveLength(2)
+    })
+
+    it('does nothing when called with an empty array', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      await expect(repository.insertMany([])).resolves.toBeUndefined()
+    })
+  })
 }

@@ -72,16 +72,16 @@ export function getJwtStrategyConfig(oidcConfigs) {
           .filter(Boolean)
           .map((s) => s.trim())
           .join(' ')
-        const scope = await getDefraUserRoles(tokenPayload, request)
+        const { scopes } = await getDefraUserRoles(tokenPayload, request)
 
         return {
-          isValid: scope.length > 0,
+          isValid: true,
           credentials: {
             id: tokenPayload.contactId,
             email,
             name,
             issuer,
-            scope,
+            scope: scopes,
             currentRelationshipId: tokenPayload?.currentRelationshipId
           }
         }

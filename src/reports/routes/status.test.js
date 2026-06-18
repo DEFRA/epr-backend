@@ -23,8 +23,8 @@ vi.mock('#reports/application/audit.js', () => ({
 describe(`POST ${reportsStatusPath}`, () => {
   setupAuthContext()
 
-  const makeUrl = (orgId, regId, year, cadence, period) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/status`
+  const makeUrl = (orgId, regId, year, cadence, period, submissionNumber = 1) =>
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}/status`
 
   describe('when feature flag is enabled', () => {
     // Defaults to a report whose manual-entry fields are populated enough
@@ -105,7 +105,7 @@ describe(`POST ${reportsStatusPath}`, () => {
           wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: reportsRepositoryFactory
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       return {
@@ -135,7 +135,7 @@ describe(`POST ${reportsStatusPath}`, () => {
           wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: createInMemoryReportsRepository()
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       return {
@@ -535,6 +535,33 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
     })
+
+    describe('when report is stale', () => {
+      it('returns 409 with summary_log_changed code', async () => {
+        const { server, organisationId, registrationId, reportsRepository } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        await reportsRepository.markActiveReportsStale(
+          organisationId,
+          registrationId,
+          'sl-new',
+          new Date().toISOString()
+        )
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 2 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
+      })
+    })
   })
 
   describe('when feature flag is disabled', () => {
@@ -544,7 +571,7 @@ describe(`POST ${reportsStatusPath}`, () => {
 
       const server = await createTestServer({
         repositories: {},
-        featureFlags: createInMemoryFeatureFlags({ reports: false })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       const response = await server.inject({

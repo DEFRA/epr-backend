@@ -358,23 +358,11 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
     },
-    allowFullErrorOutput: {
-      doc: 'Feature Flag: Allow full error output (including potentially sensitive payload / stack detail)',
+    fixDuplicateAccreditationLinks: {
+      doc: 'Feature Flag: Fix duplicate accreditation links in existing organisation data on startup',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_ALLOW_FULL_ERROR_OUTPUT'
-    },
-    wasteBalanceLedger: {
-      doc: 'Feature Flag: Write and read waste balance transactions via the append-only ledger collection (ADR 0031)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_WASTE_BALANCE_LEDGER'
-    },
-    reportUnsubmit: {
-      doc: 'Feature Flag: Enable admin unsubmit endpoint for reports',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_REPORT_UNSUBMIT'
+      env: 'FEATURE_FLAG_FIX_DUPLICATE_ACCREDITATION_LINKS'
     }
   },
   formSubmissionOverrides: {

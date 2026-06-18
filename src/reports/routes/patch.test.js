@@ -19,8 +19,8 @@ import { reportsPatchPath, buildUpdatedPrn } from './patch.js'
 describe(`PATCH ${reportsPatchPath}`, () => {
   setupAuthContext()
 
-  const makeUrl = (orgId, regId, year, cadence, period) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}`
+  const makeUrl = (orgId, regId, year, cadence, period, submissionNumber = 1) =>
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}`
 
   const createServer = async (
     registrationOverrides = {},
@@ -889,6 +889,33 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
+  describe('when report is stale', () => {
+    it('returns 409 with summary_log_changed code', async () => {
+      const { server, organisationId, registrationId, reportsRepository } =
+        await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+      await reportsRepository.markActiveReportsStale(
+        organisationId,
+        registrationId,
+        'sl-new',
+        new Date().toISOString()
+      )
+
+      const response = await patchReport(
+        server,
+        organisationId,
+        registrationId,
+        { supportingInformation: 'notes' }
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
     })
   })
 })

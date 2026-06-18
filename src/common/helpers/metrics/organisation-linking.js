@@ -11,3 +11,15 @@ export const organisationLinkingMetrics = {
     await incrementCounter('organisation.linked', {})
   }
 }
+
+/**
+ * @typedef {Object} OrganisationUnlinkingMetrics
+ * @property {() => Promise<void>} organisationUnlinked - Records organisation unlinked metric
+ */
+
+/** @type {OrganisationUnlinkingMetrics} */
+export const organisationUnlinkingMetrics = {
+  organisationUnlinked: async () => {
+    await incrementCounter('organisation.unlinked', {})
+  }
+}

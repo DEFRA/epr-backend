@@ -10,6 +10,7 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
@@ -125,6 +126,10 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: async () => []
+      }),
+      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor: extractor
     })
 

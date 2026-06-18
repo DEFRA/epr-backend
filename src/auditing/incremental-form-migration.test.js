@@ -1,9 +1,10 @@
 import { auditIncrementalFormMigration } from './incremental-form-migration.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 
 const mockAudit = vi.fn()
-const mockInsert = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -29,9 +30,12 @@ vi.mock('#root/config.js', () => ({
 describe('auditIncrementalFormMigration', () => {
   const now = new Date('2026-02-11T12:00:00.000Z')
 
+  let systemLogsRepository
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(now)
+    systemLogsRepository = createSystemLogsRepository()(logger)
   })
 
   afterEach(() => {
@@ -42,9 +46,10 @@ describe('auditIncrementalFormMigration', () => {
   const organisationId = new ObjectId().toString()
   const systemUser = { id: 'system', email: 'system', scope: [] }
 
-  const createMockSystemLogsRepository = () => ({
-    insert: mockInsert
-  })
+  const findStoredLog = async () => {
+    const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
+    return systemLogs[0]
+  }
 
   it('logs full previous/next state to both CDP audit and system log', async () => {
     const previous = {
@@ -67,7 +72,7 @@ describe('auditIncrementalFormMigration', () => {
     }
 
     await auditIncrementalFormMigration(
-      createMockSystemLogsRepository(),
+      systemLogsRepository,
       organisationId,
       previous,
       next
@@ -89,7 +94,8 @@ describe('auditIncrementalFormMigration', () => {
     })
 
     // Verify system log stores full state
-    expect(mockInsert).toHaveBeenCalledWith({
+    const storedLog = await findStoredLog()
+    expect(storedLog).toEqual({
       createdAt: now,
       createdBy: systemUser,
       event: {
@@ -135,7 +141,7 @@ describe('auditIncrementalFormMigration', () => {
     }
 
     await auditIncrementalFormMigration(
-      createMockSystemLogsRepository(),
+      systemLogsRepository,
       organisationId,
       previous,
       next
@@ -153,7 +159,8 @@ describe('auditIncrementalFormMigration', () => {
     })
 
     // Verify system log still stores full state (no size limit)
-    expect(mockInsert).toHaveBeenCalledWith({
+    const storedLog = await findStoredLog()
+    expect(storedLog).toEqual({
       createdAt: now,
       createdBy: systemUser,
       event: {

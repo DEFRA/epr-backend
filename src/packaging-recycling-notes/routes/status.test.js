@@ -21,6 +21,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
 
@@ -28,6 +29,27 @@ const organisationId = 'org-123'
 const registrationId = 'reg-456'
 const accreditationId = 'acc-789'
 const prnId = '507f1f77bcf86cd799439011'
+
+/**
+ * A valid appended stream event, as the ledger-path balance effects return one.
+ * The read-side fold reads `kind`, `number`, `createdAt` and `createdBy` off it.
+ *
+ * @param {import('#waste-balances/repository/stream-schema.js').StreamEventKind} kind
+ * @param {number} [number]
+ */
+const buildAppendedEvent = (kind, number = 2) => ({
+  id: `event-${number}`,
+  registrationId,
+  accreditationId,
+  organisationId,
+  number,
+  kind,
+  payload: { prnId, amount: 100 },
+  openingBalance: { amount: 500, availableAmount: 500 },
+  closingBalance: { amount: 500, availableAmount: 400 },
+  createdAt: new Date('2026-02-03T10:00:00.000Z'),
+  createdBy: { id: 'test-user-id', name: 'Ada Lovelace' }
+})
 
 const createMockPrn = (overrides = {}) => ({
   id: prnId,
@@ -84,7 +106,6 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       accreditationId,
       amount: 500,
       availableAmount: 500,
-      transactions: [],
       version: 1,
       schemaVersion: 1,
       ...overrides
@@ -92,12 +113,15 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeAll(async () => {
       wasteBalancesRepository = {
-        findByAccreditationId: vi
+        findBalance: vi.fn().mockResolvedValue(createMockWasteBalance()),
+        getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
+        appendStreamEvent: vi.fn(),
+        deductAvailableBalanceForPrnCreation: vi
           .fn()
-          .mockResolvedValue(createMockWasteBalance()),
-        findByAccreditationIds: vi.fn(),
-        deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({}),
-        deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED)),
+        deductTotalBalanceForPrnIssue: vi
+          .fn()
+          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
       }
 
       organisationsRepository = {
@@ -133,6 +157,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
       vi.spyOn(packagingRecyclingNotesRepository, 'findById')
       vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
+      vi.spyOn(packagingRecyclingNotesRepository, 'persistProjection')
     })
 
     afterEach(() => {
@@ -159,11 +184,15 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(body.status).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
 
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.persistProjection
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            id: prnId,
-            status: PRN_STATUS.AWAITING_AUTHORISATION
+            projection: expect.objectContaining({
+              id: prnId,
+              status: expect.objectContaining({
+                currentStatus: PRN_STATUS.AWAITING_AUTHORISATION
+              })
+            })
           })
         )
       })
@@ -180,9 +209,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        const callArgs =
-          packagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
-        expect(callArgs).not.toHaveProperty('prnNumber')
+        const { projection } =
+          packagingRecyclingNotesRepository.persistProjection.mock.calls[0][0]
+        expect(projection).not.toHaveProperty('prnNumber')
       })
     })
 
@@ -215,10 +244,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
 
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.persistProjection
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            prnNumber: expect.stringMatching(/^ER26\d{5}$/)
+            projection: expect.objectContaining({
+              prnNumber: expect.stringMatching(/^ER26\d{5}$/)
+            })
           })
         )
       })
@@ -250,10 +281,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.persistProjection
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            prnNumber: expect.stringMatching(/^EX26\d{5}$/)
+            projection: expect.objectContaining({
+              prnNumber: expect.stringMatching(/^EX26\d{5}$/)
+            })
           })
         )
       })
@@ -289,10 +322,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.persistProjection
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            prnNumber: expect.stringMatching(/^WR26\d{5}$/)
+            projection: expect.objectContaining({
+              prnNumber: expect.stringMatching(/^WR26\d{5}$/)
+            })
           })
         )
       })
@@ -344,17 +379,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           awaitingAuthPrn
         )
 
-        // First call throws conflict, second succeeds
-        packagingRecyclingNotesRepository.updateStatus
+        // First persist throws a number collision, second succeeds
+        packagingRecyclingNotesRepository.persistProjection
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345'))
-          .mockResolvedValueOnce({
-            ...awaitingAuthPrn,
-            prnNumber: 'ER2612345A',
-            status: {
-              currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-              history: awaitingAuthPrn.status.history
-            }
-          })
+          .mockImplementationOnce(async ({ projection }) => projection)
 
         const response = await server.inject({
           method: 'POST',
@@ -367,13 +395,13 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         // Should have been called twice - once without suffix, once with A
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.persistProjection
         ).toHaveBeenCalledTimes(2)
 
-        // Second call should have suffix A
+        // Second call should carry the A suffix
         const secondCall =
-          packagingRecyclingNotesRepository.updateStatus.mock.calls[1][0]
-        expect(secondCall.prnNumber).toMatch(/^ER26\d{5}A$/)
+          packagingRecyclingNotesRepository.persistProjection.mock.calls[1][0]
+        expect(secondCall.projection.prnNumber).toMatch(/^ER26\d{5}A$/)
       })
 
       it('continues through suffixes until one succeeds', async () => {
@@ -394,19 +422,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           awaitingAuthPrn
         )
 
-        // First three calls throw conflict, fourth succeeds
-        packagingRecyclingNotesRepository.updateStatus
+        // First three persists throw collisions, fourth succeeds
+        packagingRecyclingNotesRepository.persistProjection
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345'))
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345A'))
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345B'))
-          .mockResolvedValueOnce({
-            ...awaitingAuthPrn,
-            prnNumber: 'ER2612345C',
-            status: {
-              currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-              history: awaitingAuthPrn.status.history
-            }
-          })
+          .mockImplementationOnce(async ({ projection }) => projection)
 
         const response = await server.inject({
           method: 'POST',
@@ -417,13 +438,13 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.persistProjection
         ).toHaveBeenCalledTimes(4)
 
-        // Fourth call should have suffix C
+        // Fourth call should carry the C suffix
         const fourthCall =
-          packagingRecyclingNotesRepository.updateStatus.mock.calls[3][0]
-        expect(fourthCall.prnNumber).toMatch(/^ER26\d{5}C$/)
+          packagingRecyclingNotesRepository.persistProjection.mock.calls[3][0]
+        expect(fourthCall.projection.prnNumber).toMatch(/^ER26\d{5}C$/)
       })
 
       it('returns 500 when all suffix attempts are exhausted', async () => {
@@ -445,7 +466,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         )
 
         // All 27 attempts (no suffix + A-Z) throw conflict
-        packagingRecyclingNotesRepository.updateStatus.mockRejectedValue(
+        packagingRecyclingNotesRepository.persistProjection.mockRejectedValue(
           new PrnNumberConflictError('ER2612345')
         )
 
@@ -460,7 +481,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         // Should have tried 27 times (no suffix + A through Z)
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.persistProjection
         ).toHaveBeenCalledTimes(27)
       })
 
@@ -482,8 +503,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           awaitingAuthPrn
         )
 
-        // First call throws conflict, second throws database error
-        packagingRecyclingNotesRepository.updateStatus
+        // First persist throws a collision, second throws a database error
+        packagingRecyclingNotesRepository.persistProjection
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345'))
           .mockRejectedValueOnce(new Error('Database connection lost'))
 
@@ -496,9 +517,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
 
-        // Should have only tried twice before non-collision error
+        // Should have only tried twice before the non-collision error
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.persistProjection
         ).toHaveBeenCalledTimes(2)
       })
 
@@ -527,10 +548,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          wasteBalancesRepository.deductAvailableBalanceForPrnCreation
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            updatedBy: { id: userId, name: userName }
+            createdBy: expect.objectContaining({ id: userId, name: userName })
           })
         )
       })
@@ -554,10 +575,13 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          wasteBalancesRepository.deductAvailableBalanceForPrnCreation
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            updatedBy: { id: 'unknown', name: 'unknown' }
+            createdBy: expect.objectContaining({
+              id: 'unknown',
+              name: 'unknown'
+            })
           })
         )
       })
@@ -746,12 +770,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         )
       })
 
-      it('returns 500 when updateStatus returns null', async () => {
+      it('returns 500 when the projection persist returns null', async () => {
         // Reset PRN to draft status for this test
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.persistProjection.mockResolvedValueOnce(
           null
         )
 
@@ -770,7 +794,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
-        packagingRecyclingNotesRepository.updateStatus.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.persistProjection.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
@@ -864,7 +888,6 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       accreditationId,
       amount: 500,
       availableAmount: 500,
-      transactions: [],
       version: 1,
       schemaVersion: 1,
       ...overrides
@@ -872,12 +895,15 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeAll(async () => {
       wasteBalancesRepository = {
-        findByAccreditationId: vi
+        findBalance: vi.fn().mockResolvedValue(createMockWasteBalance()),
+        getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
+        appendStreamEvent: vi.fn(),
+        deductAvailableBalanceForPrnCreation: vi
           .fn()
-          .mockResolvedValue(createMockWasteBalance()),
-        findByAccreditationIds: vi.fn(),
-        deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({}),
-        deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED)),
+        deductTotalBalanceForPrnIssue: vi
+          .fn()
+          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
       }
 
       organisationsRepository = {
@@ -913,6 +939,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
       vi.spyOn(packagingRecyclingNotesRepository, 'findById')
       vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
+      vi.spyOn(packagingRecyclingNotesRepository, 'persistProjection')
     })
 
     afterEach(() => {
@@ -925,11 +952,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     it('deducts tonnage from available balance when transitioning to awaiting_authorisation', async () => {
       const balance = createMockWasteBalance()
-      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(
-        balance
-      )
+      wasteBalancesRepository.findBalance.mockResolvedValueOnce(balance)
       wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockResolvedValueOnce(
-        undefined
+        buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED)
       )
       packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(mockPrn)
 
@@ -997,11 +1022,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     it('returns 400 when no waste balance exists', async () => {
-      // An accreditation with no balance returns null on every lookup: both
-      // the up-front canonical-source check and the balance-effect read.
-      wasteBalancesRepository.findByAccreditationId
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
+      wasteBalancesRepository.findBalance.mockResolvedValueOnce(null)
       packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
         createMockPrn()
       )
@@ -1021,9 +1042,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     it('returns 500 when waste balance deduction fails', async () => {
       const balance = createMockWasteBalance()
-      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(
-        balance
-      )
+      wasteBalancesRepository.findBalance.mockResolvedValueOnce(balance)
       wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockRejectedValueOnce(
         new Error('Database write failed')
       )

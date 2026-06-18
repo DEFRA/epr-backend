@@ -1,5 +1,8 @@
 import { classifierTail, conflict } from '#common/helpers/logging/cdp-boom.js'
-import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
+import {
+  LINKABLE_ORGANISATION_STATUSES,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { errorCodes } from './enums/error-codes.js'
@@ -332,13 +335,15 @@ const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db
     .collection(COLLECTION_NAME)
     .find({
-      // Must not be linked
-      linkedDefraOrganisation: { $exists: false },
-      // Must be approved (check last status in statusHistory)
+      // Must not be linked — matches never-linked (field absent) and unlinked
+      // (field cleared to null by the unlink flow)
+      linkedDefraOrganisation: null,
+      // Must be approved, or active but unlinked (check last status in
+      // statusHistory) — both are re-linkable candidates
       $expr: {
-        $eq: [
+        $in: [
           { $arrayElemAt: ['$statusHistory.status', -1] },
-          REG_ACC_STATUS.APPROVED
+          LINKABLE_ORGANISATION_STATUSES
         ]
       },
       // User must be an initial user (case-insensitive email match)

@@ -76,4 +76,8 @@
  * }} DefraIdRelationship
  */
 
+/**
+ * @typedef {{ role: string | null, scopes: string[] }} UserRoleAndScopes
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

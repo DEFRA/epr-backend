@@ -33,9 +33,9 @@
  * @typedef {Object} Supplier
  * @property {string} supplierName
  * @property {string} facilityType
- * @property {string} address
- * @property {string} phone
- * @property {string} email
+ * @property {string} supplierAddress
+ * @property {string} supplierPhone
+ * @property {string} supplierEmail
  * @property {number} tonnageReceived
  */
 
@@ -44,8 +44,6 @@
  * @property {string} recipientName
  * @property {string} facilityType
  * @property {string} address
- * @property {string} phone
- * @property {string} email
  * @property {number} tonnageSentOn
  */
 
@@ -90,6 +88,23 @@
  */
 
 /**
+ * @typedef {{ uploadedAt: string, reason: StaleReason, summaryLogId?: string }} ReportStale
+ */
+
+/**
+ * Per-report result returned by {@link ReportsRepository.markActiveReportsStale}.
+ * Contains the fields needed to audit the stale transition.
+ *
+ * @typedef {Object} MarkReportStaleResult
+ * @property {string} reportId
+ * @property {number} year
+ * @property {string} cadence
+ * @property {number} period
+ * @property {number} submissionNumber
+ * @property {ReportStale} stale
+ */
+
+/**
  * @typedef {Object} Report
  * @property {string} id
  * @property {number} version
@@ -113,6 +128,7 @@
  * @property {PrnData} [prn]
  * @property {string} [supportingInformation]
  * @property {SourceData} [sourceData]
+ * @property {ReportStale} [stale]
  */
 
 /**
@@ -132,7 +148,7 @@
 /**
  * Curated subset of ReportSummary used for list-style responses
  * (e.g. the reports calendar). Excludes heavy activity payloads.
- * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submittedAt' | 'submittedBy'>} ReportListItem
+ * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submissionNumber' | 'submittedAt' | 'submittedBy'>} ReportListItem
  */
 
 /**
@@ -231,10 +247,18 @@
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
+ * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStale
+ *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
+ *   skipping any report already built from `summaryLogId` or already stale from it.
+ *   Returns the per-report stale details for auditing.
  */
 
 /**
  * @typedef {() => ReportsRepository} ReportsRepositoryFactory
+ */
+
+/**
+ * @import { StaleReason } from '#reports/domain/stale.js'
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
