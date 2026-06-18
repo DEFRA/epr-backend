@@ -69,7 +69,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         token: defraIdMockAuthTokens.unknownUnauthorisedUserToken,
         description:
           'Defra user with no valid relationship to any organisation',
-        expectedStatus: StatusCodes.UNAUTHORIZED
+        expectedStatus: StatusCodes.FORBIDDEN
       },
       {
         token: defraIdMockAuthTokens.validToken,
@@ -91,7 +91,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         }),
         description:
           'Defra user with a relationship pointing to a different organisation',
-        expectedStatus: StatusCodes.UNAUTHORIZED
+        expectedStatus: StatusCodes.FORBIDDEN
       }
     ])(
       'returns $expectedStatus for $description',
