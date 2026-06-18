@@ -560,13 +560,7 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
-
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.role).toBeNull()
       })
