@@ -79,7 +79,7 @@ export const organisationsLink = {
       await organisationsRepository.findAllLinkableForUser(tokenPayload.email)
 
     const orgToLink = linkableOrganisations.find(
-      ({ id }) => id === organisation.id
+      (linkableOrganisation) => linkableOrganisation.id === organisation.id
     )
 
     if (!orgToLink) {
