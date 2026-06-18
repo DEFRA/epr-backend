@@ -1,5 +1,4 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
-import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 import { describe, expect, it, vi } from 'vitest'
 import {
   deduplicateOrganisations,
@@ -7,8 +6,7 @@ import {
   getCurrentRelationship,
   getDefraTokenSummary,
   getOrgDataFromDefraIdToken,
-  isInitialUser,
-  isOrganisationsDiscoveryReq
+  isInitialUser
 } from './helpers.js'
 
 describe('getOrgDataFromDefraIdToken', () => {
@@ -309,53 +307,6 @@ describe('getDefraTokenSummary', () => {
     expect(result.defraIdOrgId).toBeUndefined()
     expect(result.defraIdOrgName).toBeUndefined()
     expect(result.defraIdRelationships).toEqual([])
-  })
-})
-
-describe('isOrganisationsDiscoveryReq', () => {
-  it('should return true for GET request to organisations linked path', () => {
-    const request = /** @type {any} */ ({
-      path: organisationsLinkedGetAllPath,
-      method: 'get'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(true)
-  })
-
-  it('should return false for POST request to organisations linked path', () => {
-    const request = /** @type {any} */ ({
-      path: organisationsLinkedGetAllPath,
-      method: 'post'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(false)
-  })
-
-  it('should return false for GET request to different path', () => {
-    const request = /** @type {any} */ ({
-      path: '/api/v1/different-path',
-      method: 'get'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(false)
-  })
-
-  it('should return false for PUT request to organisations linked path', () => {
-    const request = /** @type {any} */ ({
-      path: organisationsLinkedGetAllPath,
-      method: 'put'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(false)
-  })
-
-  it('should return false for DELETE request to organisations linked path', () => {
-    const request = /** @type {any} */ ({
-      path: organisationsLinkedGetAllPath,
-      method: 'delete'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(false)
   })
 })
 

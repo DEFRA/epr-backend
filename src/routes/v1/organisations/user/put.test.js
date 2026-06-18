@@ -177,7 +177,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         expect(auditPayload.user).toEqual({
           id: newUser.contactId,
           email: newUser.email,
-          scope: ['standard_user']
+          scope: ['inquirer', 'standard_user']
         })
 
         expect(auditPayload.context).toEqual({
@@ -230,7 +230,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         expect(log.createdBy).toEqual({
           id: newUser.contactId,
           email: newUser.email,
-          scope: ['standard_user']
+          scope: ['inquirer', 'standard_user']
         })
 
         expect(new Date(log.createdAt).getTime()).toBeGreaterThanOrEqual(
@@ -288,7 +288,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         expect(auditPayload.user).toEqual({
           id: updatedUser().contactId,
           email: updatedUser().email,
-          scope: ['standard_user']
+          scope: ['inquirer', 'standard_user']
         })
 
         expect(auditPayload.context).toEqual({
@@ -349,7 +349,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         expect(log.createdBy).toEqual({
           id: updatedUser().contactId,
           email: updatedUser().email,
-          scope: ['standard_user']
+          scope: ['inquirer', 'standard_user']
         })
 
         expect(new Date(log.createdAt).getTime()).toBeGreaterThanOrEqual(

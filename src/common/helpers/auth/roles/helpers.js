@@ -1,5 +1,4 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
-import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 
 /** @import {DefraIdRelationship, DefraIdTokenPayload} from '../types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
@@ -76,16 +75,6 @@ export function getDefraTokenSummary(tokenPayload) {
     getCurrentRelationship(defraIdRelationships) || {}
 
   return { defraIdOrgId, defraIdOrgName, defraIdRelationships }
-}
-
-/**
- * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
- * @returns {boolean}
- */
-export function isOrganisationsDiscoveryReq(request) {
-  return (
-    request.path === organisationsLinkedGetAllPath && request.method === 'get'
-  )
 }
 
 /**
