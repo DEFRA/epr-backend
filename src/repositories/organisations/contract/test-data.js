@@ -63,6 +63,10 @@ export const buildRegistration = (overrides = {}) => {
     delete registration.overseasSites
   }
 
+  if (!overrides.accreditationId) {
+    delete registration.accreditationId
+  }
+
   return registration
 }
 

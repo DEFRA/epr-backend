@@ -5,9 +5,15 @@ export const testFindByIdsBehaviour = (it) => {
   describe('findByIds', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     it('returns empty array when given empty array', async () => {
       const result = await repository.findByIds([])

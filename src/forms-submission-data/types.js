@@ -57,7 +57,7 @@
  *   cbduNumber: string
  *   exportPorts?: string[]
  *   formSubmission: { id: string, time: Date }
- *   glassRecyclingProcess?: string
+ *   glassRecyclingProcess?: string[]
  *   id: string
  *   material: string
  *   noticeAddress?: object
@@ -81,7 +81,7 @@
 /**
  * @typedef {{
  *   formSubmission: { id: string, time: Date }
- *   glassRecyclingProcess?: string
+ *   glassRecyclingProcess?: string[]
  *   id: string
  *   material: string
  *   orgId: number
