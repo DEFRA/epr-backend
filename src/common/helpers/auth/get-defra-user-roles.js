@@ -1,12 +1,11 @@
-import Boom from '@hapi/boom'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
 import {
   getDefraTokenSummary,
   isOrganisationsDiscoveryReq
 } from './roles/helpers.js'
 import { getOrgMatchingUsersToken } from './get-users-org-info.js'
-import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
@@ -48,15 +47,29 @@ export async function getDefraUserRoles(tokenPayload, request) {
     organisationsRepository
   )
 
-  if (!linkedEprOrg) {
-    throw Boom.forbidden('User is not linked to an organisation')
-  }
-
-  // Throws error if:
-  // - the request does not have an organisationId param
-  // - or if the linkedEprOrg does not match the organisationId param
-  // - or if the organisation status is not accessible
-  const roles = await getRolesForOrganisationAccess(request, linkedEprOrg.id)
+  const roles =
+    linkedEprOrg &&
+    requestIsForSameOrganisation(request, linkedEprOrg) &&
+    organisationIsActive(linkedEprOrg)
+      ? [ROLES.standardUser]
+      : []
 
   return { role: null, scopes: roles } // this highlights how this code has mixed up roles/scopes - needs fixing!
+}
+
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest} request
+ * @param {import('#domain/organisations/model.js').Organisation} linkedEprOrg
+ */
+const requestIsForSameOrganisation = (request, linkedEprOrg) => {
+  const { organisationId } = request.params
+
+  return !!organisationId && organisationId === linkedEprOrg.id
+}
+
+/**
+ * @param {import('#domain/organisations/model.js').Organisation} organisation
+ */
+const organisationIsActive = (organisation) => {
+  return organisation.status === ORGANISATION_STATUS.ACTIVE
 }

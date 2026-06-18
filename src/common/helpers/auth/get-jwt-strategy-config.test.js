@@ -780,7 +780,7 @@ describe('#getJwtStrategyConfig', () => {
 
         expect(result.credentials.id).toBe('')
         expect(result.credentials.email).toBe('')
-        expect(result.isValid).toBe(false)
+        expect(result.isValid).toBe(true)
       })
     })
 
