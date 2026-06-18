@@ -16,6 +16,8 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
@@ -350,9 +352,8 @@ describe('Submission and placeholder tests', () => {
         wasteRecordsRepository,
         summaryLogExtractor: validationExtractor,
         logger: mockLogger,
-        reportsRepository: /** @type {any} */ ({
-          findPeriodicReports: async () => []
-        })
+        reportsRepository: createInMemoryReportsRepository()(),
+        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
 
       const syncWasteRecords = syncFromSummaryLog(
@@ -458,8 +459,8 @@ describe('Submission and placeholder tests', () => {
       )
 
       expect(wasteRecords).toHaveLength(2)
-      expect(wasteRecords[0].rowId).toBe(1001)
-      expect(wasteRecords[1].rowId).toBe(1002)
+      expect(wasteRecords[0].rowId).toBe('1001')
+      expect(wasteRecords[1].rowId).toBe('1002')
     })
 
     it('should update summary log status to SUBMITTED', async () => {
@@ -526,13 +527,13 @@ describe('Submission and placeholder tests', () => {
       expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
 
       expect(payload.loads.added.valid.count).toBe(1)
-      expect(payload.loads.added.valid.rowIds).toContain(1003)
+      expect(payload.loads.added.valid.rowIds).toContain('1003')
 
       expect(payload.loads.adjusted.valid.count).toBe(1)
-      expect(payload.loads.adjusted.valid.rowIds).toContain(1002)
+      expect(payload.loads.adjusted.valid.rowIds).toContain('1002')
 
       expect(payload.loads.unchanged.valid.count).toBe(1)
-      expect(payload.loads.unchanged.valid.rowIds).toContain(1001)
+      expect(payload.loads.unchanged.valid.rowIds).toContain('1001')
 
       expect(payload.loadsByWasteRecordType).toEqual([
         expect.objectContaining({
@@ -803,9 +804,8 @@ describe('Submission and placeholder tests', () => {
         wasteRecordsRepository,
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: /** @type {any} */ ({
-          findPeriodicReports: async () => []
-        })
+        reportsRepository: createInMemoryReportsRepository()(),
+        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
       const featureFlags = createInMemoryFeatureFlags()
 
