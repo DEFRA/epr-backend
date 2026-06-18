@@ -18,6 +18,14 @@ const maintainerCredential = {
 }
 const expectedMaintainerScope = [...ADMIN_ROLES.service_maintainer]
 
+const stubRequest = (overrides = {}) => ({
+  organisationsRepository: {},
+  path: '/v1/me/organisations',
+  method: 'get',
+  params: {},
+  ...overrides
+})
+
 // Mock config
 const mockConfigGet = vi.fn()
 
@@ -478,7 +486,7 @@ describe('#getJwtStrategyConfig', () => {
         const artifacts = {
           decoded: { payload: { ...userPresentInOrg1DefraIdTokenPayload } }
         }
-        const request = {
+        const request = stubRequest({
           organisationsRepository: {
             findById: vi.fn().mockResolvedValue({
               id: testOrgId,
@@ -492,7 +500,7 @@ describe('#getJwtStrategyConfig', () => {
           params: {
             organisationId: testOrgId
           }
-        }
+        })
 
         const result = await config.validate(artifacts, request)
 
@@ -514,13 +522,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.scope).toEqual([ROLES.inquirer])
       })
@@ -540,13 +543,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.name).toBe('Test User')
       })
@@ -565,13 +563,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.name).toBe('Test')
       })
@@ -590,13 +583,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.name).toBe('User')
       })
@@ -614,13 +602,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.name).toBe('')
       })
@@ -640,13 +623,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.name).toBe('Test User')
       })
@@ -666,13 +644,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.name).toBe('')
       })
@@ -692,13 +665,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.name).toBe('')
       })
@@ -716,13 +684,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
         expect(result.credentials.issuer).toBe(
@@ -743,14 +706,13 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
+        const request = stubRequest({
           path: '/any',
           params: {
             organisationId:
               userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
           }
-        }
+        })
 
         await expect(config.validate(artifacts, request)).rejects.toThrow(
           Boom.forbidden('Invalid audience for Defra Id token')
@@ -770,13 +732,8 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.id).toBe('')
         expect(result.credentials.email).toBe('')
@@ -810,15 +767,9 @@ describe('#getJwtStrategyConfig', () => {
           }
         }
 
-        const defraRequest = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
-
         const [entraResult, defraResult] = await Promise.all([
           config.validate(entraArtifacts),
-          config.validate(defraArtifacts, defraRequest)
+          config.validate(defraArtifacts, stubRequest())
         ])
 
         expect(entraResult.credentials.id).toBe('entra-contact')

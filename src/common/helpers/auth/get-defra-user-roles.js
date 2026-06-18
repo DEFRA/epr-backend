@@ -1,10 +1,7 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
-import {
-  getDefraTokenSummary,
-  isOrganisationsDiscoveryReq
-} from './roles/helpers.js'
+import { getDefraTokenSummary } from './roles/helpers.js'
 import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -37,11 +34,6 @@ export async function getDefraUserRoles(tokenPayload, request) {
 
   const { organisationsRepository } = request
 
-  // The endpoint will show info based on the user's email and contactId
-  if (isOrganisationsDiscoveryReq(request)) {
-    return { role: null, scopes: [ROLES.inquirer] } // this highlights how this code has mixed up roles/scopes - needs fixing!
-  }
-
   const linkedEprOrg = await getOrgMatchingUsersToken(
     tokenPayload,
     organisationsRepository
@@ -51,8 +43,8 @@ export async function getDefraUserRoles(tokenPayload, request) {
     linkedEprOrg &&
     requestIsForSameOrganisation(request, linkedEprOrg) &&
     organisationIsActive(linkedEprOrg)
-      ? [ROLES.standardUser]
-      : []
+      ? [ROLES.inquirer, ROLES.standardUser]
+      : [ROLES.inquirer]
 
   return { role: null, scopes: roles } // this highlights how this code has mixed up roles/scopes - needs fixing!
 }
