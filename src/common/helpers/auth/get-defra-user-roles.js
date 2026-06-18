@@ -1,7 +1,5 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
-import { getDefraTokenSummary } from './roles/helpers.js'
 import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -18,18 +16,6 @@ export async function getDefraUserRoles(tokenPayload, request) {
 
   if (!email) {
     return { role: null, scopes: [] }
-  }
-
-  // This throws if the user is unauthorised
-  const isValidLinkingReq = await isAuthorisedOrgLinkingReq(
-    request,
-    tokenPayload
-  )
-
-  if (isValidLinkingReq) {
-    request.server.app.orgInToken = getDefraTokenSummary(tokenPayload)
-
-    return { role: null, scopes: [ROLES.linker] } // this highlights how this code has mixed up roles/scopes - needs fixing!
   }
 
   const { organisationsRepository } = request

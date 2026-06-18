@@ -85,7 +85,21 @@ const generateValidDefraIdToken = (tokenPayload) => {
   return mockDefraIdToken
 }
 
-// TODO bit of a hack to override things that rely on the fixture
+/**
+ * @typedef {{
+ *  contactId?: string
+ *  email?: string
+ *  firstName?: string
+ *  lastName?: string
+ *  currentRelationshipId?: string
+ *  relationships?: string[]
+ * }} TokenOverrides
+ *
+ * Token generation, so tests can specify token contents (instead of coupling to the default values declared in this file)
+ *
+ * @param {TokenOverrides} overrides
+ * @returns
+ */
 export const generateValidTokenWith = (overrides = {}) =>
   generateValidDefraIdToken({
     ...userPresentInOrg1DefraIdTokenPayload,

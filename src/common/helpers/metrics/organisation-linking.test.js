@@ -1,9 +1,6 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { config } from '#root/config.js'
-import {
-  organisationLinkingMetrics,
-  organisationUnlinkingMetrics
-} from './organisation-linking.js'
+import { organisationLinkingMetrics } from './organisation-linking.js'
 import { StorageResolution, Unit } from 'aws-embedded-metrics'
 
 const mockPutMetric = vi.fn()
@@ -53,7 +50,7 @@ describe('organisationLinkingMetrics', () => {
 
   describe('organisationUnlinked', () => {
     it('records metric with no dimensions', async () => {
-      await organisationUnlinkingMetrics.organisationUnlinked()
+      await organisationLinkingMetrics.organisationUnlinked()
 
       expect(mockPutDimensions).toHaveBeenCalledWith({})
       expect(mockPutMetric).toHaveBeenCalledWith(

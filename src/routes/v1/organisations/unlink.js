@@ -2,13 +2,12 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import { auditOrganisationUnlinking } from '#root/auditing/organisation-linking.js'
-import { organisationUnlinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
+import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 
 export const organisationsUnlink = {
   method: 'DELETE',
-  path: organisationsLinkPath,
+  path: '/v1/organisations/{organisationId}/link',
   options: {
     auth: {
       scope: [SCOPES.adminWrite]
@@ -49,7 +48,7 @@ export const organisationsUnlink = {
       id: linkedOrg.orgId,
       name: linkedOrg.orgName
     })
-    await organisationUnlinkingMetrics.organisationUnlinked()
+    await organisationLinkingMetrics.organisationUnlinked()
 
     return h.response().code(StatusCodes.NO_CONTENT)
   }

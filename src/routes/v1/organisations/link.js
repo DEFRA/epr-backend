@@ -1,14 +1,11 @@
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { ROLES } from '#auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import {
-  LINKABLE_ORGANISATION_STATUSES,
-  ORGANISATION_STATUS
-} from '#domain/organisations/model.js'
-import { organisationsLinkPath } from '#domain/organisations/paths.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
+import { getDefraTokenSummary } from '#auth/roles/helpers.js'
 
 /**
  * @typedef {{
@@ -30,10 +27,10 @@ import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation
 
 export const organisationsLink = {
   method: 'POST',
-  path: organisationsLinkPath,
+  path: '/v1/organisations/{organisationId}/link',
   options: {
     auth: {
-      scope: [ROLES.linker]
+      scope: [ROLES.inquirer]
     },
     tags: ['api', 'admin']
   },
@@ -48,40 +45,52 @@ export const organisationsLink = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    // TODO: `orgInToken`, `organisationId` and `organisation` are guaranteed to exist here
-    // by the logic in `isAuthorisedOrgLinkingReq` which frontloads those checks.
-    // It may make sense to move those checks into this handler
-
-    const { orgInToken } =
-      /** @type {{ orgInToken: import('#common/helpers/auth/types.js').DefraIdRelationship }} */ (
-        request.server.app
-      )
-
     const { organisationId } = request.params
-
     const { organisationsRepository } = request
     const {
-      id,
-      version: currentVersion,
-      ...organisation
-    } = await organisationsRepository.findById(organisationId)
+      decoded: { payload: tokenPayload }
+    } = /** @type {import('#common/hapi-types.js').DefraIdArtifacts} */ (
+      request.auth.artifacts
+    )
 
-    if (!LINKABLE_ORGANISATION_STATUSES.includes(organisation.status)) {
-      throw Boom.conflict('Organisation is not in a linkable state')
+    const { defraIdOrgId, defraIdOrgName } = getDefraTokenSummary(tokenPayload)
+
+    if (!defraIdOrgId || !defraIdOrgName) {
+      throw Boom.badRequest('Missing organisation information in user token')
     }
 
-    if (organisation.linkedDefraOrganisation) {
-      throw Boom.conflict('Organisation is already linked')
-    }
+    // throws Boom.notFound if organisation does not exist
+    const organisation = await organisationsRepository.findById(organisationId)
+
+    const { id, version: currentVersion, ...organisationData } = organisation
 
     const { email, id: credentialId } =
       /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
         request.auth.credentials
       )
 
+    /**
+     * repository only returns linkable orgs where
+     * - the org is in an appropriate status (ie approved or active)
+     * - the user (identified by email) is an initial user for this org
+     * - the organisation is not already linked
+     */
+    const linkableOrganisations =
+      await organisationsRepository.findAllLinkableForUser(tokenPayload.email)
+
+    const orgToLink = linkableOrganisations.find(
+      ({ id }) => id === organisation.id
+    )
+
+    if (!orgToLink) {
+      // strictly this should 403 if the org is linkable but the user is not an initial user...
+      // ...but that differentiation is embedded within findAllLinkableForUser
+      throw Boom.conflict('Organisation is not in a linkable state')
+    }
+
     const linkedDefraOrg = {
-      orgId: orgInToken.defraIdOrgId,
-      orgName: orgInToken.defraIdOrgName,
+      orgId: defraIdOrgId,
+      orgName: defraIdOrgName,
       linkedBy: {
         email,
         id: credentialId
@@ -90,7 +99,7 @@ export const organisationsLink = {
     }
 
     await organisationsRepository.replace(id, currentVersion, {
-      ...organisation,
+      ...organisationData,
       status: ORGANISATION_STATUS.ACTIVE,
       linkedDefraOrganisation: linkedDefraOrg
     })

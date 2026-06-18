@@ -1,7 +1,4 @@
-import { USER_ROLES } from '#domain/organisations/model.js'
-
 /** @import {DefraIdRelationship, DefraIdTokenPayload} from '../types.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
 
 /**
  * Performs a case-insensitive string comparison
@@ -13,20 +10,6 @@ import { USER_ROLES } from '#domain/organisations/model.js'
  */
 export const stringEquals = (a, b) =>
   a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
-
-/**
- * Checks if a user is the initial user of an organisation
- * @param {string} email - The user's email address
- * @returns {(organisation: Organisation) => boolean} Function that checks if the user is an initial user
- */
-export const isInitialUser = (email) => (organisation) =>
-  Boolean(
-    organisation.users?.some(
-      (user) =>
-        stringEquals(user.email, email) &&
-        user.roles?.includes(USER_ROLES.INITIAL)
-    )
-  )
 
 /**
  * Extracts and parses organization data from a Defra ID token
