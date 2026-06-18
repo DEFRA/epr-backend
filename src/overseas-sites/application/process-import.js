@@ -13,7 +13,7 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { processImportFile } from './process-import-file.js'
 
 /**
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  * @import { TypedLogger } from '#common/hapi-types.js'
  * @import { OrsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
  */
@@ -33,7 +33,7 @@ import { processImportFile } from './process-import-file.js'
  * @param {SystemLogsRepository} deps.systemLogsRepository
  * @param {TypedLogger} deps.logger
  * @param {OrsImportMetrics} deps.orsImportMetrics
- * @param {{ id: string, email: string, scope: string[], role?: string | null }} deps.user
+ * @param {SystemLogHumanActor} deps.user
  */
 export const processOrsImport = async (importId, deps) => {
   const {

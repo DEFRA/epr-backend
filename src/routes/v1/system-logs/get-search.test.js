@@ -33,7 +33,7 @@ describe('GET /v1/system-logs/search', () => {
    *   userId?: string,
    *   email?: string,
    *   subCategory?: string,
-   *   role?: string,
+   *   role?: string | null,
    *   id?: number
    * }} [overrides]
    */

@@ -3,7 +3,7 @@ import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/excel
 import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 
 /**
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  * @import { TypedLogger } from '#common/hapi-types.js'
  */
 
@@ -17,7 +17,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @param {object} deps.organisationsRepository
  * @param {SystemLogsRepository} deps.systemLogsRepository
  * @param {TypedLogger} deps.logger
- * @param {{ id: string, email: string, scope: string[], role?: string | null }} deps.user
+ * @param {SystemLogHumanActor} deps.user
  * @returns {Promise<{status: string, sitesCreated: number, mappingsUpdated: number, registrationNumber: string|null, errors: Array}>}
  */
 export const processImportFile = async (

@@ -3,8 +3,9 @@
  * role it resolved to (null when none); a machine credential carries a name
  * instead. Both always carry an id.
  *
+ * @typedef {{ id: string, email: string, scope: string[], role: string | null }} SystemLogHumanActor
  * @typedef {(
- *   | { id: string, email: string, scope: string[], role: string | null }
+ *   | SystemLogHumanActor
  *   | { id: string, name: string }
  * )} SystemLogActor
  */
