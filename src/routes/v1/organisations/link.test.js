@@ -177,6 +177,12 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
                   validTo: VALID_TO,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }
+              ],
+              accreditations: [
+                {
+                  ...orgWithSubmitterDetails.accreditations[0],
+                  reprocessingType: REPROCESSING_TYPE.INPUT
+                }
               ]
             })
           )

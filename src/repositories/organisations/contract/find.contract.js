@@ -284,6 +284,12 @@ export const testFindBehaviour = (it) => {
               validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
+          ],
+          accreditations: [
+            {
+              ...inserted.accreditations[0],
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
           ]
         })
         await repository.replace(org.id, 1, updatePayload)

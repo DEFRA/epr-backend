@@ -4,6 +4,7 @@ import { duplicateRegistrationIdRule } from './duplicate-registration-id.js'
 import { sharedAccreditationRule } from './shared-accreditation.js'
 import { orphanAccreditationRule } from './orphan-accreditation.js'
 import { materialMismatchRule } from './material-mismatch.js'
+import { invalidAccreditationLinkRule } from './invalid-accreditation-link.js'
 
 /**
  * @typedef {{
@@ -21,5 +22,6 @@ export const rules = [
   duplicateRegistrationIdRule,
   sharedAccreditationRule,
   orphanAccreditationRule,
-  materialMismatchRule
+  materialMismatchRule,
+  invalidAccreditationLinkRule
 ]

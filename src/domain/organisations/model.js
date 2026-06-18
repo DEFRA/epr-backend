@@ -2,6 +2,10 @@
 /** @import {Registration} from '#domain/organisations/registration.js' */
 
 /**
+ * @typedef {Registration | Accreditation} RegistrationOrAccreditation
+ */
+
+/**
  * Status values for registrations and accreditations
  * @typedef {typeof REG_ACC_STATUS[keyof typeof REG_ACC_STATUS]} RegAccStatus
  */

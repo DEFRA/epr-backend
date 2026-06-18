@@ -15,9 +15,15 @@ export const testOrgStatusTransitionBehaviour = (it) => {
     let repository
     const { VALID_FROM, VALID_TO } = getValidDateRange()
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     describe('invalid transitions', () => {
       it('rejects transition from CREATED to ACTIVE', async () => {
@@ -81,6 +87,12 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
+          ],
+          accreditations: [
+            {
+              ...orgData.accreditations[0],
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
           ]
         })
 
@@ -98,6 +110,12 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
+          ],
+          accreditations: [
+            {
+              ...orgData.accreditations[0],
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -135,6 +153,12 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
+          ],
+          accreditations: [
+            {
+              ...orgData.accreditations[0],
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
           ]
         })
 
@@ -159,6 +183,12 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
+          ],
+          accreditations: [
+            {
+              ...orgData.accreditations[0],
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
           ]
         })
 
@@ -176,6 +206,12 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
+          ],
+          accreditations: [
+            {
+              ...orgData.accreditations[0],
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -200,6 +236,12 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
+          ],
+          accreditations: [
+            {
+              ...orgData.accreditations[0],
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -228,6 +270,12 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
+          ],
+          accreditations: [
+            {
+              ...orgData.accreditations[0],
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]

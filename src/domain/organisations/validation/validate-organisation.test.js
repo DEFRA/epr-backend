@@ -12,8 +12,15 @@ const organisation = (registrations, accreditations) =>
 describe('validateOrganisation', () => {
   it('returns no issues for a conforming organisation', () => {
     const org = organisation(
-      [{ id: 'reg-1', accreditationId: 'acc-1', material: 'glass' }],
-      [{ id: 'acc-1', material: 'glass' }]
+      [
+        {
+          id: 'reg-1',
+          accreditationId: 'acc-1',
+          wasteProcessingType: 'exporter',
+          material: 'glass'
+        }
+      ],
+      [{ id: 'acc-1', wasteProcessingType: 'exporter', material: 'glass' }]
     )
 
     expect(validateOrganisation(org)).toEqual([])
