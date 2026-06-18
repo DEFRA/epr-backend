@@ -186,4 +186,26 @@ describe('runOrganisationValidationSweep', () => {
       message: 'Failed to run organisation validation sweep'
     })
   })
+
+  it('logs an INVALID_ACCREDITATION_LINK issue when a registration is linked to a semantically mismatched accreditation', async () => {
+    const accreditation = buildAccreditation({
+      wasteProcessingType: 'exporter'
+    })
+    const registration = buildRegistration({
+      accreditationId: accreditation.id
+    })
+    const org = buildOrganisation({
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+    seedRepositoryWith([org])
+
+    await runOrganisationValidationSweep(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message: expect.stringContaining(
+        'code=INVALID_ACCREDITATION_LINK severity=error'
+      )
+    })
+  })
 })
