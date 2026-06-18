@@ -1,7 +1,6 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
 import { describe, expect, it } from 'vitest'
 import {
-  deduplicateOrganisations,
   getCurrentRelationship,
   getDefraTokenSummary,
   getOrgDataFromDefraIdToken,
@@ -306,94 +305,6 @@ describe('getDefraTokenSummary', () => {
     expect(result.defraIdOrgId).toBeUndefined()
     expect(result.defraIdOrgName).toBeUndefined()
     expect(result.defraIdRelationships).toEqual([])
-  })
-})
-
-describe('deduplicateOrganisations', () => {
-  it('should return empty array when both inputs are empty', () => {
-    const result = deduplicateOrganisations([], [])
-    expect(result).toEqual([])
-  })
-
-  it('should deduplicate organizations with the same ID', () => {
-    const org1 = { id: 'org-1', name: 'Org One' }
-    const org2 = { id: 'org-2', name: 'Org Two' }
-    const org1Duplicate = { id: 'org-1', name: 'Org One Duplicate' }
-
-    const unlinked = [org1Duplicate, { id: 'org-3', name: 'Org Three' }]
-    const linked = [org1, org2]
-
-    const result = deduplicateOrganisations(unlinked, linked)
-
-    // Should keep first occurrence (from unlinked) when duplicate exists
-    expect(result).toHaveLength(3)
-    expect(result.map((org) => org.id)).toEqual(['org-1', 'org-3', 'org-2'])
-
-    // Verify the first occurrence is kept
-    const org1Result = result.find((org) => org.id === 'org-1')
-    expect(org1Result.name).toBe('Org One Duplicate')
-  })
-
-  it('should handle multiple duplicates', () => {
-    const unlinked = [
-      { id: 'org-1', name: 'A' },
-      { id: 'org-2', name: 'B' }
-    ]
-    const linked = [
-      { id: 'org-1', name: 'Duplicate A' },
-      { id: 'org-2', name: 'Duplicate B' },
-      { id: 'org-3', name: 'C' }
-    ]
-
-    const result = deduplicateOrganisations(unlinked, linked)
-
-    expect(result).toHaveLength(3)
-    expect(result[0].name).toBe('A')
-    expect(result[1].name).toBe('B')
-    expect(result[2].name).toBe('C')
-  })
-
-  it('should preserve all organizations when no duplicates', () => {
-    const unlinked = [
-      { id: 'org-1', name: 'Org One' },
-      { id: 'org-2', name: 'Org Two' }
-    ]
-    const linked = [
-      { id: 'org-3', name: 'Org Three' },
-      { id: 'org-4', name: 'Org Four' }
-    ]
-
-    const result = deduplicateOrganisations(unlinked, linked)
-
-    expect(result).toHaveLength(4)
-    expect(result.map((org) => org.id)).toEqual([
-      'org-1',
-      'org-2',
-      'org-3',
-      'org-4'
-    ])
-  })
-
-  it('should handle empty unlinked array', () => {
-    const linked = [
-      { id: 'org-1', name: 'Org One' },
-      { id: 'org-2', name: 'Org Two' }
-    ]
-
-    const result = deduplicateOrganisations([], linked)
-
-    expect(result).toEqual(linked)
-  })
-
-  it('should handle empty linked array', () => {
-    const unlinked = [
-      { id: 'org-1', name: 'Org One' },
-      { id: 'org-2', name: 'Org Two' }
-    ]
-
-    const result = deduplicateOrganisations(unlinked, [])
-
-    expect(result).toEqual(unlinked)
   })
 })
 

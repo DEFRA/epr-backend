@@ -2,7 +2,6 @@ import { USER_ROLES } from '#domain/organisations/model.js'
 
 /** @import {DefraIdRelationship, DefraIdTokenPayload} from '../types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 
 /**
  * Performs a case-insensitive string comparison
@@ -75,26 +74,4 @@ export function getDefraTokenSummary(tokenPayload) {
     getCurrentRelationship(defraIdRelationships) || {}
 
   return { defraIdOrgId, defraIdOrgName, defraIdRelationships }
-}
-
-/**
- * Helper function to deduplicate organisations by ID
- *
- * Exported for testing purposes
- *
- * @param {Array} unlinkedOrganisations - Array of unlinked organisations
- * @param {Array} linkedOrganisations - Array of linked organisations
- * @returns {Array} Deduplicated array of organisations
- */
-export function deduplicateOrganisations(
-  unlinkedOrganisations,
-  linkedOrganisations
-) {
-  return [...unlinkedOrganisations, ...linkedOrganisations].reduce(
-    (prev, organisation) =>
-      prev.some(({ id }) => id === organisation.id)
-        ? prev
-        : [...prev, organisation],
-    []
-  )
 }
