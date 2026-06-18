@@ -1,53 +1,28 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { config } from '#root/config.js'
+import { Metrics } from '@defra/cdp-metrics'
 import {
   organisationLinkingMetrics,
   organisationUnlinkingMetrics
 } from './organisation-linking.js'
-import { StorageResolution, Unit } from 'aws-embedded-metrics'
-
-const mockPutMetric = vi.fn()
-const mockPutDimensions = vi.fn()
-const mockFlush = vi.fn()
-
-vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
-  const original = await importOriginal()
-
-  return {
-    ...original,
-    createMetricsLogger: () =>
-      /** @type {import('aws-embedded-metrics').MetricsLogger} */ (
-        /** @type {unknown} */ ({
-          putMetric: mockPutMetric,
-          putDimensions: mockPutDimensions,
-          flush: mockFlush
-        })
-      )
-  }
-})
 
 describe('organisationLinkingMetrics', () => {
+  let counterSpy
+
   beforeEach(() => {
-    config.set('isMetricsEnabled', true)
-    mockFlush.mockResolvedValue(undefined)
+    counterSpy = vi
+      .spyOn(Metrics.prototype, 'counter')
+      .mockResolvedValue(undefined)
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe('organisationLinked', () => {
     it('records metric with no dimensions', async () => {
       await organisationLinkingMetrics.organisationLinked()
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({})
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'organisation.linked',
-        1,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-      expect(mockFlush).toHaveBeenCalled()
+      expect(counterSpy).toHaveBeenCalledWith('organisation.linked', 1, {})
     })
   })
 
@@ -55,14 +30,7 @@ describe('organisationLinkingMetrics', () => {
     it('records metric with no dimensions', async () => {
       await organisationUnlinkingMetrics.organisationUnlinked()
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({})
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'organisation.unlinked',
-        1,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-      expect(mockFlush).toHaveBeenCalled()
+      expect(counterSpy).toHaveBeenCalledWith('organisation.unlinked', 1, {})
     })
   })
 })

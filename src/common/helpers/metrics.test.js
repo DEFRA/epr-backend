@@ -1,182 +1,53 @@
-import { StorageResolution, Unit } from 'aws-embedded-metrics'
+import { Metrics } from '@defra/cdp-metrics'
 
-import { config } from '#root/config.js'
 import { incrementCounter, recordDuration, timed } from './metrics.js'
-
-const mockPutMetric = vi.fn()
-const mockPutDimensions = vi.fn()
-const mockFlush = vi.fn()
-const mockLoggerError = vi.fn()
-
-vi.mock('aws-embedded-metrics', async (importOriginal) => {
-  const awsEmbeddedMetrics = await importOriginal()
-
-  return {
-    ...awsEmbeddedMetrics,
-    createMetricsLogger: () => ({
-      putMetric: mockPutMetric,
-      putDimensions: mockPutDimensions,
-      flush: mockFlush
-    })
-  }
-})
-
-vi.mock('./logging/logger.js', () => ({
-  logger: {
-    error: (...args) => mockLoggerError(...args)
-  }
-}))
 
 const mockMetricsName = 'mock-metrics-name'
 
 describe('#metrics', () => {
+  let counterSpy
+  let millisSpy
+
+  beforeEach(() => {
+    counterSpy = vi
+      .spyOn(Metrics.prototype, 'counter')
+      .mockResolvedValue(undefined)
+    millisSpy = vi
+      .spyOn(Metrics.prototype, 'millis')
+      .mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   describe('#incrementCounter', () => {
-    describe('When metrics is not enabled', () => {
-      beforeEach(async () => {
-        config.set('isMetricsEnabled', false)
-        await incrementCounter(mockMetricsName, {})
-      })
+    test('Should send counter with default value of 1', async () => {
+      await incrementCounter(mockMetricsName, {})
 
-      test('Should not call metric', () => {
-        expect(mockPutMetric).not.toHaveBeenCalled()
-      })
-
-      test('Should not call flush', () => {
-        expect(mockFlush).not.toHaveBeenCalled()
-      })
+      expect(counterSpy).toHaveBeenCalledWith(mockMetricsName, 1, {})
     })
 
-    describe('When metrics is enabled', () => {
-      beforeEach(() => {
-        config.set('isMetricsEnabled', true)
-      })
+    test('Should send counter with specified value and dimensions', async () => {
+      const dimensions = { operation: 'test' }
 
-      test('Should send metric with default value of 1', async () => {
-        await incrementCounter(mockMetricsName, {})
+      await incrementCounter(mockMetricsName, dimensions, 42)
 
-        expect(mockPutMetric).toHaveBeenCalledWith(
-          mockMetricsName,
-          1,
-          Unit.Count,
-          StorageResolution.Standard
-        )
-      })
-
-      test('Should send metric with specified value and dimensions', async () => {
-        const dimensions = { operation: 'test' }
-        await incrementCounter(mockMetricsName, dimensions, 42)
-
-        expect(mockPutMetric).toHaveBeenCalledWith(
-          mockMetricsName,
-          42,
-          Unit.Count,
-          StorageResolution.Standard
-        )
-        expect(mockPutDimensions).toHaveBeenCalledWith(dimensions)
-      })
-
-      test('Should call flush', async () => {
-        await incrementCounter(mockMetricsName, {})
-        expect(mockFlush).toHaveBeenCalled()
-      })
-
-      test('Should set dimensions when provided', async () => {
-        const dimensions = { status: 'validated' }
-        await incrementCounter(mockMetricsName, dimensions)
-
-        expect(mockPutDimensions).toHaveBeenCalledWith(dimensions)
-      })
-    })
-
-    describe('When metrics throws', () => {
-      const mockError = 'mock-metrics-put-error'
-
-      beforeEach(async () => {
-        config.set('isMetricsEnabled', true)
-        mockFlush.mockRejectedValue(new Error(mockError))
-
-        await incrementCounter(mockMetricsName, {})
-      })
-
-      test('Should log expected error', () => {
-        expect(mockLoggerError).toHaveBeenCalledWith({
-          message: mockError,
-          err: Error(mockError)
-        })
-      })
+      expect(counterSpy).toHaveBeenCalledWith(mockMetricsName, 42, dimensions)
     })
   })
 
   describe('#recordDuration', () => {
-    describe('When metrics is not enabled', () => {
-      beforeEach(async () => {
-        config.set('isMetricsEnabled', false)
-        await recordDuration(mockMetricsName, {}, 150)
-      })
+    test('Should send duration in milliseconds with dimensions', async () => {
+      const dimensions = { stage: 'validation' }
 
-      test('Should not call metric', () => {
-        expect(mockPutMetric).not.toHaveBeenCalled()
-      })
+      await recordDuration(mockMetricsName, dimensions, 250)
 
-      test('Should not call flush', () => {
-        expect(mockFlush).not.toHaveBeenCalled()
-      })
-    })
-
-    describe('When metrics is enabled', () => {
-      beforeEach(() => {
-        config.set('isMetricsEnabled', true)
-      })
-
-      test('Should send metric with duration in milliseconds', async () => {
-        await recordDuration(mockMetricsName, {}, 250)
-
-        expect(mockPutMetric).toHaveBeenCalledWith(
-          mockMetricsName,
-          250,
-          Unit.Milliseconds,
-          StorageResolution.Standard
-        )
-      })
-
-      test('Should call flush', async () => {
-        await recordDuration(mockMetricsName, {}, 100)
-        expect(mockFlush).toHaveBeenCalled()
-      })
-
-      test('Should set dimensions when provided', async () => {
-        const dimensions = { stage: 'validation' }
-        await recordDuration(mockMetricsName, dimensions, 100)
-
-        expect(mockPutDimensions).toHaveBeenCalledWith(dimensions)
-      })
-    })
-
-    describe('When metrics throws', () => {
-      const mockError = 'mock-metrics-put-error'
-
-      beforeEach(async () => {
-        config.set('isMetricsEnabled', true)
-        mockFlush.mockRejectedValue(new Error(mockError))
-
-        await recordDuration(mockMetricsName, {}, 500)
-      })
-
-      test('Should log expected error', () => {
-        expect(mockLoggerError).toHaveBeenCalledWith({
-          message: mockError,
-          err: Error(mockError)
-        })
-      })
+      expect(millisSpy).toHaveBeenCalledWith(mockMetricsName, 250, dimensions)
     })
   })
 
   describe('#timed', () => {
-    beforeEach(() => {
-      config.set('isMetricsEnabled', true)
-      vi.clearAllMocks()
-    })
-
     test('Should return the result of the function', async () => {
       const expectedResult = { foo: 'bar' }
       const fn = vi.fn().mockResolvedValue(expectedResult)
@@ -191,25 +62,23 @@ describe('#metrics', () => {
 
       await timed(mockMetricsName, {}, fn)
 
-      expect(mockPutMetric).toHaveBeenCalledWith(
+      expect(millisSpy).toHaveBeenCalledWith(
         mockMetricsName,
         expect.any(Number),
-        Unit.Milliseconds,
-        StorageResolution.Standard
+        {}
       )
     })
 
-    test('Should record duration even when function throws', async () => {
+    test('Should re-throw and still record duration when function throws', async () => {
       const error = new Error('test error')
       const fn = vi.fn().mockRejectedValue(error)
 
       await expect(timed(mockMetricsName, {}, fn)).rejects.toThrow('test error')
 
-      expect(mockPutMetric).toHaveBeenCalledWith(
+      expect(millisSpy).toHaveBeenCalledWith(
         mockMetricsName,
         expect.any(Number),
-        Unit.Milliseconds,
-        StorageResolution.Standard
+        {}
       )
     })
 
@@ -220,16 +89,20 @@ describe('#metrics', () => {
       const result = await timed(mockMetricsName, {}, fn)
 
       expect(result).toEqual(expectedResult)
-      expect(mockPutMetric).toHaveBeenCalled()
+      expect(millisSpy).toHaveBeenCalled()
     })
 
-    test('Should set dimensions when provided', async () => {
+    test('Should pass dimensions through to the duration metric', async () => {
       const dimensions = { stage: 'validation' }
       const fn = vi.fn().mockResolvedValue('result')
 
       await timed(mockMetricsName, dimensions, fn)
 
-      expect(mockPutDimensions).toHaveBeenCalledWith(dimensions)
+      expect(millisSpy).toHaveBeenCalledWith(
+        mockMetricsName,
+        expect.any(Number),
+        dimensions
+      )
     })
   })
 })

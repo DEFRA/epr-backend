@@ -1,33 +1,11 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { StorageResolution, Unit } from 'aws-embedded-metrics'
-import { config } from '#root/config.js'
+import { Metrics } from '@defra/cdp-metrics'
 import {
   ORS_FILE_RESULT_STATUS,
   ORS_IMPORT_STATUS
 } from '#overseas-sites/domain/import-status.js'
 
-const mockPutMetric = vi.fn()
-const mockPutDimensions = vi.fn()
-const mockFlush = vi.fn()
-const mockLoggerError = vi.fn()
 const mockTimed = vi.fn(async (_name, _dimensions, fn) => fn())
-
-vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
-  const original = await importOriginal()
-
-  return {
-    ...original,
-    createMetricsLogger: () => ({
-      putMetric: mockPutMetric,
-      putDimensions: mockPutDimensions,
-      flush: mockFlush
-    })
-  }
-})
-
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: { error: (...args) => mockLoggerError(...args) }
-}))
 
 vi.mock('#common/helpers/metrics.js', async (importOriginal) => {
   const original = await importOriginal()
@@ -40,12 +18,16 @@ vi.mock('#common/helpers/metrics.js', async (importOriginal) => {
 const { orsImportMetrics } = await import('./ors-imports.js')
 
 describe('orsImportMetrics', () => {
+  let counterSpy
+
   beforeEach(() => {
-    config.set('isMetricsEnabled', true)
-    mockFlush.mockResolvedValue(undefined)
+    counterSpy = vi
+      .spyOn(Metrics.prototype, 'counter')
+      .mockResolvedValue(undefined)
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.clearAllMocks()
   })
 
@@ -55,16 +37,9 @@ describe('orsImportMetrics', () => {
         status: ORS_IMPORT_STATUS.PROCESSING
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('orsImport.statusTransition', 1, {
         status: 'processing'
       })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'orsImport.statusTransition',
-        1,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
     it('records completed status', async () => {
@@ -72,7 +47,7 @@ describe('orsImportMetrics', () => {
         status: ORS_IMPORT_STATUS.COMPLETED
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('orsImport.statusTransition', 1, {
         status: 'completed'
       })
     })
@@ -82,34 +57,8 @@ describe('orsImportMetrics', () => {
         status: ORS_IMPORT_STATUS.FAILED
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('orsImport.statusTransition', 1, {
         status: 'failed'
-      })
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await orsImportMetrics.recordStatusTransition({
-        status: ORS_IMPORT_STATUS.PROCESSING
-      })
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
-      expect(mockFlush).not.toHaveBeenCalled()
-    })
-
-    it('logs error when flush fails', async () => {
-      const mockError = new Error('flush failed')
-      mockFlush.mockRejectedValue(mockError)
-
-      await orsImportMetrics.recordStatusTransition({
-        status: ORS_IMPORT_STATUS.PROCESSING
-      })
-
-      expect(mockLoggerError).toHaveBeenCalledWith({
-        message: 'flush failed',
-        err: mockError
       })
     })
   })
@@ -118,34 +67,13 @@ describe('orsImportMetrics', () => {
     it('records count of sites created', async () => {
       await orsImportMetrics.recordSitesCreated(5)
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({})
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'orsImport.sitesCreated',
-        5,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-      expect(mockFlush).toHaveBeenCalled()
+      expect(counterSpy).toHaveBeenCalledWith('orsImport.sitesCreated', 5, {})
     })
 
     it('records zero when no sites created', async () => {
       await orsImportMetrics.recordSitesCreated(0)
 
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'orsImport.sitesCreated',
-        0,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await orsImportMetrics.recordSitesCreated(3)
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
+      expect(counterSpy).toHaveBeenCalledWith('orsImport.sitesCreated', 0, {})
     })
   })
 
@@ -155,16 +83,9 @@ describe('orsImportMetrics', () => {
         status: ORS_FILE_RESULT_STATUS.SUCCESS
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('orsImport.fileResult', 1, {
         status: 'success'
       })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'orsImport.fileResult',
-        1,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
     it('records failed file result', async () => {
@@ -172,21 +93,9 @@ describe('orsImportMetrics', () => {
         status: ORS_FILE_RESULT_STATUS.FAILURE
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('orsImport.fileResult', 1, {
         status: 'failure'
       })
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await orsImportMetrics.recordFileResult({
-        status: ORS_FILE_RESULT_STATUS.SUCCESS
-      })
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
-      expect(mockFlush).not.toHaveBeenCalled()
     })
   })
 

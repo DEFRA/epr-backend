@@ -1,6 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { StorageResolution, Unit } from 'aws-embedded-metrics'
-import { config } from '#root/config.js'
+import { Metrics } from '@defra/cdp-metrics'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
   VALIDATION_SEVERITY,
@@ -8,28 +7,7 @@ import {
 } from '#common/enums/validation.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
-const mockPutMetric = vi.fn()
-const mockPutDimensions = vi.fn()
-const mockFlush = vi.fn()
-const mockLoggerError = vi.fn()
 const mockTimed = vi.fn(async (_name, _dimensions, fn) => fn())
-
-vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
-  const original = await importOriginal()
-
-  return {
-    ...original,
-    createMetricsLogger: () => ({
-      putMetric: mockPutMetric,
-      putDimensions: mockPutDimensions,
-      flush: mockFlush
-    })
-  }
-})
-
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: { error: (...args) => mockLoggerError(...args) }
-}))
 
 vi.mock('#common/helpers/metrics.js', async (importOriginal) => {
   const original = await importOriginal()
@@ -42,12 +20,20 @@ vi.mock('#common/helpers/metrics.js', async (importOriginal) => {
 const { summaryLogMetrics } = await import('./summary-logs.js')
 
 describe('summaryLogMetrics', () => {
+  let counterSpy
+  let millisSpy
+
   beforeEach(() => {
-    config.set('isMetricsEnabled', true)
-    mockFlush.mockResolvedValue(undefined)
+    counterSpy = vi
+      .spyOn(Metrics.prototype, 'counter')
+      .mockResolvedValue(undefined)
+    millisSpy = vi
+      .spyOn(Metrics.prototype, 'millis')
+      .mockResolvedValue(undefined)
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.clearAllMocks()
   })
 
@@ -58,17 +44,14 @@ describe('summaryLogMetrics', () => {
         processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
-        status: 'preprocessing',
-        processingType: 'reprocessor_input'
-      })
-      expect(mockPutMetric).toHaveBeenCalledWith(
+      expect(counterSpy).toHaveBeenCalledWith(
         'summaryLog.statusTransition',
         1,
-        Unit.Count,
-        StorageResolution.Standard
+        {
+          status: 'preprocessing',
+          processingType: 'reprocessor_input'
+        }
       )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
     it('lowercases processingType enum values', async () => {
@@ -77,10 +60,14 @@ describe('summaryLogMetrics', () => {
         processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
-        status: 'validated',
-        processingType: 'reprocessor_output'
-      })
+      expect(counterSpy).toHaveBeenCalledWith(
+        'summaryLog.statusTransition',
+        1,
+        {
+          status: 'validated',
+          processingType: 'reprocessor_output'
+        }
+      )
     })
 
     it('handles exporter processingType', async () => {
@@ -89,23 +76,25 @@ describe('summaryLogMetrics', () => {
         processingType: PROCESSING_TYPES.EXPORTER
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
-        status: 'submitted',
-        processingType: 'exporter'
-      })
+      expect(counterSpy).toHaveBeenCalledWith(
+        'summaryLog.statusTransition',
+        1,
+        {
+          status: 'submitted',
+          processingType: 'exporter'
+        }
+      )
     })
 
     it('omits processingType dimension for early lifecycle states', async () => {
       await summaryLogMetrics.recordStatusTransition({ status: 'validating' })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
-        status: 'validating'
-      })
-      expect(mockPutMetric).toHaveBeenCalledWith(
+      expect(counterSpy).toHaveBeenCalledWith(
         'summaryLog.statusTransition',
         1,
-        Unit.Count,
-        StorageResolution.Standard
+        {
+          status: 'validating'
+        }
       )
     })
 
@@ -130,45 +119,15 @@ describe('summaryLogMetrics', () => {
           processingType: PROCESSING_TYPES.EXPORTER
         })
 
-        expect(mockPutDimensions).toHaveBeenCalledWith({
-          status,
-          processingType: 'exporter'
-        })
-        expect(mockPutMetric).toHaveBeenCalledWith(
+        expect(counterSpy).toHaveBeenCalledWith(
           'summaryLog.statusTransition',
           1,
-          Unit.Count,
-          StorageResolution.Standard
+          {
+            status,
+            processingType: 'exporter'
+          }
         )
       }
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await summaryLogMetrics.recordStatusTransition({
-        status: 'validated',
-        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
-      })
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
-      expect(mockFlush).not.toHaveBeenCalled()
-    })
-
-    it('logs error when flush fails', async () => {
-      const mockError = new Error('flush failed')
-      mockFlush.mockRejectedValue(mockError)
-
-      await summaryLogMetrics.recordStatusTransition({
-        status: 'validated',
-        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
-      })
-
-      expect(mockLoggerError).toHaveBeenCalledWith({
-        message: 'flush failed',
-        err: mockError
-      })
     })
   })
 
@@ -179,17 +138,10 @@ describe('summaryLogMetrics', () => {
         42
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('summaryLog.wasteRecords', 42, {
         operation: 'created',
         processingType: 'reprocessor_input'
       })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.wasteRecords',
-        42,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
     it('records zero when no records created', async () => {
@@ -198,28 +150,10 @@ describe('summaryLogMetrics', () => {
         0
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('summaryLog.wasteRecords', 0, {
         operation: 'created',
         processingType: 'exporter'
       })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.wasteRecords',
-        0,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await summaryLogMetrics.recordWasteRecordsCreated(
-        { processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT },
-        10
-      )
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
     })
   })
 
@@ -230,17 +164,10 @@ describe('summaryLogMetrics', () => {
         15
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('summaryLog.wasteRecords', 15, {
         operation: 'updated',
         processingType: 'reprocessor_output'
       })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.wasteRecords',
-        15,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
     it('records zero when no records updated', async () => {
@@ -249,28 +176,10 @@ describe('summaryLogMetrics', () => {
         0
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('summaryLog.wasteRecords', 0, {
         operation: 'updated',
         processingType: 'exporter'
       })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.wasteRecords',
-        0,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await summaryLogMetrics.recordWasteRecordsUpdated(
-        { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
-        5
-      )
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
     })
   })
 
@@ -281,16 +190,13 @@ describe('summaryLogMetrics', () => {
         1500
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
-        processingType: 'reprocessor_input'
-      })
-      expect(mockPutMetric).toHaveBeenCalledWith(
+      expect(millisSpy).toHaveBeenCalledWith(
         'summaryLog.validation.duration',
         1500,
-        Unit.Milliseconds,
-        StorageResolution.Standard
+        {
+          processingType: 'reprocessor_input'
+        }
       )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
     it('lowercases processingType for all values', async () => {
@@ -299,21 +205,13 @@ describe('summaryLogMetrics', () => {
         2000
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
-        processingType: 'reprocessor_output'
-      })
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await summaryLogMetrics.recordValidationDuration(
-        { processingType: PROCESSING_TYPES.EXPORTER },
-        1000
+      expect(millisSpy).toHaveBeenCalledWith(
+        'summaryLog.validation.duration',
+        2000,
+        {
+          processingType: 'reprocessor_output'
+        }
       )
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
     })
   })
 
@@ -372,18 +270,15 @@ describe('summaryLogMetrics', () => {
         3
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
-        severity: 'error',
-        category: 'business',
-        processingType: 'reprocessor_input'
-      })
-      expect(mockPutMetric).toHaveBeenCalledWith(
+      expect(counterSpy).toHaveBeenCalledWith(
         'summaryLog.validation.issues',
         3,
-        Unit.Count,
-        StorageResolution.Standard
+        {
+          severity: 'error',
+          category: 'business',
+          processingType: 'reprocessor_input'
+        }
       )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
     it('records metric with specified count', async () => {
@@ -396,16 +291,14 @@ describe('summaryLogMetrics', () => {
         5
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
-        severity: 'fatal',
-        category: 'technical',
-        processingType: 'exporter'
-      })
-      expect(mockPutMetric).toHaveBeenCalledWith(
+      expect(counterSpy).toHaveBeenCalledWith(
         'summaryLog.validation.issues',
         5,
-        Unit.Count,
-        StorageResolution.Standard
+        {
+          severity: 'fatal',
+          category: 'technical',
+          processingType: 'exporter'
+        }
       )
     })
 
@@ -427,11 +320,15 @@ describe('summaryLogMetrics', () => {
           1
         )
 
-        expect(mockPutDimensions).toHaveBeenCalledWith({
-          severity,
-          category: 'technical',
-          processingType: 'reprocessor_output'
-        })
+        expect(counterSpy).toHaveBeenCalledWith(
+          'summaryLog.validation.issues',
+          1,
+          {
+            severity,
+            category: 'technical',
+            processingType: 'reprocessor_output'
+          }
+        )
       }
     })
 
@@ -452,29 +349,16 @@ describe('summaryLogMetrics', () => {
           1
         )
 
-        expect(mockPutDimensions).toHaveBeenCalledWith({
-          severity: 'error',
-          category,
-          processingType: 'exporter'
-        })
+        expect(counterSpy).toHaveBeenCalledWith(
+          'summaryLog.validation.issues',
+          1,
+          {
+            severity: 'error',
+            category,
+            processingType: 'exporter'
+          }
+        )
       }
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await summaryLogMetrics.recordValidationIssues(
-        {
-          severity: VALIDATION_SEVERITY.ERROR,
-          category: VALIDATION_CATEGORY.BUSINESS,
-          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
-        },
-        1
-      )
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
-      expect(mockFlush).not.toHaveBeenCalled()
     })
   })
 
@@ -488,17 +372,10 @@ describe('summaryLogMetrics', () => {
         10
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('summaryLog.rows.outcome', 10, {
         outcome: 'included',
         processingType: 'reprocessor_input'
       })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.rows.outcome',
-        10,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
     it('records metric with specified count', async () => {
@@ -510,16 +387,10 @@ describe('summaryLogMetrics', () => {
         25
       )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('summaryLog.rows.outcome', 25, {
         outcome: 'rejected',
         processingType: 'exporter'
       })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.rows.outcome',
-        25,
-        Unit.Count,
-        StorageResolution.Standard
-      )
     })
 
     it('lowercases outcome enum values', async () => {
@@ -539,27 +410,11 @@ describe('summaryLogMetrics', () => {
           1
         )
 
-        expect(mockPutDimensions).toHaveBeenCalledWith({
+        expect(counterSpy).toHaveBeenCalledWith('summaryLog.rows.outcome', 1, {
           outcome: expected,
           processingType: 'reprocessor_output'
         })
       }
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await summaryLogMetrics.recordRowOutcome(
-        {
-          outcome: ROW_OUTCOME.INCLUDED,
-          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
-        },
-        1
-      )
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
-      expect(mockFlush).not.toHaveBeenCalled()
     })
   })
 })
