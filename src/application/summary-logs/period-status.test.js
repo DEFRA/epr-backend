@@ -210,12 +210,14 @@ describe('classifyByPeriodStatus', () => {
           {
             rowId: '10001',
             wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-            exclusionReasons: []
+            exclusionReasons: [],
+            tonnageDelta: 0.1
           },
           {
             rowId: '10002',
             wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-            exclusionReasons: []
+            exclusionReasons: [],
+            tonnageDelta: 0.2
           }
         ]
       })
@@ -330,7 +332,8 @@ describe('classifyByPeriodStatus', () => {
           {
             rowId: '10001',
             wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-            exclusionReasons: []
+            exclusionReasons: [],
+            tonnageDelta: 50
           }
         ]
       })
@@ -457,7 +460,8 @@ describe('classifyByPeriodStatus', () => {
           {
             rowId: '10001',
             wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-            exclusionReasons: []
+            exclusionReasons: [],
+            tonnageDelta: 10
           }
         ]
       })
@@ -607,7 +611,8 @@ describe('classifyByPeriodStatus', () => {
           {
             rowId: '10001',
             wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-            exclusionReasons: []
+            exclusionReasons: [],
+            tonnageDelta: 10
           }
         ]
       })

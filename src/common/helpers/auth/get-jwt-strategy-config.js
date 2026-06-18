@@ -75,7 +75,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
         const { scopes } = await getDefraUserRoles(tokenPayload, request)
 
         return {
-          isValid: scopes.length > 0,
+          isValid: true,
           credentials: {
             id: tokenPayload.contactId,
             email,

@@ -182,7 +182,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
               {
                 rowId: '1001',
                 wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-                exclusionReasons: []
+                exclusionReasons: [],
+                tonnageDelta: 100
               }
             ]
           },
@@ -192,7 +193,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
               {
                 rowId: '2001',
                 wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-                exclusionReasons: [CLASSIFICATION_REASON.ORS_NOT_APPROVED]
+                exclusionReasons: [CLASSIFICATION_REASON.ORS_NOT_APPROVED],
+                tonnageDelta: 0
               }
             ]
           }
@@ -230,7 +232,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
           {
             rowId: '1001',
             wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-            exclusionReasons: [CLASSIFICATION_REASON.PRN_ISSUED]
+            exclusionReasons: [CLASSIFICATION_REASON.PRN_ISSUED],
+            tonnageDelta: 0
           }
         ]
       }
@@ -260,7 +263,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
       {
         rowId: '1001',
         wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-        exclusionReasons: [CLASSIFICATION_REASON.PRN_ISSUED]
+        exclusionReasons: [CLASSIFICATION_REASON.PRN_ISSUED],
+        tonnageDelta: 0
       }
     ])
   })
@@ -292,7 +296,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
         {
           rowId: '1001',
           wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-          exclusionReasons: []
+          exclusionReasons: [],
+          tonnageDelta: 100
         }
       ]
     })
@@ -361,12 +366,14 @@ describe('loadsByReportingPeriod population at validate time', () => {
         {
           rowId: '1001',
           wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-          exclusionReasons: []
+          exclusionReasons: [],
+          tonnageDelta: 100
         },
         {
           rowId: '1002',
           wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-          exclusionReasons: []
+          exclusionReasons: [],
+          tonnageDelta: 200
         }
       ]
     })
@@ -407,7 +414,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
         {
           rowId: '1001',
           wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-          exclusionReasons: []
+          exclusionReasons: [],
+          tonnageDelta: 50
         }
       ]
     })
@@ -468,7 +476,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
         {
           rowId: '1001',
           wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-          exclusionReasons: []
+          exclusionReasons: [],
+          tonnageDelta: -100
         }
       ]
     })
@@ -481,7 +490,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
         {
           rowId: '1001',
           wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-          exclusionReasons: []
+          exclusionReasons: [],
+          tonnageDelta: 100
         }
       ]
     })
@@ -532,7 +542,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
           {
             rowId: '1001',
             wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-            exclusionReasons: []
+            exclusionReasons: [],
+            tonnageDelta: 0
           }
         ]
       }
@@ -573,7 +584,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
         {
           rowId: '1001',
           wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-          exclusionReasons: [CLASSIFICATION_REASON.PRN_ISSUED]
+          exclusionReasons: [CLASSIFICATION_REASON.PRN_ISSUED],
+          tonnageDelta: -100
         }
       ]
     })

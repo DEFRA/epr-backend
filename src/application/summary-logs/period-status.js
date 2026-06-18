@@ -21,9 +21,18 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
 
 /**
- * A single load's identity and exclusion reason codes, listed under an
- * expandable bucket. exclusionReasons is empty for an included row.
- * @typedef {{ rowId: string, wasteRecordType: string, exclusionReasons: string[] }} RowDetail
+ * A load's stable identity and exclusion reason codes, computed once and
+ * carried onto every leg it produces. exclusionReasons is empty for an
+ * included row.
+ * @typedef {{ rowId: string, wasteRecordType: string, exclusionReasons: string[] }} RowIdentity
+ */
+
+/**
+ * A single load listed under an expandable bucket: its identity plus the
+ * signed tonnage this leg contributed to the period's balance (0 for a
+ * non-balance-affecting row). For a cross-period amendment each period's row
+ * carries that leg's delta, not the global net.
+ * @typedef {RowIdentity & { tonnageDelta: number }} RowDetail
  */
 
 /**
@@ -162,7 +171,7 @@ const classifyRow = (schema, data, context) => {
  * @param {Object} params
  * @param {'open' | 'closed'} params.period
  * @param {number} params.transactionAmount
- * @param {RowDetail} params.identity
+ * @param {RowIdentity} params.identity
  * @returns {PeriodStatusEntry[]}
  */
 const classifyAddedRecord = ({ period, transactionAmount, identity }) => [
@@ -187,7 +196,7 @@ const classifyAddedRecord = ({ period, transactionAmount, identity }) => [
  * @param {'open' | 'closed' | null} params.newPeriod
  * @param {number} params.oldAmount
  * @param {number} params.newAmount
- * @param {RowDetail} params.identity
+ * @param {RowIdentity} params.identity
  * @returns {PeriodStatusEntry[]}
  */
 const classifyAdjustedRecord = ({
@@ -253,13 +262,14 @@ const reduceEntries = (entries) => {
     const group = result[PERIOD_TO_KEY[period]][change]
     // A leg with no net delta is nonBalanceAffecting; any movement (rounded)
     // goes to balanceAffecting.
+    const row = { ...identity, tonnageDelta }
     if (tonnageDelta === 0) {
       group.nonBalanceAffecting.count += count
-      pushRow(group.nonBalanceAffecting.rows, identity)
+      pushRow(group.nonBalanceAffecting.rows, row)
     } else {
       group.balanceAffecting.count += count
       group.balanceAffecting.tonnageDelta += tonnageDelta
-      pushRow(group.balanceAffecting.rows, identity)
+      pushRow(group.balanceAffecting.rows, row)
     }
   }
 
