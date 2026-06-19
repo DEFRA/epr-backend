@@ -187,6 +187,44 @@ describe(`POST ${reportsStatusPath}`, () => {
           status: 'ready_to_submit'
         })
       })
+
+      it('advances status to submitted with submissionDeclaredBy stored', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepository,
+          reportId
+        } = await createServerWithReport({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await reportsRepository.updateReportStatus({
+          reportId,
+          version: 1,
+          status: 'ready_to_submit',
+          slot: REPORT_STATUS_SLOT.READY,
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+        })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          {
+            status: 'submitted',
+            version: 2,
+            submissionDeclaredBy: 'Jane Smith'
+          }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(JSON.parse(response.payload)).toEqual({ status: 'submitted' })
+
+        const updatedReport = await reportsRepository.findReportById(reportId)
+        expect(updatedReport.submissionDeclaredBy).toBe('Jane Smith')
+      })
     })
 
     describe('auditing', () => {
@@ -411,7 +449,11 @@ describe(`POST ${reportsStatusPath}`, () => {
           server,
           organisationId,
           registrationId,
-          { status: 'submitted', version: 1 }
+          {
+            status: 'submitted',
+            version: 1,
+            submissionDeclaredBy: 'Jane Smith'
+          }
         )
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
@@ -441,7 +483,8 @@ describe(`POST ${reportsStatusPath}`, () => {
           version: 2,
           status: 'submitted',
           slot: REPORT_STATUS_SLOT.SUBMITTED,
-          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' },
+          submissionDeclaredBy: 'Test User'
         })
 
         const response = await postStatus(
@@ -519,6 +562,44 @@ describe(`POST ${reportsStatusPath}`, () => {
           organisationId,
           registrationId,
           {}
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 422 when submissionDeclaredBy is missing for submitted transition', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'submitted', version: 1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 422 when submissionDeclaredBy is provided for non-submitted transition', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          {
+            status: 'ready_to_submit',
+            version: 1,
+            submissionDeclaredBy: 'Jane Smith'
+          }
         )
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)

@@ -210,7 +210,8 @@ describe('report-service', () => {
         version: 1,
         status: 'submitted',
         slot: REPORT_STATUS_SLOT.SUBMITTED,
-        changedBy
+        changedBy,
+        submissionDeclaredBy: 'Test User'
       })
       await reportsRepository.createReport({
         ...baseReport,

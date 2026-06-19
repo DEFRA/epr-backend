@@ -152,7 +152,7 @@ const updateReport = async (reports, params) => {
  */
 const updateReportStatus = async (reports, params) => {
   const { slot, ...statusParams } = params
-  const { reportId, version, status, changedBy } =
+  const { reportId, version, status, changedBy, submissionDeclaredBy } =
     validateUpdateReportStatus(statusParams)
 
   const existing = reports.get(reportId)
@@ -168,15 +168,17 @@ const updateReportStatus = async (reports, params) => {
   }
 
   const now = new Date().toISOString()
+  const slotValue = { at: now, by: changedBy }
 
   const updated = {
     ...existing,
+    ...(submissionDeclaredBy !== undefined && { submissionDeclaredBy }),
     version: existing.version + 1,
     status: {
       ...existing.status,
       currentStatus: status,
       currentStatusAt: now,
-      [slot]: { at: now, by: changedBy },
+      [slot]: slotValue,
       history: [...existing.status.history, { status, at: now, by: changedBy }]
     }
   }

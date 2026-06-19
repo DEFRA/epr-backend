@@ -26,7 +26,12 @@ const payloadSchema = Joi.object({
       REPORT_STATUS.SUBMITTED
     )
     .required(),
-  version: Joi.number().integer().min(1).required()
+  version: Joi.number().integer().min(1).required(),
+  submissionDeclaredBy: Joi.string().when('status', {
+    is: REPORT_STATUS.SUBMITTED,
+    then: Joi.required(),
+    otherwise: Joi.forbidden()
+  })
 })
 
 export const reportsStatus = {
@@ -41,7 +46,7 @@ export const reportsStatus = {
     }
   },
   /**
-   * @param {HapiRequest<{ status: ReportStatus, version: number }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
+   * @param {HapiRequest<{ status: ReportStatus, version: number, submissionDeclaredBy?: string }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -50,7 +55,7 @@ export const reportsStatus = {
     const year = Number(params.year)
     const period = Number(params.period)
     const submissionNumber = Number(params.submissionNumber)
-    const { status, version } = request.payload
+    const { status, version, submissionDeclaredBy } = request.payload
 
     const [registration, report] = await Promise.all([
       organisationsRepository.findRegistrationById(
@@ -89,7 +94,8 @@ export const reportsStatus = {
       version,
       status,
       slot: STATUS_TO_SLOT[status],
-      changedBy: extractChangedBy(request.auth.credentials)
+      changedBy: extractChangedBy(request.auth.credentials),
+      ...(submissionDeclaredBy !== undefined && { submissionDeclaredBy })
     })
 
     await auditReportStatusTransition(request, {

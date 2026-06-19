@@ -129,6 +129,7 @@
  * @property {string} [supportingInformation]
  * @property {SourceData} [sourceData]
  * @property {ReportStale} [stale]
+ * @property {string} [submissionDeclaredBy]
  */
 
 /**
@@ -219,6 +220,7 @@
  * @property {ReportStatus} status
  * @property {string} slot - the status object key to record this transition (e.g. 'ready', 'submitted', 'unsubmitted')
  * @property {UserSummary} [changedBy]
+ * @property {string} [submissionDeclaredBy] - full name typed by the user on the declaration form; required for SUBMITTED transitions
  */
 
 /**

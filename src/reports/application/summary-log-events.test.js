@@ -180,7 +180,8 @@ async function createAndSubmitReport(repo) {
     version: 2,
     status: REPORT_STATUS.SUBMITTED,
     slot: REPORT_STATUS_SLOT.SUBMITTED,
-    changedBy: DEFAULT_CHANGED_BY
+    changedBy: DEFAULT_CHANGED_BY,
+    submissionDeclaredBy: 'Test User'
   })
   return { id }
 }
