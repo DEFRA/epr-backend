@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryRowStateRepository } from '#repositories/waste-records/states/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import {
@@ -68,6 +70,35 @@ describe('wasteRecordStatesForRegistration', () => {
     expect(dataByRowId).toEqual({
       'row-1': { tonnage: 99 },
       'row-2': { tonnage: 20 }
+    })
+  })
+
+  it('projects to domain content, dropping storage id, membership and partition', async () => {
+    const rowStateRepository = createInMemoryRowStateRepository()()
+    await rowStateRepository.upsertRowStates(
+      DEFAULT_PARTITION,
+      [buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
+      'log-1'
+    )
+    const streamRepository = createInMemoryStreamRepository([
+      submissionEvent(1, 'log-1')
+    ])()
+
+    const [state] = await wasteRecordStatesForRegistration({
+      streamRepository,
+      rowStateRepository,
+      ...registration
+    })
+
+    expect(state).toEqual({
+      rowId: 'row-1',
+      wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+      data: { tonnage: 10 },
+      classification: {
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: 10
+      }
     })
   })
 })
