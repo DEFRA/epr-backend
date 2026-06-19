@@ -53,6 +53,19 @@ describe('row state insert schema', () => {
     expect(error).toBeDefined()
   })
 
+  it('rejects an unknown classification reason code', () => {
+    const { error } = validate(
+      buildRowState({
+        classification: {
+          outcome: ROW_OUTCOME.EXCLUDED,
+          reasons: [{ code: 'NOT_A_REAL_REASON' }],
+          transactionAmount: 0
+        }
+      })
+    )
+    expect(error).toBeDefined()
+  })
+
   it('rejects an empty summaryLogIds membership', () => {
     const { error } = validate(buildRowState({ summaryLogIds: [] }))
     expect(error).toBeDefined()

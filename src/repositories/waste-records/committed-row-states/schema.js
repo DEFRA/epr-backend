@@ -1,6 +1,7 @@
 import Joi from 'joi'
 
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
@@ -65,7 +66,9 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  */
 
 const classificationReasonSchema = Joi.object({
-  code: Joi.string().required(),
+  code: Joi.string()
+    .valid(...Object.values(CLASSIFICATION_REASON))
+    .required(),
   field: Joi.string()
 })
 
