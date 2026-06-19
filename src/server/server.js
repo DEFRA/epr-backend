@@ -4,6 +4,7 @@ import Jwt from '@hapi/jwt'
 import Vision from '@hapi/vision'
 import HapiSwagger from 'hapi-swagger'
 
+import { metrics } from '@defra/cdp-metrics'
 import { secureContext } from '@defra/hapi-secure-context'
 
 import { dlqAdminPlugin } from '#plugins/dlq-admin.js'
@@ -176,6 +177,7 @@ async function createServer(options = {}) {
   const plugins = [
     requestLogger,
     requestTracing,
+    metrics,
     cacheControl,
     secureContext,
     pulse,

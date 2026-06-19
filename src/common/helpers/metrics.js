@@ -1,36 +1,11 @@
-import { config } from '#root/config.js'
-import {
-  createMetricsLogger,
-  StorageResolution,
-  Unit
-} from 'aws-embedded-metrics'
+import { Metrics } from '@defra/cdp-metrics'
 import { logger } from './logging/logger.js'
 
 /**
  * @typedef {Record<string, string>} Dimensions
  */
 
-/**
- * Records a metric to AWS CloudWatch
- * @param {string} metricName - The name of the metric
- * @param {number} value - The value to record
- * @param {import('aws-embedded-metrics').Unit} unit - The AWS CloudWatch unit
- * @param {Dimensions} dimensions - Dimensions for the metric
- */
-const recordMetric = async (metricName, value, unit, dimensions) => {
-  if (!config.get('isMetricsEnabled')) {
-    return
-  }
-
-  try {
-    const metricsLogger = createMetricsLogger()
-    metricsLogger.putDimensions(dimensions)
-    metricsLogger.putMetric(metricName, value, unit, StorageResolution.Standard)
-    await metricsLogger.flush()
-  } catch (error) {
-    logger.error({ message: error.message, err: error })
-  }
-}
+const metrics = new Metrics(logger)
 
 /**
  * Increments a counter metric
@@ -39,7 +14,7 @@ const recordMetric = async (metricName, value, unit, dimensions) => {
  * @param {number} [value=1] - The amount to increment by
  */
 const incrementCounter = async (metricName, dimensions, value = 1) => {
-  await recordMetric(metricName, value, Unit.Count, dimensions)
+  await metrics.counter(metricName, value, dimensions)
 }
 
 /**
@@ -49,7 +24,7 @@ const incrementCounter = async (metricName, dimensions, value = 1) => {
  * @param {number} durationMs - The duration in milliseconds
  */
 const recordDuration = async (metricName, dimensions, durationMs) => {
-  await recordMetric(metricName, durationMs, Unit.Milliseconds, dimensions)
+  await metrics.millis(metricName, durationMs, dimensions)
 }
 
 /**

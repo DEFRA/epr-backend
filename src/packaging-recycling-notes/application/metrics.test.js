@@ -1,39 +1,20 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { StorageResolution, Unit } from 'aws-embedded-metrics'
-import { config } from '#root/config.js'
+import { Metrics } from '@defra/cdp-metrics'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-
-const mockPutMetric = vi.fn()
-const mockPutDimensions = vi.fn()
-const mockFlush = vi.fn()
-const mockLoggerError = vi.fn()
-
-vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
-  const original = await importOriginal()
-
-  return {
-    ...original,
-    createMetricsLogger: () => ({
-      putMetric: mockPutMetric,
-      putDimensions: mockPutDimensions,
-      flush: mockFlush
-    })
-  }
-})
-
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: { error: (...args) => mockLoggerError(...args) }
-}))
 
 const { prnMetrics } = await import('./metrics.js')
 
 describe('prnMetrics', () => {
+  let counterSpy
+
   beforeEach(() => {
-    config.set('isMetricsEnabled', true)
-    mockFlush.mockResolvedValue(undefined)
+    counterSpy = vi
+      .spyOn(Metrics.prototype, 'counter')
+      .mockResolvedValue(undefined)
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.clearAllMocks()
   })
 
@@ -44,17 +25,10 @@ describe('prnMetrics', () => {
         toStatus: PRN_STATUS.AWAITING_AUTHORISATION
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('prn.statusTransition', 1, {
         fromStatus: 'draft',
         toStatus: 'awaiting_authorisation'
       })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'prn.statusTransition',
-        1,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
     it('records metric with all optional dimensions when provided', async () => {
@@ -65,7 +39,7 @@ describe('prnMetrics', () => {
         isExport: false
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('prn.statusTransition', 1, {
         fromStatus: 'awaiting_authorisation',
         toStatus: 'awaiting_acceptance',
         material: 'paper',
@@ -80,7 +54,7 @@ describe('prnMetrics', () => {
         isExport: true
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('prn.statusTransition', 1, {
         fromStatus: 'awaiting_authorisation',
         toStatus: 'awaiting_acceptance',
         isExport: 'true'
@@ -93,7 +67,7 @@ describe('prnMetrics', () => {
         toStatus: PRN_STATUS.AWAITING_AUTHORISATION
       })
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({
+      expect(counterSpy).toHaveBeenCalledWith('prn.statusTransition', 1, {
         fromStatus: 'draft',
         toStatus: 'awaiting_authorisation'
       })
@@ -126,45 +100,11 @@ describe('prnMetrics', () => {
           toStatus: to
         })
 
-        expect(mockPutDimensions).toHaveBeenCalledWith({
+        expect(counterSpy).toHaveBeenCalledWith('prn.statusTransition', 1, {
           fromStatus: from,
           toStatus: to
         })
-        expect(mockPutMetric).toHaveBeenCalledWith(
-          'prn.statusTransition',
-          1,
-          Unit.Count,
-          StorageResolution.Standard
-        )
       }
-    })
-
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
-
-      await prnMetrics.recordStatusTransition({
-        fromStatus: PRN_STATUS.DRAFT,
-        toStatus: PRN_STATUS.AWAITING_AUTHORISATION
-      })
-
-      expect(mockPutMetric).not.toHaveBeenCalled()
-      expect(mockPutDimensions).not.toHaveBeenCalled()
-      expect(mockFlush).not.toHaveBeenCalled()
-    })
-
-    it('logs error when flush fails', async () => {
-      const mockError = new Error('flush failed')
-      mockFlush.mockRejectedValue(mockError)
-
-      await prnMetrics.recordStatusTransition({
-        fromStatus: PRN_STATUS.DRAFT,
-        toStatus: PRN_STATUS.AWAITING_AUTHORISATION
-      })
-
-      expect(mockLoggerError).toHaveBeenCalledWith({
-        message: 'flush failed',
-        err: mockError
-      })
     })
   })
 })
