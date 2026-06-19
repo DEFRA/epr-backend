@@ -10,15 +10,17 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 /**
  * Apply a summary-log submission to the event stream.
  *
- * Persists each row's committed state first (idempotent upsert keyed by row
- * identity, coerced data and classification, `$addToSet`ing this submission's
- * `summaryLogId` onto membership), then computes the aggregate `creditTotal`
- * (sum of all row-level target amounts) and appends a single
- * `summary-log-submitted` event. The row-state write precedes the event append
- * so a failed append leaves no committed balance change and the partially
- * written row states stay invisible to committed reads until a retry commits
- * them. The stream's delta arithmetic (creditTotal minus previous creditTotal)
- * replaces the per-row delta reconciliation of the ADR-0031 ledger.
+ * When the committed-row-states feature flag is enabled, persists each row's
+ * committed state first (idempotent upsert keyed by row identity, coerced data
+ * and classification, `$addToSet`ing this submission's `summaryLogId` onto
+ * membership). Either way computes the aggregate `creditTotal` (sum of all
+ * row-level target amounts) and appends a single `summary-log-submitted` event.
+ * The row-state write precedes the event append so a failed append leaves no
+ * committed balance change and the partially written row states stay invisible
+ * to committed reads until a retry commits them. With the flag off, no
+ * row-state write occurs and the submission behaves exactly as before. The
+ * stream's delta arithmetic (creditTotal minus previous creditTotal) replaces
+ * the per-row delta reconciliation of the ADR-0031 ledger.
  *
  * @param {Object} params
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
@@ -27,6 +29,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {import('../repository/row-states-port.js').RowStateRepository} params.rowStateRepository
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites
  * @param {string} params.summaryLogId
@@ -52,11 +55,13 @@ export const performUpdateViaStream = async ({
     classifyWasteRecord(record, accreditation, overseasSites)
   )
 
-  await rowStateRepository.upsertRowStates(
-    { organisationId, registrationId, accreditationId: accreditation.id },
-    classifiedRows,
-    summaryLogId
-  )
+  if (dependencies.featureFlags?.isCommittedRowStatesEnabled()) {
+    await rowStateRepository.upsertRowStates(
+      { organisationId, registrationId, accreditationId: accreditation.id },
+      classifiedRows,
+      summaryLogId
+    )
+  }
 
   let creditTotal = 0
   for (const { classification } of classifiedRows) {

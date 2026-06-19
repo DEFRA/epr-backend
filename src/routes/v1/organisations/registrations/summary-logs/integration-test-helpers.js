@@ -553,6 +553,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const wasteBalancesRepositoryFactory = createWasteBalancesRepository({
     streamRepository,
     rowStateRepository,
+    featureFlags,
     systemLogsRepository: systemLogsForBalanceAudit
   })
   const wasteBalancesRepository = wasteBalancesRepositoryFactory()

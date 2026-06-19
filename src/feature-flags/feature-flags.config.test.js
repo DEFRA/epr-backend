@@ -22,4 +22,11 @@ describe('createConfigFeatureFlags', () => {
     expect(flags.isCopyFormFilesToS3Enabled()).toBe(false)
     expect(config.get).toHaveBeenCalledWith('featureFlags.copyFormFilesToS3')
   })
+
+  it('returns true when committedRowStates flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isCommittedRowStatesEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.committedRowStates')
+  })
 })

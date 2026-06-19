@@ -4,6 +4,7 @@ import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js
 import { createInMemoryRowStateRepository } from '../repository/row-states-inmemory.js'
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { performUpdateViaStream } from './update-via-stream.js'
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
@@ -391,7 +392,10 @@ describe('performUpdateViaStream', () => {
         accreditation,
         streamRepository,
         rowStateRepository,
-        dependencies: { systemLogsRepository },
+        dependencies: {
+          systemLogsRepository,
+          featureFlags: createInMemoryFeatureFlags({ committedRowStates: true })
+        },
         user,
         overseasSites,
         summaryLogId
@@ -515,6 +519,50 @@ describe('performUpdateViaStream', () => {
       const committed = await rowStateRepository.findBySummaryLogId('log-A')
       expect(committed).toHaveLength(1)
       expect(committed[0].summaryLogIds).toEqual(['log-A'])
+    })
+  })
+
+  describe('committed-row-states feature flag', () => {
+    const submitWith = (featureFlags) =>
+      performUpdateViaStream({
+        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
+        accreditation,
+        streamRepository,
+        rowStateRepository,
+        dependencies: { systemLogsRepository, featureFlags },
+        user,
+        overseasSites,
+        summaryLogId: 'log-A'
+      })
+
+    it('writes no row states and appends the event unchanged when the flag is off', async () => {
+      await submitWith(
+        createInMemoryFeatureFlags({ committedRowStates: false })
+      )
+
+      expect(await rowStateRepository.findBySummaryLogId('log-A')).toHaveLength(
+        0
+      )
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        accreditationId
+      )
+      expect(latest.payload).toEqual({
+        summaryLogId: 'log-A',
+        creditTotal: 100
+      })
+      expect(latest.closingBalance).toEqual({
+        amount: 100,
+        availableAmount: 100
+      })
+    })
+
+    it('writes committed row states when the flag is on', async () => {
+      await submitWith(createInMemoryFeatureFlags({ committedRowStates: true }))
+
+      expect(await rowStateRepository.findBySummaryLogId('log-A')).toHaveLength(
+        1
+      )
     })
   })
 })

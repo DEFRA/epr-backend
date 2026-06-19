@@ -17,7 +17,8 @@ export const mongoWasteBalancesRepositoryPlugin = {
 
     const factory = createWasteBalancesRepository({
       streamRepository,
-      rowStateRepository
+      rowStateRepository,
+      featureFlags: server.featureFlags
     })
     const repository = factory()
 

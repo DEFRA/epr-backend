@@ -50,4 +50,19 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(false)
   })
+
+  it('returns true when committedRowStates flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ committedRowStates: true })
+    expect(flags.isCommittedRowStatesEnabled()).toBe(true)
+  })
+
+  it('returns false when committedRowStates flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ committedRowStates: false })
+    expect(flags.isCommittedRowStatesEnabled()).toBe(false)
+  })
+
+  it('returns false when committedRowStates flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isCommittedRowStatesEnabled()).toBe(false)
+  })
 })
