@@ -1,5 +1,5 @@
 /**
- * Storage-level port for committed row states (ADR-0037 Stage 1).
+ * Storage-level port for waste record states (ADR-0037 Stage 1).
  *
  * One document per *distinct committed state* of a row, carrying a
  * `summaryLogIds` membership array of every submission that committed that
@@ -41,7 +41,7 @@
  *   Returns the resulting state document for each entry, in input order.
  * @property {(summaryLogId: string) => Promise<RowState[]>} findBySummaryLogId
  *   Return every state document whose membership contains `summaryLogId` — the
- *   full committed row state of the submission that produced it.
+ *   full waste record state of the submission that produced it.
  * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<RowState[]>} findRowHistory
  *   Return every state document for the given row identity.
  */

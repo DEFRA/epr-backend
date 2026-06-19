@@ -51,18 +51,18 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(false)
   })
 
-  it('returns true when committedRowStates flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({ committedRowStates: true })
-    expect(flags.isCommittedRowStatesEnabled()).toBe(true)
+  it('returns true when wasteRecordStates flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ wasteRecordStates: true })
+    expect(flags.isWasteRecordStatesEnabled()).toBe(true)
   })
 
-  it('returns false when committedRowStates flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({ committedRowStates: false })
-    expect(flags.isCommittedRowStatesEnabled()).toBe(false)
+  it('returns false when wasteRecordStates flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ wasteRecordStates: false })
+    expect(flags.isWasteRecordStatesEnabled()).toBe(false)
   })
 
-  it('returns false when committedRowStates flag is not provided', () => {
+  it('returns false when wasteRecordStates flag is not provided', () => {
     const flags = createInMemoryFeatureFlags({})
-    expect(flags.isCommittedRowStatesEnabled()).toBe(false)
+    expect(flags.isWasteRecordStatesEnabled()).toBe(false)
   })
 })

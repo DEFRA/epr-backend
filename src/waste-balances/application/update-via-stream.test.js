@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
-import { createInMemoryRowStateRepository } from '#repositories/waste-records/committed-row-states/inmemory.js'
+import { createInMemoryRowStateRepository } from '#repositories/waste-records/states/inmemory.js'
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { performUpdateViaStream } from './update-via-stream.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
@@ -385,7 +385,7 @@ describe('performUpdateViaStream', () => {
     })
   })
 
-  describe('committed row states', () => {
+  describe('waste record states', () => {
     const submit = (wasteRecords, summaryLogId) =>
       performUpdateViaStream({
         wasteRecords,
@@ -394,14 +394,14 @@ describe('performUpdateViaStream', () => {
         rowStateRepository,
         dependencies: {
           systemLogsRepository,
-          featureFlags: createInMemoryFeatureFlags({ committedRowStates: true })
+          featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: true })
         },
         user,
         overseasSites,
         summaryLogId
       })
 
-    it('persists the full committed row state of the submission, including excluded rows', async () => {
+    it('persists the full waste record state of the submission, including excluded rows', async () => {
       await submit(
         [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
@@ -522,7 +522,7 @@ describe('performUpdateViaStream', () => {
     })
   })
 
-  describe('committed-row-states feature flag', () => {
+  describe('waste-record-states feature flag', () => {
     const submitWith = (featureFlags) =>
       performUpdateViaStream({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
@@ -536,9 +536,7 @@ describe('performUpdateViaStream', () => {
       })
 
     it('writes no row states and appends the event unchanged when the flag is off', async () => {
-      await submitWith(
-        createInMemoryFeatureFlags({ committedRowStates: false })
-      )
+      await submitWith(createInMemoryFeatureFlags({ wasteRecordStates: false }))
 
       expect(await rowStateRepository.findBySummaryLogId('log-A')).toHaveLength(
         0
@@ -557,8 +555,8 @@ describe('performUpdateViaStream', () => {
       })
     })
 
-    it('writes committed row states when the flag is on', async () => {
-      await submitWith(createInMemoryFeatureFlags({ committedRowStates: true }))
+    it('writes waste record states when the flag is on', async () => {
+      await submitWith(createInMemoryFeatureFlags({ wasteRecordStates: true }))
 
       expect(await rowStateRepository.findBySummaryLogId('log-A')).toHaveLength(
         1

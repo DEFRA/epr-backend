@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { validateRowStateInsert } from './validation.js'
 
 /**
- * In-memory adapter for committed row states.
+ * In-memory adapter for waste record states.
  *
  * Backed by a single array — fine for tests, fixtures, and contract
  * verification. Not durable, not concurrent-safe across processes.

@@ -2,7 +2,7 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
- * Build a committed row-state document (insert shape — no `id`).
+ * Build a waste record state document (insert shape — no `id`).
  * Defaults to an INCLUDED received-waste row in one submission's membership.
  * @param {object} [overrides]
  */

@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
 
-import { createInMemoryRowStateRepository } from '#repositories/waste-records/committed-row-states/inmemory.js'
+import { createInMemoryRowStateRepository } from '#repositories/waste-records/states/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import {
   buildRowStateEntry,
   DEFAULT_PARTITION
-} from '#repositories/waste-records/committed-row-states/test-data.js'
+} from '#repositories/waste-records/states/test-data.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
-import { committedRowStatesForRegistration } from './read-committed-row-states.js'
+import { wasteRecordStatesForRegistration } from './read-waste-record-states.js'
 
 const submissionEvent = (number, summaryLogId) =>
   buildStreamEvent({
@@ -21,9 +21,9 @@ const registration = {
   accreditationId: DEFAULT_PARTITION.accreditationId
 }
 
-describe('committedRowStatesForRegistration', () => {
+describe('wasteRecordStatesForRegistration', () => {
   it('returns an empty array when the stream has no submission', async () => {
-    const states = await committedRowStatesForRegistration({
+    const states = await wasteRecordStatesForRegistration({
       streamRepository: createInMemoryStreamRepository()(),
       rowStateRepository: createInMemoryRowStateRepository()(),
       ...registration
@@ -56,7 +56,7 @@ describe('committedRowStatesForRegistration', () => {
       submissionEvent(2, 'log-2')
     ])()
 
-    const states = await committedRowStatesForRegistration({
+    const states = await wasteRecordStatesForRegistration({
       streamRepository,
       rowStateRepository,
       ...registration

@@ -9,7 +9,7 @@ export function createInMemoryWasteBalancesRepositoryPlugin() {
       const streamRepository = createInMemoryStreamRepository()()
       const factory = createWasteBalancesRepository({
         streamRepository,
-        rowStateRepository: server.app.committedRowStatesRepository,
+        rowStateRepository: server.app.wasteRecordStatesRepository,
         featureFlags: server.featureFlags
       })
       const repository = factory()

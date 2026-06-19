@@ -1,15 +1,15 @@
 import { createInMemoryRowStateRepository } from './inmemory.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
-export function createInMemoryCommittedRowStatesRepositoryPlugin() {
+export function createInMemoryWasteRecordStatesRepositoryPlugin() {
   const repository = createInMemoryRowStateRepository()()
 
   return {
-    name: 'committedRowStatesRepository',
+    name: 'wasteRecordStatesRepository',
     register: (server) => {
       registerRepository(
         server,
-        'committedRowStatesRepository',
+        'wasteRecordStatesRepository',
         () => repository
       )
     }

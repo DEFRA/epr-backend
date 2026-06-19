@@ -10,7 +10,7 @@ const it = base.extend({
   }
 })
 
-describe('committed row-states repository - in-memory implementation', () => {
+describe('waste record states repository - in-memory implementation', () => {
   it('exposes the row-state port surface', () => {
     const repository = createInMemoryRowStateRepository()()
     expect(repository.upsertRowStates).toBeTypeOf('function')

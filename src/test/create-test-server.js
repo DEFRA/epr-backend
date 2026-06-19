@@ -35,7 +35,7 @@ import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepositoryPlugin } from '#waste-balances/repository/inmemory.plugin.js'
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
-import { createInMemoryCommittedRowStatesRepositoryPlugin } from '#repositories/waste-records/committed-row-states/inmemory.plugin.js'
+import { createInMemoryWasteRecordStatesRepositoryPlugin } from '#repositories/waste-records/states/inmemory.plugin.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
@@ -105,8 +105,8 @@ const repositoryConfigs = [
     createDefault: createInMemoryWasteRecordsRepositoryPlugin
   },
   {
-    name: 'committedRowStatesRepository',
-    createDefault: createInMemoryCommittedRowStatesRepositoryPlugin
+    name: 'wasteRecordStatesRepository',
+    createDefault: createInMemoryWasteRecordStatesRepositoryPlugin
   },
   {
     name: 'wasteBalancesRepository',

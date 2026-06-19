@@ -9,7 +9,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  */
 
 /**
- * Stamped classification for a committed row state. `outcome` and
+ * Stamped classification for a waste record state. `outcome` and
  * `transactionAmount` are the row's contribution to the waste balance at the
  * time it committed; `reasons` carry the codes explaining a non-included row.
  *

@@ -1,8 +1,8 @@
 import { createMongoRowStateRepository } from './mongodb.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
-export const mongoCommittedRowStatesRepositoryPlugin = {
-  name: 'committedRowStatesRepository',
+export const mongoWasteRecordStatesRepositoryPlugin = {
+  name: 'wasteRecordStatesRepository',
   version: '1.0.0',
   dependencies: ['mongodb'],
 
@@ -10,6 +10,6 @@ export const mongoCommittedRowStatesRepositoryPlugin = {
     const factory = await createMongoRowStateRepository(server.db)
     const repository = factory()
 
-    registerRepository(server, 'committedRowStatesRepository', () => repository)
+    registerRepository(server, 'wasteRecordStatesRepository', () => repository)
   }
 }

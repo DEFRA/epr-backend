@@ -5,7 +5,7 @@ import { registerRepository } from '#plugins/register-repository.js'
 export const mongoWasteBalancesRepositoryPlugin = {
   name: 'wasteBalancesRepository',
   version: '1.0.0',
-  dependencies: ['mongodb', 'committedRowStatesRepository'],
+  dependencies: ['mongodb', 'wasteRecordStatesRepository'],
 
   register: async (server) => {
     const streamFactory = await createMongoStreamRepository(server.db)
@@ -13,7 +13,7 @@ export const mongoWasteBalancesRepositoryPlugin = {
 
     const factory = createWasteBalancesRepository({
       streamRepository,
-      rowStateRepository: server.app.committedRowStatesRepository,
+      rowStateRepository: server.app.wasteRecordStatesRepository,
       featureFlags: server.featureFlags
     })
     const repository = factory()

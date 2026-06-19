@@ -2,7 +2,7 @@ import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 
 /**
  * Resolve the `summaryLogId` of the most recent committed submission for a
- * stream partition — the committed head the row-state reads pivot on. Returns
+ * stream partition — the committed head the waste-record-state reads pivot on. Returns
  * `null` when the partition has no summary-log submission yet.
  *
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} streamRepository

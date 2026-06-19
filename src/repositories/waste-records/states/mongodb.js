@@ -25,7 +25,7 @@ export const WASTE_BALANCE_ROW_STATES_COLLECTION_NAME =
 
 /**
  * Ensures the row-states collection exists with the indexes required by the
- * committed row-state design: a multikey index on `summaryLogIds` for the
+ * waste record state design: a multikey index on `summaryLogIds` for the
  * committed-state membership query, and a row-identity index for row history.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
@@ -154,7 +154,7 @@ const performFindRowHistory =
   }
 
 /**
- * Creates a MongoDB-backed committed row-state repository.
+ * Creates a MongoDB-backed waste record state repository.
  *
  * @param {Db} db
  * @returns {Promise<import('./port.js').RowStateRepositoryFactory>}

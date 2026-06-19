@@ -10,13 +10,13 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 /**
  * Apply a summary-log submission to the event stream.
  *
- * When the committed-row-states feature flag is enabled, persists each row's
+ * When the waste-record-states feature flag is enabled, persists each row's
  * committed state first (idempotent upsert keyed by row identity, coerced data
  * and classification, `$addToSet`ing this submission's `summaryLogId` onto
  * membership). Either way computes the aggregate `creditTotal` (sum of all
  * row-level target amounts) and appends a single `summary-log-submitted` event.
  * The row-state write precedes the event append so a failed append leaves no
- * committed balance change and the partially written row states stay invisible
+ * committed balance change and the partially written waste record states stay invisible
  * to committed reads until a retry commits them. With the flag off, no
  * row-state write occurs and the submission behaves exactly as before. The
  * stream's delta arithmetic (creditTotal minus previous creditTotal) replaces
@@ -26,7 +26,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
  * @param {{ id: string, validFrom?: string, validTo?: string }} params.accreditation
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} params.streamRepository
- * @param {import('#repositories/waste-records/committed-row-states/port.js').RowStateRepository} params.rowStateRepository
+ * @param {import('#repositories/waste-records/states/port.js').RowStateRepository} params.rowStateRepository
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
@@ -55,7 +55,7 @@ export const performUpdateViaStream = async ({
     classifyWasteRecord(record, accreditation, overseasSites)
   )
 
-  if (dependencies.featureFlags?.isCommittedRowStatesEnabled()) {
+  if (dependencies.featureFlags?.isWasteRecordStatesEnabled()) {
     await rowStateRepository.upsertRowStates(
       { organisationId, registrationId, accreditationId: accreditation.id },
       classifiedRows,

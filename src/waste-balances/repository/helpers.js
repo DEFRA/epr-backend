@@ -60,7 +60,7 @@ const dispatchToStream = async ({
         dependencies.streamRepository
       ),
     rowStateRepository:
-      /** @type {import('#repositories/waste-records/committed-row-states/port.js').RowStateRepository} */ (
+      /** @type {import('#repositories/waste-records/states/port.js').RowStateRepository} */ (
         dependencies.rowStateRepository
       ),
     dependencies: {
@@ -87,7 +87,7 @@ const dispatchToStream = async ({
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} params.dependencies.streamRepository
- * @param {import('#repositories/waste-records/committed-row-states/port.js').RowStateRepository} [params.dependencies.rowStateRepository]
+ * @param {import('#repositories/waste-records/states/port.js').RowStateRepository} [params.dependencies.rowStateRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} [params.user]
  * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED

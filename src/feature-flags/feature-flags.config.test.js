@@ -23,10 +23,10 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.copyFormFilesToS3')
   })
 
-  it('returns true when committedRowStates flag is enabled', () => {
+  it('returns true when wasteRecordStates flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
-    expect(flags.isCommittedRowStatesEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.committedRowStates')
+    expect(flags.isWasteRecordStatesEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.wasteRecordStates')
   })
 })

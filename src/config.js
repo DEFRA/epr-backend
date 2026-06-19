@@ -364,11 +364,11 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_FIX_DUPLICATE_ACCREDITATION_LINKS'
     },
-    committedRowStates: {
-      doc: 'Feature Flag: Persist committed waste-balance row states on summary-log submission (ADR-0037)',
+    wasteRecordStates: {
+      doc: 'Feature Flag: Persist waste record states on summary-log submission (ADR-0037)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_COMMITTED_ROW_STATES'
+      env: 'FEATURE_FLAG_WASTE_RECORD_STATES'
     }
   },
   formSubmissionOverrides: {

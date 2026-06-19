@@ -73,7 +73,7 @@ describe('ensureRowStatesCollection', () => {
   })
 })
 
-describe('committed row-states repository - mongodb implementation', () => {
+describe('waste record states repository - mongodb implementation', () => {
   it('exposes the row-state port surface', async (/** @type {*} */ {
     mongoClient
   }) => {
