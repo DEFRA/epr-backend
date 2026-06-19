@@ -1,12 +1,9 @@
 import Boom from '@hapi/boom'
 
-import {
-  rowStateInsertSchema,
-  rowStateReadSchema
-} from './row-states-schema.js'
+import { rowStateInsertSchema, rowStateReadSchema } from './schema.js'
 
 /**
- * @returns {import('./row-states-schema.js').RowStateInsert}
+ * @returns {import('./schema.js').RowStateInsert}
  */
 export const validateRowStateInsert = (data) => {
   const { error, value } = rowStateInsertSchema.validate(data, {
@@ -22,7 +19,7 @@ export const validateRowStateInsert = (data) => {
 }
 
 /**
- * @returns {import('./row-states-schema.js').RowState}
+ * @returns {import('./schema.js').RowState}
  */
 export const validateRowStateRead = (data) => {
   const { error, value } = rowStateReadSchema.validate(data, {

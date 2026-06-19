@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
 
-import { createInMemoryRowStateRepository } from '../repository/row-states-inmemory.js'
-import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
+import { createInMemoryRowStateRepository } from '#repositories/waste-records/committed-row-states/inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import {
   buildRowStateEntry,
   DEFAULT_PARTITION
-} from '../repository/row-states-test-data.js'
-import { buildStreamEvent } from '../repository/stream-test-data.js'
+} from '#repositories/waste-records/committed-row-states/test-data.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { committedRowStatesForRegistration } from './read-committed-row-states.js'
 
 const submissionEvent = (number, summaryLogId) =>

@@ -1,6 +1,5 @@
 import { createWasteBalancesRepository } from './repository.js'
 import { createInMemoryStreamRepository } from './stream-inmemory.js'
-import { createInMemoryRowStateRepository } from './row-states-inmemory.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
 export function createInMemoryWasteBalancesRepositoryPlugin() {
@@ -8,10 +7,9 @@ export function createInMemoryWasteBalancesRepositoryPlugin() {
     name: 'wasteBalancesRepository',
     register: (server) => {
       const streamRepository = createInMemoryStreamRepository()()
-      const rowStateRepository = createInMemoryRowStateRepository()()
       const factory = createWasteBalancesRepository({
         streamRepository,
-        rowStateRepository,
+        rowStateRepository: server.app.committedRowStatesRepository,
         featureFlags: server.featureFlags
       })
       const repository = factory()

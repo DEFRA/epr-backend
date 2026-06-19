@@ -6,8 +6,8 @@ import {
   createMongoRowStateRepository,
   ensureRowStatesCollection,
   WASTE_BALANCE_ROW_STATES_COLLECTION_NAME
-} from './row-states-mongodb.js'
-import { testRowStateRepositoryContract } from './row-states-port.contract.js'
+} from './mongodb.js'
+import { testRowStateRepositoryContract } from './port.contract.js'
 
 const DATABASE_NAME = 'epr-backend'
 

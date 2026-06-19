@@ -37,6 +37,7 @@ import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mon
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoWasteBalancesRepositoryPlugin } from '#waste-balances/repository/mongodb.plugin.js'
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
+import { mongoCommittedRowStatesRepositoryPlugin } from '#repositories/waste-records/committed-row-states/mongodb.plugin.js'
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
@@ -123,6 +124,7 @@ function getProductionPlugins(config) {
     mongoSummaryLogsRepositoryPlugin,
     mongoFormSubmissionsRepositoryPlugin,
     mongoWasteRecordsRepositoryPlugin,
+    mongoCommittedRowStatesRepositoryPlugin,
     {
       plugin: mongoWasteBalancesRepositoryPlugin,
       options: { eventualConsistency }

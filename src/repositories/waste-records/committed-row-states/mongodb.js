@@ -3,25 +3,22 @@
 import { isDeepStrictEqual } from 'node:util'
 
 /**
- * @typedef {import('./row-states-schema.js').RowState} RowState
+ * @typedef {import('./schema.js').RowState} RowState
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowStateInsert} RowStateInsert
+ * @typedef {import('./schema.js').RowStateInsert} RowStateInsert
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowStateEntry} RowStateEntry
+ * @typedef {import('./schema.js').RowStateEntry} RowStateEntry
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowStatePartition} RowStatePartition
+ * @typedef {import('./schema.js').RowStatePartition} RowStatePartition
  */
 
-import {
-  validateRowStateInsert,
-  validateRowStateRead
-} from './row-states-validation.js'
+import { validateRowStateInsert, validateRowStateRead } from './validation.js'
 
 export const WASTE_BALANCE_ROW_STATES_COLLECTION_NAME =
   'waste-balance-row-states'
@@ -160,7 +157,7 @@ const performFindRowHistory =
  * Creates a MongoDB-backed committed row-state repository.
  *
  * @param {Db} db
- * @returns {Promise<import('./row-states-port.js').RowStateRepositoryFactory>}
+ * @returns {Promise<import('./port.js').RowStateRepositoryFactory>}
  */
 export const createMongoRowStateRepository = async (db) => {
   const collection = await ensureRowStatesCollection(db)

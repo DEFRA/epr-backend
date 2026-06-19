@@ -1,7 +1,7 @@
 import { describe, it as base, expect, it } from 'vitest'
 import { createWasteBalancesRepository } from './repository.js'
 import { createInMemoryStreamRepository } from './stream-inmemory.js'
-import { createInMemoryRowStateRepository } from './row-states-inmemory.js'
+import { createInMemoryRowStateRepository } from '#repositories/waste-records/committed-row-states/inmemory.js'
 import { buildStreamEvent } from './stream-test-data.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 

@@ -15,19 +15,19 @@
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowState} RowState
+ * @typedef {import('./schema.js').RowState} RowState
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowStateInsert} RowStateInsert
+ * @typedef {import('./schema.js').RowStateInsert} RowStateInsert
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowStateEntry} RowStateEntry
+ * @typedef {import('./schema.js').RowStateEntry} RowStateEntry
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowStatePartition} RowStatePartition
+ * @typedef {import('./schema.js').RowStatePartition} RowStatePartition
  */
 
 /**

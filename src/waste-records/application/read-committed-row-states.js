@@ -1,14 +1,14 @@
-import { latestCommittedSummaryLogId } from './latest-committed-summary-log-id.js'
+import { latestCommittedSummaryLogId } from '#waste-balances/application/latest-committed-summary-log-id.js'
 
 /**
- * @typedef {import('../repository/row-states-schema.js').RowState} RowState
+ * @typedef {import('#repositories/waste-records/committed-row-states/schema.js').RowState} RowState
  */
 
 /**
  * Membership query for a resolved committed head: every row whose committed
  * state belongs to that submission, or nothing when there is no head.
  *
- * @param {import('../repository/row-states-port.js').RowStateRepository} rowStateRepository
+ * @param {import('#repositories/waste-records/committed-row-states/port.js').RowStateRepository} rowStateRepository
  * @param {string | null} head
  * @returns {Promise<RowState[]>}
  */
@@ -21,8 +21,8 @@ const rowStatesForHead = async (rowStateRepository, head) =>
  * row whose committed state belongs to that submission.
  *
  * @param {{
- *   streamRepository: import('../repository/stream-port.js').WasteBalanceStreamRepository,
- *   rowStateRepository: import('../repository/row-states-port.js').RowStateRepository,
+ *   streamRepository: import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository,
+ *   rowStateRepository: import('#repositories/waste-records/committed-row-states/port.js').RowStateRepository,
  *   organisationId: string,
  *   registrationId: string,
  *   accreditationId: string | null

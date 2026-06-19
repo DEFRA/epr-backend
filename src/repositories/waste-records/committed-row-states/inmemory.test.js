@@ -1,7 +1,7 @@
 import { describe, it as base, expect } from 'vitest'
 
-import { createInMemoryRowStateRepository } from './row-states-inmemory.js'
-import { testRowStateRepositoryContract } from './row-states-port.contract.js'
+import { createInMemoryRowStateRepository } from './inmemory.js'
+import { testRowStateRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern

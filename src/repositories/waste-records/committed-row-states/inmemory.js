@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
-import { validateRowStateInsert } from './row-states-validation.js'
+import { validateRowStateInsert } from './validation.js'
 
 /**
  * In-memory adapter for committed row states.
@@ -11,19 +11,19 @@ import { validateRowStateInsert } from './row-states-validation.js'
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowState} RowState
+ * @typedef {import('./schema.js').RowState} RowState
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowStateInsert} RowStateInsert
+ * @typedef {import('./schema.js').RowStateInsert} RowStateInsert
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowStateEntry} RowStateEntry
+ * @typedef {import('./schema.js').RowStateEntry} RowStateEntry
  */
 
 /**
- * @typedef {import('./row-states-schema.js').RowStatePartition} RowStatePartition
+ * @typedef {import('./schema.js').RowStatePartition} RowStatePartition
  */
 
 /**
@@ -81,7 +81,7 @@ const upsertOne = (storage, partition, entry, summaryLogId) => {
 
 /**
  * @param {RowState[]} [initialRowStates]
- * @returns {import('./row-states-port.js').RowStateRepositoryFactory}
+ * @returns {import('./port.js').RowStateRepositoryFactory}
  */
 export const createInMemoryRowStateRepository = (initialRowStates = []) => {
   const storage = initialRowStates

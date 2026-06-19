@@ -1,9 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import {
-  buildRowStateEntry,
-  DEFAULT_PARTITION
-} from '../row-states-test-data.js'
+import { buildRowStateEntry, DEFAULT_PARTITION } from '../test-data.js'
 
 export const testFindBySummaryLogIdBehaviour = (it) => {
   describe('findBySummaryLogId', () => {

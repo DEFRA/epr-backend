@@ -2,10 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
-import {
-  buildRowStateEntry,
-  DEFAULT_PARTITION
-} from '../row-states-test-data.js'
+import { buildRowStateEntry, DEFAULT_PARTITION } from '../test-data.js'
 
 export const testFindRowHistoryBehaviour = (it) => {
   describe('findRowHistory', () => {

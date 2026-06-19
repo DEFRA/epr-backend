@@ -2,12 +2,9 @@ import { describe, it, expect } from 'vitest'
 
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
-import { rowStateInsertSchema } from './row-states-schema.js'
-import {
-  validateRowStateInsert,
-  validateRowStateRead
-} from './row-states-validation.js'
-import { buildRowState } from './row-states-test-data.js'
+import { rowStateInsertSchema } from './schema.js'
+import { validateRowStateInsert, validateRowStateRead } from './validation.js'
+import { buildRowState } from './test-data.js'
 
 const validate = (data) =>
   rowStateInsertSchema.validate(data, { abortEarly: false })
