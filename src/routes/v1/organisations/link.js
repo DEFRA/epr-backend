@@ -62,8 +62,6 @@ export const organisationsLink = {
     // throws Boom.notFound if organisation does not exist
     const organisation = await organisationsRepository.findById(organisationId)
 
-    const { id, version: currentVersion, ...organisationData } = organisation
-
     const { email, id: credentialId } =
       /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
         request.auth.credentials
@@ -97,6 +95,8 @@ export const organisationsLink = {
       },
       linkedAt: new Date().toISOString()
     }
+
+    const { id, version: currentVersion, ...organisationData } = organisation
 
     await organisationsRepository.replace(id, currentVersion, {
       ...organisationData,
