@@ -1,7 +1,7 @@
 import { latestCommittedSummaryLogId } from '#waste-balances/application/latest-committed-summary-log-id.js'
 
 /**
- * @typedef {import('#repositories/waste-records/states/schema.js').RowState} RowState
+ * @typedef {import('#waste-records/repository/schema.js').RowState} RowState
  */
 
 /**
@@ -14,7 +14,7 @@ import { latestCommittedSummaryLogId } from '#waste-balances/application/latest-
  * @property {string} rowId
  * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
  * @property {Record<string, any>} data
- * @property {import('#repositories/waste-records/states/schema.js').RowClassification} classification
+ * @property {import('#waste-records/repository/schema.js').RowClassification} classification
  */
 
 /**
@@ -40,7 +40,7 @@ const toWasteRecordState = ({
  * Membership query for a resolved committed head: every row whose committed
  * state belongs to that submission, or nothing when there is no head.
  *
- * @param {import('#repositories/waste-records/states/port.js').RowStateRepository} rowStateRepository
+ * @param {import('#waste-records/repository/port.js').RowStateRepository} rowStateRepository
  * @param {string | null} head
  * @returns {Promise<RowState[]>}
  */
@@ -55,7 +55,7 @@ const rowStatesForHead = async (rowStateRepository, head) =>
  *
  * @param {{
  *   streamRepository: import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository,
- *   rowStateRepository: import('#repositories/waste-records/states/port.js').RowStateRepository,
+ *   rowStateRepository: import('#waste-records/repository/port.js').RowStateRepository,
  *   organisationId: string,
  *   registrationId: string,
  *   accreditationId: string | null

@@ -9,7 +9,7 @@ import {
 import {
   createMongoRowStateRepository,
   WASTE_BALANCE_ROW_STATES_COLLECTION_NAME
-} from '#repositories/waste-records/states/mongodb.js'
+} from '#waste-records/repository/mongodb.js'
 import { buildStreamEvent } from './stream-test-data.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 
@@ -25,7 +25,7 @@ const DATABASE_NAME = 'epr-backend'
  * @typedef {object} WasteBalancesRepoFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('./stream-port.js').WasteBalanceStreamRepository} streamRepository
- * @property {import('#repositories/waste-records/states/port.js').RowStateRepository} rowStateRepository
+ * @property {import('#waste-records/repository/port.js').RowStateRepository} rowStateRepository
  * @property {import('./port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
  * @property {(event: object) => Promise<void>} seedBalance
  */

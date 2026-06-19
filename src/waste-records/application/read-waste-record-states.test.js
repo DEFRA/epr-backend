@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest'
 
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createInMemoryRowStateRepository } from '#repositories/waste-records/states/inmemory.js'
+import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import {
   buildRowStateEntry,
   DEFAULT_PARTITION
-} from '#repositories/waste-records/states/test-data.js'
+} from '#waste-records/repository/test-data.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { wasteRecordStatesForRegistration } from './read-waste-record-states.js'
 

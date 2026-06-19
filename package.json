@@ -28,6 +28,7 @@
     "#test/*": "./src/test/*",
     "#vite/*": "./.vite/*",
     "#waste-balances/*": "./src/waste-balances/*",
+    "#waste-records/*": "./src/waste-records/*",
     "#waste-records-export/*": "./src/waste-records-export/*"
   },
   "engines": {

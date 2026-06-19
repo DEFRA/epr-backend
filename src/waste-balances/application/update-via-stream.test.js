@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
-import { createInMemoryRowStateRepository } from '#repositories/waste-records/states/inmemory.js'
+import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { performUpdateViaStream } from './update-via-stream.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'

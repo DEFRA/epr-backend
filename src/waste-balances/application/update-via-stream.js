@@ -26,7 +26,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
  * @param {{ id: string, validFrom?: string, validTo?: string }} params.accreditation
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} params.streamRepository
- * @param {import('#repositories/waste-records/states/port.js').RowStateRepository} params.rowStateRepository
+ * @param {import('#waste-records/repository/port.js').RowStateRepository} params.rowStateRepository
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
