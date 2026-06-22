@@ -27,11 +27,18 @@ const reprocessorRegistration = (overrides) =>
     ...overrides
   })
 
-const submittedLog = (id, organisationId, registrationId, submittedAt) => ({
-  id,
+const fileId = (documentId) => `file-${documentId}`
+
+const submittedLog = (
+  documentId,
+  organisationId,
+  registrationId,
+  submittedAt
+) => ({
+  id: documentId,
   summaryLog: {
     status: SUMMARY_LOG_STATUS.SUBMITTED,
-    file: { id: `file-${id}`, name: `${id}.xlsx` },
+    file: { id: fileId(documentId), name: `${documentId}.xlsx` },
     organisationId,
     registrationId,
     createdAt: submittedAt,
@@ -44,7 +51,7 @@ const receivedRecord = (
   organisationId,
   registrationId,
   rowId,
-  summaryLogId
+  summaryLogFileId
 ) => ({
   organisationId,
   registrationId,
@@ -52,7 +59,7 @@ const receivedRecord = (
   type: WASTE_RECORD_TYPE.RECEIVED,
   data: { supplierName: 'Acme' },
   versions: [
-    { summaryLog: { id: summaryLogId }, data: { supplierName: 'Acme' } }
+    { summaryLog: { id: summaryLogFileId }, data: { supplierName: 'Acme' } }
   ]
 })
 
@@ -93,7 +100,9 @@ describe('runWasteRecordStateBackfill', () => {
     )
     mockServer.app = await buildServerApp({
       organisations: [organisation],
-      wasteRecords: [receivedRecord(organisation.id, 'reg-1', 'row-1', 'sl-1')],
+      wasteRecords: [
+        receivedRecord(organisation.id, 'reg-1', 'row-1', fileId('sl-1'))
+      ],
       logs: [
         submittedLog(
           'sl-1',
@@ -113,7 +122,7 @@ describe('runWasteRecordStateBackfill', () => {
     expect(
       (
         await mockServer.app.wasteRecordStatesRepository.findBySummaryLogId(
-          'sl-1'
+          fileId('sl-1')
         )
       ).map((d) => d.rowId)
     ).toEqual(['row-1'])
@@ -144,7 +153,9 @@ describe('runWasteRecordStateBackfill', () => {
     })
     mockServer.app = await buildServerApp({
       organisations: [organisation],
-      wasteRecords: [receivedRecord(organisation.id, 'reg-1', 'row-1', 'sl-1')],
+      wasteRecords: [
+        receivedRecord(organisation.id, 'reg-1', 'row-1', fileId('sl-1'))
+      ],
       logs: [
         submittedLog(
           'sl-1',

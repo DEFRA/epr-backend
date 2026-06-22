@@ -16,6 +16,11 @@ import {
 
 import { backfillEstateRowStates } from './backfill-estate-rowstates.js'
 
+// The summary-log document id and the workbook's file.id are distinct values
+// (the doc id is a URL path param; file.id is the uploader's id). Membership and
+// version tags key on file.id, so fixtures keep them deliberately different.
+const fileId = (documentId) => `file-${documentId}`
+
 const reprocessorRegistration = (overrides) =>
   buildRegistration({
     wasteProcessingType: 'reprocessor',
@@ -25,7 +30,7 @@ const reprocessorRegistration = (overrides) =>
 
 const insertLog = (
   summaryLogsRepository,
-  id,
+  documentId,
   {
     organisationId,
     registrationId,
@@ -33,9 +38,9 @@ const insertLog = (
     status = SUMMARY_LOG_STATUS.SUBMITTED
   }
 ) =>
-  summaryLogsRepository.insert(id, {
+  summaryLogsRepository.insert(documentId, {
     status,
-    file: { id: `file-${id}`, name: `${id}.xlsx` },
+    file: { id: fileId(documentId), name: `${documentId}.xlsx` },
     organisationId,
     registrationId,
     createdAt: submittedAt,
@@ -62,7 +67,7 @@ const inMemoryDeps = ({ organisations, wasteRecords }) => ({
 })
 
 describe('backfillEstateRowStates', () => {
-  it('backfills every submission of an accredited registration and reports the sweep', async () => {
+  it('backfills every submission of an accredited registration, keyed by file id, and reports the sweep', async () => {
     const registration = reprocessorRegistration({
       id: 'reg-1',
       accreditationId: 'acc-1'
@@ -73,7 +78,7 @@ describe('backfillEstateRowStates', () => {
     )
     const wasteRecords = [
       receivedRecord(organisation.id, 'reg-1', 'row-1', [
-        { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } }
       ])
     ]
     const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
@@ -91,16 +96,19 @@ describe('backfillEstateRowStates', () => {
     const summary = await backfillEstateRowStates(deps)
 
     expect(
-      (await deps.rowStateRepository.findBySummaryLogId('sl-1')).map(
+      (await deps.rowStateRepository.findBySummaryLogId(fileId('sl-1'))).map(
         (d) => d.rowId
       )
     ).toEqual(['row-1'])
     expect(
-      (await deps.rowStateRepository.findBySummaryLogId('sl-2')).map(
+      (await deps.rowStateRepository.findBySummaryLogId(fileId('sl-2'))).map(
         (d) => d.rowId
       )
     ).toEqual(['row-1'])
-    const [doc] = await deps.rowStateRepository.findBySummaryLogId('sl-1')
+    expect(await deps.rowStateRepository.findBySummaryLogId('sl-1')).toEqual([])
+    const [doc] = await deps.rowStateRepository.findBySummaryLogId(
+      fileId('sl-1')
+    )
     expect(doc.accreditationId).toBe('acc-1')
     expect(summary).toEqual({
       organisationsScanned: 1,
@@ -120,7 +128,7 @@ describe('backfillEstateRowStates', () => {
     })
     const wasteRecords = [
       receivedRecord(organisation.id, 'reg-ro', 'row-1', [
-        { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } }
       ])
     ]
     const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
@@ -132,7 +140,9 @@ describe('backfillEstateRowStates', () => {
 
     const summary = await backfillEstateRowStates(deps)
 
-    expect(await deps.rowStateRepository.findBySummaryLogId('sl-1')).toEqual([])
+    expect(
+      await deps.rowStateRepository.findBySummaryLogId(fileId('sl-1'))
+    ).toEqual([])
     expect(summary.streamsBackfilled).toBe(0)
     expect(summary.submissionsBackfilled).toBe(0)
   })
@@ -155,7 +165,7 @@ describe('backfillEstateRowStates', () => {
     })
     const wasteRecords = [
       receivedRecord(organisation.id, 'reg-a', 'row-1', [
-        { summaryLog: { id: 'sl-a' }, data: { supplierName: 'Acme' } }
+        { summaryLog: { id: fileId('sl-a') }, data: { supplierName: 'Acme' } }
       ])
     ]
     const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
@@ -180,15 +190,15 @@ describe('backfillEstateRowStates', () => {
     const summary = await backfillEstateRowStates(deps)
 
     expect(
-      (await deps.rowStateRepository.findBySummaryLogId('sl-a')).map(
+      (await deps.rowStateRepository.findBySummaryLogId(fileId('sl-a'))).map(
         (d) => d.rowId
       )
     ).toEqual(['row-1'])
     expect(
-      await deps.rowStateRepository.findBySummaryLogId('sl-a-bad')
+      await deps.rowStateRepository.findBySummaryLogId(fileId('sl-a-bad'))
     ).toEqual([])
     expect(
-      await deps.rowStateRepository.findBySummaryLogId('sl-b-bad')
+      await deps.rowStateRepository.findBySummaryLogId(fileId('sl-b-bad'))
     ).toEqual([])
     expect(summary.streamsBackfilled).toBe(1)
     expect(summary.submissionsBackfilled).toBe(1)
@@ -205,7 +215,7 @@ describe('backfillEstateRowStates', () => {
     })
     const wasteRecords = [
       receivedRecord(organisation.id, 'reg-1', 'row-1', [
-        { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } }
       ])
     ]
     const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
@@ -224,7 +234,9 @@ describe('backfillEstateRowStates', () => {
         accreditationId: 'acc-gone'
       }
     ])
-    expect(await deps.rowStateRepository.findBySummaryLogId('sl-1')).toEqual([])
+    expect(
+      await deps.rowStateRepository.findBySummaryLogId(fileId('sl-1'))
+    ).toEqual([])
     expect(summary.streamsBackfilled).toBe(0)
   })
 })

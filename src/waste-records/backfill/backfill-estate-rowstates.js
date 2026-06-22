@@ -30,10 +30,14 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  */
 
 /**
- * @param {{ id: string, summaryLog: { status: string, submittedAt: string } }} log
+ * The membership key and the waste-record version tags are the summary log's
+ * `file.id`, not the summary-log document id — the live write path keys both on
+ * `file.id`, so the backfill must too or it reconstructs nothing.
+ *
+ * @param {{ summaryLog: { status: string, submittedAt: string, file: { id: string } } }} log
  */
-const toOrderedSummaryLog = ({ id, summaryLog }) => ({
-  id,
+const toOrderedSummaryLog = ({ summaryLog }) => ({
+  id: summaryLog.file.id,
   status: summaryLog.status,
   submittedAt: summaryLog.submittedAt
 })
