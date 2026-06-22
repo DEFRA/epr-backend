@@ -192,9 +192,9 @@ const performUpdateReportStatus = async (db, params) => {
 
   const now = new Date().toISOString()
   const slotValue =
-    submissionDeclaredBy !== undefined
-      ? { at: now, by: changedBy, declaredBy: submissionDeclaredBy }
-      : { at: now, by: changedBy }
+    submissionDeclaredBy === undefined
+      ? { at: now, by: changedBy }
+      : { at: now, by: changedBy, declaredBy: submissionDeclaredBy }
 
   const doc = await reportsCollection(db).findOneAndUpdate(
     { id: reportId, version },

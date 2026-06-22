@@ -169,9 +169,9 @@ const updateReportStatus = async (reports, params) => {
 
   const now = new Date().toISOString()
   const slotValue =
-    submissionDeclaredBy !== undefined
-      ? { at: now, by: changedBy, declaredBy: submissionDeclaredBy }
-      : { at: now, by: changedBy }
+    submissionDeclaredBy === undefined
+      ? { at: now, by: changedBy }
+      : { at: now, by: changedBy, declaredBy: submissionDeclaredBy }
 
   const updated = {
     ...existing,
