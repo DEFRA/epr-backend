@@ -3,16 +3,8 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import { isIncludedInWasteBalance } from '#waste-records-export/domain/is-included-in-waste-balance.js'
 
 /**
- * Sum the tonnage the row-states at the committed head contribute to the
- * balance — the included rows' stamped `transactionAmount`. Decomposability
- * (ADR-0037) means this must equal the head event's `creditTotal`.
- *
- * @param {import('#waste-records/application/read-waste-record-states.js').WasteRecordState[]} rowStates
- * @returns {number}
- */
-/**
- * The waste-record type of a row, however the source names it — row-states
- * carry `wasteRecordType`, legacy waste-records carry `type`.
+ * The waste-record type of a row, however the source names it — waste record
+ * states carry `wasteRecordType`, legacy waste-records carry `type`.
  *
  * @param {{ wasteRecordType?: string, type?: string }} row
  * @returns {string | undefined}
@@ -36,8 +28,16 @@ const rowKey = (row) => `${typeOf(row)}::${row.rowId}`
  */
 const toRowRef = (row) => ({ rowId: row.rowId, wasteRecordType: typeOf(row) })
 
-const rowStateCreditTotal = (rowStates) =>
-  rowStates.reduce(
+/**
+ * Sum the tonnage the waste record states at the committed head contribute to
+ * the balance — the included rows' stamped `transactionAmount`. Decomposability
+ * (ADR-0037) means this must equal the head event's `creditTotal`.
+ *
+ * @param {import('#waste-records/application/read-waste-record-states.js').WasteRecordState[]} wasteRecordStates
+ * @returns {number}
+ */
+const wasteRecordStateCreditTotal = (wasteRecordStates) =>
+  wasteRecordStates.reduce(
     (total, { classification }) =>
       classification.outcome === ROW_OUTCOME.INCLUDED
         ? toNumber(add(total, classification.transactionAmount))
@@ -46,16 +46,16 @@ const rowStateCreditTotal = (rowStates) =>
   )
 
 /**
- * Reconcile the committed row-state collection against the legacy waste-records
- * read for a single registration partition. Read-only: every input is already
- * loaded; this function only compares.
+ * Reconcile the waste record state collection (ADR-0037) against the legacy
+ * waste-records committed baseline for a single registration partition.
+ * Read-only: every input is already loaded; this function only compares.
  *
  * @param {Object} input
  * @param {string} input.registrationId
  * @param {string | null} input.accreditationId
  * @param {string | null} input.head
  * @param {number | null} input.eventCreditTotal
- * @param {import('#waste-records/application/read-waste-record-states.js').WasteRecordState[]} input.rowStates
+ * @param {import('#waste-records/application/read-waste-record-states.js').WasteRecordState[]} input.wasteRecordStates
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} input.wasteRecords
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} input.accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} input.overseasSites
@@ -65,64 +65,77 @@ export const reconcileRegistration = ({
   accreditationId,
   head,
   eventCreditTotal,
-  rowStates,
+  wasteRecordStates,
   wasteRecords,
   accreditation,
   overseasSites
 }) => {
   const hasCommittedSubmission = head !== null
-  const hasRowStateData = rowStates.length > 0
+  const hasWasteRecordStateData = wasteRecordStates.length > 0
   const committedRows = wasteRecords.filter((record) =>
     record.versions.some((version) => version.summaryLog.id === head)
   )
 
-  const rowStatesTotal = rowStateCreditTotal(rowStates)
+  const wasteRecordStatesTotal = wasteRecordStateCreditTotal(wasteRecordStates)
   const eventTotal = eventCreditTotal ?? 0
-  const drift = toNumber(add(rowStatesTotal, -eventTotal))
+  const drift = toNumber(add(wasteRecordStatesTotal, -eventTotal))
 
-  const rowStateKeys = new Set(rowStates.map(rowKey))
+  const wasteRecordStateKeys = new Set(wasteRecordStates.map(rowKey))
   const committedByKey = new Map(
     committedRows.map((record) => [rowKey(record), record])
   )
   const missingRows = committedRows
-    .filter((record) => !rowStateKeys.has(rowKey(record)))
+    .filter((record) => !wasteRecordStateKeys.has(rowKey(record)))
     .map(toRowRef)
-  const extraRows = rowStates
-    .filter((rowState) => !committedByKey.has(rowKey(rowState)))
+  const extraRows = wasteRecordStates
+    .filter((wasteRecordState) => !committedByKey.has(rowKey(wasteRecordState)))
     .map(toRowRef)
 
-  const classificationDivergences = rowStates.flatMap((rowState) => {
-    const record = committedByKey.get(rowKey(rowState))
-    if (record === undefined) {
-      return []
+  const classificationDivergences = wasteRecordStates.flatMap(
+    (wasteRecordState) => {
+      const record = committedByKey.get(rowKey(wasteRecordState))
+      if (record === undefined) {
+        return []
+      }
+      const wasteRecordStateIncluded =
+        wasteRecordState.classification.outcome === ROW_OUTCOME.INCLUDED
+      const legacyIncluded = isIncludedInWasteBalance(
+        record,
+        accreditation,
+        overseasSites
+      )
+      if (wasteRecordStateIncluded === legacyIncluded) {
+        return []
+      }
+      return [
+        {
+          ...toRowRef(wasteRecordState),
+          wasteRecordStateIncluded,
+          legacyIncluded,
+          reasons: wasteRecordState.classification.reasons
+        }
+      ]
     }
-    const rowStateIncluded =
-      rowState.classification.outcome === ROW_OUTCOME.INCLUDED
-    const legacyIncluded = isIncludedInWasteBalance(
-      record,
-      accreditation,
-      overseasSites
-    )
-    if (rowStateIncluded === legacyIncluded) {
-      return []
-    }
-    return [{ ...toRowRef(rowState), rowStateIncluded, legacyIncluded }]
-  })
+  )
 
   return {
     registrationId,
     accreditationId,
     head,
     hasCommittedSubmission,
-    hasRowStateData,
-    rowStateCount: rowStates.length,
+    hasWasteRecordStateData,
+    wasteRecordStateCount: wasteRecordStates.length,
     committedRowCount: committedRows.length,
-    creditTotal: { rowStates: rowStatesTotal, event: eventTotal, drift },
+    creditTotal: {
+      wasteRecordStates: wasteRecordStatesTotal,
+      event: eventTotal,
+      drift
+    },
     missingRows,
     extraRows,
     classificationDivergences,
     isClean:
-      (!hasCommittedSubmission || hasRowStateData) &&
+      (!hasCommittedSubmission || hasWasteRecordStateData) &&
       missingRows.length === 0 &&
       extraRows.length === 0 &&
       drift === 0

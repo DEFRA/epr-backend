@@ -4,15 +4,16 @@ import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { reconcileRegistration } from './reconcile-registration.js'
 
 /**
- * Read the committed row-state and legacy waste-record views for one
+ * Read the waste record state and legacy waste-record views for one
  * registration partition and reconcile them. Read-only: resolves the committed
- * head from the stream, the row-states at that head, and the legacy
- * waste-records for the registration, then compares. The stream and row-state
- * reads reuse the production `wasteRecordStatesForRegistration` read model.
+ * head from the stream, the waste record states at that head, and the legacy
+ * waste-records for the registration, then compares. The stream and waste
+ * record state reads reuse the production `wasteRecordStatesForRegistration`
+ * read model.
  *
  * @param {Object} input
  * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} input.streamRepository
- * @param {import('#waste-records/repository/port.js').RowStateRepository} input.rowStateRepository
+ * @param {import('#waste-records/repository/port.js').RowStateRepository} input.wasteRecordStateRepository
  * @param {Pick<import('#repositories/waste-records/port.js').WasteRecordsRepository, 'findByRegistration'>} input.wasteRecordsRepository
  * @param {string} input.organisationId
  * @param {string} input.registrationId
@@ -22,7 +23,7 @@ import { reconcileRegistration } from './reconcile-registration.js'
  */
 export const reconcilePartition = async ({
   streamRepository,
-  rowStateRepository,
+  wasteRecordStateRepository,
   wasteRecordsRepository,
   organisationId,
   registrationId,
@@ -42,9 +43,9 @@ export const reconcilePartition = async ({
   const head = payload?.summaryLogId ?? null
   const eventCreditTotal = payload?.creditTotal ?? null
 
-  const rowStates = await wasteRecordStatesForRegistration({
+  const wasteRecordStates = await wasteRecordStatesForRegistration({
     streamRepository,
-    rowStateRepository,
+    rowStateRepository: wasteRecordStateRepository,
     organisationId,
     registrationId,
     accreditationId
@@ -59,7 +60,7 @@ export const reconcilePartition = async ({
     accreditationId,
     head,
     eventCreditTotal,
-    rowStates,
+    wasteRecordStates,
     wasteRecords,
     accreditation,
     overseasSites

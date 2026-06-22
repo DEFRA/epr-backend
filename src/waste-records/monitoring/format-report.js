@@ -8,78 +8,96 @@ const partitionLabel = ({ registrationId, accreditationId }) =>
     ? `registration ${registrationId} (registered-only)`
     : `registration ${registrationId} / accreditation ${accreditationId}`
 
+const rowRefLabel = ({ wasteRecordType, rowId }) =>
+  `${wasteRecordType}:${rowId}`
+
+const inclusionLabel = (included) => (included ? 'included' : 'excluded')
+
+const reasonLabel = ({ code, field }) => (field ? `${code} (${field})` : code)
+
+const divergenceLabel = (divergence) =>
+  [
+    rowRefLabel(divergence),
+    `(waste record state ${inclusionLabel(divergence.wasteRecordStateIncluded)},`,
+    `legacy ${inclusionLabel(divergence.legacyIncluded)};`,
+    `reasons: ${divergence.reasons.length > 0 ? divergence.reasons.map(reasonLabel).join(', ') : 'none'})`
+  ].join(' ')
+
 /**
- * The hard discrepancies that block the flag flip, rendered for one partition.
- * Classification divergences are deliberately excluded — they are a
- * context-sensitive signal reported in the census, not a blocker.
+ * The discrepancies for one partition, each rendered as a fragment. Coverage
+ * gaps, missing/extra rows and creditTotal drift are listed alongside
+ * classification divergences with their reasons — under current-factors
+ * backfill, divergences are expected findings to review (an overseas site
+ * approved since submission, for instance), not failures.
  *
  * @param {RegistrationReconciliation} r
  * @returns {string[]}
  */
-const partitionIssues = (r) => {
-  const issues = []
-  if (r.hasCommittedSubmission && !r.hasRowStateData) {
-    issues.push('no row-state data')
+const partitionFindings = (r) => {
+  const findings = []
+  if (r.hasCommittedSubmission && !r.hasWasteRecordStateData) {
+    findings.push('no waste record state data')
   }
   if (r.missingRows.length > 0) {
-    issues.push(`missing rows: ${r.missingRows.length}`)
+    findings.push(`missing rows: ${r.missingRows.map(rowRefLabel).join(', ')}`)
   }
   if (r.extraRows.length > 0) {
-    issues.push(`extra rows: ${r.extraRows.length}`)
+    findings.push(`extra rows: ${r.extraRows.map(rowRefLabel).join(', ')}`)
   }
   if (r.creditTotal.drift !== 0) {
-    issues.push(`creditTotal drift: ${r.creditTotal.drift}`)
+    findings.push(
+      `creditTotal drift: ${r.creditTotal.drift} (waste record states ${r.creditTotal.wasteRecordStates} vs event ${r.creditTotal.event})`
+    )
   }
-  return issues
+  if (r.classificationDivergences.length > 0) {
+    findings.push(
+      `classification divergences: ${r.classificationDivergences.map(divergenceLabel).join('; ')}`
+    )
+  }
+  return findings
 }
 
 /**
- * Render the estate reconciliation as a human-readable report: the verdict, the
- * coverage census, and one line per partition carrying a hard discrepancy. A
- * CLEAN verdict is the green light for the backfill-complete check and the flag
- * flip.
+ * Whether a partition carries anything worth logging for review — a hard
+ * discrepancy (coverage gap, missing/extra rows, creditTotal drift) or a
+ * classification divergence.
  *
- * @param {{ reconciliations: RegistrationReconciliation[], census: Census }} result
+ * @param {RegistrationReconciliation} r
+ * @returns {boolean}
+ */
+export const hasReviewableFindings = (r) =>
+  !r.isClean || r.classificationDivergences.length > 0
+
+/**
+ * Render a single partition's discrepancies as one reviewable line: the
+ * partition label, its committed head, and each finding. Mirrors the
+ * waste-balance ledger migration diagnostic — one line per affected partition,
+ * read and confirmed against expectations before the write-flag flip.
+ *
+ * @param {RegistrationReconciliation} r
  * @returns {string}
  */
-export const formatReport = ({ reconciliations, census }) => {
-  const lines = []
+export const formatPartitionDiagnostic = (r) =>
+  `Waste record state discrepancy: ${partitionLabel(r)}, head ${r.head} — ${partitionFindings(r).join('; ')}`
 
-  lines.push(
-    census.isEstateClean
-      ? 'VERDICT: CLEAN — committed row-states reconcile with the waste-records committed state.'
-      : 'VERDICT: DISCREPANCIES FOUND — committed row-states do not yet reconcile.'
-  )
-
-  lines.push('')
-  lines.push('Coverage census:')
-  lines.push(`  Partitions: ${census.totalPartitions}`)
-  lines.push(
-    `  With committed submission: ${census.partitionsWithCommittedSubmission}`
-  )
-  lines.push(
-    `  Partitions covered: ${census.partitionsCovered}/${census.partitionsWithCommittedSubmission}`
-  )
-  lines.push(
-    `  Missing row-state data: ${census.partitionsMissingRowStateData}`
-  )
-  lines.push(`  Missing rows (total): ${census.totalMissingRows}`)
-  lines.push(`  Extra rows (total): ${census.totalExtraRows}`)
-  lines.push(
-    `  Partitions with creditTotal drift: ${census.partitionsWithCreditTotalDrift}`
-  )
-  lines.push(
-    `  Classification divergences (context-sensitive): ${census.totalClassificationDivergences}`
-  )
-
-  const discrepant = reconciliations.filter((r) => !r.isClean)
-  if (discrepant.length > 0) {
-    lines.push('')
-    lines.push('Partitions with discrepancies:')
-    for (const r of discrepant) {
-      lines.push(`  - ${partitionLabel(r)}: ${partitionIssues(r).join(', ')}`)
-    }
-  }
-
-  return lines.join('\n')
-}
+/**
+ * Render the estate-level census as a single summary line. No pass/fail
+ * verdict: discrepancies are reviewed against expectations (overseas-site and
+ * other factor drift) rather than gating the flip.
+ *
+ * @param {Census} census
+ * @returns {string}
+ */
+export const formatCensusSummary = (census) =>
+  [
+    'Waste record state reconciliation census:',
+    `partitions: ${census.totalPartitions},`,
+    `with committed submission: ${census.partitionsWithCommittedSubmission},`,
+    `covered: ${census.partitionsCovered},`,
+    `missing waste record state data: ${census.partitionsMissingWasteRecordStateData},`,
+    `with discrepancies: ${census.partitionsWithDiscrepancies},`,
+    `missing rows: ${census.totalMissingRows},`,
+    `extra rows: ${census.totalExtraRows},`,
+    `creditTotal drift: ${census.partitionsWithCreditTotalDrift},`,
+    `classification divergences: ${census.totalClassificationDivergences}`
+  ].join(' ')

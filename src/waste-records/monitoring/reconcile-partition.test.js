@@ -39,7 +39,7 @@ describe('reconcilePartition', () => {
   it('reports a partition with no committed submission as uncovered and clean', async () => {
     const result = await reconcile({
       streamRepository: createInMemoryStreamRepository()(),
-      rowStateRepository: createInMemoryRowStateRepository()(),
+      wasteRecordStateRepository: createInMemoryRowStateRepository()(),
       wasteRecordsRepository: createInMemoryWasteRecordsRepository()()
     })
 
@@ -52,9 +52,9 @@ describe('reconcilePartition', () => {
     })
   })
 
-  it('reads both collections and flags a committed row missing from the row-states', async () => {
-    const rowStateRepository = createInMemoryRowStateRepository()()
-    await rowStateRepository.upsertRowStates(
+  it('reads both collections and flags a committed row missing from the waste record states', async () => {
+    const wasteRecordStateRepository = createInMemoryRowStateRepository()()
+    await wasteRecordStateRepository.upsertRowStates(
       DEFAULT_PARTITION,
       [
         buildRowStateEntry({
@@ -80,17 +80,17 @@ describe('reconcilePartition', () => {
 
     const result = await reconcile({
       streamRepository,
-      rowStateRepository,
+      wasteRecordStateRepository,
       wasteRecordsRepository
     })
 
     expect(result).toMatchObject({
       head: 'log-1',
       hasCommittedSubmission: true,
-      hasRowStateData: true,
-      rowStateCount: 1,
+      hasWasteRecordStateData: true,
+      wasteRecordStateCount: 1,
       committedRowCount: 2,
-      creditTotal: { rowStates: 10, event: 10, drift: 0 },
+      creditTotal: { wasteRecordStates: 10, event: 10, drift: 0 },
       missingRows: [
         { rowId: 'row-2', wasteRecordType: WASTE_RECORD_TYPE.RECEIVED }
       ],
