@@ -7,7 +7,11 @@ export function createInMemoryWasteBalancesRepositoryPlugin() {
     name: 'wasteBalancesRepository',
     register: (server) => {
       const streamRepository = createInMemoryStreamRepository()()
-      const factory = createWasteBalancesRepository({ streamRepository })
+      const factory = createWasteBalancesRepository({
+        streamRepository,
+        rowStateRepository: server.app.wasteRecordStatesRepository,
+        featureFlags: server.featureFlags
+      })
       const repository = factory()
       registerRepository(server, 'wasteBalancesRepository', () => repository)
       registerRepository(server, 'streamRepository', () => streamRepository)

@@ -363,6 +363,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_FIX_DUPLICATE_ACCREDITATION_LINKS'
+    },
+    wasteRecordStates: {
+      doc: 'Feature Flag: Persist waste record states on summary-log submission (ADR-0037)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_WASTE_RECORD_STATES'
     }
   },
   formSubmissionOverrides: {

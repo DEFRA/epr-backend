@@ -21,12 +21,14 @@ const COLLECTIONS = {
   SUMMARY_LOGS: 'summary-logs',
   OVERSEAS_SITES: 'overseas-sites',
   SYSTEM_LOGS: 'system-logs',
-  WASTE_BALANCE_EVENTS: 'waste-balance-events'
+  WASTE_BALANCE_EVENTS: 'waste-balance-events',
+  WASTE_BALANCE_ROW_STATES: 'waste-balance-row-states'
 }
 
 const EMPTY_COUNTS = Object.freeze({
   'packaging-recycling-notes': 0,
   'waste-balance-events': 0,
+  'waste-balance-row-states': 0,
   reports: 0,
   'waste-records': 0,
   'summary-logs': 0,
@@ -86,6 +88,11 @@ const buildCascadeSteps = (orgId, mongoIdHex, { overseasSiteIds }) => [
   {
     label: 'waste-balance-events',
     collection: COLLECTIONS.WASTE_BALANCE_EVENTS,
+    filter: { organisationId: mongoIdHex }
+  },
+  {
+    label: 'waste-balance-row-states',
+    collection: COLLECTIONS.WASTE_BALANCE_ROW_STATES,
     filter: { organisationId: mongoIdHex }
   },
   {

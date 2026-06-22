@@ -11,5 +11,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isFixDuplicateAccreditationLinksEnabled() {
     return flags.fixDuplicateAccreditationLinks ?? false
+  },
+  isWasteRecordStatesEnabled() {
+    return flags.wasteRecordStates ?? false
   }
 })

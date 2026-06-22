@@ -50,4 +50,19 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(false)
   })
+
+  it('returns true when wasteRecordStates flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ wasteRecordStates: true })
+    expect(flags.isWasteRecordStatesEnabled()).toBe(true)
+  })
+
+  it('returns false when wasteRecordStates flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ wasteRecordStates: false })
+    expect(flags.isWasteRecordStatesEnabled()).toBe(false)
+  })
+
+  it('returns false when wasteRecordStates flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isWasteRecordStatesEnabled()).toBe(false)
+  })
 })

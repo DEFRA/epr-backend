@@ -10,5 +10,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isFixDuplicateAccreditationLinksEnabled() {
     return config.get('featureFlags.fixDuplicateAccreditationLinks')
+  },
+  isWasteRecordStatesEnabled() {
+    return config.get('featureFlags.wasteRecordStates')
   }
 })

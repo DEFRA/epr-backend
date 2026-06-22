@@ -6,6 +6,10 @@ import {
   createMongoStreamRepository,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from './stream-mongodb.js'
+import {
+  createMongoRowStateRepository,
+  WASTE_BALANCE_ROW_STATES_COLLECTION_NAME
+} from '#waste-records/repository/mongodb.js'
 import { buildStreamEvent } from './stream-test-data.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 
@@ -21,6 +25,7 @@ const DATABASE_NAME = 'epr-backend'
  * @typedef {object} WasteBalancesRepoFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('./stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @property {import('#waste-records/repository/port.js').RowStateRepository} rowStateRepository
  * @property {import('./port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
  * @property {(event: object) => Promise<void>} seedBalance
  */
@@ -39,8 +44,20 @@ const it = /** @type {import('vitest').TestAPI<WasteBalancesRepoFixtures>} */ (
       await use(factory())
     },
 
-    wasteBalancesRepository: async ({ streamRepository }, use) => {
-      const factory = createWasteBalancesRepository({ streamRepository })
+    rowStateRepository: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const factory = await createMongoRowStateRepository(database)
+      await use(factory())
+    },
+
+    wasteBalancesRepository: async (
+      { streamRepository, rowStateRepository },
+      use
+    ) => {
+      const factory = createWasteBalancesRepository({
+        streamRepository,
+        rowStateRepository
+      })
       await use(factory)
     },
 
@@ -67,6 +84,9 @@ describe('MongoDB waste balances repository', () => {
       const database = mongoClient.db(DATABASE_NAME)
       await database
         .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+        .deleteMany({})
+      await database
+        .collection(WASTE_BALANCE_ROW_STATES_COLLECTION_NAME)
         .deleteMany({})
     })
 
