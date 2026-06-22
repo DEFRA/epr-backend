@@ -48,6 +48,7 @@ import { runOrganisationValidationSweep } from '#server/run-organisation-validat
 import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
 import { runBackfillSummaryLogRowStates } from '#server/run-backfill-summary-log-row-states.js'
 import { runRegOnlySubmittedEventsBackfill } from '#server/run-reg-only-submitted-events-backfill.js'
+import { runRowStateDiscrepancyReport } from '#server/run-row-state-discrepancy-report.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -242,6 +243,7 @@ async function createServer(options = {}) {
     runDuplicateAccreditationLinkMigration(server)
     runBackfillSummaryLogRowStates(server)
     runRegOnlySubmittedEventsBackfill(server)
+    runRowStateDiscrepancyReport(server)
   })
 
   return server
