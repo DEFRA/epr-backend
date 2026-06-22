@@ -477,8 +477,7 @@ describe('#getJwtStrategyConfig', () => {
 
     describe('Happy path', () => {
       test('uses issuer from defraIdOidcConfig for validation', async () => {
-        const testOrgId =
-          userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
+        const testOrgId = 'org-id-001'
 
         mockGetOrgMatchingUsersToken.mockResolvedValue({ id: testOrgId })
 
@@ -708,10 +707,7 @@ describe('#getJwtStrategyConfig', () => {
         }
         const request = stubRequest({
           path: '/any',
-          params: {
-            organisationId:
-              userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
-          }
+          params: { organisationId: 'some-org-id' }
         })
 
         await expect(config.validate(artifacts, request)).rejects.toThrow(

@@ -5,8 +5,7 @@
  */
 export const ROLES = {
   standardUser: 'standard_user',
-  inquirer: 'inquirer',
-  linker: 'linker'
+  inquirer: 'inquirer'
 }
 
 /**

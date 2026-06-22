@@ -27,7 +27,7 @@ const mockCdpAuditing = vi.fn()
 const mockOrganisationUnlinkedMetric = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
-  audit: (...args) => mockCdpAuditing(...args)
+  audit: (/** @type {any} */ ...args) => mockCdpAuditing(...args)
 }))
 
 vi.mock(
@@ -36,8 +36,8 @@ vi.mock(
     const actual = await importOriginal()
     return {
       ...actual,
-      organisationUnlinkingMetrics: {
-        ...actual.organisationUnlinkingMetrics,
+      organisationLinkingMetrics: {
+        ...actual.organisationLinkingMetrics,
         organisationUnlinked: () => mockOrganisationUnlinkedMetric()
       }
     }
@@ -53,7 +53,9 @@ const ADMIN_USER = {
 
 describe('DELETE /v1/organisations/{organisationId}/link', () => {
   setupAuthContext()
+  /** @type {import('#test/create-test-server.js').TestServer} */
   let server
+  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
   let organisationsRepository
 
   beforeAll(async () => {
