@@ -8,7 +8,7 @@ import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstat
  */
 
 /**
- * What a single registration's backfill committed, for migration logging.
+ * What a single registration's backfill wrote, for migration logging.
  *
  * @typedef {Object} RegistrationBackfillSummary
  * @property {number} submissionCount - Submitted summary logs replayed
@@ -16,11 +16,11 @@ import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstat
  */
 
 /**
- * Backfill one registration's committed row-states from its sparse version
+ * Backfill one registration's waste record states from its sparse version
  * history. Reconstructs each historical submission's membership in stream order
  * and upserts it through the guarded `upsertRowStates`, so a row unchanged
  * across submissions dedups to one document whose membership grows. Re-runnable:
- * the upsert is idempotent, so a second pass commits nothing new.
+ * the upsert is idempotent, so a second pass writes nothing new.
  *
  * Submissions are upserted sequentially, not concurrently: membership growth
  * depends on an earlier submission's document already existing when a later one

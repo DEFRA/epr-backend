@@ -8,7 +8,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /**
  * A submission's reconstructed row-state membership: the entries to upsert
- * against the committed row-state collection for one historical submission.
+ * against the waste record state collection for one historical submission.
  *
  * @typedef {Object} SubmissionRowStates
  * @property {string} summaryLogId
@@ -28,7 +28,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
  * Reconstruct a waste record's data as it stood at a submission point by
  * shallow-merging version data objects up to the latest version whose
  * summaryLog is in the seen set. Returns null when the row had no version at or
- * before that point — it did not yet exist in the committed estate.
+ * before that point — it had not yet been submitted.
  *
  * @param {WasteRecord['versions']} versions
  * @param {Set<string>} seenSummaryLogIds
@@ -54,12 +54,12 @@ const reconstructDataAtSubmission = (versions, seenSummaryLogIds) => {
 }
 
 /**
- * Reconstruct one committed row-state membership per historical submission from
+ * Reconstruct one waste record state membership per historical submission from
  * the sparse per-row version history, in submission (stream) order. For each
  * submitted summary log, every waste record that exists as of that submission
  * contributes its as-of-submission data, classified exactly as the live write
  * path classifies it. The returned descriptors are upserted — each against its
- * summaryLogId — to rebuild the committed row-state collection from the
+ * summaryLogId — to rebuild the waste record state collection from the
  * authoritative version history alone.
  *
  * @param {Object} params
