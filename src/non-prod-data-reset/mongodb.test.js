@@ -25,6 +25,8 @@ import {
   toWasteRecordVersions
 } from '#repositories/waste-records/contract/test-data.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { buildRowStateEntry } from '#waste-records/repository/test-data.js'
+import { createMongoRowStateRepository } from '#waste-records/repository/mongodb.js'
 
 import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'
@@ -60,7 +62,8 @@ const COLLECTIONS = [
   'waste-records',
   'summary-logs',
   'overseas-sites',
-  'system-logs'
+  'system-logs',
+  'waste-balance-row-states'
 ]
 
 const mockS3Config = { s3Client: {}, preSignedUrlExpiry: 60 }
@@ -114,6 +117,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       )
       const overseasSitesFactory = await createOverseasSitesRepository(database)
       const systemLogsFactory = await createSystemLogsRepository(database)
+      const rowStatesFactory = await createMongoRowStateRepository(database)
 
       await use({
         organisations: organisationsFactory(),
@@ -122,7 +126,8 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         wasteRecords: wasteRecordsFactory(),
         summaryLogs: summaryLogsFactory(mockLogger),
         overseasSites: overseasSitesFactory(),
-        systemLogs: systemLogsFactory(mockLogger)
+        systemLogs: systemLogsFactory(mockLogger),
+        wasteRecordStates: rowStatesFactory()
       })
     },
 
@@ -229,6 +234,12 @@ const seedDownstreamForOrganisation = async (
       number: 1
     })
   )
+
+  await repositories.wasteRecordStates.upsertRowStates(
+    { organisationId, registrationId, accreditationId },
+    [buildRowStateEntry()],
+    `summary-log-${randomUUID()}`
+  )
 }
 
 // The 'organisation' collection is written by the journey-test apply path and
@@ -262,6 +273,7 @@ const seedStagingCollections = async (database, orgId) => {
 const EMPTY_COUNTS = {
   'packaging-recycling-notes': 0,
   'waste-balance-events': 0,
+  'waste-balance-row-states': 0,
   reports: 0,
   'waste-records': 0,
   'summary-logs': 0,
@@ -300,6 +312,7 @@ describe('non-prod data reset (mongo)', () => {
       expect(counts).toEqual({
         'packaging-recycling-notes': 2,
         'waste-balance-events': 1,
+        'waste-balance-row-states': 1,
         reports: 1,
         'waste-records': 1,
         'summary-logs': 1,
@@ -349,6 +362,11 @@ describe('non-prod data reset (mongo)', () => {
       expect(
         await database
           .collection('waste-records')
+          .countDocuments({ organisationId: other.organisationId })
+      ).toBe(1)
+      expect(
+        await database
+          .collection('waste-balance-row-states')
           .countDocuments({ organisationId: other.organisationId })
       ).toBe(1)
       expect(
