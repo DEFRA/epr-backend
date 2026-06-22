@@ -223,7 +223,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(JSON.parse(response.payload)).toEqual({ status: 'submitted' })
 
         const updatedReport = await reportsRepository.findReportById(reportId)
-        expect(updatedReport.status.submitted.declaredBy).toBe('Jane Smith')
+        expect(updatedReport.status.submitted?.declaredBy).toBe('Jane Smith')
       })
     })
 
