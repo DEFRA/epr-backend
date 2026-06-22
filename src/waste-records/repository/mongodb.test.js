@@ -139,7 +139,7 @@ describe('waste record states repository - mongodb implementation', () => {
       )
     })
 
-    it('stays idempotent when the same submission is replayed concurrently', async (/** @type {*} */ {
+    it('keeps a concurrently-redelivered submission to a single committed-state row', async (/** @type {*} */ {
       rowStateRepository
     }) => {
       const repository = rowStateRepository()
@@ -159,6 +159,10 @@ describe('waste record states repository - mongodb implementation', () => {
       )
       expect(history).toHaveLength(1)
       expect(history[0].summaryLogIds).toEqual(['log-1'])
+
+      const committed = await repository.findBySummaryLogId('log-1')
+      expect(committed).toHaveLength(1)
+      expect(committed[0].rowId).toBe('row-1')
     })
 
     it('rethrows a failed insert that is not a committed-state collision', async () => {
