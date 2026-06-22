@@ -46,6 +46,48 @@ const wasteRecordStateCreditTotal = (wasteRecordStates) =>
   )
 
 /**
+ * The rows where the waste record state's inclusion decision disagrees with the
+ * legacy waste-record's, each carrying the waste record state's classification
+ * reasons so the divergence can be reviewed against expectations.
+ *
+ * @param {object} input
+ * @param {import('#waste-records/application/read-waste-record-states.js').WasteRecordState[]} input.wasteRecordStates
+ * @param {Map<string, import('#domain/waste-records/model.js').WasteRecord>} input.committedByKey
+ * @param {import('#domain/organisations/accreditation.js').Accreditation | null} input.accreditation
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} input.overseasSites
+ */
+const classificationDivergencesBetween = ({
+  wasteRecordStates,
+  committedByKey,
+  accreditation,
+  overseasSites
+}) =>
+  wasteRecordStates.flatMap((wasteRecordState) => {
+    const record = committedByKey.get(rowKey(wasteRecordState))
+    if (record === undefined) {
+      return []
+    }
+    const wasteRecordStateIncluded =
+      wasteRecordState.classification.outcome === ROW_OUTCOME.INCLUDED
+    const legacyIncluded = isIncludedInWasteBalance(
+      record,
+      accreditation,
+      overseasSites
+    )
+    if (wasteRecordStateIncluded === legacyIncluded) {
+      return []
+    }
+    return [
+      {
+        ...toRowRef(wasteRecordState),
+        wasteRecordStateIncluded,
+        legacyIncluded,
+        reasons: wasteRecordState.classification.reasons
+      }
+    ]
+  })
+
+/**
  * Reconcile the waste record state collection (ADR-0037) against the legacy
  * waste-records committed baseline for a single registration partition.
  * Read-only: every input is already loaded; this function only compares.
@@ -91,32 +133,12 @@ export const reconcileRegistration = ({
     .filter((wasteRecordState) => !committedByKey.has(rowKey(wasteRecordState)))
     .map(toRowRef)
 
-  const classificationDivergences = wasteRecordStates.flatMap(
-    (wasteRecordState) => {
-      const record = committedByKey.get(rowKey(wasteRecordState))
-      if (record === undefined) {
-        return []
-      }
-      const wasteRecordStateIncluded =
-        wasteRecordState.classification.outcome === ROW_OUTCOME.INCLUDED
-      const legacyIncluded = isIncludedInWasteBalance(
-        record,
-        accreditation,
-        overseasSites
-      )
-      if (wasteRecordStateIncluded === legacyIncluded) {
-        return []
-      }
-      return [
-        {
-          ...toRowRef(wasteRecordState),
-          wasteRecordStateIncluded,
-          legacyIncluded,
-          reasons: wasteRecordState.classification.reasons
-        }
-      ]
-    }
-  )
+  const classificationDivergences = classificationDivergencesBetween({
+    wasteRecordStates,
+    committedByKey,
+    accreditation,
+    overseasSites
+  })
 
   return {
     registrationId,
