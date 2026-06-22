@@ -85,7 +85,7 @@ const canonicalise = (value) => {
   }
   if (value !== null && typeof value === 'object') {
     return Object.keys(value)
-      .sort()
+      .sort((a, b) => (a > b ? 1 : -1))
       .reduce((ordered, key) => {
         ordered[key] = canonicalise(
           /** @type {Record<string, unknown>} */ (value)[key]
