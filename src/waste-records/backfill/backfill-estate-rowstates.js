@@ -5,6 +5,8 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
 
 /**
  * @import { RowStateRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogWithId } from '#repositories/summary-logs/port.js'
+ * @import { OrderedSummaryLog } from './reconstruct-submission-rowstates.js'
  */
 
 /**
@@ -32,14 +34,17 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
 /**
  * The membership key and the waste-record version tags are the summary log's
  * `file.id`, not the summary-log document id — the live write path keys both on
- * `file.id`, so the backfill must too or it reconstructs nothing.
+ * `file.id`, so the backfill must too or it reconstructs nothing. A submitted
+ * summary log always carries `submittedAt` (stamped at submission), which the
+ * status filter upstream guarantees is the only kind reaching this mapping.
  *
- * @param {{ summaryLog: { status: string, submittedAt: string, file: { id: string } } }} log
+ * @param {SummaryLogWithId} log
+ * @returns {OrderedSummaryLog}
  */
 const toOrderedSummaryLog = ({ summaryLog }) => ({
   id: summaryLog.file.id,
   status: summaryLog.status,
-  submittedAt: summaryLog.submittedAt
+  submittedAt: /** @type {string} */ (summaryLog.submittedAt)
 })
 
 /**

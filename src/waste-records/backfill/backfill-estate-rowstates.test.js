@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
+import { logger } from '#common/helpers/logging/logger.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -31,6 +32,7 @@ const reprocessorRegistration = (overrides) =>
 const insertLog = (
   summaryLogsRepository,
   documentId,
+  /** @type {{ organisationId: string, registrationId: string, submittedAt: string, status?: import('#domain/summary-logs/status.js').SummaryLogStatus }} */
   {
     organisationId,
     registrationId,
@@ -61,7 +63,7 @@ const inMemoryDeps = ({ organisations, wasteRecords }) => ({
   organisationsRepository:
     createInMemoryOrganisationsRepository(organisations)(),
   wasteRecordsRepository: createInMemoryWasteRecordsRepository(wasteRecords)(),
-  summaryLogsRepository: createInMemorySummaryLogsRepository()(undefined),
+  summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
   overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
   rowStateRepository: createInMemoryRowStateRepository()()
 })

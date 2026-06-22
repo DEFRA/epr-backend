@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
@@ -12,7 +13,8 @@ const partition = {
   accreditationId: 'acc-1'
 }
 const accreditation = { id: 'acc-1' }
-const overseasSites = {}
+/** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} */
+const overseasSites = ORS_VALIDATION_DISABLED
 
 const submittedLog = (id, submittedAt) => ({
   id,

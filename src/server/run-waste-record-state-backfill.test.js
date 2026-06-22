@@ -64,7 +64,7 @@ const receivedRecord = (
 })
 
 const buildServerApp = async ({ organisations, wasteRecords, logs }) => {
-  const summaryLogsRepository = createInMemorySummaryLogsRepository()(undefined)
+  const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
   for (const { id, summaryLog } of logs) {
     await summaryLogsRepository.insert(id, summaryLog)
   }
