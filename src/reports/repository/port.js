@@ -19,12 +19,16 @@
  */
 
 /**
+ * @typedef {ReportOperation & { declaredBy?: string }} ReportSubmittedSlot
+ */
+
+/**
  * @typedef {Object} ReportStatusObject
  * @property {ReportStatus} currentStatus
  * @property {string} currentStatusAt - ISO timestamp
  * @property {ReportOperation} created
  * @property {ReportOperation} [ready]
- * @property {ReportOperation} [submitted]
+ * @property {ReportSubmittedSlot} [submitted]
  * @property {ReportOperation} [unsubmitted]
  * @property {ReportStatusHistoryItem[]} history
  */
@@ -129,7 +133,6 @@
  * @property {string} [supportingInformation]
  * @property {SourceData} [sourceData]
  * @property {ReportStale} [stale]
- * @property {string} [submissionDeclaredBy]
  */
 
 /**
@@ -220,7 +223,7 @@
  * @property {ReportStatus} status
  * @property {string} slot - the status object key to record this transition (e.g. 'ready', 'submitted', 'unsubmitted')
  * @property {UserSummary} [changedBy]
- * @property {string} [submissionDeclaredBy] - full name typed by the user on the declaration form; required for SUBMITTED transitions
+ * @property {string} [submissionDeclaredBy] - full name typed by the user on the declaration form; stored in status.submitted.declaredBy
  */
 
 /**

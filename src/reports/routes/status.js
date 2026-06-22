@@ -18,6 +18,10 @@ import {
 export const reportsStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/status'
 
+const MIN_DECLARED_BY_LENGTH = 2
+const MAX_DECLARED_BY_LENGTH = 255
+const INVALID_DECLARED_BY_CHARS = /[@#$%&<>]/
+
 const payloadSchema = Joi.object({
   status: Joi.string()
     .valid(
@@ -27,11 +31,15 @@ const payloadSchema = Joi.object({
     )
     .required(),
   version: Joi.number().integer().min(1).required(),
-  submissionDeclaredBy: Joi.string().when('status', {
-    is: REPORT_STATUS.SUBMITTED,
-    then: Joi.required(),
-    otherwise: Joi.forbidden()
-  })
+  submissionDeclaredBy: Joi.string()
+    .min(MIN_DECLARED_BY_LENGTH)
+    .max(MAX_DECLARED_BY_LENGTH)
+    .pattern(INVALID_DECLARED_BY_CHARS, { invert: true })
+    .when('status', {
+      is: REPORT_STATUS.SUBMITTED,
+      then: Joi.optional(),
+      otherwise: Joi.forbidden()
+    })
 })
 
 export const reportsStatus = {

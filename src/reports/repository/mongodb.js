@@ -191,7 +191,10 @@ const performUpdateReportStatus = async (db, params) => {
     validateUpdateReportStatus(statusParams)
 
   const now = new Date().toISOString()
-  const slotValue = { at: now, by: changedBy }
+  const slotValue =
+    submissionDeclaredBy !== undefined
+      ? { at: now, by: changedBy, declaredBy: submissionDeclaredBy }
+      : { at: now, by: changedBy }
 
   const doc = await reportsCollection(db).findOneAndUpdate(
     { id: reportId, version },
@@ -199,8 +202,7 @@ const performUpdateReportStatus = async (db, params) => {
       $set: {
         'status.currentStatus': status,
         'status.currentStatusAt': now,
-        [`status.${slot}`]: slotValue,
-        ...(submissionDeclaredBy !== undefined && { submissionDeclaredBy })
+        [`status.${slot}`]: slotValue
       },
       $push: /** @type {any} */ ({
         'status.history': { status, at: now, by: changedBy }

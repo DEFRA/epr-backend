@@ -82,12 +82,12 @@ export const testUpdateReportStatusBehaviour = (it) => {
       expect(result).toMatchObject({
         id: reportId,
         version: 3,
-        submissionDeclaredBy: 'Jane Smith',
         status: {
           currentStatus: REPORT_STATUS.SUBMITTED,
           [REPORT_STATUS_SLOT.SUBMITTED]: {
             at: expect.any(String),
-            by: changedBy
+            by: changedBy,
+            declaredBy: 'Jane Smith'
           },
           history: [
             {

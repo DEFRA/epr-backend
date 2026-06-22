@@ -223,7 +223,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(JSON.parse(response.payload)).toEqual({ status: 'submitted' })
 
         const updatedReport = await reportsRepository.findReportById(reportId)
-        expect(updatedReport.submissionDeclaredBy).toBe('Jane Smith')
+        expect(updatedReport.status.submitted.declaredBy).toBe('Jane Smith')
       })
     })
 
@@ -567,7 +567,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
-      it('returns 422 when submissionDeclaredBy is missing for submitted transition', async () => {
+      it('returns 422 when submissionDeclaredBy is a single character', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport({
             wasteProcessingType: 'reprocessor',
@@ -578,11 +578,56 @@ describe(`POST ${reportsStatusPath}`, () => {
           server,
           organisationId,
           registrationId,
-          { status: 'submitted', version: 1 }
+          { status: 'submitted', version: 1, submissionDeclaredBy: 'A' }
         )
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
+
+      it('returns 422 when submissionDeclaredBy exceeds 255 characters', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          {
+            status: 'submitted',
+            version: 1,
+            submissionDeclaredBy: 'A'.repeat(256)
+          }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it.each(['@', '#', '$', '%', '&', '<', '>'])(
+        'returns 422 when submissionDeclaredBy contains invalid character %s',
+        async (char) => {
+          const { server, organisationId, registrationId } =
+            await createServerWithReport({
+              wasteProcessingType: 'reprocessor',
+              accreditationId: undefined
+            })
+
+          const response = await postStatus(
+            server,
+            organisationId,
+            registrationId,
+            {
+              status: 'submitted',
+              version: 1,
+              submissionDeclaredBy: `Jane ${char} Smith`
+            }
+          )
+
+          expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        }
+      )
 
       it('returns 422 when submissionDeclaredBy is provided for non-submitted transition', async () => {
         const { server, organisationId, registrationId } =

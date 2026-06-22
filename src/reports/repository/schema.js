@@ -204,9 +204,9 @@ export const updateReportStatusSchema = Joi.object({
     .valid(...Object.values(REPORT_STATUS))
     .required(),
   changedBy: userSummarySchema.required(),
-  submissionDeclaredBy: Joi.string().when('status', {
+  submissionDeclaredBy: Joi.string().min(2).when('status', {
     is: REPORT_STATUS.SUBMITTED,
-    then: Joi.required(),
+    then: Joi.optional(),
     otherwise: Joi.forbidden()
   })
 })
