@@ -32,6 +32,19 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  */
 
 /**
+ * What backfilling a single registration stream contributed: either an orphaned
+ * accreditation to surface, or the submission and write counts it committed.
+ * `null` means the stream was skipped (no accreditation or no submitted logs).
+ *
+ * @typedef {Object} StreamBackfilled
+ * @property {number} submissionCount
+ * @property {number} rowStateWriteCount
+ *
+ * @typedef {Object} StreamOrphaned
+ * @property {OrphanedAccreditation} orphanedAccreditation
+ */
+
+/**
  * The membership key and the waste-record version tags are the summary log's
  * `file.id`, not the summary-log document id — the live write path keys both on
  * `file.id`, so the backfill must too or it reconstructs nothing. A submitted
@@ -46,6 +59,95 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
   status: summaryLog.status,
   submittedAt: /** @type {string} */ (summaryLog.submittedAt)
 })
+
+/**
+ * Backfill one registration's stream, mirroring the live write scope: skipped
+ * unless it is accredited and has at least one submitted summary log, partitioned
+ * by its accreditation, classified against today's accreditation and overseas-site
+ * state. A referenced accreditation missing from the organisation is surfaced as
+ * orphaned rather than fatal.
+ *
+ * @param {Object} args
+ * @param {import('#domain/organisations/model.js').Organisation} args.organisation
+ * @param {import('#domain/organisations/registration.js').Registration} args.registration
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} args.organisationsRepository
+ * @param {import('#repositories/waste-records/port.js').WasteRecordsRepository} args.wasteRecordsRepository
+ * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
+ * @param {RowStateRepository} args.rowStateRepository
+ * @returns {Promise<StreamBackfilled | StreamOrphaned | null>}
+ */
+const backfillRegistrationStream = async ({
+  organisation,
+  registration,
+  organisationsRepository,
+  wasteRecordsRepository,
+  summaryLogsRepository,
+  overseasSitesRepository,
+  rowStateRepository
+}) => {
+  const { accreditationId } = registration
+  if (!accreditationId) {
+    return null
+  }
+
+  const logs = await summaryLogsRepository.findAllByOrgReg(
+    organisation.id,
+    registration.id
+  )
+  const summaryLogs = logs
+    .filter((log) => log.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED)
+    .map(toOrderedSummaryLog)
+  if (summaryLogs.length === 0) {
+    return null
+  }
+
+  let accreditation = null
+  try {
+    accreditation = await organisationsRepository.findAccreditationById(
+      organisation.id,
+      accreditationId
+    )
+  } catch {
+    accreditation = null
+  }
+  if (!accreditation) {
+    return {
+      orphanedAccreditation: {
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId
+      }
+    }
+  }
+
+  const wasteRecords = await wasteRecordsRepository.findByRegistration(
+    organisation.id,
+    registration.id
+  )
+  const overseasSites = await resolveOverseasSites(
+    organisationsRepository,
+    overseasSitesRepository,
+    organisation.id,
+    registration.id
+  )
+
+  const { submissionCount, rowStateWriteCount } =
+    await backfillRegistrationRowStates({
+      partition: {
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId
+      },
+      wasteRecords,
+      summaryLogs,
+      accreditation,
+      overseasSites,
+      rowStateRepository
+    })
+
+  return { submissionCount, rowStateWriteCount }
+}
 
 /**
  * Reconstruct the waste record state collection for the whole historical estate
@@ -83,68 +185,25 @@ export const backfillEstateRowStates = async ({
 
   for (const organisation of organisations) {
     for (const registration of organisation.registrations) {
-      const { accreditationId } = registration
-      if (!accreditationId) {
-        continue
-      }
-
-      const logs = await summaryLogsRepository.findAllByOrgReg(
-        organisation.id,
-        registration.id
-      )
-      const summaryLogs = logs
-        .filter((log) => log.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED)
-        .map(toOrderedSummaryLog)
-      if (summaryLogs.length === 0) {
-        continue
-      }
-
-      let accreditation = null
-      try {
-        accreditation = await organisationsRepository.findAccreditationById(
-          organisation.id,
-          accreditationId
-        )
-      } catch {
-        accreditation = null
-      }
-      if (!accreditation) {
-        orphanedAccreditations.push({
-          organisationId: organisation.id,
-          registrationId: registration.id,
-          accreditationId
-        })
-        continue
-      }
-
-      const wasteRecords = await wasteRecordsRepository.findByRegistration(
-        organisation.id,
-        registration.id
-      )
-      const overseasSites = await resolveOverseasSites(
+      const result = await backfillRegistrationStream({
+        organisation,
+        registration,
         organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogsRepository,
         overseasSitesRepository,
-        organisation.id,
-        registration.id
-      )
-
-      const { submissionCount, rowStateWriteCount } =
-        await backfillRegistrationRowStates({
-          partition: {
-            organisationId: organisation.id,
-            registrationId: registration.id,
-            accreditationId
-          },
-          wasteRecords,
-          summaryLogs,
-          accreditation,
-          overseasSites,
-          rowStateRepository
-        })
-
+        rowStateRepository
+      })
+      if (!result) {
+        continue
+      }
+      if ('orphanedAccreditation' in result) {
+        orphanedAccreditations.push(result.orphanedAccreditation)
+        continue
+      }
       streamsBackfilled += 1
-      submissionsBackfilled += submissionCount
-      rowStateWrites += rowStateWriteCount
+      submissionsBackfilled += result.submissionCount
+      rowStateWrites += result.rowStateWriteCount
     }
   }
 
