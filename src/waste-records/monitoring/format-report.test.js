@@ -1,16 +1,19 @@
 import { describe, it, expect } from 'vitest'
 
-import { formatReport } from './format-report.js'
+import {
+  formatCensusSummary,
+  formatPartitionDiagnostic
+} from './format-report.js'
 
 const cleanReconciliation = {
   registrationId: 'reg-1',
   accreditationId: 'acc-1',
   head: 'log-1',
   hasCommittedSubmission: true,
-  hasRowStateData: true,
-  rowStateCount: 2,
+  hasWasteRecordStateData: true,
+  wasteRecordStateCount: 2,
   committedRowCount: 2,
-  creditTotal: { rowStates: 30, event: 30, drift: 0 },
+  creditTotal: { wasteRecordStates: 30, event: 30, drift: 0 },
   missingRows: [],
   extraRows: [],
   classificationDivergences: [],
@@ -18,110 +21,111 @@ const cleanReconciliation = {
 }
 
 const census = {
-  totalPartitions: 1,
-  partitionsWithCommittedSubmission: 1,
-  partitionsCovered: 1,
-  partitionsMissingRowStateData: 0,
-  cleanPartitions: 1,
-  partitionsWithDiscrepancies: 0,
-  totalMissingRows: 0,
-  totalExtraRows: 0,
-  partitionsWithCreditTotalDrift: 0,
-  totalClassificationDivergences: 0,
-  isEstateClean: true
+  totalPartitions: 4,
+  partitionsWithCommittedSubmission: 3,
+  partitionsCovered: 2,
+  partitionsMissingWasteRecordStateData: 1,
+  cleanPartitions: 2,
+  partitionsWithDiscrepancies: 2,
+  totalMissingRows: 2,
+  totalExtraRows: 1,
+  partitionsWithCreditTotalDrift: 1,
+  totalClassificationDivergences: 1,
+  isEstateClean: false
 }
 
-describe('formatReport', () => {
-  it('reports a clean estate as the green light for the flag flip', () => {
-    const report = formatReport({
-      reconciliations: [cleanReconciliation],
-      census
+describe('formatCensusSummary', () => {
+  it('renders the estate counts without any pass/fail verdict', () => {
+    const summary = formatCensusSummary(census)
+
+    expect(summary).toContain('partitions: 4')
+    expect(summary).toContain('with committed submission: 3')
+    expect(summary).toContain('covered: 2')
+    expect(summary).toContain('missing waste record state data: 1')
+    expect(summary).toContain('with discrepancies: 2')
+    expect(summary).toContain('missing rows: 2')
+    expect(summary).toContain('extra rows: 1')
+    expect(summary).toContain('creditTotal drift: 1')
+    expect(summary).toContain('classification divergences: 1')
+    expect(summary).not.toContain('VERDICT')
+    expect(summary).not.toContain('CLEAN')
+    expect(summary).not.toContain('green light')
+  })
+})
+
+describe('formatPartitionDiagnostic', () => {
+  it('labels the partition and lists its missing rows, drift and coverage gap', () => {
+    const line = formatPartitionDiagnostic({
+      ...cleanReconciliation,
+      registrationId: 'reg-2',
+      hasWasteRecordStateData: false,
+      wasteRecordStateCount: 0,
+      missingRows: [{ rowId: 'row-9', wasteRecordType: 'received' }],
+      creditTotal: { wasteRecordStates: 5, event: 30, drift: -25 },
+      isClean: false
     })
 
-    expect(report).toContain('CLEAN')
-    expect(report).toContain('Partitions covered: 1/1')
-    expect(report).not.toContain('reg-1')
+    expect(line).toContain('registration reg-2 / accreditation acc-1')
+    expect(line).toContain('head log-1')
+    expect(line).toContain('no waste record state data')
+    expect(line).toContain('missing rows: received:row-9')
+    expect(line).toContain('creditTotal drift: -25')
+    expect(line).toContain('waste record states 5 vs event 30')
   })
 
-  it('lists each partition with discrepancies and its specific issues', () => {
-    const report = formatReport({
-      reconciliations: [
-        {
-          ...cleanReconciliation,
-          registrationId: 'reg-2',
-          hasRowStateData: false,
-          rowStateCount: 0,
-          missingRows: [{ rowId: 'row-9', wasteRecordType: 'received' }],
-          creditTotal: { rowStates: 5, event: 30, drift: -25 },
-          isClean: false
-        }
-      ],
-      census: {
-        ...census,
-        partitionsCovered: 0,
-        partitionsMissingRowStateData: 1,
-        cleanPartitions: 0,
-        partitionsWithDiscrepancies: 1,
-        totalMissingRows: 1,
-        partitionsWithCreditTotalDrift: 1,
-        isEstateClean: false
-      }
+  it('labels a registered-only partition and lists extra rows', () => {
+    const line = formatPartitionDiagnostic({
+      ...cleanReconciliation,
+      registrationId: 'reg-3',
+      accreditationId: null,
+      extraRows: [{ rowId: 'row-x', wasteRecordType: 'received' }],
+      isClean: false
     })
 
-    expect(report).toContain('DISCREPANCIES FOUND')
-    expect(report).toContain('reg-2')
-    expect(report).toContain('acc-1')
-    expect(report).toContain('no row-state data')
-    expect(report).toContain('missing rows: 1')
-    expect(report).toContain('creditTotal drift: -25')
+    expect(line).toContain('registration reg-3 (registered-only)')
+    expect(line).toContain('extra rows: received:row-x')
   })
 
-  it('labels a registered-only partition and lists extra rows on their own', () => {
-    const report = formatReport({
-      reconciliations: [
+  it('shows each classification divergence with its reasons for human review', () => {
+    const line = formatPartitionDiagnostic({
+      ...cleanReconciliation,
+      classificationDivergences: [
         {
-          ...cleanReconciliation,
-          registrationId: 'reg-3',
-          accreditationId: null,
-          extraRows: [{ rowId: 'row-x', wasteRecordType: 'received' }],
-          isClean: false
-        }
-      ],
-      census: {
-        ...census,
-        cleanPartitions: 0,
-        partitionsWithDiscrepancies: 1,
-        totalExtraRows: 1,
-        isEstateClean: false
-      }
-    })
-
-    expect(report).toContain(
-      '- registration reg-3 (registered-only): extra rows: 1'
-    )
-  })
-
-  it('notes classification divergences as a context-sensitive signal, separate from the verdict', () => {
-    const report = formatReport({
-      reconciliations: [
-        {
-          ...cleanReconciliation,
-          classificationDivergences: [
-            {
-              rowId: 'row-1',
-              wasteRecordType: 'received',
-              rowStateIncluded: true,
-              legacyIncluded: false
-            }
+          rowId: 'row-1',
+          wasteRecordType: 'received',
+          wasteRecordStateIncluded: false,
+          legacyIncluded: true,
+          reasons: [
+            { code: 'ORS_NOT_APPROVED', field: 'overseasSiteId' },
+            { code: 'PRN_ISSUED' }
           ]
         }
-      ],
-      census: { ...census, totalClassificationDivergences: 1 }
+      ]
     })
 
-    expect(report).toContain('CLEAN')
-    expect(report).toContain(
-      'Classification divergences (context-sensitive): 1'
-    )
+    expect(line).toContain('classification divergences:')
+    expect(line).toContain('received:row-1')
+    expect(line).toContain('waste record state excluded, legacy included')
+    expect(line).toContain('ORS_NOT_APPROVED (overseasSiteId)')
+    expect(line).toContain('PRN_ISSUED')
+  })
+
+  it('records a divergence with no stated reasons rather than omitting it', () => {
+    const line = formatPartitionDiagnostic({
+      ...cleanReconciliation,
+      classificationDivergences: [
+        {
+          rowId: 'row-2',
+          wasteRecordType: 'received',
+          wasteRecordStateIncluded: false,
+          legacyIncluded: true,
+          reasons: []
+        }
+      ]
+    })
+
+    expect(line).toContain('received:row-2')
+    expect(line).toContain('waste record state excluded, legacy included')
+    expect(line).toContain('reasons: none')
   })
 })

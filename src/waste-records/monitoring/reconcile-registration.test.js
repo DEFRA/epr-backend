@@ -15,18 +15,18 @@ const partition = {
   accreditationId: 'acc-1'
 }
 
-const includedRowState = (rowId, transactionAmount) => ({
+const includedWasteRecordState = (rowId, transactionAmount, reasons = []) => ({
   rowId,
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   data: { ROW_ID: rowId },
   classification: {
     outcome: ROW_OUTCOME.INCLUDED,
-    reasons: [],
+    reasons,
     transactionAmount
   }
 })
 
-const excludedRowState = (rowId) => ({
+const excludedWasteRecordState = (rowId) => ({
   rowId,
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   data: { ROW_ID: rowId },
@@ -68,7 +68,7 @@ describe('reconcileRegistration', () => {
       ...partition,
       head: null,
       eventCreditTotal: null,
-      rowStates: [],
+      wasteRecordStates: [],
       wasteRecords: [],
       accreditation: null,
       overseasSites: {}
@@ -79,7 +79,7 @@ describe('reconcileRegistration', () => {
       accreditationId: 'acc-1',
       head: null,
       hasCommittedSubmission: false,
-      hasRowStateData: false,
+      hasWasteRecordStateData: false,
       missingRows: [],
       extraRows: [],
       classificationDivergences: [],
@@ -87,12 +87,15 @@ describe('reconcileRegistration', () => {
     })
   })
 
-  it('reconciles a covered head whose row-states match the committed rows and event total', () => {
+  it('reconciles a covered head whose waste record states match the committed rows and event total', () => {
     const result = reconcileRegistration({
       ...partition,
       head: 'log-2',
       eventCreditTotal: 0,
-      rowStates: [excludedRowState('row-1'), excludedRowState('row-2')],
+      wasteRecordStates: [
+        excludedWasteRecordState('row-1'),
+        excludedWasteRecordState('row-2')
+      ],
       wasteRecords: [
         committedRecord('row-1', 'log-2'),
         committedRecord('row-2', 'log-2')
@@ -104,10 +107,10 @@ describe('reconcileRegistration', () => {
     expect(result).toMatchObject({
       head: 'log-2',
       hasCommittedSubmission: true,
-      hasRowStateData: true,
-      rowStateCount: 2,
+      hasWasteRecordStateData: true,
+      wasteRecordStateCount: 2,
       committedRowCount: 2,
-      creditTotal: { rowStates: 0, event: 0, drift: 0 },
+      creditTotal: { wasteRecordStates: 0, event: 0, drift: 0 },
       missingRows: [],
       extraRows: [],
       classificationDivergences: [],
@@ -115,28 +118,28 @@ describe('reconcileRegistration', () => {
     })
   })
 
-  it('flags a committed head with no row-state data as an uncovered backfill gap', () => {
+  it('flags a committed head with no waste record state data as an uncovered backfill gap', () => {
     const result = reconcileRegistration({
       ...partition,
       head: 'log-1',
       eventCreditTotal: 10,
-      rowStates: [],
+      wasteRecordStates: [],
       wasteRecords: [committedRecord('row-1', 'log-1')],
       accreditation: null,
       overseasSites: {}
     })
 
     expect(result.hasCommittedSubmission).toBe(true)
-    expect(result.hasRowStateData).toBe(false)
+    expect(result.hasWasteRecordStateData).toBe(false)
     expect(result.isClean).toBe(false)
   })
 
-  it('reports a committed-at-head row absent from the row-states as missing', () => {
+  it('reports a committed-at-head row absent from the waste record states as missing', () => {
     const result = reconcileRegistration({
       ...partition,
       head: 'log-2',
       eventCreditTotal: 10,
-      rowStates: [includedRowState('row-1', 10)],
+      wasteRecordStates: [includedWasteRecordState('row-1', 10)],
       wasteRecords: [
         committedRecord('row-1', 'log-2'),
         committedRecord('row-2', 'log-2')
@@ -151,12 +154,15 @@ describe('reconcileRegistration', () => {
     expect(result.isClean).toBe(false)
   })
 
-  it('reports a row-state row not committed at the head in legacy as extra', () => {
+  it('reports a waste record state not committed at the head in legacy as extra', () => {
     const result = reconcileRegistration({
       ...partition,
       head: 'log-2',
       eventCreditTotal: 10,
-      rowStates: [includedRowState('row-1', 10), includedRowState('row-9', 0)],
+      wasteRecordStates: [
+        includedWasteRecordState('row-1', 10),
+        includedWasteRecordState('row-9', 0)
+      ],
       wasteRecords: [committedRecord('row-1', 'log-2')],
       accreditation: null,
       overseasSites: {}
@@ -168,12 +174,15 @@ describe('reconcileRegistration', () => {
     expect(result.isClean).toBe(false)
   })
 
-  it('reports creditTotal drift when the row-states do not sum to the event total', () => {
+  it('reports creditTotal drift when the waste record states do not sum to the event total', () => {
     const result = reconcileRegistration({
       ...partition,
       head: 'log-2',
       eventCreditTotal: 30,
-      rowStates: [includedRowState('row-1', 10), includedRowState('row-2', 5)],
+      wasteRecordStates: [
+        includedWasteRecordState('row-1', 10),
+        includedWasteRecordState('row-2', 5)
+      ],
       wasteRecords: [
         committedRecord('row-1', 'log-2'),
         committedRecord('row-2', 'log-2')
@@ -183,19 +192,21 @@ describe('reconcileRegistration', () => {
     })
 
     expect(result.creditTotal).toEqual({
-      rowStates: 15,
+      wasteRecordStates: 15,
       event: 30,
       drift: -15
     })
     expect(result.isClean).toBe(false)
   })
 
-  it('reports a row whose row-state outcome disagrees with the legacy reader as a classification divergence', () => {
+  it('reports a row whose waste record state outcome disagrees with the legacy reader as a classification divergence, carrying its reasons', () => {
     const result = reconcileRegistration({
       ...partition,
       head: 'log-2',
       eventCreditTotal: 10,
-      rowStates: [includedRowState('row-1', 10)],
+      wasteRecordStates: [
+        includedWasteRecordState('row-1', 10, [{ code: 'ORS_NOT_APPROVED' }])
+      ],
       wasteRecords: [committedRecord('row-1', 'log-2')],
       accreditation: null,
       overseasSites: {}
@@ -205,8 +216,9 @@ describe('reconcileRegistration', () => {
       {
         rowId: 'row-1',
         wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-        rowStateIncluded: true,
-        legacyIncluded: false
+        wasteRecordStateIncluded: true,
+        legacyIncluded: false,
+        reasons: [{ code: 'ORS_NOT_APPROVED' }]
       }
     ])
   })
@@ -216,7 +228,7 @@ describe('reconcileRegistration', () => {
       ...partition,
       head: 'log-2',
       eventCreditTotal: 10,
-      rowStates: [includedRowState('row-1', 10)],
+      wasteRecordStates: [includedWasteRecordState('row-1', 10)],
       wasteRecords: [committedRecord('row-1', 'log-2')],
       accreditation: null,
       overseasSites: {}
@@ -226,12 +238,15 @@ describe('reconcileRegistration', () => {
     expect(result.isClean).toBe(true)
   })
 
-  it('excludes non-included row-states from the row-state credit total', () => {
+  it('excludes non-included waste record states from the waste record state credit total', () => {
     const result = reconcileRegistration({
       ...partition,
       head: 'log-2',
       eventCreditTotal: 10,
-      rowStates: [includedRowState('row-1', 10), excludedRowState('row-2')],
+      wasteRecordStates: [
+        includedWasteRecordState('row-1', 10),
+        excludedWasteRecordState('row-2')
+      ],
       wasteRecords: [
         committedRecord('row-1', 'log-2'),
         committedRecord('row-2', 'log-2')
@@ -240,6 +255,10 @@ describe('reconcileRegistration', () => {
       overseasSites: {}
     })
 
-    expect(result.creditTotal).toEqual({ rowStates: 10, event: 10, drift: 0 })
+    expect(result.creditTotal).toEqual({
+      wasteRecordStates: 10,
+      event: 10,
+      drift: 0
+    })
   })
 })

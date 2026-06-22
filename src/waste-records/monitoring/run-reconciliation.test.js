@@ -36,8 +36,8 @@ describe('runReconciliation', () => {
 
     const orgWithoutRegistrations = { id: 'org-empty' }
 
-    const rowStateRepository = createInMemoryRowStateRepository()()
-    await rowStateRepository.upsertRowStates(
+    const wasteRecordStateRepository = createInMemoryRowStateRepository()()
+    await wasteRecordStateRepository.upsertRowStates(
       {
         organisationId: 'org-1',
         registrationId: 'reg-acc',
@@ -67,7 +67,7 @@ describe('runReconciliation', () => {
     const { reconciliations, census } = await runReconciliation({
       organisationsRepository: orgsRepository([org, orgWithoutRegistrations]),
       streamRepository,
-      rowStateRepository,
+      wasteRecordStateRepository,
       wasteRecordsRepository,
       overseasSitesRepository: sitesRepository([
         { id: 'site-1', validFrom: new Date('2026-01-01') }
@@ -79,7 +79,7 @@ describe('runReconciliation', () => {
       totalPartitions: 2,
       partitionsWithCommittedSubmission: 2,
       partitionsCovered: 1,
-      partitionsMissingRowStateData: 1,
+      partitionsMissingWasteRecordStateData: 1,
       isEstateClean: false
     })
   })

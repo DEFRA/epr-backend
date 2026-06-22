@@ -10,10 +10,10 @@ const sum = (reconciliations, amount) =>
 
 /**
  * Roll a set of per-registration reconciliations up into an estate-level
- * census: how many partitions carry committed row-state data, how many are
+ * census: how many partitions carry waste record state data, how many are
  * clean, and the totals behind any discrepancies. A clean estate (no missing
  * rows, no extra rows, no creditTotal drift, every committed partition covered)
- * is the green light for the backfill-complete check and the flag flip.
+ * reconciles fully against the committed baseline.
  *
  * @param {RegistrationReconciliation[]} reconciliations
  */
@@ -25,11 +25,11 @@ export const summariseCensus = (reconciliations) => ({
   ),
   partitionsCovered: count(
     reconciliations,
-    (r) => r.hasCommittedSubmission && r.hasRowStateData
+    (r) => r.hasCommittedSubmission && r.hasWasteRecordStateData
   ),
-  partitionsMissingRowStateData: count(
+  partitionsMissingWasteRecordStateData: count(
     reconciliations,
-    (r) => r.hasCommittedSubmission && !r.hasRowStateData
+    (r) => r.hasCommittedSubmission && !r.hasWasteRecordStateData
   ),
   cleanPartitions: count(reconciliations, (r) => r.isClean),
   partitionsWithDiscrepancies: count(reconciliations, (r) => !r.isClean),

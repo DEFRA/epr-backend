@@ -7,10 +7,10 @@ const reconciliation = (overrides = {}) => ({
   accreditationId: 'acc',
   head: 'log-1',
   hasCommittedSubmission: true,
-  hasRowStateData: true,
-  rowStateCount: 1,
+  hasWasteRecordStateData: true,
+  wasteRecordStateCount: 1,
   committedRowCount: 1,
-  creditTotal: { rowStates: 10, event: 10, drift: 0 },
+  creditTotal: { wasteRecordStates: 10, event: 10, drift: 0 },
   missingRows: [],
   extraRows: [],
   classificationDivergences: [],
@@ -24,7 +24,7 @@ describe('summariseCensus', () => {
       totalPartitions: 0,
       partitionsWithCommittedSubmission: 0,
       partitionsCovered: 0,
-      partitionsMissingRowStateData: 0,
+      partitionsMissingWasteRecordStateData: 0,
       cleanPartitions: 0,
       partitionsWithDiscrepancies: 0,
       totalMissingRows: 0,
@@ -39,15 +39,15 @@ describe('summariseCensus', () => {
     const reconciliations = [
       reconciliation(),
       reconciliation({
-        hasRowStateData: false,
-        rowStateCount: 0,
+        hasWasteRecordStateData: false,
+        wasteRecordStateCount: 0,
         isClean: false
       }),
       reconciliation({
         head: null,
         hasCommittedSubmission: false,
-        hasRowStateData: false,
-        rowStateCount: 0,
+        hasWasteRecordStateData: false,
+        wasteRecordStateCount: 0,
         committedRowCount: 0,
         isClean: true
       }),
@@ -55,7 +55,7 @@ describe('summariseCensus', () => {
         isClean: false,
         missingRows: [{ rowId: 'a' }, { rowId: 'b' }],
         extraRows: [{ rowId: 'c' }],
-        creditTotal: { rowStates: 5, event: 10, drift: -5 },
+        creditTotal: { wasteRecordStates: 5, event: 10, drift: -5 },
         classificationDivergences: [{ rowId: 'a' }]
       })
     ]
@@ -64,7 +64,7 @@ describe('summariseCensus', () => {
       totalPartitions: 4,
       partitionsWithCommittedSubmission: 3,
       partitionsCovered: 2,
-      partitionsMissingRowStateData: 1,
+      partitionsMissingWasteRecordStateData: 1,
       cleanPartitions: 2,
       partitionsWithDiscrepancies: 2,
       totalMissingRows: 2,
