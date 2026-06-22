@@ -203,7 +203,12 @@ export const updateReportStatusSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REPORT_STATUS))
     .required(),
-  changedBy: userSummarySchema.required()
+  changedBy: userSummarySchema.required(),
+  submissionDeclaredBy: Joi.string().min(2).when('status', {
+    is: REPORT_STATUS.SUBMITTED,
+    then: Joi.optional(),
+    otherwise: Joi.forbidden()
+  })
 })
 
 export const findPeriodicReportsSchema = Joi.object({

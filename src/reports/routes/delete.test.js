@@ -220,7 +220,8 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           version: 2,
           status: 'submitted',
           slot: REPORT_STATUS_SLOT.SUBMITTED,
-          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' },
+          submissionDeclaredBy: 'Test User'
         })
 
         const response = await deleteReport(

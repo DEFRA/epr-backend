@@ -18,6 +18,10 @@ import {
 export const reportsStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/status'
 
+const MIN_DECLARED_BY_LENGTH = 2
+const MAX_DECLARED_BY_LENGTH = 255
+const INVALID_DECLARED_BY_CHARS = /[@#$%&<>]/
+
 const payloadSchema = Joi.object({
   status: Joi.string()
     .valid(
@@ -26,7 +30,16 @@ const payloadSchema = Joi.object({
       REPORT_STATUS.SUBMITTED
     )
     .required(),
-  version: Joi.number().integer().min(1).required()
+  version: Joi.number().integer().min(1).required(),
+  submissionDeclaredBy: Joi.string()
+    .min(MIN_DECLARED_BY_LENGTH)
+    .max(MAX_DECLARED_BY_LENGTH)
+    .pattern(INVALID_DECLARED_BY_CHARS, { invert: true })
+    .when('status', {
+      is: REPORT_STATUS.SUBMITTED,
+      then: Joi.optional(),
+      otherwise: Joi.forbidden()
+    })
 })
 
 export const reportsStatus = {
@@ -41,7 +54,7 @@ export const reportsStatus = {
     }
   },
   /**
-   * @param {HapiRequest<{ status: ReportStatus, version: number }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
+   * @param {HapiRequest<{ status: ReportStatus, version: number, submissionDeclaredBy?: string }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -50,7 +63,7 @@ export const reportsStatus = {
     const year = Number(params.year)
     const period = Number(params.period)
     const submissionNumber = Number(params.submissionNumber)
-    const { status, version } = request.payload
+    const { status, version, submissionDeclaredBy } = request.payload
 
     const [registration, report] = await Promise.all([
       organisationsRepository.findRegistrationById(
@@ -89,7 +102,8 @@ export const reportsStatus = {
       version,
       status,
       slot: STATUS_TO_SLOT[status],
-      changedBy: extractChangedBy(request.auth.credentials)
+      changedBy: extractChangedBy(request.auth.credentials),
+      ...(submissionDeclaredBy !== undefined && { submissionDeclaredBy })
     })
 
     await auditReportStatusTransition(request, {
