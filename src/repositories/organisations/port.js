@@ -59,7 +59,6 @@
  * @typedef {Object} OrganisationsRepository
  * @property {(organisation: Omit<Organisation, 'status'>) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
- * @property {(id: string, version: number, document: Organisation) => Promise<void>} replaceRaw - Direct write bypassing status history management (dev/test only)
  * @property {() => Promise<Organisation[]>} findAll
  * @property {(schemaVersion: number) => Promise<Organisation[]>} findAllBySchemaVersion - Find all organisations with a specific schema version
  * @property {(params: { search?: string, page: number, pageSize: number }) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} findPage - Paginated organisations query with optional case-insensitive substring search on companyDetails.name; results sorted alphabetically by name

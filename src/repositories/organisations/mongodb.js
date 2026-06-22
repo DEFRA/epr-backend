@@ -138,33 +138,6 @@ const performReplace = (db) => async (id, version, updates) => {
   }
 }
 
-const performReplaceRaw = (db) => async (id, version, document) => {
-  const validatedId = validateId(id)
-
-  let result
-  try {
-    result = await db.collection(COLLECTION_NAME).replaceOne(
-      { _id: ObjectId.createFromHexString(validatedId), version },
-      {
-        _id: ObjectId.createFromHexString(validatedId),
-        ...document,
-        version: version + 1
-      }
-    )
-  } catch (error) {
-    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      throwCuratedDuplicateKeyBoom(error, validatedId)
-    }
-    throw error
-  }
-
-  if (result.matchedCount === 0) {
-    throw Boom.conflict(
-      `Version conflict: attempted to update with version ${version}`
-    )
-  }
-}
-
 const handleFoundDocument = (doc, minimumVersion) => {
   const mapped = mapDocumentWithCurrentStatuses(doc)
 
@@ -478,7 +451,6 @@ export const createOrganisationsRepository = async (
     return {
       insert: performInsert(db),
       replace: performReplace(db),
-      replaceRaw: performReplaceRaw(db),
       findById,
       findAll: performFindAll(db),
       findAllBySchemaVersion: performFindAllBySchemaVersion(db),
