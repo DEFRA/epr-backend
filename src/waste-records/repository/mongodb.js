@@ -27,8 +27,8 @@ export const WASTE_BALANCE_ROW_STATES_COLLECTION_NAME =
  * Ensures the row-states collection exists with the indexes required by the
  * waste record state design: a multikey index on `summaryLogIds` for the
  * committed-state membership query, a row-identity index for row history, and a
- * unique index on the committed-state identity (partition + content hash) that
- * makes the content-addressed dedup atomic under concurrent writers.
+ * unique index on the waste-record-state identity (partition + content hash)
+ * that makes the content-addressed dedup atomic under concurrent writers.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -60,7 +60,7 @@ export async function ensureRowStatesCollection(db) {
       wasteRecordType: 1,
       contentHash: 1
     },
-    { name: 'committed_state_identity', unique: true }
+    { name: 'waste_record_state_identity', unique: true }
   )
 
   return collection
@@ -72,7 +72,7 @@ const toRowState = (doc) => {
 }
 
 /**
- * Recursively orders object keys so that two semantically equal committed
+ * Recursively orders object keys so that two semantically equal waste record
  * states serialise to the same string, making the content hash independent of
  * property insertion order.
  *
@@ -100,7 +100,7 @@ const canonicalise = (value) => {
  * @param {RowStateInsert} candidate
  * @returns {string}
  */
-const hashCommittedState = (candidate) =>
+const hashWasteRecordState = (candidate) =>
   createHash('sha256')
     .update(
       JSON.stringify(
@@ -161,7 +161,7 @@ const upsertOne = async (collection, partition, entry, summaryLogId) => {
     classification: entry.classification,
     summaryLogIds: [summaryLogId]
   })
-  const contentHash = hashCommittedState(candidate)
+  const contentHash = hashWasteRecordState(candidate)
 
   const existing = await findCommittedStateDoc(
     collection,

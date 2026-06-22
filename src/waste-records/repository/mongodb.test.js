@@ -67,11 +67,11 @@ describe('ensureRowStatesCollection', () => {
     })
   })
 
-  it('creates a unique committed-state identity index', async (/** @type {*} */ {
+  it('creates a unique waste-record-state identity index', async (/** @type {*} */ {
     rowStatesCollection
   }) => {
     const indexes = await rowStatesCollection.indexes()
-    expect(indexKeyFor(indexes, 'committed_state_identity')).toEqual({
+    expect(indexKeyFor(indexes, 'waste_record_state_identity')).toEqual({
       organisationId: 1,
       registrationId: 1,
       accreditationId: 1,
@@ -80,7 +80,7 @@ describe('ensureRowStatesCollection', () => {
       contentHash: 1
     })
     expect(
-      indexes.find((idx) => idx.name === 'committed_state_identity')?.unique
+      indexes.find((idx) => idx.name === 'waste_record_state_identity')?.unique
     ).toBe(true)
   })
 
@@ -139,7 +139,7 @@ describe('waste record states repository - mongodb implementation', () => {
       )
     })
 
-    it('keeps a concurrently-redelivered submission to a single committed-state row', async (/** @type {*} */ {
+    it('keeps a concurrently-redelivered submission to a single waste-record-state row', async (/** @type {*} */ {
       rowStateRepository
     }) => {
       const repository = rowStateRepository()
@@ -165,7 +165,7 @@ describe('waste record states repository - mongodb implementation', () => {
       expect(committed[0].rowId).toBe('row-1')
     })
 
-    it('rethrows a failed insert that is not a committed-state collision', async () => {
+    it('rethrows a failed insert that is not a waste-record-state collision', async () => {
       const upstream = new Error('connection lost')
       const stubCollection = {
         createIndex: () => Promise.resolve(),
