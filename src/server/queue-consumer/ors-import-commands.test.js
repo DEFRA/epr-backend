@@ -69,6 +69,47 @@ describe('orsImportCommandHandlers', () => {
 
         expect(error?.message).toContain('"extra" is not allowed')
       })
+
+      it('accepts a user carrying a resolved role', () => {
+        const { error } = handler.payloadSchema.validate({
+          importId: 'import-123',
+          user: {
+            id: 'user-1',
+            email: 'maintainer@example.com',
+            scope: ['admin.read'],
+            role: 'service_maintainer'
+          }
+        })
+
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts a user with a null role', () => {
+        const { error } = handler.payloadSchema.validate({
+          importId: 'import-123',
+          user: {
+            id: 'user-1',
+            email: 'operator@example.com',
+            scope: ['operator'],
+            role: null
+          }
+        })
+
+        expect(error).toBeUndefined()
+      })
+
+      it('rejects a user without a role', () => {
+        const { error } = handler.payloadSchema.validate({
+          importId: 'import-123',
+          user: {
+            id: 'user-1',
+            email: 'operator@example.com',
+            scope: ['operator']
+          }
+        })
+
+        expect(error?.message).toBe('"user.role" is required')
+      })
     })
 
     describe('execute', () => {

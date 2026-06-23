@@ -4,6 +4,7 @@
  * @property {string} [name]
  * @property {string} email
  * @property {string[]} scope
+ * @property {string | null} role
  */
 
 /**

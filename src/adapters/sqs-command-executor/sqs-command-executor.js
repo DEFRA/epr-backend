@@ -42,7 +42,8 @@ export const extractUser = (request) => {
     id: credentials.id,
     ...(credentials.name && { name: credentials.name }),
     email: credentials.email,
-    scope: credentials.scope
+    scope: credentials.scope,
+    role: credentials.role
   }
 }
 
