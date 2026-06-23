@@ -59,7 +59,8 @@ const user = {
   id: 'user-1',
   name: 'Test User',
   email: 'user@example.test',
-  scope: ['standard_user']
+  scope: ['standard_user'],
+  role: 'standard_user'
 }
 
 const buildExporterRecord = ({
@@ -369,7 +370,12 @@ describe('performUpdateViaStream', () => {
         streamRepository,
         rowStateRepository,
         dependencies: { systemLogsRepository },
-        user: { id: 'user-2', email: 'noname@example.test', scope: [] },
+        user: {
+          id: 'user-2',
+          email: 'noname@example.test',
+          scope: [],
+          role: null
+        },
         overseasSites,
         summaryLogId: 'log-A'
       })

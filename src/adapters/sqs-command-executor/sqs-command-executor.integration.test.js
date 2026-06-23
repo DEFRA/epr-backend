@@ -12,6 +12,18 @@ vi.mock(import('@defra/hapi-tracing'), () => ({
 const TEST_TIMEOUT = 30000
 
 /**
+ * @param {{ Messages?: Array<{ Body?: string }> }} response
+ * @returns {unknown}
+ */
+const parseSingleMessageBody = (response) => {
+  const [message] = response.Messages ?? []
+  if (!message?.Body) {
+    throw new Error('Expected a single SQS message carrying a body')
+  }
+  return JSON.parse(message.Body)
+}
+
+/**
  * Integration tests for SQS command executor.
  *
  * These tests verify that the executor correctly sends messages to an SQS queue
@@ -62,7 +74,7 @@ describe('SQS command executor integration', () => {
 
         expect(response.Messages).toHaveLength(1)
 
-        const message = JSON.parse(response.Messages[0].Body)
+        const message = parseSingleMessageBody(response)
         expect(message).toEqual({
           command: 'validate',
           summaryLogId
@@ -95,13 +107,15 @@ describe('SQS command executor integration', () => {
   })
 
   describe('submit', () => {
+    /** @type {import('#common/hapi-types.js').AuthenticatedRequest} */
     const mockRequest = {
       auth: {
         credentials: {
           id: 'user-123',
           email: 'test@example.com',
           scope: ['admin'],
-          role: 'standard_user'
+          role: 'standard_user',
+          issuer: 'https://defra-id.example.com'
         }
       }
     }
@@ -132,7 +146,7 @@ describe('SQS command executor integration', () => {
 
         expect(response.Messages).toHaveLength(1)
 
-        const message = JSON.parse(response.Messages[0].Body)
+        const message = parseSingleMessageBody(response)
         expect(message).toEqual({
           command: 'submit',
           summaryLogId,
@@ -156,6 +170,7 @@ describe('SQS command executor integration', () => {
           logger
         })
 
+        /** @type {import('#common/hapi-types.js').AuthenticatedRequest} */
         const machineRequest = {
           auth: {
             credentials: {
@@ -228,7 +243,7 @@ describe('SQS command executor integration', () => {
 
         expect(response.Messages).toHaveLength(1)
 
-        const message = JSON.parse(response.Messages[0].Body)
+        const message = parseSingleMessageBody(response)
         expect(message).toEqual({
           command: 'import-overseas-sites',
           importId
@@ -268,7 +283,7 @@ describe('SQS command executor integration', () => {
 
         expect(response.Messages).toHaveLength(1)
 
-        const message = JSON.parse(response.Messages[0].Body)
+        const message = parseSingleMessageBody(response)
         expect(message).toEqual({
           command: 'import-overseas-sites',
           importId,
@@ -341,7 +356,7 @@ describe('SQS command executor integration', () => {
 
         expect(response.Messages).toHaveLength(1)
 
-        const message = JSON.parse(response.Messages[0].Body)
+        const message = parseSingleMessageBody(response)
         expect(message).toEqual({
           command: 'validate',
           summaryLogId,
@@ -380,7 +395,7 @@ describe('SQS command executor integration', () => {
 
         expect(response.Messages).toHaveLength(1)
 
-        const message = JSON.parse(response.Messages[0].Body)
+        const message = parseSingleMessageBody(response)
         expect(message).toEqual({
           command: 'validate',
           summaryLogId
