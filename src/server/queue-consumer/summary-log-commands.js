@@ -33,7 +33,8 @@ const userSchema = Joi.object({
   id: Joi.string().required(),
   name: Joi.string(),
   email: Joi.string().required(),
-  scope: Joi.array().items(Joi.string()).required()
+  scope: Joi.array().items(Joi.string()).required(),
+  role: Joi.string().allow(null).required()
 })
 
 /**

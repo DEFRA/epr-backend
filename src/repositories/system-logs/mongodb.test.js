@@ -7,25 +7,30 @@ import { randomUUID } from 'crypto'
 
 /** @import { Db } from 'mongodb' */
 /** @import { TypedLogger } from '#common/helpers/logging/logger.js' */
-/** @import { SystemLog } from './port.js' */
+/** @import { SystemLog, SystemLogsRepositoryFactory } from './port.js' */
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(
-      /** @type {string} */ (/** @type {unknown} */ (db))
-    )
-    await use(client)
-    await client.close()
-  },
+/**
+ * @typedef {object} SystemLogsRepoFixtures
+ * @property {MongoClient} mongoClient
+ * @property {SystemLogsRepositoryFactory} systemLogsRepository
+ */
 
-  systemLogsRepository: async ({ mongoClient }, use) => {
-    const client = /** @type {MongoClient} */ (
-      /** @type {unknown} */ (mongoClient)
-    )
-    const factory = await createSystemLogsRepository(client.db('epr-backend'))
-    await use(factory)
-  }
-})
+const it = /** @type {import('vitest').TestAPI<SystemLogsRepoFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
+
+    systemLogsRepository: async ({ mongoClient }, use) => {
+      const factory = await createSystemLogsRepository(
+        mongoClient.db('epr-backend')
+      )
+      await use(factory)
+    }
+  })
+)
 
 const buildMockDb = () => {
   let callCount = 0
@@ -60,6 +65,57 @@ const buildSystemLog = () =>
 describe('Mongo DB system logs repository', () => {
   describe('system logs repository contract', () => {
     testSystemLogsRepositoryContract(it)
+  })
+
+  it('surfaces a null role for a human log written before role capture', async ({
+    mongoClient,
+    systemLogsRepository
+  }) => {
+    const organisationId = randomUUID()
+    await mongoClient
+      .db('epr-backend')
+      .collection('system-logs')
+      .insertOne({
+        createdAt: new Date(),
+        createdBy: { id: 'user-001', email: 'user@email.com', scope: [] },
+        event: { category: 'c', subCategory: 's', action: 'a' },
+        context: { organisationId }
+      })
+
+    const { systemLogs } = await systemLogsRepository(buildMockLogger()).find({
+      organisationId,
+      limit: 10
+    })
+
+    expect(systemLogs[0].createdBy).toEqual({
+      id: 'user-001',
+      email: 'user@email.com',
+      scope: [],
+      role: null
+    })
+  })
+
+  it('leaves a machine actor untouched on read', async ({
+    mongoClient,
+    systemLogsRepository
+  }) => {
+    const organisationId = randomUUID()
+    await mongoClient
+      .db('epr-backend')
+      .collection('system-logs')
+      .insertOne({
+        createdAt: new Date(),
+        createdBy: { id: 'machine-1', name: 'RPD' },
+        event: { category: 'c', subCategory: 's', action: 'a' },
+        context: { organisationId }
+      })
+
+    const { systemLogs } = await systemLogsRepository(buildMockLogger()).find({
+      organisationId,
+      limit: 10
+    })
+
+    expect(systemLogs[0].createdBy).toEqual({ id: 'machine-1', name: 'RPD' })
   })
 
   it('fails gracefully and logs an error when DB write fails', async () => {
