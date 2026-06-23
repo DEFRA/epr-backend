@@ -151,6 +151,63 @@ describe('prepareStatusHistoryAppend', () => {
     })
   })
 
+  it('cascades a direct registration cancel to its linked accreditation', () => {
+    const org = orgWith({
+      registrations: [
+        reg({ id: 'reg-1', status: 'approved', accreditationId: 'acc-1' })
+      ],
+      accreditations: [acc({ id: 'acc-1', status: 'approved' })]
+    })
+    const result = prepareStatusHistoryAppend(
+      org,
+      { type: 'registration', registrationId: 'reg-1' },
+      'cancelled',
+      'user-9'
+    )
+    expect(result.changes).toContainEqual({
+      itemType: 'registration',
+      id: 'reg-1',
+      entry: {
+        status: 'cancelled',
+        updatedAt: expect.any(Date),
+        updatedBy: 'user-9'
+      }
+    })
+    expect(result.changes).toContainEqual({
+      itemType: 'accreditation',
+      id: 'acc-1',
+      entry: {
+        status: 'cancelled',
+        updatedAt: expect.any(Date),
+        updatedBy: 'user-9'
+      }
+    })
+  })
+
+  it('reinstates a cancelled registration to approved', () => {
+    const org = orgWith({
+      registrations: [reg({ id: 'reg-1', status: 'cancelled' })]
+    })
+    const result = prepareStatusHistoryAppend(
+      org,
+      { type: 'registration', registrationId: 'reg-1' },
+      'approved',
+      'user-9'
+    )
+    expect(result.previousStatus).toBe('cancelled')
+    expect(result.changes).toEqual([
+      {
+        itemType: 'registration',
+        id: 'reg-1',
+        entry: {
+          status: 'approved',
+          updatedAt: expect.any(Date),
+          updatedBy: 'user-9'
+        }
+      }
+    ])
+  })
+
   it('appends an accreditation status entry', () => {
     const org = orgWith({
       accreditations: [acc({ id: 'acc-1', status: 'approved' })]
