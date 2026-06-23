@@ -206,7 +206,7 @@ export const updateReportStatusSchema = Joi.object({
   changedBy: userSummarySchema.required(),
   submissionDeclaredBy: Joi.string().min(2).when('status', {
     is: REPORT_STATUS.SUBMITTED,
-    then: Joi.optional(),
+    then: Joi.required(),
     otherwise: Joi.forbidden()
   })
 })
