@@ -5,6 +5,8 @@ import {
 import { createMockSqsClient } from '#test/mock-sqs-client.js'
 import { commandQueueConsumerPlugin } from './queue-consumer.plugin.js'
 
+/** @import { Consumer } from 'sqs-consumer' */
+
 vi.mock('#common/helpers/sqs/sqs-client.js')
 vi.mock('#application/summary-logs/extractor.js')
 vi.mock('./consumer.js')
@@ -58,8 +60,10 @@ describe('commandQueueConsumerPlugin', () => {
     mockConsumer = { start: vi.fn(), stop: vi.fn() }
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
-    vi.mocked(createSummaryLogExtractor).mockReturnValue({})
-    vi.mocked(createCommandQueueConsumer).mockResolvedValue(mockConsumer)
+    vi.mocked(createSummaryLogExtractor).mockReturnValue({ extract: vi.fn() })
+    vi.mocked(createCommandQueueConsumer).mockResolvedValue(
+      /** @type {Consumer} */ (/** @type {unknown} */ (mockConsumer))
+    )
   })
 
   afterEach(() => {
