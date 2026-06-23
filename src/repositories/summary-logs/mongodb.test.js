@@ -6,6 +6,15 @@ import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
 import { createMockDb } from '#test/mock-db.js'
+import { createMockLogger } from '#test/mock-logger.js'
+import { createMongoError } from '#test/mongo-error.js'
+
+/**
+ * @import { S3Client } from '@aws-sdk/client-s3'
+ * @import { SummaryLogsS3Config } from './mongodb.js'
+ * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
+ * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
+ */
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -17,35 +26,32 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
   })
 }))
 
+/** @type {SummaryLogsS3Config} */
 const mockS3Config = {
-  s3Client: {},
+  s3Client: /** @type {S3Client} */ (/** @type {unknown} */ ({})),
   preSignedUrlExpiry: SIXTY_SECONDS
 }
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  },
+const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
 
-  summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    const factory = await createSummaryLogsRepository(database, mockS3Config)
-    await use(factory)
-  },
+    summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const factory = await createSummaryLogsRepository(database, mockS3Config)
+      await use(factory)
+    },
 
-  summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
+    summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
+      const repository = summaryLogsRepositoryFactory(createMockLogger())
+      await use(repository)
     }
-    const repository = summaryLogsRepositoryFactory(mockLogger)
-    await use(repository)
-  }
-})
+  })
+)
 
 describe('MongoDB summary logs repository', () => {
   describe('summary logs repository contract', () => {
@@ -58,18 +64,15 @@ describe('MongoDB summary logs repository', () => {
         createIndex: async () => {},
         findOne: async () => null, // No existing submitting log
         insertOne: async () => {
-          const error = new Error('Connection timeout')
-          error.code = 'ETIMEOUT'
-          throw error
+          throw createMongoError('Connection timeout', { code: 'ETIMEOUT' })
         }
       })
 
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
       )
-      const repository = repositoryFactory(mockLogger)
+      const repository = repositoryFactory(createMockLogger())
 
       await expect(
         repository.insert(
@@ -105,19 +108,13 @@ describe('MongoDB summary logs repository', () => {
         findOneAndUpdate: async () => null // Concurrent modification beat us
       })
 
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
       )
-      const repository = repositoryFactory(mockLogger)
+      const repository = repositoryFactory(createMockLogger())
 
-      const result = await repository.transitionToSubmittingExclusive(
-        logId,
-        1,
-        'org-1',
-        'reg-1'
-      )
+      const result = await repository.transitionToSubmittingExclusive(logId)
 
       expect(result.success).toBe(false)
     })
@@ -145,27 +142,20 @@ describe('MongoDB summary logs repository', () => {
         },
         findOneAndUpdate: async () => {
           // Another request beat us and the unique index blocks our update
-          const error = new Error(
-            'E11000 duplicate key error collection: epr-backend.summary-logs'
+          throw createMongoError(
+            'E11000 duplicate key error collection: epr-backend.summary-logs',
+            { code: 11000 }
           )
-          error.code = 11000
-          throw error
         }
       })
 
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
       )
-      const repository = repositoryFactory(mockLogger)
+      const repository = repositoryFactory(createMockLogger())
 
-      const result = await repository.transitionToSubmittingExclusive(
-        logId,
-        1,
-        'org-1',
-        'reg-1'
-      )
+      const result = await repository.transitionToSubmittingExclusive(logId)
 
       expect(result.success).toBe(false)
     })
@@ -192,21 +182,18 @@ describe('MongoDB summary logs repository', () => {
           return null
         },
         findOneAndUpdate: async () => {
-          const error = new Error('Connection timeout')
-          error.code = 'ETIMEOUT'
-          throw error
+          throw createMongoError('Connection timeout', { code: 'ETIMEOUT' })
         }
       })
 
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
       )
-      const repository = repositoryFactory(mockLogger)
+      const repository = repositoryFactory(createMockLogger())
 
       await expect(
-        repository.transitionToSubmittingExclusive(logId, 1, 'org-1', 'reg-1')
+        repository.transitionToSubmittingExclusive(logId)
       ).rejects.toThrow('Connection timeout')
     })
   })

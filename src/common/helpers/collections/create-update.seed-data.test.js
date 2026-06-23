@@ -4,13 +4,19 @@ import { describe, expect, it, vi } from 'vitest'
 import { createSeedData } from './create-update.js'
 import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
 
-/** @import { Collection } from 'mongodb' */
+/**
+ * @import { Collection } from 'mongodb'
+ * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
+ */
 
 const PRODUCTION = () => true
 const NON_PRODUCTION = () => false
 
+/** @type {WasteRecordsRepository} */
 const mockWasteRecordsRepository = {
-  appendVersions: vi.fn()
+  appendVersions: vi.fn(async () => {}),
+  findByRegistration: vi.fn(async () => []),
+  findDistinctDataKeys: vi.fn(async () => [])
 }
 
 describe('createSeedData', () => {
@@ -124,10 +130,17 @@ describe('createSeedData', () => {
   })
 })
 
+/**
+ * @param {{
+ *   countDocuments?: () => Promise<number>,
+ *   find?: (query?: unknown) => { toArray: () => Promise<unknown[]> }
+ * }} [overrides]
+ */
 function createMockDb({
   countDocuments = async () => 0,
   find = () => ({ toArray: async () => [] })
 } = {}) {
+  /** @type {Array<{ collectionName: string, items: unknown }>} */
   const insertions = []
   const mockDb = createSharedMockDb({
     collection: (collectionName) =>

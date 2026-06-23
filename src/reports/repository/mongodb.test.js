@@ -5,28 +5,38 @@ import { createReportsRepository } from './mongodb.js'
 import { testReportsRepositoryContract } from './port.contract.js'
 import { buildCreateReportParams } from '#root/reports/repository/contract/test-data.js'
 import { createMockDb } from '#test/mock-db.js'
+import { createMongoError } from '#test/mongo-error.js'
+
+/**
+ * @import { ReportsRepositoryFactory } from './port.js'
+ * @typedef {{ mongoClient: MongoClient, reportsRepository: ReportsRepositoryFactory }} ReportsFixtures
+ */
 
 const DATABASE_NAME = 'epr-backend'
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  },
+const it = /** @type {import('vitest').TestAPI<ReportsFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
 
-  reportsRepository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    const factory = await createReportsRepository(database)
-    await use(factory)
-  }
-})
+    reportsRepository: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const factory = await createReportsRepository(database)
+      await use(factory)
+    }
+  })
+)
 
 describe('MongoDB reports repository', () => {
-  beforeEach(async ({ mongoClient }) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    await database.collection('reports').deleteMany({})
-  })
+  beforeEach(
+    /** @param {ReportsFixtures} fixture */ async ({ mongoClient }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      await database.collection('reports').deleteMany({})
+    }
+  )
 
   it('creates a repository', ({ reportsRepository }) => {
     expect(reportsRepository).toBeDefined()
@@ -38,8 +48,9 @@ describe('MongoDB reports repository', () => {
 
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors during createReport', async () => {
-      const unexpectedError = new Error('Database connection lost')
-      unexpectedError.code = 'ECONNREFUSED'
+      const unexpectedError = createMongoError('Database connection lost', {
+        code: 'ECONNREFUSED'
+      })
 
       const mockDb = createMockDb({
         createIndex: async () => {},

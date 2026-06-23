@@ -4,28 +4,39 @@ import { describe, expect } from 'vitest'
 import { createOverseasSitesRepository } from './mongodb.js'
 import { testOverseasSitesRepositoryContract } from './port.contract.js'
 import { createMockDb } from '#test/mock-db.js'
+import { createMongoError } from '#test/mongo-error.js'
+
+/**
+ * @import { OverseasSitesRepository, OverseasSitesRepositoryFactory } from './port.js'
+ * @typedef {{ mongoClient: MongoClient, overseasSitesRepositoryFactory: OverseasSitesRepositoryFactory, overseasSitesRepository: OverseasSitesRepository }} OverseasSitesFixtures
+ */
 
 const DATABASE_NAME = 'epr-backend'
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  },
+const it = /** @type {import('vitest').TestAPI<OverseasSitesFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
 
-  overseasSitesRepositoryFactory: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    await database.collection('overseas-sites').deleteMany({})
-    const factory = await createOverseasSitesRepository(database)
-    await use(factory)
-  },
+    overseasSitesRepositoryFactory: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      await database.collection('overseas-sites').deleteMany({})
+      const factory = await createOverseasSitesRepository(database)
+      await use(factory)
+    },
 
-  overseasSitesRepository: async ({ overseasSitesRepositoryFactory }, use) => {
-    const repository = overseasSitesRepositoryFactory()
-    await use(repository)
-  }
-})
+    overseasSitesRepository: async (
+      { overseasSitesRepositoryFactory },
+      use
+    ) => {
+      const repository = overseasSitesRepositoryFactory()
+      await use(repository)
+    }
+  })
+)
 
 describe('MongoDB overseas sites repository', () => {
   describe('overseas sites repository contract', () => {
@@ -55,8 +66,9 @@ describe('MongoDB overseas sites repository', () => {
     })
 
     it('handles NamespaceNotFound error when collection is new', async () => {
-      const nsError = new Error('ns not found')
-      nsError.codeName = 'NamespaceNotFound'
+      const nsError = createMongoError('ns not found', {
+        codeName: 'NamespaceNotFound'
+      })
 
       const mockDb = createMockDb({
         createIndex: async () => {
@@ -69,8 +81,9 @@ describe('MongoDB overseas sites repository', () => {
     })
 
     it('re-throws non-NamespaceNotFound errors', async () => {
-      const connectionError = new Error('Connection refused')
-      connectionError.codeName = 'NetworkError'
+      const connectionError = createMongoError('Connection refused', {
+        codeName: 'NetworkError'
+      })
 
       const mockDb = createMockDb({
         createIndex: async () => {
