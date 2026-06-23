@@ -200,7 +200,8 @@ describe('SQS command queue consumer integration', () => {
         const user = {
           id: 'user-123',
           email: 'test@example.com',
-          scope: ['operator']
+          scope: ['operator'],
+          role: null
         }
         const request = {
           auth: { credentials: { ...user, issuer: 'test-issuer' } }

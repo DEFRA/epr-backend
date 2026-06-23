@@ -464,7 +464,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(systemLogPayload.createdBy).toEqual({
             id: defraIdContactId,
             email: userEmail,
-            scope: ['inquirer']
+            scope: ['inquirer'],
+            role: null
           })
 
           expect(
@@ -496,7 +497,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(auditPayload.user).toEqual({
             id: defraIdContactId,
             email: userEmail,
-            scope: ['inquirer']
+            scope: ['inquirer'],
+            role: null
           })
 
           expect(auditPayload.event).toEqual({

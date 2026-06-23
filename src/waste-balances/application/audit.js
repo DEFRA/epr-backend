@@ -41,7 +41,7 @@ export const recordWasteBalanceUpdateAudit = async ({
   if (systemLogsRepository) {
     await systemLogsRepository.insert({
       createdAt: new Date(),
-      createdBy: user,
+      createdBy: { ...user, role: null },
       event: payload.event,
       context: payload.context
     })

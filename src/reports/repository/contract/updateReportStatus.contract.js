@@ -204,6 +204,30 @@ export const testUpdateReportStatusBehaviour = (it) => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
     })
 
+    it('throws bad request when submissionDeclaredBy is missing for submitted status', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
+
+      await repository.updateReportStatus({
+        reportId,
+        version: 1,
+        status: REPORT_STATUS.READY_TO_SUBMIT,
+        slot: REPORT_STATUS_SLOT.READY,
+        changedBy
+      })
+
+      await expect(
+        repository.updateReportStatus({
+          reportId,
+          version: 2,
+          status: REPORT_STATUS.SUBMITTED,
+          slot: REPORT_STATUS_SLOT.SUBMITTED,
+          changedBy
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+    })
+
     it('throws error on invalid status', async () => {
       const { id: reportId } = await repository.createReport(
         buildCreateReportParams()

@@ -44,7 +44,7 @@ describe('auditDuplicateAccreditationLinkMigration', () => {
   })
 
   const organisationId = new ObjectId().toString()
-  const systemUser = { id: 'system', email: 'system', scope: [] }
+  const systemUser = { id: 'system', email: 'system', scope: [], role: null }
 
   const findStoredLog = async () => {
     const { systemLogs } = await systemLogsRepository.find({ limit: 10 })

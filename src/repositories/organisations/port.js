@@ -56,6 +56,27 @@
  */
 
 /**
+ * @typedef {(
+ *   { type: 'organisation' } |
+ *   { type: 'registration', registrationId: string } |
+ *   { type: 'accreditation', registrationId: string, accreditationId: string }
+ * )} StatusTransitionTarget
+ */
+
+/**
+ * @typedef {Object} StatusHistoryChange
+ * @property {'organisation'|'registration'|'accreditation'} itemType
+ * @property {string} [id]
+ * @property {{status: string, updatedAt: Date, updatedBy?: string}} entry
+ */
+
+/**
+ * @typedef {Object} StatusHistoryAppendResult
+ * @property {StatusHistoryChange[]} changes
+ * @property {string} previousStatus
+ */
+
+/**
  * @typedef {Object} OrganisationsRepository
  * @property {(organisation: Omit<Organisation, 'status'>) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
@@ -75,6 +96,7 @@
  * @property {(orgId: number) => Promise<Organisation|null>} findByOrgId - Find organisation by business orgId
  * @property {(id: string, version: number, registrationId: string, entries: Record<string, {overseasSiteId: string}>) => Promise<boolean>} replaceRegistrationOverseasSites - Replace a registration's overseasSites map with the given entries
  * @property {(version: number) => Promise<Organisation[]>} findAllBySchemaVersion - Find all organisations with a given schemaVersion
+ * @property {(id: string, version: number, target: StatusTransitionTarget, toStatus: string, updatedBy: string) => Promise<{ organisation: Organisation, previousStatus: string }>} appendStatusHistory - Append a status transition to the target item under whole-org version CAS; returns the updated organisation and the targeted item's status before the change. Throws Boom.conflict (409) on version mismatch.
  */
 
 /**
