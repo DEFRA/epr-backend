@@ -5,6 +5,8 @@ import {
   toWasteRecordVersions
 } from './test-data.js'
 
+/** @typedef {import('../port.js').VersionData} VersionData */
+
 export const testDataIsolationBehaviour = (it) => {
   describe('data isolation', () => {
     let repository
@@ -60,10 +62,10 @@ export const testDataIsolationBehaviour = (it) => {
 
         // mutate input after save
         data.GROSS_WEIGHT = 999.99
-        const storedRow = wasteRecordVersions.get('received')?.get('row-1')
-        if (!storedRow) {
-          throw new Error('expected stored row to exist')
-        }
+        const receivedRows = /** @type {Map<string, VersionData>} */ (
+          wasteRecordVersions.get('received')
+        )
+        const storedRow = /** @type {VersionData} */ (receivedRows.get('row-1'))
         storedRow.data.GROSS_WEIGHT = 999.99
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
