@@ -1,5 +1,8 @@
 import { classifierTail, conflict } from '#common/helpers/logging/cdp-boom.js'
-import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
+import {
+  LINKABLE_ORGANISATION_STATUSES,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { errorCodes } from './enums/error-codes.js'
@@ -131,33 +134,6 @@ const performReplace = (db) => async (id, version, updates) => {
   if (result.matchedCount === 0) {
     throw Boom.conflict(
       `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-    )
-  }
-}
-
-const performReplaceRaw = (db) => async (id, version, document) => {
-  const validatedId = validateId(id)
-
-  let result
-  try {
-    result = await db.collection(COLLECTION_NAME).replaceOne(
-      { _id: ObjectId.createFromHexString(validatedId), version },
-      {
-        _id: ObjectId.createFromHexString(validatedId),
-        ...document,
-        version: version + 1
-      }
-    )
-  } catch (error) {
-    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      throwCuratedDuplicateKeyBoom(error, validatedId)
-    }
-    throw error
-  }
-
-  if (result.matchedCount === 0) {
-    throw Boom.conflict(
-      `Version conflict: attempted to update with version ${version}`
     )
   }
 }
@@ -332,13 +308,15 @@ const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db
     .collection(COLLECTION_NAME)
     .find({
-      // Must not be linked
-      linkedDefraOrganisation: { $exists: false },
-      // Must be approved (check last status in statusHistory)
+      // Must not be linked — matches never-linked (field absent) and unlinked
+      // (field cleared to null by the unlink flow)
+      linkedDefraOrganisation: null,
+      // Must be approved, or active but unlinked (check last status in
+      // statusHistory) — both are re-linkable candidates
       $expr: {
-        $eq: [
+        $in: [
           { $arrayElemAt: ['$statusHistory.status', -1] },
-          REG_ACC_STATUS.APPROVED
+          LINKABLE_ORGANISATION_STATUSES
         ]
       },
       // User must be an initial user (case-insensitive email match)
@@ -473,7 +451,6 @@ export const createOrganisationsRepository = async (
     return {
       insert: performInsert(db),
       replace: performReplace(db),
-      replaceRaw: performReplaceRaw(db),
       findById,
       findAll: performFindAll(db),
       findAllBySchemaVersion: performFindAllBySchemaVersion(db),

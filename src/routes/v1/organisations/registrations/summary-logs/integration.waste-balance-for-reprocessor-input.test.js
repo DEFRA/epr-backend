@@ -12,6 +12,7 @@ import {
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
+  getWasteBalance,
   pollForValidation,
   pollWhileStatus,
   setupWasteBalanceIntegrationEnvironment,
@@ -133,7 +134,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { wasteBalancesRepository, accreditationId } = env
+      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         { rowId: 1001, tonnageReceived: 100 },
@@ -146,22 +147,15 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-      expect(balance).toBeDefined()
-      expect(balance.transactions).toHaveLength(2)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
 
       // 100 + 200 = 300
       expect(balance.amount).toBe(300)
       expect(balance.availableAmount).toBe(300)
-
-      const transaction1 = balance.transactions.find(
-        (t) => t.entities[0].id === '1001'
-      )
-      expect(transaction1).toBeDefined()
-      expect(transaction1.type).toBe('credit')
-      expect(transaction1.amount).toBe(100)
     })
 
     it('should update waste balance with debits from sent on loads', async () => {
@@ -169,7 +163,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { wasteBalancesRepository, accreditationId } = env
+      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const uploadData = createUploadData(
         [{ rowId: 1001, tonnageReceived: 500 }], // Initial credit to allow debits
@@ -184,22 +178,15 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-      expect(balance).toBeDefined()
-      expect(balance.transactions).toHaveLength(2)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
 
       // 500 (credit) - 100 (debit) = 400
       expect(balance.amount).toBe(400)
       expect(balance.availableAmount).toBe(400)
-
-      const debitTx = balance.transactions.find(
-        (t) => t.entities[0].id === '5001'
-      )
-      expect(debitTx).toBeDefined()
-      expect(debitTx.type).toBe('debit')
-      expect(debitTx.amount).toBe(100)
     })
 
     it('should not create credit transaction if PRN was issued on received load', async () => {
@@ -207,7 +194,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { wasteBalancesRepository, accreditationId } = env
+      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         { rowId: 1001, tonnageReceived: 100, prnIssued: 'Yes' },
@@ -222,12 +209,13 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
 
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
-      expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
     it('should compute correct balance when RECEIVED and SENT_ON rows share a rowId', async () => {
@@ -235,7 +223,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { wasteBalancesRepository, accreditationId } = env
+      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       // RECEIVED requires rowId >= 1000; SENT_ON requires rowId >= 5000.
       // The minimums are floors, not walls — a single value >= 5000 satisfies
@@ -256,26 +244,19 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
 
       // 500 (credit from RECEIVED) - 100 (debit from SENT_ON) = 400.
-      // Regression guard: if the balance calculation ever reverts to
-      // accumulating from the rowId-keyed transaction ledger, the SENT_ON
-      // row would conflate with the RECEIVED row's credit and the closing
-      // balance would drift.
+      // Regression guard: colliding rowIds across the two tables must not
+      // conflate. The credit and debit differ in magnitude, so a dropped or
+      // merged row would not tally to 400.
       expect(balance).toBeDefined()
       expect(balance.amount).toBe(400)
       expect(balance.availableAmount).toBe(400)
-
-      // Both rows must produce a ledger entry — a regression that silently
-      // dropped one of the colliding rows would still tally to 400 by luck
-      // in a single-upload scenario, but would leave only one transaction.
-      expect(balance.transactions).toHaveLength(2)
-      expect(
-        balance.transactions.find((t) => t.type === 'credit')
-      ).toBeDefined()
-      expect(balance.transactions.find((t) => t.type === 'debit')).toBeDefined()
     })
 
     it('should not create transaction for received load outside accreditation period', async () => {
@@ -283,7 +264,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { wasteBalancesRepository, accreditationId } = env
+      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         {
@@ -306,12 +287,13 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
 
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
-      expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
     it('should not create transaction for sent on load outside accreditation period', async () => {
@@ -319,7 +301,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { wasteBalancesRepository, accreditationId } = env
+      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const uploadData = createUploadData(
         [{ rowId: 1001, tonnageReceived: 500 }], // Initial credit
@@ -345,17 +327,15 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
 
       // 500 (credit) - 50 (debit) = 450
       // Row 5001 should be ignored
       expect(balance.amount).toBe(450)
-
-      const debitTx = balance.transactions.find((t) => t.type === 'debit')
-      expect(debitTx).toBeDefined()
-      expect(debitTx.entities[0].id).toBe('5002')
-      expect(debitTx.amount).toBe(50)
     })
 
     it('should handle revisions correctly (credit -> debit)', async () => {
@@ -363,7 +343,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { wasteBalancesRepository, accreditationId } = env
+      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       // First submission: Valid credit
       const firstUploadData = createUploadData([
@@ -378,8 +358,11 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         firstUploadData
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
       expect(balance.amount).toBe(100)
 
       // Second submission: Revised to PRN Issued (should reverse credit)
@@ -395,15 +378,12 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         secondUploadData
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
       expect(balance.amount).toBe(0)
-
-      // Should have original credit and corrective debit
-      expect(balance.transactions).toHaveLength(2)
-      const debitTx = balance.transactions.find((t) => t.type === 'debit')
-      expect(debitTx.entities[0].id).toBe('1001')
-      expect(debitTx.amount).toBe(100)
     })
 
     it('should not create transaction if mandatory fields are missing (AC01d)', async () => {
@@ -411,7 +391,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { wasteBalancesRepository, accreditationId } = env
+      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         {
@@ -434,13 +414,14 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
 
       // Only row 1002 should contribute
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
-      expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
     it('should correctly calculate tonnage with bailing wire deduction (Requirement Note)', async () => {
@@ -448,7 +429,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { wasteBalancesRepository, accreditationId } = env
+      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       // (1000 gross - 100 tare - 50 pallet) = 850 net
       // 850 net * 0.9985 (bailing wire) = 848.725
@@ -475,8 +456,11 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
 
       expect(balance.amount).toBe(848.73)
     })

@@ -5,9 +5,15 @@ export const testDataIsolationBehaviour = (it) => {
   describe('data isolation', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     describe('findAll isolation', () => {
       it('returns independent copies that cannot modify stored data', async () => {

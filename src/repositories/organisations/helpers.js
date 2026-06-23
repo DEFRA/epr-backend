@@ -8,7 +8,12 @@ import {
   assertAndHandleItemStateTransition,
   assertOrgStatusTransition
 } from '#repositories/organisations/schema/status-transition.js'
-import { validateApprovals } from './schema/helpers.js'
+import {
+  validateAccreditationLinkExists,
+  validateAccreditationLinkMatches,
+  validateAccreditationLinkUniqueness,
+  validateApprovals
+} from './schema/helpers.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
@@ -93,6 +98,15 @@ function prepareRegAccForReplace(validated, existing) {
       validated.registrations,
       validated.accreditations
     )
+  validateAccreditationLinkUniqueness(validated.registrations)
+  validateAccreditationLinkExists(
+    validated.registrations,
+    accreditationsAfterUpdate
+  )
+  validateAccreditationLinkMatches(
+    validated.registrations,
+    accreditationsAfterUpdate
+  )
   validateApprovals(validated.registrations, accreditationsAfterUpdate)
   const registrations = updateStatusHistoryForItems(
     existing.registrations,

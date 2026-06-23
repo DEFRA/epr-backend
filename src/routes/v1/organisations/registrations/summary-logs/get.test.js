@@ -8,6 +8,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asStandardUser } from '#test/inject-auth.js'
@@ -83,7 +84,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
         summaryLogId,
-        summaryLogFactory.validated({ organisationId, registrationId })
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
+        })
       )
 
       const response = await makeRequest(server)
@@ -121,7 +126,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const loads = createLoads()
       await summaryLogsRepository.insert(
         summaryLogId,
-        summaryLogFactory.validated({ organisationId, registrationId })
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
+        })
       )
       await summaryLogsRepository.update(summaryLogId, 1, { loads })
       await waitForVersion(summaryLogsRepository, summaryLogId, 2)
@@ -137,7 +146,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
         summaryLogId,
-        summaryLogFactory.validated({ organisationId, registrationId })
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
+        })
       )
 
       const response = await makeRequest(server)
@@ -236,13 +249,14 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         summaryLogId,
         summaryLogFactory.invalid({ organisationId, registrationId })
       )
-      await summaryLogsRepository.update(summaryLogId, 1, {
-        meta: {
-          PROCESSING_TYPE: null,
-          MATERIAL: null,
-          ACCREDITATION_NUMBER: null
-        }
-      })
+      // Raw storage can hold null meta values; the response must omit them.
+      /** @type {Record<string, unknown>} */
+      const dirtyMeta = {
+        PROCESSING_TYPE: null,
+        MATERIAL: null,
+        ACCREDITATION_NUMBER: null
+      }
+      await summaryLogsRepository.update(summaryLogId, 1, { meta: dirtyMeta })
       await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)

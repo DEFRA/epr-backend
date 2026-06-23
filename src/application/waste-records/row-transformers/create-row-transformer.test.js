@@ -13,4 +13,14 @@ describe('createRowTransformer', () => {
 
     expect(() => transform({}, 5)).toThrow('Missing ROW_ID at row 5')
   })
+
+  it('coerces a numeric ROW_ID to a string', () => {
+    const transform = createRowTransformer({
+      wasteRecordType: 'received',
+      processingType: 'REPROCESSOR_INPUT',
+      rowIdField: 'ROW_ID'
+    })
+
+    expect(transform({ ROW_ID: 1000 }, 0).rowId).toBe('1000')
+  })
 })

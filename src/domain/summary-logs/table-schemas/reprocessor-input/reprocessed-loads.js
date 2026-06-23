@@ -4,6 +4,7 @@ import { REPROCESSED_LOADS_FIELDS as FIELDS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 /**
  * All fields - all optional for REPROCESSOR_INPUT
  */
@@ -29,6 +30,9 @@ const ALL_FIELDS = [
  */
 export const REPROCESSED_LOADS = {
   rowIdField: FIELDS.ROW_ID,
+  reportingDateFields: Object.values(
+    REPORTING_DATE_FIELDS.REPROCESSOR_INPUT.REPROCESSED_LOADS
+  ),
   wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
   sheetName: 'Processed',
   rowTransformer: createRowTransformer({

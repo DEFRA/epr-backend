@@ -1,18 +1,9 @@
-import {
-  isPayloadSmallEnoughToAudit,
-  safeAudit
-} from '#root/auditing/helpers.js'
+import { safeAudit } from '#root/auditing/helpers.js'
 
 /**
  * Emit the back-office system-log entry and the CDP audit event for a waste
- * balance update. Both write paths, the embedded-array path in
- * `repository/helpers.js` and the stream-append path in
- * `application/update-via-stream.js`, share this helper so they produce
- * identical audit shapes.
- *
- * If the full payload exceeds the safe-audit size limit, the system-log
- * entry falls back to a count-only context. The audit event itself goes
- * through `safeAudit`, which has its own internal trim.
+ * balance update. The audit event goes through `safeAudit`, which trims the
+ * payload internally if it exceeds the safe-audit size limit.
  *
  * @param {Object} params
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.systemLogsRepository]
@@ -45,24 +36,12 @@ export const recordWasteBalanceUpdateAudit = async ({
     user
   }
 
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: {
-          accreditationId,
-          amount,
-          availableAmount,
-          transactionCount: newTransactions.length
-        }
-      }
-
-  safeAudit(safeAuditingPayload)
+  safeAudit(payload)
 
   if (systemLogsRepository) {
     await systemLogsRepository.insert({
       createdAt: new Date(),
-      createdBy: user,
+      createdBy: { ...user, role: null },
       event: payload.event,
       context: payload.context
     })

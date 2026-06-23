@@ -299,7 +299,7 @@ const performPersistProjection =
       }
     }
 
-    const persisted = { ...projection, id }
+    const persisted = { ...projection, id, version: expectedVersion + 1 }
     storage.set(id, structuredClone(persisted))
     return structuredClone(persisted)
   }

@@ -42,7 +42,13 @@ export default [
   {
     files: ['**/*.test.js', '**/*.contract.js'],
     plugins: { vitest },
-    rules: vitest.configs.recommended.rules,
+    rules: {
+      ...vitest.configs.recommended.rules,
+      'vitest/expect-expect': [
+        'error',
+        { assertFunctionNames: ['expect', 'expect*'] }
+      ]
+    },
     settings: {
       vitest: {
         vitestImports: [/#vite\/fixtures\//]

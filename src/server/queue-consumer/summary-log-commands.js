@@ -14,6 +14,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 /** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
 /** @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
+/** @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository */
 
 /**
  * @typedef {object} SummaryLogHandlerDeps
@@ -22,14 +23,18 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {OrganisationsRepository} organisationsRepository
  * @property {WasteRecordsRepository} wasteRecordsRepository
  * @property {WasteBalancesRepository} wasteBalancesRepository
+ * @property {ReportsRepository} reportsRepository
  * @property {SummaryLogExtractor} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
+ * @property {(organisationId: string, registrationId: string) => Promise<void>} onSummaryLogSubmittedReportHook
  */
 
 const userSchema = Joi.object({
   id: Joi.string().required(),
+  name: Joi.string(),
   email: Joi.string().required(),
-  scope: Joi.array().items(Joi.string()).required()
+  scope: Joi.array().items(Joi.string()).required(),
+  role: Joi.string().allow(null).required()
 })
 
 /**
@@ -58,6 +63,8 @@ export const summaryLogCommandHandlers = [
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        reportsRepository,
+        overseasSitesRepository,
         summaryLogExtractor
       } = deps
 
@@ -66,6 +73,8 @@ export const summaryLogCommandHandlers = [
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        reportsRepository,
+        overseasSitesRepository,
         summaryLogExtractor
       })
 
@@ -89,7 +98,8 @@ export const summaryLogCommandHandlers = [
     execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
       await submitSummaryLog(payload.summaryLogId, {
         ...deps,
-        user: payload.user
+        user: payload.user,
+        onSummaryLogSubmittedReportHook: deps.onSummaryLogSubmittedReportHook
       })
     },
     onFailure: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {

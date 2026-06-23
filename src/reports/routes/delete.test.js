@@ -23,8 +23,8 @@ vi.mock('#reports/application/audit.js', () => ({
 describe(`DELETE ${reportsDeletePath}`, () => {
   setupAuthContext()
 
-  const makeUrl = (orgId, regId, year, cadence, period) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}`
+  const makeUrl = (orgId, regId, year, cadence, period, submissionNumber = 1) =>
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}`
 
   describe('when feature flag is enabled', () => {
     const createServerWithReport = async (registrationOverrides = {}) => {
@@ -58,7 +58,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: reportsRepositoryFactory
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       return {
@@ -85,7 +85,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: createInMemoryReportsRepository()
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       return {
@@ -220,7 +220,8 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           version: 2,
           status: 'submitted',
           slot: REPORT_STATUS_SLOT.SUBMITTED,
-          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' },
+          submissionDeclaredBy: 'Test User'
         })
 
         const response = await deleteReport(
@@ -293,7 +294,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
 
       const server = await createTestServer({
         repositories: {},
-        featureFlags: createInMemoryFeatureFlags({ reports: false })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       const response = await server.inject({

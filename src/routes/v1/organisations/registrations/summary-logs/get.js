@@ -4,8 +4,12 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { getDefaultStatus } from '#domain/summary-logs/status.js'
+import {
+  getDefaultStatus,
+  SUMMARY_LOG_STATUS
+} from '#domain/summary-logs/status.js'
 import { extractResponseMetaFields } from '#domain/summary-logs/extract-response-meta-fields.js'
+import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { transformValidationResponse } from './transform-validation-response.js'
 import { summaryLogResponseSchema } from './response.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
@@ -46,6 +50,10 @@ export const summaryLogsGet = {
       status: summaryLog.status,
       ...transformValidationResponse(summaryLog.validation),
       ...(summaryLog.loads && { loads: summaryLog.loads }),
+      ...(summaryLog.status === SUMMARY_LOG_STATUS.VALIDATED && {
+        loadsByReportingPeriod:
+          summaryLog.loadsByReportingPeriod ?? emptyLoadsByReportingPeriod()
+      }),
       ...(summaryLog.loadsByWasteRecordType && {
         loadsByWasteRecordType: summaryLog.loadsByWasteRecordType
       }),

@@ -3,10 +3,8 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
   VALIDATION_CATEGORY,
-  VALIDATION_CODE,
-  VALIDATION_SEVERITY
+  VALIDATION_CODE
 } from '#common/enums/index.js'
-import { isNil } from '#common/helpers/is-nil.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
@@ -18,44 +16,45 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
-  PROCESSING_TYPE_TABLES,
-  findSchemaForProcessingType
+  findSchemaForProcessingType,
+  PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
-  countByValidity,
-  countByWasteBalanceInclusion,
-  countByWasteRecordType,
-  mergeLoads
-} from './load-counts.js'
-import {
-  logValidationIssues,
-  MAX_VALIDATION_ISSUES
-} from './validate-issue-logging.js'
+  classifyLoads,
+  fetchPeriodicReports,
+  filterWasteBalanceRecords,
+  resolveOverseasSitesContext
+} from './classify-and-persist.js'
+import { logValidationIssues } from './validate-issue-logging.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
+import { capIssuesForStorage } from './cap-issues-for-storage.js'
 
-export { MAX_VALIDATION_ISSUES }
-
-export const MAX_ACTUAL_LENGTH = 200
+export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
+export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+/** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
+/** @import {LoadsByReportingPeriod} from './period-status.js' */
+/** @import {ReportsRepository} from '#reports/repository/port.js' */
+/** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
  * @param {{
@@ -94,6 +93,7 @@ const extractSummaryLog = async ({
  * }} params
  * @returns {Promise<{
  *   wasteRecords: ValidatedWasteRecord[],
+ *   existingRecordsMap: Map<string, WasteRecord>,
  *   issues: ValidationIssuesCollector
  * }>}
  */
@@ -137,7 +137,7 @@ const transformAndValidateData = async ({
   // Data business validation using waste records
   const issues = validateDataBusiness({ wasteRecords, existingWasteRecords })
 
-  return { wasteRecords, issues }
+  return { wasteRecords, existingRecordsMap, issues }
 }
 
 /**
@@ -183,6 +183,8 @@ const fetchRegistration = async ({
  * @property {ValidationIssuesCollector} issues - Validation issues object with methods like getAllIssues(), isFatal()
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
+ * @property {Registration} [registration] - Registration fetched during validation
+ * @property {Map<string, WasteRecord>} [existingRecordsMap] - Existing records map for adjusted record lookup
  */
 
 /**
@@ -304,7 +306,12 @@ const performValidationChecks = async ({
 }) => {
   const issues = createValidationIssues()
   let wasteRecords = null
+  /** @type {ExtractedMeta | undefined} */
   let meta
+  /** @type {Registration | undefined} */
+  let registration
+  /** @type {Map<string, WasteRecord> | undefined} */
+  let existingRecordsMap
 
   try {
     const parsed = await extractSummaryLog({
@@ -322,7 +329,7 @@ const performValidationChecks = async ({
       return { issues, wasteRecords, meta }
     }
 
-    const registration = await fetchRegistration({
+    registration = await fetchRegistration({
       organisationsRepository,
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
@@ -339,7 +346,7 @@ const performValidationChecks = async ({
     )
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta }
+      return { issues, wasteRecords, meta, registration }
     }
 
     // Data syntax validation returns validated data with issues attached to rows
@@ -348,7 +355,7 @@ const performValidationChecks = async ({
     issues.merge(dataSyntaxIssues)
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta }
+      return { issues, wasteRecords, meta, registration }
     }
 
     const dataResult = await transformAndValidateData({
@@ -359,6 +366,7 @@ const performValidationChecks = async ({
     })
 
     wasteRecords = dataResult.wasteRecords
+    existingRecordsMap = dataResult.existingRecordsMap
 
     markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
 
@@ -372,7 +380,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, wasteRecords, meta }
+  return { issues, wasteRecords, meta, registration, existingRecordsMap }
 }
 
 /**
@@ -504,6 +512,7 @@ const recordValidationMetrics = async ({
  * @param {Object} params
  * @param {ValidationIssuesCollector} params.issues
  * @param {Loads | null} params.loads
+ * @param {LoadsByReportingPeriod | null} params.loadsByReportingPeriod
  * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
  * @param {ExtractedMeta | undefined} params.meta
  * @param {SummaryLogStatus} params.status
@@ -515,6 +524,7 @@ const recordValidationMetrics = async ({
 const persistValidationResult = async ({
   issues,
   loads,
+  loadsByReportingPeriod,
   loadsByWasteRecordType,
   meta,
   status,
@@ -533,64 +543,71 @@ const persistValidationResult = async ({
       counts: issues.getCounts()
     },
     ...(loads && { loads }),
+    ...(loadsByReportingPeriod && { loadsByReportingPeriod }),
     ...(loadsByWasteRecordType && { loadsByWasteRecordType }),
     ...(meta && { meta })
   })
 }
 
 /**
- * Filters waste records to only those from tables that participate in waste balance.
- *
- * @param {ValidatedWasteRecord[] | null} wasteRecords
- * @param {string} processingType
- * @returns {ValidatedWasteRecord[]}
+ * Fetches periodic reports, classifies loads, and persists the validation result.
  */
-const filterWasteBalanceRecords = (wasteRecords, processingType) =>
-  wasteRecords?.filter((wr) => {
-    const schema = findSchemaForProcessingType(processingType, wr.record.type)
-    return !isNil(schema?.classifyForWasteBalance)
-  }) ?? []
-
-/**
- * Computes aggregate and per-waste-record-type load counts for validated summary logs.
- *
- * @param {Object} params
- * @param {string} params.status - Summary log status after validation
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {string} params.summaryLogId
- * @param {ProcessingType} params.processingType
- * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null }}
- */
-const classifyLoads = ({
+const classifyAndPersistResult = async ({
+  issues,
   processingType,
   status,
   summaryLogId,
   wasteBalanceRecords,
-  wasteRecords
+  wasteRecords,
+  registration,
+  existingRecordsMap,
+  meta,
+  summaryLog,
+  summaryLogsRepository,
+  version,
+  reportsRepository,
+  organisationsRepository,
+  overseasSitesRepository
 }) => {
-  if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
-    return { loads: null, loadsByWasteRecordType: null }
-  }
-
-  const loads = mergeLoads(
-    countByValidity({ wasteRecords, summaryLogId }),
-    countByWasteBalanceInclusion({
-      wasteRecords: wasteBalanceRecords,
-      summaryLogId
-    })
-  )
-
-  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
-
-  const loadsByWasteRecordType = countByWasteRecordType({
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    tableSchemas
+  const periodicReports = await fetchPeriodicReports({
+    registration,
+    status,
+    summaryLog,
+    reportsRepository
   })
 
-  return { loads, loadsByWasteRecordType }
+  const overseasSites = await resolveOverseasSitesContext({
+    processingType,
+    summaryLog,
+    organisationsRepository,
+    overseasSitesRepository
+  })
+
+  const { loads, loadsByWasteRecordType, loadsByReportingPeriod } =
+    classifyLoads({
+      processingType,
+      status,
+      summaryLogId,
+      wasteBalanceRecords,
+      wasteRecords,
+      periodicReports,
+      overseasSites,
+      registration,
+      existingRecordsMap
+    })
+
+  await persistValidationResult({
+    issues,
+    loads,
+    loadsByReportingPeriod,
+    loadsByWasteRecordType,
+    meta,
+    status,
+    summaryLog,
+    summaryLogId,
+    summaryLogsRepository,
+    version
+  })
 }
 
 /**
@@ -601,6 +618,8 @@ const classifyLoads = ({
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   wasteRecordsRepository: WasteRecordsRepository,
+ *   reportsRepository: ReportsRepository,
+ *   overseasSitesRepository: OverseasSitesRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
  * @returns {(summaryLogId: string) => Promise<void>}
@@ -610,6 +629,8 @@ export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
   wasteRecordsRepository,
+  reportsRepository,
+  overseasSitesRepository,
   summaryLogExtractor
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
@@ -621,10 +642,7 @@ export const createSummaryLogsValidator = ({
       /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
         result
       )
-    const {
-      file: { id: fileId, name: filename }
-    } = summaryLog
-
+    const { id: fileId, name: filename } = summaryLog.file
     const loggingContext = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
 
     logger.info({
@@ -636,26 +654,24 @@ export const createSummaryLogsValidator = ({
     })
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta } = await performValidationChecks({
-      summaryLogId,
-      summaryLog,
-      loggingContext,
-      logger,
-      summaryLogExtractor,
-      organisationsRepository,
-      wasteRecordsRepository,
-      validateDataSyntax
-    })
-    const validationDurationMs = Date.now() - validationStart
+    const { issues, wasteRecords, meta, registration, existingRecordsMap } =
+      await performValidationChecks({
+        summaryLogId,
+        summaryLog,
+        loggingContext,
+        logger,
+        summaryLogExtractor,
+        organisationsRepository,
+        wasteRecordsRepository,
+        validateDataSyntax
+      })
 
     logValidationIssues({ summaryLogId, summaryLog, issues, logger })
 
     const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
-
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
-
     const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
       processingType
@@ -665,28 +681,26 @@ export const createSummaryLogsValidator = ({
       issues,
       processingType,
       status,
-      validationDurationMs,
+      validationDurationMs: Date.now() - validationStart,
       wasteBalanceRecords
     })
 
-    const { loads, loadsByWasteRecordType } = classifyLoads({
+    await classifyAndPersistResult({
+      issues,
       processingType,
       status,
       summaryLogId,
       wasteBalanceRecords,
-      wasteRecords
-    })
-
-    await persistValidationResult({
-      issues,
-      loads,
-      loadsByWasteRecordType,
+      wasteRecords,
+      registration,
+      existingRecordsMap,
       meta,
-      status,
       summaryLog,
-      summaryLogId,
       summaryLogsRepository,
-      version
+      version,
+      reportsRepository,
+      organisationsRepository,
+      overseasSitesRepository
     })
 
     logger.info({
@@ -697,56 +711,4 @@ export const createSummaryLogsValidator = ({
       }
     })
   }
-}
-
-/** @param {ValidationIssue[]} issues */
-const truncateActualValues = (issues) => {
-  for (const issue of issues) {
-    if (
-      typeof issue.context?.actual === 'string' &&
-      issue.context.actual.length > MAX_ACTUAL_LENGTH
-    ) {
-      issue.context.actual =
-        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
-    }
-  }
-}
-
-/**
- * Caps the issues array and truncates long actual values for MongoDB storage.
- *
- * Both the issue count and per-issue actual values are bounded to prevent
- * the summary log document exceeding MongoDB's 16 MiB BSON limit.
- * @see https://eaflood.atlassian.net/browse/PAE-1244
- *
- * Fatal issues are always preserved — they determine the summary log status
- * and are required by the frontend to render specific error messages.
- * Non-fatal issues fill the remaining capacity.
- *
- * @param {ValidationIssue[]} allIssues - All validation issues
- * @returns {ValidationIssue[]} The capped, actual-value-truncated issues
- */
-const capIssuesForStorage = (allIssues) => {
-  let cappedIssues
-
-  if (allIssues.length <= MAX_VALIDATION_ISSUES) {
-    cappedIssues = allIssues
-  } else {
-    const fatal = allIssues.filter(
-      (issue) => issue.severity === VALIDATION_SEVERITY.FATAL
-    )
-    const nonFatal = allIssues.filter(
-      (issue) => issue.severity !== VALIDATION_SEVERITY.FATAL
-    )
-    const cappedFatal = fatal.slice(0, MAX_VALIDATION_ISSUES)
-    const nonFatalSlots = Math.max(
-      0,
-      MAX_VALIDATION_ISSUES - cappedFatal.length
-    )
-    cappedIssues = [...cappedFatal, ...nonFatal.slice(0, nonFatalSlots)]
-  }
-
-  truncateActualValues(cappedIssues)
-
-  return cappedIssues
 }

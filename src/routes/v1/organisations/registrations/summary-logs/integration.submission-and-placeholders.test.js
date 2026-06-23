@@ -16,9 +16,12 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -101,7 +104,7 @@ describe('Submission and placeholder tests', () => {
       testOrg.id = organisationId
 
       const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
+        { ...testOrg, status: 'active' }
       ])()
 
       const sharedMeta = {
@@ -349,15 +352,19 @@ describe('Submission and placeholder tests', () => {
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor: validationExtractor,
-        logger: mockLogger
+        logger: mockLogger,
+        reportsRepository: createInMemoryReportsRepository()(),
+        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
 
-      const syncWasteRecords = syncFromSummaryLog({
-        extractor: transformationExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
-        organisationsRepository,
-        overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
-      })
+      const syncWasteRecords = syncFromSummaryLog(
+        /** @type {any} */ ({
+          extractor: transformationExtractor,
+          wasteRecordRepository: wasteRecordsRepository,
+          organisationsRepository,
+          overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
+        })
+      )
 
       const submitterWorker = {
         validate: validateSummaryLog,
@@ -365,7 +372,10 @@ describe('Submission and placeholder tests', () => {
           await new Promise((resolve) => setImmediate(resolve))
 
           const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } = existing
+          const { version, summaryLog } =
+            /** @type {import('#repositories/summary-logs/port.js').SummaryLogVersion} */ (
+              existing
+            )
 
           await syncWasteRecords(summaryLog)
 
@@ -450,8 +460,8 @@ describe('Submission and placeholder tests', () => {
       )
 
       expect(wasteRecords).toHaveLength(2)
-      expect(wasteRecords[0].rowId).toBe(1001)
-      expect(wasteRecords[1].rowId).toBe(1002)
+      expect(wasteRecords[0].rowId).toBe('1001')
+      expect(wasteRecords[1].rowId).toBe('1002')
     })
 
     it('should update summary log status to SUBMITTED', async () => {
@@ -518,13 +528,13 @@ describe('Submission and placeholder tests', () => {
       expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
 
       expect(payload.loads.added.valid.count).toBe(1)
-      expect(payload.loads.added.valid.rowIds).toContain(1003)
+      expect(payload.loads.added.valid.rowIds).toContain('1003')
 
       expect(payload.loads.adjusted.valid.count).toBe(1)
-      expect(payload.loads.adjusted.valid.rowIds).toContain(1002)
+      expect(payload.loads.adjusted.valid.rowIds).toContain('1002')
 
       expect(payload.loads.unchanged.valid.count).toBe(1)
-      expect(payload.loads.unchanged.valid.rowIds).toContain(1001)
+      expect(payload.loads.unchanged.valid.rowIds).toContain('1001')
 
       expect(payload.loadsByWasteRecordType).toEqual([
         expect.objectContaining({
@@ -762,10 +772,12 @@ describe('Submission and placeholder tests', () => {
       testOrg.id = organisationId
 
       const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
+        { ...testOrg, status: 'active' }
       ])()
 
-      const excelBuffer = await createExcelWithPlaceholders()
+      const excelBuffer = /** @type {Buffer<ArrayBufferLike>} */ (
+        /** @type {unknown} */ (await createExcelWithPlaceholders())
+      )
 
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
         organisationId,
@@ -782,8 +794,7 @@ describe('Submission and placeholder tests', () => {
       const { Bucket: s3Bucket, Key: s3Key } = parseS3Uri(s3Uri)
 
       const summaryLogExtractor = createSummaryLogExtractor({
-        uploadsRepository,
-        logger: mockLogger
+        uploadsRepository
       })
 
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
@@ -793,7 +804,9 @@ describe('Submission and placeholder tests', () => {
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor,
-        logger: mockLogger
+        logger: mockLogger,
+        reportsRepository: createInMemoryReportsRepository()(),
+        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
       const featureFlags = createInMemoryFeatureFlags()
 

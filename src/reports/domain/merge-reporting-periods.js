@@ -36,6 +36,7 @@ function indexPersistedSlots(periodicReports, cadence) {
  *   startDate: string;
  *   endDate: string;
  *   dueDate: string;
+ *   submissionNumber: number;
  *   report: ReportSummary | null;
  * }} MergedPeriod
  */
@@ -71,6 +72,7 @@ export function mergeReportingPeriods(
       startDate: cp.startDate,
       endDate: cp.endDate,
       dueDate: cp.dueDate,
+      submissionNumber: slot?.current?.submissionNumber ?? 1,
       report: slot?.current ?? null
     })
   }
@@ -86,6 +88,7 @@ export function mergeReportingPeriods(
       startDate: slot.startDate,
       endDate: slot.endDate,
       dueDate: slot.dueDate,
+      submissionNumber: slot.current.submissionNumber,
       report: slot.current
     })
   }

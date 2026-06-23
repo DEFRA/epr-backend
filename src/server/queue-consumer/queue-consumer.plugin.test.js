@@ -6,6 +6,7 @@ import { commandQueueConsumerPlugin } from './queue-consumer.plugin.js'
 
 vi.mock('#common/helpers/sqs/sqs-client.js')
 vi.mock('#application/summary-logs/extractor.js')
+vi.mock('#reports/application/summary-log-events.js')
 vi.mock('./consumer.js')
 vi.mock('./summary-log-commands.js')
 vi.mock('./ors-import-commands.js')
@@ -38,6 +39,7 @@ describe('commandQueueConsumerPlugin', () => {
         wasteRecordsRepository: {},
         wasteBalancesRepository: {},
         uploadsRepository: {},
+        reportsRepository: {},
         systemLogsRepository: {}
       }
     }
@@ -56,9 +58,15 @@ describe('commandQueueConsumerPlugin', () => {
     mockSqsClient = { destroy: vi.fn() }
     mockConsumer = { start: vi.fn(), stop: vi.fn() }
 
-    vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
-    vi.mocked(createSummaryLogExtractor).mockReturnValue({})
-    vi.mocked(createCommandQueueConsumer).mockResolvedValue(mockConsumer)
+    vi.mocked(createSqsClient).mockReturnValue(
+      /** @type {any} */ (mockSqsClient)
+    )
+    vi.mocked(createSummaryLogExtractor).mockReturnValue(
+      /** @type {any} */ ({})
+    )
+    vi.mocked(createCommandQueueConsumer).mockResolvedValue(
+      /** @type {any} */ (mockConsumer)
+    )
   })
 
   afterEach(() => {
@@ -131,7 +139,9 @@ describe('commandQueueConsumerPlugin', () => {
           organisationsRepository: server.app.organisationsRepository,
           wasteRecordsRepository: server.app.wasteRecordsRepository,
           wasteBalancesRepository: server.app.wasteBalancesRepository,
-          summaryLogExtractor: expect.any(Object)
+          reportsRepository: server.app.reportsRepository,
+          summaryLogExtractor: expect.any(Object),
+          onSummaryLogSubmittedReportHook: expect.any(Function)
         },
         [...summaryLogCommandHandlers]
       )

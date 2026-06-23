@@ -120,6 +120,28 @@ describe('stream event insert schema', () => {
     expect(error).toBeDefined()
   })
 
+  it('preserves email on createdBy', () => {
+    const { value } = validate(
+      buildStreamEvent({
+        createdBy: {
+          id: 'user-1',
+          name: 'Test User',
+          email: 'user@example.test'
+        }
+      })
+    )
+    expect(value.createdBy.email).toBe('user@example.test')
+  })
+
+  it('accepts createdBy without name', () => {
+    const { error } = validate(
+      buildStreamEvent({
+        createdBy: { id: 'user-1', email: 'user@example.test' }
+      })
+    )
+    expect(error).toBeUndefined()
+  })
+
   it('accepts accreditationId: null for registered-only streams', () => {
     const { error } = validate(buildStreamEvent({ accreditationId: null }))
     expect(error).toBeUndefined()

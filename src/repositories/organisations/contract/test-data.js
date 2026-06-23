@@ -8,7 +8,7 @@ export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
 
 /**
  * Generates date constants for validFrom/validTo in YYYY-MM-DD format
- * @returns {Object} Object with VALID_FROM (today) and VALID_TO (one year from now)
+ * @returns {{ VALID_FROM: string, VALID_TO: string }} Object with VALID_FROM (today) and VALID_TO (one year from now)
  */
 export const getValidDateRange = () => {
   const now = new Date()
@@ -61,6 +61,10 @@ export const buildRegistration = (overrides = {}) => {
     delete registration.exportPorts
     delete registration.orsFileUploads
     delete registration.overseasSites
+  }
+
+  if (!overrides.accreditationId) {
+    delete registration.accreditationId
   }
 
   return registration

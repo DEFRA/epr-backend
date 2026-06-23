@@ -6,27 +6,14 @@ import {
   auditOverseasSiteDelete,
   auditOverseasSiteImport
 } from './auditing.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { logger } from '#common/helpers/logging/logger.js'
 
 const mockAudit = vi.fn()
-const mockInsert = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
 }))
-
-const createMockRequest = (overrides = {}) => ({
-  systemLogsRepository: {
-    insert: mockInsert
-  },
-  auth: {
-    credentials: {
-      id: 'user-123',
-      email: 'test@defra.gov.uk',
-      scope: ['service-maintainer']
-    }
-  },
-  ...overrides
-})
 
 const expectedUser = {
   id: 'user-123',
@@ -37,9 +24,30 @@ const expectedUser = {
 describe('overseas sites auditing', () => {
   const now = new Date('2026-03-18T10:00:00.000Z')
 
+  let systemLogsRepository
+
+  const createMockRequest = (overrides = {}) =>
+    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+      systemLogsRepository,
+      auth: {
+        credentials: {
+          id: 'user-123',
+          email: 'test@defra.gov.uk',
+          scope: ['service-maintainer']
+        }
+      },
+      ...overrides
+    })
+
+  const findStoredLog = async () => {
+    const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
+    return systemLogs[0]
+  }
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(now)
+    systemLogsRepository = createSystemLogsRepository()(logger)
   })
 
   afterEach(() => {
@@ -65,18 +73,17 @@ describe('overseas sites auditing', () => {
         })
       )
 
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          createdAt: now,
-          createdBy: expectedUser,
-          event: {
-            category: 'entity',
-            subCategory: 'overseas-sites',
-            action: 'create'
-          },
-          context: { site }
-        })
-      )
+      const storedLog = await findStoredLog()
+      expect(storedLog).toEqual({
+        createdAt: now,
+        createdBy: expectedUser,
+        event: {
+          category: 'entity',
+          subCategory: 'overseas-sites',
+          action: 'create'
+        },
+        context: { site }
+      })
     })
   })
 
@@ -100,18 +107,17 @@ describe('overseas sites auditing', () => {
         })
       )
 
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          createdAt: now,
-          createdBy: expectedUser,
-          event: {
-            category: 'entity',
-            subCategory: 'overseas-sites',
-            action: 'update'
-          },
-          context: { siteId, previous, next }
-        })
-      )
+      const storedLog = await findStoredLog()
+      expect(storedLog).toEqual({
+        createdAt: now,
+        createdBy: expectedUser,
+        event: {
+          category: 'entity',
+          subCategory: 'overseas-sites',
+          action: 'update'
+        },
+        context: { siteId, previous, next }
+      })
     })
 
     it('omits previous and next from audit event for large payloads', async () => {
@@ -133,16 +139,13 @@ describe('overseas sites auditing', () => {
         })
       )
 
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: {
-            category: 'entity',
-            subCategory: 'overseas-sites',
-            action: 'update'
-          },
-          context: { siteId, previous, next }
-        })
-      )
+      const storedLog = await findStoredLog()
+      expect(storedLog.event).toEqual({
+        category: 'entity',
+        subCategory: 'overseas-sites',
+        action: 'update'
+      })
+      expect(storedLog.context).toEqual({ siteId, previous, next })
     })
   })
 
@@ -165,18 +168,17 @@ describe('overseas sites auditing', () => {
         })
       )
 
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          createdAt: now,
-          createdBy: expectedUser,
-          event: {
-            category: 'entity',
-            subCategory: 'overseas-sites',
-            action: 'delete'
-          },
-          context: { siteId, site }
-        })
-      )
+      const storedLog = await findStoredLog()
+      expect(storedLog).toEqual({
+        createdAt: now,
+        createdBy: expectedUser,
+        event: {
+          category: 'entity',
+          subCategory: 'overseas-sites',
+          action: 'delete'
+        },
+        context: { siteId, site }
+      })
     })
   })
 
@@ -198,18 +200,17 @@ describe('overseas sites auditing', () => {
         })
       )
 
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          createdAt: now,
-          createdBy: expectedUser,
-          event: {
-            category: 'entity',
-            subCategory: 'overseas-sites',
-            action: 'import-initiated'
-          },
-          context: { importId }
-        })
-      )
+      const storedLog = await findStoredLog()
+      expect(storedLog).toEqual({
+        createdAt: now,
+        createdBy: expectedUser,
+        event: {
+          category: 'entity',
+          subCategory: 'overseas-sites',
+          action: 'import-initiated'
+        },
+        context: { importId }
+      })
     })
   })
 })
