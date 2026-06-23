@@ -7,7 +7,12 @@ import {
 } from '#auditing/helpers.js'
 
 /** @type {import('#repositories/system-logs/port.js').SystemLog['createdBy']} */
-const SYSTEM_ACTOR = Object.freeze({ id: 'system', email: 'system', scope: [] })
+const SYSTEM_ACTOR = Object.freeze({
+  id: 'system',
+  email: 'system',
+  scope: [],
+  role: null
+})
 
 const AUDIT_CATEGORY = 'waste-reporting'
 const AUDIT_SUB_CATEGORY = 'reports'

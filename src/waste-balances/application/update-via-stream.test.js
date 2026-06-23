@@ -59,7 +59,8 @@ const user = {
   id: 'user-1',
   name: 'Test User',
   email: 'user@example.test',
-  scope: ['standard_user']
+  scope: ['standard_user'],
+  role: 'standard_user'
 }
 
 const buildExporterRecord = ({
@@ -290,7 +291,7 @@ describe('performUpdateViaStream', () => {
       const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
       expect(systemLogs).toHaveLength(1)
       const [entry] = systemLogs
-      expect(entry.createdBy).toEqual(user)
+      expect(entry.createdBy).toEqual({ ...user, role: null })
       expect(entry.createdAt).toBeInstanceOf(Date)
       expect(entry.event).toEqual({
         category: 'waste-reporting',
@@ -369,7 +370,12 @@ describe('performUpdateViaStream', () => {
         streamRepository,
         rowStateRepository,
         dependencies: { systemLogsRepository },
-        user: { id: 'user-2', email: 'noname@example.test', scope: [] },
+        user: {
+          id: 'user-2',
+          email: 'noname@example.test',
+          scope: [],
+          role: null
+        },
         overseasSites,
         summaryLogId: 'log-A'
       })

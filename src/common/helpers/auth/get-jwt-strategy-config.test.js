@@ -147,9 +147,29 @@ describe('#getJwtStrategyConfig', () => {
           id: 'contact-123',
           email: 'user@example.com',
           issuer: entraIdMockOidcWellKnownResponse.issuer,
+          role: 'service_maintainer',
           scope: expectedMaintainerScope
         }
       })
+    })
+
+    test('credential carries the resolved admin role', async () => {
+      const config = getJwtStrategyConfig(mockOidcConfigs)
+
+      const artifacts = {
+        decoded: {
+          payload: {
+            iss: entraIdMockOidcWellKnownResponse.issuer,
+            aud: mockEntraClientId,
+            oid: 'contact-123',
+            preferred_username: 'user@example.com'
+          }
+        }
+      }
+
+      const result = await config.validate(artifacts)
+
+      expect(result.credentials.role).toBe('service_maintainer')
     })
 
     test('calls getEntraUserRoles with email address from token payload', async () => {
@@ -525,6 +545,24 @@ describe('#getJwtStrategyConfig', () => {
         const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.scope).toEqual([ROLES.inquirer])
+      })
+
+      test('Defra ID credential carries a null role', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              aud: mockDefraClientId,
+              contactId: 'defra-contact-123',
+              email: 'defra-user@example.com',
+              iss: defraIdMockOidcWellKnownResponse.issuer
+            }
+          }
+        }
+        const result = await config.validate(artifacts, stubRequest())
+
+        expect(result.credentials.role).toBeNull()
       })
 
       test('includes name from firstName and lastName in credentials', async () => {

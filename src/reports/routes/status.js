@@ -37,7 +37,7 @@ const payloadSchema = Joi.object({
     .pattern(INVALID_DECLARED_BY_CHARS, { invert: true })
     .when('status', {
       is: REPORT_STATUS.SUBMITTED,
-      then: Joi.optional(),
+      then: Joi.required(),
       otherwise: Joi.forbidden()
     })
 })

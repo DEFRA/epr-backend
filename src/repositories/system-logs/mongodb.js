@@ -8,6 +8,19 @@ import { buildPage } from './pagination.js'
 export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 
 /**
+ * Normalise a stored actor so a human session always reads back with an explicit
+ * role: a stored human actor with no role field surfaces as null rather than
+ * absent. A machine actor is returned untouched.
+ *
+ * @param {any} createdBy
+ * @returns {import('./port.js').SystemLogActor}
+ */
+const normaliseActorRole = (createdBy) =>
+  'email' in createdBy && !('role' in createdBy)
+    ? { ...createdBy, role: null }
+    : createdBy
+
+/**
  * Ensures the collection exists with required indexes.
  * Safe to call multiple times - MongoDB createIndex is idempotent.
  *
@@ -96,7 +109,7 @@ const performFind =
         event: doc.event,
         context: doc.context,
         createdAt: doc.createdAt,
-        createdBy: doc.createdBy
+        createdBy: normaliseActorRole(doc.createdBy)
       })),
       hasNext,
       hasPrev,

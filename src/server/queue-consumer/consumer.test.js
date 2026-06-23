@@ -29,7 +29,8 @@ vi.mock('#common/helpers/metrics/summary-logs.js')
 const TEST_USER = {
   id: 'test-user',
   email: 'test-user@example.com',
-  scope: ['standard_user']
+  scope: ['standard_user'],
+  role: null
 }
 
 const { createSummaryLogsValidator } =

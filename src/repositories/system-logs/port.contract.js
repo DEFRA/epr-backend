@@ -478,7 +478,12 @@ export const testSystemLogsRepositoryContract = (it) => {
       expect(actors).toEqual([
         {
           summaryLogId: 'doc-1',
-          createdBy: { id: 'user-1', email: 'alice@example.com', scope: [] }
+          createdBy: {
+            id: 'user-1',
+            email: 'alice@example.com',
+            scope: [],
+            role: null
+          }
         }
       ])
     })
