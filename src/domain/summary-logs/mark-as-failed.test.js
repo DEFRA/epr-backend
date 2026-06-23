@@ -2,12 +2,13 @@ import { vi, describe, it, expect } from 'vitest'
 
 import { markAsSubmissionFailed } from './mark-as-failed.js'
 import { SUMMARY_LOG_STATUS } from './status.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createMockSummaryLogsRepository } from '#test/mock-repositories.js'
 
 describe('markAsSubmissionFailed', () => {
   it('logs error when repository.update throws', async () => {
     const summaryLogId = 'test-id'
-    const logger = { error: vi.fn(), warn: vi.fn() }
+    const logger = createMockLogger()
     const repository = createMockSummaryLogsRepository({
       findById: vi.fn().mockResolvedValue({
         version: 1,

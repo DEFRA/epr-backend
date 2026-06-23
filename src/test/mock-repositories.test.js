@@ -18,7 +18,6 @@ describe('mock-repositories', () => {
       methods: [
         'insert',
         'replace',
-        'replaceRaw',
         'findAll',
         'findAllBySchemaVersion',
         'findPage',
@@ -55,7 +54,7 @@ describe('mock-repositories', () => {
     },
     createMockSystemLogsRepository: {
       build: createMockSystemLogsRepository,
-      methods: ['insert', 'find']
+      methods: ['insert', 'insertMany', 'find', 'findSummaryLogSubmitActors']
     },
     createMockFormSubmissionsRepository: {
       build: createMockFormSubmissionsRepository,
@@ -91,17 +90,13 @@ describe('mock-repositories', () => {
     createMockWasteBalancesRepository: {
       build: createMockWasteBalancesRepository,
       methods: [
-        'findByAccreditationId',
-        'findByAccreditationIds',
+        'findBalance',
         'updateWasteBalanceTransactions',
         'deductAvailableBalanceForPrnCreation',
         'deductTotalBalanceForPrnIssue',
         'creditAvailableBalanceForPrnCancellation',
         'creditFullBalanceForIssuedPrnCancellation',
         'appendStreamEvent',
-        'flipCanonicalSourceToMigrating',
-        'flipCanonicalSourceToLedger',
-        'resetCanonicalSourceToEmbedded',
         'getPrnCatchupEvents'
       ]
     },

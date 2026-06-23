@@ -21,7 +21,6 @@ import { vi } from 'vitest'
 export const createMockOrganisationsRepository = (overrides = {}) => ({
   insert: vi.fn(),
   replace: vi.fn(),
-  replaceRaw: vi.fn(),
   findAll: vi.fn(),
   findAllBySchemaVersion: vi.fn(),
   findPage: vi.fn(),
@@ -82,7 +81,9 @@ export const createMockWasteRecordsRepository = (overrides = {}) => ({
  */
 export const createMockSystemLogsRepository = (overrides = {}) => ({
   insert: vi.fn(),
+  insertMany: vi.fn(),
   find: vi.fn(),
+  findSummaryLogSubmitActors: vi.fn(),
   ...overrides
 })
 
@@ -139,17 +140,13 @@ export const createMockPackagingRecyclingNotesRepository = (
  * @returns {WasteBalancesRepository}
  */
 export const createMockWasteBalancesRepository = (overrides = {}) => ({
-  findByAccreditationId: vi.fn(),
-  findByAccreditationIds: vi.fn(),
+  findBalance: vi.fn(),
   updateWasteBalanceTransactions: vi.fn(),
   deductAvailableBalanceForPrnCreation: vi.fn(),
   deductTotalBalanceForPrnIssue: vi.fn(),
   creditAvailableBalanceForPrnCancellation: vi.fn(),
   creditFullBalanceForIssuedPrnCancellation: vi.fn(),
   appendStreamEvent: vi.fn(),
-  flipCanonicalSourceToMigrating: vi.fn(),
-  flipCanonicalSourceToLedger: vi.fn(),
-  resetCanonicalSourceToEmbedded: vi.fn(),
   getPrnCatchupEvents: vi.fn(),
   ...overrides
 })

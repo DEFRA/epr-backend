@@ -22,7 +22,10 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
+import {
+  createMockOverseasSitesRepository,
+  createMockWasteBalancesRepository
+} from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -360,10 +363,12 @@ describe('Submission and placeholder tests', () => {
       const syncWasteRecords = syncFromSummaryLog({
         extractor: transformationExtractor,
         wasteRecordRepository: wasteRecordsRepository,
+        wasteBalancesRepository: createMockWasteBalancesRepository(),
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])
-        })
+        }),
+        logger: mockLogger
       })
 
       const submitterWorker = {
