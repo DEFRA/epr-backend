@@ -49,6 +49,7 @@ export const prepareStatusHistoryAppend = (
   )
 }
 
+/** @returns {import('./port.js').StatusHistoryAppendResult} */
 const prepareOrganisation = (existing, toStatus, updatedBy) => {
   if (toStatus === ORGANISATION_STATUS.ACTIVE) {
     throw Boom.badData(
@@ -73,6 +74,7 @@ const prepareOrganisation = (existing, toStatus, updatedBy) => {
   }
 }
 
+/** @returns {import('./port.js').StatusHistoryAppendResult} */
 const prepareRegistration = (existing, registrationId, toStatus, updatedBy) => {
   const registration = existing.registrations.find(
     (r) => r.id === registrationId
@@ -93,6 +95,7 @@ const prepareRegistration = (existing, registrationId, toStatus, updatedBy) => {
   )
   validateApprovals(projectedRegistrations, projectedAccreditations)
 
+  /** @type {import('./port.js').StatusHistoryChange[]} */
   const changes = [
     {
       itemType: 'registration',
@@ -120,6 +123,7 @@ const prepareRegistration = (existing, registrationId, toStatus, updatedBy) => {
   return { previousStatus, changes }
 }
 
+/** @returns {import('./port.js').StatusHistoryAppendResult} */
 const prepareAccreditation = (
   existing,
   accreditationId,

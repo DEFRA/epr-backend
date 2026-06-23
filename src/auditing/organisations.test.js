@@ -131,6 +131,7 @@ describe('auditStatusTransition', () => {
       systemLogsRepository
     })
 
+  /** @type {import('#repositories/organisations/port.js').StatusTransitionTarget} */
   const target = { type: 'registration', registrationId: 'reg-1' }
   const expectedEvent = {
     action: 'status-transition',

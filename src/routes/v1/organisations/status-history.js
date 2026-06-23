@@ -47,7 +47,7 @@ const validatePayload = (value) => {
  * Build the status-transition target from the route type and path params.
  *
  * @param {'organisation'|'registration'|'accreditation'} type
- * @param {{ params: { registrationId?: string, accreditationId?: string } }} request
+ * @param {{ params: Record<string, string> }} request
  * @returns {StatusTransitionTarget}
  */
 const targetFor = (type, request) => {
@@ -79,18 +79,21 @@ const statusOfTarget = (organisation, target) => {
     return organisation.status
   }
   if (target.type === 'registration') {
-    return organisation.registrations.find(
-      (registration) => registration.id === target.registrationId
+    return /** @type {{ status: string }} */ (
+      organisation.registrations.find(
+        (registration) => registration.id === target.registrationId
+      )
     ).status
   }
-  return organisation.accreditations.find(
-    (accreditation) => accreditation.id === target.accreditationId
+  return /** @type {{ status: string }} */ (
+    organisation.accreditations.find(
+      (accreditation) => accreditation.id === target.accreditationId
+    )
   ).status
 }
 
 /**
  * @param {{ type: 'organisation'|'registration'|'accreditation', path: string }} config
- * @returns {import('@hapi/hapi').ServerRoute}
  */
 const makeRoute = ({ type, path }) => ({
   method: 'POST',

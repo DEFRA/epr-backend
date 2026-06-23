@@ -1,14 +1,24 @@
 import { prepareStatusHistoryAppend } from './status-history.js'
 
-const orgWith = (overrides = {}) => ({
-  id: 'org-1',
-  version: 4,
-  status: 'created',
-  statusHistory: [{ status: 'created', updatedAt: new Date('2020-01-01') }],
-  registrations: [],
-  accreditations: [],
-  ...overrides
-})
+/**
+ * Derived-status organisation test double. Cast through unknown because the
+ * fixture intentionally carries only the fields the pure helper reads.
+ *
+ * @param {object} [overrides]
+ * @returns {import('#domain/organisations/model.js').Organisation}
+ */
+const orgWith = (overrides = {}) =>
+  /** @type {import('#domain/organisations/model.js').Organisation} */ (
+    /** @type {unknown} */ ({
+      id: 'org-1',
+      version: 4,
+      status: 'created',
+      statusHistory: [{ status: 'created', updatedAt: new Date('2020-01-01') }],
+      registrations: [],
+      accreditations: [],
+      ...overrides
+    })
+  )
 
 const reg = (overrides = {}) => ({
   id: 'reg-1',
