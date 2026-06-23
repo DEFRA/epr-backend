@@ -567,6 +567,23 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
+      it('returns 422 when submissionDeclaredBy is missing for submitted status', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'submitted', version: 1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
       it('returns 422 when submissionDeclaredBy is a single character', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport({
