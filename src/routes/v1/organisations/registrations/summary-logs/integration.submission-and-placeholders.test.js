@@ -23,7 +23,6 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createMockLogger } from '#test/mock-logger.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'

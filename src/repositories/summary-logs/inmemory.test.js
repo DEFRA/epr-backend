@@ -6,19 +6,29 @@ import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
 import { waitForVersion } from './contract/test-helpers.js'
 
-const it = base.extend({
-  // eslint-disable-next-line no-empty-pattern
-  summaryLogsRepositoryFactory: async ({}, use) => {
-    const factory = createInMemorySummaryLogsRepository()
-    await use(factory)
-  },
+/** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
 
-  summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
-    const mockLogger = createMockLogger()
-    const repository = summaryLogsRepositoryFactory(mockLogger)
-    await use(repository)
-  }
-})
+/**
+ * @typedef {object} SummaryLogsFixtures
+ * @property {SummaryLogsRepositoryFactory} summaryLogsRepositoryFactory
+ * @property {SummaryLogsRepository} summaryLogsRepository
+ */
+
+const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
+  base.extend({
+    // eslint-disable-next-line no-empty-pattern
+    summaryLogsRepositoryFactory: async ({}, use) => {
+      const factory = createInMemorySummaryLogsRepository()
+      await use(factory)
+    },
+
+    summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
+      const mockLogger = createMockLogger()
+      const repository = summaryLogsRepositoryFactory(mockLogger)
+      await use(repository)
+    }
+  })
+)
 
 describe('In-memory summary logs repository', () => {
   describe('summary logs repository contract', () => {
@@ -37,11 +47,11 @@ describe('In-memory summary logs repository', () => {
         summaryLogFactory.validating({ file: { name: 'original.xlsx' } })
       )
 
-      const retrieved = await repository.findById(id)
+      const retrieved = await waitForVersion(repository, id, 1)
       retrieved.summaryLog.file.name = 'modified.xlsx'
       retrieved.summaryLog.file.uri = 's3://hacked-bucket/hacked-key'
 
-      const retrievedAgain = await repository.findById(id)
+      const retrievedAgain = await waitForVersion(repository, id, 1)
       expect(retrievedAgain.summaryLog.file.name).toBe('original.xlsx')
       expect(retrievedAgain.summaryLog.file.uri).toBe(
         's3://test-bucket/test-key'
@@ -62,7 +72,7 @@ describe('In-memory summary logs repository', () => {
       summaryLog.file.name = 'mutated.xlsx'
       summaryLog.file.uri = 's3://mutated-bucket/mutated-key'
 
-      const retrieved = await repository.findById(id)
+      const retrieved = await waitForVersion(repository, id, 1)
       expect(retrieved.summaryLog.file.name).toBe('original.xlsx')
       expect(retrieved.summaryLog.file.uri).toBe('s3://test-bucket/test-key')
     })

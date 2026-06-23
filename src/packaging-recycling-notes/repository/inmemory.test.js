@@ -9,19 +9,30 @@ import {
 import { createInMemoryPackagingRecyclingNotesRepository } from './inmemory.plugin.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 
-const it = base.extend({
-  // eslint-disable-next-line no-empty-pattern
-  prnRepositoryFactory: async ({}, use) => {
-    const factory = createInMemoryPackagingRecyclingNotesRepository([])
-    await use(factory)
-  },
+/** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
+/** @import { PackagingRecyclingNotesRepository, PackagingRecyclingNotesRepositoryFactory } from './port.js' */
 
-  prnRepository: async ({ prnRepositoryFactory }, use) => {
-    const mockLogger = createMockLogger()
-    const repository = prnRepositoryFactory(mockLogger)
-    await use(repository)
-  }
-})
+/**
+ * @typedef {object} PrnRepoFixtures
+ * @property {PackagingRecyclingNotesRepositoryFactory} prnRepositoryFactory
+ * @property {PackagingRecyclingNotesRepository} prnRepository
+ */
+
+const it = /** @type {import('vitest').TestAPI<PrnRepoFixtures>} */ (
+  base.extend({
+    // eslint-disable-next-line no-empty-pattern
+    prnRepositoryFactory: async ({}, use) => {
+      const factory = createInMemoryPackagingRecyclingNotesRepository([])
+      await use(factory)
+    },
+
+    prnRepository: async ({ prnRepositoryFactory }, use) => {
+      const mockLogger = createMockLogger()
+      const repository = prnRepositoryFactory(mockLogger)
+      await use(repository)
+    }
+  })
+)
 
 describe('In-memory packaging recycling notes repository', () => {
   testPackagingRecyclingNotesRepositoryContract(it)
@@ -37,7 +48,7 @@ describe('in-memory adapter organisation exclusion', () => {
       const repository = createInMemoryPackagingRecyclingNotesRepository(
         [],
         [testOrgId]
-      )()
+      )(createMockLogger())
 
       const testPrn = await repository.create(
         buildCancelledPrn({
@@ -71,7 +82,7 @@ describe('in-memory adapter organisation exclusion', () => {
       const repository = createInMemoryPackagingRecyclingNotesRepository(
         [],
         []
-      )()
+      )(createMockLogger())
 
       const prn = await repository.create(
         buildCancelledPrn({
@@ -97,7 +108,7 @@ describe('in-memory adapter organisation exclusion', () => {
       const repository = createInMemoryPackagingRecyclingNotesRepository(
         [],
         [testOrgId]
-      )()
+      )(createMockLogger())
 
       const sentinel = await repository.create(
         buildCancelledPrn({
@@ -151,7 +162,11 @@ describe('in-memory adapter legacy documents without a version field', () => {
     const id = new ObjectId().toHexString()
     const { version: _version, ...prnWithoutVersion } =
       buildAwaitingAuthorisationPrn()
-    return { id, prn: { ...prnWithoutVersion, id } }
+    // Legacy documents predate the version field; the adapter defaults it to 1.
+    const prn = /** @type {PackagingRecyclingNote} */ (
+      /** @type {unknown} */ ({ ...prnWithoutVersion, id })
+    )
+    return { id, prn }
   }
 
   base('reads back as version 1', async () => {
@@ -162,7 +177,7 @@ describe('in-memory adapter legacy documents without a version field', () => {
 
     const found = await repository.findById(id)
 
-    expect(found.version).toBe(1)
+    expect(found?.version).toBe(1)
   })
 
   base(
@@ -182,8 +197,8 @@ describe('in-memory adapter legacy documents without a version field', () => {
         prnNumber: `TT2688888`
       })
 
-      expect(updated.version).toBe(2)
-      expect(updated.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      expect(updated?.version).toBe(2)
+      expect(updated?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
     }
   )
 })
