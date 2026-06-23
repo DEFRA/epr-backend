@@ -11,35 +11,34 @@ import { auditStatusTransition } from '#root/auditing/organisations.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/organisations/port.js').StatusTransitionTarget} StatusTransitionTarget */
 
-const ALL_STATUSES = [
-  ...new Set([
-    ...Object.values(REG_ACC_STATUS),
-    ...Object.values(ORGANISATION_STATUS)
-  ])
-]
-
-const payloadSchema = Joi.object({
-  status: Joi.string()
-    .valid(...ALL_STATUSES)
-    .required(),
-  reason: Joi.string().trim().min(1).required(),
-  version: Joi.number().integer().required()
-})
+const ORGANISATION_STATUSES = Object.values(ORGANISATION_STATUS)
+const REGISTRATION_ACCREDITATION_STATUSES = Object.values(REG_ACC_STATUS)
 
 /**
- * Function validator (the convention in this codebase — the server has no Hapi
- * Joi validator registered). Validates the payload with the Joi schema and
- * raises a 400 on any violation.
+ * Build a function validator (this codebase has no Hapi Joi validator
+ * registered) that only accepts the statuses valid for the resource type, so a
+ * status that is structurally wrong for the resource fails as a 400 rather than
+ * reaching the domain transition check as a 422.
  *
- * @param {unknown} value
- * @returns {{ status: string, reason: string, version: number }}
+ * @param {string[]} allowedStatuses
+ * @returns {(value: unknown) => { status: string, reason: string, version: number }}
  */
-const validatePayload = (value) => {
-  const { error, value: validated } = payloadSchema.validate(value)
-  if (error) {
-    throw Boom.badRequest(error.message)
+const buildPayloadValidator = (allowedStatuses) => {
+  const schema = Joi.object({
+    status: Joi.string()
+      .valid(...allowedStatuses)
+      .required(),
+    reason: Joi.string().trim().min(1).required(),
+    version: Joi.number().integer().required()
+  })
+
+  return (value) => {
+    const { error, value: validated } = schema.validate(value)
+    if (error) {
+      throw Boom.badRequest(error.message)
+    }
+    return validated
   }
-  return validated
 }
 
 /**
@@ -69,52 +68,60 @@ const targetFor = (type, request) => {
 /**
  * @param {{ type: 'organisation'|'registration'|'accreditation', path: string }} config
  */
-const makeRoute = ({ type, path }) => ({
-  method: 'POST',
-  path,
-  options: {
-    auth: {
-      scope: [SCOPES.adminWrite]
+const makeRoute = ({ type, path }) => {
+  const validatePayload = buildPayloadValidator(
+    type === 'organisation'
+      ? ORGANISATION_STATUSES
+      : REGISTRATION_ACCREDITATION_STATUSES
+  )
+
+  return {
+    method: 'POST',
+    path,
+    options: {
+      auth: {
+        scope: [SCOPES.adminWrite]
+      },
+      tags: ['api', 'admin'],
+      validate: {
+        payload: validatePayload
+      }
     },
-    tags: ['api', 'admin'],
-    validate: {
-      payload: validatePayload
-    }
-  },
 
-  /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{status: string, reason: string, version: number}> & {
-   *   organisationsRepository: OrganisationsRepository
-   * }} request
-   * @param {import('@hapi/hapi').ResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    const { organisationsRepository } = request
-    const organisationId = request.params.organisationId
-    const { status, reason, version } = request.payload
-    const target = targetFor(type, request)
-    const updatedBy = request.auth.credentials.id
+    /**
+     * @param {import('#common/hapi-types.js').HapiRequest<{status: string, reason: string, version: number}> & {
+     *   organisationsRepository: OrganisationsRepository
+     * }} request
+     * @param {import('@hapi/hapi').ResponseToolkit} h
+     */
+    handler: async (request, h) => {
+      const { organisationsRepository } = request
+      const organisationId = request.params.organisationId
+      const { status, reason, version } = request.payload
+      const target = targetFor(type, request)
+      const updatedBy = request.auth.credentials.id
 
-    const { organisation, previousStatus } =
-      await organisationsRepository.appendStatusHistory(
+      const { organisation, previousStatus } =
+        await organisationsRepository.appendStatusHistory(
+          organisationId,
+          version,
+          target,
+          status,
+          updatedBy
+        )
+
+      await auditStatusTransition(request, {
         organisationId,
-        version,
         target,
-        status,
-        updatedBy
-      )
+        previousStatus,
+        nextStatus: status,
+        reason
+      })
 
-    await auditStatusTransition(request, {
-      organisationId,
-      target,
-      previousStatus,
-      nextStatus: status,
-      reason
-    })
-
-    return h.response(organisation).code(StatusCodes.OK)
+      return h.response(organisation).code(StatusCodes.OK)
+    }
   }
-})
+}
 
 export const organisationStatusHistoryPost = makeRoute({
   type: 'organisation',

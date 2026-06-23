@@ -226,4 +226,16 @@ describe('POST status-history routes', () => {
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
+
+  it('returns 400 for a status that is not valid for the resource type', async () => {
+    const org = await insertOrganisation()
+
+    const response = await post(`/v1/organisations/${org.id}/status-history`, {
+      status: REG_ACC_STATUS.SUSPENDED,
+      reason: 'Suspended is not an organisation status',
+      version: org.version
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+  })
 })
