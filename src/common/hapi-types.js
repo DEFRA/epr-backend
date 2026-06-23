@@ -17,6 +17,7 @@
  *   id: string,
  *   email: string,
  *   scope: string[],
+ *   role: string | null,
  *   issuer: string,
  *   name?: string,
  *   currentRelationshipId?: string,
@@ -35,6 +36,15 @@
  *   strategy: string,
  *   artifacts?: unknown
  * }} RequestAuth
+ */
+
+/**
+ * The slice of a request a command executor consumes: the authenticated
+ * credentials. A full HapiRequest satisfies this, so route handlers pass their
+ * request unchanged while callers that only need to project credentials are
+ * spared constructing an entire request.
+ *
+ * @typedef {{ auth: { credentials: MachineCredentials | HumanCredentials } }} AuthenticatedRequest
  */
 
 /**

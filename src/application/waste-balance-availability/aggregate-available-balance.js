@@ -2,40 +2,75 @@ import {
   buildEffectiveMaterialStages,
   formatMaterialResults
 } from '#application/common/material-aggregation.js'
+import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/stream-mongodb.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
-const WASTE_BALANCES_COLLECTION = 'waste-balances'
+const ACCREDITATION_ID_FIELD = '$accreditationId'
 
-const buildMaterialLookupStage = () => ({
-  $lookup: {
-    from: ORGANISATIONS_COLLECTION,
-    let: {
-      orgId: { $toObjectId: '$organisationId' },
-      accId: '$accreditationId'
-    },
-    pipeline: [
-      { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
-      { $unwind: '$registrations' },
-      {
-        $match: {
-          $expr: { $eq: ['$registrations.accreditationId', '$$accId'] }
-        }
-      },
-      {
-        $project: {
+const buildAccreditedRegistrationStages = () => [
+  { $unwind: '$registrations' },
+  {
+    $match: {
+      'registrations.accreditationId': { $exists: true, $ne: null }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      registrationId: '$registrations.id',
+      accreditationId: '$registrations.accreditationId',
+      orgData: [
+        {
           orgId: '$orgId',
           material: '$registrations.material',
           glassRecyclingProcess: '$registrations.glassRecyclingProcess'
         }
+      ]
+    }
+  }
+]
+
+const buildLatestStreamEventLookupStage = () => ({
+  $lookup: {
+    from: WASTE_BALANCE_EVENTS_COLLECTION_NAME,
+    let: { regId: '$registrationId', accId: ACCREDITATION_ID_FIELD },
+    pipeline: [
+      {
+        $match: {
+          $expr: {
+            $and: [
+              { $eq: ['$registrationId', '$$regId'] },
+              { $eq: [ACCREDITATION_ID_FIELD, '$$accId'] }
+            ]
+          }
+        }
+      },
+      { $sort: { number: -1 } },
+      { $limit: 1 },
+      {
+        $project: { _id: 0, availableAmount: '$closingBalance.availableAmount' }
       }
     ],
-    as: 'orgData'
+    as: 'latestStreamEvent'
+  }
+})
+
+// Mirrors findBalanceByPartition
+// (waste-balances/repository/read-balance.js): the latest stream closing
+// balance is the source of truth, resolving to zero when the stream is empty.
+const buildStreamAvailableAmountStage = () => ({
+  $addFields: {
+    availableAmount: {
+      $ifNull: [{ $arrayElemAt: ['$latestStreamEvent.availableAmount', 0] }, 0]
+    }
   }
 })
 
 const buildAggregationPipeline = () => [
-  buildMaterialLookupStage(),
+  ...buildAccreditedRegistrationStages(),
   ...buildEffectiveMaterialStages(),
+  buildLatestStreamEventLookupStage(),
+  buildStreamAvailableAmountStage(),
   {
     $group: {
       _id: '$effectiveMaterial',
@@ -49,7 +84,7 @@ export const aggregateAvailableBalance = async (db) => {
   const pipeline = buildAggregationPipeline()
 
   const results = await db
-    .collection(WASTE_BALANCES_COLLECTION)
+    .collection(ORGANISATIONS_COLLECTION)
     .aggregate(pipeline)
     .toArray()
 

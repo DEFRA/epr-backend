@@ -166,4 +166,63 @@ describe(`${overseasSitesListPath} route`, () => {
       })
     })
   })
+
+  describe('basic-auth strategy', () => {
+    const validCredentials = Buffer.from('basic-auth-user:changeme').toString(
+      'base64'
+    )
+
+    const buildBasicAuthServer = (basicAuth) =>
+      createTestServer({
+        config: { basicAuth },
+        repositories: {
+          overseasSitesRepository: () =>
+            createInMemoryOverseasSitesRepository()()
+        },
+        featureFlags: createInMemoryFeatureFlags({})
+      })
+
+    it('returns 200 with valid Basic Auth credentials', async () => {
+      const server = await buildBasicAuthServer({
+        username: 'basic-auth-user',
+        password: 'changeme'
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/overseas-sites',
+        headers: { Authorization: `Basic ${validCredentials}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('returns 401 with wrong password', async () => {
+      const server = await buildBasicAuthServer({
+        username: 'basic-auth-user',
+        password: 'changeme'
+      })
+      const encoded = Buffer.from('basic-auth-user:wrong').toString('base64')
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/overseas-sites',
+        headers: { Authorization: `Basic ${encoded}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    })
+
+    it('returns 401 with valid credentials when basic-auth is not configured', async () => {
+      const server = await buildBasicAuthServer({ username: '', password: '' })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/overseas-sites',
+        headers: { Authorization: `Basic ${validCredentials}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    })
+  })
 })

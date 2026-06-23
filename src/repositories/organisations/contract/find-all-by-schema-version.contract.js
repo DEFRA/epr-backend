@@ -5,9 +5,15 @@ export const testFindAllBySchemaVersionBehaviour = (it) => {
   describe('findAllBySchemaVersion', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     it('returns empty array when no organisations match the schema version', async () => {
       const org = buildOrganisation()

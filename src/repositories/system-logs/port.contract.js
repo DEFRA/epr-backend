@@ -455,4 +455,193 @@ export const testSystemLogsRepositoryContract = (it) => {
       })
     })
   })
+
+  describe('findSummaryLogSubmitActors', () => {
+    it('returns the submitter and summary-log id for each requested document', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      await repository.insert(
+        buildSystemLog({
+          userId: 'user-1',
+          email: 'alice@example.com',
+          subCategory: 'summary-log',
+          action: 'submit',
+          summaryLogId: 'doc-1'
+        })
+      )
+
+      const actors = await repository.findSummaryLogSubmitActors(['doc-1'])
+
+      expect(actors).toEqual([
+        {
+          summaryLogId: 'doc-1',
+          createdBy: {
+            id: 'user-1',
+            email: 'alice@example.com',
+            scope: [],
+            role: null
+          }
+        }
+      ])
+    })
+
+    it('excludes other actions and other sub-categories', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      await repository.insert(
+        buildSystemLog({
+          subCategory: 'summary-log',
+          action: 'upload',
+          summaryLogId: 'doc-upload'
+        })
+      )
+      await repository.insert(
+        buildSystemLog({
+          subCategory: 'summary-log',
+          action: 'download',
+          summaryLogId: 'doc-download'
+        })
+      )
+      await repository.insert(
+        buildSystemLog({
+          subCategory: 'organisations',
+          action: 'submit',
+          summaryLogId: 'doc-other-sub'
+        })
+      )
+      await repository.insert(
+        buildSystemLog({
+          subCategory: 'summary-log',
+          action: 'submit',
+          summaryLogId: 'doc-keep'
+        })
+      )
+
+      const actors = await repository.findSummaryLogSubmitActors([
+        'doc-upload',
+        'doc-download',
+        'doc-other-sub',
+        'doc-keep'
+      ])
+
+      expect(actors.map((actor) => actor.summaryLogId)).toEqual(['doc-keep'])
+    })
+
+    it('excludes submit logs for documents that were not requested', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      await repository.insert(
+        buildSystemLog({
+          subCategory: 'summary-log',
+          action: 'submit',
+          summaryLogId: 'mine'
+        })
+      )
+      await repository.insert(
+        buildSystemLog({
+          subCategory: 'summary-log',
+          action: 'submit',
+          summaryLogId: 'theirs'
+        })
+      )
+
+      const actors = await repository.findSummaryLogSubmitActors(['mine'])
+
+      expect(actors.map((actor) => actor.summaryLogId)).toEqual(['mine'])
+    })
+
+    it('returns an empty array when no requested document has a submit log', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      const actors = await repository.findSummaryLogSubmitActors([randomUUID()])
+
+      expect(actors).toEqual([])
+    })
+
+    it('returns an empty array for an empty list of document ids', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      await repository.insert(
+        buildSystemLog({
+          subCategory: 'summary-log',
+          action: 'submit',
+          summaryLogId: 'doc-1'
+        })
+      )
+
+      const actors = await repository.findSummaryLogSubmitActors([])
+
+      expect(actors).toEqual([])
+    })
+
+    it('returns the most recent submit first when a document is submitted more than once', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      await repository.insert(
+        buildSystemLog({
+          userId: 'first-user',
+          subCategory: 'summary-log',
+          action: 'submit',
+          summaryLogId: 'doc-1'
+        })
+      )
+      await repository.insert(
+        buildSystemLog({
+          userId: 'latest-user',
+          subCategory: 'summary-log',
+          action: 'submit',
+          summaryLogId: 'doc-1'
+        })
+      )
+
+      const actors = await repository.findSummaryLogSubmitActors(['doc-1'])
+
+      expect(actors[0].createdBy.id).toBe('latest-user')
+    })
+  })
+
+  describe('insertMany', () => {
+    it('inserts all provided system logs', async ({ systemLogsRepository }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      const userId = randomUUID()
+
+      await repository.insertMany([
+        buildSystemLog({ userId, id: 1 }),
+        buildSystemLog({ userId, id: 2 })
+      ])
+
+      const result = await repository.find({ userId, limit: DEFAULT_LIMIT })
+
+      expect(result.systemLogs).toHaveLength(2)
+    })
+
+    it('does nothing when called with an empty array', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      await expect(repository.insertMany([])).resolves.toBeUndefined()
+    })
+  })
 }

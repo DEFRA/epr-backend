@@ -12,6 +12,28 @@ const { submitSummaryLog } = await import('#application/summary-logs/submit.js')
 const { markAsValidationFailed, markAsSubmissionFailed } =
   await import('#domain/summary-logs/mark-as-failed.js')
 
+/**
+ * @param {string} command
+ */
+const handlerFor = (command) => {
+  const handler = summaryLogCommandHandlers.find((h) => h.command === command)
+  if (!handler) {
+    throw new Error(`No handler registered for command: ${command}`)
+  }
+  return handler
+}
+
+/**
+ * @param {{ error?: import('joi').ValidationError }} result
+ * @returns {import('joi').ValidationError}
+ */
+const validationErrorFrom = ({ error }) => {
+  if (!error) {
+    throw new Error('Expected a validation error but validation passed')
+  }
+  return error
+}
+
 describe('summaryLogCommandHandlers', () => {
   let deps
 
@@ -35,9 +57,7 @@ describe('summaryLogCommandHandlers', () => {
   })
 
   describe('validate handler', () => {
-    const handler = summaryLogCommandHandlers.find(
-      (h) => h.command === 'validate'
-    )
+    const handler = handlerFor('validate')
 
     it('has command "validate"', () => {
       expect(handler.command).toBe('validate')
@@ -53,16 +73,18 @@ describe('summaryLogCommandHandlers', () => {
       })
 
       it('requires summaryLogId', () => {
-        const { error } = handler.payloadSchema.validate({})
+        const error = validationErrorFrom(handler.payloadSchema.validate({}))
 
         expect(error.message).toBe('"summaryLogId" is required')
       })
 
       it('rejects unknown fields', () => {
-        const { error } = handler.payloadSchema.validate({
-          summaryLogId: 'log-123',
-          extra: true
-        })
+        const error = validationErrorFrom(
+          handler.payloadSchema.validate({
+            summaryLogId: 'log-123',
+            extra: true
+          })
+        )
 
         expect(error.message).toContain('"extra" is not allowed')
       })
@@ -108,9 +130,7 @@ describe('summaryLogCommandHandlers', () => {
   })
 
   describe('submit handler', () => {
-    const handler = summaryLogCommandHandlers.find(
-      (h) => h.command === 'submit'
-    )
+    const handler = handlerFor('submit')
 
     it('has command "submit"', () => {
       expect(handler.command).toBe('submit')
@@ -118,9 +138,11 @@ describe('summaryLogCommandHandlers', () => {
 
     describe('payloadSchema', () => {
       it('rejects payload without user', () => {
-        const { error } = handler.payloadSchema.validate({
-          summaryLogId: 'log-123'
-        })
+        const error = validationErrorFrom(
+          handler.payloadSchema.validate({
+            summaryLogId: 'log-123'
+          })
+        )
 
         expect(error.message).toBe('"user" is required')
       })
@@ -131,38 +153,102 @@ describe('summaryLogCommandHandlers', () => {
           user: {
             id: 'user-1',
             email: 'test@example.com',
-            scope: ['operator']
+            scope: ['operator'],
+            role: null
           }
         })
 
         expect(error).toBeUndefined()
       })
 
+      it('accepts a user carrying a name', () => {
+        const { error } = handler.payloadSchema.validate({
+          summaryLogId: 'log-123',
+          user: {
+            id: 'user-1',
+            name: 'Test User',
+            email: 'test@example.com',
+            scope: ['operator'],
+            role: null
+          }
+        })
+
+        expect(error).toBeUndefined()
+      })
+
+      it('rejects a user without a role', () => {
+        const error = validationErrorFrom(
+          handler.payloadSchema.validate({
+            summaryLogId: 'log-123',
+            user: {
+              id: 'user-1',
+              email: 'test@example.com',
+              scope: ['operator']
+            }
+          })
+        )
+
+        expect(error.message).toBe('"user.role" is required')
+      })
+
       it('requires summaryLogId', () => {
-        const { error } = handler.payloadSchema.validate({})
+        const error = validationErrorFrom(handler.payloadSchema.validate({}))
 
         expect(error.message).toBe('"summaryLogId" is required')
       })
 
       it('validates user schema when present', () => {
-        const { error } = handler.payloadSchema.validate({
-          summaryLogId: 'log-123',
-          user: { id: 'user-1' }
-        })
+        const error = validationErrorFrom(
+          handler.payloadSchema.validate({
+            summaryLogId: 'log-123',
+            user: { id: 'user-1' }
+          })
+        )
 
         expect(error.message).toContain('"user.email" is required')
       })
 
-      it('rejects unknown fields', () => {
+      it('accepts a user carrying a resolved role', () => {
         const { error } = handler.payloadSchema.validate({
           summaryLogId: 'log-123',
           user: {
             id: 'user-1',
-            email: 'test@example.com',
-            scope: ['operator']
-          },
-          extra: true
+            email: 'maintainer@example.com',
+            scope: ['admin.read'],
+            role: 'service_maintainer'
+          }
         })
+
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts a user with a null role', () => {
+        const { error } = handler.payloadSchema.validate({
+          summaryLogId: 'log-123',
+          user: {
+            id: 'user-1',
+            email: 'operator@example.com',
+            scope: ['operator'],
+            role: null
+          }
+        })
+
+        expect(error).toBeUndefined()
+      })
+
+      it('rejects unknown fields', () => {
+        const error = validationErrorFrom(
+          handler.payloadSchema.validate({
+            summaryLogId: 'log-123',
+            user: {
+              id: 'user-1',
+              email: 'test@example.com',
+              scope: ['operator'],
+              role: null
+            },
+            extra: true
+          })
+        )
 
         expect(error.message).toContain('"extra" is not allowed')
       })
@@ -175,7 +261,8 @@ describe('summaryLogCommandHandlers', () => {
           user: {
             id: 'user-1',
             email: 'test@example.com',
-            scope: ['operator']
+            scope: ['operator'],
+            role: null
           }
         }
 

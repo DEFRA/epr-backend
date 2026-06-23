@@ -14,6 +14,7 @@ import { buildReadOrganisation } from '#repositories/organisations/contract/test
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -58,12 +59,7 @@ describe('Repeated uploads of identical data', () => {
     let secondUploadResponse
 
     beforeEach(async () => {
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
+      const mockLogger = createMockLogger()
 
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
@@ -99,7 +95,7 @@ describe('Repeated uploads of identical data', () => {
       testOrg.id = organisationId
 
       const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
+        { ...testOrg, status: 'active' }
       ])()
 
       // Define shared metadata and headers
@@ -243,15 +239,20 @@ describe('Repeated uploads of identical data', () => {
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor,
-        logger: mockLogger
+        logger: mockLogger,
+        reportsRepository: /** @type {any} */ ({
+          findPeriodicReports: async () => []
+        })
       })
 
-      const syncWasteRecords = syncFromSummaryLog({
-        extractor: summaryLogExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
-        organisationsRepository,
-        overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
-      })
+      const syncWasteRecords = syncFromSummaryLog(
+        /** @type {any} */ ({
+          extractor: summaryLogExtractor,
+          wasteRecordRepository: wasteRecordsRepository,
+          organisationsRepository,
+          overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
+        })
+      )
 
       const summaryLogsWorker = {
         validate: validateSummaryLog,
@@ -259,7 +260,10 @@ describe('Repeated uploads of identical data', () => {
           await new Promise((resolve) => setImmediate(resolve))
 
           const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } = existing
+          const { version, summaryLog } =
+            /** @type {import('#repositories/summary-logs/port.js').SummaryLogVersion} */ (
+              existing
+            )
 
           await syncWasteRecords(summaryLog)
 

@@ -23,29 +23,10 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.copyFormFilesToS3')
   })
 
-  it('returns true when wasteBalanceLedger flag is enabled', () => {
+  it('returns true when wasteRecordStates flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
-    expect(flags.isWasteBalanceLedgerEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.wasteBalanceLedger')
-  })
-
-  it('returns false when wasteBalanceLedger flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
-  })
-
-  it('returns true when reportUnsubmit flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isReportUnsubmitEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.reportUnsubmit')
-  })
-
-  it('returns false when reportUnsubmit flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isReportUnsubmitEnabled()).toBe(false)
+    expect(flags.isWasteRecordStatesEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.wasteRecordStates')
   })
 })

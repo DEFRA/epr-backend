@@ -12,7 +12,8 @@ export const periodParamsSchema = Joi.object({
   registrationId: Joi.string().required(),
   year: Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR).required(),
   cadence: cadenceSchema,
-  period: periodSchema
+  period: periodSchema,
+  submissionNumber: Joi.number().integer().valid(1).required()
 })
 
 /**
@@ -25,6 +26,8 @@ export const periodParamsSchema = Joi.object({
  *   cadence: Cadence,
  *   period: number
  * }} PeriodPathParams
+ *
+ * @typedef {PeriodPathParams & { submissionNumber: number }} PeriodWithSubmissionPathParams
  */
 
 export const standardUserAuth = getAuthConfig([ROLES.standardUser])
@@ -47,13 +50,16 @@ export function withRegistrationDetails(report, registration) {
 
 /**
  * Extracts a changedBy user summary from request credentials.
+ * Carries name and email distinctly: name is omitted when there is no real
+ * name, and the email is never coerced into the name slot.
  * @param {object} credentials
- * @returns {{ id: string, name: string, position: string }}
+ * @returns {{ id: string, name?: string, email?: string, position: string }}
  */
 export function extractChangedBy(credentials) {
   return {
     id: credentials.id,
-    name: credentials.name ?? credentials.email,
+    ...(credentials.name && { name: credentials.name }),
+    ...(credentials.email && { email: credentials.email }),
     position: credentials.position ?? 'User'
   }
 }

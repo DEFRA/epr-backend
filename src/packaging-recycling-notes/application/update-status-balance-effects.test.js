@@ -5,9 +5,8 @@ import {
   balanceEventsFor
 } from './update-status-balance-effects.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 
@@ -28,9 +27,9 @@ const buildLogger = () => ({
 })
 
 /**
- * A ledger-backed in-memory repository seeded with one stream event so the
- * marker-aware read resolves a non-zero balance. The next balance effect
- * appends a second event, so the returned watermark is APPENDED_EVENT_NUMBER.
+ * An in-memory repository seeded with one stream event so the read resolves a
+ * non-zero balance. The next balance effect appends a second event, so the
+ * returned watermark is APPENDED_EVENT_NUMBER.
  */
 const setupLedgerRepository = async () => {
   const streamRepository = createInMemoryStreamRepository()()
@@ -43,23 +42,9 @@ const setupLedgerRepository = async () => {
     })
   )
 
-  const ledgerBalance = {
-    id: 'bal-1',
-    organisationId: ORGANISATION_ID,
-    registrationId: REGISTRATION_ID,
-    accreditationId: ACCREDITATION_ID,
-    schemaVersion: 1,
-    version: 1,
-    amount: 0,
-    availableAmount: 0,
-    canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
-    transactions: []
-  }
-
-  const wasteBalancesRepository = createInMemoryWasteBalancesRepository(
-    [ledgerBalance],
-    { streamRepository }
-  )()
+  const wasteBalancesRepository = createWasteBalancesRepository({
+    streamRepository
+  })()
 
   return { wasteBalancesRepository, streamRepository }
 }
@@ -70,7 +55,7 @@ const balanceParamsFor = (overrides) => ({
   accreditationId: ACCREDITATION_ID,
   registrationId: REGISTRATION_ID,
   organisationId: ORGANISATION_ID,
-  userId: 'user-1',
+  createdBy: { id: 'user-1' },
   ...overrides
 })
 

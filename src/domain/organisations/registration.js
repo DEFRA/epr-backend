@@ -1,4 +1,4 @@
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {Accreditation, StatusHistory} from '#domain/organisations/accreditation.js' */
 /** @import {GlassRecyclingProcess, Material, RegAccStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
@@ -31,7 +31,7 @@
  */
 
 /**
- * @typedef {{ id: string } & {
+ * @typedef {{ id: string } & StatusHistory & {
  *  accreditation: Accreditation | null;
  *  accreditationId?: string;
  *  applicationContactDetails: User;

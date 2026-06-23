@@ -105,9 +105,11 @@ export const packagingRecyclingNotesUpdateStatus = {
     } = request
     const { organisationId, registrationId, accreditationId, id } = params
     const { status: newStatus } = payload
+    const credentialEmail = auth.credentials?.email
     const user = {
       id: auth.credentials?.id ?? 'unknown',
-      name: auth.credentials?.name ?? 'unknown'
+      name: auth.credentials?.name ?? 'unknown',
+      ...(typeof credentialEmail === 'string' ? { email: credentialEmail } : {})
     }
 
     try {

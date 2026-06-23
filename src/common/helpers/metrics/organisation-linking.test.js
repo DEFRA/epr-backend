@@ -12,11 +12,14 @@ vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
 
   return {
     ...original,
-    createMetricsLogger: () => ({
-      putMetric: mockPutMetric,
-      putDimensions: mockPutDimensions,
-      flush: mockFlush
-    })
+    createMetricsLogger: () =>
+      /** @type {import('aws-embedded-metrics').MetricsLogger} */ (
+        /** @type {unknown} */ ({
+          putMetric: mockPutMetric,
+          putDimensions: mockPutDimensions,
+          flush: mockFlush
+        })
+      )
   }
 })
 
@@ -37,6 +40,21 @@ describe('organisationLinkingMetrics', () => {
       expect(mockPutDimensions).toHaveBeenCalledWith({})
       expect(mockPutMetric).toHaveBeenCalledWith(
         'organisation.linked',
+        1,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+  })
+
+  describe('organisationUnlinked', () => {
+    it('records metric with no dimensions', async () => {
+      await organisationLinkingMetrics.organisationUnlinked()
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({})
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'organisation.unlinked',
         1,
         Unit.Count,
         StorageResolution.Standard

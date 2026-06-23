@@ -9,10 +9,10 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
   },
-  isWasteBalanceLedgerEnabled() {
-    return flags.wasteBalanceLedger ?? false
+  isFixDuplicateAccreditationLinksEnabled() {
+    return flags.fixDuplicateAccreditationLinks ?? false
   },
-  isReportUnsubmitEnabled() {
-    return flags.reportUnsubmit ?? false
+  isWasteRecordStatesEnabled() {
+    return flags.wasteRecordStates ?? false
   }
 })
