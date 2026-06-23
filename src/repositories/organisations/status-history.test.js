@@ -210,11 +210,18 @@ describe('prepareStatusHistoryAppend', () => {
 
   it('appends an accreditation status entry', () => {
     const org = orgWith({
+      registrations: [
+        reg({ id: 'reg-1', status: 'approved', accreditationId: 'acc-1' })
+      ],
       accreditations: [acc({ id: 'acc-1', status: 'approved' })]
     })
     const result = prepareStatusHistoryAppend(
       org,
-      { type: 'accreditation', accreditationId: 'acc-1' },
+      {
+        type: 'accreditation',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      },
       'suspended',
       'user-9'
     )
@@ -232,16 +239,46 @@ describe('prepareStatusHistoryAppend', () => {
     ])
   })
 
-  it('throws notFound when the accreditation id is unknown', () => {
-    const org = orgWith({ accreditations: [acc({ id: 'acc-1' })] })
+  it('throws notFound for an unknown registration on the accreditation path', () => {
+    const org = orgWith({
+      registrations: [
+        reg({ id: 'reg-1', status: 'approved', accreditationId: 'acc-1' })
+      ],
+      accreditations: [acc({ id: 'acc-1', status: 'approved' })]
+    })
     expect(() =>
       prepareStatusHistoryAppend(
         org,
-        { type: 'accreditation', accreditationId: 'nope' },
+        {
+          type: 'accreditation',
+          registrationId: 'nope',
+          accreditationId: 'acc-1'
+        },
         'suspended',
         'u'
       )
-    ).toThrow(/not found/i)
+    ).toThrow(/registration nope not found/i)
+  })
+
+  it('throws notFound when the accreditation is not linked to the registration', () => {
+    const org = orgWith({
+      registrations: [
+        reg({ id: 'reg-1', status: 'approved', accreditationId: 'acc-1' })
+      ],
+      accreditations: [acc({ id: 'acc-1', status: 'approved' })]
+    })
+    expect(() =>
+      prepareStatusHistoryAppend(
+        org,
+        {
+          type: 'accreditation',
+          registrationId: 'reg-1',
+          accreditationId: 'acc-2'
+        },
+        'suspended',
+        'u'
+      )
+    ).toThrow(/not linked to registration/i)
   })
 
   it('rejects approving an accreditation not linked to an approved registration', () => {
@@ -254,7 +291,11 @@ describe('prepareStatusHistoryAppend', () => {
     expect(() =>
       prepareStatusHistoryAppend(
         org,
-        { type: 'accreditation', accreditationId: 'acc-1' },
+        {
+          type: 'accreditation',
+          registrationId: 'reg-1',
+          accreditationId: 'acc-1'
+        },
         'approved',
         'u'
       )
@@ -342,7 +383,11 @@ describe('prepareStatusHistoryAppend', () => {
     })
     const result = prepareStatusHistoryAppend(
       org,
-      { type: 'accreditation', accreditationId: 'acc-1' },
+      {
+        type: 'accreditation',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      },
       'suspended',
       'user-9'
     )

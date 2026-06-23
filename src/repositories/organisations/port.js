@@ -59,7 +59,7 @@
  * @typedef {(
  *   { type: 'organisation' } |
  *   { type: 'registration', registrationId: string } |
- *   { type: 'accreditation', accreditationId: string }
+ *   { type: 'accreditation', registrationId: string, accreditationId: string }
  * )} StatusTransitionTarget
  */
 

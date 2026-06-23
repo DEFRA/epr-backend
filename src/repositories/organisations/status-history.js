@@ -8,7 +8,12 @@ import {
   applyRegistrationStatusToLinkedAccreditations,
   requireApprovedRegistration
 } from './schema/status-transition.js'
-import { validateApprovals } from './schema/helpers.js'
+import {
+  validateApprovals,
+  validateAccreditationLinkUniqueness,
+  validateAccreditationLinkExists,
+  validateAccreditationLinkMatches
+} from './schema/helpers.js'
 import { createStatusHistoryEntry } from './helpers.js'
 
 /** @import {StatusTransitionTarget} from './port.js' */
@@ -43,6 +48,7 @@ export const prepareStatusHistoryAppend = (
   }
   return prepareAccreditation(
     existing,
+    target.registrationId,
     target.accreditationId,
     toStatus,
     updatedBy
@@ -126,16 +132,33 @@ const prepareRegistration = (existing, registrationId, toStatus, updatedBy) => {
 /** @returns {import('./port.js').StatusHistoryAppendResult} */
 const prepareAccreditation = (
   existing,
+  registrationId,
   accreditationId,
   toStatus,
   updatedBy
 ) => {
-  const accreditation = existing.accreditations.find(
-    (a) => a.id === accreditationId
+  const registration = existing.registrations.find(
+    (r) => r.id === registrationId
   )
-  if (!accreditation) {
-    throw Boom.notFound(`Accreditation ${accreditationId} not found`)
+  if (!registration) {
+    throw Boom.notFound(`Registration ${registrationId} not found`)
   }
+  if (registration.accreditationId !== accreditationId) {
+    throw Boom.notFound(
+      `Accreditation ${accreditationId} is not linked to registration ${registrationId}`
+    )
+  }
+
+  // The registration -> accreditation link is load-bearing (it drives the
+  // cascade), so enforce its integrity at the write boundary with the same
+  // predicates the validation sweep uses, rather than trusting the path params.
+  validateAccreditationLinkUniqueness(existing.registrations)
+  validateAccreditationLinkExists([registration], existing.accreditations)
+  validateAccreditationLinkMatches([registration], existing.accreditations)
+
+  const accreditation = /** @type {{ status: string }} */ (
+    existing.accreditations.find((a) => a.id === accreditationId)
+  )
   const previousStatus = accreditation.status
   assertRegAccStatusTransitionValid(previousStatus, toStatus)
 

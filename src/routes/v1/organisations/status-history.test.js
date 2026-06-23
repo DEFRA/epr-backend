@@ -186,6 +186,7 @@ describe('POST status-history routes', () => {
     const logs = await findSystemLog(org.id)
     expect(logs[0].context.target).toEqual({
       type: 'accreditation',
+      registrationId,
       accreditationId
     })
     expect(logs[0].context.previousStatus).toBe(REG_ACC_STATUS.APPROVED)

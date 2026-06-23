@@ -61,6 +61,7 @@ const targetFor = (type, request) => {
   }
   return {
     type: 'accreditation',
+    registrationId: request.params.registrationId,
     accreditationId: request.params.accreditationId
   }
 }
