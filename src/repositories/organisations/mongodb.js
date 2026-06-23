@@ -180,7 +180,7 @@ const performAppendStatusHistory =
     }
 
     const derived = mapDocumentWithCurrentStatuses(existing)
-    const { changes } = prepareStatusHistoryAppend(
+    const { changes, previousStatus } = prepareStatusHistoryAppend(
       derived,
       target,
       toStatus,
@@ -203,7 +203,8 @@ const performAppendStatusHistory =
       )
     }
 
-    return findById(validatedId, version + 1)
+    const organisation = await findById(validatedId, version + 1)
+    return { organisation, previousStatus }
   }
 
 const handleFoundDocument = (doc, minimumVersion) => {

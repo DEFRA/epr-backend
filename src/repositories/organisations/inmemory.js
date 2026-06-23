@@ -143,7 +143,7 @@ const performAppendStatusHistory =
     }
 
     const derived = mapDocumentWithCurrentStatuses(structuredClone(existing))
-    const { changes } = prepareStatusHistoryAppend(
+    const { changes, previousStatus } = prepareStatusHistoryAppend(
       derived,
       target,
       toStatus,
@@ -156,7 +156,8 @@ const performAppendStatusHistory =
 
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
 
-    return findById(validatedId, updated.version)
+    const organisation = await findById(validatedId, updated.version)
+    return { organisation, previousStatus }
   }
 
 const performFindById = (staleCache) => (id) => {

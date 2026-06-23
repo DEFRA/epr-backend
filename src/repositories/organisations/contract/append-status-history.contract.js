@@ -84,14 +84,16 @@ export const appendStatusHistoryContract = (it) => {
     it('appends an organisation status entry and bumps the version', async () => {
       const { id, version } = await seedApprovedRegLinkedToApprovedAcc()
 
-      const updated = await repository.appendStatusHistory(
-        id,
-        version,
-        { type: 'organisation' },
-        ORGANISATION_STATUS.APPROVED,
-        'admin-user-1'
-      )
+      const { organisation: updated, previousStatus } =
+        await repository.appendStatusHistory(
+          id,
+          version,
+          { type: 'organisation' },
+          ORGANISATION_STATUS.APPROVED,
+          'admin-user-1'
+        )
 
+      expect(previousStatus).toBe(ORGANISATION_STATUS.CREATED)
       expect(updated.status).toBe(ORGANISATION_STATUS.APPROVED)
       expect(updated.version).toBe(version + 1)
 
@@ -142,7 +144,7 @@ export const appendStatusHistoryContract = (it) => {
       const inserted = await repository.findById(organisation.id)
       const registrationId = inserted.registrations[0].id
 
-      const updated = await repository.appendStatusHistory(
+      const { organisation: updated } = await repository.appendStatusHistory(
         inserted.id,
         inserted.version,
         { type: 'registration', registrationId },
@@ -162,7 +164,7 @@ export const appendStatusHistoryContract = (it) => {
       const { id, version, registrationId, accreditationId } =
         await seedApprovedRegLinkedToApprovedAcc()
 
-      const updated = await repository.appendStatusHistory(
+      const { organisation: updated } = await repository.appendStatusHistory(
         id,
         version,
         { type: 'registration', registrationId },

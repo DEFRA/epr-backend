@@ -10,7 +10,6 @@ import { auditStatusTransition } from '#root/auditing/organisations.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/organisations/port.js').StatusTransitionTarget} StatusTransitionTarget */
-/** @typedef {import('#domain/organisations/model.js').Organisation} Organisation */
 
 const ALL_STATUSES = [
   ...new Set([
@@ -67,36 +66,6 @@ const targetFor = (type, request) => {
 }
 
 /**
- * Status of the item with the given id. Only called for ids the transition has
- * already validated as present, so the lookup always resolves.
- *
- * @param {Array<{ id: string, status: string }>} items
- * @param {string} id
- * @returns {string}
- */
-const itemStatus = (items, id) =>
-  /** @type {{ status: string }} */ (items.find((item) => item.id === id))
-    .status
-
-/**
- * Read the current status of the targeted item from an organisation. Only
- * called after the transition has been validated, so the target always exists.
- *
- * @param {Organisation} organisation
- * @param {StatusTransitionTarget} target
- * @returns {string}
- */
-const statusOfTarget = (organisation, target) => {
-  if (target.type === 'organisation') {
-    return organisation.status
-  }
-  if (target.type === 'registration') {
-    return itemStatus(organisation.registrations, target.registrationId)
-  }
-  return itemStatus(organisation.accreditations, target.accreditationId)
-}
-
-/**
  * @param {{ type: 'organisation'|'registration'|'accreditation', path: string }} config
  */
 const makeRoute = ({ type, path }) => ({
@@ -125,27 +94,24 @@ const makeRoute = ({ type, path }) => ({
     const target = targetFor(type, request)
     const updatedBy = request.auth.credentials.id
 
-    // Capture the pre-change state so the audit records the true previous
-    // status; appendStatusHistory validates existence/transition next, so the
-    // target is guaranteed to exist by the time we read it for the audit.
-    const before = await organisationsRepository.findById(organisationId)
-    const updated = await organisationsRepository.appendStatusHistory(
-      organisationId,
-      version,
-      target,
-      status,
-      updatedBy
-    )
+    const { organisation, previousStatus } =
+      await organisationsRepository.appendStatusHistory(
+        organisationId,
+        version,
+        target,
+        status,
+        updatedBy
+      )
 
     await auditStatusTransition(request, {
       organisationId,
       target,
-      previousStatus: statusOfTarget(before, target),
+      previousStatus,
       nextStatus: status,
       reason
     })
 
-    return h.response(updated).code(StatusCodes.OK)
+    return h.response(organisation).code(StatusCodes.OK)
   }
 })
 
