@@ -5,7 +5,7 @@
  * valid-from date, looked up from the overseas-sites repository.
  *
  * @param {OverseasSitesRepository} overseasSitesRepository
- * @param {Record<string, { overseasSiteId: string }> | null | undefined} overseasSites
+ * @param {Record<string, { overseasSiteId: string }> | undefined} overseasSites
  * @returns {Promise<Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>>}
  */
 export async function getOrsDetailsMap(overseasSitesRepository, overseasSites) {

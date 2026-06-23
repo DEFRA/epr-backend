@@ -60,18 +60,6 @@ describe('getOrsDetailsMap', () => {
     expect(overseasSitesRepository.findByIds).not.toHaveBeenCalled()
   })
 
-  it('returns an empty Map when overseasSites is null', async () => {
-    const overseasSitesRepository = createMockOverseasSitesRepository({
-      findByIds: vi.fn()
-    })
-
-    const result = await getOrsDetailsMap(overseasSitesRepository, null)
-
-    expect(result).toBeInstanceOf(Map)
-    expect(result.size).toBe(0)
-    expect(overseasSitesRepository.findByIds).not.toHaveBeenCalled()
-  })
-
   it('returns an empty Map when overseasSites is empty', async () => {
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn()
