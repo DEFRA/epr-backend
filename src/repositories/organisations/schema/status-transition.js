@@ -14,7 +14,7 @@ import {
  * @param {Organisation} existing
  * @returns {void}
  */
-const requireApprovedRegistration = (existing) => {
+export const requireApprovedRegistration = (existing) => {
   const hasApproved = existing.registrations.some(
     (reg) => reg.status === REG_ACC_STATUS.APPROVED
   )

@@ -13,6 +13,7 @@ import {
   prepareForReplace
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
+import { prepareStatusHistoryAppend } from './status-history.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -93,6 +94,70 @@ const performReplace =
 
     // Schedule async staleCache update
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
+  }
+
+/**
+ * Apply status history changes to a stored organisation document. Returns a
+ * deep clone with each change appended to the relevant statusHistory array.
+ *
+ * @param {Record<string, any>} stored - Stored document (uses `_id`)
+ * @param {import('./port.js').StatusHistoryChange[]} changes
+ * @returns {Record<string, any>}
+ */
+const applyChangesToStored = (stored, changes) => {
+  const next = structuredClone(stored)
+
+  for (const change of changes) {
+    if (change.itemType === 'organisation') {
+      next.statusHistory.push(change.entry)
+      continue
+    }
+
+    const collection =
+      change.itemType === 'registration'
+        ? next.registrations
+        : next.accreditations
+    const item = collection.find((i) => i.id === change.id)
+    item.statusHistory.push(change.entry)
+  }
+
+  return next
+}
+
+const performAppendStatusHistory =
+  (storage, staleCache, pendingSyncRef, findById) =>
+  async (id, version, target, toStatus, updatedBy) => {
+    const validatedId = validateId(id)
+
+    const existingIndex = storage.findIndex((o) => o._id === validatedId)
+    const existing = storage[existingIndex]
+
+    if (existingIndex === -1) {
+      throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+    }
+
+    if (existing.version !== version) {
+      throw Boom.conflict(
+        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+      )
+    }
+
+    const derived = mapDocumentWithCurrentStatuses(structuredClone(existing))
+    const { changes, previousStatus } = prepareStatusHistoryAppend(
+      derived,
+      target,
+      toStatus,
+      updatedBy
+    )
+
+    const updated = applyChangesToStored(existing, changes)
+    updated.version = existing.version + 1
+    storage[existingIndex] = updated
+
+    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
+
+    const organisation = await findById(validatedId, updated.version)
+    return { organisation, previousStatus }
   }
 
 const performFindById = (staleCache) => (id) => {
@@ -426,6 +491,12 @@ export const createInMemoryOrganisationsRepository = (
       ),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
+      appendStatusHistory: performAppendStatusHistory(
+        storage,
+        staleCache,
+        pendingSyncRef,
+        findById
+      ),
       // Test-only method to access internal storage (not part of the port interface)
       _getStorageForTesting: () => storage
     }
