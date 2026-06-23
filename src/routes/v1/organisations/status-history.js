@@ -67,6 +67,18 @@ const targetFor = (type, request) => {
 }
 
 /**
+ * Status of the item with the given id. Only called for ids the transition has
+ * already validated as present, so the lookup always resolves.
+ *
+ * @param {Array<{ id: string, status: string }>} items
+ * @param {string} id
+ * @returns {string}
+ */
+const itemStatus = (items, id) =>
+  /** @type {{ status: string }} */ (items.find((item) => item.id === id))
+    .status
+
+/**
  * Read the current status of the targeted item from an organisation. Only
  * called after the transition has been validated, so the target always exists.
  *
@@ -79,17 +91,9 @@ const statusOfTarget = (organisation, target) => {
     return organisation.status
   }
   if (target.type === 'registration') {
-    return /** @type {{ status: string }} */ (
-      organisation.registrations.find(
-        (registration) => registration.id === target.registrationId
-      )
-    ).status
+    return itemStatus(organisation.registrations, target.registrationId)
   }
-  return /** @type {{ status: string }} */ (
-    organisation.accreditations.find(
-      (accreditation) => accreditation.id === target.accreditationId
-    )
-  ).status
+  return itemStatus(organisation.accreditations, target.accreditationId)
 }
 
 /**
