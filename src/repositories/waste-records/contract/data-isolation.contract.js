@@ -60,8 +60,11 @@ export const testDataIsolationBehaviour = (it) => {
 
         // mutate input after save
         data.GROSS_WEIGHT = 999.99
-        wasteRecordVersions.get('received').get('row-1').data.GROSS_WEIGHT =
-          999.99
+        const storedRow = wasteRecordVersions.get('received')?.get('row-1')
+        if (!storedRow) {
+          throw new Error('expected stored row to exist')
+        }
+        storedRow.data.GROSS_WEIGHT = 999.99
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
         expect(result[0].data.GROSS_WEIGHT).toBe(100.5)

@@ -10,8 +10,6 @@ const generateOrgReg = () => ({
 /**
  * Contract tests for findLatestSubmittedForOrgReg method
  * These tests verify the behaviour is consistent across implementations
- *
- * @param {import('vitest').TaskContext} it - Vitest test context with fixtures
  */
 export const testFindLatestSubmittedForOrgReg = (it) => {
   describe('findLatestSubmittedForOrgReg', () => {

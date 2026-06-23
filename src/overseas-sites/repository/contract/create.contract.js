@@ -5,15 +5,9 @@ export const testCreateBehaviour = (it) => {
   describe('create', () => {
     let repository
 
-    beforeEach(
-      async (
-        /** @type {{ overseasSitesRepository: import('../port.js').OverseasSitesRepository }} */ {
-          overseasSitesRepository
-        }
-      ) => {
-        repository = overseasSitesRepository
-      }
-    )
+    beforeEach(async ({ overseasSitesRepository }) => {
+      repository = overseasSitesRepository
+    })
 
     it('creates a site and returns it with an id', async () => {
       const input = buildOverseasSite()

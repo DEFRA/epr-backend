@@ -10,15 +10,9 @@ export const testFindBehaviour = (it) => {
   describe('find', () => {
     let repository
 
-    beforeEach(
-      async (
-        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
-          prnRepository
-        }
-      ) => {
-        repository = prnRepository
-      }
-    )
+    beforeEach(async ({ prnRepository }) => {
+      repository = prnRepository
+    })
 
     describe('findById', () => {
       it('returns null when id not found', async () => {

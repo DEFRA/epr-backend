@@ -18,8 +18,6 @@ const generateOrgReg = () => ({
  * This method atomically transitions a summary log to 'submitting' status,
  * but only if no other summary log for the same organisation/registration
  * pair is already submitting. This prevents concurrent submissions.
- *
- * @param {import('vitest').TaskContext} it - Vitest test context with fixtures
  */
 export const testTransitionToSubmittingExclusive = (it) => {
   describe('transitionToSubmittingExclusive', () => {

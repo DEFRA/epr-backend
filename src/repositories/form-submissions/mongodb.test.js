@@ -87,27 +87,21 @@ const it = mongoIt.extend({
 })
 
 describe('MongoDB form submissions repository', () => {
-  beforeEach(
-    async (
-      /** @type {{ mongoClient: import('mongodb').MongoClient }} */ {
-        mongoClient
-      }
-    ) => {
-      await mongoClient
-        .db(DATABASE_NAME)
-        .collection('accreditation')
-        .deleteMany({})
-      await mongoClient
-        .db(DATABASE_NAME)
-        .collection('registration')
-        .deleteMany({})
-      await mongoClient
-        .db(DATABASE_NAME)
-        .collection('organisation')
-        .deleteMany({})
-      await mongoClient.db(DATABASE_NAME).collection('counters').deleteMany({})
-    }
-  )
+  beforeEach(async ({ mongoClient }) => {
+    await mongoClient
+      .db(DATABASE_NAME)
+      .collection('accreditation')
+      .deleteMany({})
+    await mongoClient
+      .db(DATABASE_NAME)
+      .collection('registration')
+      .deleteMany({})
+    await mongoClient
+      .db(DATABASE_NAME)
+      .collection('organisation')
+      .deleteMany({})
+    await mongoClient.db(DATABASE_NAME).collection('counters').deleteMany({})
+  })
 
   it('should create repository instance', async ({
     formSubmissionsRepository
