@@ -1,13 +1,18 @@
 import { ObjectId } from 'mongodb'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
   fetchOrGenerateReportForPeriod,
-  createReportForPeriod
+  createReportForPeriod,
+  fetchReportBySubmissionNumber
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
@@ -69,6 +74,11 @@ const buildWasteRecordsRepository = (params) =>
     }
   ])()
 
+const createPrnRepo = (initialData = []) =>
+  createInMemoryPackagingRecyclingNotesRepository(initialData)(
+    /** @type {any} */ (null)
+  )
+
 const defaultParams = () => {
   const organisationId = new ObjectId().toString()
   const registration = buildRegistration()
@@ -78,7 +88,9 @@ const defaultParams = () => {
     registration,
     year: 2024,
     cadence: 'monthly',
-    period: 1
+    period: 1,
+    submissionNumber: 1,
+    overseasSitesRepository: createInMemoryOverseasSitesRepository()()
   }
 }
 
@@ -87,8 +99,7 @@ describe('report-service', () => {
     it('returns computed report when no stored report exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
+      const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
 
       const report = await fetchOrGenerateReportForPeriod({
@@ -100,14 +111,13 @@ describe('report-service', () => {
 
       expect(report.recyclingActivity).toBeDefined()
       expect(report.wasteSent).toBeDefined()
-      expect(report.id).toBeUndefined()
+      expect(report).not.toHaveProperty('id')
     })
 
     it('returns stored report when one exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
+      const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
@@ -117,6 +127,7 @@ describe('report-service', () => {
         year: 2024,
         cadence: 'monthly',
         period: 1,
+        submissionNumber: 1,
         startDate: '2024-01-01',
         endDate: '2024-01-31',
         dueDate: '2024-02-15',
@@ -149,8 +160,75 @@ describe('report-service', () => {
         ...params
       })
 
-      expect(report.id).toBeDefined()
-      expect(report.status.currentStatus).toBe(REPORT_STATUS.IN_PROGRESS)
+      const storedReport =
+        /** @type {import('#reports/repository/port.js').Report} */ (report)
+      expect(storedReport.id).toBeDefined()
+      expect(storedReport.status.currentStatus).toBe(REPORT_STATUS.IN_PROGRESS)
+    })
+
+    it('returns stored report when submissionNumber matches a previous submission', async () => {
+      const reportsRepository = createInMemoryReportsRepository()()
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository = createPrnRepo()
+      const params = defaultParams()
+      const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
+
+      const baseReport = {
+        organisationId: params.organisationId,
+        registrationId: params.registrationId,
+        year: 2024,
+        cadence: 'monthly',
+        period: 1,
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        dueDate: '2024-02-15',
+        changedBy,
+        material: 'plastic',
+        wasteProcessingType: 'reprocessor',
+        source: { summaryLogId: 'sl-1', lastUploadedAt: null },
+        prn: null,
+        recyclingActivity: {
+          suppliers: [],
+          totalTonnageReceived: 0,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
+        },
+        wasteSent: {
+          tonnageSentToReprocessor: 0,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0,
+          finalDestinations: []
+        }
+      }
+
+      const report1 = await reportsRepository.createReport({
+        ...baseReport,
+        submissionNumber: 1
+      })
+      await reportsRepository.updateReportStatus({
+        reportId: report1.id,
+        version: 1,
+        status: 'submitted',
+        slot: REPORT_STATUS_SLOT.SUBMITTED,
+        changedBy,
+        submissionDeclaredBy: 'Test User'
+      })
+      await reportsRepository.createReport({
+        ...baseReport,
+        submissionNumber: 2
+      })
+
+      const report = await fetchOrGenerateReportForPeriod({
+        reportsRepository,
+        wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
+        ...params,
+        submissionNumber: 1
+      })
+
+      const storedReport =
+        /** @type {import('#reports/repository/port.js').Report} */ (report)
+      expect(storedReport.id).toBe(report1.id)
     })
 
     it('returns computed report with aggregated waste data', async () => {
@@ -164,8 +242,7 @@ describe('report-service', () => {
         }
       ])()
       const reportsRepository = createInMemoryReportsRepository()()
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
+      const packagingRecyclingNotesRepository = createPrnRepo()
 
       const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
@@ -174,10 +251,63 @@ describe('report-service', () => {
         ...params
       })
 
-      expect(report.recyclingActivity.suppliers).toHaveLength(1)
-      expect(report.recyclingActivity.suppliers[0].supplierName).toBe(
+      expect(report.recyclingActivity?.suppliers).toHaveLength(1)
+      expect(report.recyclingActivity?.suppliers[0]?.supplierName).toBe(
         'Supplier A'
       )
+    })
+  })
+
+  describe('fetchReportBySubmissionNumber', () => {
+    const baseReportFields = (params, changedBy) => ({
+      organisationId: params.organisationId,
+      registrationId: params.registrationId,
+      year: 2024,
+      cadence: 'monthly',
+      period: 1,
+      startDate: '2024-01-01',
+      endDate: '2024-01-31',
+      dueDate: '2024-02-15',
+      changedBy,
+      material: 'plastic',
+      wasteProcessingType: 'reprocessor',
+      source: { summaryLogId: 'sl-1', lastUploadedAt: null },
+      prn: null,
+      recyclingActivity: {
+        suppliers: [],
+        totalTonnageReceived: 0,
+        tonnageRecycled: null,
+        tonnageNotRecycled: null
+      },
+      wasteSent: {
+        tonnageSentToReprocessor: 0,
+        tonnageSentToExporter: 0,
+        tonnageSentToAnotherSite: 0,
+        finalDestinations: []
+      }
+    })
+
+    it('returns null when submissionNumber does not match current or any previous submission', async () => {
+      const reportsRepository = createInMemoryReportsRepository()()
+      const params = defaultParams()
+      const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
+
+      await reportsRepository.createReport({
+        ...baseReportFields(params, changedBy),
+        submissionNumber: 1
+      })
+
+      const result = await fetchReportBySubmissionNumber(
+        reportsRepository,
+        params.organisationId,
+        params.registrationId,
+        2024,
+        'monthly',
+        1,
+        99
+      )
+
+      expect(result).toBeNull()
     })
   })
 
@@ -186,8 +316,7 @@ describe('report-service', () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()
       const wasteRecordsRepository = buildWasteRecordsRepository(params)
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
+      const packagingRecyclingNotesRepository = createPrnRepo()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
@@ -209,8 +338,7 @@ describe('report-service', () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()
       const wasteRecordsRepository = buildWasteRecordsRepository(params)
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
+      const packagingRecyclingNotesRepository = createPrnRepo()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       await createReportForPeriod({
@@ -235,8 +363,7 @@ describe('report-service', () => {
     it('throws badRequest for period that has not yet ended', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
+      const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
       params.year = 2099
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
@@ -260,8 +387,7 @@ describe('report-service', () => {
         glassRecyclingProcess: ['glass_re_melt']
       })
       const wasteRecordsRepository = buildWasteRecordsRepository(params)
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
+      const packagingRecyclingNotesRepository = createPrnRepo()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
@@ -279,8 +405,7 @@ describe('report-service', () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()
       const wasteRecordsRepository = buildWasteRecordsRepository(params)
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
+      const packagingRecyclingNotesRepository = createPrnRepo()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
@@ -312,7 +437,14 @@ describe('report-service', () => {
           status: {
             currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
             currentStatusAt: IN_PERIOD,
-            issued: { at: IN_PERIOD, by: { id: 'test', name: 'test' } }
+            issued: { at: IN_PERIOD, by: { id: 'test', name: 'test' } },
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                at: IN_PERIOD,
+                by: { id: 'test', name: 'test' }
+              }
+            ]
           }
         })
 
@@ -321,7 +453,7 @@ describe('report-service', () => {
         const params = defaultParams()
         params.registration = buildRegistration({ accreditationId: undefined })
         const wasteRecordsRepository = buildWasteRecordsRepository(params)
-        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
+        const prnRepo = createPrnRepo()
 
         const report = await createReportForPeriod({
           reportsRepository,
@@ -338,7 +470,7 @@ describe('report-service', () => {
         const reportsRepository = createInMemoryReportsRepository()()
         const params = defaultParams()
         const wasteRecordsRepository = buildWasteRecordsRepository(params)
-        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
+        const prnRepo = createPrnRepo()
 
         const report = await createReportForPeriod({
           reportsRepository,
@@ -348,14 +480,14 @@ describe('report-service', () => {
           changedBy
         })
 
-        expect(report.prn.issuedTonnage).toBe(0)
+        expect(report.prn?.issuedTonnage).toBe(0)
       })
 
       it('persists prn with summed issuedTonnage from PRNs in period', async () => {
         const reportsRepository = createInMemoryReportsRepository()()
         const params = defaultParams()
         const wasteRecordsRepository = buildWasteRecordsRepository(params)
-        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
+        const prnRepo = createPrnRepo()
 
         await prnRepo.create(
           buildIssuedPrn(params.registration.accreditationId, 30)
@@ -372,7 +504,7 @@ describe('report-service', () => {
           changedBy
         })
 
-        expect(report.prn.issuedTonnage).toBe(50)
+        expect(report.prn?.issuedTonnage).toBe(50)
       })
     })
   })

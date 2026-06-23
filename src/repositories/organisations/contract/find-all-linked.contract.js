@@ -6,9 +6,15 @@ export const testFindAllLinkedBehaviour = (it) => {
   describe('findAllLinked', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     it('returns empty array when no organisations exist', async () => {
       const result = await repository.findAllLinked()

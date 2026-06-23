@@ -14,6 +14,7 @@ import {
   createEmptyLoadCategory,
   createEmptyLoadValidity
 } from './load-counts.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 
@@ -249,6 +250,10 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockResolvedValue([])
+      }),
+      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
   })
@@ -672,6 +677,10 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockResolvedValue([])
+      }),
+      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
 
@@ -703,6 +712,32 @@ describe('SummaryLogsValidator', () => {
     const result = await validateSummaryLog(summaryLogId).catch((err) => err)
 
     expect(result).toBe(databaseError)
+  })
+
+  it('should throw and not persist when fetching periodic reports fails', async () => {
+    const fetchError = new Error('Database connection lost')
+
+    const validateWithBrokenReports = createSummaryLogsValidator({
+      logger,
+      summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
+      organisationsRepository: /** @type {any} */ (organisationsRepository),
+      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
+      }),
+      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+      summaryLogExtractor
+    })
+
+    const result = await validateWithBrokenReports(summaryLogId).catch(
+      (err) => err
+    )
+
+    // The reports lookup is core flow: a failure must fail validation (the
+    // consumer's onFailure then marks the log validation_failed) rather than
+    // persist a result with every load misclassified as open.
+    expect(result).toBe(fetchError)
+    expect(summaryLogsRepository.update).not.toHaveBeenCalled()
   })
 
   describe('Four-level validation hierarchy short-circuit behavior', () => {
@@ -859,14 +894,14 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Note: ROW_ID values come directly from test data as numbers
+      // Note: ROW_ID is normalised to a string row identity by the transform
       // Row 10001 is excluded because EWC_CODE is missing (classifyForWasteBalance)
       expect(updateCall.loads).toEqual({
         added: {
-          valid: { count: 1, rowIds: [10000] },
-          invalid: { count: 1, rowIds: [10001] },
-          included: { count: 1, rowIds: [10000] },
-          excluded: { count: 1, rowIds: [10001] }
+          valid: { count: 1, rowIds: ['10000'] },
+          invalid: { count: 1, rowIds: ['10001'] },
+          included: { count: 1, rowIds: ['10000'] },
+          excluded: { count: 1, rowIds: ['10001'] }
         },
         unchanged: createEmptyLoadValidity(),
         adjusted: createEmptyLoadValidity()
@@ -973,12 +1008,12 @@ describe('SummaryLogsValidator', () => {
 
       // Row 10001 is IGNORED (outside accreditation range) and counted as excluded
       expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([10000])
-      expect(updateCall.loads.added.included.rowIds).toEqual([10000])
+      expect(updateCall.loads.added.valid.rowIds).toEqual(['10000'])
+      expect(updateCall.loads.added.included.rowIds).toEqual(['10000'])
 
       expect(updateCall.loads.added.invalid.count).toBe(0)
       expect(updateCall.loads.added.excluded.count).toBe(1)
-      expect(updateCall.loads.added.excluded.rowIds).toEqual([10001])
+      expect(updateCall.loads.added.excluded.rowIds).toEqual(['10001'])
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (REPROCESSED_LOADS in REPROCESSOR_INPUT)', async () => {
@@ -1138,7 +1173,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([5000])
+      expect(updateCall.loads.added.valid.rowIds).toEqual(['5000'])
     })
 
     it('sets IGNORED outcome for EXPORTER loads with dates outside accreditation range', async () => {
@@ -1247,7 +1282,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
+      expect(updateCall.loads.added.valid.rowIds).toEqual(['3000'])
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in EXPORTER)', async () => {
@@ -1437,7 +1472,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
+      expect(updateCall.loads.added.valid.rowIds).toEqual(['3000'])
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in REPROCESSOR_OUTPUT)', async () => {
@@ -1668,7 +1703,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       expect(updateCall.loads.added.invalid.count).toBe(1)
-      expect(updateCall.loads.added.invalid.rowIds).toEqual([5000])
+      expect(updateCall.loads.added.invalid.rowIds).toEqual(['5000'])
     })
 
     it('completes validation for REPROCESSOR_OUTPUT when date field is empty', async () => {

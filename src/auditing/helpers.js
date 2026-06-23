@@ -18,7 +18,8 @@ function extractUserDetails(request) {
     : {
         id: request.auth?.credentials?.id,
         email: request.auth?.credentials?.email,
-        scope: request.auth?.credentials?.scope
+        scope: request.auth?.credentials?.scope,
+        role: request.auth?.credentials?.role
       }
 }
 
@@ -32,6 +33,23 @@ async function recordSystemLog(request, { user, ...restPayload }) {
     createdBy: user,
     ...restPayload
   })
+}
+
+/**
+ * Batch analogue of {@link recordSystemLog} for system-triggered audits (no Hapi request available).
+ * Uses {@link SystemLogsRepository.insertMany} for a single DB round-trip.
+ *
+ * @param {SystemLogsRepository} systemLogsRepository
+ * @param {Array<{ user: object } & object>} payloads
+ */
+async function recordSystemLogs(systemLogsRepository, payloads) {
+  const records = payloads.map(({ user, ...restPayload }) => ({
+    createdAt: new Date(),
+    createdBy: user,
+    ...restPayload
+  }))
+
+  await systemLogsRepository.insertMany(records)
 }
 
 /**
@@ -73,5 +91,6 @@ export {
   extractUserDetails,
   isPayloadSmallEnoughToAudit,
   recordSystemLog,
+  recordSystemLogs,
   safeAudit
 }

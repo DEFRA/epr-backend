@@ -23,8 +23,8 @@ vi.mock('#reports/application/audit.js', () => ({
 describe(`POST ${reportsStatusPath}`, () => {
   setupAuthContext()
 
-  const makeUrl = (orgId, regId, year, cadence, period) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/status`
+  const makeUrl = (orgId, regId, year, cadence, period, submissionNumber = 1) =>
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}/status`
 
   describe('when feature flag is enabled', () => {
     // Defaults to a report whose manual-entry fields are populated enough
@@ -60,7 +60,13 @@ describe(`POST ${reportsStatusPath}`, () => {
       registrationOverrides,
       accreditationStatus
     ) => {
-      const registration = buildRegistration(registrationOverrides)
+      const accreditationId = accreditationStatus
+        ? new ObjectId().toString()
+        : undefined
+      const registration = buildRegistration({
+        ...registrationOverrides,
+        ...(accreditationId && { accreditationId })
+      })
       const org = buildOrganisationWithRegistration(
         registration,
         accreditationStatus
@@ -105,7 +111,7 @@ describe(`POST ${reportsStatusPath}`, () => {
           wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: reportsRepositoryFactory
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       return {
@@ -135,7 +141,7 @@ describe(`POST ${reportsStatusPath}`, () => {
           wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: createInMemoryReportsRepository()
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       return {
@@ -180,6 +186,44 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(JSON.parse(response.payload)).toEqual({
           status: 'ready_to_submit'
         })
+      })
+
+      it('advances status to submitted with submissionDeclaredBy stored', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepository,
+          reportId
+        } = await createServerWithReport({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await reportsRepository.updateReportStatus({
+          reportId,
+          version: 1,
+          status: 'ready_to_submit',
+          slot: REPORT_STATUS_SLOT.READY,
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+        })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          {
+            status: 'submitted',
+            version: 2,
+            submissionDeclaredBy: 'Jane Smith'
+          }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(JSON.parse(response.payload)).toEqual({ status: 'submitted' })
+
+        const updatedReport = await reportsRepository.findReportById(reportId)
+        expect(updatedReport.status.submitted?.declaredBy).toBe('Jane Smith')
       })
     })
 
@@ -405,7 +449,11 @@ describe(`POST ${reportsStatusPath}`, () => {
           server,
           organisationId,
           registrationId,
-          { status: 'submitted', version: 1 }
+          {
+            status: 'submitted',
+            version: 1,
+            submissionDeclaredBy: 'Jane Smith'
+          }
         )
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
@@ -435,7 +483,8 @@ describe(`POST ${reportsStatusPath}`, () => {
           version: 2,
           status: 'submitted',
           slot: REPORT_STATUS_SLOT.SUBMITTED,
-          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' },
+          submissionDeclaredBy: 'Test User'
         })
 
         const response = await postStatus(
@@ -518,6 +567,106 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
+      it('returns 422 when submissionDeclaredBy is missing for submitted status', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'submitted', version: 1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 422 when submissionDeclaredBy is a single character', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'submitted', version: 1, submissionDeclaredBy: 'A' }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 422 when submissionDeclaredBy exceeds 255 characters', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          {
+            status: 'submitted',
+            version: 1,
+            submissionDeclaredBy: 'A'.repeat(256)
+          }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it.each(['@', '#', '$', '%', '&', '<', '>'])(
+        'returns 422 when submissionDeclaredBy contains invalid character %s',
+        async (char) => {
+          const { server, organisationId, registrationId } =
+            await createServerWithReport({
+              wasteProcessingType: 'reprocessor',
+              accreditationId: undefined
+            })
+
+          const response = await postStatus(
+            server,
+            organisationId,
+            registrationId,
+            {
+              status: 'submitted',
+              version: 1,
+              submissionDeclaredBy: `Jane ${char} Smith`
+            }
+          )
+
+          expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        }
+      )
+
+      it('returns 422 when submissionDeclaredBy is provided for non-submitted transition', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          {
+            status: 'ready_to_submit',
+            version: 1,
+            submissionDeclaredBy: 'Jane Smith'
+          }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
       it('returns 422 for invalid cadence', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithoutReport({
@@ -535,6 +684,33 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
     })
+
+    describe('when report is stale', () => {
+      it('returns 409 with summary_log_changed code', async () => {
+        const { server, organisationId, registrationId, reportsRepository } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        await reportsRepository.markActiveReportsStale(
+          organisationId,
+          registrationId,
+          'sl-new',
+          new Date().toISOString()
+        )
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 2 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
+      })
+    })
   })
 
   describe('when feature flag is disabled', () => {
@@ -544,7 +720,7 @@ describe(`POST ${reportsStatusPath}`, () => {
 
       const server = await createTestServer({
         repositories: {},
-        featureFlags: createInMemoryFeatureFlags({ reports: false })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       const response = await server.inject({

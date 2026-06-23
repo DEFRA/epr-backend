@@ -1,7 +1,8 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { logger } from '#common/helpers/logging/logger.js'
 
 const mockAudit = vi.fn()
-const mockInsert = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -17,29 +18,35 @@ describe('auditPublicRegisterGenerate', () => {
   const userEmail = 'test@example.gov.uk'
   const userScope = ['service_maintainer']
 
-  const createMockRequest = () => ({
-    auth: {
-      credentials: {
-        id: userId,
-        email: userEmail,
-        scope: userScope
-      }
-    },
-    systemLogsRepository: {
-      insert: mockInsert
-    }
-  })
+  let systemLogsRepository
+
+  const createMockRequest = () =>
+    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+      auth: {
+        credentials: {
+          id: userId,
+          email: userEmail,
+          scope: userScope
+        }
+      },
+      systemLogsRepository
+    })
 
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-12-22T10:00:00.000Z'))
-    mockInsert.mockResolvedValue(undefined)
+    systemLogsRepository = createSystemLogsRepository()(logger)
   })
 
   afterEach(() => {
     vi.useRealTimers()
     vi.clearAllMocks()
   })
+
+  const findStoredLog = async () => {
+    const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
+    return systemLogs[0]
+  }
 
   it('sends audit event to CDP auditing with correct payload', async () => {
     const request = createMockRequest()
@@ -78,7 +85,8 @@ describe('auditPublicRegisterGenerate', () => {
       expiresAt
     })
 
-    expect(mockInsert).toHaveBeenCalledWith({
+    const storedLog = await findStoredLog()
+    expect(storedLog).toEqual({
       createdAt: new Date('2025-12-22T10:00:00.000Z'),
       createdBy: {
         id: userId,

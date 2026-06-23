@@ -4,12 +4,15 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  */
 
+export const SUMMARY_LOG_SUB_CATEGORY = 'summary-log'
+export const SUMMARY_LOG_SUBMIT_ACTION = 'submit'
+
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
  * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
  */
 async function auditSummaryLogSubmit(request, context) {
-  await auditSummaryLog(request, context, 'submit')
+  await auditSummaryLog(request, context, SUMMARY_LOG_SUBMIT_ACTION)
 }
 
 /**
@@ -30,7 +33,7 @@ async function auditSummaryLog(request, context, action) {
   const payload = {
     event: {
       category: 'waste-reporting',
-      subCategory: 'summary-log',
+      subCategory: SUMMARY_LOG_SUB_CATEGORY,
       action
     },
     context,

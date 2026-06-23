@@ -25,7 +25,7 @@ jobs:
 
       - name: Check for docs-only changes
         id: check
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -48,7 +48,7 @@ jobs:
     if: needs.pr-prep.outputs.docs-only != 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
@@ -59,7 +59,7 @@ jobs:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
 
       - name: Cache MongoDB binaries
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.cache/mongodb-binaries
           key: mongodb-binaries-${{ runner.os }}-7.0.14
@@ -77,12 +77,6 @@ jobs:
       pull-requests: write
     steps:
       - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types-tests@main
-        with:
-          include-globs: |
-            **/*.test.js
-            **/test-helpers/**
-            **/test-fixtures.js
-            **/*.d.ts
 
   dependency-review:
     name: Dependency Review
@@ -92,23 +86,23 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - uses: actions/dependency-review-action@v5
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: moderate
 
   test-journey:
-    name: Run Journey Tests (ledger=${{ matrix.ledger }})
+    name: Run Journey Tests (waste-record-states=${{ matrix.waste-record-states }})
     runs-on: ubuntu-latest
     needs: pr-prep
     if: needs.pr-prep.outputs.docs-only != 'true'
     strategy:
       fail-fast: false
       matrix:
-        ledger: [false, true]
+        waste-record-states: [false, true]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Check for matching journey test branch
         id: journey-branch
@@ -135,8 +129,8 @@ jobs:
         with:
           epr-backend: ${{github.sha}}
           branch: ${{ steps.journey-branch.outputs.ref }}
-          waste-balance-ledger: ${{ matrix.ledger }}
-          artifact-suffix: -ledger-${{ matrix.ledger }}
+          waste-record-states: ${{ matrix.waste-record-states }}
+          artifact-suffix: -waste-record-states-${{ matrix.waste-record-states }}
 
       - name: Write journey test summary
         if: always()

@@ -18,6 +18,11 @@ export const STATUS_TO_SLOT = {
   [REPORT_STATUS.SUBMITTED]: REPORT_STATUS_SLOT.SUBMITTED
 }
 
+export const ACTIVE_REPORT_STATUSES = new Set([
+  REPORT_STATUS.IN_PROGRESS,
+  REPORT_STATUS.READY_TO_SUBMIT
+])
+
 /**
  * @typedef {typeof REPORT_STATUS[keyof typeof REPORT_STATUS]} ReportStatus
  */

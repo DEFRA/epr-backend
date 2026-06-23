@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import { describe, beforeEach, expect } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
@@ -54,6 +55,7 @@ export const testPersistProjectionBehaviour = (it) => {
           projection,
           expectedVersion: created.version
         })
+        assert(persisted)
 
         expect(persisted.id).toBe(created.id)
         expect(persisted.version).toBe(created.version + 1)
@@ -84,9 +86,10 @@ export const testPersistProjectionBehaviour = (it) => {
           projection,
           expectedVersion: created.version
         })
+        assert(persisted)
 
         expect(persisted.id).toBe(created.id)
-        expect(persisted._id).toBeUndefined()
+        expect(Object.keys(persisted)).not.toContain('_id')
       })
 
       it('returns null when no PRN exists with the given id', async () => {
@@ -103,6 +106,28 @@ export const testPersistProjectionBehaviour = (it) => {
         })
 
         expect(result).toBeNull()
+      })
+    })
+
+    describe('version ownership', () => {
+      it('derives the persisted version from expectedVersion, ignoring the version the projection carries', async () => {
+        const created = await repository.create(buildDraftPrn())
+        const projection = buildProjection(created, {
+          version: created.version + 99,
+          lastAppliedEventNumber: 3
+        })
+
+        const persisted = await repository.persistProjection({
+          projection,
+          expectedVersion: created.version
+        })
+        assert(persisted)
+
+        expect(persisted.version).toBe(created.version + 1)
+
+        const refetched = await repository.findById(created.id)
+        assert(refetched)
+        expect(refetched.version).toBe(created.version + 1)
       })
     })
 
@@ -189,9 +214,11 @@ export const testPersistProjectionBehaviour = (it) => {
           projection: buildProjection(created, { prnNumber }),
           expectedVersion: created.version
         })
+        assert(persisted)
 
         expect(persisted.prnNumber).toBe(prnNumber)
         const refetched = await repository.findById(created.id)
+        assert(refetched)
         expect(refetched.prnNumber).toBe(prnNumber)
       })
     })
@@ -230,6 +257,7 @@ export const testPersistProjectionBehaviour = (it) => {
           projection,
           expectedVersion: created.version
         })
+        assert(persisted)
 
         expect(persisted.status.issued).toEqual({ at, by: ISSUE_USER })
         expect(persisted.status.currentStatus).toBe(

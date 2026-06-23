@@ -31,7 +31,8 @@ export const periodSchema = Joi.number()
 
 export const userSummarySchema = Joi.object({
   id: Joi.string().required(),
-  name: Joi.string().required(),
+  name: Joi.string().optional(),
+  email: Joi.string().optional(),
   position: Joi.string().optional()
 }).required()
 
@@ -202,7 +203,12 @@ export const updateReportStatusSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REPORT_STATUS))
     .required(),
-  changedBy: userSummarySchema.required()
+  changedBy: userSummarySchema.required(),
+  submissionDeclaredBy: Joi.string().min(2).when('status', {
+    is: REPORT_STATUS.SUBMITTED,
+    then: Joi.required(),
+    otherwise: Joi.forbidden()
+  })
 })
 
 export const findPeriodicReportsSchema = Joi.object({
@@ -213,3 +219,10 @@ export const findPeriodicReportsSchema = Joi.object({
 export const findReportByIdSchema = Joi.string()
   .guid({ version: 'uuidv4' })
   .required()
+
+export const markActiveReportsStaleSchema = Joi.object({
+  organisationId: MONGO_ID_SCHEMA,
+  registrationId: MONGO_ID_SCHEMA,
+  summaryLogId: Joi.string().required(),
+  uploadedAt: Joi.string().isoDate().required()
+})
