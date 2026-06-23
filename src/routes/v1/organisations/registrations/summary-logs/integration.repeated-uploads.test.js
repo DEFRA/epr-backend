@@ -10,6 +10,8 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -240,9 +242,8 @@ describe('Repeated uploads of identical data', () => {
         wasteRecordsRepository,
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: /** @type {any} */ ({
-          findPeriodicReports: async () => []
-        })
+        reportsRepository: createInMemoryReportsRepository()(),
+        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
 
       const syncWasteRecords = syncFromSummaryLog(
