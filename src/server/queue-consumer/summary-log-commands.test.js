@@ -153,7 +153,8 @@ describe('summaryLogCommandHandlers', () => {
           user: {
             id: 'user-1',
             email: 'test@example.com',
-            scope: ['operator']
+            scope: ['operator'],
+            role: null
           }
         })
 
@@ -167,11 +168,27 @@ describe('summaryLogCommandHandlers', () => {
             id: 'user-1',
             name: 'Test User',
             email: 'test@example.com',
-            scope: ['operator']
+            scope: ['operator'],
+            role: null
           }
         })
 
         expect(error).toBeUndefined()
+      })
+
+      it('rejects a user without a role', () => {
+        const error = validationErrorFrom(
+          handler.payloadSchema.validate({
+            summaryLogId: 'log-123',
+            user: {
+              id: 'user-1',
+              email: 'test@example.com',
+              scope: ['operator']
+            }
+          })
+        )
+
+        expect(error.message).toBe('"user.role" is required')
       })
 
       it('requires summaryLogId', () => {
@@ -226,7 +243,8 @@ describe('summaryLogCommandHandlers', () => {
             user: {
               id: 'user-1',
               email: 'test@example.com',
-              scope: ['operator']
+              scope: ['operator'],
+              role: null
             },
             extra: true
           })
@@ -243,7 +261,8 @@ describe('summaryLogCommandHandlers', () => {
           user: {
             id: 'user-1',
             email: 'test@example.com',
-            scope: ['operator']
+            scope: ['operator'],
+            role: null
           }
         }
 

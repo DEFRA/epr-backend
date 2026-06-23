@@ -11,6 +11,7 @@ describe('extractUser', () => {
           name: 'Ada Lovelace',
           email: 'ada@example.com',
           scope: ['admin'],
+          role: 'standard_user',
           issuer: 'defra-id'
         }
       }
@@ -20,7 +21,8 @@ describe('extractUser', () => {
       id: 'user-123',
       name: 'Ada Lovelace',
       email: 'ada@example.com',
-      scope: ['admin']
+      scope: ['admin'],
+      role: 'standard_user'
     })
   })
 
@@ -32,6 +34,7 @@ describe('extractUser', () => {
           id: 'user-456',
           email: 'noname@example.com',
           scope: ['admin'],
+          role: null,
           issuer: 'defra-id'
         }
       }
@@ -42,7 +45,8 @@ describe('extractUser', () => {
     expect(user).toEqual({
       id: 'user-456',
       email: 'noname@example.com',
-      scope: ['admin']
+      scope: ['admin'],
+      role: null
     })
     expect('name' in user).toBe(false)
   })

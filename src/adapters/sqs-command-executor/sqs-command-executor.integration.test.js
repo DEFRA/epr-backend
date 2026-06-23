@@ -100,7 +100,8 @@ describe('SQS command executor integration', () => {
         credentials: {
           id: 'user-123',
           email: 'test@example.com',
-          scope: ['admin']
+          scope: ['admin'],
+          role: 'standard_user'
         }
       }
     }
@@ -138,7 +139,8 @@ describe('SQS command executor integration', () => {
           user: {
             id: 'user-123',
             email: 'test@example.com',
-            scope: ['admin']
+            scope: ['admin'],
+            role: 'standard_user'
           }
         })
       }
@@ -248,7 +250,8 @@ describe('SQS command executor integration', () => {
         const user = {
           id: 'user-123',
           email: 'maintainer@defra.gov.uk',
-          scope: ['serviceMaintainer']
+          scope: ['serviceMaintainer'],
+          role: 'service_maintainer'
         }
         await executor.orsImportsWorker.importOverseasSites(importId, user)
 

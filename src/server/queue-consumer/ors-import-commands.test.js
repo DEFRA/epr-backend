@@ -97,6 +97,19 @@ describe('orsImportCommandHandlers', () => {
 
         expect(error).toBeUndefined()
       })
+
+      it('rejects a user without a role', () => {
+        const { error } = handler.payloadSchema.validate({
+          importId: 'import-123',
+          user: {
+            id: 'user-1',
+            email: 'operator@example.com',
+            scope: ['operator']
+          }
+        })
+
+        expect(error?.message).toBe('"user.role" is required')
+      })
     })
 
     describe('execute', () => {
