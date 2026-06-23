@@ -12,6 +12,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -386,8 +387,12 @@ describe('Advanced validation scenarios', () => {
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         summaryLogExtractor,
-        logger: mockLogger
+        logger: mockLogger,
+        reportsRepository: /** @type {any} */ ({
+          findPeriodicReports: async () => []
+        })
       })
       const featureFlags = createInMemoryFeatureFlags()
 
@@ -568,8 +573,12 @@ describe('Advanced validation scenarios', () => {
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         summaryLogExtractor,
-        logger: mockLogger
+        logger: mockLogger,
+        reportsRepository: /** @type {any} */ ({
+          findPeriodicReports: async () => []
+        })
       })
       const featureFlags = createInMemoryFeatureFlags()
 
@@ -787,7 +796,8 @@ describe('Advanced validation scenarios', () => {
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          validation: {}
+          validation: {},
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
         })
       )
 

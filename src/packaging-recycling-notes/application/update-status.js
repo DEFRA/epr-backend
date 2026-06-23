@@ -6,13 +6,6 @@ import {
   balanceEventsFor
 } from './update-status-balance-effects.js'
 import {
-  COLLISION_SUFFIXES,
-  applyStatusUpdate,
-  performCreation,
-  performTransition
-} from './update-status-embedded-write.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
-import {
   PRN_STATUS,
   validateTransition,
   assertAccreditationNotSuspended
@@ -20,6 +13,9 @@ import {
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
+
+/** Suffixes A-Z for PRN-number collision avoidance on issuance */
+const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
@@ -30,9 +26,8 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
  */
 
 /**
- * The shared context handed to each top-level write strategy (ledger or
- * embedded). Inner helpers (performStreamWrite, applyStatusUpdate,
- * applyEmbeddedBalanceEffect) consume different subsets.
+ * The shared context handed to each write path. The ledger path and the
+ * no-balance-effect discard write consume different subsets.
  *
  * @typedef {Object} PrnWriteContext
  * @property {PackagingRecyclingNotesRepository} prnRepository
@@ -45,7 +40,7 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
  * @property {string} organisationId
  * @property {string} registrationId
  * @property {string} accreditationId
- * @property {{ id: string; name: string }} user
+ * @property {{ id: string; name: string; email?: string }} user
  * @property {PrnStatus} currentStatus
  * @property {Date} now
  * @property {string} id
@@ -95,8 +90,8 @@ async function persistProjectionWithIssuanceRetry({
 }
 
 /**
- * Event-first write for a migrated accreditation (canonicalSource 'ledger').
- * The balance-affecting events are appended to the stream, then folded onto
+ * Event-first write for a status transition. The balance-affecting events are
+ * appended to the stream, then folded onto
  * the in-memory PRN, then the resulting projection is persisted. There is no
  * compensation: a partial failure (event appended, doc not persisted) is
  * recovered by the read-side catch-up, which folds events after the watermark
@@ -125,15 +120,11 @@ async function performStreamWrite({
     assertAccreditationNotSuspended(accreditation)
   }
 
-  const applied = await applyWasteBalanceEffects(
+  const streamEvents = await applyWasteBalanceEffects(
     wasteBalancesRepository,
     logger,
     events
   )
-  const streamEvents =
-    /** @type {import('#waste-balances/repository/stream-port.js').StreamEvent[]} */ (
-      applied.filter((e) => e !== null)
-    )
 
   const projection = foldPrnFromTailEvents(prn, streamEvents)
 
@@ -190,7 +181,7 @@ async function performLedgerWrite({
     organisationId,
     prnId: id,
     tonnage: prn.tonnage,
-    userId: user.id
+    createdBy: user
   })
 
   /* c8 ignore next 5 - defensive: the only legal transition with no balance events (DRAFT→DISCARDED) is handled before this branch */
@@ -214,45 +205,20 @@ async function performLedgerWrite({
 }
 
 /**
- * Whether the accreditation's balance has migrated to the event-sourced stream
- * (canonicalSource 'ledger'). Read up front so the write ordering is chosen
- * before any side effect runs.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {string} accreditationId
- * @returns {Promise<boolean>}
- */
-async function isOnLedger(wasteBalancesRepository, accreditationId) {
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
-  return balance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-}
-
-/**
- * Selects the embedded-path write strategy. Creation is its own strategy
- * because the balance debit happens before the PRN write; everything else
- * writes the PRN first and applies the balance effect after.
- *
- * @param {PrnStatus} newStatus
- * @returns {(context: PrnWriteContext) => Promise<PackagingRecyclingNote>}
- */
-function selectEmbeddedWriteStrategy(newStatus) {
-  return newStatus === PRN_STATUS.AWAITING_AUTHORISATION
-    ? performCreation
-    : performTransition
-}
-
-/**
- * Picks the write path for a transition: the ledger (event-first) path when
- * the accreditation has migrated, otherwise the embedded-write strategy.
+ * Write a status transition that has no balance effect: the PRN document's
+ * status is stamped directly with no stream event. Used for DRAFT→DISCARDED,
+ * where a never-issued draft is discarded.
  *
  * @param {PrnWriteContext} ctx
  * @returns {Promise<PackagingRecyclingNote>}
  */
-const dispatchStatusWrite = async (ctx) =>
-  (await isOnLedger(ctx.wasteBalancesRepository, ctx.accreditationId))
-    ? performLedgerWrite(ctx)
-    : selectEmbeddedWriteStrategy(ctx.newStatus)(ctx)
+const performDiscardWrite = async ({ prnRepository, updateParams }) => {
+  const updatedPrn = await prnRepository.updateStatus(updateParams)
+  if (!updatedPrn) {
+    throw Boom.badImplementation('Failed to update PRN status')
+  }
+  return updatedPrn
+}
 
 /**
  * Updates PRN status with all business logic
@@ -268,7 +234,7 @@ const dispatchStatusWrite = async (ctx) =>
  * @param {string} params.accreditationId
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
- * @param {{ id: string; name: string }} params.user
+ * @param {{ id: string; name: string; email?: string }} params.user
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} [params.providedPrn] - Optional pre-fetched PRN to avoid duplicate fetch
  * @param {Date} [params.updatedAt] - Optional timestamp override (defaults to now)
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
@@ -306,7 +272,7 @@ export async function updatePrnStatus({
     id,
     version: prn.version,
     status: newStatus,
-    updatedBy: user,
+    updatedBy: { id: user.id, name: user.name },
     updatedAt: now,
     lastAppliedEventNumber: prn.lastAppliedEventNumber
   }
@@ -330,8 +296,8 @@ export async function updatePrnStatus({
 
   const updatedPrn =
     currentStatus === PRN_STATUS.DRAFT && newStatus === PRN_STATUS.DISCARDED
-      ? await applyStatusUpdate(ctx)
-      : await dispatchStatusWrite(ctx)
+      ? await performDiscardWrite(ctx)
+      : await performLedgerWrite(ctx)
 
   await prnMetrics.recordStatusTransition({
     fromStatus: currentStatus,

@@ -6,12 +6,14 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { StreamSlotConflictError } from '#waste-balances/repository/stream-port.js'
 import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -78,18 +80,40 @@ const buildAwaitingCancellationSeed = () =>
     })
   )
 
+const STARTING_TOTAL = 1000
+
 const buildBalanceSeed = (overrides = {}) => ({
   id: 'wb-1',
   accreditationId: ACC_ID,
+  registrationId: REG_ID,
   organisationId: ORG_ID,
-  amount: 1000,
-  availableAmount: 1000,
-  transactions: [],
+  amount: STARTING_TOTAL,
+  availableAmount: STARTING_TOTAL,
   version: 0,
   schemaVersion: 1,
-  canonicalSource: 'embedded',
   ...overrides
 })
+
+/**
+ * Seed the stream so the seeded balance resolves to its `amount` /
+ * `availableAmount` on read.
+ *
+ * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @param {{ amount: number, availableAmount: number }} balanceSeed
+ */
+const seedClosingBalance = (streamRepository, balanceSeed) =>
+  streamRepository.appendEvent(
+    buildStreamEvent({
+      registrationId: REG_ID,
+      accreditationId: ACC_ID,
+      organisationId: ORG_ID,
+      number: 1,
+      closingBalance: {
+        amount: balanceSeed.amount,
+        availableAmount: balanceSeed.availableAmount
+      }
+    })
+  )
 
 const buildOrganisationsRepository = () =>
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
@@ -100,17 +124,27 @@ const buildOrganisationsRepository = () =>
     })
   )
 
-const expectOneWinsOneVersionConflict = (results) => {
+const COMMITTED_EVENT_NUMBER = 2
+
+/**
+ * On the ledger path concurrent writers serialise at the append-only stream
+ * slot: the first writer claims the next slot, the second collides with a
+ * StreamSlotConflictError. Exactly one writer commits, so the stream holds a
+ * single event past the seed.
+ *
+ * @param {PromiseSettledResult<unknown>[]} results
+ * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
+ */
+const expectOneWinsOneStreamConflict = async (results, streamRepository) => {
   const fulfilled = results.filter((r) => r.status === 'fulfilled')
   const rejected = results.filter((r) => r.status === 'rejected')
 
   expect(fulfilled).toHaveLength(1)
   expect(rejected).toHaveLength(1)
-  expect(rejected[0].reason).toMatchObject({
-    isBoom: true,
-    output: { statusCode: 409 }
-  })
-  expect(rejected[0].reason.message).toMatch(/Version conflict/)
+  expect(rejected[0].reason).toBeInstanceOf(StreamSlotConflictError)
+
+  const latest = await streamRepository.findLatestByPartition(REG_ID, ACC_ID)
+  expect(latest?.number).toBe(COMMITTED_EVENT_NUMBER)
 }
 
 describe('updatePrnStatus concurrency', () => {
@@ -120,18 +154,13 @@ describe('updatePrnStatus concurrency', () => {
     ])
     const prnRepository = prnFactory(noopLogger())
 
-    const wasteFactory = createInMemoryWasteBalancesRepository(
-      [buildBalanceSeed()],
-      { streamRepository: createInMemoryStreamRepository()() }
-    )
-    const realWasteBalancesRepository = wasteFactory()
-    const deductSpy = vi.fn(
-      realWasteBalancesRepository.deductTotalBalanceForPrnIssue
-    )
-    const wasteBalancesRepository = {
-      ...realWasteBalancesRepository,
-      deductTotalBalanceForPrnIssue: deductSpy
-    }
+    const balanceSeed = buildBalanceSeed()
+    const streamRepository = createInMemoryStreamRepository()()
+    await seedClosingBalance(streamRepository, balanceSeed)
+    const wasteFactory = createWasteBalancesRepository({
+      streamRepository
+    })
+    const wasteBalancesRepository = wasteFactory()
 
     const organisationsRepository = buildOrganisationsRepository()
 
@@ -152,8 +181,7 @@ describe('updatePrnStatus concurrency', () => {
 
     const results = await Promise.allSettled([issue(), issue()])
 
-    expectOneWinsOneVersionConflict(results)
-    expect(deductSpy).toHaveBeenCalledTimes(1)
+    await expectOneWinsOneStreamConflict(results, streamRepository)
   })
 
   it('credits the waste balance only once when two deletes race for an awaiting_authorisation PRN', async () => {
@@ -162,18 +190,15 @@ describe('updatePrnStatus concurrency', () => {
     ])
     const prnRepository = prnFactory(noopLogger())
 
-    const wasteFactory = createInMemoryWasteBalancesRepository(
-      [buildBalanceSeed({ availableAmount: RINGFENCED_AVAILABLE })],
-      { streamRepository: createInMemoryStreamRepository()() }
-    )
-    const realWasteBalancesRepository = wasteFactory()
-    const creditSpy = vi.fn(
-      realWasteBalancesRepository.creditAvailableBalanceForPrnCancellation
-    )
-    const wasteBalancesRepository = {
-      ...realWasteBalancesRepository,
-      creditAvailableBalanceForPrnCancellation: creditSpy
-    }
+    const balanceSeed = buildBalanceSeed({
+      availableAmount: RINGFENCED_AVAILABLE
+    })
+    const streamRepository = createInMemoryStreamRepository()()
+    await seedClosingBalance(streamRepository, balanceSeed)
+    const wasteFactory = createWasteBalancesRepository({
+      streamRepository
+    })
+    const wasteBalancesRepository = wasteFactory()
 
     const organisationsRepository = buildOrganisationsRepository()
 
@@ -194,8 +219,7 @@ describe('updatePrnStatus concurrency', () => {
 
     const results = await Promise.allSettled([cancel(), cancel()])
 
-    expectOneWinsOneVersionConflict(results)
-    expect(creditSpy).toHaveBeenCalledTimes(1)
+    await expectOneWinsOneStreamConflict(results, streamRepository)
   })
 
   it('credits the waste balance only once when two cancels race for an awaiting_cancellation PRN', async () => {
@@ -204,23 +228,16 @@ describe('updatePrnStatus concurrency', () => {
     ])
     const prnRepository = prnFactory(noopLogger())
 
-    const wasteFactory = createInMemoryWasteBalancesRepository(
-      [
-        buildBalanceSeed({
-          availableAmount: RINGFENCED_AVAILABLE,
-          amount: ISSUED_AMOUNT
-        })
-      ],
-      { streamRepository: createInMemoryStreamRepository()() }
-    )
-    const realWasteBalancesRepository = wasteFactory()
-    const creditSpy = vi.fn(
-      realWasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation
-    )
-    const wasteBalancesRepository = {
-      ...realWasteBalancesRepository,
-      creditFullBalanceForIssuedPrnCancellation: creditSpy
-    }
+    const balanceSeed = buildBalanceSeed({
+      availableAmount: RINGFENCED_AVAILABLE,
+      amount: ISSUED_AMOUNT
+    })
+    const streamRepository = createInMemoryStreamRepository()()
+    await seedClosingBalance(streamRepository, balanceSeed)
+    const wasteFactory = createWasteBalancesRepository({
+      streamRepository
+    })
+    const wasteBalancesRepository = wasteFactory()
 
     const organisationsRepository = buildOrganisationsRepository()
 
@@ -241,7 +258,6 @@ describe('updatePrnStatus concurrency', () => {
 
     const results = await Promise.allSettled([cancel(), cancel()])
 
-    expectOneWinsOneVersionConflict(results)
-    expect(creditSpy).toHaveBeenCalledTimes(1)
+    await expectOneWinsOneStreamConflict(results, streamRepository)
   })
 })

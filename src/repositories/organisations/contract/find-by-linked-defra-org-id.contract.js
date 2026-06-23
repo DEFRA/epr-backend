@@ -22,9 +22,15 @@ export const testFindByLinkedDefraOrgIdBehaviour = (it) => {
   describe('findByLinkedDefraOrgId', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     it('returns null when no organisation is linked to the Defra org ID', async () => {
       const result = await repository.findByLinkedDefraOrgId(

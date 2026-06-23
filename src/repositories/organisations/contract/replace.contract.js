@@ -18,9 +18,15 @@ export const testReplaceBehaviour = (it) => {
     // Date strings for validFrom/validTo
     const { VALID_FROM, VALID_TO } = getValidDateRange()
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     describe('basic behaviour', () => {
       it('updates organisation level fields successfully', async () => {
@@ -70,7 +76,8 @@ export const testReplaceBehaviour = (it) => {
         const registrationToUpdate = {
           ...originalReg,
           material: 'plastic',
-          glassRecyclingProcess: null
+          glassRecyclingProcess: null,
+          accreditationId: undefined
         }
         const beforeUpdateOrg = await repository.findById(organisation.id)
 
@@ -111,8 +118,11 @@ export const testReplaceBehaviour = (it) => {
           material: 'plastic'
         }
 
+        const { accreditationId: _, ...regWithoutLink } =
+          organisationAfterInsert.registrations[0]
         const updatePayload = prepareOrgUpdate(organisation, {
-          accreditations: [accreditationToUpdate]
+          accreditations: [accreditationToUpdate],
+          registrations: [regWithoutLink]
         })
         await repository.replace(organisation.id, 1, updatePayload)
 
@@ -163,13 +173,15 @@ export const testReplaceBehaviour = (it) => {
         )
         expect(addedReg).toBeDefined()
 
-        const { statusHistory: _, ...expectedReg } = {
+        /** @type {Record<string, any>} */
+        const newRegistrationWithDate = {
           ...newRegistration,
           formSubmission: {
             id: newRegistration.formSubmission.id,
             time: new Date(newRegistration.formSubmission.time)
           }
         }
+        const { statusHistory: _, ...expectedReg } = newRegistrationWithDate
         const { statusHistory: actualStatusHistory, ...actualReg } = addedReg
 
         expect(actualReg).toMatchObject(expectedReg)
@@ -182,13 +194,14 @@ export const testReplaceBehaviour = (it) => {
         await repository.insert(organisation)
 
         const { ObjectId } = await import('mongodb')
+        const { statusHistory: _statusHistory, ...baseAccreditation } =
+          organisation.accreditations[0]
         const newAccreditation = {
-          ...organisation.accreditations[0],
+          ...baseAccreditation,
           id: new ObjectId().toString(),
           material: 'aluminium',
           glassRecyclingProcess: null
         }
-        delete newAccreditation.statusHistory
         const updatePayload = prepareOrgUpdate(organisation, {
           accreditations: [newAccreditation]
         })
@@ -204,9 +217,7 @@ export const testReplaceBehaviour = (it) => {
         )
         expect(addedAcc).toBeDefined()
 
-        const { statusHistory: _, ...expectedAcc } = {
-          ...newAccreditation
-        }
+        const expectedAcc = { ...newAccreditation }
         const { statusHistory: actualStatusHistory, ...actualAcc } = addedAcc
         expect(actualAcc).toMatchObject(expectedAcc)
         expect(actualStatusHistory).toHaveLength(1)
@@ -353,7 +364,13 @@ export const testReplaceBehaviour = (it) => {
           reprocessingType: REPROCESSING_TYPE.INPUT
         }
         const updatePayload = prepareOrgUpdate(organisation, {
-          registrations: [registrationToUpdate]
+          registrations: [registrationToUpdate],
+          accreditations: [
+            {
+              ...organisation.accreditations[0],
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
+          ]
         })
         await repository.replace(organisation.id, 1, updatePayload)
 
@@ -382,6 +399,12 @@ export const testReplaceBehaviour = (it) => {
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
+          ],
+          accreditations: [
+            {
+              ...organisation.accreditations[0],
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -441,6 +464,12 @@ export const testReplaceBehaviour = (it) => {
               status: REG_ACC_STATUS.REJECTED,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
+          ],
+          registrations: [
+            {
+              ...organisation.registrations[0],
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
           ]
         })
         await repository.replace(organisation.id, 1, orgUpdate1)
@@ -495,6 +524,12 @@ export const testReplaceBehaviour = (it) => {
                 validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
+            ],
+            accreditations: [
+              {
+                ...organisation.accreditations[0],
+                reprocessingType: REPROCESSING_TYPE.INPUT
+              }
             ]
           })
           await repository.replace(organisation.id, 1, updatePayload)
@@ -532,6 +567,12 @@ export const testReplaceBehaviour = (it) => {
                 registrationNumber: 'REG12345',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
+                reprocessingType: REPROCESSING_TYPE.INPUT
+              }
+            ],
+            accreditations: [
+              {
+                ...organisation.accreditations[0],
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
@@ -650,6 +691,12 @@ export const testReplaceBehaviour = (it) => {
                 validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
+            ],
+            accreditations: [
+              {
+                ...organisation.accreditations[0],
+                reprocessingType: REPROCESSING_TYPE.INPUT
+              }
             ]
           })
           await repository.replace(organisation.id, 1, updatePayload)
@@ -714,6 +761,12 @@ export const testReplaceBehaviour = (it) => {
               {
                 ...reg2,
                 status: REG_ACC_STATUS.CREATED
+              }
+            ],
+            accreditations: [
+              {
+                ...organisation.accreditations[0],
+                reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
           })

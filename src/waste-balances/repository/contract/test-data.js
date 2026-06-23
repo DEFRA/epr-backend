@@ -1,65 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import {
-  WASTE_BALANCE_CANONICAL_SOURCE,
-  WASTE_BALANCE_TRANSACTION_TYPE,
-  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
-} from '../../domain/model.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-
-/**
- * Build a minimal waste balance for testing
- * @param {Partial<import('../../domain/model.js').WasteBalance>} [overrides] - Optional overrides for the waste balance
- * @returns {import('../../domain/model.js').WasteBalance}
- */
-export const buildWasteBalance = (overrides = {}) => {
-  const id = overrides.id ?? randomUUID()
-  const organisationId = overrides.organisationId ?? 'org-1'
-  const accreditationId = overrides.accreditationId ?? 'acc-1'
-  const schemaVersion = overrides.schemaVersion ?? 1
-  const version = overrides.version ?? 1
-  const amount = overrides.amount ?? 100
-  const availableAmount = overrides.availableAmount ?? 100
-  const canonicalSource =
-    overrides.canonicalSource ?? WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-
-  const transaction = {
-    id: randomUUID(),
-    type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
-    createdAt: new Date('2025-01-15T10:00:00.000Z').toISOString(),
-    createdBy: {
-      id: 'user-1',
-      name: 'Test User'
-    },
-    amount: 100,
-    openingAmount: 0,
-    closingAmount: 100,
-    openingAvailableAmount: 0,
-    closingAvailableAmount: 100,
-    entities: [
-      {
-        id: 'waste-record-1',
-        currentVersionId: 'version-1',
-        previousVersionIds: [],
-        type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED
-      }
-    ]
-  }
-
-  return {
-    ...overrides,
-    id,
-    organisationId,
-    accreditationId,
-    schemaVersion,
-    version,
-    amount,
-    availableAmount,
-    canonicalSource,
-    transactions: overrides.transactions || [transaction]
-  }
-}
 
 /**
  * Build a waste record for testing

@@ -17,30 +17,39 @@ import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { createMockDb } from '#test/mock-db.js'
 
+/**
+ * @import { OrganisationsRepository, OrganisationsRepositoryFactory } from './port.js'
+ * @typedef {{ mongoClient: MongoClient, organisationsRepository: OrganisationsRepositoryFactory }} MongoFixtures
+ */
+
 const COLLECTION_NAME = 'epr-organisations'
 const DATABASE_NAME = 'epr-backend'
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  },
+const it = /** @type {import('vitest').TestAPI<MongoFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
 
-  organisationsRepository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    const factory = await createOrganisationsRepository(database)
-    await use(factory)
-  }
-})
+    organisationsRepository: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const factory = await createOrganisationsRepository(database)
+      await use(factory)
+    }
+  })
+)
 
 describe('MongoDB organisations repository', () => {
-  beforeEach(async ({ mongoClient }) => {
-    await mongoClient
-      .db(DATABASE_NAME)
-      .collection(COLLECTION_NAME)
-      .deleteMany({})
-  })
+  beforeEach(
+    /** @param {MongoFixtures} fixture */ async ({ mongoClient }) => {
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection(COLLECTION_NAME)
+        .deleteMany({})
+    }
+  )
 
   describe('organisations repository contract', () => {
     testOrganisationsRepositoryContract(it)
@@ -172,7 +181,7 @@ describe('MongoDB organisations repository', () => {
       ).rejects.toThrow('Unexpected database error')
     })
 
-    it('falls back to "unknown" in the dup-key message when keyPattern is absent', async () => {
+    it('falls back to "unknown" in the dup-key message from replaceRaw when keyPattern is absent', async () => {
       const dbMock = createMockDb({
         createIndex: async () => {},
         replaceOne: async () => {
@@ -189,6 +198,44 @@ describe('MongoDB organisations repository', () => {
 
       await expect(
         repository.replaceRaw(anyOrg.id, 1, { orgId: 'x' })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: expect.stringContaining('unknown')
+          }
+        }
+      })
+    })
+
+    it('falls back to "unknown" in the dup-key message from replace when keyPattern is absent', async () => {
+      const existingOrg = buildOrganisation()
+      const existingDoc = {
+        ...existingOrg,
+        _id: ObjectId.createFromHexString(existingOrg.id),
+        version: 1,
+        schemaVersion: 1,
+        users: []
+      }
+      const dbMock = createMockDb({
+        createIndex: async () => {},
+        findOne: async () => existingDoc,
+        replaceOne: async () => {
+          const error = new Error('E11000 duplicate key error')
+          error.code = 11000
+          throw error
+        }
+      })
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+      const updatePayload = prepareOrgUpdate(existingOrg, {
+        wasteProcessingTypes: ['reprocessor']
+      })
+
+      await expect(
+        repository.replace(existingOrg.id, 1, updatePayload)
       ).rejects.toMatchObject({
         isBoom: true,
         output: {
@@ -272,10 +319,12 @@ describe('MongoDB organisations repository', () => {
       )
 
       // Read directly from MongoDB (bypassing repository mapping)
-      const rawDoc = await mongoClient
-        .db(DATABASE_NAME)
-        .collection(COLLECTION_NAME)
-        .findOne({ _id: ObjectId.createFromHexString(organisation.id) })
+      const rawDoc = /** @type {Record<string, any>} */ (
+        await mongoClient
+          .db(DATABASE_NAME)
+          .collection(COLLECTION_NAME)
+          .findOne({ _id: ObjectId.createFromHexString(organisation.id) })
+      )
 
       expect(rawDoc.status).toBeUndefined()
       expect(rawDoc.registrations[0].status).toBeUndefined()
@@ -292,7 +341,10 @@ describe('MongoDB organisations repository', () => {
 
       await repository.insert(organisation)
 
-      const result = await repository.findAllForOverseasSitesAdminList()
+      const mongoRepository = /** @type {Required<OrganisationsRepository>} */ (
+        repository
+      )
+      const result = await mongoRepository.findAllForOverseasSitesAdminList()
 
       expect(result).toHaveLength(1)
       expect(result[0]).toMatchObject({
@@ -300,9 +352,10 @@ describe('MongoDB organisations repository', () => {
         registrations: expect.any(Array),
         accreditations: expect.any(Array)
       })
-      expect(result[0].companyDetails).toBeUndefined()
-      expect(result[0].statusHistory).toBeUndefined()
-      expect(result[0]._id).toBeUndefined()
+      const item = /** @type {any} */ (result[0])
+      expect(item.companyDetails).toBeUndefined()
+      expect(item.statusHistory).toBeUndefined()
+      expect(item._id).toBeUndefined()
     })
   })
 
@@ -379,7 +432,9 @@ describe('MongoDB organisations repository', () => {
         })
       )
 
-      const page = await repository.findPageForOverseasSitesAdminList({
+      const page = await /** @type {Required<OrganisationsRepository>} */ (
+        repository
+      ).findPageForOverseasSitesAdminList({
         page: 2,
         pageSize: 1
       })
@@ -468,7 +523,9 @@ describe('MongoDB organisations repository', () => {
         })
       )
 
-      const page = await repository.findPageForOverseasSitesAdminList({
+      const page = await /** @type {Required<OrganisationsRepository>} */ (
+        repository
+      ).findPageForOverseasSitesAdminList({
         page: 2,
         pageSize: 1,
         registrationNumber: 'filter'
@@ -500,7 +557,9 @@ describe('MongoDB organisations repository', () => {
     }) => {
       const repository = organisationsRepository()
 
-      const page = await repository.findPageForOverseasSitesAdminList({
+      const page = await /** @type {Required<OrganisationsRepository>} */ (
+        repository
+      ).findPageForOverseasSitesAdminList({
         page: 1,
         pageSize: 10
       })
@@ -549,7 +608,9 @@ describe('MongoDB organisations repository', () => {
         })
       )
 
-      const page = await repository.findPageForOverseasSitesAdminList({
+      const page = await /** @type {Required<OrganisationsRepository>} */ (
+        repository
+      ).findPageForOverseasSitesAdminList({
         page: 1,
         pageSize: 10
       })

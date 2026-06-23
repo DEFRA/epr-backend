@@ -140,9 +140,12 @@ describe('table-schemas', () => {
       )
 
       expect(result).not.toBeNull()
-      expect(result.tableName).toBe('RECEIVED_LOADS_FOR_REPROCESSING')
-      expect(result.schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
-      expect(result.schema.sheetName).toBe('Received')
+      const { tableName, schema } = /** @type {NonNullable<typeof result>} */ (
+        result
+      )
+      expect(tableName).toBe('RECEIVED_LOADS_FOR_REPROCESSING')
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
+      expect(schema.sheetName).toBe('Received')
     })
 
     it('returns the correct table for exported waste record type', () => {
@@ -152,8 +155,11 @@ describe('table-schemas', () => {
       )
 
       expect(result).not.toBeNull()
-      expect(result.tableName).toBe('RECEIVED_LOADS_FOR_EXPORT')
-      expect(result.schema.sheetName).toBe('Exported')
+      const { tableName, schema } = /** @type {NonNullable<typeof result>} */ (
+        result
+      )
+      expect(tableName).toBe('RECEIVED_LOADS_FOR_EXPORT')
+      expect(schema.sheetName).toBe('Exported')
     })
 
     it('returns the correct table for processed waste record type', () => {
@@ -163,8 +169,11 @@ describe('table-schemas', () => {
       )
 
       expect(result).not.toBeNull()
-      expect(result.tableName).toBe('REPROCESSED_LOADS')
-      expect(result.schema.sheetName).toBe('Processed')
+      const { tableName, schema } = /** @type {NonNullable<typeof result>} */ (
+        result
+      )
+      expect(tableName).toBe('REPROCESSED_LOADS')
+      expect(schema.sheetName).toBe('Processed')
     })
 
     it('returns the correct table for sent on waste record type', () => {
@@ -174,8 +183,11 @@ describe('table-schemas', () => {
       )
 
       expect(result).not.toBeNull()
-      expect(result.tableName).toBe('SENT_ON_LOADS')
-      expect(result.schema.sheetName).toBe('Sent on')
+      const { tableName, schema } = /** @type {NonNullable<typeof result>} */ (
+        result
+      )
+      expect(tableName).toBe('SENT_ON_LOADS')
+      expect(schema.sheetName).toBe('Sent on')
     })
 
     it('returns null for an unknown waste record type', () => {
@@ -205,23 +217,25 @@ describe('table-schemas', () => {
 
   describe('findSchemaForProcessingType', () => {
     it('finds REPROCESSOR_INPUT received loads schema by waste record type', () => {
-      const schema = findSchemaForProcessingType(
+      const result = findSchemaForProcessingType(
         PROCESSING_TYPES.REPROCESSOR_INPUT,
         WASTE_RECORD_TYPE.RECEIVED
       )
 
-      expect(schema).toBeDefined()
+      expect(result).not.toBeNull()
+      const schema = /** @type {NonNullable<typeof result>} */ (result)
       expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
       expect(schema.sheetName).toBe('Received')
     })
 
     it('finds EXPORTER exported loads schema by waste record type', () => {
-      const schema = findSchemaForProcessingType(
+      const result = findSchemaForProcessingType(
         PROCESSING_TYPES.EXPORTER,
         WASTE_RECORD_TYPE.EXPORTED
       )
 
-      expect(schema).toBeDefined()
+      expect(result).not.toBeNull()
+      const schema = /** @type {NonNullable<typeof result>} */ (result)
       expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.EXPORTED)
     })
 
@@ -231,8 +245,10 @@ describe('table-schemas', () => {
         WASTE_RECORD_TYPE.SENT_ON
       )
 
-      expect(schema).toBeDefined()
-      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.SENT_ON)
+      expect(schema).not.toBeNull()
+      expect(
+        /** @type {NonNullable<typeof schema>} */ (schema).wasteRecordType
+      ).toBe(WASTE_RECORD_TYPE.SENT_ON)
     })
 
     it('returns null for unknown processing type', () => {
@@ -252,6 +268,31 @@ describe('table-schemas', () => {
 
       expect(schema).toBeNull()
     })
+  })
+
+  describe('reportingDateFields', () => {
+    it.each(
+      Object.entries(PROCESSING_TYPE_TABLES).flatMap(
+        ([processingType, tables]) =>
+          Object.entries(tables).map(([tableName, schema]) => ({
+            processingType,
+            tableName,
+            schema
+          }))
+      )
+    )(
+      '$processingType/$tableName has reportingDateFields in requiredHeaders',
+      ({ schema }) => {
+        expect(schema.reportingDateFields).toBeDefined()
+        expect(Array.isArray(schema.reportingDateFields)).toBe(true)
+        expect(schema.reportingDateFields.length).toBeGreaterThan(0)
+
+        for (const field of schema.reportingDateFields) {
+          expect(typeof field).toBe('string')
+          expect(schema.requiredHeaders).toContain(field)
+        }
+      }
+    )
   })
 
   describe('aggregateUnfilledValues', () => {

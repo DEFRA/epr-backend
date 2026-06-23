@@ -8,10 +8,10 @@ export const createConfigFeatureFlags = (config) => ({
   isCopyFormFilesToS3Enabled() {
     return config.get('featureFlags.copyFormFilesToS3')
   },
-  isWasteBalanceLedgerEnabled() {
-    return config.get('featureFlags.wasteBalanceLedger')
+  isFixDuplicateAccreditationLinksEnabled() {
+    return config.get('featureFlags.fixDuplicateAccreditationLinks')
   },
-  isReportUnsubmitEnabled() {
-    return config.get('featureFlags.reportUnsubmit')
+  isWasteRecordStatesEnabled() {
+    return config.get('featureFlags.wasteRecordStates')
   }
 })

@@ -453,12 +453,8 @@ export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
   const data = parsed?.data || {}
   const processingType = parsed?.meta?.PROCESSING_TYPE?.value
   const getTableSchema = createTableSchemaGetter(processingType, schemaRegistry)
-  /** @type {ValidatedSummaryLog['data']} */
-  const validatedTables = {}
-  /** @type {ValidationIssue[]} */
-  const allIssues = []
 
-  for (const [tableName, tableData] of Object.entries(data)) {
+  const tableResults = Object.entries(data).map(([tableName, tableData]) => {
     const domainSchema = getTableSchema(tableName)
 
     if (!domainSchema) {
@@ -466,36 +462,43 @@ export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
         ? { sheet: tableData.location.sheet, table: tableName }
         : { table: tableName }
 
-      allIssues.push({
+      /** @type {ValidationIssue} */
+      const unrecognisedTableIssue = {
         severity: VALIDATION_SEVERITY.FATAL,
         category: VALIDATION_CATEGORY.TECHNICAL,
         message: `Unrecognised table '${tableName}' has no schema for this processing type`,
         code: VALIDATION_CODE.TABLE_UNRECOGNISED,
         context: { location }
-      })
+      }
 
-      // Keep unvalidated tables as-is for downstream processing.
-      validatedTables[tableName] = /** @type {ValidatedTableSection} */ (
-        /** @type {unknown} */ (tableData)
-      )
-      continue
+      return {
+        tableName,
+        // Keep unvalidated tables as-is for downstream processing.
+        table: /** @type {ValidatedTableSection} */ (
+          /** @type {unknown} */ (tableData)
+        ),
+        issues: [unrecognisedTableIssue]
+      }
     }
 
-    const { issues: tableIssues, table } = validateTable({
+    const { issues, table } = validateTable({
       tableName,
       tableData,
       domainSchema
     })
 
-    validatedTables[tableName] = table
-    allIssues.push(...tableIssues)
-  }
+    return { tableName, table, issues }
+  })
 
   return {
-    issues: createValidationIssues(allIssues),
+    issues: createValidationIssues(
+      tableResults.flatMap((entry) => entry.issues)
+    ),
     validatedData: {
       ...parsed,
-      data: validatedTables
+      data: Object.fromEntries(
+        tableResults.map((entry) => [entry.tableName, entry.table])
+      )
     }
   }
 }

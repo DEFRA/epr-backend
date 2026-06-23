@@ -4,6 +4,7 @@ import {
   getRegAccKey
 } from './submission-keys.js'
 import {
+  GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
@@ -66,6 +67,57 @@ describe('keyForRegAcc', () => {
           reprocessingType: REPROCESSING_TYPE.OUTPUT
         })
       ).toBe('reprocessor::glass::W1C2AA::output')
+    })
+  })
+
+  describe('glass recycling process', () => {
+    it('includes glassRecyclingProcess in the key for glass material', () => {
+      expect(
+        getRegAccKey({
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+        })
+      ).toBe('exporter::glass::glass_re_melt')
+      expect(
+        getRegAccKey({
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+        })
+      ).toBe('exporter::glass::glass_other')
+    })
+
+    it('does not include glassRecyclingProcess in the key for non-glass material', () => {
+      expect(
+        getRegAccKey({
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          material: MATERIAL.PLASTIC,
+          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+        })
+      ).toBe('exporter::plastic')
+    })
+
+    it('omits glassRecyclingProcess from the key when not provided', () => {
+      expect(
+        getRegAccKey({
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          material: MATERIAL.GLASS
+        })
+      ).toBe('exporter::glass')
+    })
+
+    it('omits glassRecyclingProcess from the key when array has more than one entry', () => {
+      expect(
+        getRegAccKey({
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [
+            GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+            GLASS_RECYCLING_PROCESS.GLASS_OTHER
+          ]
+        })
+      ).toBe('exporter::glass')
     })
   })
 })
@@ -250,6 +302,74 @@ describe('isAccreditationForRegistration', () => {
           isAccreditationForRegistration(accreditation, registration)
         ).toBe(false)
       })
+    })
+  })
+
+  describe('glass recycling process', () => {
+    it('matches when glassRecyclingProcess is the same', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        true
+      )
+    })
+
+    it('does not match when glassRecyclingProcess differs', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
+    })
+
+    it('does not match when only one side has a glassRecyclingProcess', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
+    })
+
+    it('does not match when either side has more than one glassRecyclingProcess', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [
+          GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+          GLASS_RECYCLING_PROCESS.GLASS_OTHER
+        ]
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
     })
   })
 })

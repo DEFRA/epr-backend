@@ -42,8 +42,6 @@ import { StatusCodes } from 'http-status-codes'
  * }} UserOrganisationsResponse
  */
 
-export const organisationsLinkedGetAllPath = '/v1/me/organisations'
-
 /**
  * Extract loggable organization info (org name and current flag)
  *
@@ -110,7 +108,7 @@ const tryGetCurrentDetailsFromToken = async (request, defraIdRelationships) => {
 
 export const organisationsLinkedGetAll = {
   method: 'GET',
-  path: organisationsLinkedGetAllPath,
+  path: '/v1/me/organisations',
   options: {
     auth: {
       scope: [ROLES.inquirer]

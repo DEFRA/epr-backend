@@ -1,4 +1,5 @@
 import { uppercaseString } from '#common/helpers/formatters.js'
+import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 
 import * as exporter from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import * as exporterRegisteredOnly from '#domain/summary-logs/table-schemas/exporter-registered-only/fields.js'
@@ -15,9 +16,11 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 export const METADATA_COLUMNS = Object.freeze([
   'Regulator',
   'Organisation Name',
+  'Registration Number',
   'Material',
   'Operator Processing Type',
   'Accredited',
+  'Accreditation Number',
   'Waste Record Type',
   'Submitted At',
   'Included in Waste Balance',
@@ -124,9 +127,11 @@ export const buildDataRow = ({
   const metadata = [
     uppercaseString(registration.submittedToRegulator),
     org.companyDetails.name,
-    registration.material,
+    registration.registrationNumber ?? '',
+    resolveDetailedMaterial(registration),
     data.processingType,
     accredited,
+    accreditation?.accreditationNumber ?? '',
     record.type,
     summaryLogEntry?.submittedAt ?? '',
     includedInWasteBalance ? 'true' : 'false',

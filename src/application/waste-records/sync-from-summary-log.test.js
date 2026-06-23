@@ -1406,7 +1406,7 @@ describe('syncFromSummaryLog', () => {
     expect(received).toMatchObject({
       organisationId: 'org-1',
       registrationId: 'reg-1',
-      rowId: 1000,
+      rowId: '1000',
       type: WASTE_RECORD_TYPE.RECEIVED
     })
     expect(received.data.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
@@ -1418,7 +1418,7 @@ describe('syncFromSummaryLog', () => {
     expect(sentOn).toMatchObject({
       organisationId: 'org-1',
       registrationId: 'reg-1',
-      rowId: 5000,
+      rowId: '5000',
       type: WASTE_RECORD_TYPE.SENT_ON
     })
     expect(sentOn.data.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
@@ -1505,7 +1505,7 @@ describe('syncFromSummaryLog', () => {
     expect(received).toMatchObject({
       organisationId: 'org-1',
       registrationId: 'reg-1',
-      rowId: 1000,
+      rowId: '1000',
       type: WASTE_RECORD_TYPE.RECEIVED
     })
     expect(received.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
@@ -1517,7 +1517,7 @@ describe('syncFromSummaryLog', () => {
     expect(exported).toMatchObject({
       organisationId: 'org-1',
       registrationId: 'reg-1',
-      rowId: 2000,
+      rowId: '2000',
       type: WASTE_RECORD_TYPE.EXPORTED
     })
     expect(exported.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
@@ -1528,7 +1528,7 @@ describe('syncFromSummaryLog', () => {
     expect(sentOn).toMatchObject({
       organisationId: 'org-1',
       registrationId: 'reg-1',
-      rowId: 4000,
+      rowId: '4000',
       type: WASTE_RECORD_TYPE.SENT_ON
     })
     expect(sentOn.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')

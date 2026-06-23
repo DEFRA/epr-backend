@@ -130,6 +130,44 @@ describe('streamCsvExport', () => {
     )
   })
 
+  it('emits registration and accreditation numbers and the detailed glass material', async () => {
+    const accreditation = {
+      id: 'acc-1',
+      status: 'approved',
+      accreditationNumber: 'ACC-777',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    }
+    const org = baseOrg({
+      accreditations: [accreditation],
+      registrations: [
+        baseRegistration({
+          accreditation: null,
+          accreditationId: 'acc-1',
+          registrationNumber: 'REG-555',
+          material: 'glass',
+          glassRecyclingProcess: ['glass_re_melt']
+        })
+      ]
+    })
+    const record = reprocessorReceivedRecord()
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([record])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    expect(out).toHaveLength(2)
+    const cells = out[1].trim().split(',')
+    expect(cells[2]).toBe('"REG-555"') // Registration Number
+    expect(cells[3]).toBe('"glass_re_melt"') // Material (detailed)
+    expect(cells[5]).toBe('"Yes"') // Accredited
+    expect(cells[6]).toBe('"ACC-777"') // Accreditation Number
+  })
+
   it('emits empty Submitted At when the record references a missing summary log', async () => {
     const org = baseOrg({ registrations: [baseRegistration()] })
     const record = reprocessorReceivedRecord({
@@ -147,9 +185,9 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(2)
-    // The Submitted At column (index 6) should be an empty quoted cell
+    // The Submitted At column (index 8) should be an empty quoted cell
     const cells = out[1].trim().split(',')
-    expect(cells[6]).toBe('""')
+    expect(cells[8]).toBe('""')
   })
 
   it('processes received, processed, sentOn and exported records on the same registration', async () => {
@@ -254,9 +292,9 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(2)
     expect(deps.overseasSitesRepository.findAll).toHaveBeenCalledTimes(1)
-    // "Included in Waste Balance" is the 8th metadata column (index 7) → "true"
+    // "Included in Waste Balance" is the 10th metadata column (index 9) → "true"
     const cells = out[1].trim().split(',')
-    expect(cells[7]).toBe('"true"')
+    expect(cells[9]).toBe('"true"')
   })
 
   const exporterAccreditation = {
@@ -329,8 +367,8 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
-    expect(cells[4]).toBe('"Yes"') // Accredited column
-    expect(cells[7]).toBe('"true"')
+    expect(cells[5]).toBe('"Yes"') // Accredited column
+    expect(cells[9]).toBe('"true"')
   })
 
   it('marks accredited exporter row as not included when DATE_OF_EXPORT is outside accreditation period', async () => {
@@ -364,8 +402,38 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
-    expect(cells[4]).toBe('"Yes"') // Accredited column
-    expect(cells[7]).toBe('"false"')
+    expect(cells[5]).toBe('"Yes"') // Accredited column
+    expect(cells[9]).toBe('"false"')
+  })
+
+  it('reads Accredited "Yes" with the number for a suspended accreditation', async () => {
+    const suspendedAccreditation = {
+      id: 'acc-1',
+      status: 'suspended',
+      accreditationNumber: 'ACC-SUS-1',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    }
+    const org = baseOrg({
+      accreditations: [suspendedAccreditation],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([reprocessorReceivedRecord()])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[5]).toBe('"Yes"') // Accredited
+    expect(cells[6]).toBe('"ACC-SUS-1"') // Accreditation Number
   })
 
   it('iterates organisations and registrations sorted by id for deterministic output', async () => {
@@ -449,7 +517,7 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(2)
     const cells = out[1].trim().split(',')
-    expect(cells[4]).toBe('"No"') // Accredited column
+    expect(cells[5]).toBe('"No"') // Accredited column
   })
 
   it('skips organisations that have no registrations array', async () => {

@@ -1,6 +1,9 @@
-import Joi from 'joi'
-
-import { orsImportCommandHandlers } from './ors-import-commands.js'
+import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
+import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
+import {
+  importOverseasSitesHandler,
+  orsImportCommandHandlers
+} from './ors-import-commands.js'
 
 vi.mock('#overseas-sites/application/process-import.js')
 vi.mock('#overseas-sites/metrics/ors-imports.js')
@@ -10,13 +13,18 @@ const { processOrsImport } =
 const { orsImportMetrics } =
   await import('#overseas-sites/metrics/ors-imports.js')
 
+const seedImport = (orsImportsRepository, _id, status) =>
+  orsImportsRepository.create({ _id, status, files: [] })
+
 describe('orsImportCommandHandlers', () => {
   let deps
+  let orsImportsRepository
 
   beforeEach(() => {
+    orsImportsRepository = createInMemoryOrsImportsRepository()()
     deps = {
       logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
-      orsImportsRepository: { updateStatus: vi.fn() },
+      orsImportsRepository,
       uploadsRepository: {},
       overseasSitesRepository: {},
       organisationsRepository: {}
@@ -32,9 +40,7 @@ describe('orsImportCommandHandlers', () => {
   })
 
   describe('import-overseas-sites handler', () => {
-    const handler = orsImportCommandHandlers.find(
-      (h) => h.command === 'import-overseas-sites'
-    )
+    const handler = importOverseasSitesHandler
 
     it('has command "import-overseas-sites"', () => {
       expect(handler.command).toBe('import-overseas-sites')
@@ -52,7 +58,7 @@ describe('orsImportCommandHandlers', () => {
       it('requires importId', () => {
         const { error } = handler.payloadSchema.validate({})
 
-        expect(error.message).toBe('"importId" is required')
+        expect(error?.message).toBe('"importId" is required')
       })
 
       it('rejects unknown fields', () => {
@@ -61,7 +67,48 @@ describe('orsImportCommandHandlers', () => {
           extra: true
         })
 
-        expect(error.message).toContain('"extra" is not allowed')
+        expect(error?.message).toContain('"extra" is not allowed')
+      })
+
+      it('accepts a user carrying a resolved role', () => {
+        const { error } = handler.payloadSchema.validate({
+          importId: 'import-123',
+          user: {
+            id: 'user-1',
+            email: 'maintainer@example.com',
+            scope: ['admin.read'],
+            role: 'service_maintainer'
+          }
+        })
+
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts a user with a null role', () => {
+        const { error } = handler.payloadSchema.validate({
+          importId: 'import-123',
+          user: {
+            id: 'user-1',
+            email: 'operator@example.com',
+            scope: ['operator'],
+            role: null
+          }
+        })
+
+        expect(error).toBeUndefined()
+      })
+
+      it('rejects a user without a role', () => {
+        const { error } = handler.payloadSchema.validate({
+          importId: 'import-123',
+          user: {
+            id: 'user-1',
+            email: 'operator@example.com',
+            scope: ['operator']
+          }
+        })
+
+        expect(error?.message).toBe('"user.role" is required')
       })
     })
 
@@ -81,40 +128,34 @@ describe('orsImportCommandHandlers', () => {
     })
 
     describe('onFailure', () => {
-      it('marks ORS import as failed', async () => {
-        deps.orsImportsRepository.updateStatus.mockResolvedValue(true)
-
-        await handler.onFailure({ importId: 'import-123' }, deps)
-
-        expect(deps.orsImportsRepository.updateStatus).toHaveBeenCalledWith(
+      it('marks a non-terminal import as failed and records the transition', async () => {
+        await seedImport(
+          orsImportsRepository,
           'import-123',
-          'failed'
+          ORS_IMPORT_STATUS.PROCESSING
         )
-      })
-
-      it('records failed status transition metric when update succeeded', async () => {
-        deps.orsImportsRepository.updateStatus.mockResolvedValue(true)
 
         await handler.onFailure({ importId: 'import-123' }, deps)
 
+        const stored = await orsImportsRepository.findById('import-123')
+        expect(stored.status).toBe(ORS_IMPORT_STATUS.FAILED)
         expect(orsImportMetrics.recordStatusTransition).toHaveBeenCalledWith({
-          status: 'failed'
+          status: ORS_IMPORT_STATUS.FAILED
         })
       })
 
-      it('does not record status metric when update was blocked by terminal status', async () => {
-        deps.orsImportsRepository.updateStatus.mockResolvedValue(false)
+      it('leaves a terminal import untouched, recording no metric and logging the skip', async () => {
+        await seedImport(
+          orsImportsRepository,
+          'import-123',
+          ORS_IMPORT_STATUS.COMPLETED
+        )
 
         await handler.onFailure({ importId: 'import-123' }, deps)
 
+        const stored = await orsImportsRepository.findById('import-123')
+        expect(stored.status).toBe(ORS_IMPORT_STATUS.COMPLETED)
         expect(orsImportMetrics.recordStatusTransition).not.toHaveBeenCalled()
-      })
-
-      it('logs when update was blocked by terminal status', async () => {
-        deps.orsImportsRepository.updateStatus.mockResolvedValue(false)
-
-        await handler.onFailure({ importId: 'import-123' }, deps)
-
         expect(deps.logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
             message: expect.stringContaining('import-123')
@@ -122,9 +163,11 @@ describe('orsImportCommandHandlers', () => {
         )
       })
 
-      it('logs error when marking as failed throws', async () => {
+      it('logs an error when the repository throws', async () => {
         const updateError = new Error('Database error')
-        deps.orsImportsRepository.updateStatus.mockRejectedValue(updateError)
+        orsImportsRepository.updateStatus = vi
+          .fn()
+          .mockRejectedValue(updateError)
 
         await handler.onFailure({ importId: 'import-123' }, deps)
 
@@ -144,11 +187,5 @@ describe('orsImportCommandHandlers', () => {
         )
       })
     })
-  })
-
-  it('all handlers have valid Joi payload schemas', () => {
-    for (const handler of orsImportCommandHandlers) {
-      expect(Joi.isSchema(handler.payloadSchema)).toBe(true)
-    }
   })
 })

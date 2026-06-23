@@ -1,7 +1,7 @@
+import crypto from 'node:crypto'
 import {
   ORGANISATION_STATUS,
-  REPROCESSING_TYPE,
-  USER_ROLES
+  REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
@@ -14,25 +14,20 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
-import {
-  COMPANY_1_ID,
-  COMPANY_1_NAME,
-  defraIdMockAuthTokens,
-  USER_PRESENT_IN_ORG1_EMAIL,
-  VALID_TOKEN_CONTACT_ID
-} from '#vite/helpers/create-defra-id-test-tokens.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { generateValidTokenWith } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
+import {
+  asServiceMaintainer,
+  asServiceMaintainerWrite
+} from '#test/inject-auth.js'
 
-const { validToken } = defraIdMockAuthTokens
-const { validToken: serviceMaintainerToken } = entraIdMockAuthTokens
 const mockCdpAuditing = vi.fn()
 const mockOrganisationLinkedMetric = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
-  audit: (...args) => mockCdpAuditing(...args)
+  audit: (/** @type {any} */ ...args) => mockCdpAuditing(...args)
 }))
 
 vi.mock(
@@ -47,30 +42,92 @@ vi.mock(
 
 const ISO_DATE_STRING_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/
 
+function submitterContactDetails(/** @type {string} */ email) {
+  return {
+    submitterContactDetails: {
+      fullName: 'Users name',
+      email,
+      phone: '1234567890',
+      jobTitle: 'Director'
+    }
+  }
+}
+
+/**
+ * @param {{
+ *   defraIdContactId?: string,
+ *   email?: string,
+ *   defraIdOrganisationId?: string,
+ *   defraIdOrganisationName?: string,
+ *   relationshipId?: string
+ *   relationships?: string[]
+ * }} param0
+ * @returns
+ */
+function defraIdJwtTokenWith({
+  defraIdContactId = crypto.randomUUID(),
+  email = 'user@email.com',
+  defraIdOrganisationId = crypto.randomUUID(),
+  defraIdOrganisationName = 'some org ltd',
+  relationshipId = crypto.randomUUID(),
+  relationships = [
+    `${relationshipId}:${defraIdOrganisationId}:${defraIdOrganisationName}`
+  ]
+}) {
+  return generateValidTokenWith({
+    contactId: defraIdContactId,
+    email,
+    currentRelationshipId: relationshipId,
+    relationships
+  })
+}
+
 describe('POST /v1/organisations/{organisationId}/link', () => {
   setupAuthContext()
+  /** @type {import('#test/create-test-server.js').TestServer} */
   let server
-  let organisationsRepositoryFactory
+  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
   let organisationsRepository
   const { VALID_FROM, VALID_TO } = getValidDateRange()
 
   beforeAll(async () => {
-    organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       },
-      featureFlags
+      featureFlags: createInMemoryFeatureFlags()
     })
   })
 
   afterAll(() => {
     vi.resetAllMocks()
   })
+
+  const performLink = async (
+    /** @type {string} */ organisationId,
+    /** @type {string} */ jwtAccessToken
+  ) => {
+    return await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/${organisationId}/link`,
+      headers: {
+        Authorization: `Bearer ${jwtAccessToken}`
+      }
+    })
+  }
+
+  const performUnlink = async (/** @type {string} */ organisationId) => {
+    return await server.inject({
+      method: 'DELETE',
+      url: `/v1/organisations/${organisationId}/link`,
+      ...asServiceMaintainerWrite()
+    })
+  }
 
   testInvalidTokenScenarios({
     server: () => server,
@@ -90,79 +147,74 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   })
 
   describe('the request contains a valid Defra Id token', () => {
-    it('when the organisation in the request does not exist, returns 401', async () => {
-      const nonExistingOrg = buildOrganisation()
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${nonExistingOrg.id}/link`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
-      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    it('when the organisation in the request does not exist, returns 404', async () => {
+      const organisationId = 'some-uuid-for-an-org-that-is-not-in-the-service'
+      const response = await performLink(
+        organisationId,
+        defraIdJwtTokenWith({})
+      )
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
     describe('the request is valid, the org exists', () => {
-      const baseUserObject = {
-        email: 'john.doe@email.com',
-        fullName: 'John Doe'
-      }
-
-      const fullyValidUser = {
-        ...baseUserObject,
-        email: USER_PRESENT_IN_ORG1_EMAIL,
-        roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
-      }
+      const user1Email = 'user1@email.com'
+      const user2Email = 'user2@email.com'
 
       it.each([
         {
-          description: 'user is not in the users list',
-          user: baseUserObject,
+          description:
+            'user email in token does not match any user for the organisation',
+          userEmailOnOrg: user1Email,
+          defraIdJwtToken: defraIdJwtTokenWith({ email: user2Email }),
           status: ORGANISATION_STATUS.APPROVED,
-          expectedStatusCode: StatusCodes.UNAUTHORIZED
+          expectedStatusCode: StatusCodes.CONFLICT
         },
         {
-          description: 'user is valid',
-          user: fullyValidUser,
+          description: 'organisation in "created" state',
+          userEmailOnOrg: user1Email,
+          defraIdJwtToken: defraIdJwtTokenWith({ email: user1Email }),
           status: ORGANISATION_STATUS.CREATED,
           expectedStatusCode: StatusCodes.CONFLICT
         },
         {
-          description: 'user is valid',
-          user: fullyValidUser,
+          description: 'organisation in "rejected" state',
+          userEmailOnOrg: user1Email,
+          defraIdJwtToken: defraIdJwtTokenWith({ email: user1Email }),
           status: ORGANISATION_STATUS.REJECTED,
           expectedStatusCode: StatusCodes.CONFLICT
+        },
+        {
+          description: 'organisation in "approved" state',
+          userEmailOnOrg: user1Email,
+          defraIdJwtToken: defraIdJwtTokenWith({ email: user1Email }),
+          status: ORGANISATION_STATUS.APPROVED,
+          expectedStatusCode: StatusCodes.OK
+        },
+        {
+          description: 'defra ID token does not have organisation data',
+          userEmailOnOrg: user1Email,
+          defraIdJwtToken: defraIdJwtTokenWith({
+            email: user1Email,
+            relationships: []
+          }),
+          status: ORGANISATION_STATUS.APPROVED,
+          expectedStatusCode: StatusCodes.BAD_REQUEST
         }
       ])(
         'returns $expectedStatusCode when $description and org status is $status',
-        async ({ user, status, expectedStatusCode }) => {
-          const org = buildOrganisation()
-
+        async ({
+          userEmailOnOrg,
+          defraIdJwtToken,
+          status,
+          expectedStatusCode
+        }) => {
+          const org = buildOrganisation(submitterContactDetails(userEmailOnOrg))
           await organisationsRepository.insert(org)
 
           await organisationsRepository.replace(
             org.id,
-            1,
+            org.version,
             prepareOrgUpdate(org, {
-              submitterContactDetails: {
-                fullName: user.fullName,
-                email: user.email,
-                phone: '1234567890',
-                jobTitle: 'Director'
-              }
-            })
-          )
-
-          const orgWithSubmitterDetails = await waitForVersion(
-            organisationsRepository,
-            org.id,
-            2
-          )
-
-          await organisationsRepository.replace(
-            org.id,
-            2,
-            prepareOrgUpdate(orgWithSubmitterDetails, {
               status,
               registrations: [
                 {
@@ -177,40 +229,167 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
                   validTo: VALID_TO,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }
+              ],
+              accreditations: [
+                {
+                  ...org.accreditations[0],
+                  reprocessingType: REPROCESSING_TYPE.INPUT
+                }
               ]
             })
           )
 
-          await waitForVersion(organisationsRepository, org.id, 3)
+          await waitForVersion(organisationsRepository, org.id, org.version + 1)
 
-          const response = await server.inject({
-            method: 'POST',
-            url: `/v1/organisations/${org.id}/link`,
-            headers: {
-              Authorization: `Bearer ${validToken}`
-            }
-          })
+          const response = await performLink(org.id, defraIdJwtToken)
 
           expect(response.statusCode).toBe(expectedStatusCode)
         }
       )
 
-      describe('when the request succeeds', async () => {
-        const performPostLinkOrganisation = async () => {
-          const org = await buildApprovedOrg(organisationsRepository)
+      it('organisation can be linked, unlinked, then re-linked', async () => {
+        const userEmail = 'aUser@email.com'
+        const defraIdToken = defraIdJwtTokenWith({ email: userEmail })
+        const approvedOrg = await buildApprovedOrg(
+          organisationsRepository,
+          submitterContactDetails(userEmail)
+        )
 
-          const response = await server.inject({
-            method: 'POST',
-            url: `/v1/organisations/${org.id}/link`,
-            headers: {
-              Authorization: `Bearer ${validToken}`
-            }
+        const firstLinkResponse = await performLink(
+          approvedOrg.id,
+          defraIdToken
+        )
+
+        expect(firstLinkResponse.statusCode).toBe(StatusCodes.OK)
+
+        const unlinkResponse = await performUnlink(approvedOrg.id)
+
+        expect(unlinkResponse.statusCode).toBe(StatusCodes.NO_CONTENT)
+
+        const secondLinkResponse = await performLink(
+          approvedOrg.id,
+          defraIdToken
+        )
+
+        expect(secondLinkResponse.statusCode).toBe(StatusCodes.OK)
+      })
+
+      it('rejects linking an organisation that is already linked', async () => {
+        const userEmail = 'aUser@email.com'
+        const defraIdToken = defraIdJwtTokenWith({ email: userEmail })
+        const org = await buildApprovedOrg(
+          organisationsRepository,
+          submitterContactDetails(userEmail)
+        )
+
+        const firstLinkResponse = await performLink(org.id, defraIdToken)
+
+        expect(firstLinkResponse.statusCode).toBe(StatusCodes.OK)
+
+        await waitForVersion(organisationsRepository, org.id, org.version + 1)
+
+        const secondLinkResponse = await performLink(org.id, defraIdToken)
+
+        expect(secondLinkResponse.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(secondLinkResponse.payload).message).toBe(
+          'Organisation is not in a linkable state'
+        )
+      })
+
+      it('only allows initial users to link the organisation', async () => {
+        const user1Email = 'user1@email.com'
+        const user2Email = 'user2@email.com'
+        const defraIdOrganisationId = crypto.randomUUID()
+        const user1DefraIdToken = defraIdJwtTokenWith({
+          email: user1Email,
+          defraIdOrganisationId
+        })
+        const user2DefraIdToken = defraIdJwtTokenWith({
+          email: user2Email,
+          defraIdOrganisationId
+        })
+        const org = await buildApprovedOrg(
+          organisationsRepository,
+          submitterContactDetails(user1Email)
+        )
+
+        const user1LinkResponse = await performLink(org.id, user1DefraIdToken)
+
+        expect(user1LinkResponse.statusCode).toBe(StatusCodes.OK)
+
+        // add user 2 to organisation
+        const addUser2Response = await server.inject({
+          method: 'PUT',
+          url: `/v1/organisations/${org.id}/user`,
+          headers: {
+            Authorization: `Bearer ${user2DefraIdToken}`
+          }
+        })
+
+        expect(addUser2Response.statusCode).toBe(StatusCodes.OK)
+
+        await waitForVersion(organisationsRepository, org.id, org.version + 2)
+
+        // read users
+        const getOrganisationResponseUser1 = await server.inject({
+          method: 'GET',
+          url: `/v1/organisations/${org.id}`,
+          headers: {
+            Authorization: `Bearer ${user1DefraIdToken}`
+          }
+        })
+
+        const users = JSON.parse(getOrganisationResponseUser1.payload).users
+
+        expect(users).toContainEqual(
+          expect.objectContaining({
+            email: user1Email,
+            roles: ['initial_user', 'standard_user']
           })
+        )
+
+        expect(users).toContainEqual(
+          expect.objectContaining({
+            email: user2Email,
+            roles: ['standard_user']
+          })
+        )
+
+        // unlink
+        const unlinkResponse = await performUnlink(org.id)
+
+        expect(unlinkResponse.statusCode).toBe(StatusCodes.NO_CONTENT)
+
+        // user 2 (not initial_user) attempts to link
+        const user2LinkResponse = await performLink(org.id, user2DefraIdToken)
+
+        expect(user2LinkResponse.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+
+      describe('when the request succeeds', async () => {
+        const defraIdContactId = crypto.randomUUID()
+        const userEmail = 'aUser@email.com'
+        const defraIdOrganisationId = crypto.randomUUID()
+        const defraIdOrganisationName = 'Magic Ltd'
+
+        const performPostLinkOrganisation = async () => {
+          const defraIdToken = defraIdJwtTokenWith({
+            defraIdContactId,
+            email: userEmail,
+            defraIdOrganisationId,
+            defraIdOrganisationName
+          })
+          const org = await buildApprovedOrg(
+            organisationsRepository,
+            submitterContactDetails(userEmail)
+          )
+
+          const response = await performLink(org.id, defraIdToken)
 
           const finalOrgVersion = await waitForVersion(
             organisationsRepository,
             org.id,
-            2
+            org.version + 1
           )
           return { response, finalOrgVersion }
         }
@@ -229,12 +408,12 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(result).toEqual({
             status: ORGANISATION_STATUS.ACTIVE,
             linked: {
-              id: COMPANY_1_ID,
-              name: COMPANY_1_NAME,
+              id: defraIdOrganisationId,
+              name: defraIdOrganisationName,
               linkedAt: expect.stringMatching(ISO_DATE_STRING_REGEX),
               linkedBy: {
-                email: USER_PRESENT_IN_ORG1_EMAIL,
-                id: VALID_TOKEN_CONTACT_ID
+                email: userEmail,
+                id: defraIdContactId
               }
             }
           })
@@ -247,15 +426,18 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         })
 
         it('populates the organisation with a complete "linkedDefraOrganisation" object', async () => {
-          const { finalOrgVersion } = await performPostLinkOrganisation()
+          const { response: linkResponse, finalOrgVersion } =
+            await performPostLinkOrganisation()
+
+          expect(linkResponse.statusCode).toBe(StatusCodes.OK)
 
           expect(finalOrgVersion.linkedDefraOrganisation).toEqual({
-            orgId: COMPANY_1_ID,
-            orgName: COMPANY_1_NAME,
+            orgId: defraIdOrganisationId,
+            orgName: defraIdOrganisationName,
             linkedAt: expect.any(Date),
             linkedBy: {
-              email: USER_PRESENT_IN_ORG1_EMAIL,
-              id: VALID_TOKEN_CONTACT_ID
+              email: userEmail,
+              id: defraIdContactId
             }
           })
         })
@@ -268,9 +450,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           const systemLogsResponse = await server.inject({
             method: 'GET',
             url: `/v1/system-logs/search?organisationId=${finalOrgVersion.id}`,
-            headers: {
-              Authorization: `Bearer ${serviceMaintainerToken}`
-            }
+            ...asServiceMaintainer()
           })
 
           expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
@@ -282,9 +462,10 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           const systemLogPayload = systemLogsResponseBody.systemLogs[0]
 
           expect(systemLogPayload.createdBy).toEqual({
-            id: VALID_TOKEN_CONTACT_ID,
-            email: USER_PRESENT_IN_ORG1_EMAIL,
-            scope: ['linker']
+            id: defraIdContactId,
+            email: userEmail,
+            scope: ['inquirer'],
+            role: null
           })
 
           expect(
@@ -300,8 +481,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(systemLogPayload.context).toEqual({
             organisationId: finalOrgVersion.id,
             linkedDefraOrganisation: {
-              id: COMPANY_1_ID,
-              name: COMPANY_1_NAME
+              id: defraIdOrganisationId,
+              name: defraIdOrganisationName
             }
           })
         })
@@ -314,9 +495,10 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           const auditPayload = mockCdpAuditing.mock.calls[0][0]
 
           expect(auditPayload.user).toEqual({
-            id: VALID_TOKEN_CONTACT_ID,
-            email: USER_PRESENT_IN_ORG1_EMAIL,
-            scope: ['linker']
+            id: defraIdContactId,
+            email: userEmail,
+            scope: ['inquirer'],
+            role: null
           })
 
           expect(auditPayload.event).toEqual({
@@ -328,8 +510,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(auditPayload.context).toEqual({
             organisationId: finalOrgVersion.id,
             linkedDefraOrganisation: {
-              id: COMPANY_1_ID,
-              name: COMPANY_1_NAME
+              id: defraIdOrganisationId,
+              name: defraIdOrganisationName
             }
           })
         })
