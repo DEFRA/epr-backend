@@ -1,3 +1,4 @@
+import { testAccreditationLinkValidation } from './contract/accreditation-link.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
 import { testFindAllBySchemaVersionBehaviour } from './contract/find-all-by-schema-version.contract.js'
 import { testFindByIdsBehaviour } from './contract/find-by-ids.contract.js'
@@ -7,7 +8,6 @@ import { testFindByLinkedDefraOrgIdBehaviour } from './contract/find-by-linked-d
 import { testFindPageBehaviour } from './contract/find-page.contract.js'
 import { testInsertBehaviour } from './contract/insert.contract.js'
 import { testReplaceBehaviour } from './contract/replace.contract.js'
-import { testReplaceRawBehaviour } from './contract/replace-raw.contract.js'
 import { testDataIsolationBehaviour } from './contract/data-isolation.contract.js'
 import { testFindRegistrationByIdBehaviour } from './contract/find-registration-by-id.contract.js'
 import { testFindAccreditationByIdBehaviour } from './contract/find-accreditation-by-id.contract.js'
@@ -19,7 +19,6 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testInsertBehaviour(repositoryFactory)
   testFindAllBySchemaVersionBehaviour(repositoryFactory)
   testReplaceBehaviour(repositoryFactory)
-  testReplaceRawBehaviour(repositoryFactory)
   testFindBehaviour(repositoryFactory)
   testFindByIdsBehaviour(repositoryFactory)
   testFindAllIdsBehaviour(repositoryFactory)
@@ -31,6 +30,7 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testFindAccreditationByIdBehaviour(repositoryFactory)
   testDataIsolationBehaviour(repositoryFactory)
   testRegAccApprovalValidation(repositoryFactory)
+  testAccreditationLinkValidation(repositoryFactory)
   testOrgStatusTransitionBehaviour(repositoryFactory)
   testRegAccStatusTransitionBehaviour(repositoryFactory)
 }

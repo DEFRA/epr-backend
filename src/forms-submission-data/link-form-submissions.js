@@ -117,12 +117,14 @@ export function linkItemsToOrganisations(
   const itemsBySystemReference = getItemsBySystemReference(items)
   const organisationsById = getOrganisationsById(organisations)
 
-  const unlinked = []
+  const unlinked = [...itemsBySystemReference].flatMap(
+    ([systemReference, itemsPerOrg]) => {
+      const org = organisationsById.get(systemReference)
 
-  for (const [systemReference, itemsPerOrg] of itemsBySystemReference) {
-    const org = organisationsById.get(systemReference)
+      if (!org) {
+        return itemsPerOrg.map(toUnlinkedItem)
+      }
 
-    if (org) {
       const { matched, unmatched } = systemReferencesRequiringOrgIdMatch.has(
         systemReference
       )
@@ -130,11 +132,9 @@ export function linkItemsToOrganisations(
         : { matched: itemsPerOrg, unmatched: [] }
 
       org[propertyName] = (org[propertyName] ?? []).concat(matched)
-      unlinked.push(...unmatched.map(toUnlinkedItem))
-    } else {
-      unlinked.push(...itemsPerOrg.map(toUnlinkedItem))
+      return unmatched.map(toUnlinkedItem)
     }
-  }
+  )
 
   logUnlinkedItems(unlinked, propertyName)
   logOrganisationsWithoutItems(organisations, propertyName)
@@ -144,11 +144,17 @@ export function linkItemsToOrganisations(
 
 /**
  * Finds accreditations eligible for linking to a registration
- * Filters out approved accreditations to prevent linking to locked records
+ * Filters out approved accreditations to prevent linking to locked records,
+ * and accreditations already claimed by another registration
  */
-function findEligibleAccreditations(registration, accreditations) {
+function findEligibleAccreditations(
+  registration,
+  accreditations,
+  claimedAccreditationIds
+) {
   return accreditations
     .filter((acc) => acc.status !== REG_ACC_STATUS.APPROVED)
+    .filter((acc) => !claimedAccreditationIds.has(acc.id))
     .filter((acc) => isAccreditationForRegistration(acc, registration))
 }
 
@@ -183,6 +189,43 @@ function findRegistrationsToLink(registrations, accreditations) {
   )
 }
 
+function getClaimedAccreditationIds(registrations) {
+  return new Set(registrations.flatMap((reg) => reg.accreditationId ?? []))
+}
+
+function claimAccreditationForRegistration(
+  registration,
+  accreditations,
+  claimedAccreditationIds,
+  organisation
+) {
+  const matchedAccreditations = findEligibleAccreditations(
+    registration,
+    accreditations,
+    claimedAccreditationIds
+  )
+
+  if (matchedAccreditations.length === 0) {
+    return
+  }
+
+  const latestMatchedAccreditation = selectLatestAccreditation(
+    matchedAccreditations
+  )
+  registration.accreditationId = latestMatchedAccreditation.id
+  claimedAccreditationIds.add(latestMatchedAccreditation.id)
+
+  if (matchedAccreditations.length > 1) {
+    logger.warn({
+      message:
+        `Multiple accreditations match registration, picking latest by formSubmission.time: ` +
+        `orgId=${organisation.orgId},orgDbId=${organisation.id},` +
+        `registration=[${formatRegistrationDetails(registration)}],` +
+        `selected accreditation=[${formatAccreditationDetails(latestMatchedAccreditation)}]`
+    })
+  }
+}
+
 function linkAccreditationsForOrg(organisation) {
   const accreditations = organisation.accreditations ?? []
   const registrations = organisation.registrations ?? []
@@ -192,29 +235,17 @@ function linkAccreditationsForOrg(organisation) {
     accreditations
   )
 
-  for (const registration of registrationsToLink) {
-    const matchedAccreditations = findEligibleAccreditations(
+  const claimedAccreditationIds = getClaimedAccreditationIds(registrations)
+
+  registrationsToLink.forEach((registration) =>
+    claimAccreditationForRegistration(
       registration,
-      accreditations
+      accreditations,
+      claimedAccreditationIds,
+      organisation
     )
+  )
 
-    if (matchedAccreditations.length > 0) {
-      const latestMatchedAccreditation = selectLatestAccreditation(
-        matchedAccreditations
-      )
-      registration.accreditationId = latestMatchedAccreditation.id
-
-      if (matchedAccreditations.length > 1) {
-        logger.warn({
-          message:
-            `Multiple accreditations match registration, picking latest by formSubmission.time: ` +
-            `orgId=${organisation.orgId},orgDbId=${organisation.id},` +
-            `registration=[${formatRegistrationDetails(registration)}],` +
-            `selected accreditation=[${formatAccreditationDetails(latestMatchedAccreditation)}]`
-        })
-      }
-    }
-  }
   logUnlinkedAccreditations(organisation)
 }
 
@@ -307,9 +338,7 @@ function getLinkedAccCount(organisations) {
  */
 export function linkRegistrationToAccreditations(organisations) {
   const accCount = countItems(organisations, 'accreditations')
-  for (const org of organisations) {
-    linkAccreditationsForOrg(org)
-  }
+  organisations.forEach((org) => linkAccreditationsForOrg(org))
 
   const linkedRegCount = getLinkedRegCount(organisations)
   const linkedAccCount = getLinkedAccCount(organisations)

@@ -6,7 +6,7 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
- * Boolean version of waste-balances/application/calculator#getTargetAmount.
+ * Boolean version of waste-balances/application/target-amount#getTargetAmount.
  * Returns true iff the record currently counts toward the waste balance for
  * its accreditation. Mirrors the same logic; differs only by returning a
  * boolean rather than a tonnage.

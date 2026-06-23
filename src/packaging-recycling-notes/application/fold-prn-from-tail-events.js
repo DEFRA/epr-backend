@@ -42,13 +42,15 @@ const applyEvent = (prn, event) => {
     throw new Error(`Unmappable stream event kind: ${event.kind}`)
   }
   const slot = STREAM_EVENT_KIND_TO_STATUS_SLOT[event.kind]
-  const slotValue = { at: event.createdAt, by: event.createdBy }
+  // PRN actors record id and name only; the event's createdBy may also carry an
+  // email (best-view enrichment on the stream), which the PRN document omits.
+  const by = { id: event.createdBy.id, name: event.createdBy.name }
+  const slotValue = { at: event.createdAt, by }
 
   return {
     ...prn,
-    version: (prn.version ?? 0) + 1,
     updatedAt: event.createdAt,
-    updatedBy: event.createdBy,
+    updatedBy: by,
     lastAppliedEventNumber: event.number,
     status: {
       ...prn.status,
@@ -57,7 +59,7 @@ const applyEvent = (prn, event) => {
       [slot]: slotValue,
       history: [
         ...prn.status.history,
-        { status: newStatus, at: event.createdAt, by: event.createdBy }
+        { status: newStatus, at: event.createdAt, by }
       ]
     }
   }
@@ -66,7 +68,9 @@ const applyEvent = (prn, event) => {
 /**
  * Left-fold over persisted stream tail events: applies each event in turn,
  * stamping its slot, appending a history entry, advancing currentStatus,
- * updatedAt/By, version and the lastAppliedEventNumber watermark.
+ * updatedAt/By and the lastAppliedEventNumber watermark. The persisted-document
+ * version is owned by the repository's optimistic-concurrency guard, so the
+ * fold leaves it untouched.
  *
  * Pure: returns a new PRN, does not mutate the input. Returns the input
  * reference unchanged when no events are supplied.

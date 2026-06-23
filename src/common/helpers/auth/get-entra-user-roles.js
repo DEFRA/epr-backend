@@ -12,14 +12,10 @@ const ADMIN_ROLE_RESOLUTION_ORDER = [
 ]
 
 /**
- * @typedef {{ role: string | null, scopes: string[] }} ResolvedAdminRole
- */
-
-/**
  * Resolves an Entra ID user's admin role and bundled scopes from
  * email-list config. Email comparison is case-insensitive.
  * @param {string | undefined | null} userEmail - Email from the validated Entra access token.
- * @returns {Promise<ResolvedAdminRole>}
+ * @returns {Promise<import('#auth/types.js').UserRoleAndScopes>}
  */
 export async function getEntraUserRoles(userEmail) {
   if (!userEmail) {

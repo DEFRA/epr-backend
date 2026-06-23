@@ -5,7 +5,8 @@ import {
   updateReportStatusSchema,
   deleteReportParamsSchema,
   findPeriodicReportsSchema,
-  findReportByIdSchema
+  findReportByIdSchema,
+  markActiveReportsStaleSchema
 } from './schema.js'
 
 /**
@@ -94,6 +95,22 @@ export const validateFindPeriodicReports = (params) => {
  */
 export const validateFindReportById = (reportId) => {
   const { error, value } = findReportByIdSchema.validate(reportId)
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
+ * @param {{ organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string }} params
+ * @returns {{ organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string }}
+ */
+export const validateMarkActiveReportsStale = (params) => {
+  const { error, value } = markActiveReportsStaleSchema.validate(params, {
+    abortEarly: false
+  })
 
   if (error) {
     throw Boom.badRequest(error.message)

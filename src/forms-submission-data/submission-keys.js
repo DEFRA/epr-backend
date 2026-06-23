@@ -1,8 +1,18 @@
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { siteKey } from '#formsubmission/parsing-common/site.js'
 
 /**
- * @import {Registration, Accreditation, RegistrationOrAccreditation} from './types.js'
+ * Structural subset of Registration/Accreditation fields used to build the
+ * identity key. Accepts both domain (post-validation) and migration-time
+ * (forms-submission-data) shapes, which differ in fields like `status`.
+ *
+ * @typedef {{
+ *   wasteProcessingType: string;
+ *   material: string;
+ *   site?: object;
+ *   reprocessingType?: string;
+ *   glassRecyclingProcess?: string[];
+ * }} RegAccKeyFields
  */
 
 const KEY_DELIMITER = '::'
@@ -15,7 +25,7 @@ const KEY_DELIMITER = '::'
  * - For exporters: `{wasteProcessingType}::{material}[::{reprocessingType}]`
  * - For reprocessors: `{wasteProcessingType}::{material}::{normalizedPostcode}[::{reprocessingType}]`
  *
- * @param {RegistrationOrAccreditation} item - Registration or accreditation object
+ * @param {RegAccKeyFields} item - Registration or accreditation object
  * @returns {string} key for registration or accreditation
  */
 export function getRegAccKey(item) {
@@ -25,6 +35,8 @@ export function getRegAccKey(item) {
 /**
  * Extracts the identity fields as key-value pairs.
  * Uses conditional spreading for a cleaner, declarative structure.
+ *
+ * @param {RegAccKeyFields} item
  */
 function getRegAccKeyValuePairs(item) {
   return {
@@ -35,14 +47,18 @@ function getRegAccKeyValuePairs(item) {
     }),
     ...(item.reprocessingType && {
       reprocessingType: item.reprocessingType
-    })
+    }),
+    ...(item.material === MATERIAL.GLASS &&
+      item.glassRecyclingProcess?.length === 1 && {
+        glassRecyclingProcess: item.glassRecyclingProcess[0]
+      })
   }
 }
 
 /**
  * Check if an accreditation matches a registration based on type, material, and site
- * @param {Accreditation} accreditation - The accreditation to check
- * @param {Registration} registration - The registration to match against
+ * @param {RegAccKeyFields} accreditation - The accreditation to check
+ * @param {RegAccKeyFields} registration - The registration to match against
  * @returns {boolean} True if the accreditation matches the registration
  */
 export function isAccreditationForRegistration(accreditation, registration) {

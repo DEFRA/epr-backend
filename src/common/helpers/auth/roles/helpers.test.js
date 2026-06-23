@@ -1,14 +1,8 @@
-import { USER_ROLES } from '#domain/organisations/model.js'
-import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  deduplicateOrganisations,
-  findOrganisationMatches,
   getCurrentRelationship,
   getDefraTokenSummary,
-  getOrgDataFromDefraIdToken,
-  isInitialUser,
-  isOrganisationsDiscoveryReq
+  getOrgDataFromDefraIdToken
 } from './helpers.js'
 import { createMockOrganisationsRepository } from '#test/mock-repositories.js'
 
@@ -237,7 +231,7 @@ describe('getCurrentRelationship', () => {
 
     const result = getCurrentRelationship(relationships)
 
-    expect(result.defraIdOrgId).toBe('org-1')
+    expect(result?.defraIdOrgId).toBe('org-1')
   })
 })
 

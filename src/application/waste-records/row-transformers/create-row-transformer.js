@@ -23,7 +23,7 @@ export const createRowTransformer = ({
 
     return {
       wasteRecordType,
-      rowId: rowData[rowIdField],
+      rowId: String(rowData[rowIdField]),
       data: {
         ...rowData,
         processingType

@@ -1,7 +1,10 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
 import Boom from '@hapi/boom'
-import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
+import {
+  LINKABLE_ORGANISATION_STATUSES,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   createInitialStatusHistory,
@@ -258,8 +261,8 @@ const performFindAllLinkableForUser = (staleCache) => async (email) => {
       return false
     }
 
-    // Must be approved
-    if (getCurrentStatus(org) !== REG_ACC_STATUS.APPROVED) {
+    // Must be approved, or active but unlinked (re-linkable after unlinking)
+    if (!LINKABLE_ORGANISATION_STATUSES.includes(getCurrentStatus(org))) {
       return false
     }
 
@@ -401,27 +404,9 @@ export const createInMemoryOrganisationsRepository = (
     const insertFn = performInsert(storage, staleCache)
     const replaceFn = performReplace(storage, staleCache, pendingSyncRef)
 
-    const replaceRawFn = async (id, version, document) => {
-      const validatedId = validateId(id)
-      const existingIndex = storage.findIndex((o) => o._id === validatedId)
-      if (existingIndex === -1) {
-        throw Boom.notFound(`Organisation with id ${validatedId} not found`)
-      }
-      if (storage[existingIndex].version !== version) {
-        throw Boom.conflict(`Version conflict`)
-      }
-      storage[existingIndex] = {
-        _id: validatedId,
-        ...document,
-        version: version + 1
-      }
-      scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
-    }
-
     return {
       insert: insertFn,
       replace: replaceFn,
-      replaceRaw: replaceRawFn,
       findAll: performFindAll(staleCache),
       findAllBySchemaVersion: performFindAllBySchemaVersion(staleCache),
       findPage: performFindPage(staleCache),

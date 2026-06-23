@@ -59,7 +59,7 @@ describe('foldPrnFromTailEvents', () => {
   })
 
   describe('per-event projection', () => {
-    it('prn-created sets status, slot, history, version, updatedAt/By and watermark', () => {
+    it('prn-created sets status, slot, history, updatedAt/By and watermark, leaving version to storage', () => {
       const prn = basePrn()
       const event = buildEvent(
         STREAM_EVENT_KIND.PRN_CREATED,
@@ -85,10 +85,52 @@ describe('foldPrnFromTailEvents', () => {
           by: event.createdBy
         }
       ])
-      expect(result.version).toBe(2)
+      expect(result.version).toBe(prn.version)
       expect(result.updatedAt).toEqual(event.createdAt)
       expect(result.updatedBy).toEqual(event.createdBy)
       expect(result.lastAppliedEventNumber).toBe(1)
+    })
+
+    it('leaves version untouched: the persisted-document version is owned by storage, not the fold', () => {
+      const prn = basePrn()
+      const created = buildEvent(
+        STREAM_EVENT_KIND.PRN_CREATED,
+        1,
+        '2026-02-01T12:00:00.000Z'
+      )
+      const issued = buildEvent(
+        STREAM_EVENT_KIND.PRN_ISSUED,
+        2,
+        '2026-02-02T12:00:00.000Z'
+      )
+
+      const result = foldPrnFromTailEvents(prn, [created, issued])
+
+      expect(result.version).toBe(prn.version)
+    })
+
+    it('narrows the event actor to id and name, dropping the stream-only email', () => {
+      const prn = basePrn()
+      const event = buildEvent(
+        STREAM_EVENT_KIND.PRN_CREATED,
+        1,
+        '2026-02-01T12:00:00.000Z',
+        { id: 'user-1', name: 'Test User', email: 'test@example.com' }
+      )
+
+      const result = foldPrnFromTailEvents(prn, [event])
+
+      const expectedActor = { id: 'user-1', name: 'Test User' }
+      expect(result.updatedBy).toEqual(expectedActor)
+      expect(result.status.created).toEqual({
+        at: event.createdAt,
+        by: expectedActor
+      })
+      expect(result.status.history.at(-1)).toEqual({
+        status: PRN_STATUS.AWAITING_AUTHORISATION,
+        at: event.createdAt,
+        by: expectedActor
+      })
     })
 
     it('prn-issued sets currentStatus awaiting_acceptance and issued slot', () => {
@@ -241,7 +283,7 @@ describe('foldPrnFromTailEvents', () => {
           by: issued.createdBy
         }
       ])
-      expect(result.version).toBe(3)
+      expect(result.version).toBe(prn.version)
       expect(result.updatedAt).toEqual(issued.createdAt)
       expect(result.updatedBy).toEqual(issued.createdBy)
       expect(result.lastAppliedEventNumber).toBe(2)

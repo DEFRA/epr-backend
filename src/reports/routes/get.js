@@ -5,7 +5,7 @@ import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import { isRegistrationAccredited } from '#reports/domain/is-registration-accredited.js'
+import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 
 /**
@@ -31,8 +31,8 @@ const toReportListItem = (current) => {
   if (!current) {
     return null
   }
-  const { id, status, submittedAt, submittedBy } = current
-  return { id, status, submittedAt, submittedBy }
+  const { id, status, submissionNumber, submittedAt, submittedBy } = current
+  return { id, status, submissionNumber, submittedAt, submittedBy }
 }
 
 export const reportsGet = {

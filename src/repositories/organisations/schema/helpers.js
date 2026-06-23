@@ -1,6 +1,5 @@
 import Joi from 'joi'
 import {
-  MATERIAL,
   REG_ACC_STATUS,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
@@ -10,6 +9,9 @@ import {
   isAccreditationForRegistration
 } from '#formsubmission/submission-keys.js'
 import Boom from '@hapi/boom'
+
+/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {RegistrationOrAccreditation} from '#domain/organisations/model.js' */
 
 export const PREVIOUS_SCHEMA_VERSION = 2
 export const CURRENT_SCHEMA_VERSION = 3
@@ -121,31 +123,18 @@ function findAccreditationsWithoutApprovedRegistration(
 }
 
 /**
- * Glass registrations can be split into remelt and other processes,
- * which should be treated as distinct entities for duplicate detection.
- *
- * @param {import('#formsubmission/types.js').RegistrationOrAccreditation} item
- * @returns {string}
+ * @param {RegistrationOrAccreditation[]} items
+ * @returns {[string, RegistrationOrAccreditation[]][]}
  */
-function getDuplicateDetectionKey(item) {
-  const baseKey = getRegAccKey(item)
-
-  if (item.material === MATERIAL.GLASS && item.glassRecyclingProcess?.[0]) {
-    return `${baseKey}::${item.glassRecyclingProcess[0]}`
-  }
-
-  return baseKey
-}
-
 function findDuplicateApprovals(items) {
   const grouped = Object.groupBy(
     items.filter((item) => item.status === REG_ACC_STATUS.APPROVED),
-    (item) => getDuplicateDetectionKey(item)
+    (item) => getRegAccKey(item)
   )
 
-  return Object.entries(grouped).filter(
-    // Object.entries yields only keys that exist, so group is always present
-    ([_key, group]) => /** @type {typeof items} */ (group).length > 1
+  return (
+    /** @type {[string, RegistrationOrAccreditation[]][]} */
+    (Object.entries(grouped)).filter(([, group]) => group.length > 1)
   )
 }
 
@@ -155,6 +144,105 @@ function formatDuplicateError(duplicates, itemType) {
     .flatMap(([_key, group]) => group.map((item) => item.id))
     .join(', ')
   return `Multiple approved ${itemType} found with duplicate keys [${keys}]: ${ids}`
+}
+
+/**
+ * @param {Registration[]} registrations
+ * @returns {[string, Registration[]][]}
+ */
+function findAccreditationIdsLinkedToMultipleRegistrations(registrations) {
+  const linkedRegistrations = registrations.filter(
+    (reg) => reg.accreditationId !== undefined && reg.accreditationId !== null
+  )
+
+  const grouped = Object.groupBy(
+    linkedRegistrations,
+    (reg) => /** @type {string} */ (reg.accreditationId)
+  )
+
+  return (
+    /** @type {[string, Registration[]][]} */
+    (Object.entries(grouped)).filter(([, regs]) => regs.length > 1)
+  )
+}
+
+/**
+ * @param {Registration[]} registrations
+ */
+export function validateAccreditationLinkUniqueness(registrations) {
+  const duplicates =
+    findAccreditationIdsLinkedToMultipleRegistrations(registrations)
+
+  if (duplicates.length === 0) {
+    return
+  }
+
+  const details = duplicates
+    .map(
+      ([accId, regs]) =>
+        `accreditation ${accId} linked to registrations ${regs.map((reg) => reg.id).join(', ')}`
+    )
+    .join('; ')
+  throw Boom.badData(
+    `Each accreditation must be linked to at most one registration: ${details}`
+  )
+}
+
+/**
+ * @param {Registration[]} registrations
+ * @param {import('#domain/organisations/accreditation.js').Accreditation[]} accreditations
+ */
+export function validateAccreditationLinkExists(registrations, accreditations) {
+  const accreditationIds = new Set(accreditations.map((acc) => acc.id))
+
+  const missing = registrations.filter(
+    (reg) => !!reg.accreditationId && !accreditationIds.has(reg.accreditationId)
+  )
+
+  if (missing.length === 0) {
+    return
+  }
+
+  const details = missing
+    .map(
+      (reg) => `registration ${reg.id} -> accreditation ${reg.accreditationId}`
+    )
+    .join('; ')
+  throw Boom.badData(
+    `Registrations are linked to accreditations that do not exist: ${details}`
+  )
+}
+
+/**
+ * @param {Registration[]} registrations
+ * @param {import('#domain/organisations/accreditation.js').Accreditation[]} accreditations
+ */
+export function validateAccreditationLinkMatches(
+  registrations,
+  accreditations
+) {
+  const accreditationsById = new Map(accreditations.map((acc) => [acc.id, acc]))
+
+  const mismatched = registrations.filter((reg) => {
+    if (!reg.accreditationId) {
+      return false
+    }
+    const acc = accreditationsById.get(reg.accreditationId)
+    return acc !== undefined && !isAccreditationForRegistration(acc, reg)
+  })
+
+  if (mismatched.length === 0) {
+    return
+  }
+
+  const details = mismatched
+    .map(
+      (reg) => `registration ${reg.id} -> accreditation ${reg.accreditationId}`
+    )
+    .join('; ')
+  throw Boom.badData(
+    `Registrations are linked to accreditations that do not match their type, material, or site: ${details}`
+  )
 }
 
 export function validateApprovals(registrations, accreditations) {

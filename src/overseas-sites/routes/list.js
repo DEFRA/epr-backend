@@ -7,7 +7,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
@@ -17,7 +17,10 @@ export const overseasSitesList = {
   method: 'GET',
   path: overseasSitesListPath,
   options: {
-    auth: getAuthConfig([SCOPES.adminRead]),
+    auth: {
+      strategies: ['access-token', BASIC_AUTH],
+      scope: [SCOPES.adminRead, SCOPES.organisationRead]
+    },
     tags: ['api'],
     validate: {
       query: Joi.object({

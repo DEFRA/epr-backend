@@ -10,9 +10,15 @@ export const testFindAccreditationByIdBehaviour = (it) => {
   describe('findAccreditationById', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     it('returns accreditation when both organisation ID and accreditation ID are valid', async () => {
       const accreditation1 = buildAccreditation({
@@ -27,6 +33,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
       })
 
       const org = buildOrganisation({
+        registrations: [],
         accreditations: [accreditation1, accreditation2]
       })
 
@@ -48,6 +55,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
     it('throws NotFound when organisation ID does not exist', async () => {
       const accreditation = buildAccreditation()
       const org = buildOrganisation({
+        registrations: [],
         accreditations: [accreditation]
       })
 
@@ -66,6 +74,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
     it('throws NotFound when accreditation ID does not exist in the organisation', async () => {
       const accreditation = buildAccreditation()
       const org = buildOrganisation({
+        registrations: [],
         accreditations: [accreditation]
       })
 
@@ -83,6 +92,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
     it('throws NotFound when organisation has no accreditations', async () => {
       const org = buildOrganisation({
+        registrations: [],
         accreditations: []
       })
 
@@ -111,6 +121,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
       const accreditation = buildAccreditation()
 
       const org = buildOrganisation({
+        registrations: [],
         accreditations: [accreditation]
       })
 
@@ -130,6 +141,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
       const accreditation = buildAccreditation()
 
       const org = buildOrganisation({
+        registrations: [],
         accreditations: [accreditation]
       })
 
