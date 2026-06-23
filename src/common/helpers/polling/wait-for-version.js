@@ -18,7 +18,7 @@ const RETRY_DELAY_MS = 25
 export const waitForVersion = async (repository, id, expectedVersion) => {
   for (let i = 0; i < MAX_RETRIES; i++) {
     const result = await repository.findById(id)
-    if (result?.version >= expectedVersion) {
+    if (result && result.version >= expectedVersion) {
       return result
     }
     /* v8 ignore next 5 */
