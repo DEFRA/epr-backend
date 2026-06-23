@@ -1,10 +1,11 @@
 import Boom from '@hapi/boom'
 import { describe, beforeEach, expect } from 'vitest'
-import { buildWasteBalance } from './test-data.js'
-import {
-  WASTE_BALANCE_CANONICAL_SOURCE,
-  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
-} from '../../domain/model.js'
+import { STREAM_EVENT_KIND } from '../stream-schema.js'
+
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
 
 export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
   describe('creditFullBalanceForIssuedPrnCancellation', () => {
@@ -12,95 +13,94 @@ export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
 
     beforeEach(
       async (
-        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
-          wasteBalancesRepository
-        }
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
       ) => {
         repository = await wasteBalancesRepository()
       }
     )
 
-    it('credits tonnage back to both amount and available balance', async ({
-      insertWasteBalance
+    it('credits tonnage back to both amount and available balance, resolved from the stream', async ({
+      seedBalance
     }) => {
-      const wasteBalance = buildWasteBalance({
+      await seedBalance({
         accreditationId: 'acc-full-cancel-1',
+        registrationId: 'reg-1',
         organisationId: 'org-1',
-        amount: 400,
-        availableAmount: 350
+        closingBalance: { amount: 400, availableAmount: 350 }
       })
-
-      await insertWasteBalance(wasteBalance)
 
       await repository.creditFullBalanceForIssuedPrnCancellation({
         accreditationId: 'acc-full-cancel-1',
+        registrationId: 'reg-1',
         organisationId: 'org-1',
         prnId: 'prn-123',
         tonnage: 60,
-        userId: 'user-abc'
+        createdBy: { id: 'user-abc' }
       })
 
-      const result = await repository.findByAccreditationId('acc-full-cancel-1')
+      const result = await repository.findBalance({
+        registrationId: 'reg-1',
+        accreditationId: 'acc-full-cancel-1'
+      })
 
       expect(result.amount).toBe(460)
       expect(result.availableAmount).toBe(410)
     })
 
-    it('creates transaction with PRN_CANCELLED entity type', async ({
-      insertWasteBalance
+    it('appends a PRN_CANCELLED_AFTER_ISSUE event carrying the prn and tonnage', async ({
+      seedBalance,
+      streamRepository
     }) => {
-      const wasteBalance = buildWasteBalance({
+      await seedBalance({
         accreditationId: 'acc-full-cancel-2',
+        registrationId: 'reg-1',
         organisationId: 'org-1',
-        amount: 200,
-        availableAmount: 150,
-        transactions: []
+        closingBalance: { amount: 100, availableAmount: 100 }
       })
 
-      await insertWasteBalance(wasteBalance)
+      const appended =
+        await repository.creditFullBalanceForIssuedPrnCancellation({
+          accreditationId: 'acc-full-cancel-2',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-456',
+          tonnage: 25.5,
+          createdBy: { id: 'user-xyz' }
+        })
 
-      await repository.creditFullBalanceForIssuedPrnCancellation({
-        accreditationId: 'acc-full-cancel-2',
-        organisationId: 'org-1',
-        prnId: 'prn-456',
-        tonnage: 25.5,
-        userId: 'user-xyz'
-      })
+      expect(appended.kind).toBe(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
+      expect(appended.payload).toEqual({ prnId: 'prn-456', amount: 25.5 })
 
-      const result = await repository.findByAccreditationId('acc-full-cancel-2')
-
-      expect(result.transactions).toHaveLength(1)
-      expect(result.transactions[0].amount).toBe(25.5)
-      expect(result.transactions[0].entities[0].id).toBe('prn-456')
-      expect(result.transactions[0].entities[0].type).toBe(
-        WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED_POST_ISSUE
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        'acc-full-cancel-2'
       )
+      expect(appended.number).toBe(latest.number)
     })
 
     it('throws when no balance exists', async () => {
       await expect(
         repository.creditFullBalanceForIssuedPrnCancellation({
           accreditationId: 'acc-nonexistent',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
-          userId: 'user-123'
+          createdBy: { id: 'user-123' }
         })
       ).rejects.toThrow(Boom.Boom)
     })
 
-    it('returns the appended stream event on the ledger path', async ({
-      insertWasteBalance,
+    it('appends the PRN event after the balance-establishing event', async ({
+      seedBalance,
       streamRepository
     }) => {
-      const wasteBalance = buildWasteBalance({
+      await seedBalance({
         accreditationId: 'acc-full-cancel-ledger',
         registrationId: 'reg-1',
         organisationId: 'org-1',
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        closingBalance: { amount: 100, availableAmount: 100 }
       })
-
-      await insertWasteBalance(wasteBalance)
 
       const appended =
         await repository.creditFullBalanceForIssuedPrnCancellation({
@@ -109,7 +109,7 @@ export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
           organisationId: 'org-1',
           prnId: 'prn-ledger',
           tonnage: 10,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         })
 
       const latest = await streamRepository.findLatestByPartition(
@@ -117,50 +117,7 @@ export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
         'acc-full-cancel-ledger'
       )
       expect(appended.number).toBe(latest.number)
-      expect(appended.number).toBe(1)
-    })
-
-    it('returns null on the embedded path', async ({ insertWasteBalance }) => {
-      const wasteBalance = buildWasteBalance({
-        accreditationId: 'acc-full-cancel-embedded',
-        organisationId: 'org-1',
-        amount: 400,
-        availableAmount: 350
-      })
-
-      await insertWasteBalance(wasteBalance)
-
-      const watermark =
-        await repository.creditFullBalanceForIssuedPrnCancellation({
-          accreditationId: 'acc-full-cancel-embedded',
-          organisationId: 'org-1',
-          prnId: 'prn-embedded',
-          tonnage: 10,
-          userId: 'user-abc'
-        })
-
-      expect(watermark).toBeNull()
-    })
-
-    it('increments version number', async ({ insertWasteBalance }) => {
-      const wasteBalance = buildWasteBalance({
-        accreditationId: 'acc-full-cancel-3',
-        organisationId: 'org-1',
-        version: 5
-      })
-
-      await insertWasteBalance(wasteBalance)
-
-      await repository.creditFullBalanceForIssuedPrnCancellation({
-        accreditationId: 'acc-full-cancel-3',
-        organisationId: 'org-1',
-        prnId: 'prn-999',
-        tonnage: 10,
-        userId: 'user-456'
-      })
-
-      const result = await repository.findByAccreditationId('acc-full-cancel-3')
-      expect(result.version).toBe(6)
+      expect(appended.number).toBe(2)
     })
   })
 }

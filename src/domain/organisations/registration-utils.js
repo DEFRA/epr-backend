@@ -1,8 +1,8 @@
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
-/** @import { Organisation, RegAccStatus } from '#domain/organisations/model.js' */
-/** @import { RegistrationApproved } from '#domain/organisations/registration.js' */
+/** @import { GlassRecyclingProcess, Material, Organisation, RegAccStatus } from '#domain/organisations/model.js' */
+/** @import { Registration, RegistrationApproved } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
@@ -56,6 +56,42 @@ export function resolveAccreditationNumber(registration, org) {
       ACTIVE_ACCREDITATION_STATUSES.has(a.status)
   )
   return accreditation?.accreditationNumber ?? ''
+}
+
+/**
+ * Returns true when the registration is linked to an accreditation that is
+ * live (approved or suspended). Presence of accreditationId alone is not
+ * sufficient — an accreditation in 'created', 'rejected', or 'cancelled'
+ * state has never been active and must be treated as registered-only.
+ *
+ * @param {{ accreditation: { status?: string } | null }} registration
+ * @returns {boolean}
+ */
+export function isRegistrationAccredited(registration) {
+  const status = registration.accreditation?.status
+  return ACTIVE_ACCREDITATION_STATUSES.has(/** @type {RegAccStatus} */ (status))
+}
+
+/**
+ * Returns the registration's material at its finest granularity. Glass is the
+ * only material that sub-divides: each glass registration carries a single
+ * recycling process (submissions are split per process upstream), so the
+ * process value (glass_re_melt / glass_other) is returned in place of 'glass'.
+ * All other materials are returned unchanged.
+ *
+ * @param {Pick<Registration, 'material' | 'glassRecyclingProcess'>} registration
+ * @returns {Material | GlassRecyclingProcess}
+ */
+export function resolveDetailedMaterial(registration) {
+  const glassProcess = registration.glassRecyclingProcess
+  if (
+    registration.material === 'glass' &&
+    glassProcess &&
+    glassProcess.length > 0
+  ) {
+    return glassProcess[0]
+  }
+  return registration.material
 }
 
 /**

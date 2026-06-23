@@ -5,7 +5,8 @@
 /**
  * @typedef {Object} UserSummary
  * @property {string} id
- * @property {string} name
+ * @property {string} [name]
+ * @property {string} [email]
  * @property {string} position
  */
 
@@ -18,12 +19,16 @@
  */
 
 /**
+ * @typedef {ReportOperation & { declaredBy?: string }} ReportSubmittedSlot
+ */
+
+/**
  * @typedef {Object} ReportStatusObject
  * @property {ReportStatus} currentStatus
  * @property {string} currentStatusAt - ISO timestamp
  * @property {ReportOperation} created
  * @property {ReportOperation} [ready]
- * @property {ReportOperation} [submitted]
+ * @property {ReportSubmittedSlot} [submitted]
  * @property {ReportOperation} [unsubmitted]
  * @property {ReportStatusHistoryItem[]} history
  */
@@ -32,9 +37,9 @@
  * @typedef {Object} Supplier
  * @property {string} supplierName
  * @property {string} facilityType
- * @property {string} address
- * @property {string} phone
- * @property {string} email
+ * @property {string} supplierAddress
+ * @property {string} supplierPhone
+ * @property {string} supplierEmail
  * @property {number} tonnageReceived
  */
 
@@ -43,8 +48,6 @@
  * @property {string} recipientName
  * @property {string} facilityType
  * @property {string} address
- * @property {string} phone
- * @property {string} email
  * @property {number} tonnageSentOn
  */
 
@@ -78,14 +81,31 @@
 /**
  * @typedef {Object} PrnData
  * @property {number} issuedTonnage
- * @property {number} [totalRevenue]
- * @property {number} [averagePricePerTonne]
- * @property {number} freeTonnage
+ * @property {number | null} [totalRevenue]
+ * @property {number | null} [averagePricePerTonne]
+ * @property {number | null} freeTonnage
  */
 
 /**
  * @typedef {Object} SourceData
  * @property {string[]} summaryLogIds
+ */
+
+/**
+ * @typedef {{ uploadedAt: string, reason: StaleReason, summaryLogId?: string }} ReportStale
+ */
+
+/**
+ * Per-report result returned by {@link ReportsRepository.markActiveReportsStale}.
+ * Contains the fields needed to audit the stale transition.
+ *
+ * @typedef {Object} MarkReportStaleResult
+ * @property {string} reportId
+ * @property {number} year
+ * @property {string} cadence
+ * @property {number} period
+ * @property {number} submissionNumber
+ * @property {ReportStale} stale
  */
 
 /**
@@ -112,6 +132,7 @@
  * @property {PrnData} [prn]
  * @property {string} [supportingInformation]
  * @property {SourceData} [sourceData]
+ * @property {ReportStale} [stale]
  */
 
 /**
@@ -131,7 +152,7 @@
 /**
  * Curated subset of ReportSummary used for list-style responses
  * (e.g. the reports calendar). Excludes heavy activity payloads.
- * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submittedAt' | 'submittedBy'>} ReportListItem
+ * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submissionNumber' | 'submittedAt' | 'submittedBy'>} ReportListItem
  */
 
 /**
@@ -202,6 +223,7 @@
  * @property {ReportStatus} status
  * @property {string} slot - the status object key to record this transition (e.g. 'ready', 'submitted', 'unsubmitted')
  * @property {UserSummary} [changedBy]
+ * @property {string} [submissionDeclaredBy] - full name typed by the user on the declaration form; stored in status.submitted.declaredBy
  */
 
 /**
@@ -230,10 +252,18 @@
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
+ * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStale
+ *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
+ *   skipping any report already built from `summaryLogId` or already stale from it.
+ *   Returns the per-report stale details for auditing.
  */
 
 /**
  * @typedef {() => ReportsRepository} ReportsRepositoryFactory
+ */
+
+/**
+ * @import { StaleReason } from '#reports/domain/stale.js'
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

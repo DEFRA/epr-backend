@@ -7,7 +7,7 @@ export const testFindAllBySchemaVersionBehaviour = (it) => {
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
           organisationsRepository
         }
       ) => {

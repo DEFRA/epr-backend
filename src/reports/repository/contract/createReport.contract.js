@@ -16,16 +16,16 @@ import {
   DEFAULT_REPORT_YEAR
 } from './test-data.js'
 
+/** @import { ReportsRepositoryFactory } from '../port.js' */
+
+/** @typedef {{ reportsRepository: ReportsRepositoryFactory }} ReportsFixture */
+
 export const testCreateReportBehaviour = (it) => {
   describe('createReport', () => {
     let repository
 
     beforeEach(
-      async (
-        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory }} */ {
-          reportsRepository
-        }
-      ) => {
+      /** @param {ReportsFixture} fixture */ async ({ reportsRepository }) => {
         repository = reportsRepository()
       }
     )
@@ -137,7 +137,8 @@ export const testCreateReportBehaviour = (it) => {
         version: 1,
         status: REPORT_STATUS.SUBMITTED,
         slot: REPORT_STATUS_SLOT.SUBMITTED,
-        changedBy
+        changedBy,
+        submissionDeclaredBy: 'Test User'
       })
 
       const { id: secondId } = await repository.createReport(

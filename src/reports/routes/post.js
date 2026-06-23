@@ -22,11 +22,11 @@ import {
  * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
- * @import { PeriodPathParams } from './shared.js'
+ * @import { PeriodWithSubmissionPathParams } from './shared.js'
  */
 
 export const reportsPostPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
 
 /**
  * @param {TypedLogger} logger
@@ -60,7 +60,7 @@ export const reportsPost = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: PeriodPathParams,
+   *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
    *   wasteRecordsRepository: WasteRecordsRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
@@ -79,7 +79,14 @@ export const reportsPost = {
       params,
       logger
     } = request
-    const { organisationId, registrationId, year, cadence, period } = params
+    const {
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber
+    } = params
 
     try {
       const registration = await organisationsRepository.findRegistrationById(
@@ -100,6 +107,7 @@ export const reportsPost = {
         year,
         cadence,
         period,
+        submissionNumber,
         changedBy: extractChangedBy(request.auth.credentials)
       })
 

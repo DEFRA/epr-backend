@@ -5,6 +5,7 @@ import {
   prepareOrgUpdate
 } from './test-data.js'
 import {
+  ORGANISATION_STATUS,
   REG_ACC_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -283,11 +284,47 @@ export const testFindBehaviour = (it) => {
               validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
+          ],
+          accreditations: [
+            {
+              ...inserted.accreditations[0],
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
           ]
         })
         await repository.replace(org.id, 1, updatePayload)
         // Wait for the update to propagate to ensure stale cache is synced
         await repository.findById(org.id, 2)
+      }
+
+      // An organisation can only become active while linked (enforced by the
+      // status-transition guard), so reach the active-but-unlinked state the
+      // way production does: activate with a link, then remove the link while
+      // the status stays active.
+      const activateAndUnlinkOrg = async (org) => {
+        await approveOrg(org)
+        const approved = await repository.findById(org.id, 2)
+        await repository.replace(
+          org.id,
+          2,
+          prepareOrgUpdate(approved, {
+            status: ORGANISATION_STATUS.ACTIVE,
+            linkedDefraOrganisation: {
+              orgId: DEFRA_ORG_ID,
+              orgName: 'Active Org',
+              linkedBy: { email: 'linker@example.com', id: USER_ID },
+              linkedAt: new Date().toISOString()
+            }
+          })
+        )
+        const active = await repository.findById(org.id, 3)
+        await repository.replace(
+          org.id,
+          3,
+          prepareOrgUpdate(active, { linkedDefraOrganisation: undefined })
+        )
+        // Wait for the update to propagate to ensure stale cache is synced
+        await repository.findById(org.id, 4)
       }
 
       it('returns empty array when no organisations exist', async () => {
@@ -318,6 +355,19 @@ export const testFindBehaviour = (it) => {
 
         expect(result).toHaveLength(1)
         expect(result[0].id).toBe(matchingOrg.id)
+      })
+
+      it('returns active unlinked organisations where user is initial user', async () => {
+        const activeOrg = buildOrgWithSubmitter(INITIAL_USER_EMAIL)
+        await repository.insert(activeOrg)
+        await activateAndUnlinkOrg(activeOrg)
+
+        const result =
+          await repository.findAllLinkableForUser(INITIAL_USER_EMAIL)
+
+        expect(result).toHaveLength(1)
+        expect(result[0].id).toBe(activeOrg.id)
+        expect(result[0].status).toBe(ORGANISATION_STATUS.ACTIVE)
       })
 
       it('excludes linked organisations', async () => {

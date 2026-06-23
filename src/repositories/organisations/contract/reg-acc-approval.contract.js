@@ -53,7 +53,13 @@ export const testRegAccApprovalValidation = (it) => {
             organisation.id,
             1,
             prepareOrgUpdate(inserted, {
-              accreditations: [accreditationToUpdate]
+              accreditations: [accreditationToUpdate],
+              registrations: [
+                {
+                  ...inserted.registrations[0],
+                  reprocessingType: REPROCESSING_TYPE.INPUT
+                }
+              ]
             })
           )
         ).rejects.toThrow(
@@ -299,6 +305,9 @@ export const testRegAccApprovalValidation = (it) => {
 
           const orgData = {
             ...organisation,
+            registrations: organisation.registrations.map(
+              ({ accreditationId: _, ...reg }) => reg
+            ),
             accreditations: [
               buildAccreditation({
                 id: acc1Id,
@@ -372,6 +381,9 @@ export const testRegAccApprovalValidation = (it) => {
 
           const orgData = {
             ...organisation,
+            registrations: organisation.registrations.map(
+              ({ accreditationId: _, ...reg }) => reg
+            ),
             accreditations: [
               buildAccreditation({
                 id: acc1Id,
@@ -443,6 +455,7 @@ export const testRegAccApprovalValidation = (it) => {
                 wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
                 material: MATERIAL.PAPER,
                 glassRecyclingProcess: null,
+                accreditationId: undefined,
                 site: {
                   address: { line1: '123 Test St', postcode: 'AB12 3CD' },
                   gridReference: 'ST123456',
@@ -460,6 +473,7 @@ export const testRegAccApprovalValidation = (it) => {
                 wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
                 material: MATERIAL.PAPER,
                 glassRecyclingProcess: null,
+                accreditationId: undefined,
                 site: {
                   address: { line1: '456 Test Ave', postcode: 'AB12 3CD' },
                   gridReference: 'ST789012',
@@ -511,6 +525,7 @@ export const testRegAccApprovalValidation = (it) => {
                 wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
                 material: MATERIAL.PAPER,
                 glassRecyclingProcess: null,
+                accreditationId: undefined,
                 site: {
                   address: { line1: '123 Test St', postcode: 'AB12 3CD' },
                   gridReference: 'ST123456',
@@ -527,6 +542,7 @@ export const testRegAccApprovalValidation = (it) => {
                 wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
                 material: MATERIAL.ALUMINIUM,
                 glassRecyclingProcess: null,
+                accreditationId: undefined,
                 site: {
                   address: { line1: '456 Test Ave', postcode: 'XY98 7ZW' },
                   gridReference: 'ST789012',
@@ -863,7 +879,13 @@ export const testRegAccApprovalValidation = (it) => {
             organisation.id,
             1,
             prepareOrgUpdate(inserted, {
-              registrations: [registrationToUpdate]
+              registrations: [registrationToUpdate],
+              accreditations: [
+                {
+                  ...inserted.accreditations[0],
+                  reprocessingType: REPROCESSING_TYPE.INPUT
+                }
+              ]
             })
           )
 
@@ -1015,11 +1037,14 @@ export const testRegAccApprovalValidation = (it) => {
             glassRecyclingProcess: null
           }
 
+          const { accreditationId: _accId, ...regWithoutLink } =
+            inserted.registrations[0]
           await repository.replace(
             organisation.id,
             1,
             prepareOrgUpdate(inserted, {
-              accreditations: [accreditationToUpdate]
+              accreditations: [accreditationToUpdate],
+              registrations: [regWithoutLink]
             })
           )
 
@@ -1109,7 +1134,13 @@ export const testRegAccApprovalValidation = (it) => {
             organisation.id,
             1,
             prepareOrgUpdate(inserted, {
-              registrations: [registrationToUpdate]
+              registrations: [registrationToUpdate],
+              accreditations: [
+                {
+                  ...inserted.accreditations[0],
+                  reprocessingType: REPROCESSING_TYPE.INPUT
+                }
+              ]
             })
           )
 
@@ -1427,8 +1458,10 @@ export const testRegAccApprovalValidation = (it) => {
           await repository.insert(organisation)
           const inserted = await repository.findById(organisation.id)
 
+          const { accreditationId: _accId2, ...regBase } =
+            inserted.registrations[0]
           const registrationToUpdate = {
-            ...inserted.registrations[0],
+            ...regBase,
             material: 'plastic',
             glassRecyclingProcess: null,
             validFrom: null,
@@ -1658,11 +1691,14 @@ export const testRegAccApprovalValidation = (it) => {
             glassRecyclingProcess: null
           }
 
+          const { accreditationId: _accId3, ...regWithoutLink3 } =
+            inserted.registrations[0]
           await repository.replace(
             organisation.id,
             1,
             prepareOrgUpdate(inserted, {
-              accreditations: [accreditationToUpdate]
+              accreditations: [accreditationToUpdate],
+              registrations: [regWithoutLink3]
             })
           )
 

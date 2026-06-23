@@ -1,8 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { STREAM_EVENT_KIND } from '../stream-schema.js'
-import { buildWasteBalance } from './test-data.js'
 import {
   buildPrnCreatedEvent,
   buildPrnIssuedEvent
@@ -15,17 +13,16 @@ const partition = (suffix) => ({
   accreditationId: `acc-catchup-${suffix}`
 })
 
-const ledgerBalance = (suffix) =>
-  buildWasteBalance({
-    ...partition(suffix),
-    canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-  })
-
 const params = ({ suffix, afterEventNumber = 0 }) => ({
   ...partition(suffix),
   prnId: PRN_ID,
   afterEventNumber
 })
+
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
 
 export const testGetPrnCatchupEventsBehaviour = (it) => {
   describe('getPrnCatchupEvents', () => {
@@ -33,15 +30,13 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
 
     beforeEach(
       async (
-        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
-          wasteBalancesRepository
-        }
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
       ) => {
         repository = await wasteBalancesRepository()
       }
     )
 
-    it('returns an empty array when no balance document exists', async () => {
+    it('returns an empty array when the partition has no events', async () => {
       const result = await repository.getPrnCatchupEvents(
         params({ suffix: 'missing' })
       )
@@ -49,60 +44,10 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
       expect(result).toEqual([])
     })
 
-    it('returns an empty array when the marker is embedded', async ({
-      insertWasteBalance,
+    it('returns an empty array when there are no matching tail events', async ({
       streamRepository
     }) => {
-      const suffix = 'embedded'
-      await insertWasteBalance(
-        buildWasteBalance({
-          ...partition(suffix),
-          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-        })
-      )
-      await streamRepository.appendEvent(
-        buildPrnCreatedEvent({
-          ...partition(suffix),
-          number: 1,
-          payload: { prnId: PRN_ID, amount: 10 }
-        })
-      )
-
-      const result = await repository.getPrnCatchupEvents(params({ suffix }))
-
-      expect(result).toEqual([])
-    })
-
-    it('returns an empty array when the marker is migrating', async ({
-      insertWasteBalance,
-      streamRepository
-    }) => {
-      const suffix = 'migrating'
-      await insertWasteBalance(
-        buildWasteBalance({
-          ...partition(suffix),
-          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
-        })
-      )
-      await streamRepository.appendEvent(
-        buildPrnCreatedEvent({
-          ...partition(suffix),
-          number: 1,
-          payload: { prnId: PRN_ID, amount: 10 }
-        })
-      )
-
-      const result = await repository.getPrnCatchupEvents(params({ suffix }))
-
-      expect(result).toEqual([])
-    })
-
-    it('returns an empty array when the marker is ledger but there are no matching tail events', async ({
-      insertWasteBalance,
-      streamRepository
-    }) => {
-      const suffix = 'ledger-no-tail'
-      await insertWasteBalance(ledgerBalance(suffix))
+      const suffix = 'no-tail'
       await streamRepository.appendEvent(
         buildPrnCreatedEvent({
           ...partition(suffix),
@@ -116,12 +61,10 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
       expect(result).toEqual([])
     })
 
-    it('returns tail events when the marker is ledger and events exist for the PRN', async ({
-      insertWasteBalance,
+    it('returns tail events when events exist for the PRN', async ({
       streamRepository
     }) => {
-      const suffix = 'ledger-tail'
-      await insertWasteBalance(ledgerBalance(suffix))
+      const suffix = 'tail'
       await streamRepository.appendEvent(
         buildPrnCreatedEvent({
           ...partition(suffix),
@@ -147,11 +90,9 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
     })
 
     it('filters out events at or below afterEventNumber', async ({
-      insertWasteBalance,
       streamRepository
     }) => {
-      const suffix = 'ledger-filter'
-      await insertWasteBalance(ledgerBalance(suffix))
+      const suffix = 'filter'
       await streamRepository.appendEvent(
         buildPrnCreatedEvent({
           ...partition(suffix),

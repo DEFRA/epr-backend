@@ -48,7 +48,10 @@ async function buildRegisteredOnlyOrg(orgRepo) {
     INITIAL_VERSION,
     prepareOrgUpdate(org, {
       status: ORGANISATION_STATUS.APPROVED,
-      registrations: approvedRegistrations
+      registrations: approvedRegistrations,
+      accreditations: [
+        { ...org.accreditations[0], reprocessingType: REPROCESSING_TYPE.INPUT }
+      ]
     })
   )
 

@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildAccreditation,
+  buildLinkedDefraOrg,
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
@@ -275,6 +276,51 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
     expect(result.registrations[0]).not.toHaveProperty('accreditation')
+  })
+
+  it('omits linkedDefraOrganisation when the organisation is not linked', async () => {
+    const org = buildOrganisation()
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result).not.toHaveProperty('linkedDefraOrganisation')
+  })
+
+  it('returns linkedDefraOrganisation (orgId, orgName, linkedAt, linkedBy.email) when linked', async () => {
+    const linkedDefraOrganisation = buildLinkedDefraOrg(
+      '550e8400-e29b-41d4-a716-446655440001',
+      'Lost Ark Adventures Ltd'
+    )
+    const org = buildOrganisation({ linkedDefraOrganisation })
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result.linkedDefraOrganisation.orgId).toBe(
+      linkedDefraOrganisation.orgId
+    )
+    expect(result.linkedDefraOrganisation.orgName).toBe(
+      linkedDefraOrganisation.orgName
+    )
+    expect(result.linkedDefraOrganisation.linkedBy).toEqual({
+      email: linkedDefraOrganisation.linkedBy.email
+    })
+    expect(
+      new Date(result.linkedDefraOrganisation.linkedAt).toISOString()
+    ).toBe(new Date(linkedDefraOrganisation.linkedAt).toISOString())
   })
 
   it('returns 404 when the organisation does not exist', async () => {

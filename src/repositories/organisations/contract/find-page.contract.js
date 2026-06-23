@@ -21,7 +21,7 @@ export const testFindPageBehaviour = (it) => {
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
           organisationsRepository
         }
       ) => {

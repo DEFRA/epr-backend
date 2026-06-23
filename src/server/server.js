@@ -37,16 +37,14 @@ import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mon
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoWasteBalancesRepositoryPlugin } from '#waste-balances/repository/mongodb.plugin.js'
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
+import { mongoWasteRecordStatesRepositoryPlugin } from '#waste-records/repository/mongodb.plugin.js'
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
-import { runBalanceDivergenceDiagnostic } from '#server/run-balance-divergence-diagnostic.js'
-import { runBalanceSizeDiagnostic } from '#server/run-balance-size-diagnostic.js'
-import { runCanonicalSourceCensus } from '#server/run-canonical-source-census.js'
-import { runRowIdCollisionDiagnostic } from '#server/run-row-id-collision-diagnostic.js'
-import { runStreamPromotion } from '#server/run-stream-promotion.js'
+import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
+import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -126,6 +124,7 @@ function getProductionPlugins(config) {
     mongoSummaryLogsRepositoryPlugin,
     mongoFormSubmissionsRepositoryPlugin,
     mongoWasteRecordsRepositoryPlugin,
+    mongoWasteRecordStatesRepositoryPlugin,
     {
       plugin: mongoWasteBalancesRepositoryPlugin,
       options: { eventualConsistency }
@@ -225,11 +224,8 @@ async function createServer(options = {}) {
   server.ext('onPostStart', () => {
     runFormsDataMigration(server)
     copyFormFilesToS3(server)
-    runRowIdCollisionDiagnostic(server)
-    runBalanceDivergenceDiagnostic(server)
-    runBalanceSizeDiagnostic(server)
-    runCanonicalSourceCensus(server)
-    runStreamPromotion(server)
+    runOrganisationValidationSweep(server)
+    runDuplicateAccreditationLinkMigration(server)
   })
 
   return server

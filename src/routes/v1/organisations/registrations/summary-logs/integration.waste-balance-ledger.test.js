@@ -6,7 +6,6 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 
 import {
@@ -22,7 +21,7 @@ import {
   EXPORTER_HEADERS
 } from './integration-test-helpers.js'
 
-describe('Waste balance stream (Exporter, canonicalSource ledger)', () => {
+describe('Waste balance stream (Exporter)', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
@@ -101,32 +100,13 @@ describe('Waste balance stream (Exporter, canonicalSource ledger)', () => {
     await submitAndPoll(env, summaryLogId)
   }
 
-  const seedStreamBalance = (organisationId, registrationId) => ({
-    id: 'seeded-balance',
-    accreditationId: 'ACC-123',
-    registrationId,
-    organisationId,
-    schemaVersion: 1,
-    version: 0,
-    amount: 0,
-    availableAmount: 0,
-    transactions: [],
-    canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-  })
-
   const setupStream = () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
-    /** @type {import('#waste-balances/domain/model.js').WasteBalance[]} */
-    const existingWasteBalances = [
-      seedStreamBalance(organisationId, registrationId)
-    ]
     return setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       organisationId,
-      registrationId,
-      // @ts-expect-error -- TypeScript infers existingWasteBalances as never[] from the default [], WasteBalance[] is correct at runtime
-      existingWasteBalances
+      registrationId
     })
   }
 
@@ -165,9 +145,12 @@ describe('Waste balance stream (Exporter, canonicalSource ledger)', () => {
       availableAmount: 300
     })
 
-    const embeddedBalance =
-      await wasteBalancesRepository.findByAccreditationId('ACC-123')
-    expect(embeddedBalance?.transactions ?? []).toHaveLength(0)
+    const resolvedBalance = await wasteBalancesRepository.findBalance({
+      registrationId,
+      accreditationId: 'ACC-123'
+    })
+    expect(resolvedBalance?.amount).toBe(300)
+    expect(resolvedBalance?.availableAmount).toBe(300)
   })
 
   it('computes correct delta on re-upload with identical data', async () => {

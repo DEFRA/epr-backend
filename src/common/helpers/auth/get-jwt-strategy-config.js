@@ -48,7 +48,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
 
         const email = tokenPayload.preferred_username
 
-        const { scopes } = await getEntraUserRoles(email)
+        const { role, scopes } = await getEntraUserRoles(email)
 
         return {
           isValid: true,
@@ -56,6 +56,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
             id: tokenPayload.oid,
             email,
             issuer,
+            role,
             scope: scopes
           }
         }
@@ -72,16 +73,17 @@ export function getJwtStrategyConfig(oidcConfigs) {
           .filter(Boolean)
           .map((s) => s.trim())
           .join(' ')
-        const scope = await getDefraUserRoles(tokenPayload, request)
+        const { role, scopes } = await getDefraUserRoles(tokenPayload, request)
 
         return {
-          isValid: scope.length > 0,
+          isValid: true,
           credentials: {
             id: tokenPayload.contactId,
             email,
             name,
             issuer,
-            scope,
+            role,
+            scope: scopes,
             currentRelationshipId: tokenPayload?.currentRelationshipId
           }
         }

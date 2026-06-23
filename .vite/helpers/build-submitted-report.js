@@ -26,7 +26,8 @@ export async function buildSubmittedReport(reportsRepository, overrides = {}) {
     version: 2,
     status: REPORT_STATUS.SUBMITTED,
     slot: 'submitted',
-    changedBy: SUBMITTER
+    changedBy: SUBMITTER,
+    submissionDeclaredBy: 'Test User'
   })
   return id
 }

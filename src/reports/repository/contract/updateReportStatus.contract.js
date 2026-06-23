@@ -5,6 +5,10 @@ import {
 import { beforeEach, describe, expect } from 'vitest'
 import { buildCreateReportParams, createAndSubmitReport } from './test-data.js'
 
+/** @import { ReportsRepositoryFactory } from '../port.js' */
+
+/** @typedef {{ reportsRepository: ReportsRepositoryFactory }} ReportsFixture */
+
 export const testUpdateReportStatusBehaviour = (it) => {
   describe('updateReportStatus', () => {
     let repository
@@ -12,11 +16,7 @@ export const testUpdateReportStatusBehaviour = (it) => {
     const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
 
     beforeEach(
-      async (
-        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory }} */ {
-          reportsRepository
-        }
-      ) => {
+      /** @param {ReportsFixture} fixture */ async ({ reportsRepository }) => {
         repository = reportsRepository()
       }
     )
@@ -75,7 +75,8 @@ export const testUpdateReportStatusBehaviour = (it) => {
         version: 2,
         status: REPORT_STATUS.SUBMITTED,
         slot: REPORT_STATUS_SLOT.SUBMITTED,
-        changedBy
+        changedBy,
+        submissionDeclaredBy: 'Jane Smith'
       })
 
       expect(result).toMatchObject({
@@ -85,7 +86,8 @@ export const testUpdateReportStatusBehaviour = (it) => {
           currentStatus: REPORT_STATUS.SUBMITTED,
           [REPORT_STATUS_SLOT.SUBMITTED]: {
             at: expect.any(String),
-            by: changedBy
+            by: changedBy,
+            declaredBy: 'Jane Smith'
           },
           history: [
             {
@@ -106,6 +108,24 @@ export const testUpdateReportStatusBehaviour = (it) => {
           ]
         }
       })
+    })
+
+    it('does not set submissionDeclaredBy on ready_to_submit slot', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
+
+      const result = await repository.updateReportStatus({
+        reportId,
+        version: 1,
+        status: REPORT_STATUS.READY_TO_SUBMIT,
+        slot: REPORT_STATUS_SLOT.READY,
+        changedBy
+      })
+
+      expect(result.status[REPORT_STATUS_SLOT.READY]).not.toHaveProperty(
+        'submissionDeclaredBy'
+      )
     })
 
     it('transitions submitted → ready_to_submit with unsubmitted slot, preserving prior slots', async () => {
@@ -182,6 +202,30 @@ export const testUpdateReportStatusBehaviour = (it) => {
           changedBy
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
+    })
+
+    it('throws bad request when submissionDeclaredBy is missing for submitted status', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
+
+      await repository.updateReportStatus({
+        reportId,
+        version: 1,
+        status: REPORT_STATUS.READY_TO_SUBMIT,
+        slot: REPORT_STATUS_SLOT.READY,
+        changedBy
+      })
+
+      await expect(
+        repository.updateReportStatus({
+          reportId,
+          version: 2,
+          status: REPORT_STATUS.SUBMITTED,
+          slot: REPORT_STATUS_SLOT.SUBMITTED,
+          changedBy
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
 
     it('throws error on invalid status', async () => {

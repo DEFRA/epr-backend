@@ -32,6 +32,7 @@ import {
 } from '../shared/classify-helpers.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
@@ -82,6 +83,9 @@ const SUPPLEMENTARY_FIELDS = [
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
+  reportingDateFields: Object.values(
+    REPORTING_DATE_FIELDS.REPROCESSOR_INPUT.RECEIVED_LOADS_FOR_REPROCESSING
+  ),
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   sheetName: 'Received',
   rowTransformer: createRowTransformer({

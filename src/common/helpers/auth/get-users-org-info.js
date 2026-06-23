@@ -1,7 +1,4 @@
-import {
-  findOrganisationMatches,
-  getDefraTokenSummary
-} from '#common/helpers/auth/roles/helpers.js'
+import { getDefraTokenSummary } from '#common/helpers/auth/roles/helpers.js'
 
 /**
  * @typedef {'trace'|'debug'|'info'|'warn'|'error'|'fatal'} LogLevel
@@ -29,5 +26,5 @@ export async function getOrgMatchingUsersToken(
     return null
   }
 
-  return findOrganisationMatches(defraIdOrgId, organisationsRepository)
+  return organisationsRepository.findByLinkedDefraOrgId(defraIdOrgId)
 }

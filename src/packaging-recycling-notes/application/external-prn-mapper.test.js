@@ -197,6 +197,24 @@ describe('mapToExternalPrn', () => {
     })
   })
 
+  it('omits fullName when the actor has no name, leaving the id as the proof', () => {
+    const issuerWithoutName = { id: 'user-issuer' }
+    const prn = buildAwaitingAcceptancePrn({
+      status: {
+        currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        currentStatusAt: issuedDate,
+        created: { at: authorisedDate, by: creator },
+        issued: { at: issuedDate, by: issuerWithoutName },
+        history: []
+      }
+    })
+
+    const result = mapToExternalPrn(prn)
+
+    expect(result.status.authorisedBy).toEqual({})
+    expect('fullName' in result.status.authorisedBy).toBe(false)
+  })
+
   it('includes registrationType when present on issuedToOrganisation', () => {
     const prn = buildAwaitingAcceptancePrn({
       issuedToOrganisation: {

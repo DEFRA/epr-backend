@@ -19,7 +19,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
           organisationsRepository
         }
       ) => {
@@ -41,6 +41,12 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
                 registrationNumber: 'REG12345',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
+                reprocessingType: REPROCESSING_TYPE.INPUT
+              }
+            ],
+            accreditations: [
+              {
+                ...orgData.accreditations[0],
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
@@ -327,6 +333,12 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
                 accreditationNumber: 'ACC12345',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
+                reprocessingType: REPROCESSING_TYPE.INPUT
+              }
+            ],
+            registrations: [
+              {
+                ...orgData.registrations[0],
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]

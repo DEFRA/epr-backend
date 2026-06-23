@@ -4,9 +4,10 @@ import { StatusCodes } from 'http-status-codes'
 
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { assertReportComplete } from '#reports/application/assert-report-complete.js'
-import { fetchCurrentReport } from '#reports/application/report-service.js'
+import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS, STATUS_TO_SLOT } from '#reports/domain/report-status.js'
+import { assertNotStale } from '#reports/domain/stale.js'
 import { isValidReportTransition } from '#reports/domain/report-transitions.js'
 import {
   periodParamsSchema,
@@ -15,7 +16,11 @@ import {
 } from './shared.js'
 
 export const reportsStatusPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/status'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/status'
+
+const MIN_DECLARED_BY_LENGTH = 2
+const MAX_DECLARED_BY_LENGTH = 255
+const INVALID_DECLARED_BY_CHARS = /[@#$%&<>]/
 
 const payloadSchema = Joi.object({
   status: Joi.string()
@@ -25,7 +30,16 @@ const payloadSchema = Joi.object({
       REPORT_STATUS.SUBMITTED
     )
     .required(),
-  version: Joi.number().integer().min(1).required()
+  version: Joi.number().integer().min(1).required(),
+  submissionDeclaredBy: Joi.string()
+    .min(MIN_DECLARED_BY_LENGTH)
+    .max(MAX_DECLARED_BY_LENGTH)
+    .pattern(INVALID_DECLARED_BY_CHARS, { invert: true })
+    .when('status', {
+      is: REPORT_STATUS.SUBMITTED,
+      then: Joi.required(),
+      otherwise: Joi.forbidden()
+    })
 })
 
 export const reportsStatus = {
@@ -40,7 +54,7 @@ export const reportsStatus = {
     }
   },
   /**
-   * @param {HapiRequest<{ status: ReportStatus, version: number }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
+   * @param {HapiRequest<{ status: ReportStatus, version: number, submissionDeclaredBy?: string }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -48,20 +62,22 @@ export const reportsStatus = {
     const { organisationId, registrationId, cadence } = params
     const year = Number(params.year)
     const period = Number(params.period)
-    const { status, version } = request.payload
+    const submissionNumber = Number(params.submissionNumber)
+    const { status, version, submissionDeclaredBy } = request.payload
 
     const [registration, report] = await Promise.all([
       organisationsRepository.findRegistrationById(
         organisationId,
         registrationId
       ),
-      fetchCurrentReport(
+      fetchReportBySubmissionNumber(
         reportsRepository,
         organisationId,
         registrationId,
         year,
         cadence,
-        period
+        period,
+        submissionNumber
       )
     ])
 
@@ -70,6 +86,8 @@ export const reportsStatus = {
         `No report found for ${cadence} period ${period} of ${year}`
       )
     }
+
+    assertNotStale(report)
 
     if (!isValidReportTransition(report.status.currentStatus, status)) {
       throw Boom.badRequest(
@@ -84,7 +102,8 @@ export const reportsStatus = {
       version,
       status,
       slot: STATUS_TO_SLOT[status],
-      changedBy: extractChangedBy(request.auth.credentials)
+      changedBy: extractChangedBy(request.auth.credentials),
+      ...(submissionDeclaredBy !== undefined && { submissionDeclaredBy })
     })
 
     await auditReportStatusTransition(request, {

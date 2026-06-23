@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   getReportableRegistrations,
+  isRegistrationAccredited,
   resolveAccreditationNumber,
-  resolveAccreditation
+  resolveAccreditation,
+  resolveDetailedMaterial
 } from './registration-utils.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -134,6 +136,31 @@ describe('getReportableRegistrations', () => {
 })
 
 // ---------------------------------------------------------------------------
+// isRegistrationAccredited
+// ---------------------------------------------------------------------------
+
+describe('isRegistrationAccredited', () => {
+  it.each([
+    { status: 'approved', expected: true },
+    { status: 'suspended', expected: true },
+    { status: 'created', expected: false },
+    { status: 'rejected', expected: false },
+    { status: 'cancelled', expected: false }
+  ])(
+    'returns $expected when linked accreditation status is $status',
+    ({ status, expected }) => {
+      expect(isRegistrationAccredited({ accreditation: { status } })).toBe(
+        expected
+      )
+    }
+  )
+
+  it('returns false when accreditation is null', () => {
+    expect(isRegistrationAccredited({ accreditation: null })).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // resolveAccreditationNumber
 // ---------------------------------------------------------------------------
 
@@ -253,5 +280,47 @@ describe('resolveAccreditation', () => {
     const reg = buildReg({ accreditationId: 'acc-1' })
 
     expect(resolveAccreditation(reg, org)).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// resolveDetailedMaterial
+// ---------------------------------------------------------------------------
+
+describe('resolveDetailedMaterial', () => {
+  it('returns the glass recycling process for a glass registration', () => {
+    const reg = buildReg({
+      material: 'glass',
+      glassRecyclingProcess: ['glass_re_melt']
+    })
+
+    expect(resolveDetailedMaterial(reg)).toBe('glass_re_melt')
+  })
+
+  it('returns glass_other for a glass-other registration', () => {
+    const reg = buildReg({
+      material: 'glass',
+      glassRecyclingProcess: ['glass_other']
+    })
+
+    expect(resolveDetailedMaterial(reg)).toBe('glass_other')
+  })
+
+  it('returns glass when a glass registration has no recycling process', () => {
+    const reg = buildReg({ material: 'glass' })
+
+    expect(resolveDetailedMaterial(reg)).toBe('glass')
+  })
+
+  it('returns glass when the recycling process array is empty', () => {
+    const reg = buildReg({ material: 'glass', glassRecyclingProcess: [] })
+
+    expect(resolveDetailedMaterial(reg)).toBe('glass')
+  })
+
+  it('returns the material unchanged for non-glass registrations', () => {
+    const reg = buildReg({ material: 'plastic' })
+
+    expect(resolveDetailedMaterial(reg)).toBe('plastic')
   })
 })
