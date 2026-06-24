@@ -225,7 +225,13 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
     if (overseasSites !== ORS_VALIDATION_DISABLED) {
       const ors = overseasSites[toThreeDigitId(data[FIELDS.OSR_ID])]
-      if (!isOrsApprovedAtDate(ors?.validFrom, data[FIELDS.DATE_OF_EXPORT])) {
+      if (ors === undefined) {
+        return {
+          outcome: ROW_OUTCOME.EXCLUDED,
+          reasons: [{ code: CLASSIFICATION_REASON.ORS_NOT_FOUND }]
+        }
+      }
+      if (!isOrsApprovedAtDate(ors.validFrom, data[FIELDS.DATE_OF_EXPORT])) {
         return {
           outcome: ROW_OUTCOME.EXCLUDED,
           reasons: [{ code: CLASSIFICATION_REASON.ORS_NOT_APPROVED }]

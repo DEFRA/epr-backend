@@ -1030,7 +1030,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       })
     })
 
-    describe('EXCLUDED outcome - ORS not approved (VAL014)', () => {
+    describe('EXCLUDED outcome - ORS not found or not approved (VAL014)', () => {
       const approvedOverseasSites = {
         '001': { validFrom: new Date('2024-01-01') }
       }
@@ -1053,7 +1053,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
 
-      it('returns EXCLUDED when OSR_ID is not in overseasSites map', () => {
+      it('returns EXCLUDED with ORS_NOT_FOUND when OSR_ID is not in overseasSites map', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
           overseasSites: {
@@ -1062,7 +1062,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.reasons).toContainEqual({
-          code: CLASSIFICATION_REASON.ORS_NOT_APPROVED
+          code: CLASSIFICATION_REASON.ORS_NOT_FOUND
         })
       })
 
@@ -1092,14 +1092,14 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         })
       })
 
-      it('returns EXCLUDED when overseasSites map is empty', () => {
+      it('returns EXCLUDED with ORS_NOT_FOUND when overseasSites map is empty', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
           overseasSites: {}
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.reasons).toContainEqual({
-          code: CLASSIFICATION_REASON.ORS_NOT_APPROVED
+          code: CLASSIFICATION_REASON.ORS_NOT_FOUND
         })
       })
 
@@ -1284,7 +1284,9 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         }
         const result = schema.classifyForWasteBalance(row, {
           accreditation,
-          overseasSites: {}
+          overseasSites: {
+            '001': { validFrom: null }
+          }
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.reasons).toContainEqual({
