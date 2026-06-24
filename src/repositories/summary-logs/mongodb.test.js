@@ -6,10 +6,15 @@ import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { summaryLogFactory } from './contract/test-data.js'
+import { createMockDb } from '#test/mock-db.js'
+import { createMongoError } from '#test/mongo-error.js'
 
-/** @import { Db } from 'mongodb' */
-/** @import { SummaryLogsS3Config } from './mongodb.js' */
-/** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
+/**
+ * @import { S3Client } from '@aws-sdk/client-s3'
+ * @import { SummaryLogsS3Config } from './mongodb.js'
+ * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
+ * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
+ */
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -21,21 +26,13 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
   })
 }))
 
-const mockS3Config = /** @type {SummaryLogsS3Config} */ (
-  /** @type {unknown} */ ({
-    s3Client: {},
-    preSignedUrlExpiry: SIXTY_SECONDS
-  })
-)
+/** @type {SummaryLogsS3Config} */
+const mockS3Config = {
+  s3Client: /** @type {S3Client} */ (/** @type {unknown} */ ({})),
+  preSignedUrlExpiry: SIXTY_SECONDS
+}
 
-/**
- * @typedef {object} SummaryLogsRepoFixtures
- * @property {import('mongodb').MongoClient} mongoClient
- * @property {SummaryLogsRepositoryFactory} summaryLogsRepositoryFactory
- * @property {SummaryLogsRepository} summaryLogsRepository
- */
-
-const it = /** @type {import('vitest').TestAPI<SummaryLogsRepoFixtures>} */ (
+const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
   mongoIt.extend({
     mongoClient: async ({ db }, use) => {
       const client = await MongoClient.connect(db)
@@ -50,8 +47,7 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsRepoFixtures>} */ (
     },
 
     summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
-      const mockLogger = createMockLogger()
-      const repository = summaryLogsRepositoryFactory(mockLogger)
+      const repository = summaryLogsRepositoryFactory(createMockLogger())
       await use(repository)
     }
   })
@@ -64,26 +60,19 @@ describe('MongoDB summary logs repository', () => {
 
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
-      const mockDb = /** @type {Db} */ (
-        /** @type {unknown} */ ({
-          collection: () => ({
-            createIndex: async () => {},
-            findOne: async () => null, // No existing submitting log
-            insertOne: async () => {
-              throw Object.assign(new Error('Connection timeout'), {
-                code: 'ETIMEOUT'
-              })
-            }
-          })
-        })
-      )
+      const mockDb = createMockDb({
+        createIndex: async () => {},
+        findOne: async () => null, // No existing submitting log
+        insertOne: async () => {
+          throw createMongoError('Connection timeout', { code: 'ETIMEOUT' })
+        }
+      })
 
-      const mockLogger = createMockLogger()
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
       )
-      const repository = repositoryFactory(mockLogger)
+      const repository = repositoryFactory(createMockLogger())
 
       await expect(
         repository.insert(
@@ -99,36 +88,31 @@ describe('MongoDB summary logs repository', () => {
       const logId = `test-${randomUUID()}`
       let findOneCallCount = 0
 
-      const mockDb = /** @type {Db} */ (
-        /** @type {unknown} */ ({
-          collection: () => ({
-            createIndex: async () => {},
-            findOne: async () => {
-              findOneCallCount++
-              if (findOneCallCount === 1) {
-                // First call: document exists and is validated
-                return {
-                  _id: logId,
-                  version: 1,
-                  status: 'validated',
-                  organisationId: 'org-1',
-                  registrationId: 'reg-1'
-                }
-              }
-              // Second call: check for existing submitting - none found
-              return null
-            },
-            findOneAndUpdate: async () => null // Concurrent modification beat us
-          })
-        })
-      )
+      const mockDb = createMockDb({
+        createIndex: async () => {},
+        findOne: async () => {
+          findOneCallCount++
+          if (findOneCallCount === 1) {
+            // First call: document exists and is validated
+            return {
+              _id: logId,
+              version: 1,
+              status: 'validated',
+              organisationId: 'org-1',
+              registrationId: 'reg-1'
+            }
+          }
+          // Second call: check for existing submitting - none found
+          return null
+        },
+        findOneAndUpdate: async () => null // Concurrent modification beat us
+      })
 
-      const mockLogger = createMockLogger()
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
       )
-      const repository = repositoryFactory(mockLogger)
+      const repository = repositoryFactory(createMockLogger())
 
       const result = await repository.transitionToSubmittingExclusive(logId)
 
@@ -139,44 +123,37 @@ describe('MongoDB summary logs repository', () => {
       const logId = `test-${randomUUID()}`
       let findOneCallCount = 0
 
-      const mockDb = /** @type {Db} */ (
-        /** @type {unknown} */ ({
-          collection: () => ({
-            createIndex: async () => {},
-            findOne: async () => {
-              findOneCallCount++
-              if (findOneCallCount === 1) {
-                // First call: document exists and is validated
-                return {
-                  _id: logId,
-                  version: 1,
-                  status: 'validated',
-                  organisationId: 'org-1',
-                  registrationId: 'reg-1'
-                }
-              }
-              // Second call: check for existing submitting - none found
-              return null
-            },
-            findOneAndUpdate: async () => {
-              // Another request beat us and the unique index blocks our update
-              throw Object.assign(
-                new Error(
-                  'E11000 duplicate key error collection: epr-backend.summary-logs'
-                ),
-                { code: 11000 }
-              )
+      const mockDb = createMockDb({
+        createIndex: async () => {},
+        findOne: async () => {
+          findOneCallCount++
+          if (findOneCallCount === 1) {
+            // First call: document exists and is validated
+            return {
+              _id: logId,
+              version: 1,
+              status: 'validated',
+              organisationId: 'org-1',
+              registrationId: 'reg-1'
             }
-          })
-        })
-      )
+          }
+          // Second call: check for existing submitting - none found
+          return null
+        },
+        findOneAndUpdate: async () => {
+          // Another request beat us and the unique index blocks our update
+          throw createMongoError(
+            'E11000 duplicate key error collection: epr-backend.summary-logs',
+            { code: 11000 }
+          )
+        }
+      })
 
-      const mockLogger = createMockLogger()
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
       )
-      const repository = repositoryFactory(mockLogger)
+      const repository = repositoryFactory(createMockLogger())
 
       const result = await repository.transitionToSubmittingExclusive(logId)
 
@@ -187,40 +164,33 @@ describe('MongoDB summary logs repository', () => {
       const logId = `test-${randomUUID()}`
       let findOneCallCount = 0
 
-      const mockDb = /** @type {Db} */ (
-        /** @type {unknown} */ ({
-          collection: () => ({
-            createIndex: async () => {},
-            findOne: async () => {
-              findOneCallCount++
-              if (findOneCallCount === 1) {
-                // First call: document exists and is validated
-                return {
-                  _id: logId,
-                  version: 1,
-                  status: 'validated',
-                  organisationId: 'org-1',
-                  registrationId: 'reg-1'
-                }
-              }
-              // Second call: check for existing submitting - none found
-              return null
-            },
-            findOneAndUpdate: async () => {
-              throw Object.assign(new Error('Connection timeout'), {
-                code: 'ETIMEOUT'
-              })
+      const mockDb = createMockDb({
+        createIndex: async () => {},
+        findOne: async () => {
+          findOneCallCount++
+          if (findOneCallCount === 1) {
+            // First call: document exists and is validated
+            return {
+              _id: logId,
+              version: 1,
+              status: 'validated',
+              organisationId: 'org-1',
+              registrationId: 'reg-1'
             }
-          })
-        })
-      )
+          }
+          // Second call: check for existing submitting - none found
+          return null
+        },
+        findOneAndUpdate: async () => {
+          throw createMongoError('Connection timeout', { code: 'ETIMEOUT' })
+        }
+      })
 
-      const mockLogger = createMockLogger()
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
       )
-      const repository = repositoryFactory(mockLogger)
+      const repository = repositoryFactory(createMockLogger())
 
       await expect(
         repository.transitionToSubmittingExclusive(logId)

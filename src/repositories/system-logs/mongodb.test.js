@@ -5,8 +5,8 @@ import { createSystemLogsRepository } from './mongodb.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { MongoClient } from 'mongodb'
 import { randomUUID } from 'crypto'
+import { createMockDb } from '#test/mock-db.js'
 
-/** @import { Db } from 'mongodb' */
 /** @import { SystemLog, SystemLogsRepositoryFactory } from './port.js' */
 
 /**
@@ -34,17 +34,17 @@ const it = /** @type {import('vitest').TestAPI<SystemLogsRepoFixtures>} */ (
 
 const buildMockDb = () => {
   let callCount = 0
-  return /** @type {Db} */ (
-    /** @type {unknown} */ ({
-      collection: () => {
-        callCount++
-        if (callCount === 1) {
-          return { createIndex: async () => {} }
-        }
-        throw new Error('error accessing db')
+  return createMockDb({
+    collection: () => {
+      callCount++
+      if (callCount === 1) {
+        return /** @type {import('mongodb').Collection} */ (
+          /** @type {unknown} */ ({ createIndex: async () => {} })
+        )
       }
-    })
-  )
+      throw new Error('error accessing db')
+    }
+  })
 }
 
 const buildSystemLog = () =>
@@ -116,12 +116,7 @@ describe('Mongo DB system logs repository', () => {
   it('fails gracefully and logs an error when DB write fails', async () => {
     const mockLogger = createMockLogger()
     const mockDb = buildMockDb()
-    const collectionSpy = vi.spyOn(
-      /** @type {{ collection: () => unknown }} */ (
-        /** @type {unknown} */ (mockDb)
-      ),
-      'collection'
-    )
+    const collectionSpy = vi.spyOn(mockDb, 'collection')
 
     const repositoryFactory = await createSystemLogsRepository(mockDb)
     const repository = repositoryFactory(mockLogger)
