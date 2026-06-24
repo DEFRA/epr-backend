@@ -104,7 +104,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects ROW_ID below minimum', () => {
         const { error } = validationSchema.validate({ ROW_ID: 999 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 1000')
+        expect(error?.details[0].message).toBe('must be at least 1000')
       })
 
       it('rejects non-integer ROW_ID', () => {
@@ -133,7 +133,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           DATE_RECEIVED_FOR_EXPORT: 'not-a-date'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a valid date')
+        expect(error?.details[0].message).toBe('must be a valid date')
       })
     })
 
@@ -150,7 +150,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           DATE_OF_EXPORT: 'not-a-date'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a valid date')
+        expect(error?.details[0].message).toBe('must be a valid date')
       })
     })
 
@@ -167,7 +167,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           DATE_RECEIVED_BY_OSR: 'not-a-date'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a valid date')
+        expect(error?.details[0].message).toBe('must be a valid date')
       })
     })
 
@@ -185,7 +185,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects invalid EWC code format', () => {
         const { error } = validationSchema.validate({ EWC_CODE: '030308' })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must be a valid EWC code from the allowed list'
         )
       })
@@ -193,7 +193,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects EWC code not in allowed list', () => {
         const { error } = validationSchema.validate({ EWC_CODE: '99 99 99' })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must be a valid EWC code from the allowed list'
         )
       })
@@ -220,7 +220,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           DESCRIPTION_WASTE: 'Invalid waste type'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must be a valid waste description from the allowed list'
         )
       })
@@ -260,7 +260,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           BASEL_EXPORT_CODE: 'INVALID'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must be a valid Basel export code from the allowed list'
         )
       })
@@ -270,7 +270,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           BASEL_EXPORT_CODE: 'Z9999'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must be a valid Basel export code from the allowed list'
         )
       })
@@ -296,7 +296,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           EXPORT_CONTROLS: 'Some other control'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must be a valid export control type from the allowed list'
         )
       })
@@ -306,7 +306,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           EXPORT_CONTROLS: 'article 18 (green list)'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must be a valid export control type from the allowed list'
         )
       })
@@ -374,7 +374,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           CUSTOMS_CODES: 'A'.repeat(101)
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 100 characters')
+        expect(error?.details[0].message).toBe('must be at most 100 characters')
       })
 
       it('rejects code with accented characters', () => {
@@ -382,7 +382,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           CUSTOMS_CODES: 'caf\u00E9'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must contain only permitted characters'
         )
       })
@@ -392,7 +392,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           CUSTOMS_CODES: 'code\x00ref'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must contain only permitted characters'
         )
       })
@@ -432,7 +432,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           CONTAINER_NUMBER: 'A'.repeat(101)
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 100 characters')
+        expect(error?.details[0].message).toBe('must be at most 100 characters')
       })
 
       it('rejects container number with accented characters', () => {
@@ -440,7 +440,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           CONTAINER_NUMBER: 'caf\u00E9-container'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must contain only permitted characters'
         )
       })
@@ -450,7 +450,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           CONTAINER_NUMBER: 'CONT\x00123'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must contain only permitted characters'
         )
       })
@@ -475,13 +475,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects value below minimum (0)', () => {
         const { error } = validationSchema.validate({ OSR_ID: 0 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
+        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
 
       it('rejects value above maximum (1000)', () => {
         const { error } = validationSchema.validate({ OSR_ID: 1000 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
+        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
 
       it('rejects non-integer', () => {
@@ -492,7 +492,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects non-numeric string', () => {
         const { error } = validationSchema.validate({ OSR_ID: 'ABC' })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
+        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
     })
 
@@ -510,13 +510,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects value below minimum (0)', () => {
         const { error } = validationSchema.validate({ INTERIM_SITE_ID: 0 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
+        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
 
       it('rejects value above maximum (1000)', () => {
         const { error } = validationSchema.validate({ INTERIM_SITE_ID: 1000 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
+        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
     })
 
@@ -552,19 +552,19 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           it('rejects negative value', () => {
             const { error } = validationSchema.validate({ [field]: -1 })
             expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be at least 0')
+            expect(error?.details[0].message).toBe('must be at least 0')
           })
 
           it('rejects value above maximum (1000)', () => {
             const { error } = validationSchema.validate({ [field]: 1001 })
             expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be at most 1000')
+            expect(error?.details[0].message).toBe('must be at most 1000')
           })
 
           it('rejects non-number', () => {
             const { error } = validationSchema.validate({ [field]: 'heavy' })
             expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be a number')
+            expect(error?.details[0].message).toBe('must be a number')
           })
         })
       }
@@ -597,7 +597,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           RECYCLABLE_PROPORTION_PERCENTAGE: -0.1
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 0')
+        expect(error?.details[0].message).toBe('must be at least 0')
       })
 
       it('rejects value above 1', () => {
@@ -605,7 +605,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           RECYCLABLE_PROPORTION_PERCENTAGE: 1.1
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 1')
+        expect(error?.details[0].message).toBe('must be at most 1')
       })
     })
 
@@ -631,13 +631,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           it('rejects lowercase "yes"', () => {
             const { error } = validationSchema.validate({ [field]: 'yes' })
             expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be Yes or No')
+            expect(error?.details[0].message).toBe('must be Yes or No')
           })
 
           it('rejects other strings', () => {
             const { error } = validationSchema.validate({ [field]: 'Maybe' })
             expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be Yes or No')
+            expect(error?.details[0].message).toBe('must be Yes or No')
           })
         })
       }
@@ -687,7 +687,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Some other method'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must be a valid recyclable proportion calculation method'
         )
       })
@@ -732,7 +732,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           NET_WEIGHT: 100
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
         )
       })
@@ -799,7 +799,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           TONNAGE_RECEIVED_FOR_EXPORT: 80 // Should be 72
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
         )
       })
@@ -813,7 +813,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           TONNAGE_RECEIVED_FOR_EXPORT: 72 // Wrong - should be 71.892
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
         )
       })
