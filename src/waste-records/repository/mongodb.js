@@ -1,6 +1,6 @@
 /** @import { Collection, Db } from 'mongodb' */
 
-import { isDeepStrictEqual } from 'node:util'
+import { createHash } from 'node:crypto'
 
 /**
  * @typedef {import('./schema.js').RowState} RowState
@@ -26,7 +26,9 @@ export const WASTE_BALANCE_ROW_STATES_COLLECTION_NAME =
 /**
  * Ensures the row-states collection exists with the indexes required by the
  * waste record state design: a multikey index on `summaryLogIds` for the
- * committed-state membership query, and a row-identity index for row history.
+ * committed-state membership query, a row-identity index for row history, and a
+ * unique index on the waste-record-state identity (partition + content hash)
+ * that makes the content-addressed dedup atomic under concurrent writers.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -49,35 +51,96 @@ export async function ensureRowStatesCollection(db) {
     { name: 'row_history' }
   )
 
+  await collection.createIndex(
+    {
+      organisationId: 1,
+      registrationId: 1,
+      accreditationId: 1,
+      rowId: 1,
+      wasteRecordType: 1,
+      contentHash: 1
+    },
+    { name: 'waste_record_state_identity', unique: true }
+  )
+
   return collection
 }
 
 const toRowState = (doc) => {
-  const { _id, ...rest } = doc
+  const { _id, contentHash: _contentHash, ...rest } = doc
   return validateRowStateRead({ id: _id.toString(), ...rest })
 }
 
 /**
+ * Recursively orders object keys so that two semantically equal waste record
+ * states serialise to the same string, making the content hash independent of
+ * property insertion order.
+ *
+ * @param {unknown} value
+ * @returns {unknown}
+ */
+const canonicalise = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(canonicalise)
+  }
+  if (value !== null && typeof value === 'object') {
+    return Object.keys(value)
+      .sort((a, b) => (a > b ? 1 : -1))
+      .reduce((ordered, key) => {
+        ordered[key] = canonicalise(
+          /** @type {Record<string, unknown>} */ (value)[key]
+        )
+        return ordered
+      }, /** @type {Record<string, unknown>} */ ({}))
+  }
+  return value
+}
+
+/**
+ * @param {RowStateInsert} candidate
+ * @returns {string}
+ */
+const hashWasteRecordState = (candidate) =>
+  createHash('sha256')
+    .update(
+      JSON.stringify(
+        canonicalise({
+          data: candidate.data,
+          classification: candidate.classification
+        })
+      )
+    )
+    .digest('hex')
+
+/**
  * @param {Collection} collection
  * @param {RowStateInsert} candidate
- * @returns {Promise<{ _id: import('mongodb').ObjectId } | undefined>}
+ * @param {string} contentHash
+ * @returns {Promise<import('mongodb').WithId<import('mongodb').Document> | null>}
  */
-const findCommittedStateDoc = async (collection, candidate) => {
-  const existing = await collection
-    .find({
-      organisationId: candidate.organisationId,
-      registrationId: candidate.registrationId,
-      accreditationId: candidate.accreditationId,
-      rowId: candidate.rowId,
-      wasteRecordType: candidate.wasteRecordType
-    })
-    .toArray()
+const findCommittedStateDoc = (collection, candidate, contentHash) =>
+  collection.findOne({
+    organisationId: candidate.organisationId,
+    registrationId: candidate.registrationId,
+    accreditationId: candidate.accreditationId,
+    rowId: candidate.rowId,
+    wasteRecordType: candidate.wasteRecordType,
+    contentHash
+  })
 
-  return existing.find(
-    (doc) =>
-      isDeepStrictEqual(doc.data, candidate.data) &&
-      isDeepStrictEqual(doc.classification, candidate.classification)
+/**
+ * @param {Collection} collection
+ * @param {import('mongodb').ObjectId} _id
+ * @param {string} summaryLogId
+ * @returns {Promise<RowState>}
+ */
+const addMembership = async (collection, _id, summaryLogId) => {
+  await collection.updateOne(
+    { _id },
+    { $addToSet: { summaryLogIds: summaryLogId } }
   )
+  const updated = await collection.findOne({ _id })
+  return toRowState(updated)
 }
 
 /**
@@ -98,20 +161,31 @@ const upsertOne = async (collection, partition, entry, summaryLogId) => {
     classification: entry.classification,
     summaryLogIds: [summaryLogId]
   })
+  const contentHash = hashWasteRecordState(candidate)
 
-  const match = await findCommittedStateDoc(collection, candidate)
-
-  if (match) {
-    await collection.updateOne(
-      { _id: match._id },
-      { $addToSet: { summaryLogIds: summaryLogId } }
-    )
-    const updated = await collection.findOne({ _id: match._id })
-    return toRowState(updated)
+  const existing = await findCommittedStateDoc(
+    collection,
+    candidate,
+    contentHash
+  )
+  if (existing) {
+    return addMembership(collection, existing._id, summaryLogId)
   }
 
-  const result = await collection.insertOne(candidate)
-  return toRowState({ _id: result.insertedId, ...candidate })
+  try {
+    const result = await collection.insertOne({ ...candidate, contentHash })
+    return toRowState({ _id: result.insertedId, ...candidate, contentHash })
+  } catch (error) {
+    const winner = await findCommittedStateDoc(
+      collection,
+      candidate,
+      contentHash
+    )
+    if (!winner) {
+      throw error
+    }
+    return addMembership(collection, winner._id, summaryLogId)
+  }
 }
 
 /**

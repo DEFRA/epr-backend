@@ -2,7 +2,10 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { createMockSqsClient } from '#test/mock-sqs-client.js'
 import { commandQueueConsumerPlugin } from './queue-consumer.plugin.js'
+
+/** @import { Consumer } from 'sqs-consumer' */
 
 vi.mock('#common/helpers/sqs/sqs-client.js')
 vi.mock('#application/summary-logs/extractor.js')
@@ -55,17 +58,13 @@ describe('commandQueueConsumerPlugin', () => {
       })
     }
 
-    mockSqsClient = { destroy: vi.fn() }
+    mockSqsClient = createMockSqsClient()
     mockConsumer = { start: vi.fn(), stop: vi.fn() }
 
-    vi.mocked(createSqsClient).mockReturnValue(
-      /** @type {any} */ (mockSqsClient)
-    )
-    vi.mocked(createSummaryLogExtractor).mockReturnValue(
-      /** @type {any} */ ({})
-    )
+    vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
+    vi.mocked(createSummaryLogExtractor).mockReturnValue({ extract: vi.fn() })
     vi.mocked(createCommandQueueConsumer).mockResolvedValue(
-      /** @type {any} */ (mockConsumer)
+      /** @type {Consumer} */ (/** @type {unknown} */ (mockConsumer))
     )
   })
 

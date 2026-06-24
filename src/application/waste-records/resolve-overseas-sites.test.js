@@ -1,23 +1,28 @@
 import { describe, it, expect, vi } from 'vitest'
+
 import { resolveOverseasSites } from './resolve-overseas-sites.js'
+import {
+  createMockOrganisationsRepository,
+  createMockOverseasSitesRepository
+} from '#test/mock-repositories.js'
 
 describe('resolveOverseasSites', () => {
   it('returns resolved map keyed by zero-padded string OSR ID', async () => {
     const validFrom = new Date('2024-01-01')
-    const organisationsRepository = {
+    const organisationsRepository = createMockOrganisationsRepository({
       findRegistrationById: vi.fn().mockResolvedValue({
         overseasSites: {
           '001': { overseasSiteId: 'site-aaa' },
           '099': { overseasSiteId: 'site-bbb' }
         }
       })
-    }
-    const overseasSitesRepository = {
+    })
+    const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn().mockResolvedValue([
         { id: 'site-aaa', validFrom },
         { id: 'site-bbb', validFrom: new Date('2024-06-01') }
       ])
-    }
+    })
 
     const result = await resolveOverseasSites(
       organisationsRepository,
@@ -41,12 +46,14 @@ describe('resolveOverseasSites', () => {
   })
 
   it('returns empty map when registration has no overseasSites', async () => {
-    const organisationsRepository = {
+    const organisationsRepository = createMockOrganisationsRepository({
       findRegistrationById: vi.fn().mockResolvedValue({
         overseasSites: undefined
       })
-    }
-    const overseasSitesRepository = { findByIds: vi.fn() }
+    })
+    const overseasSitesRepository = createMockOverseasSitesRepository({
+      findByIds: vi.fn()
+    })
 
     const result = await resolveOverseasSites(
       organisationsRepository,
@@ -60,12 +67,14 @@ describe('resolveOverseasSites', () => {
   })
 
   it('returns empty map when overseasSites map is empty', async () => {
-    const organisationsRepository = {
+    const organisationsRepository = createMockOrganisationsRepository({
       findRegistrationById: vi.fn().mockResolvedValue({
         overseasSites: {}
       })
-    }
-    const overseasSitesRepository = { findByIds: vi.fn() }
+    })
+    const overseasSitesRepository = createMockOverseasSitesRepository({
+      findByIds: vi.fn()
+    })
 
     const result = await resolveOverseasSites(
       organisationsRepository,
@@ -79,10 +88,12 @@ describe('resolveOverseasSites', () => {
   })
 
   it('throws when registration is not found', async () => {
-    const organisationsRepository = {
+    const organisationsRepository = createMockOrganisationsRepository({
       findRegistrationById: vi.fn().mockResolvedValue(null)
-    }
-    const overseasSitesRepository = { findByIds: vi.fn() }
+    })
+    const overseasSitesRepository = createMockOverseasSitesRepository({
+      findByIds: vi.fn()
+    })
 
     await expect(
       resolveOverseasSites(
@@ -95,16 +106,16 @@ describe('resolveOverseasSites', () => {
   })
 
   it('sets validFrom to null when overseas site is not found', async () => {
-    const organisationsRepository = {
+    const organisationsRepository = createMockOrganisationsRepository({
       findRegistrationById: vi.fn().mockResolvedValue({
         overseasSites: {
           '001': { overseasSiteId: 'missing-site' }
         }
       })
-    }
-    const overseasSitesRepository = {
+    })
+    const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn().mockResolvedValue([])
-    }
+    })
 
     const result = await resolveOverseasSites(
       organisationsRepository,
@@ -119,18 +130,18 @@ describe('resolveOverseasSites', () => {
   })
 
   it('sets validFrom to null when overseas site has no validFrom', async () => {
-    const organisationsRepository = {
+    const organisationsRepository = createMockOrganisationsRepository({
       findRegistrationById: vi.fn().mockResolvedValue({
         overseasSites: {
           '001': { overseasSiteId: 'site-no-date' }
         }
       })
-    }
-    const overseasSitesRepository = {
+    })
+    const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi
         .fn()
         .mockResolvedValue([{ id: 'site-no-date', validFrom: undefined }])
-    }
+    })
 
     const result = await resolveOverseasSites(
       organisationsRepository,

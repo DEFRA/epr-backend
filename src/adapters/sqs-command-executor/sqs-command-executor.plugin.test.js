@@ -1,5 +1,6 @@
 import Hapi from '@hapi/hapi'
 
+import { createMockSqsClient } from '#test/mock-sqs-client.js'
 import { sqsCommandExecutorPlugin } from './sqs-command-executor.plugin.js'
 
 vi.mock('#common/helpers/sqs/sqs-client.js')
@@ -36,12 +37,11 @@ describe('sqsCommandExecutorPlugin', () => {
       })
     }
 
-    mockSqsClient = {
+    mockSqsClient = createMockSqsClient({
       send: vi.fn().mockResolvedValue({
         QueueUrl: 'http://localhost:4566/000000000000/test-queue'
-      }),
-      destroy: vi.fn()
-    }
+      })
+    })
 
     mockExecutor = {
       summaryLogsWorker: {

@@ -15,6 +15,10 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import {
+  createMockOverseasSitesRepository,
+  createMockWasteBalancesRepository
+} from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -242,17 +246,22 @@ describe('Repeated uploads of identical data', () => {
         logger: mockLogger,
         reportsRepository: /** @type {any} */ ({
           findPeriodicReports: async () => []
+        }),
+        overseasSitesRepository: createMockOverseasSitesRepository({
+          findByIds: vi.fn().mockResolvedValue([])
         })
       })
 
-      const syncWasteRecords = syncFromSummaryLog(
-        /** @type {any} */ ({
-          extractor: summaryLogExtractor,
-          wasteRecordRepository: wasteRecordsRepository,
-          organisationsRepository,
-          overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
-        })
-      )
+      const syncWasteRecords = syncFromSummaryLog({
+        extractor: summaryLogExtractor,
+        wasteRecordRepository: wasteRecordsRepository,
+        wasteBalancesRepository: createMockWasteBalancesRepository(),
+        organisationsRepository,
+        overseasSitesRepository: createMockOverseasSitesRepository({
+          findByIds: vi.fn().mockResolvedValue([])
+        }),
+        logger: mockLogger
+      })
 
       const summaryLogsWorker = {
         validate: validateSummaryLog,

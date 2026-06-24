@@ -4,9 +4,9 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { summaryLogFactory } from './contract/test-data.js'
 import { createMockDb } from '#test/mock-db.js'
-import { createMockLogger } from '#test/mock-logger.js'
 import { createMongoError } from '#test/mongo-error.js'
 
 /**

@@ -9,7 +9,7 @@ const RETRY_DELAY_MS = 25
  * Returns the polled resource. The shape varies by repository (organisations,
  * summary-logs, ...), so the return is intentionally untyped.
  *
- * @param {{findById: (arg0: string) => Promise<{ version: number }>}} repository - Repository instance with findById method
+ * @param {{findById: (arg0: string) => Promise<{ version: number } | null>}} repository - Repository instance with findById method
  * @param {string} id - Resource ID to poll
  * @param {number} expectedVersion - Version number to wait for
  * @returns {Promise<any>}
@@ -18,7 +18,7 @@ const RETRY_DELAY_MS = 25
 export const waitForVersion = async (repository, id, expectedVersion) => {
   for (let i = 0; i < MAX_RETRIES; i++) {
     const result = await repository.findById(id)
-    if (result?.version >= expectedVersion) {
+    if (result && result.version >= expectedVersion) {
       return result
     }
     /* v8 ignore next 5 */
