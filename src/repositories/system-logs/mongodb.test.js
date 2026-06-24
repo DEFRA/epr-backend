@@ -1,12 +1,12 @@
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createSystemLogsRepository } from './mongodb.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { MongoClient } from 'mongodb'
 import { randomUUID } from 'crypto'
 
 /** @import { Db } from 'mongodb' */
-/** @import { TypedLogger } from '#common/helpers/logging/logger.js' */
 /** @import { SystemLog, SystemLogsRepositoryFactory } from './port.js' */
 
 /**
@@ -47,11 +47,6 @@ const buildMockDb = () => {
   )
 }
 
-const buildMockLogger = () =>
-  /** @type {TypedLogger} */ (
-    /** @type {unknown} */ ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() })
-  )
-
 const buildSystemLog = () =>
   /** @type {SystemLog} */ (
     /** @type {unknown} */ ({
@@ -82,7 +77,7 @@ describe('Mongo DB system logs repository', () => {
         context: { organisationId }
       })
 
-    const { systemLogs } = await systemLogsRepository(buildMockLogger()).find({
+    const { systemLogs } = await systemLogsRepository(createMockLogger()).find({
       organisationId,
       limit: 10
     })
@@ -110,7 +105,7 @@ describe('Mongo DB system logs repository', () => {
         context: { organisationId }
       })
 
-    const { systemLogs } = await systemLogsRepository(buildMockLogger()).find({
+    const { systemLogs } = await systemLogsRepository(createMockLogger()).find({
       organisationId,
       limit: 10
     })
@@ -119,7 +114,7 @@ describe('Mongo DB system logs repository', () => {
   })
 
   it('fails gracefully and logs an error when DB write fails', async () => {
-    const mockLogger = buildMockLogger()
+    const mockLogger = createMockLogger()
     const mockDb = buildMockDb()
     const collectionSpy = vi.spyOn(
       /** @type {{ collection: () => unknown }} */ (
@@ -138,7 +133,7 @@ describe('Mongo DB system logs repository', () => {
   })
 
   it('fails gracefully and logs an error when insertMany DB write fails', async () => {
-    const mockLogger = buildMockLogger()
+    const mockLogger = createMockLogger()
     const repositoryFactory = await createSystemLogsRepository(buildMockDb())
     const repository = repositoryFactory(mockLogger)
 
