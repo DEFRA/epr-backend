@@ -76,8 +76,7 @@ export const statusHistoryItemSchema = Joi.object({
       REG_ACC_STATUS.SUSPENDED
     )
     .required(),
-  updatedAt: Joi.date().iso().required(),
-  updatedBy: idSchema.optional()
+  updatedAt: Joi.date().iso().required()
 })
 
 export const companyDetailsSchema = Joi.object({

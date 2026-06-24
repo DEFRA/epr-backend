@@ -126,7 +126,7 @@ const applyChangesToStored = (stored, changes) => {
 
 const performAppendStatusHistory =
   (storage, staleCache, pendingSyncRef, findById) =>
-  async (id, version, target, toStatus, updatedBy) => {
+  async (id, version, target, toStatus) => {
     const validatedId = validateId(id)
 
     const existingIndex = storage.findIndex((o) => o._id === validatedId)
@@ -146,8 +146,7 @@ const performAppendStatusHistory =
     const { changes, previousStatus } = prepareStatusHistoryAppend(
       derived,
       target,
-      toStatus,
-      updatedBy
+      toStatus
     )
 
     const updated = applyChangesToStored(existing, changes)

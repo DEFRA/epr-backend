@@ -169,7 +169,7 @@ const buildPushSpec = (changes) => {
 }
 
 const performAppendStatusHistory =
-  (db, findById) => async (id, version, target, toStatus, updatedBy) => {
+  (db, findById) => async (id, version, target, toStatus) => {
     const validatedId = validateId(id)
 
     const existing = await db
@@ -183,8 +183,7 @@ const performAppendStatusHistory =
     const { changes, previousStatus } = prepareStatusHistoryAppend(
       derived,
       target,
-      toStatus,
-      updatedBy
+      toStatus
     )
 
     const { push, arrayFilters } = buildPushSpec(changes)

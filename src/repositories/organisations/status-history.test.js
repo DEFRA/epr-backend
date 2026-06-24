@@ -47,7 +47,7 @@ const acc = (overrides = {}) => ({
 })
 
 describe('prepareStatusHistoryAppend', () => {
-  it('appends an organisation status entry with updatedBy', () => {
+  it('appends an organisation status entry', () => {
     const org = orgWith({
       status: 'created',
       registrations: [reg({ status: 'approved' })]
@@ -55,8 +55,7 @@ describe('prepareStatusHistoryAppend', () => {
     const result = prepareStatusHistoryAppend(
       org,
       { type: 'organisation' },
-      'approved',
-      'user-9'
+      'approved'
     )
     expect(result.previousStatus).toBe('created')
     expect(result.changes).toEqual([
@@ -64,8 +63,7 @@ describe('prepareStatusHistoryAppend', () => {
         itemType: 'organisation',
         entry: {
           status: 'approved',
-          updatedAt: expect.any(Date),
-          updatedBy: 'user-9'
+          updatedAt: expect.any(Date)
         }
       }
     ])
@@ -74,7 +72,7 @@ describe('prepareStatusHistoryAppend', () => {
   it('rejects organisation transition to active (link-flow owned)', () => {
     const org = orgWith({ status: 'approved', registrations: [reg()] })
     expect(() =>
-      prepareStatusHistoryAppend(org, { type: 'organisation' }, 'active', 'u')
+      prepareStatusHistoryAppend(org, { type: 'organisation' }, 'active')
     ).toThrow(/active/i)
   })
 
@@ -84,14 +82,14 @@ describe('prepareStatusHistoryAppend', () => {
       registrations: [reg({ status: 'created' })]
     })
     expect(() =>
-      prepareStatusHistoryAppend(org, { type: 'organisation' }, 'approved', 'u')
+      prepareStatusHistoryAppend(org, { type: 'organisation' }, 'approved')
     ).toThrow(/at least one approved registration/i)
   })
 
   it('rejects an invalid organisation transition with 422', () => {
     const org = orgWith({ status: 'approved', registrations: [reg()] })
     expect(() =>
-      prepareStatusHistoryAppend(org, { type: 'organisation' }, 'rejected', 'u')
+      prepareStatusHistoryAppend(org, { type: 'organisation' }, 'rejected')
     ).toThrow(/Cannot transition organisation status/i)
   })
 
@@ -102,8 +100,7 @@ describe('prepareStatusHistoryAppend', () => {
     const result = prepareStatusHistoryAppend(
       org,
       { type: 'registration', registrationId: 'reg-1' },
-      'approved',
-      'user-9'
+      'approved'
     )
     expect(result.changes).toEqual([
       {
@@ -111,8 +108,7 @@ describe('prepareStatusHistoryAppend', () => {
         id: 'reg-1',
         entry: {
           status: 'approved',
-          updatedAt: expect.any(Date),
-          updatedBy: 'user-9'
+          updatedAt: expect.any(Date)
         }
       }
     ])
@@ -128,16 +124,14 @@ describe('prepareStatusHistoryAppend', () => {
     const result = prepareStatusHistoryAppend(
       org,
       { type: 'registration', registrationId: 'reg-1' },
-      'suspended',
-      'user-9'
+      'suspended'
     )
     expect(result.changes).toContainEqual({
       itemType: 'registration',
       id: 'reg-1',
       entry: {
         status: 'suspended',
-        updatedAt: expect.any(Date),
-        updatedBy: 'user-9'
+        updatedAt: expect.any(Date)
       }
     })
     expect(result.changes).toContainEqual({
@@ -145,8 +139,7 @@ describe('prepareStatusHistoryAppend', () => {
       id: 'acc-1',
       entry: {
         status: 'suspended',
-        updatedAt: expect.any(Date),
-        updatedBy: 'user-9'
+        updatedAt: expect.any(Date)
       }
     })
   })
@@ -161,16 +154,14 @@ describe('prepareStatusHistoryAppend', () => {
     const result = prepareStatusHistoryAppend(
       org,
       { type: 'registration', registrationId: 'reg-1' },
-      'cancelled',
-      'user-9'
+      'cancelled'
     )
     expect(result.changes).toContainEqual({
       itemType: 'registration',
       id: 'reg-1',
       entry: {
         status: 'cancelled',
-        updatedAt: expect.any(Date),
-        updatedBy: 'user-9'
+        updatedAt: expect.any(Date)
       }
     })
     expect(result.changes).toContainEqual({
@@ -178,8 +169,7 @@ describe('prepareStatusHistoryAppend', () => {
       id: 'acc-1',
       entry: {
         status: 'cancelled',
-        updatedAt: expect.any(Date),
-        updatedBy: 'user-9'
+        updatedAt: expect.any(Date)
       }
     })
   })
@@ -191,8 +181,7 @@ describe('prepareStatusHistoryAppend', () => {
     const result = prepareStatusHistoryAppend(
       org,
       { type: 'registration', registrationId: 'reg-1' },
-      'approved',
-      'user-9'
+      'approved'
     )
     expect(result.previousStatus).toBe('cancelled')
     expect(result.changes).toEqual([
@@ -201,8 +190,7 @@ describe('prepareStatusHistoryAppend', () => {
         id: 'reg-1',
         entry: {
           status: 'approved',
-          updatedAt: expect.any(Date),
-          updatedBy: 'user-9'
+          updatedAt: expect.any(Date)
         }
       }
     ])
@@ -222,8 +210,7 @@ describe('prepareStatusHistoryAppend', () => {
         registrationId: 'reg-1',
         accreditationId: 'acc-1'
       },
-      'suspended',
-      'user-9'
+      'suspended'
     )
     expect(result.previousStatus).toBe('approved')
     expect(result.changes).toEqual([
@@ -232,8 +219,7 @@ describe('prepareStatusHistoryAppend', () => {
         id: 'acc-1',
         entry: {
           status: 'suspended',
-          updatedAt: expect.any(Date),
-          updatedBy: 'user-9'
+          updatedAt: expect.any(Date)
         }
       }
     ])
@@ -254,8 +240,7 @@ describe('prepareStatusHistoryAppend', () => {
           registrationId: 'nope',
           accreditationId: 'acc-1'
         },
-        'suspended',
-        'u'
+        'suspended'
       )
     ).toThrow(/registration nope not found/i)
   })
@@ -275,8 +260,7 @@ describe('prepareStatusHistoryAppend', () => {
           registrationId: 'reg-1',
           accreditationId: 'acc-2'
         },
-        'suspended',
-        'u'
+        'suspended'
       )
     ).toThrow(/not linked to registration/i)
   })
@@ -296,8 +280,7 @@ describe('prepareStatusHistoryAppend', () => {
           registrationId: 'reg-1',
           accreditationId: 'acc-1'
         },
-        'approved',
-        'u'
+        'approved'
       )
     ).toThrow(/not linked to an approved registration/i)
   })
@@ -308,8 +291,7 @@ describe('prepareStatusHistoryAppend', () => {
       prepareStatusHistoryAppend(
         org,
         { type: 'registration', registrationId: 'nope' },
-        'suspended',
-        'u'
+        'suspended'
       )
     ).toThrow(/not found/i)
   })
@@ -337,16 +319,14 @@ describe('prepareStatusHistoryAppend', () => {
     const result = prepareStatusHistoryAppend(
       org,
       { type: 'registration', registrationId: 'reg-1' },
-      'suspended',
-      'user-9'
+      'suspended'
     )
     expect(result.changes).toContainEqual({
       itemType: 'registration',
       id: 'reg-1',
       entry: {
         status: 'suspended',
-        updatedAt: expect.any(Date),
-        updatedBy: 'user-9'
+        updatedAt: expect.any(Date)
       }
     })
     expect(result.changes).toContainEqual({
@@ -354,8 +334,7 @@ describe('prepareStatusHistoryAppend', () => {
       id: 'acc-1',
       entry: {
         status: 'suspended',
-        updatedAt: expect.any(Date),
-        updatedBy: 'user-9'
+        updatedAt: expect.any(Date)
       }
     })
     expect(result.changes).toHaveLength(2)
@@ -388,8 +367,7 @@ describe('prepareStatusHistoryAppend', () => {
         registrationId: 'reg-1',
         accreditationId: 'acc-1'
       },
-      'suspended',
-      'user-9'
+      'suspended'
     )
     expect(result.changes).toEqual([
       {
@@ -397,8 +375,7 @@ describe('prepareStatusHistoryAppend', () => {
         id: 'acc-1',
         entry: {
           status: 'suspended',
-          updatedAt: expect.any(Date),
-          updatedBy: 'user-9'
+          updatedAt: expect.any(Date)
         }
       }
     ])

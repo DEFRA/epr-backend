@@ -99,15 +99,13 @@ const makeRoute = ({ type, path }) => {
       const organisationId = request.params.organisationId
       const { status, reason, version } = request.payload
       const target = targetFor(type, request)
-      const updatedBy = request.auth.credentials.id
 
       const { organisation, previousStatus } =
         await organisationsRepository.appendStatusHistory(
           organisationId,
           version,
           target,
-          status,
-          updatedBy
+          status
         )
 
       await auditStatusTransition(request, {

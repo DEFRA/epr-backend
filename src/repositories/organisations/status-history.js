@@ -26,37 +26,25 @@ import { createStatusHistoryEntry } from './helpers.js'
  *   organisation in derived-status shape (items carry `.status`)
  * @param {StatusTransitionTarget} target
  * @param {string} toStatus
- * @param {string} updatedBy authenticated user id
  * @returns {import('./port.js').StatusHistoryAppendResult}
  */
-export const prepareStatusHistoryAppend = (
-  existing,
-  target,
-  toStatus,
-  updatedBy
-) => {
+export const prepareStatusHistoryAppend = (existing, target, toStatus) => {
   if (target.type === 'organisation') {
-    return prepareOrganisation(existing, toStatus, updatedBy)
+    return prepareOrganisation(existing, toStatus)
   }
   if (target.type === 'registration') {
-    return prepareRegistration(
-      existing,
-      target.registrationId,
-      toStatus,
-      updatedBy
-    )
+    return prepareRegistration(existing, target.registrationId, toStatus)
   }
   return prepareAccreditation(
     existing,
     target.registrationId,
     target.accreditationId,
-    toStatus,
-    updatedBy
+    toStatus
   )
 }
 
 /** @returns {import('./port.js').StatusHistoryAppendResult} */
-const prepareOrganisation = (existing, toStatus, updatedBy) => {
+const prepareOrganisation = (existing, toStatus) => {
   if (toStatus === ORGANISATION_STATUS.ACTIVE) {
     throw Boom.badData(
       'Cannot transition organisation to active: activation is owned by the Defra ID link flow'
@@ -74,14 +62,14 @@ const prepareOrganisation = (existing, toStatus, updatedBy) => {
     changes: [
       {
         itemType: 'organisation',
-        entry: createStatusHistoryEntry(toStatus, updatedBy)
+        entry: createStatusHistoryEntry(toStatus)
       }
     ]
   }
 }
 
 /** @returns {import('./port.js').StatusHistoryAppendResult} */
-const prepareRegistration = (existing, registrationId, toStatus, updatedBy) => {
+const prepareRegistration = (existing, registrationId, toStatus) => {
   const registration = existing.registrations.find(
     (r) => r.id === registrationId
   )
@@ -106,7 +94,7 @@ const prepareRegistration = (existing, registrationId, toStatus, updatedBy) => {
     {
       itemType: 'registration',
       id: registrationId,
-      entry: createStatusHistoryEntry(toStatus, updatedBy)
+      entry: createStatusHistoryEntry(toStatus)
     }
   ]
 
@@ -121,7 +109,7 @@ const prepareRegistration = (existing, registrationId, toStatus, updatedBy) => {
       changes.push({
         itemType: 'accreditation',
         id: accreditation.id,
-        entry: createStatusHistoryEntry(accreditation.status, updatedBy)
+        entry: createStatusHistoryEntry(accreditation.status)
       })
     }
   }
@@ -134,8 +122,7 @@ const prepareAccreditation = (
   existing,
   registrationId,
   accreditationId,
-  toStatus,
-  updatedBy
+  toStatus
 ) => {
   const registration = existing.registrations.find(
     (r) => r.id === registrationId
@@ -173,7 +160,7 @@ const prepareAccreditation = (
       {
         itemType: 'accreditation',
         id: accreditationId,
-        entry: createStatusHistoryEntry(toStatus, updatedBy)
+        entry: createStatusHistoryEntry(toStatus)
       }
     ]
   }

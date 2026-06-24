@@ -21,13 +21,11 @@ import { getCurrentStatus } from './status.js'
  * Creates a status history entry for an organisation, registration, or accreditation.
  *
  * @param {string} status - The status value to record
- * @param {string} [updatedBy] - Optional user identifier who triggered the status change
- * @returns {{ status: string, updatedAt: Date, updatedBy?: string }}
+ * @returns {{ status: string, updatedAt: Date }}
  */
-export const createStatusHistoryEntry = (status, updatedBy) => ({
+export const createStatusHistoryEntry = (status) => ({
   status,
-  updatedAt: new Date(),
-  ...(updatedBy ? { updatedBy } : {})
+  updatedAt: new Date()
 })
 
 export const createInitialStatusHistory = () => {

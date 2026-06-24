@@ -35,12 +35,11 @@ describe('validateStatusHistory', () => {
     )
   })
 
-  it('validates statusHistory with optional updatedBy field', () => {
+  it('validates a statusHistory entry with status and updatedAt', () => {
     const statusHistory = [
       {
         status: REG_ACC_STATUS.CREATED,
-        updatedAt: new Date(),
-        updatedBy: new ObjectId().toString()
+        updatedAt: new Date()
       }
     ]
 

@@ -89,8 +89,7 @@ export const appendStatusHistoryContract = (it) => {
           id,
           version,
           { type: 'organisation' },
-          ORGANISATION_STATUS.APPROVED,
-          'admin-user-1'
+          ORGANISATION_STATUS.APPROVED
         )
 
       expect(previousStatus).toBe(ORGANISATION_STATUS.CREATED)
@@ -99,7 +98,6 @@ export const appendStatusHistoryContract = (it) => {
 
       const lastEntry = updated.statusHistory.at(-1)
       expect(lastEntry.status).toBe(ORGANISATION_STATUS.APPROVED)
-      expect(lastEntry.updatedBy).toBe('admin-user-1')
     })
 
     it('throws conflict (409) on a stale version', async () => {
@@ -110,8 +108,7 @@ export const appendStatusHistoryContract = (it) => {
           id,
           1,
           { type: 'organisation' },
-          ORGANISATION_STATUS.APPROVED,
-          'admin-user-1'
+          ORGANISATION_STATUS.APPROVED
         )
       ).rejects.toMatchObject({
         isBoom: true,
@@ -129,8 +126,7 @@ export const appendStatusHistoryContract = (it) => {
           inserted.id,
           inserted.version,
           { type: 'organisation' },
-          ORGANISATION_STATUS.ACTIVE,
-          'admin-user-1'
+          ORGANISATION_STATUS.ACTIVE
         )
       ).rejects.toMatchObject({
         isBoom: true,
@@ -148,15 +144,13 @@ export const appendStatusHistoryContract = (it) => {
         inserted.id,
         inserted.version,
         { type: 'registration', registrationId },
-        REG_ACC_STATUS.APPROVED,
-        'admin-user-2'
+        REG_ACC_STATUS.APPROVED
       )
 
       const registration = updated.registrations.find(
         (r) => r.id === registrationId
       )
       expect(registration.status).toBe(REG_ACC_STATUS.APPROVED)
-      expect(registration.statusHistory.at(-1).updatedBy).toBe('admin-user-2')
       expect(updated.version).toBe(inserted.version + 1)
     })
 
@@ -168,8 +162,7 @@ export const appendStatusHistoryContract = (it) => {
         id,
         version,
         { type: 'registration', registrationId },
-        REG_ACC_STATUS.SUSPENDED,
-        'admin-user-3'
+        REG_ACC_STATUS.SUSPENDED
       )
 
       const registration = updated.registrations.find(
@@ -181,7 +174,6 @@ export const appendStatusHistoryContract = (it) => {
 
       expect(registration.status).toBe(REG_ACC_STATUS.SUSPENDED)
       expect(accreditation.status).toBe(REG_ACC_STATUS.SUSPENDED)
-      expect(accreditation.statusHistory.at(-1).updatedBy).toBe('admin-user-3')
     })
 
     it('throws notFound (404) for an unknown organisation id', async () => {
@@ -190,8 +182,7 @@ export const appendStatusHistoryContract = (it) => {
           new ObjectId().toString(),
           1,
           { type: 'organisation' },
-          ORGANISATION_STATUS.APPROVED,
-          'admin-user-1'
+          ORGANISATION_STATUS.APPROVED
         )
       ).rejects.toMatchObject({
         isBoom: true,
@@ -209,8 +200,7 @@ export const appendStatusHistoryContract = (it) => {
           inserted.id,
           inserted.version,
           { type: 'registration', registrationId: new ObjectId().toString() },
-          REG_ACC_STATUS.APPROVED,
-          'admin-user-1'
+          REG_ACC_STATUS.APPROVED
         )
       ).rejects.toMatchObject({
         isBoom: true,

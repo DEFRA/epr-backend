@@ -123,7 +123,6 @@ describe('POST status-history routes', () => {
     const body = JSON.parse(response.payload)
     expect(body.status).toBe(ORGANISATION_STATUS.APPROVED)
     expect(body.version).toBe(org.version + 1)
-    expect(body.statusHistory.at(-1).updatedBy).toBe('test-user-id')
 
     const logs = await findSystemLog(org.id)
     expect(logs).toHaveLength(1)

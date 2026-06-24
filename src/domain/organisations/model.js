@@ -233,7 +233,6 @@ export const USER_ROLES = Object.freeze({
  * @typedef {{
  *   status: RegAccStatus;
  *   updatedAt: Date;
- *   updatedBy?: string;
  * }} StatusHistoryItem
  */
 
