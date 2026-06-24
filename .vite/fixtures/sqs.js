@@ -18,6 +18,13 @@ const CREDENTIALS = {
 const QUEUE_NAME_PREFIX = 'epr_backend_commands'
 const DLQ_NAME_PREFIX = 'epr_backend_commands_dlq'
 
+/**
+ * A real SQSClient augmented with the queue names this fixture provisions, so
+ * tests can resolve queue URLs without re-deriving the names.
+ *
+ * @typedef {SQSClient & { queueName: string, dlqName: string }} FixtureSqsClient
+ */
+
 let testCounter = 0
 
 /**
@@ -98,7 +105,7 @@ const sqsClientFixture = {
         AttributeNames: ['QueueArn']
       })
     )
-    const dlqArn = dlqAttributes.Attributes.QueueArn
+    const dlqArn = dlqAttributes.Attributes?.QueueArn
 
     // Create main queue with redrive policy
     await client.send(
@@ -115,11 +122,12 @@ const sqsClientFixture = {
     )
 
     // Extend client with queue names for easy access in tests
-    client.queueName = queueName
-    client.dlqName = dlqName
+    const fixtureClient = /** @type {FixtureSqsClient} */ (client)
+    fixtureClient.queueName = queueName
+    fixtureClient.dlqName = dlqName
 
-    await use(client)
-    client.destroy()
+    await use(fixtureClient)
+    fixtureClient.destroy()
   }
 }
 

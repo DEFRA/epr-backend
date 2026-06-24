@@ -6,26 +6,31 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { aggregatePrnTonnage } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
+import { createMockLogger } from '#test/mock-logger.js'
+
+/** @import { Db } from 'mongodb' */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
 vi.mock('#application/prn-tonnage/aggregate-prn-tonnage.js', () => ({
   aggregatePrnTonnage: vi.fn()
 }))
 
 describe('getPrnTonnage route handler', () => {
-  const mockDb = {}
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn()
-  }
+  const mockDb = /** @type {Db} */ (/** @type {unknown} */ ({}))
+  const mockLogger = createMockLogger()
+
+  const mockRequest = /** @type {HapiRequest} */ (
+    /** @type {unknown} */ ({ db: mockDb, logger: mockLogger })
+  )
 
   const mockCode = vi.fn()
   const mockResponse = vi.fn(() => ({
     code: mockCode
   }))
 
-  const mockH = {
-    response: mockResponse
-  }
+  const mockH = /** @type {HapiResponseToolkit} */ (
+    /** @type {unknown} */ ({ response: mockResponse })
+  )
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -38,7 +43,7 @@ describe('getPrnTonnage route handler', () => {
     }
     vi.mocked(aggregatePrnTonnage).mockResolvedValue(payload)
 
-    await getPrnTonnage.handler({ db: mockDb, logger: mockLogger }, mockH)
+    await getPrnTonnage.handler(mockRequest, mockH)
 
     expect(aggregatePrnTonnage).toHaveBeenCalledWith(mockDb)
     expect(mockLogger.info).toHaveBeenCalledWith({
@@ -58,7 +63,7 @@ describe('getPrnTonnage route handler', () => {
     vi.mocked(aggregatePrnTonnage).mockRejectedValue(error)
 
     await expect(
-      getPrnTonnage.handler({ db: mockDb, logger: mockLogger }, mockH)
+      getPrnTonnage.handler(mockRequest, mockH)
     ).rejects.toMatchObject({
       isBoom: true,
       output: {

@@ -12,6 +12,7 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -244,6 +245,7 @@ describe('Repeated uploads of identical data', () => {
         wasteRecordsRepository,
         summaryLogExtractor,
         logger: mockLogger,
+        overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
         reportsRepository: /** @type {any} */ ({
           findPeriodicReports: async () => []
         }),
