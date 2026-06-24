@@ -17,6 +17,7 @@ import {
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 import { getCurrentStatus } from './status.js'
+import { prepareStatusHistoryAppend } from './status-history.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -137,6 +138,74 @@ const performReplace = (db) => async (id, version, updates) => {
     )
   }
 }
+
+/**
+ * Build the `$push` document and `arrayFilters` for an atomic status history
+ * append. Organisation changes push directly onto `statusHistory`; registration
+ * and accreditation changes target the matched array element via a unique
+ * positional array filter per change.
+ *
+ * @param {import('./port.js').StatusHistoryChange[]} changes
+ * @returns {{ push: Record<string, any>, arrayFilters: Record<string, any>[] }}
+ */
+const buildPushSpec = (changes) => {
+  const push = {}
+  const arrayFilters = []
+
+  changes.forEach((change, index) => {
+    if (change.itemType === 'organisation') {
+      push.statusHistory = change.entry
+      return
+    }
+
+    const collection =
+      change.itemType === 'registration' ? 'registrations' : 'accreditations'
+    const marker = `el${index}`
+    push[`${collection}.$[${marker}].statusHistory`] = change.entry
+    arrayFilters.push({ [`${marker}.id`]: change.id })
+  })
+
+  return { push, arrayFilters }
+}
+
+const performAppendStatusHistory =
+  (db, findById) => async (id, version, target, toStatus, updatedBy) => {
+    const validatedId = validateId(id)
+
+    const existing = await db
+      .collection(COLLECTION_NAME)
+      .findOne({ _id: ObjectId.createFromHexString(validatedId) })
+    if (!existing) {
+      throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+    }
+
+    const derived = mapDocumentWithCurrentStatuses(existing)
+    const { changes, previousStatus } = prepareStatusHistoryAppend(
+      derived,
+      target,
+      toStatus,
+      updatedBy
+    )
+
+    const { push, arrayFilters } = buildPushSpec(changes)
+
+    const result = await db
+      .collection(COLLECTION_NAME)
+      .updateOne(
+        { _id: ObjectId.createFromHexString(validatedId), version },
+        { $push: push, $inc: { version: 1 } },
+        arrayFilters.length ? { arrayFilters } : {}
+      )
+
+    if (result.matchedCount === 0) {
+      throw Boom.conflict(
+        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+      )
+    }
+
+    const organisation = await findById(validatedId, version + 1)
+    return { organisation, previousStatus }
+  }
 
 const handleFoundDocument = (doc, minimumVersion) => {
   const mapped = mapDocumentWithCurrentStatuses(doc)
@@ -467,7 +536,8 @@ export const createOrganisationsRepository = async (
       findAccreditationById: performFindAccreditationById(findById),
       findByOrgId: performFindByOrgId(db),
       replaceRegistrationOverseasSites:
-        performReplaceRegistrationOverseasSites(db)
+        performReplaceRegistrationOverseasSites(db),
+      appendStatusHistory: performAppendStatusHistory(db, findById)
     }
   }
 }
