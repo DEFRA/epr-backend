@@ -6,11 +6,14 @@ import {
 } from '#domain/waste-records/model.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildVersionData,
   toWasteRecordVersions
 } from '#repositories/waste-records/contract/test-data.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -1532,5 +1535,241 @@ describe('syncFromSummaryLog', () => {
       type: WASTE_RECORD_TYPE.SENT_ON
     })
     expect(sentOn.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
+  })
+
+  describe('committed waste record states (forward path)', () => {
+    let rowStateRepository
+    const flagOn = createInMemoryFeatureFlags({ wasteRecordStates: true })
+
+    beforeEach(() => {
+      rowStateRepository = createInMemoryRowStateRepository()()
+    })
+
+    const syncWith = (extractor, featureFlags = flagOn) =>
+      /** @type {any} */ (syncFromSummaryLog)({
+        extractor,
+        wasteRecordRepository,
+        wasteBalancesRepository,
+        organisationsRepository,
+        overseasSitesRepository,
+        rowStateRepository,
+        featureFlags
+      })
+
+    const reprocessorRegisteredOnlyData = {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' } },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Received', row: 7, column: 'A' },
+          headers: ['ROW_ID', 'MONTH_RECEIVED_FOR_REPROCESSING', 'NET_WEIGHT'],
+          rows: [{ rowNumber: 8, values: [1000, '2025-01-01', 10.5] }]
+        },
+        SENT_ON_LOADS: {
+          location: { sheet: 'Sent on', row: 7, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_LOAD_LEFT_SITE',
+            'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
+          ],
+          rows: [{ rowNumber: 8, values: [5000, '2025-03-01', 5.0] }]
+        }
+      }
+    }
+
+    it('writes committed row states for a registered-only submission, partitioned null', async () => {
+      const fileId = 'file-reg-only-states'
+      const summaryLog = {
+        file: { id: fileId, uri: 's3://bucket/reg-only' },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: /** @type {any} */ (reprocessorRegisteredOnlyData)
+      })
+
+      await syncWith(extractor)(summaryLog, TEST_USER)
+
+      const committed = await rowStateRepository.findBySummaryLogId(fileId)
+      expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1000', '5000'])
+      expect(committed.every((doc) => doc.accreditationId === null)).toBe(true)
+      const received = committed.find((doc) => doc.rowId === '1000')
+      expect(received).toMatchObject({
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+        classification: {
+          outcome: ROW_OUTCOME.EXCLUDED,
+          reasons: [],
+          transactionAmount: 0
+        },
+        summaryLogIds: [fileId]
+      })
+      expect(
+        wasteBalancesRepository.updateWasteBalanceTransactions
+      ).not.toHaveBeenCalled()
+    })
+
+    it('writes committed row states for an exporter registered-only submission', async () => {
+      const fileId = 'file-exporter-reg-only-states'
+      const summaryLog = {
+        file: { id: fileId, uri: 's3://bucket/exporter-reg-only' },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+      /** @type {any} */ const parsedData = {
+        meta: { PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' } },
+        data: {
+          RECEIVED_LOADS_FOR_EXPORT: {
+            location: { sheet: 'Received (section 1)', row: 7, column: 'A' },
+            headers: ['ROW_ID', 'MONTH_RECEIVED_FOR_EXPORT', 'NET_WEIGHT'],
+            rows: [{ rowNumber: 8, values: [1000, '2025-01-01', 10.5] }]
+          },
+          LOADS_EXPORTED: {
+            location: {
+              sheet: 'Exported (sections 2 and 3)',
+              row: 7,
+              column: 'A'
+            },
+            headers: [
+              'ROW_ID',
+              'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+              'DATE_OF_EXPORT'
+            ],
+            rows: [{ rowNumber: 8, values: [2000, 5.0, '2025-03-01'] }]
+          }
+        }
+      }
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: parsedData
+      })
+
+      await syncWith(extractor)(summaryLog, TEST_USER)
+
+      const committed = await rowStateRepository.findBySummaryLogId(fileId)
+      expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1000', '2000'])
+      expect(committed.every((doc) => doc.accreditationId === null)).toBe(true)
+    })
+
+    it('writes committed row states for a no-accreditation balance-type submission, partitioned null and balance skipped', async () => {
+      const fileId = 'file-no-accred-states'
+      const summaryLog = {
+        file: { id: fileId, uri: 's3://bucket/no-accred' },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+        // no accreditationId; registration carries none either
+      }
+      /** @type {any} */ const parsedData = {
+        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            location: { sheet: 'Sheet1', row: 1, column: 'A' },
+            headers: [
+              'ROW_ID',
+              'DATE_RECEIVED_FOR_REPROCESSING',
+              FIELD_GROSS_WEIGHT
+            ],
+            rows: [
+              {
+                rowNumber: 2,
+                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+              }
+            ]
+          }
+        }
+      }
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: parsedData
+      })
+
+      await syncWith(extractor)(summaryLog, TEST_USER)
+
+      const committed = await rowStateRepository.findBySummaryLogId(fileId)
+      expect(committed).toHaveLength(1)
+      expect(committed[0]).toMatchObject({
+        rowId: 'row-123',
+        accreditationId: null,
+        summaryLogIds: [fileId]
+      })
+      expect(
+        wasteBalancesRepository.updateWasteBalanceTransactions
+      ).not.toHaveBeenCalled()
+    })
+
+    it('writes committed row states for an accredited submission and still updates the balance', async () => {
+      const fileId = 'file-accredited-states'
+      const summaryLog = {
+        file: { id: fileId, uri: 's3://bucket/accredited' },
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      }
+      organisationsRepository.findAccreditationById = vi
+        .fn()
+        .mockResolvedValue({
+          id: 'acc-1',
+          validFrom: '2023-01-01',
+          validTo: '2030-12-31'
+        })
+      /** @type {any} */ const parsedData = {
+        meta: { PROCESSING_TYPE: { value: 'EXPORTER' } },
+        data: {
+          RECEIVED_LOADS_FOR_EXPORT: {
+            location: { sheet: 'Sheet1', row: 1, column: 'A' },
+            headers: [
+              'ROW_ID',
+              'DATE_RECEIVED_FOR_REPROCESSING',
+              FIELD_GROSS_WEIGHT
+            ],
+            rows: [
+              {
+                rowNumber: 2,
+                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+              }
+            ]
+          }
+        }
+      }
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: parsedData
+      })
+
+      await syncWith(extractor)(summaryLog, TEST_USER)
+
+      const committed = await rowStateRepository.findBySummaryLogId(fileId)
+      expect(committed).toHaveLength(1)
+      expect(committed[0]).toMatchObject({
+        rowId: 'row-123',
+        accreditationId: 'acc-1'
+      })
+      expect(
+        wasteBalancesRepository.updateWasteBalanceTransactions
+      ).toHaveBeenCalled()
+    })
+
+    it('writes no row states when the feature flag is off', async () => {
+      const fileId = 'file-flag-off-states'
+      const summaryLog = {
+        file: { id: fileId, uri: 's3://bucket/flag-off' },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: /** @type {any} */ (reprocessorRegisteredOnlyData)
+      })
+
+      await syncWith(
+        extractor,
+        createInMemoryFeatureFlags({ wasteRecordStates: false })
+      )(summaryLog, TEST_USER)
+
+      expect(await rowStateRepository.findBySummaryLogId(fileId)).toHaveLength(
+        0
+      )
+      const savedRecords = await wasteRecordRepository.findByRegistration(
+        'org-1',
+        'reg-1'
+      )
+      expect(savedRecords).toHaveLength(2)
+    })
   })
 })

@@ -1,5 +1,6 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { resolveOverseasSites } from './resolve-overseas-sites.js'
+import { writeWasteRecordStates } from '#waste-records/application/write-waste-record-states.js'
 import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
@@ -244,6 +245,8 @@ const calculateMetrics = (wasteRecords) => {
  * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
  * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
+ * @param {import('#waste-records/repository/port.js').RowStateRepository} dependencies.rowStateRepository - The waste record states repository
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags] - Feature flags gating the row-state write
  * @param {TypedLogger} dependencies.logger - Logger forwarded to extractor for trace correlation
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
@@ -254,6 +257,8 @@ export const syncFromSummaryLog = (dependencies) => {
     wasteBalancesRepository,
     organisationsRepository,
     overseasSitesRepository,
+    rowStateRepository,
+    featureFlags,
     logger
   } = dependencies
 
@@ -327,14 +332,34 @@ export const syncFromSummaryLog = (dependencies) => {
           )
         : ORS_VALIDATION_DISABLED
 
-    // 9. Resolve accreditation and update waste balances
-    if (accreditationId) {
-      const accreditation = await resolveAccreditation(
-        organisationsRepository,
-        summaryLog.organisationId,
-        accreditationId
-      )
+    // 9. Resolve the accreditation when one exists (any status); null otherwise
+    const accreditation = accreditationId
+      ? await resolveAccreditation(
+          organisationsRepository,
+          summaryLog.organisationId,
+          accreditationId
+        )
+      : null
 
+    // 10. Persist committed row states for every submission (flag-gated),
+    // partitioned by accreditation existence — null for registered-only and
+    // no-accreditation registrations.
+    await writeWasteRecordStates({
+      rowStateRepository,
+      featureFlags,
+      wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
+      accreditation,
+      partition: {
+        organisationId: summaryLog.organisationId,
+        registrationId: summaryLog.registrationId,
+        accreditationId: accreditationId ?? null
+      },
+      overseasSites,
+      summaryLogId: summaryLog.file.id
+    })
+
+    // 11. Update waste balances only for accredited balance-bearing submissions
+    if (accreditationId) {
       await updateWasteBalances({
         parsedData,
         accreditation,
@@ -346,7 +371,7 @@ export const syncFromSummaryLog = (dependencies) => {
       })
     }
 
-    // 11. Count created/updated records for metrics
+    // 12. Count created/updated records for metrics
     // The change property is set by transformFromSummaryLog
     return calculateMetrics(wasteRecords)
   }
