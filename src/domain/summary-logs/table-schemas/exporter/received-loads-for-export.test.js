@@ -885,7 +885,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
-        expect(result.transactionAmount).toBe(60.5)
+        expect(
+          /** @type {{ transactionAmount: number }} */ (result)
+            .transactionAmount
+        ).toBe(60.5)
       })
 
       it('rounds transaction amount to two decimal places', () => {
@@ -897,7 +900,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           accreditation,
           overseasSites: ORS_VALIDATION_DISABLED
         })
-        expect(result.transactionAmount).toBe(60.56)
+        expect(
+          /** @type {{ transactionAmount: number }} */ (result)
+            .transactionAmount
+        ).toBe(60.56)
       })
     })
 
@@ -913,13 +919,16 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
-        expect(result.transactionAmount).toBe(45.75)
+        expect(
+          /** @type {{ transactionAmount: number }} */ (result)
+            .transactionAmount
+        ).toBe(45.75)
       })
     })
 
     describe('EXCLUDED outcome - missing required fields', () => {
       it('returns EXCLUDED when a required field is missing', () => {
-        const row = { ...completeRow }
+        const row = /** @type {Record<string, any>} */ ({ ...completeRow })
         delete row.DATE_OF_EXPORT
         const result = schema.classifyForWasteBalance(row, {
           accreditation,
