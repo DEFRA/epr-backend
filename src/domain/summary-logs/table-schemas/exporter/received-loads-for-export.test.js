@@ -5,6 +5,8 @@ import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
 
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+
 describe('RECEIVED_LOADS_FOR_EXPORT', () => {
   const schema = RECEIVED_LOADS_FOR_EXPORT
 
@@ -841,14 +843,14 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
   })
 
   describe('classifyForWasteBalance', () => {
-    const accreditation = {
+    const accreditation = /** @type {Accreditation} */ ({
       validFrom: '2024-01-01',
       validTo: '2024-12-31',
       statusHistory: [
         { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
         { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
       ]
-    }
+    })
 
     const completeRow = {
       ROW_ID: 1000,
@@ -1104,7 +1106,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     describe('INCLUDED outcome - undefined or null accreditation', () => {
       it('returns INCLUDED when accreditation is undefined (accreditation check passes)', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: undefined,
+          accreditation: /** @type {any} */ (undefined),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
@@ -1122,11 +1124,12 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
       it('returns INCLUDED when accreditation has empty statusHistory', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: {
+          accreditation: /** @type {Accreditation} */ ({
             validFrom: '2024-01-01',
             validTo: '2024-12-31',
-            statusHistory: []
-          },
+            statusHistory:
+              /** @type {{ status: string, updatedAt: string }[]} */ ([])
+          }),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
@@ -1146,7 +1149,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: suspendedAccreditation,
+          accreditation: /** @type {Accreditation} */ (suspendedAccreditation),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
@@ -1167,7 +1170,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: reapprovedAccreditation,
+          accreditation: /** @type {Accreditation} */ (reapprovedAccreditation),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
@@ -1190,7 +1193,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: suspendedAccreditation,
+          accreditation: /** @type {Accreditation} */ (suspendedAccreditation),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
@@ -1216,7 +1219,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: suspendedAccreditation,
+          accreditation: /** @type {Accreditation} */ (suspendedAccreditation),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
@@ -1242,7 +1245,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: reapprovedAccreditation,
+          accreditation: /** @type {Accreditation} */ (reapprovedAccreditation),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
