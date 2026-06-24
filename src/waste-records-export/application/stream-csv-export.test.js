@@ -162,10 +162,54 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(2)
     const cells = out[1].trim().split(',')
-    expect(cells[2]).toBe('"REG-555"') // Registration Number
-    expect(cells[3]).toBe('"glass_re_melt"') // Material (detailed)
-    expect(cells[5]).toBe('"Yes"') // Accredited
-    expect(cells[6]).toBe('"ACC-777"') // Accreditation Number
+    expect(cells[2]).toBe('REG-555') // Registration Number
+    expect(cells[3]).toBe('glass_re_melt') // Material (detailed)
+    expect(cells[5]).toBe('Yes') // Accredited
+    expect(cells[6]).toBe('ACC-777') // Accreditation Number
+  })
+
+  it('serialises a numeric data field bare so it is a real number in the CSV', async () => {
+    const org = baseOrg({ registrations: [baseRegistration()] })
+    const record = reprocessorReceivedRecord({
+      data: {
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+        GROSS_WEIGHT: 10
+      }
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([record])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const idx = buildHeaderRow(buildDataFieldColumns([])).indexOf(
+      'GROSS_WEIGHT'
+    )
+    const cells = out[1].trim().split(',')
+    expect(cells[idx]).toBe('10') // bare, not the quoted '"10"'
+  })
+
+  it('apostrophe-prefixes a dangerous free-text value end to end', async () => {
+    const org = baseOrg({
+      companyDetails: { name: '=cmd|calc' },
+      registrations: [baseRegistration()]
+    })
+    const record = reprocessorReceivedRecord()
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([record])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    // The apostrophe prefix is the real defence; fast-csv additionally wraps a
+    // leading-"=" cell in quotes, so assert the sanitised text is present
+    // rather than coupling to that quoting.
+    expect(out[1]).toContain("'=cmd|calc")
+    expect(out[1]).not.toContain('"=cmd|calc"')
   })
 
   it('emits empty Submitted At when the record references a missing summary log', async () => {
@@ -185,9 +229,9 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(2)
-    // The Submitted At column (index 8) should be an empty quoted cell
+    // The Submitted At column (index 8) is empty and serialises bare
     const cells = out[1].trim().split(',')
-    expect(cells[8]).toBe('""')
+    expect(cells[8]).toBe('')
   })
 
   it('processes received, processed, sentOn and exported records on the same registration', async () => {
@@ -292,9 +336,9 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(2)
     expect(deps.overseasSitesRepository.findAll).toHaveBeenCalledTimes(1)
-    // "Included in Waste Balance" is the 10th metadata column (index 9) → "true"
+    // "Included in Waste Balance" is the 10th metadata column (index 9) → true
     const cells = out[1].trim().split(',')
-    expect(cells[9]).toBe('"true"')
+    expect(cells[9]).toBe('true')
   })
 
   const exporterAccreditation = {
@@ -367,8 +411,8 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
-    expect(cells[5]).toBe('"Yes"') // Accredited column
-    expect(cells[9]).toBe('"true"')
+    expect(cells[5]).toBe('Yes') // Accredited column
+    expect(cells[9]).toBe('true')
   })
 
   it('marks accredited exporter row as not included when DATE_OF_EXPORT is outside accreditation period', async () => {
@@ -402,8 +446,8 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
-    expect(cells[5]).toBe('"Yes"') // Accredited column
-    expect(cells[9]).toBe('"false"')
+    expect(cells[5]).toBe('Yes') // Accredited column
+    expect(cells[9]).toBe('false')
   })
 
   it('reads Accredited "Yes" with the number for a suspended accreditation', async () => {
@@ -432,8 +476,8 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
-    expect(cells[5]).toBe('"Yes"') // Accredited
-    expect(cells[6]).toBe('"ACC-SUS-1"') // Accreditation Number
+    expect(cells[5]).toBe('Yes') // Accredited
+    expect(cells[6]).toBe('ACC-SUS-1') // Accreditation Number
   })
 
   it('iterates organisations and registrations sorted by id for deterministic output', async () => {
@@ -480,9 +524,9 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(3)
-    // Within the same type, lower rowId emits first
-    expect(out[1]).toContain('"1001"')
-    expect(out[2]).toContain('"2002"')
+    // Within the same type, lower rowId emits first (Row ID is metadata col 10)
+    expect(out[1].trim().split(',')[10]).toBe('1001')
+    expect(out[2].trim().split(',')[10]).toBe('2002')
   })
 
   it('orders rowIds naturally so "9" comes before "10"', async () => {
@@ -498,8 +542,8 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(3)
-    expect(out[1]).toContain('"9"')
-    expect(out[2]).toContain('"10"')
+    expect(out[1].trim().split(',')[10]).toBe('9')
+    expect(out[2].trim().split(',')[10]).toBe('10')
   })
 
   it('treats a missing accreditation as registered-only', async () => {
@@ -517,7 +561,7 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(2)
     const cells = out[1].trim().split(',')
-    expect(cells[5]).toBe('"No"') // Accredited column
+    expect(cells[5]).toBe('No') // Accredited column
   })
 
   it('skips organisations that have no registrations array', async () => {
