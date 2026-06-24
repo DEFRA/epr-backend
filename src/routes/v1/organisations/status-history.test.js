@@ -127,7 +127,7 @@ describe('POST status-history routes', () => {
 
     const logs = await findSystemLog(org.id)
     expect(logs).toHaveLength(1)
-    expect(logs[0].reason).toBe('Documents verified')
+    expect(logs[0].context.reason).toBe('Documents verified')
     expect(logs[0].event.action).toBe('status-transition')
     expect(logs[0].context.target).toEqual({ type: 'organisation' })
     expect(logs[0].context.previousStatus).toBe(ORGANISATION_STATUS.CREATED)

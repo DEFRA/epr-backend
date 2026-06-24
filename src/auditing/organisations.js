@@ -63,8 +63,7 @@ async function auditStatusTransition(request, details) {
       subCategory: 'epr-organisations',
       action: 'status-transition'
     },
-    reason,
-    context: { organisationId, target, previousStatus, nextStatus },
+    context: { organisationId, target, previousStatus, nextStatus, reason },
     user: extractUserDetails(request)
   }
 

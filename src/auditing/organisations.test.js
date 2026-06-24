@@ -142,7 +142,8 @@ describe('auditStatusTransition', () => {
     organisationId,
     target,
     previousStatus: 'created',
-    nextStatus: 'approved'
+    nextStatus: 'approved',
+    reason: 'Docs verified'
   }
 
   it('records the reason and before/after status in both the audit and the stored system log', async () => {
@@ -157,7 +158,6 @@ describe('auditStatusTransition', () => {
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({
         event: expectedEvent,
-        reason: 'Docs verified',
         context: expectedContext
       })
     )
@@ -168,7 +168,6 @@ describe('auditStatusTransition', () => {
     })
     expect(systemLogs).toHaveLength(1)
     expect(systemLogs[0].event).toEqual(expectedEvent)
-    expect(systemLogs[0].reason).toBe('Docs verified')
     expect(systemLogs[0].context).toEqual(expectedContext)
     expect(systemLogs[0].createdBy).toEqual({
       id: 'admin-user-1',
