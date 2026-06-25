@@ -1,12 +1,12 @@
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createSystemLogsRepository } from './mongodb.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { MongoClient } from 'mongodb'
 import { randomUUID } from 'crypto'
+import { createMockDb } from '#test/mock-db.js'
 
-/** @import { Db } from 'mongodb' */
-/** @import { TypedLogger } from '#common/helpers/logging/logger.js' */
 /** @import { SystemLog, SystemLogsRepositoryFactory } from './port.js' */
 
 /**
@@ -34,23 +34,18 @@ const it = /** @type {import('vitest').TestAPI<SystemLogsRepoFixtures>} */ (
 
 const buildMockDb = () => {
   let callCount = 0
-  return /** @type {Db} */ (
-    /** @type {unknown} */ ({
-      collection: () => {
-        callCount++
-        if (callCount === 1) {
-          return { createIndex: async () => {} }
-        }
-        throw new Error('error accessing db')
+  return createMockDb({
+    collection: () => {
+      callCount++
+      if (callCount === 1) {
+        return /** @type {import('mongodb').Collection} */ (
+          /** @type {unknown} */ ({ createIndex: async () => {} })
+        )
       }
-    })
-  )
+      throw new Error('error accessing db')
+    }
+  })
 }
-
-const buildMockLogger = () =>
-  /** @type {TypedLogger} */ (
-    /** @type {unknown} */ ({ info: vi.fn(), error: vi.fn(), warn: vi.fn() })
-  )
 
 const buildSystemLog = () =>
   /** @type {SystemLog} */ (
@@ -82,7 +77,7 @@ describe('Mongo DB system logs repository', () => {
         context: { organisationId }
       })
 
-    const { systemLogs } = await systemLogsRepository(buildMockLogger()).find({
+    const { systemLogs } = await systemLogsRepository(createMockLogger()).find({
       organisationId,
       limit: 10
     })
@@ -110,7 +105,7 @@ describe('Mongo DB system logs repository', () => {
         context: { organisationId }
       })
 
-    const { systemLogs } = await systemLogsRepository(buildMockLogger()).find({
+    const { systemLogs } = await systemLogsRepository(createMockLogger()).find({
       organisationId,
       limit: 10
     })
@@ -119,14 +114,9 @@ describe('Mongo DB system logs repository', () => {
   })
 
   it('fails gracefully and logs an error when DB write fails', async () => {
-    const mockLogger = buildMockLogger()
+    const mockLogger = createMockLogger()
     const mockDb = buildMockDb()
-    const collectionSpy = vi.spyOn(
-      /** @type {{ collection: () => unknown }} */ (
-        /** @type {unknown} */ (mockDb)
-      ),
-      'collection'
-    )
+    const collectionSpy = vi.spyOn(mockDb, 'collection')
 
     const repositoryFactory = await createSystemLogsRepository(mockDb)
     const repository = repositoryFactory(mockLogger)
@@ -138,7 +128,7 @@ describe('Mongo DB system logs repository', () => {
   })
 
   it('fails gracefully and logs an error when insertMany DB write fails', async () => {
-    const mockLogger = buildMockLogger()
+    const mockLogger = createMockLogger()
     const repositoryFactory = await createSystemLogsRepository(buildMockDb())
     const repository = repositoryFactory(mockLogger)
 

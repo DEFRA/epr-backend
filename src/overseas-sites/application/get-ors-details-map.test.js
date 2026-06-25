@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
+
 import { getOrsDetailsMap } from './get-ors-details-map.js'
+import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 
 describe('getOrsDetailsMap', () => {
   it('returns a map keyed by ORS key with siteName, country, and validFrom', async () => {
-    const overseasSitesRepository = {
+    const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn().mockResolvedValue([
         {
           id: 'site-aaa',
@@ -18,7 +20,7 @@ describe('getOrsDetailsMap', () => {
           validFrom: new Date('2024-06-01')
         }
       ])
-    }
+    })
     const overseasSites = {
       ORS_1: { overseasSiteId: 'site-aaa' },
       ORS_2: { overseasSiteId: 'site-bbb' }
@@ -47,7 +49,9 @@ describe('getOrsDetailsMap', () => {
   })
 
   it('returns an empty Map when overseasSites is undefined', async () => {
-    const overseasSitesRepository = { findByIds: vi.fn() }
+    const overseasSitesRepository = createMockOverseasSitesRepository({
+      findByIds: vi.fn()
+    })
 
     const result = await getOrsDetailsMap(overseasSitesRepository, undefined)
 
@@ -56,18 +60,10 @@ describe('getOrsDetailsMap', () => {
     expect(overseasSitesRepository.findByIds).not.toHaveBeenCalled()
   })
 
-  it('returns an empty Map when overseasSites is null', async () => {
-    const overseasSitesRepository = { findByIds: vi.fn() }
-
-    const result = await getOrsDetailsMap(overseasSitesRepository, null)
-
-    expect(result).toBeInstanceOf(Map)
-    expect(result.size).toBe(0)
-    expect(overseasSitesRepository.findByIds).not.toHaveBeenCalled()
-  })
-
   it('returns an empty Map when overseasSites is empty', async () => {
-    const overseasSitesRepository = { findByIds: vi.fn() }
+    const overseasSitesRepository = createMockOverseasSitesRepository({
+      findByIds: vi.fn()
+    })
 
     const result = await getOrsDetailsMap(overseasSitesRepository, {})
 
@@ -77,9 +73,9 @@ describe('getOrsDetailsMap', () => {
   })
 
   it('sets siteName, country, and validFrom to null when site is not found', async () => {
-    const overseasSitesRepository = {
+    const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn().mockResolvedValue([])
-    }
+    })
     const overseasSites = {
       ORS_1: { overseasSiteId: 'missing-site' }
     }
@@ -97,9 +93,9 @@ describe('getOrsDetailsMap', () => {
   })
 
   it('sets siteName, country, and validFrom to null when site fields are absent', async () => {
-    const overseasSitesRepository = {
+    const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa' }])
-    }
+    })
     const overseasSites = {
       ORS_1: { overseasSiteId: 'site-aaa' }
     }

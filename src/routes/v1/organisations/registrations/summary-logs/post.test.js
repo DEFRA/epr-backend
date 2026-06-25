@@ -1,29 +1,17 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  afterEach
-} from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { summaryLogsCreatePath } from './post.js'
 
-const mockLogger = {
-  info: vi.fn(),
-  error: vi.fn(),
-  warn: vi.fn(),
-  debug: vi.fn()
-}
+const mockLogger = createMockLogger()
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'

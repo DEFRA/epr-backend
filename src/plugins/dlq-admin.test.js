@@ -1,5 +1,6 @@
 import Hapi from '@hapi/hapi'
 
+import { createMockSqsClient } from '#test/mock-sqs-client.js'
 import { dlqAdminPlugin } from './dlq-admin.js'
 
 vi.mock('#common/helpers/sqs/sqs-client.js')
@@ -38,7 +39,7 @@ describe('dlqAdminPlugin', () => {
       })
     }
 
-    mockSqsClient = { destroy: vi.fn() }
+    mockSqsClient = createMockSqsClient()
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
     vi.mocked(resolveDlqUrl).mockResolvedValue(
