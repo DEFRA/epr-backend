@@ -168,7 +168,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           expect(updatedReg.status).toBe(REG_ACC_STATUS.SUSPENDED)
         })
 
-        it('allows direct transition from APPROVED to CANCELLED, cascading to the linked accreditation', async () => {
+        it('rejects transition from APPROVED to CANCELLED', async () => {
           const cancelledPayload = prepareOrgUpdate(afterApproval, {
             registrations: [
               {
@@ -178,18 +178,19 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             ]
           })
 
-          await repository.replace(organisation.id, 2, cancelledPayload)
-
-          const result = await repository.findById(organisation.id, 3)
-          const updatedReg = result.registrations.find(
-            (r) => r.id === registration1.id
-          )
-          const updatedAcc = result.accreditations.find(
-            (a) => a.id === accreditation1.id
-          )
-
-          expect(updatedReg.status).toBe(REG_ACC_STATUS.CANCELLED)
-          expect(updatedAcc.status).toBe(REG_ACC_STATUS.CANCELLED)
+          await expect(
+            repository.replace(organisation.id, 2, cancelledPayload)
+          ).rejects.toMatchObject({
+            isBoom: true,
+            output: {
+              statusCode: 422,
+              payload: {
+                message: expect.stringContaining(
+                  `Cannot transition registration/accreditation status from ${REG_ACC_STATUS.APPROVED} to ${REG_ACC_STATUS.CANCELLED}`
+                )
+              }
+            }
+          })
         })
 
         it('allows transition from SUSPENDED to CANCELLED', async () => {
@@ -426,7 +427,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           expect(updatedAcc.status).toBe(REG_ACC_STATUS.SUSPENDED)
         })
 
-        it('allows direct transition from APPROVED to CANCELLED', async () => {
+        it('rejects transition from APPROVED to CANCELLED', async () => {
           const cancelledPayload = prepareOrgUpdate(afterApproval, {
             accreditations: [
               {
@@ -436,14 +437,19 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             ]
           })
 
-          await repository.replace(organisation.id, 2, cancelledPayload)
-
-          const result = await repository.findById(organisation.id, 3)
-          const updatedAcc = result.accreditations.find(
-            (a) => a.id === accreditation.id
-          )
-
-          expect(updatedAcc.status).toBe(REG_ACC_STATUS.CANCELLED)
+          await expect(
+            repository.replace(organisation.id, 2, cancelledPayload)
+          ).rejects.toMatchObject({
+            isBoom: true,
+            output: {
+              statusCode: 422,
+              payload: {
+                message: expect.stringContaining(
+                  `Cannot transition registration/accreditation status from ${REG_ACC_STATUS.APPROVED} to ${REG_ACC_STATUS.CANCELLED}`
+                )
+              }
+            }
+          })
         })
 
         it('allows transition from SUSPENDED to CANCELLED', async () => {
