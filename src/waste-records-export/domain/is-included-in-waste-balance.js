@@ -3,26 +3,31 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {WasteBalanceClassificationReason} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
- * Boolean version of waste-balances/application/target-amount#getTargetAmount.
- * Returns true iff the record currently counts toward the waste balance for
- * its accreditation. Mirrors the same logic; differs only by returning a
- * boolean rather than a tonnage.
+ * @typedef {Object} WasteBalanceClassification
+ * @property {boolean} included - Whether the record is included in the waste balance
+ * @property {WasteBalanceClassificationReason[]} reasons - Exclusion reasons; empty when included
+ */
+
+/**
+ * Returns the waste balance inclusion status and any exclusion reasons for a record.
+ * Mirrors the same logic as the waste-balances calculation path.
  *
  * @param {WasteRecord} record
  * @param {Accreditation | null} accreditation
  * @param {OverseasSitesContext} overseasSites
- * @returns {boolean}
+ * @returns {WasteBalanceClassification}
  */
-export const isIncludedInWasteBalance = (
+export const getWasteBalanceClassification = (
   record,
   accreditation,
   overseasSites
 ) => {
   if (record.excludedFromWasteBalance) {
-    return false
+    return { included: false, reasons: [] }
   }
 
   const schema = findSchemaForProcessingType(
@@ -31,7 +36,7 @@ export const isIncludedInWasteBalance = (
   )
 
   if (!schema?.classifyForWasteBalance) {
-    return false
+    return { included: false, reasons: [] }
   }
 
   const result = schema.classifyForWasteBalance(record.data, {
@@ -39,5 +44,9 @@ export const isIncludedInWasteBalance = (
     overseasSites
   })
 
-  return result.outcome === ROW_OUTCOME.INCLUDED
+  if (result.outcome === ROW_OUTCOME.INCLUDED) {
+    return { included: true, reasons: [] }
+  }
+
+  return { included: false, reasons: result.reasons }
 }

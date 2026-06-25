@@ -448,6 +448,42 @@ describe('streamCsvExport', () => {
     const cells = out[1].trim().split(',')
     expect(cells[5]).toBe('Yes') // Accredited column
     expect(cells[9]).toBe('false')
+    expect(cells[10]).toContain('OUTSIDE_ACCREDITATION_PERIOD')
+  })
+
+  it('emits empty Waste Balance Exclusion Reason when the record is included', async () => {
+    const org = baseOrg({
+      accreditations: [exporterAccreditation],
+      registrations: [
+        baseRegistration({
+          accreditation: null,
+          accreditationId: 'acc-1',
+          overseasSites: { '001': { overseasSiteId: 'site-a' } }
+        })
+      ]
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([
+            exportedRecordForAccreditationTests('2026-03-01')
+          ])
+      },
+      overseasSitesRepository: {
+        findAll: vi
+          .fn()
+          .mockResolvedValue([
+            { id: 'site-a', validFrom: new Date('2026-01-01') }
+          ])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[9]).toBe('true')
+    expect(cells[10]).toBe('')
   })
 
   it('reads Accredited "Yes" with the number for a suspended accreditation', async () => {
@@ -524,9 +560,9 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(3)
-    // Within the same type, lower rowId emits first (Row ID is metadata col 10)
-    expect(out[1].trim().split(',')[10]).toBe('1001')
-    expect(out[2].trim().split(',')[10]).toBe('2002')
+    // Within the same type, lower rowId emits first (Row ID is metadata col 11)
+    expect(out[1].trim().split(',')[11]).toBe('1001')
+    expect(out[2].trim().split(',')[11]).toBe('2002')
   })
 
   it('orders rowIds naturally so "9" comes before "10"', async () => {
@@ -542,8 +578,8 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(3)
-    expect(out[1].trim().split(',')[10]).toBe('9')
-    expect(out[2].trim().split(',')[10]).toBe('10')
+    expect(out[1].trim().split(',')[11]).toBe('9')
+    expect(out[2].trim().split(',')[11]).toBe('10')
   })
 
   it('treats a missing accreditation as registered-only', async () => {

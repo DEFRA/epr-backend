@@ -8,7 +8,7 @@ import {
   buildDataRow,
   buildDataFieldColumns
 } from '../domain/csv-columns.js'
-import { isIncludedInWasteBalance } from '../domain/is-included-in-waste-balance.js'
+import { getWasteBalanceClassification } from '../domain/is-included-in-waste-balance.js'
 import { buildOverseasSitesContext } from '../domain/overseas-sites-context.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
@@ -88,18 +88,17 @@ const rowForRecord = ({
   // for a state that cannot occur.
   const lastVersion = /** @type {WasteRecordVersion} */ (record.versions.at(-1))
   const summaryLogEntry = summaryLogMap.get(lastVersion.summaryLog.id) ?? null
-  const includedInWasteBalance = isIncludedInWasteBalance(
-    record,
-    accreditation,
-    overseasSites
-  )
   return buildDataRow({
     org,
     registration,
     accreditation,
     record,
     summaryLogEntry,
-    includedInWasteBalance,
+    wasteBalanceClassification: getWasteBalanceClassification(
+      record,
+      accreditation,
+      overseasSites
+    ),
     dataFieldColumns
   })
 }
