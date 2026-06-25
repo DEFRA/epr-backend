@@ -1,28 +1,34 @@
 import { randomUUID } from 'node:crypto'
-import { describe, vi, expect, it as base } from 'vitest'
+import { describe, expect, it as base } from 'vitest'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
 import { waitForVersion } from './contract/test-helpers.js'
 
-const it = base.extend({
-  // eslint-disable-next-line no-empty-pattern
-  summaryLogsRepositoryFactory: async ({}, use) => {
-    const factory = createInMemorySummaryLogsRepository()
-    await use(factory)
-  },
+/** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
 
-  summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
+/**
+ * @typedef {object} SummaryLogsFixtures
+ * @property {SummaryLogsRepositoryFactory} summaryLogsRepositoryFactory
+ * @property {SummaryLogsRepository} summaryLogsRepository
+ */
+
+const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
+  base.extend({
+    // eslint-disable-next-line no-empty-pattern
+    summaryLogsRepositoryFactory: async ({}, use) => {
+      const factory = createInMemorySummaryLogsRepository()
+      await use(factory)
+    },
+
+    summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
+      const mockLogger = createMockLogger()
+      const repository = summaryLogsRepositoryFactory(mockLogger)
+      await use(repository)
     }
-    const repository = summaryLogsRepositoryFactory(mockLogger)
-    await use(repository)
-  }
-})
+  })
+)
 
 describe('In-memory summary logs repository', () => {
   describe('summary logs repository contract', () => {
@@ -31,7 +37,7 @@ describe('In-memory summary logs repository', () => {
 
   describe('data isolation', () => {
     it('returns independent copies that cannot modify stored data', async () => {
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
@@ -41,11 +47,11 @@ describe('In-memory summary logs repository', () => {
         summaryLogFactory.validating({ file: { name: 'original.xlsx' } })
       )
 
-      const retrieved = await repository.findById(id)
+      const retrieved = await waitForVersion(repository, id, 1)
       retrieved.summaryLog.file.name = 'modified.xlsx'
       retrieved.summaryLog.file.uri = 's3://hacked-bucket/hacked-key'
 
-      const retrievedAgain = await repository.findById(id)
+      const retrievedAgain = await waitForVersion(repository, id, 1)
       expect(retrievedAgain.summaryLog.file.name).toBe('original.xlsx')
       expect(retrievedAgain.summaryLog.file.uri).toBe(
         's3://test-bucket/test-key'
@@ -53,7 +59,7 @@ describe('In-memory summary logs repository', () => {
     })
 
     it('stores independent copies that cannot be modified by input mutation', async () => {
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
@@ -66,13 +72,13 @@ describe('In-memory summary logs repository', () => {
       summaryLog.file.name = 'mutated.xlsx'
       summaryLog.file.uri = 's3://mutated-bucket/mutated-key'
 
-      const retrieved = await repository.findById(id)
+      const retrieved = await waitForVersion(repository, id, 1)
       expect(retrieved.summaryLog.file.name).toBe('original.xlsx')
       expect(retrieved.summaryLog.file.uri).toBe('s3://test-bucket/test-key')
     })
 
     it('stores independent copies on update', async () => {
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`

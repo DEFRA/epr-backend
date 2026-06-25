@@ -2,6 +2,9 @@ import { ObjectId } from 'mongodb'
 import { describe, test, expect, vi } from 'vitest'
 
 import { createPrnVisibilityFilter } from './prn-visibility-filter.js'
+import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
+
+/** @import { Collection } from 'mongodb' */
 
 /**
  * Creates a mock MongoDB Db that returns the given documents
@@ -12,19 +15,21 @@ import { createPrnVisibilityFilter } from './prn-visibility-filter.js'
 function createMockDb(docs = []) {
   const toArray = vi.fn().mockResolvedValue(docs)
   const find = vi.fn().mockReturnValue({ toArray })
-  const collection = vi.fn().mockReturnValue({ find })
+  const db = createSharedMockDb({
+    collection: () =>
+      /** @type {Collection} */ (/** @type {unknown} */ ({ find }))
+  })
 
-  return { collection, find, toArray }
+  return { db, collection: db.collection, find, toArray }
 }
 
 describe('#createPrnVisibilityFilter', () => {
   test('returns empty excludeOrganisationIds when no test org IDs provided', async () => {
-    const { collection } = createMockDb()
+    const { db, collection } = createMockDb()
 
-    const prnVisibilityFilter = await createPrnVisibilityFilter(
-      { collection },
-      { testOrganisationIds: [] }
-    )
+    const prnVisibilityFilter = await createPrnVisibilityFilter(db, {
+      testOrganisationIds: []
+    })
 
     expect(prnVisibilityFilter.excludeOrganisationIds).toEqual([])
     expect(collection).not.toHaveBeenCalled()
@@ -38,10 +43,9 @@ describe('#createPrnVisibilityFilter', () => {
       { _id: org500002Id, orgId: 500002 }
     ])
 
-    const prnVisibilityFilter = await createPrnVisibilityFilter(
-      { collection: mockDb.collection },
-      { testOrganisationIds: [500521, 500002] }
-    )
+    const prnVisibilityFilter = await createPrnVisibilityFilter(mockDb.db, {
+      testOrganisationIds: [500521, 500002]
+    })
 
     expect(mockDb.collection).toHaveBeenCalledWith('epr-organisations')
     expect(mockDb.find).toHaveBeenCalledWith(
@@ -57,10 +61,9 @@ describe('#createPrnVisibilityFilter', () => {
   test('returns empty excludeOrganisationIds when no orgs found in DB', async () => {
     const mockDb = createMockDb([])
 
-    const prnVisibilityFilter = await createPrnVisibilityFilter(
-      { collection: mockDb.collection },
-      { testOrganisationIds: [999999] }
-    )
+    const prnVisibilityFilter = await createPrnVisibilityFilter(mockDb.db, {
+      testOrganisationIds: [999999]
+    })
 
     expect(prnVisibilityFilter.excludeOrganisationIds).toEqual([])
   })
@@ -69,10 +72,9 @@ describe('#createPrnVisibilityFilter', () => {
     const org500521Id = new ObjectId()
     const mockDb = createMockDb([{ _id: org500521Id, orgId: 500521 }])
 
-    const prnVisibilityFilter = await createPrnVisibilityFilter(
-      { collection: mockDb.collection },
-      { testOrganisationIds: [500521, 999999] }
-    )
+    const prnVisibilityFilter = await createPrnVisibilityFilter(mockDb.db, {
+      testOrganisationIds: [500521, 999999]
+    })
 
     expect(prnVisibilityFilter.excludeOrganisationIds).toEqual([
       org500521Id.toHexString()

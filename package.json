@@ -32,7 +32,7 @@
     "#waste-records-export/*": "./src/waste-records-export/*"
   },
   "engines": {
-    "node": ">=24.16.0 <25"
+    "node": ">=24.17.0 <25"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
@@ -61,11 +61,11 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.1068.0",
-    "@aws-sdk/client-sqs": "3.1068.0",
-    "@aws-sdk/credential-providers": "3.1068.0",
-    "@aws-sdk/lib-storage": "3.1068.0",
-    "@aws-sdk/s3-request-presigner": "3.1068.0",
+    "@aws-sdk/client-s3": "3.1073.0",
+    "@aws-sdk/client-sqs": "3.1073.0",
+    "@aws-sdk/credential-providers": "3.1073.0",
+    "@aws-sdk/lib-storage": "3.1073.0",
+    "@aws-sdk/s3-request-presigner": "3.1073.0",
     "@defra/cdp-auditing": "0.6.1",
     "@defra/hapi-secure-context": "0.4.0",
     "@defra/hapi-tracing": "1.30.0",
@@ -73,7 +73,7 @@
     "@fast-csv/format": "5.0.7",
     "@hapi/boom": "10.0.1",
     "@hapi/hapi": "21.4.9",
-    "@hapi/inert": "7.1.1",
+    "@hapi/inert": "7.1.2",
     "@hapi/jwt": "3.2.4",
     "@hapi/vision": "7.0.3",
     "aws-embedded-metrics": "4.2.1",

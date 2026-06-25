@@ -15,6 +15,8 @@ import {
 } from './contract/test-data.js'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
+import { createMockDb } from '#test/mock-db.js'
+import { createMongoError } from '#test/mongo-error.js'
 
 /**
  * @import { OrganisationsRepository, OrganisationsRepositoryFactory } from './port.js'
@@ -56,17 +58,11 @@ describe('MongoDB organisations repository', () => {
 
   describe('MongoDB-specific error handling', () => {
     it('rethrows unexpected database errors during insert', async () => {
-      const dbMock = /** @type {any} */ ({
-        collection: () => ({
-          createIndex: async () => {},
-          insertOne: async () => {
-            const error = /** @type {Error & { code: number }} */ (
-              new Error('Unexpected database error')
-            )
-            error.code = 99999
-            throw error
-          }
-        })
+      const dbMock = createMockDb({
+        createIndex: async () => {},
+        insertOne: async () => {
+          throw createMongoError('Unexpected database error', { code: 99999 })
+        }
       })
 
       const factory = await createOrganisationsRepository(dbMock)
@@ -89,20 +85,15 @@ describe('MongoDB organisations repository', () => {
       }
       const leakyErrmsg =
         'E11000 duplicate key error collection: epr-backend.epr-organisations index: orgId_1 dup key: { orgId: "conflicting-value" }'
-      const dbMock = /** @type {any} */ ({
-        collection: () => ({
-          createIndex: async () => {},
-          findOne: async () => existingDoc,
-          replaceOne: async () => {
-            const error =
-              /** @type {Error & { code: number, keyPattern: Record<string, number> }} */ (
-                new Error(leakyErrmsg)
-              )
-            error.code = 11000
-            error.keyPattern = { orgId: 1 }
-            throw error
-          }
-        })
+      const dbMock = createMockDb({
+        createIndex: async () => {},
+        findOne: async () => existingDoc,
+        replaceOne: async () => {
+          throw createMongoError(leakyErrmsg, {
+            code: 11000,
+            keyPattern: { orgId: 1 }
+          })
+        }
       })
 
       const factory = await createOrganisationsRepository(dbMock)
@@ -134,7 +125,7 @@ describe('MongoDB organisations repository', () => {
       })
     })
 
-    it('falls back to "unknown" in the dup-key message when keyPattern is absent', async () => {
+    it('falls back to "unknown" in the dup-key message from replace when keyPattern is absent', async () => {
       const existingOrg = buildOrganisation()
       const existingDoc = {
         ...existingOrg,
@@ -143,18 +134,12 @@ describe('MongoDB organisations repository', () => {
         schemaVersion: 1,
         users: []
       }
-      const dbMock = /** @type {any} */ ({
-        collection: () => ({
-          createIndex: async () => {},
-          findOne: async () => existingDoc,
-          replaceOne: async () => {
-            const error = /** @type {Error & { code: number }} */ (
-              new Error('E11000 duplicate key error')
-            )
-            error.code = 11000
-            throw error
-          }
-        })
+      const dbMock = createMockDb({
+        createIndex: async () => {},
+        findOne: async () => existingDoc,
+        replaceOne: async () => {
+          throw createMongoError('E11000 duplicate key error', { code: 11000 })
+        }
       })
 
       const factory = await createOrganisationsRepository(dbMock)
