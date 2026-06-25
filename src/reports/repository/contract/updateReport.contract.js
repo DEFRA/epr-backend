@@ -7,9 +7,15 @@ export const testUpdateReportBehaviour = (it) => {
   describe('updateReport', () => {
     let repository
 
-    beforeEach(async ({ reportsRepository }) => {
-      repository = reportsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory }} */ {
+          reportsRepository
+        }
+      ) => {
+        repository = reportsRepository()
+      }
+    )
 
     it('updates supportingInformation', async () => {
       const { id: reportId } = await repository.createReport(

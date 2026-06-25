@@ -14,9 +14,13 @@ export const testPublicRegisterRepositoryContract = (it) => {
   describe('public register repository contract', () => {
     let publicRegisterRepository
 
-    beforeEach(({ publicRegisterRepository: repo }) => {
-      publicRegisterRepository = repo
-    })
+    beforeEach(
+      (
+        /** @type {ContractTestFixtures} */ { publicRegisterRepository: repo }
+      ) => {
+        publicRegisterRepository = repo
+      }
+    )
 
     it('saves CSV data and retrieves it', async () => {
       const fileName = 'test-file.csv'

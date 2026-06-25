@@ -292,5 +292,6 @@ const extendedFixtures = {
 // inferred context is too loose for the contract test to use directly.
 const extendedTest = baseTest.extend(extendedFixtures)
 
-/** @type {import('vitest').TestAPI<CdpUploaderFixtures>} */
-export const it = extendedTest
+export const it = /** @type {import('vitest').TestAPI<CdpUploaderFixtures>} */ (
+  /** @type {unknown} */ (extendedTest)
+)

@@ -123,9 +123,15 @@ export const testFindByStatusBehaviour = (it) => {
   describe('findByStatus', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
+          prnRepository
+        }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     describe('status filtering', () => {
       it('returns empty result when no PRNs match status', async () => {

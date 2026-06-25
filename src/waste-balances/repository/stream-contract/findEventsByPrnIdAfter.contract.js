@@ -10,9 +10,15 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
   describe('findEventsByPrnIdAfter', () => {
     let repository
 
-    beforeEach(async ({ streamRepository }) => {
-      repository = await streamRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
+          streamRepository
+        }
+      ) => {
+        repository = await streamRepository()
+      }
+    )
 
     it('returns events with number greater than the watermark', async () => {
       await repository.appendEvent(

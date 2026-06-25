@@ -4,9 +4,15 @@ export const testValidationBehaviour = (it) => {
   describe('validation', () => {
     let repository
 
-    beforeEach(async ({ overseasSitesRepository }) => {
-      repository = overseasSitesRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ overseasSitesRepository: import('../port.js').OverseasSitesRepository }} */ {
+          overseasSitesRepository
+        }
+      ) => {
+        repository = overseasSitesRepository
+      }
+    )
 
     it('rejects creation with missing required fields', async () => {
       await expect(repository.create({})).rejects.toThrow(

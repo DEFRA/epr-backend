@@ -10,16 +10,20 @@ const generateOrgReg = () => ({
 /**
  * Contract tests for findLatestSubmittedForOrgReg method
  * These tests verify the behaviour is consistent across implementations
- *
- * @param {import('vitest').TaskContext} it - Vitest test context with fixtures
  */
 export const testFindLatestSubmittedForOrgReg = (it) => {
   describe('findLatestSubmittedForOrgReg', () => {
     let repository
 
-    beforeEach(async ({ summaryLogsRepository }) => {
-      repository = summaryLogsRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repository = summaryLogsRepository
+      }
+    )
 
     it('returns null when no submitted summary logs exist for org/reg', async () => {
       const { organisationId, registrationId } = generateOrgReg()
