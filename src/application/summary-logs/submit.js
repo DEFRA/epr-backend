@@ -17,7 +17,9 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} summaryLogsRepository
  * @property {object} organisationsRepository
  * @property {object} wasteRecordsRepository
+ * @property {import('#waste-records/repository/port.js').RowStateRepository} wasteRecordStatesRepository
  * @property {object} wasteBalancesRepository
+ * @property {import('#feature-flags/feature-flags.port.js').FeatureFlags} featureFlags
  * @property {object} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#domain/summary-logs/worker/port.js').SubmitUser} user
@@ -37,7 +39,9 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
+    wasteRecordStatesRepository,
     wasteBalancesRepository,
+    featureFlags,
     summaryLogExtractor,
     overseasSitesRepository,
     user,
@@ -81,6 +85,8 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     wasteBalancesRepository,
     organisationsRepository,
     overseasSitesRepository,
+    rowStateRepository: wasteRecordStatesRepository,
+    featureFlags,
     logger
   })
 
