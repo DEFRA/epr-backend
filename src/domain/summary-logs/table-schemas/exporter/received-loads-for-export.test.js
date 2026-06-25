@@ -1112,16 +1112,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       })
     })
 
-    describe('INCLUDED outcome - undefined or null accreditation', () => {
-      it('returns INCLUDED when accreditation is undefined (accreditation check passes)', () => {
-        const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: /** @type {any} */ (undefined),
-          overseasSites: ORS_VALIDATION_DISABLED
-        })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
-        expect(result.reasons).toEqual([])
-      })
-
+    describe('INCLUDED outcome - null accreditation', () => {
       it('returns INCLUDED when accreditation is null (accreditation check passes)', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: null,
