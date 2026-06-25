@@ -14,7 +14,7 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -80,7 +80,7 @@ describe('Submission and placeholder tests', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-      const testOrg = buildOrganisation({
+      const testOrg = buildReadOrganisation({
         registrations: [
           {
             id: registrationId,
@@ -751,7 +751,7 @@ describe('Submission and placeholder tests', () => {
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const accreditationId = 'acc-placeholder-test'
-      const testOrg = buildOrganisation({
+      const testOrg = buildReadOrganisation({
         registrations: [
           {
             id: registrationId,
