@@ -14,22 +14,22 @@ import {
 
 /**
  * @typedef {Object} TonnageFields
- * @property {string} tonnageReceivedForRecycling
- * @property {string} tonnageRecycled
- * @property {string} tonnageExportedForRecycling
- * @property {string} tonnageSentOnTotal
- * @property {string} tonnageSentOnToReprocessor
- * @property {string} tonnageSentOnToExporter
- * @property {string} tonnageSentOnToOtherFacilities
- * @property {string} tonnagePrnsPernsIssued
- * @property {string} freeTonnagePrnsPerns
- * @property {string} totalRevenuePrnsPerns
- * @property {string} averagePrnPernPricePerTonne
- * @property {string} tonnageReceivedButNotRecycled
- * @property {string} tonnageReceivedButNotExported
- * @property {string} tonnageExportedThatWasStopped
- * @property {string} tonnageExportedThatWasRefused
- * @property {string} tonnageRepatriated
+ * @property {number | ''} tonnageReceivedForRecycling
+ * @property {number | ''} tonnageRecycled
+ * @property {number | ''} tonnageExportedForRecycling
+ * @property {number | ''} tonnageSentOnTotal
+ * @property {number | ''} tonnageSentOnToReprocessor
+ * @property {number | ''} tonnageSentOnToExporter
+ * @property {number | ''} tonnageSentOnToOtherFacilities
+ * @property {number | ''} tonnagePrnsPernsIssued
+ * @property {number | ''} freeTonnagePrnsPerns
+ * @property {number | ''} totalRevenuePrnsPerns
+ * @property {number | ''} averagePrnPernPricePerTonne
+ * @property {number | ''} tonnageReceivedButNotRecycled
+ * @property {number | ''} tonnageReceivedButNotExported
+ * @property {number | ''} tonnageExportedThatWasStopped
+ * @property {number | ''} tonnageExportedThatWasRefused
+ * @property {number | ''} tonnageRepatriated
  * @property {string} noteToRegulator
  */
 
@@ -55,24 +55,24 @@ import {
 
 /**
  * @param {number | null | undefined} value
- * @returns {string}
+ * @returns {number | ''}
  */
 function formatTonnage(value) {
-  return value !== null && value !== undefined ? String(value) : ''
+  return value !== null && value !== undefined ? value : ''
 }
 
 /**
  * @param {import('#reports/repository/port.js').WasteSent | undefined} wasteSent
- * @returns {string}
+ * @returns {number | ''}
  */
 function sumSentOn(wasteSent) {
   if (!wasteSent) {
     return ''
   }
-  return String(
+  return (
     wasteSent.tonnageSentToReprocessor +
-      wasteSent.tonnageSentToExporter +
-      wasteSent.tonnageSentToAnotherSite
+    wasteSent.tonnageSentToExporter +
+    wasteSent.tonnageSentToAnotherSite
   )
 }
 

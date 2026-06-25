@@ -13,6 +13,21 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
+const FORMULA_INJECTION_PREFIX = /^[=+\-@]/
+
+/**
+ * Prefix a string cell that opens with =, +, - or @ with an apostrophe so
+ * spreadsheet software treats it as literal text rather than a formula.
+ * Numeric cells pass through untouched so genuine numbers stay numeric.
+ *
+ * @param {string | number} cell
+ * @returns {string | number}
+ */
+const sanitiseFormulaInjection = (cell) =>
+  typeof cell === 'string' && FORMULA_INJECTION_PREFIX.test(cell)
+    ? `'${cell}`
+    : cell
+
 export const METADATA_COLUMNS = Object.freeze([
   'Regulator',
   'Organisation Name',
@@ -106,11 +121,13 @@ export const buildHeaderRow = (dataFieldColumns) => [
  */
 
 /**
- * Build a single CSV data row as an array of cell strings, in the same
- * column order as `[...METADATA_COLUMNS, ...dataFieldColumns]`.
+ * Build a single CSV data row in the same column order as
+ * `[...METADATA_COLUMNS, ...dataFieldColumns]`. Numeric data cells stay
+ * numbers so they serialise unquoted; string cells are formula-injection
+ * sanitised.
  *
  * @param {BuildDataRowInput} input
- * @returns {string[]}
+ * @returns {(string | number)[]}
  */
 export const buildDataRow = ({
   org,
@@ -140,11 +157,8 @@ export const buildDataRow = ({
 
   const dataCells = dataFieldColumns.map((field) => {
     const value = data[field]
-    if (value === null || value === undefined) {
-      return ''
-    }
-    return String(value)
+    return value === null || value === undefined ? '' : value
   })
 
-  return [...metadata, ...dataCells]
+  return [...metadata, ...dataCells].map(sanitiseFormulaInjection)
 }
