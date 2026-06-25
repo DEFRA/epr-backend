@@ -5,8 +5,3 @@ export { organisationsLink } from './link.js'
 export { organisationsUnlink } from './unlink.js'
 export { organisationsOverviewGet } from './overview/get.js'
 export { organisationsUserPut } from './user/put.js'
-export {
-  organisationStatusHistoryPost,
-  registrationStatusHistoryPost,
-  accreditationStatusHistoryPost
-} from './status-history.js'
