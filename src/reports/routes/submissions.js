@@ -18,6 +18,11 @@ const tonnageValue = Joi.alternatives()
   .try(Joi.number(), Joi.valid(''))
   .required()
 
+// A monetary cell is a genuine number, or '' when there is no value to report.
+const monetaryValue = Joi.alternatives()
+  .try(Joi.number(), Joi.valid(''))
+  .required()
+
 export const getReportSubmissions = {
   method: 'GET',
   path: getReportSubmissionsPath,
@@ -55,8 +60,8 @@ export const getReportSubmissions = {
               tonnageSentOnToOtherFacilities: tonnageValue,
               tonnagePrnsPernsIssued: tonnageValue,
               freeTonnagePrnsPerns: tonnageValue,
-              totalRevenuePrnsPerns: tonnageValue,
-              averagePrnPernPricePerTonne: tonnageValue,
+              totalRevenuePrnsPerns: monetaryValue,
+              averagePrnPernPricePerTonne: monetaryValue,
               tonnageReceivedButNotRecycled: tonnageValue,
               tonnageReceivedButNotExported: tonnageValue,
               tonnageExportedThatWasStopped: tonnageValue,
