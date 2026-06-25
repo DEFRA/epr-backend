@@ -48,14 +48,15 @@ const sortRecords = (a, b) => {
 /**
  * Encode a single row of cells into a CSV-formatted line with trailing newline.
  *
- * @param {ReadonlyArray<string> | string[]} cells
+ * fast-csv's default selective quoting applies: numbers serialise bare so they
+ * stay numeric, while text containing the delimiter, a quote, or a newline is
+ * still quoted.
+ *
+ * @param {ReadonlyArray<string | number>} cells
  * @returns {Promise<string>}
  */
 const encodeRow = async (cells) => {
-  const line = await writeToString([[...cells]], {
-    headers: false,
-    quoteColumns: true
-  })
+  const line = await writeToString([[...cells]], { headers: false })
   return `${line}\n`
 }
 
@@ -70,7 +71,7 @@ const encodeRow = async (cells) => {
  * @param {Map<string, { submittedAt: string }>} input.summaryLogMap
  * @param {WasteRecord} input.record
  * @param {string[]} input.dataFieldColumns
- * @returns {string[]}
+ * @returns {(string | number)[]}
  */
 const rowForRecord = ({
   org,

@@ -13,6 +13,16 @@ import { generateReportSubmissions } from '#reports/application/report-submissio
 
 export const getReportSubmissionsPath = '/v1/organisations/reports/submissions'
 
+// A tonnage cell is a genuine number, or '' when there is no value to report.
+const tonnageValue = Joi.alternatives()
+  .try(Joi.number(), Joi.valid(''))
+  .required()
+
+// A monetary cell is a genuine number, or '' when there is no value to report.
+const monetaryValue = Joi.alternatives()
+  .try(Joi.number(), Joi.valid(''))
+  .required()
+
 export const getReportSubmissions = {
   method: 'GET',
   path: getReportSubmissionsPath,
@@ -41,22 +51,22 @@ export const getReportSubmissions = {
               dueDate: Joi.string().required(),
               submittedDate: Joi.string().allow('').required(),
               submittedBy: Joi.string().allow('').required(),
-              tonnageReceivedForRecycling: Joi.string().allow('').required(),
-              tonnageRecycled: Joi.string().allow('').required(),
-              tonnageExportedForRecycling: Joi.string().allow('').required(),
-              tonnageSentOnTotal: Joi.string().allow('').required(),
-              tonnageSentOnToReprocessor: Joi.string().allow('').required(),
-              tonnageSentOnToExporter: Joi.string().allow('').required(),
-              tonnageSentOnToOtherFacilities: Joi.string().allow('').required(),
-              tonnagePrnsPernsIssued: Joi.string().allow('').required(),
-              freeTonnagePrnsPerns: Joi.string().allow('').required(),
-              totalRevenuePrnsPerns: Joi.string().allow('').required(),
-              averagePrnPernPricePerTonne: Joi.string().allow('').required(),
-              tonnageReceivedButNotRecycled: Joi.string().allow('').required(),
-              tonnageReceivedButNotExported: Joi.string().allow('').required(),
-              tonnageExportedThatWasStopped: Joi.string().allow('').required(),
-              tonnageExportedThatWasRefused: Joi.string().allow('').required(),
-              tonnageRepatriated: Joi.string().allow('').required(),
+              tonnageReceivedForRecycling: tonnageValue,
+              tonnageRecycled: tonnageValue,
+              tonnageExportedForRecycling: tonnageValue,
+              tonnageSentOnTotal: tonnageValue,
+              tonnageSentOnToReprocessor: tonnageValue,
+              tonnageSentOnToExporter: tonnageValue,
+              tonnageSentOnToOtherFacilities: tonnageValue,
+              tonnagePrnsPernsIssued: tonnageValue,
+              freeTonnagePrnsPerns: tonnageValue,
+              totalRevenuePrnsPerns: monetaryValue,
+              averagePrnPernPricePerTonne: monetaryValue,
+              tonnageReceivedButNotRecycled: tonnageValue,
+              tonnageReceivedButNotExported: tonnageValue,
+              tonnageExportedThatWasStopped: tonnageValue,
+              tonnageExportedThatWasRefused: tonnageValue,
+              tonnageRepatriated: tonnageValue,
               noteToRegulator: Joi.string().allow('').required()
             })
           )
