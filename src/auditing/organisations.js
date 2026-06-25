@@ -46,30 +46,4 @@ async function auditOrganisationUpdate(
   await recordSystemLog(request, payload)
 }
 
-/**
- * Records a status transition (organisation, registration or accreditation) to
- * the audit log and the system log. The change reason is captured here in the
- * system log payload — it is never written onto the item's statusHistory.
- *
- * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {{organisationId: string, target: import('#repositories/organisations/port.js').StatusTransitionTarget, previousStatus: string, nextStatus: string, reason: string}} details
- */
-async function auditStatusTransition(request, details) {
-  const { organisationId, target, previousStatus, nextStatus, reason } = details
-
-  const payload = {
-    event: {
-      category: 'entity',
-      subCategory: 'epr-organisations',
-      action: 'status-transition'
-    },
-    reason,
-    context: { organisationId, target, previousStatus, nextStatus },
-    user: extractUserDetails(request)
-  }
-
-  safeAudit(payload)
-  await recordSystemLog(request, payload)
-}
-
-export { auditOrganisationUpdate, auditStatusTransition }
+export { auditOrganisationUpdate }
