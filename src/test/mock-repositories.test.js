@@ -32,8 +32,7 @@ describe('mock-repositories', () => {
         'findAccreditationById',
         'findAllIds',
         'findByOrgId',
-        'replaceRegistrationOverseasSites',
-        'appendStatusHistory'
+        'replaceRegistrationOverseasSites'
       ]
     },
     createMockSummaryLogsRepository: {
