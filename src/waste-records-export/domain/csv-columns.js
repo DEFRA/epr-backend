@@ -12,6 +12,7 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {WasteBalanceClassification} from './is-included-in-waste-balance.js' */
 
 const FORMULA_INJECTION_PREFIX = /^[=+\-@]/
 
@@ -39,6 +40,7 @@ export const METADATA_COLUMNS = Object.freeze([
   'Waste Record Type',
   'Submitted At',
   'Included in Waste Balance',
+  'Waste Balance Exclusion Reason',
   'Row ID'
 ])
 
@@ -116,7 +118,7 @@ export const buildHeaderRow = (dataFieldColumns) => [
  * @property {Accreditation | null} accreditation
  * @property {WasteRecord} record
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
- * @property {boolean} includedInWasteBalance
+ * @property {WasteBalanceClassification} wasteBalanceClassification
  * @property {string[]} dataFieldColumns
  */
 
@@ -135,7 +137,7 @@ export const buildDataRow = ({
   accreditation,
   record,
   summaryLogEntry,
-  includedInWasteBalance,
+  wasteBalanceClassification,
   dataFieldColumns
 }) => {
   const accredited = accreditation !== null ? 'Yes' : 'No'
@@ -151,7 +153,10 @@ export const buildDataRow = ({
     accreditation?.accreditationNumber ?? '',
     record.type,
     summaryLogEntry?.submittedAt ?? '',
-    includedInWasteBalance ? 'true' : 'false',
+    wasteBalanceClassification.included ? 'true' : 'false',
+    wasteBalanceClassification.reasons
+      .map((r) => (r.field ? `${r.code}: ${r.field}` : r.code))
+      .join('; '),
     String(record.rowId)
   ]
 

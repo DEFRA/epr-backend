@@ -27,6 +27,7 @@ describe('csv-columns', () => {
         'Waste Record Type',
         'Submitted At',
         'Included in Waste Balance',
+        'Waste Balance Exclusion Reason',
         'Row ID'
       ])
     })
@@ -204,7 +205,7 @@ describe('csv-columns', () => {
       summaryLogEntry: {
         submittedAt: '2026-04-15T09:00:00Z'
       },
-      includedInWasteBalance: true,
+      wasteBalanceClassification: { included: true, reasons: [] },
       dataFieldColumns
     }
 
@@ -225,7 +226,8 @@ describe('csv-columns', () => {
       expect(row[7]).toBe('received') // Waste Record Type
       expect(row[8]).toBe('2026-04-15T09:00:00Z') // Submitted At
       expect(row[9]).toBe('true') // Included in Waste Balance
-      expect(row[10]).toBe('1001') // Row ID
+      expect(row[10]).toBe('') // Waste Balance Exclusion Reason
+      expect(row[11]).toBe('1001') // Row ID
     })
 
     it('emits the glass recycling process in place of "glass" for the Material column', () => {
@@ -343,9 +345,19 @@ describe('csv-columns', () => {
       expect(row[8]).toBe('')
     })
 
-    it('emits "false" for Included in Waste Balance when input is false', () => {
-      const row = buildDataRow({ ...baseInput, includedInWasteBalance: false })
-      expect(row[9]).toBe('false')
+    it('emits waste balance columns from the classification', () => {
+      const excluded = buildDataRow({
+        ...baseInput,
+        wasteBalanceClassification: {
+          included: false,
+          reasons: [
+            { code: 'PRN_ISSUED' },
+            { code: 'MISSING_REQUIRED_FIELD', field: 'EWC_CODE' }
+          ]
+        }
+      })
+      expect(excluded[9]).toBe('false') // Included in Waste Balance
+      expect(excluded[10]).toBe('PRN_ISSUED; MISSING_REQUIRED_FIELD: EWC_CODE') // Exclusion Reason
     })
   })
 })
