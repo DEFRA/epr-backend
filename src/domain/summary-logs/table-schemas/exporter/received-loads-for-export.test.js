@@ -1088,11 +1088,11 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       })
     })
 
-    // ORS_NOT_FOUND is distinct from VAL014: VAL014 covers a registered
-    // overseas site whose approval does not yet cover the export date, whereas
-    // an OSR_ID absent from the registration's overseas sites resolves to
-    // undefined and is excluded as ORS_NOT_FOUND.
-    describe('EXCLUDED outcome - ORS not found', () => {
+    // VAL015 is distinct from VAL014: VAL014 covers a registered overseas site
+    // whose approval does not yet cover the export date, whereas VAL015 covers
+    // an OSR_ID absent from the registration's overseas sites, which resolves
+    // to undefined and is excluded as ORS_NOT_FOUND.
+    describe('EXCLUDED outcome - ORS not found (VAL015)', () => {
       it('returns EXCLUDED with ORS_NOT_FOUND when OSR_ID is not in overseasSites map', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
