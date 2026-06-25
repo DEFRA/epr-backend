@@ -8,6 +8,8 @@ import {
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
+import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { getReportSubmissionsPath } from './submissions.js'
 
 describe(`GET ${getReportSubmissionsPath}`, () => {
@@ -60,6 +62,50 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     expect(Array.isArray(payload.reportSubmissions)).toBe(true)
     expect(payload).toHaveProperty('generatedAt')
     expect(typeof payload.generatedAt).toBe('string')
+  })
+
+  it('emits numeric tonnages as numbers through the response schema', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository()
+    const organisationsRepository = organisationsRepositoryFactory()
+    const org = await buildApprovedOrg(organisationsRepository)
+
+    const reportsRepositoryFactory = createInMemoryReportsRepository()
+    const reportsRepository = reportsRepositoryFactory()
+    await buildSubmittedReport(reportsRepository, {
+      organisationId: org.id,
+      registrationId: org.registrations[0].id,
+      year: new Date().getUTCFullYear(),
+      cadence: 'monthly',
+      period: 1,
+      prn: {
+        issuedTonnage: 80,
+        freeTonnage: 5,
+        totalRevenue: 40000,
+        averagePricePerTonne: 500
+      }
+    })
+
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: organisationsRepositoryFactory,
+        reportsRepository: reportsRepositoryFactory
+      }
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: getReportSubmissionsPath,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const payload = JSON.parse(response.payload)
+    const issued = payload.reportSubmissions.map(
+      (r) => r.tonnagePrnsPernsIssued
+    )
+    // A real number survives the response schema (not coerced back to a string)
+    expect(issued).toContain(80)
   })
 
   it('returns 403 for a standard user', async () => {

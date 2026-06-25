@@ -142,6 +142,7 @@ describe('csv-columns', () => {
       wasteProcessingType: 'reprocessor',
       registrationNumber: 'REG-001',
       status: 'approved',
+      statusHistory: [],
       validFrom: '2026-01-01',
       validTo: '2026-12-31'
     }
@@ -259,11 +260,55 @@ describe('csv-columns', () => {
       expect(row[containerNumberIdx]).toBe('')
     })
 
-    it('emits the field value when a data field is present on the record', () => {
+    it('passes a numeric data field through as a real number', () => {
       const row = buildDataRow(baseInput)
       const grossIdx =
         METADATA_COLUMNS.length + dataFieldColumns.indexOf('GROSS_WEIGHT')
-      expect(row[grossIdx]).toBe('10')
+      expect(row[grossIdx]).toBe(10)
+    })
+
+    it('apostrophe-prefixes a string data cell that begins with a formula trigger', () => {
+      const row = buildDataRow({
+        ...baseInput,
+        record: buildRecord({
+          data: { ...recordFixture.data, PRODUCT_DESCRIPTION: '=SUM(A1:A2)' }
+        })
+      })
+      const idx =
+        METADATA_COLUMNS.length +
+        dataFieldColumns.indexOf('PRODUCT_DESCRIPTION')
+      expect(row[idx]).toBe("'=SUM(A1:A2)")
+    })
+
+    it.each(['+1', '-1', '@cmd'])(
+      'apostrophe-prefixes a string cell beginning with %s',
+      (value) => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({
+            data: { ...recordFixture.data, PRODUCT_DESCRIPTION: value }
+          })
+        })
+        const idx =
+          METADATA_COLUMNS.length +
+          dataFieldColumns.indexOf('PRODUCT_DESCRIPTION')
+        expect(row[idx]).toBe(`'${value}`)
+      }
+    )
+
+    it('apostrophe-prefixes the organisation name when it begins with a formula trigger', () => {
+      const row = buildDataRow({
+        ...baseInput,
+        org: { ...orgFixture, companyDetails: { name: '=cmd|calc' } }
+      })
+      expect(row[1]).toBe("'=cmd|calc")
+    })
+
+    it('does not prefix a numeric cell even though numbers are not strings', () => {
+      const row = buildDataRow(baseInput)
+      const grossIdx =
+        METADATA_COLUMNS.length + dataFieldColumns.indexOf('GROSS_WEIGHT')
+      expect(row[grossIdx]).toBe(10)
     })
 
     it('emits values for runtime-observed columns not in any schema', () => {
