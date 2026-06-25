@@ -1,3 +1,6 @@
+import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
+
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
@@ -102,16 +105,17 @@ const backfillRegistrationStream = async ({
     return null
   }
 
-  let accreditation = null
+  let accreditation
   try {
     accreditation = await organisationsRepository.findAccreditationById(
       organisation.id,
       accreditationId
     )
-  } catch {
-    accreditation = null
-  }
-  if (!accreditation) {
+  } catch (error) {
+    const statusCode = Boom.isBoom(error) ? error.output.statusCode : undefined
+    if (statusCode !== StatusCodes.NOT_FOUND) {
+      throw error
+    }
     return {
       orphanedAccreditation: {
         organisationId: organisation.id,

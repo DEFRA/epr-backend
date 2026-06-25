@@ -131,7 +131,9 @@ describe('reconstructSubmissionRowStates', () => {
       overseasSites
     })
 
+    expect(upserts[0].summaryLogId).toBe('sl-1')
     expect(upserts[0].entries.map((e) => e.rowId)).toEqual(['row-1'])
+    expect(upserts[1].summaryLogId).toBe('sl-2')
     expect(upserts[1].entries.map((e) => e.rowId)).toEqual(['row-1'])
   })
 

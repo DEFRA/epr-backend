@@ -241,4 +241,32 @@ describe('backfillEstateRowStates', () => {
     ).toEqual([])
     expect(summary.streamsBackfilled).toBe(0)
   })
+
+  it('propagates an unexpected accreditation-lookup error rather than recording it as orphaned', async () => {
+    const registration = reprocessorRegistration({
+      id: 'reg-1',
+      accreditationId: 'acc-1'
+    })
+    const organisation = buildOrganisationWithRegistration(
+      registration,
+      'approved'
+    )
+    const wasteRecords = [
+      receivedRecord(organisation.id, 'reg-1', 'row-1', [
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } }
+      ])
+    ]
+    const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
+    await insertLog(deps.summaryLogsRepository, 'sl-1', {
+      organisationId: organisation.id,
+      registrationId: 'reg-1',
+      submittedAt: '2025-01-01T00:00:00.000Z'
+    })
+    deps.organisationsRepository.findAccreditationById = () =>
+      Promise.reject(new Error('transient database failure'))
+
+    await expect(backfillEstateRowStates(deps)).rejects.toThrow(
+      'transient database failure'
+    )
+  })
 })
