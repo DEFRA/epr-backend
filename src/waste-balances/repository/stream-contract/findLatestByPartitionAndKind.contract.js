@@ -7,9 +7,15 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
   describe('findLatestByPartitionAndKind', () => {
     let repository
 
-    beforeEach(async ({ streamRepository }) => {
-      repository = await streamRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
+          streamRepository
+        }
+      ) => {
+        repository = await streamRepository()
+      }
+    )
 
     it('returns null when no events of the given kind exist', async () => {
       await repository.appendEvent(

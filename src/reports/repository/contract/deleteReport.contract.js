@@ -22,9 +22,15 @@ export const testDeleteReportBehaviour = (it) => {
   describe('deleteReport', () => {
     let repository
 
-    beforeEach(async ({ reportsRepository }) => {
-      repository = reportsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory }} */ {
+          reportsRepository
+        }
+      ) => {
+        repository = reportsRepository()
+      }
+    )
 
     it('hard-deletes the report so findReportById throws 404', async () => {
       const { id: reportId, submissionNumber } = await repository.createReport(

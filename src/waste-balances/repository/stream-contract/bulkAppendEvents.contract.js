@@ -7,9 +7,15 @@ export const testBulkAppendEventsBehaviour = (it) => {
   describe('bulkAppendEvents (@migration PAE-1382)', () => {
     let repository
 
-    beforeEach(async ({ streamRepository }) => {
-      repository = await streamRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
+          streamRepository
+        }
+      ) => {
+        repository = await streamRepository()
+      }
+    )
 
     it('inserts multiple events and returns stored events with ids', async () => {
       const events = [

@@ -14,9 +14,13 @@ export const testFormsFileUploadsRepositoryContract = (it) => {
   describe('forms file uploads repository contract', () => {
     let formsFileUploadsRepository
 
-    beforeEach(({ formsFileUploadsRepository: repo }) => {
-      formsFileUploadsRepository = repo
-    })
+    beforeEach(
+      (
+        /** @type {ContractTestFixtures} */ { formsFileUploadsRepository: repo }
+      ) => {
+        formsFileUploadsRepository = repo
+      }
+    )
 
     it('copies file to S3 and retrieves it', async () => {
       const fileId = 'test-file-123'

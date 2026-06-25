@@ -5,9 +5,15 @@ export const testFindByPropertiesBehaviour = (it) => {
   describe('findByProperties', () => {
     let repository
 
-    beforeEach(async ({ overseasSitesRepository }) => {
-      repository = overseasSitesRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ overseasSitesRepository: import('../port.js').OverseasSitesRepository }} */ {
+          overseasSitesRepository
+        }
+      ) => {
+        repository = overseasSitesRepository
+      }
+    )
 
     it('returns null when no matching site exists', async () => {
       const result = await repository.findByProperties({

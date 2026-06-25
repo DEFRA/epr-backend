@@ -5,9 +5,15 @@ export const testDataIsolation = (it) => {
   describe('data isolation', () => {
     let repository
 
-    beforeEach(async ({ overseasSitesRepository }) => {
-      repository = overseasSitesRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ overseasSitesRepository: import('../port.js').OverseasSitesRepository }} */ {
+          overseasSitesRepository
+        }
+      ) => {
+        repository = overseasSitesRepository
+      }
+    )
 
     it('returns cloned data from findById that cannot mutate storage', async () => {
       const created = await repository.create(buildOverseasSite())

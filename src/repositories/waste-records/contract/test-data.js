@@ -58,7 +58,7 @@ export const buildVersionData = (options = {}) => {
 
 /**
  * Convert object representation to nested Map structure for appendVersions
- * @param {Record<WasteRecordType, Record<string, VersionData>>} wasteRecordVersionsObj
+ * @param {Partial<Record<WasteRecordType, Record<string, VersionData>>>} wasteRecordVersionsObj
  * @returns {Map<WasteRecordType, Map<string, VersionData>>}
  */
 export const toWasteRecordVersions = (wasteRecordVersionsObj) => {

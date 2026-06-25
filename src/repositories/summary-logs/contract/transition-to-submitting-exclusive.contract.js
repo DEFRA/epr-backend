@@ -18,16 +18,20 @@ const generateOrgReg = () => ({
  * This method atomically transitions a summary log to 'submitting' status,
  * but only if no other summary log for the same organisation/registration
  * pair is already submitting. This prevents concurrent submissions.
- *
- * @param {import('vitest').TaskContext} it - Vitest test context with fixtures
  */
 export const testTransitionToSubmittingExclusive = (it) => {
   describe('transitionToSubmittingExclusive', () => {
     let repository
 
-    beforeEach(async ({ summaryLogsRepository }) => {
-      repository = summaryLogsRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repository = summaryLogsRepository
+      }
+    )
 
     it('returns success with summaryLog and version when no other log is submitting', async () => {
       const { organisationId, registrationId } = generateOrgReg()

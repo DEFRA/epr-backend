@@ -13,9 +13,15 @@ export const testFindAllByOrgReg = (it) => {
     /** @type {import('../port.js').SummaryLogsRepository} */
     let repo
 
-    beforeEach(async ({ summaryLogsRepository }) => {
-      repo = summaryLogsRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repo = summaryLogsRepository
+      }
+    )
 
     it('returns an empty array when no summary logs exist for the org/reg pair', async () => {
       const { organisationId, registrationId } = generateOrgReg()

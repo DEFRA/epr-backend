@@ -5,13 +5,21 @@ import {
   toWasteRecordVersions
 } from './test-data.js'
 
+/** @typedef {import('../port.js').VersionData} VersionData */
+
 export const testDataIsolationBehaviour = (it) => {
   describe('data isolation', () => {
     let repository
 
-    beforeEach(async ({ wasteRecordsRepository }) => {
-      repository = await wasteRecordsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteRecordsRepository: import('../port.js').WasteRecordsRepositoryFactory }} */ {
+          wasteRecordsRepository
+        }
+      ) => {
+        repository = await wasteRecordsRepository()
+      }
+    )
 
     describe('findByRegistration isolation', () => {
       it('returns independent copies that cannot modify stored data', async () => {
@@ -54,8 +62,11 @@ export const testDataIsolationBehaviour = (it) => {
 
         // mutate input after save
         data.GROSS_WEIGHT = 999.99
-        wasteRecordVersions.get('received').get('row-1').data.GROSS_WEIGHT =
-          999.99
+        const receivedRows = /** @type {Map<string, VersionData>} */ (
+          wasteRecordVersions.get('received')
+        )
+        const storedRow = /** @type {VersionData} */ (receivedRows.get('row-1'))
+        storedRow.data.GROSS_WEIGHT = 999.99
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
         expect(result[0].data.GROSS_WEIGHT).toBe(100.5)

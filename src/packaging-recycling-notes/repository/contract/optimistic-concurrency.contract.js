@@ -27,9 +27,15 @@ export const testOptimisticConcurrency = (it) => {
   describe('optimistic concurrency', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
+          prnRepository
+        }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     describe('version control', () => {
       it('initialises version to 1 on create', async () => {

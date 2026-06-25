@@ -7,9 +7,15 @@ export const testPrnNumberUniqueness = (it) => {
   describe('PRN number uniqueness', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
+          prnRepository
+        }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     describe('unique constraint', () => {
       it('throws PrnNumberConflictError when prnNumber already exists', async () => {
