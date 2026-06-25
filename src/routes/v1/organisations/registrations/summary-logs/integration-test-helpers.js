@@ -134,6 +134,9 @@ const TARE_PLUS_PALLET_WEIGHT = 150
 const DEFAULT_DATE = '2025-01-15T00:00:00.000Z'
 const VALID_FROM = '2025-01-01'
 const VALID_TO = '2025-12-31'
+// A registered overseas site whose approval starts after the default export
+// date, so OSR_ID 200 resolves to found-but-unapproved (ORS_NOT_APPROVED).
+const UNAPPROVED_VALID_FROM = '2025-06-01'
 
 export const createReprocessorReceivedRowValues = (overrides = {}) => {
   const tonnage = overrides.tonnageReceived ?? 1000
@@ -583,6 +586,18 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       validFrom: new Date(VALID_FROM),
       createdAt: new Date(),
       updatedAt: new Date()
+    },
+    {
+      id: TEST_UNAPPROVED_OVERSEAS_SITE_ID,
+      name: 'Test Unapproved Overseas Site',
+      address: {
+        line1: '2 Test Road',
+        townOrCity: 'Hamburg'
+      },
+      country: 'Germany',
+      validFrom: new Date(UNAPPROVED_VALID_FROM),
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
   ])()
 
@@ -685,6 +700,7 @@ const createTestSubmitterWorker = ({
  * @returns {Object} Test organisation with registrations and accreditations
  */
 const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
+const TEST_UNAPPROVED_OVERSEAS_SITE_ID = 'test-overseas-site-200'
 
 const buildComplexTestOrg = ({
   registrationId,
@@ -713,7 +729,10 @@ const buildComplexTestOrg = ({
     // registration report on a quarterly cadence rather than monthly.
     ...(accredited && { accreditationId }),
     ...(processingType === 'exporter' && {
-      overseasSites: { 100: { overseasSiteId: TEST_OVERSEAS_SITE_ID } }
+      overseasSites: {
+        100: { overseasSiteId: TEST_OVERSEAS_SITE_ID },
+        200: { overseasSiteId: TEST_UNAPPROVED_OVERSEAS_SITE_ID }
+      }
     })
   }
 
