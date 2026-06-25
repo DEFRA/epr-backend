@@ -10,7 +10,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
@@ -70,7 +70,7 @@ describe('Repeated uploads of identical data', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
 
       // Set up organisation with registration
-      const testOrg = buildOrganisation({
+      const testOrg = buildReadOrganisation({
         registrations: [
           {
             id: registrationId,
