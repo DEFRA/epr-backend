@@ -157,18 +157,22 @@ describe('loadsByReportingPeriod population at validate time', () => {
       processingType: 'exporter'
     })
 
-    // Both loads export on 2025-01-20 (an open period, since no reports are
+    // All loads export on 2025-01-20 (an open period, since no reports are
     // submitted). Row 100t uses OSR_ID 100, which is approved from 2025-01-01,
     // so it counts toward the predicted waste-balance delta. Row 200t uses
-    // OSR_ID 999, which has no approved overseas site, so it must be excluded
-    // from the delta exactly as it is at submit time.
+    // OSR_ID 999, which is not in the registration's overseas sites at all, so
+    // it is excluded as ORS_NOT_FOUND. Row 300t uses OSR_ID 200, a registered
+    // site whose approval starts after the export date, so it is excluded as
+    // ORS_NOT_APPROVED. Both excluded rows carry their distinct reason exactly
+    // as they do at submit time.
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-period-status',
       'file-period-status',
       createUploadData([
         { rowId: 1001, osrId: 100, exportTonnage: 100 },
-        { rowId: 2001, osrId: 999, exportTonnage: 200 }
+        { rowId: 2001, osrId: 999, exportTonnage: 200 },
+        { rowId: 3001, osrId: 200, exportTonnage: 300 }
       ])
     )
 
@@ -188,10 +192,16 @@ describe('loadsByReportingPeriod population at validate time', () => {
             ]
           },
           nonBalanceAffecting: {
-            count: 1,
+            count: 2,
             rows: [
               {
                 rowId: '2001',
+                wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+                exclusionReasons: [CLASSIFICATION_REASON.ORS_NOT_FOUND],
+                tonnageDelta: 0
+              },
+              {
+                rowId: '3001',
                 wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
                 exclusionReasons: [CLASSIFICATION_REASON.ORS_NOT_APPROVED],
                 tonnageDelta: 0
