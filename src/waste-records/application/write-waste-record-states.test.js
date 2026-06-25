@@ -61,6 +61,20 @@ describe('writeWasteRecordStates', () => {
     expect(await rowStateRepository.findBySummaryLogId('log-A')).toHaveLength(0)
   })
 
+  it('tolerates an absent repository when the feature flag is off', async () => {
+    await expect(
+      writeWasteRecordStates({
+        rowStateRepository: /** @type {any} */ (undefined),
+        featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: false }),
+        wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 10 })],
+        accreditation: null,
+        partition: nullPartition,
+        overseasSites,
+        summaryLogId: 'log-A'
+      })
+    ).resolves.toBeUndefined()
+  })
+
   it('writes a row state per record under the null partition when the flag is on', async () => {
     await writeWasteRecordStates({
       rowStateRepository,

@@ -88,7 +88,6 @@ export const commandQueueConsumerPlugin = {
     'summaryLogsRepository',
     'organisationsRepository',
     'wasteRecordsRepository',
-    'wasteRecordStatesRepository',
     'wasteBalancesRepository',
     'uploadsRepository',
     'reportsRepository',
