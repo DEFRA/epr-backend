@@ -199,11 +199,11 @@ export const backfillEstateRowStates = async ({
       }
       if ('orphanedAccreditation' in result) {
         orphanedAccreditations.push(result.orphanedAccreditation)
-        continue
+      } else {
+        streamsBackfilled += 1
+        submissionsBackfilled += result.submissionCount
+        rowStateWrites += result.rowStateWriteCount
       }
-      streamsBackfilled += 1
-      submissionsBackfilled += result.submissionCount
-      rowStateWrites += result.rowStateWriteCount
     }
   }
 
