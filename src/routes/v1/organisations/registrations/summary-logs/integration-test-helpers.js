@@ -555,8 +555,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const wasteBalancesRepositoryFactory = createWasteBalancesRepository({
     streamRepository,
-    rowStateRepository,
-    featureFlags,
     systemLogsRepository: systemLogsForBalanceAudit
   })
   const wasteBalancesRepository = wasteBalancesRepositoryFactory()
@@ -617,6 +615,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     wasteBalancesRepository,
     organisationsRepository,
     overseasSitesRepository,
+    rowStateRepository,
+    featureFlags,
     logger: mockLogger
   })
 
@@ -658,6 +658,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     accreditationId,
     fileDataMap,
     streamRepository,
+    rowStateRepository,
     systemLogsForBalanceAudit,
     reportsRepository
   }

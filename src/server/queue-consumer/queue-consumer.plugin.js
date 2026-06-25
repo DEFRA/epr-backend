@@ -20,6 +20,7 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository,
  *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository,
+ *   wasteRecordStatesRepository: import('#waste-records/repository/port.js').RowStateRepository,
  *   wasteBalancesRepository: import('#waste-balances/repository/port.js').WasteBalancesRepository,
  *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
  *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
@@ -42,10 +43,13 @@ function buildConsumerDeps(server, { config }) {
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
+    wasteRecordStatesRepository,
     wasteBalancesRepository,
     reportsRepository,
     systemLogsRepository
   } = /** @type {QueueConsumerRepositories} */ (server.app)
+
+  const { featureFlags } = server
 
   // Pre-wired closure: captures repos at plugin level; receives org/reg/sl-id at call time
   const onSummaryLogSubmittedReportHook = (
@@ -68,7 +72,9 @@ function buildConsumerDeps(server, { config }) {
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
+    wasteRecordStatesRepository,
     wasteBalancesRepository,
+    featureFlags,
     reportsRepository,
     summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
     onSummaryLogSubmittedReportHook

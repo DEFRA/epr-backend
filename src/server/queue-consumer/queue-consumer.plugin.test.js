@@ -1,3 +1,5 @@
+import Hapi from '@hapi/hapi'
+
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -81,6 +83,40 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.dependencies).toContain(
       'uploadsRepository'
     )
+  })
+
+  describe('startup without a row-state repository', () => {
+    const stubRepositoryPlugin = (name) => ({
+      name,
+      register: (/** @type {import('@hapi/hapi').Server} */ srv) => {
+        srv.app[name] = {}
+      }
+    })
+
+    it('initialises when wasteRecordStatesRepository is not registered', async () => {
+      const hapiServer = Hapi.server()
+
+      await hapiServer.register(
+        [
+          'summaryLogsRepository',
+          'organisationsRepository',
+          'wasteRecordsRepository',
+          'wasteBalancesRepository',
+          'uploadsRepository',
+          'reportsRepository',
+          'systemLogsRepository'
+        ].map(stubRepositoryPlugin)
+      )
+
+      await hapiServer.register(
+        /** @type {any} */ ({
+          plugin: commandQueueConsumerPlugin,
+          options: { config }
+        })
+      )
+
+      await expect(hapiServer.initialize()).resolves.toBeUndefined()
+    })
   })
 
   describe('plugin registration', () => {

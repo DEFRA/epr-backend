@@ -1,5 +1,6 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { resolveOverseasSites } from './resolve-overseas-sites.js'
+import { writeWasteRecordStates } from '#waste-records/application/write-waste-record-states.js'
 import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
@@ -236,6 +237,71 @@ const calculateMetrics = (wasteRecords) => {
 }
 
 /**
+ * Resolves the accreditation (when one exists, any status), commits the
+ * per-row state for every submission (flag-gated, partitioned by accreditation
+ * existence), and updates the waste balance only for accredited
+ * balance-bearing submissions.
+ *
+ * @param {object} params
+ * @param {object} params.summaryLog
+ * @param {string | undefined} params.accreditationId
+ * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
+ * @param {object} params.parsedData
+ * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
+ * @param {object} params.organisationsRepository
+ * @param {import('#waste-records/repository/port.js').RowStateRepository} params.rowStateRepository
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
+ * @param {object} params.wasteBalancesRepository
+ */
+const commitStateAndBalance = async ({
+  summaryLog,
+  accreditationId,
+  wasteRecords,
+  overseasSites,
+  parsedData,
+  user,
+  organisationsRepository,
+  rowStateRepository,
+  featureFlags,
+  wasteBalancesRepository
+}) => {
+  const accreditation = accreditationId
+    ? await resolveAccreditation(
+        organisationsRepository,
+        summaryLog.organisationId,
+        accreditationId
+      )
+    : null
+
+  await writeWasteRecordStates({
+    rowStateRepository,
+    featureFlags,
+    wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
+    accreditation,
+    partition: {
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      accreditationId: accreditationId ?? null
+    },
+    overseasSites,
+    summaryLogId: summaryLog.file.id
+  })
+
+  if (accreditationId) {
+    await updateWasteBalances({
+      parsedData,
+      accreditation,
+      wasteBalancesRepository,
+      wasteRecords,
+      user,
+      overseasSites,
+      summaryLogId: summaryLog.file.id
+    })
+  }
+}
+
+/**
  * Orchestrates the extraction, transformation, and persistence of waste records from a summary log
  *
  * @param {Object} dependencies - The service dependencies
@@ -244,6 +310,8 @@ const calculateMetrics = (wasteRecords) => {
  * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
  * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
+ * @param {import('#waste-records/repository/port.js').RowStateRepository} dependencies.rowStateRepository - The waste record states repository
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags] - Feature flags gating the row-state write
  * @param {TypedLogger} dependencies.logger - Logger forwarded to extractor for trace correlation
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
@@ -254,6 +322,8 @@ export const syncFromSummaryLog = (dependencies) => {
     wasteBalancesRepository,
     organisationsRepository,
     overseasSitesRepository,
+    rowStateRepository,
+    featureFlags,
     logger
   } = dependencies
 
@@ -327,26 +397,22 @@ export const syncFromSummaryLog = (dependencies) => {
           )
         : ORS_VALIDATION_DISABLED
 
-    // 9. Resolve accreditation and update waste balances
-    if (accreditationId) {
-      const accreditation = await resolveAccreditation(
-        organisationsRepository,
-        summaryLog.organisationId,
-        accreditationId
-      )
+    // 9. Commit per-row state for every submission and the balance for
+    // accredited balance-bearing ones.
+    await commitStateAndBalance({
+      summaryLog,
+      accreditationId,
+      wasteRecords,
+      overseasSites,
+      parsedData,
+      user,
+      organisationsRepository,
+      rowStateRepository,
+      featureFlags,
+      wasteBalancesRepository
+    })
 
-      await updateWasteBalances({
-        parsedData,
-        accreditation,
-        wasteBalancesRepository,
-        wasteRecords,
-        user,
-        overseasSites,
-        summaryLogId: summaryLog.file.id
-      })
-    }
-
-    // 11. Count created/updated records for metrics
+    // 10. Count created/updated records for metrics
     // The change property is set by transformFromSummaryLog
     return calculateMetrics(wasteRecords)
   }
