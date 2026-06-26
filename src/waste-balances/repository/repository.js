@@ -8,7 +8,8 @@ import {
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers-prn.js'
 import { findBalanceByPartition } from './read-balance.js'
-import { appendSummaryLogSubmittedEvent } from '../application/append-summary-log-submitted-event.js'
+import { STREAM_EVENT_KIND } from './stream-schema.js'
+import { appendToStream } from '../application/append-to-stream.js'
 
 /**
  * Creates a waste balances repository. The event-sourced stream is the sole
@@ -72,13 +73,25 @@ export const createWasteBalancesRepository = (dependencies) => {
         findBalance,
         dependencies
       }),
-    appendRegisteredOnlySubmittedEvent: async (params) =>
-      appendSummaryLogSubmittedEvent({
-        repository: streamRepository,
-        accreditationId: null,
-        creditTotal: 0,
-        ...params
-      }),
+    appendRegisteredOnlySubmittedEvent: async ({
+      registrationId,
+      organisationId,
+      summaryLogId,
+      createdBy
+    }) =>
+      appendToStream(
+        {
+          repository: streamRepository,
+          registrationId,
+          accreditationId: null,
+          organisationId
+        },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId, creditTotal: 0 },
+          createdBy
+        }
+      ),
     getPrnCatchupEvents: async ({
       registrationId,
       accreditationId,

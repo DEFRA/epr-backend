@@ -1,4 +1,4 @@
-import { appendSummaryLogSubmittedEvent } from '#waste-balances/application/append-summary-log-submitted-event.js'
+import { appendToStream } from '#waste-balances/application/append-to-stream.js'
 import {
   BACKFILL_ACTOR,
   STREAM_EVENT_KIND
@@ -108,15 +108,19 @@ export const backfillRegistrationRowStates = async ({
     rowStateWriteCount += entries.length
 
     if (emitsSubmittedEvents && !existingSubmittedEvents.has(summaryLogId)) {
-      await appendSummaryLogSubmittedEvent({
-        repository: streamRepository,
-        registrationId: partition.registrationId,
-        accreditationId: null,
-        organisationId: partition.organisationId,
-        summaryLogId,
-        creditTotal: 0,
-        createdBy: BACKFILL_ACTOR
-      })
+      await appendToStream(
+        {
+          repository: streamRepository,
+          registrationId: partition.registrationId,
+          accreditationId: null,
+          organisationId: partition.organisationId
+        },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId, creditTotal: 0 },
+          createdBy: BACKFILL_ACTOR
+        }
+      )
       existingSubmittedEvents.add(summaryLogId)
       submittedEventWriteCount += 1
     }
