@@ -37,7 +37,7 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
 /**
  * What backfilling a single registration stream contributed: either an orphaned
  * accreditation to surface, or the submission and write counts it committed.
- * `null` means the stream was skipped (no accreditation or no submitted logs).
+ * `null` means the stream was skipped (no submitted summary logs).
  *
  * @typedef {Object} StreamBackfilled
  * @property {number} submissionCount
@@ -64,11 +64,14 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
 })
 
 /**
- * Backfill one registration's stream, mirroring the live write scope: skipped
- * unless it is accredited and has at least one submitted summary log, partitioned
- * by its accreditation, classified against today's accreditation and overseas-site
- * state. A referenced accreditation missing from the organisation is surfaced as
- * orphaned rather than fatal.
+ * Backfill one registration's stream, mirroring the live write scope: every
+ * registration with at least one submitted summary log is reconstructed,
+ * partitioned by accreditation existence (`accreditationId ?? null`) and
+ * classified against today's accreditation (or null for a registered-only
+ * registration) and overseas-site state. A skip yields null only when there are
+ * no submitted summary logs. When a registration references an accreditation that
+ * is missing from the organisation, that is surfaced as orphaned rather than
+ * fatal.
  *
  * @param {Object} args
  * @param {import('#domain/organisations/model.js').Organisation} args.organisation
@@ -90,9 +93,6 @@ const backfillRegistrationStream = async ({
   rowStateRepository
 }) => {
   const { accreditationId } = registration
-  if (!accreditationId) {
-    return null
-  }
 
   const logs = await summaryLogsRepository.findAllByOrgReg(
     organisation.id,
@@ -105,22 +105,26 @@ const backfillRegistrationStream = async ({
     return null
   }
 
-  let accreditation
-  try {
-    accreditation = await organisationsRepository.findAccreditationById(
-      organisation.id,
-      accreditationId
-    )
-  } catch (error) {
-    const statusCode = Boom.isBoom(error) ? error.output.statusCode : undefined
-    if (statusCode !== StatusCodes.NOT_FOUND) {
-      throw error
-    }
-    return {
-      orphanedAccreditation: {
-        organisationId: organisation.id,
-        registrationId: registration.id,
+  let accreditation = null
+  if (accreditationId) {
+    try {
+      accreditation = await organisationsRepository.findAccreditationById(
+        organisation.id,
         accreditationId
+      )
+    } catch (error) {
+      const statusCode = Boom.isBoom(error)
+        ? error.output.statusCode
+        : undefined
+      if (statusCode !== StatusCodes.NOT_FOUND) {
+        throw error
+      }
+      return {
+        orphanedAccreditation: {
+          organisationId: organisation.id,
+          registrationId: registration.id,
+          accreditationId
+        }
       }
     }
   }
@@ -141,7 +145,7 @@ const backfillRegistrationStream = async ({
       partition: {
         organisationId: organisation.id,
         registrationId: registration.id,
-        accreditationId
+        accreditationId: accreditationId ?? null
       },
       wasteRecords,
       summaryLogs,
@@ -156,14 +160,14 @@ const backfillRegistrationStream = async ({
 /**
  * Reconstruct the waste record state collection for the whole historical estate
  * from sparse version history, mirroring the live submission path's write scope:
- * only accredited registrations contribute (registered-only streams never wrote
- * row states), only submitted summary logs are replayed, and each registration's
- * stream is partitioned by its accreditation. Accreditation validity and
- * overseas-site approval are read at today's state, so a backfilled row's
- * classification reflects current factors — the historical-reading drift
- * ADR-0037 accepts for legacy submissions. Re-runnable: every registration's
- * upserts are idempotent. An accreditation referenced by a registration but
- * missing from the organisation is surfaced and skipped, not fatal.
+ * every registration with submitted summary logs contributes — accredited and
+ * registered-only alike — partitioned by accreditation existence
+ * (`accreditationId ?? null`), and only submitted summary logs are replayed. Accreditation validity and overseas-site approval are read at today's
+ * state, so a backfilled row's classification reflects current factors — the
+ * historical-reading drift ADR-0037 accepts for legacy submissions. Re-runnable:
+ * every registration's upserts are idempotent. An accreditation referenced by a
+ * registration but missing from the organisation is surfaced and skipped, not
+ * fatal.
  *
  * @param {Object} deps
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} deps.organisationsRepository

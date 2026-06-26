@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -121,7 +122,7 @@ describe('backfillEstateRowStates', () => {
     })
   })
 
-  it('does not backfill a registered-only registration with no accreditation', async () => {
+  it('backfills a registered-only registration under a null-accreditation partition', async () => {
     const registration = reprocessorRegistration({ id: 'reg-ro' })
     delete registration.accreditationId
     const organisation = buildOrganisation({
@@ -142,11 +143,50 @@ describe('backfillEstateRowStates', () => {
 
     const summary = await backfillEstateRowStates(deps)
 
-    expect(
-      await deps.rowStateRepository.findBySummaryLogId(fileId('sl-1'))
-    ).toEqual([])
-    expect(summary.streamsBackfilled).toBe(0)
-    expect(summary.submissionsBackfilled).toBe(0)
+    const docs = await deps.rowStateRepository.findBySummaryLogId(
+      fileId('sl-1')
+    )
+    expect(docs.map((d) => d.rowId)).toEqual(['row-1'])
+    expect(docs[0].accreditationId).toBeNull()
+    expect(summary.streamsBackfilled).toBe(1)
+    expect(summary.submissionsBackfilled).toBe(1)
+    expect(summary.orphanedAccreditations).toEqual([])
+  })
+
+  it('backfills a registered-only processing-type stream rather than dropping it', async () => {
+    const registration = reprocessorRegistration({ id: 'reg-ro-pt' })
+    delete registration.accreditationId
+    const organisation = buildOrganisation({
+      registrations: [registration],
+      accreditations: []
+    })
+    const wasteRecords = [
+      receivedRecord(organisation.id, 'reg-ro-pt', 'row-1', [
+        {
+          summaryLog: { id: fileId('sl-1') },
+          data: {
+            processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
+            supplierName: 'Acme'
+          }
+        }
+      ])
+    ]
+    const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
+    await insertLog(deps.summaryLogsRepository, 'sl-1', {
+      organisationId: organisation.id,
+      registrationId: 'reg-ro-pt',
+      submittedAt: '2025-01-01T00:00:00.000Z'
+    })
+
+    const summary = await backfillEstateRowStates(deps)
+
+    const docs = await deps.rowStateRepository.findBySummaryLogId(
+      fileId('sl-1')
+    )
+    expect(docs.map((d) => d.rowId)).toEqual(['row-1'])
+    expect(docs[0].accreditationId).toBeNull()
+    expect(summary.streamsBackfilled).toBe(1)
+    expect(summary.submissionsBackfilled).toBe(1)
   })
 
   it('replays only submitted logs and skips streams whose logs are all unsubmitted', async () => {
