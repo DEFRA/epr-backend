@@ -117,7 +117,7 @@ describe('writeWasteRecordStates', () => {
     })
   })
 
-  it('stores report-facing tonnages coerced to two decimal places', async () => {
+  it('stores tonnages coerced to two decimal places', async () => {
     await writeWasteRecordStates({
       rowStateRepository,
       featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: true }),
@@ -130,6 +130,21 @@ describe('writeWasteRecordStates', () => {
 
     const [committed] = await rowStateRepository.findBySummaryLogId('log-A')
     expect(committed.data.TONNAGE_RECEIVED_FOR_RECYCLING).toBe(1.01)
+  })
+
+  it('stores weight quantities coerced to two decimal places', async () => {
+    await writeWasteRecordStates({
+      rowStateRepository,
+      featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: true }),
+      wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 7.536 })],
+      accreditation: null,
+      partition: nullPartition,
+      overseasSites,
+      summaryLogId: 'log-A'
+    })
+
+    const [committed] = await rowStateRepository.findBySummaryLogId('log-A')
+    expect(committed.data.NET_WEIGHT).toBe(7.54)
   })
 
   it('stores tonnages so round-each-then-sum no longer drifts from sum-then-round', async () => {

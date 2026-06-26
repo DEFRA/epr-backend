@@ -164,7 +164,7 @@ describe('reconstructSubmissionRowStates', () => {
     })
   })
 
-  it('coerces report-facing tonnages to two decimal places in reconstructed entries', () => {
+  it('coerces stored tonnages and weights to two decimal places in reconstructed entries', () => {
     const summaryLogs = [submittedLog('sl-1', '2025-01-01T00:00:00.000Z')]
     const wasteRecords = [
       receivedRecord('row-1', [
@@ -172,7 +172,9 @@ describe('reconstructSubmissionRowStates', () => {
           summaryLog: { id: 'sl-1' },
           data: {
             supplierName: 'Acme',
-            TONNAGE_RECEIVED_FOR_RECYCLING: 1.005
+            TONNAGE_RECEIVED_FOR_RECYCLING: 1.005,
+            NET_WEIGHT: 7.536,
+            TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR: 3.995
           }
         }
       ])
@@ -187,7 +189,9 @@ describe('reconstructSubmissionRowStates', () => {
 
     expect(entries[0].data).toEqual({
       supplierName: 'Acme',
-      TONNAGE_RECEIVED_FOR_RECYCLING: 1.01
+      TONNAGE_RECEIVED_FOR_RECYCLING: 1.01,
+      NET_WEIGHT: 7.54,
+      TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR: 4
     })
   })
 

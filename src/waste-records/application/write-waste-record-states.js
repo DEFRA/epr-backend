@@ -1,6 +1,6 @@
 import { markExcludedRecords } from '#waste-balances/repository/helpers.js'
 import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
-import { coerceReportTonnages } from './report-tonnage-coercion.js'
+import { coerceStoredTonnages } from './stored-tonnage-coercion.js'
 
 /**
  * @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -46,7 +46,7 @@ export const writeWasteRecordStates = async ({
 
   const classifiedRows = markExcludedRecords(wasteRecords).map((record) => {
     const classified = classifyWasteRecord(record, accreditation, overseasSites)
-    return { ...classified, data: coerceReportTonnages(classified.data) }
+    return { ...classified, data: coerceStoredTonnages(classified.data) }
   })
 
   await rowStateRepository.upsertRowStates(
