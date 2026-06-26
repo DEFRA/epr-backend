@@ -774,35 +774,26 @@ describe(`GET ${reportsGetPath}`, () => {
         return payload.reportingPeriods.find((p) => p.period === period)
       }
 
-      it('derives "overdue" for an ended period past its due date with no report', async () => {
-        const { server, organisationId, registrationId } =
-          await createAccreditedServer()
+      it.each([
+        { period: 1, expected: 'overdue', when: 'past its due date' },
+        { period: 3, expected: 'due', when: 'before its due date' }
+      ])(
+        'derives "$expected" for an ended period $when with no report',
+        async ({ period, expected }) => {
+          const { server, organisationId, registrationId } =
+            await createAccreditedServer()
 
-        const january = await findPeriod(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
+          const item = await findPeriod(
+            server,
+            organisationId,
+            registrationId,
+            period
+          )
 
-        expect(january.report).toBeNull()
-        expect(january.periodStatus).toBe('overdue')
-      })
-
-      it('derives "due" for an ended period before its due date with no report', async () => {
-        const { server, organisationId, registrationId } =
-          await createAccreditedServer()
-
-        const march = await findPeriod(
-          server,
-          organisationId,
-          registrationId,
-          3
-        )
-
-        expect(march.report).toBeNull()
-        expect(march.periodStatus).toBe('due')
-      })
+          expect(item.report).toBeNull()
+          expect(item.periodStatus).toBe(expected)
+        }
+      )
 
       it('derives periodStatus from the stored report status when a report exists', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
@@ -856,21 +847,6 @@ describe(`GET ${reportsGetPath}`, () => {
 
         expect(january.report.status).toBe('in_progress')
         expect(january.periodStatus).toBe('in_progress')
-      })
-
-      it('adds periodStatus without altering the report field shape', async () => {
-        const { server, organisationId, registrationId } =
-          await createAccreditedServer()
-
-        const january = await findPeriod(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
-
-        expect(january).toHaveProperty('periodStatus')
-        expect(january.report).toBeNull()
       })
     })
 
