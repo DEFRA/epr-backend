@@ -3,8 +3,7 @@
  * balance decision (sufficiency check, reversal) was based on. The append is
  * written at `expectedHead + 1`, so a competing write that has advanced the
  * head since the caller read it makes the append fail rather than proceed from
- * a stale position (ADR-0036 "detection over absorption"). The conflict
- * surfaces to the caller.
+ * a stale position (ADR-0036). The conflict surfaces to the caller.
  */
 
 /**

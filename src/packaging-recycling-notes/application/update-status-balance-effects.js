@@ -323,7 +323,7 @@ const EFFECT_HANDLERS = Object.freeze({
  * event per input event and returning them in order. Each handler reads the
  * balance, then appends at the head it read; a competing write that advanced
  * the head in between surfaces as a slot/sequence conflict and propagates to
- * the caller (ADR-0036 "detection over absorption"), failing the transition.
+ * the caller (ADR-0036), failing the transition.
  *
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {import('#common/hapi-types.js').TypedLogger} logger

@@ -10,9 +10,9 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 /**
  * Append the submission event at the head this submission read. A competing
  * write that advanced the head in between surfaces as a slot/sequence conflict
- * and propagates to the caller (ADR-0036 "detection over absorption"). The
- * caller is the summary-log worker job, so the conflict fails the job and the
- * queue redelivers, recomputing the submission against fresh state.
+ * and propagates to the caller (ADR-0036). The caller is the summary-log worker
+ * job, so the conflict fails the job and the queue redelivers, recomputing the
+ * submission against fresh state.
  *
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} repository
  * @param {{ registrationId: string, accreditationId: string, organisationId: string }} partition
