@@ -713,4 +713,34 @@ describe('loadsByReportingPeriod population at validate time', () => {
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
     ).toBe(0)
   })
+
+  it('includes loadsByReportingPeriod on the GET response after submit', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+
+    await upload(
+      env,
+      'sl-submitted-period',
+      'file-submitted-period',
+      createUploadData([{ rowId: 1001, osrId: 100, exportTonnage: 100 }])
+    )
+    await submitAndPoll(env, 'sl-submitted-period')
+
+    const { server, organisationId, registrationId } = env
+    const response = await server.inject({
+      method: 'GET',
+      url: buildGetUrl(organisationId, registrationId, 'sl-submitted-period'),
+      ...asStandardUser({ linkedOrgId: organisationId })
+    })
+    const body = JSON.parse(response.payload)
+
+    // After submit the document still carries loadsByReportingPeriod; the GET
+    // status endpoint must serialise it so the confirmation page can detect
+    // closed-period changes.
+    expect(body.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+    expect(
+      body.loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
+    ).toBe(1)
+  })
 })
