@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
+import { StreamSlotConflictError } from '../repository/stream-port.js'
 import { performUpdateViaStream } from './update-via-stream.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -374,6 +375,38 @@ describe('performUpdateViaStream', () => {
         id: 'user-2',
         email: 'noname@example.test'
       })
+    })
+  })
+
+  describe('optimistic concurrency', () => {
+    it('lets one of two concurrent submissions win and surfaces the loser as a slot conflict', async () => {
+      const submit = (summaryLogId, tonnage) =>
+        performUpdateViaStream({
+          wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
+          accreditation,
+          streamRepository,
+          dependencies: { systemLogsRepository },
+          user,
+          overseasSites,
+          summaryLogId
+        })
+
+      const results = await Promise.allSettled([
+        submit('log-A', 150),
+        submit('log-B', 200)
+      ])
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled')
+      const rejected = results.filter((r) => r.status === 'rejected')
+      expect(fulfilled).toHaveLength(1)
+      expect(rejected).toHaveLength(1)
+      expect(rejected[0].reason).toBeInstanceOf(StreamSlotConflictError)
+
+      const all = await streamRepository.findAllByPartition(
+        'reg-1',
+        accreditationId
+      )
+      expect(all).toHaveLength(1)
     })
   })
 })

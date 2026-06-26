@@ -11,19 +11,22 @@ const openingBalanceFrom = (latest) =>
   latest === null ? { ...ZERO_BALANCE } : { ...latest.closingBalance }
 
 /**
- * @param {import('../repository/stream-port.js').StreamEvent | null} latest
- */
-const nextNumberFrom = (latest) => (latest === null ? 1 : latest.number + 1)
-
-/**
  * Append a single event to the waste balance stream.
  *
- * Reads the latest event to determine the opening balance and next slot
- * number, computes the closing balance based on the event kind, and
- * persists the event.
+ * The event is written into the slot `expectedHead + 1`, where `expectedHead`
+ * is the stream position the caller's decision was based on (`0` for a stream
+ * the caller believes is empty). The slot index is the optimistic-concurrency
+ * guard: if a competing write has advanced the head since the caller read it,
+ * the slot is already occupied and `appendEvent` rejects with a
+ * `StreamSlotConflictError` (ADR-0036 "detection over absorption"). Deriving
+ * the slot from the caller position — rather than re-reading the head here — is
+ * what makes the guard able to fire on a stale decision.
  *
- * For `summary-log-submitted` events, also reads the latest event of
- * that kind to determine the previous `creditTotal` for delta computation.
+ * The latest event supplies the opening balance and, for
+ * `summary-log-submitted` events, the previous `creditTotal` for delta
+ * computation. On the success path the head has not moved, so the latest event
+ * is exactly the one at `expectedHead`; on a moved head the append fails before
+ * the computed balance is persisted.
  *
  * Slot conflicts and idempotency conflicts surface directly to the caller.
  *
@@ -31,7 +34,8 @@ const nextNumberFrom = (latest) => (latest === null ? 1 : latest.number + 1)
  *   repository: import('../repository/stream-port.js').WasteBalanceStreamRepository,
  *   registrationId: string,
  *   accreditationId: string | null,
- *   organisationId: string
+ *   organisationId: string,
+ *   expectedHead: number
  * }} context
  * @param {{
  *   kind: import('../repository/stream-schema.js').StreamEventKind,
@@ -41,7 +45,7 @@ const nextNumberFrom = (latest) => (latest === null ? 1 : latest.number + 1)
  * @returns {Promise<import('../repository/stream-port.js').StreamEvent>}
  */
 export const appendToStream = async (
-  { repository, registrationId, accreditationId, organisationId },
+  { repository, registrationId, accreditationId, organisationId, expectedHead },
   { kind, payload, createdBy }
 ) => {
   const latest = await repository.findLatestByPartition(
@@ -50,7 +54,7 @@ export const appendToStream = async (
   )
 
   const openingBalance = openingBalanceFrom(latest)
-  const number = nextNumberFrom(latest)
+  const number = expectedHead + 1
 
   let closingBalance
 
