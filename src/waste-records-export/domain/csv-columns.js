@@ -41,6 +41,7 @@ export const METADATA_COLUMNS = Object.freeze([
   'Submitted At',
   'Included in Waste Balance',
   'Waste Balance Exclusion Reason',
+  'Waste Balance Tonnage',
   'Row ID'
 ])
 
@@ -157,6 +158,7 @@ export const buildDataRow = ({
     wasteBalanceClassification.reasons
       .map((r) => (r.field ? `${r.code}: ${r.field}` : r.code))
       .join('; '),
+    wasteBalanceClassification.tonnage ?? '',
     String(record.rowId)
   ]
 
