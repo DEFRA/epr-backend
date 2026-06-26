@@ -173,8 +173,8 @@ const backfillRegistrationStream = async ({
  * historical-reading drift ADR-0037 accepts for legacy submissions. Re-runnable:
  * every registration's upserts are idempotent. Registered-only streams, which
  * never formed a summary-log submitted event on the live path, additionally
- * receive a balance-neutral zero-delta event per submission so the row-state
- * read model can resolve them; emission is idempotent too. An accreditation referenced
+ * receive a balance-neutral zero-delta event per submission so every submission
+ * has its submitted event; emission is idempotent too. An accreditation referenced
  * by a registration but missing from the organisation is surfaced and skipped,
  * not fatal.
  *

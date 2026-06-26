@@ -90,8 +90,7 @@
  *   the accreditation has no tail events for this PRN past the watermark.
  * @property {(params: AppendRegisteredOnlySubmittedEventParams) => Promise<import('./stream-port.js').StreamEvent>} appendRegisteredOnlySubmittedEvent
  *   Append a zero-delta `summary-log-submitted` event into a registered-only
- *   (null-accreditation) partition so the row-state read model can resolve its
- *   row-state membership. Balance-neutral.
+ *   (null-accreditation) partition, recording the submission. Balance-neutral.
  */
 
 /**

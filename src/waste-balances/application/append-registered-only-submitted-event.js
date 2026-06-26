@@ -7,9 +7,7 @@ import { appendToStream } from './append-to-stream.js'
  *
  * Registered-only submissions have no waste balance to contribute to — the
  * balance is per-accreditation — so the event is zero-delta (`creditTotal: 0`)
- * and the stream's closing balance equals its opening balance. Recording it
- * also lets the row-state read model resolve the submission's row-state
- * membership for the null partition, which otherwise has no such event.
+ * and the stream's closing balance equals its opening balance.
  *
  * @param {Object} params
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} params.repository

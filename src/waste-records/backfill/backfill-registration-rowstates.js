@@ -61,8 +61,8 @@ const existingSubmittedEventSummaryLogIds = async (
  *
  * Registered-only registrations (null partition) form no summary-log submitted
  * event on the live path, so the same sweep emits a zero-delta
- * `summary-log-submitted` event per submission, in stream order, giving the
- * row-state read model something to resolve. Emission is balance-neutral and
+ * `summary-log-submitted` event per submission, in stream order, so every
+ * submission has its submitted event. Emission is balance-neutral and
  * idempotent: an event is skipped when one already exists for its summary log,
  * so a re-run emits none. Accredited partitions keep the events their original
  * processing wrote and emit none here.

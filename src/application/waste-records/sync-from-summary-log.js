@@ -245,10 +245,8 @@ const calculateMetrics = (wasteRecords) => {
  * summary log was submitted. For an accredited submission that event also
  * carries the waste-balance delta (written via updateWasteBalances). A
  * registered-only / no-accreditation submission has no balance, so its event is
- * zero-delta — the submission is still recorded, it just moves no tonnage.
- * Recording it for registered-only streams is behind its own dedicated flag,
- * independent of the row-state flag; being balance-neutral it is safe to emit
- * before reg-only reads go live.
+ * zero-delta — the submission is still recorded, it just moves no tonnage. That
+ * zero-delta emission is flag-gated.
  *
  * @param {object} params
  * @param {object} params.summaryLog
