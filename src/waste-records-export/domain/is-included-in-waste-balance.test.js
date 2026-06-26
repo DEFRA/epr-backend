@@ -80,7 +80,7 @@ describe('getWasteBalanceClassification', () => {
         accreditation,
         ORS_VALIDATION_DISABLED
       )
-    ).toEqual({ included: false, reasons: [] })
+    ).toEqual({ included: false, reasons: [], tonnage: null })
   })
 
   it('returns included:false and empty reasons when no schema or classifyForWasteBalance exists', () => {
@@ -94,7 +94,7 @@ describe('getWasteBalanceClassification', () => {
         accreditation,
         ORS_VALIDATION_DISABLED
       )
-    ).toEqual({ included: false, reasons: [] })
+    ).toEqual({ included: false, reasons: [], tonnage: null })
 
     const noClassifyRecord = buildWasteRecord({
       type: WASTE_RECORD_TYPE.SENT_ON,
@@ -106,17 +106,16 @@ describe('getWasteBalanceClassification', () => {
         accreditation,
         ORS_VALIDATION_DISABLED
       )
-    ).toEqual({ included: false, reasons: [] })
+    ).toEqual({ included: false, reasons: [], tonnage: null })
   })
 
-  it('returns included:true and empty reasons when record is included', () => {
-    expect(
-      getWasteBalanceClassification(
-        fullyFilledReprocessorRecord,
-        accreditation,
-        ORS_VALIDATION_DISABLED
-      )
-    ).toEqual({ included: true, reasons: [] })
+  it('returns included:true with tonnage when record is included', () => {
+    const result = getWasteBalanceClassification(
+      fullyFilledReprocessorRecord,
+      accreditation,
+      ORS_VALIDATION_DISABLED
+    )
+    expect(result).toEqual({ included: true, reasons: [], tonnage: 9 })
   })
 
   it('returns included:false with exclusion reason when record is excluded', () => {
