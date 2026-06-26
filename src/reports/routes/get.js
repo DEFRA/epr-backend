@@ -4,6 +4,7 @@ import Joi from 'joi'
 import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
+import { derivePeriodStatus } from '#reports/domain/derive-period-status.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
@@ -89,6 +90,7 @@ export const reportsGet = {
 
     const reportingPeriods = merged.map((period) => ({
       ...period,
+      periodStatus: derivePeriodStatus(period),
       report: toReportListItem(period.report)
     }))
 
