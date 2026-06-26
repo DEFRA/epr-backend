@@ -237,10 +237,18 @@ const calculateMetrics = (wasteRecords) => {
 }
 
 /**
- * Resolves the accreditation (when one exists, any status), commits the
+ * Resolves the accreditation (when one exists, any status) and commits the
  * per-row state for every submission (flag-gated, partitioned by accreditation
- * existence), and updates the waste balance only for accredited
- * balance-bearing submissions.
+ * existence).
+ *
+ * Every submission records a summary-log-submitted event marking that the
+ * summary log was submitted. For an accredited submission that event also
+ * carries the waste-balance delta (written via updateWasteBalances). A
+ * registered-only / no-accreditation submission has no balance, so its event is
+ * zero-delta — the submission is still recorded, it just moves no tonnage.
+ * Recording it for registered-only streams is behind its own dedicated flag,
+ * independent of the row-state flag; being balance-neutral it is safe to emit
+ * before reg-only reads go live.
  *
  * @param {object} params
  * @param {object} params.summaryLog
@@ -298,6 +306,20 @@ const commitStateAndBalance = async ({
       overseasSites,
       summaryLogId: summaryLog.file.id
     })
+  } else if (featureFlags?.isRegisteredOnlySubmittedEventsEnabled()) {
+    await wasteBalancesRepository.appendRegisteredOnlySubmittedEvent({
+      registrationId: summaryLog.registrationId,
+      organisationId: summaryLog.organisationId,
+      summaryLogId: summaryLog.file.id,
+      createdBy: {
+        id: user.id,
+        ...(user.name && { name: user.name }),
+        email: user.email
+      }
+    })
+  } else {
+    // Registered-only submission with the flag off: its summary-log-submitted
+    // event is not recorded yet.
   }
 }
 

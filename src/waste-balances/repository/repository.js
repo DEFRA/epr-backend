@@ -8,6 +8,7 @@ import {
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers-prn.js'
 import { findBalanceByPartition } from './read-balance.js'
+import { appendRegisteredOnlySubmittedEvent } from '../application/append-registered-only-submitted-event.js'
 
 /**
  * Creates a waste balances repository. The event-sourced stream is the sole
@@ -70,6 +71,11 @@ export const createWasteBalancesRepository = (dependencies) => {
         appendParams,
         findBalance,
         dependencies
+      }),
+    appendRegisteredOnlySubmittedEvent: async (params) =>
+      appendRegisteredOnlySubmittedEvent({
+        repository: streamRepository,
+        ...params
       }),
     getPrnCatchupEvents: async ({
       registrationId,

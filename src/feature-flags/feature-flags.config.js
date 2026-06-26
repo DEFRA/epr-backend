@@ -13,5 +13,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isWasteRecordStatesEnabled() {
     return config.get('featureFlags.wasteRecordStates')
+  },
+  isRegisteredOnlySubmittedEventsEnabled() {
+    return config.get('featureFlags.registeredOnlySubmittedEvents')
   }
 })
