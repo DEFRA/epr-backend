@@ -71,7 +71,7 @@ export const summaryLogResponseSchema = Joi.object({
   }).optional(),
   loads: loadsSchema.optional(),
   loadsByReportingPeriod: Joi.when('status', {
-    is: SUMMARY_LOG_STATUS.VALIDATED,
+    is: Joi.valid(SUMMARY_LOG_STATUS.VALIDATED, SUMMARY_LOG_STATUS.SUBMITTED),
     then: loadsByReportingPeriodSchema.required(),
     otherwise: loadsByReportingPeriodSchema.optional()
   }),
