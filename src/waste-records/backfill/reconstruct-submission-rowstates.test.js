@@ -164,6 +164,33 @@ describe('reconstructSubmissionRowStates', () => {
     })
   })
 
+  it('coerces report-facing tonnages to two decimal places in reconstructed entries', () => {
+    const summaryLogs = [submittedLog('sl-1', '2025-01-01T00:00:00.000Z')]
+    const wasteRecords = [
+      receivedRecord('row-1', [
+        {
+          summaryLog: { id: 'sl-1' },
+          data: {
+            supplierName: 'Acme',
+            TONNAGE_RECEIVED_FOR_RECYCLING: 1.005
+          }
+        }
+      ])
+    ]
+
+    const [{ entries }] = reconstructSubmissionRowStates({
+      wasteRecords,
+      summaryLogs,
+      accreditation,
+      overseasSites
+    })
+
+    expect(entries[0].data).toEqual({
+      supplierName: 'Acme',
+      TONNAGE_RECEIVED_FOR_RECYCLING: 1.01
+    })
+  })
+
   it('ignores summary logs that are not submitted', () => {
     const summaryLogs = [
       submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
