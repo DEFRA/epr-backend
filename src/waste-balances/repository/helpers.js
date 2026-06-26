@@ -1,5 +1,7 @@
 import { validateAccreditationId } from './validation.js'
+import { STREAM_EVENT_KIND } from './stream-schema.js'
 import { performUpdateViaStream } from '../application/update-via-stream.js'
+import { appendToStream } from '../application/append-to-stream.js'
 import {
   classifyRow,
   ROW_OUTCOME
@@ -112,3 +114,37 @@ export const performUpdateWasteBalanceTransactions = async ({
     summaryLogId
   })
 }
+
+/**
+ * Append a zero-delta `summary-log-submitted` event into a registered-only
+ * (null-accreditation) stream. The submission moves no tonnage, so the
+ * stream's closing balance equals its opening balance.
+ *
+ * @param {Object} params
+ * @param {import('./stream-port.js').WasteBalanceStreamRepository} params.streamRepository
+ * @param {string} params.registrationId
+ * @param {string} params.organisationId
+ * @param {string} params.summaryLogId
+ * @param {import('./stream-schema.js').StreamUserSummary} params.createdBy
+ * @returns {Promise<import('./stream-port.js').StreamEvent>}
+ */
+export const performAppendRegisteredOnlySubmittedEvent = async ({
+  streamRepository,
+  registrationId,
+  organisationId,
+  summaryLogId,
+  createdBy
+}) =>
+  appendToStream(
+    {
+      repository: streamRepository,
+      registrationId,
+      accreditationId: null,
+      organisationId
+    },
+    {
+      kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+      payload: { summaryLogId, creditTotal: 0 },
+      createdBy
+    }
+  )
