@@ -21,6 +21,7 @@ describe('generateAllPeriodsForYear', () => {
   })
 
   it('throws TypeError for unknown cadence', () => {
+    // @ts-expect-error - unknown cadence is rejected by types and guarded at runtime
     expect(() => generateAllPeriodsForYear('biweekly', 2026)).toThrow(TypeError)
   })
 })
@@ -171,6 +172,7 @@ describe('generateReportingPeriods', () => {
 
   describe('validation', () => {
     it('throws TypeError for unknown cadence', () => {
+      // @ts-expect-error - unknown cadence is rejected by types and guarded at runtime
       expect(() => generateReportingPeriods('biweekly', 2026, march20)).toThrow(
         TypeError
       )
