@@ -65,4 +65,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isWasteRecordStatesEnabled()).toBe(false)
   })
+
+  it('returns true when registeredOnlyCommittedHeads flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      registeredOnlyCommittedHeads: true
+    })
+    expect(flags.isRegisteredOnlyCommittedHeadsEnabled()).toBe(true)
+  })
+
+  it('returns false when registeredOnlyCommittedHeads flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      registeredOnlyCommittedHeads: false
+    })
+    expect(flags.isRegisteredOnlyCommittedHeadsEnabled()).toBe(false)
+  })
+
+  it('returns false when registeredOnlyCommittedHeads flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isRegisteredOnlyCommittedHeadsEnabled()).toBe(false)
+  })
 })

@@ -6,6 +6,7 @@ import { testCreditAvailableBalanceForPrnCancellationBehaviour } from './contrac
 import { testCreditFullBalanceForIssuedPrnCancellationBehaviour } from './contract/creditFullBalanceForIssuedPrnCancellation.contract.js'
 import { testAppendStreamEventBehaviour } from './contract/appendStreamEvent.contract.js'
 import { testGetPrnCatchupEventsBehaviour } from './contract/getPrnCatchupEvents.contract.js'
+import { testAppendRegisteredOnlyHeadBehaviour } from './contract/appendRegisteredOnlyHead.contract.js'
 
 export const testWasteBalancesRepositoryContract = (repositoryFactory) => {
   testFindBalanceBehaviour(repositoryFactory)
@@ -16,4 +17,5 @@ export const testWasteBalancesRepositoryContract = (repositoryFactory) => {
   testCreditFullBalanceForIssuedPrnCancellationBehaviour(repositoryFactory)
   testAppendStreamEventBehaviour(repositoryFactory)
   testGetPrnCatchupEventsBehaviour(repositoryFactory)
+  testAppendRegisteredOnlyHeadBehaviour(repositoryFactory)
 }

@@ -50,6 +50,14 @@
  */
 
 /**
+ * @typedef {Object} AppendRegisteredOnlyHeadParams
+ * @property {string} registrationId
+ * @property {string} organisationId
+ * @property {string} summaryLogId
+ * @property {import('./stream-schema.js').StreamUserSummary} createdBy
+ */
+
+/**
  * @typedef {Object} GetPrnCatchupEventsParams
  * @property {string} registrationId
  * @property {string} accreditationId
@@ -80,6 +88,10 @@
  * @property {(params: GetPrnCatchupEventsParams) => Promise<import('./stream-schema.js').StreamEvent[]>} getPrnCatchupEvents
  *   Return the stream tail events to project onto a PRN read. Empty array when
  *   the accreditation has no tail events for this PRN past the watermark.
+ * @property {(params: AppendRegisteredOnlyHeadParams) => Promise<import('./stream-port.js').StreamEvent>} appendRegisteredOnlyHead
+ *   Append a zero-delta `summary-log-submitted` committed head into a
+ *   registered-only (null-accreditation) partition so the head-anchored read
+ *   model can resolve its row-state membership. Balance-neutral.
  */
 
 /**

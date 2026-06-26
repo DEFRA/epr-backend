@@ -369,6 +369,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_WASTE_RECORD_STATES'
+    },
+    registeredOnlyCommittedHeads: {
+      doc: 'Feature Flag: Emit zero-delta summary-log-submitted committed-head events for registered-only (null-accreditation) streams (ADR-0037)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_REGISTERED_ONLY_COMMITTED_HEADS'
     }
   },
   formSubmissionOverrides: {

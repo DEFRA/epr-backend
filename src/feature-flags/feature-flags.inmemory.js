@@ -14,5 +14,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isWasteRecordStatesEnabled() {
     return flags.wasteRecordStates ?? false
+  },
+  isRegisteredOnlyCommittedHeadsEnabled() {
+    return flags.registeredOnlyCommittedHeads ?? false
   }
 })

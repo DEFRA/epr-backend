@@ -31,6 +31,7 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  * @property {number} streamsBackfilled - Registration streams that received row states
  * @property {number} submissionsBackfilled
  * @property {number} rowStateWrites
+ * @property {number} headWrites - Registered-only committed heads emitted
  * @property {OrphanedAccreditation[]} orphanedAccreditations
  */
 
@@ -42,6 +43,7 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  * @typedef {Object} StreamBackfilled
  * @property {number} submissionCount
  * @property {number} rowStateWriteCount
+ * @property {number} headWriteCount
  *
  * @typedef {Object} StreamOrphaned
  * @property {OrphanedAccreditation} orphanedAccreditation
@@ -81,6 +83,7 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
  * @param {RowStateRepository} args.rowStateRepository
+ * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} args.streamRepository
  * @returns {Promise<StreamBackfilled | StreamOrphaned | null>}
  */
 const backfillRegistrationStream = async ({
@@ -90,7 +93,8 @@ const backfillRegistrationStream = async ({
   wasteRecordsRepository,
   summaryLogsRepository,
   overseasSitesRepository,
-  rowStateRepository
+  rowStateRepository,
+  streamRepository
 }) => {
   const { accreditationId } = registration
 
@@ -140,7 +144,7 @@ const backfillRegistrationStream = async ({
     registration.id
   )
 
-  const { submissionCount, rowStateWriteCount } =
+  const { submissionCount, rowStateWriteCount, headWriteCount } =
     await backfillRegistrationRowStates({
       partition: {
         organisationId: organisation.id,
@@ -151,10 +155,11 @@ const backfillRegistrationStream = async ({
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      rowStateRepository,
+      streamRepository
     })
 
-  return { submissionCount, rowStateWriteCount }
+  return { submissionCount, rowStateWriteCount, headWriteCount }
 }
 
 /**
@@ -166,9 +171,12 @@ const backfillRegistrationStream = async ({
  * Accreditation validity and overseas-site approval are read at today's
  * state, so a backfilled row's classification reflects current factors — the
  * historical-reading drift ADR-0037 accepts for legacy submissions. Re-runnable:
- * every registration's upserts are idempotent. An accreditation referenced by a
- * registration but missing from the organisation is surfaced and skipped, not
- * fatal.
+ * every registration's upserts are idempotent. Registered-only streams, which
+ * never formed a committed head on the live path, additionally receive a
+ * balance-neutral zero-delta head per submission so the head-anchored read model
+ * can resolve them; head emission is idempotent too. An accreditation referenced
+ * by a registration but missing from the organisation is surfaced and skipped,
+ * not fatal.
  *
  * @param {Object} deps
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} deps.organisationsRepository
@@ -176,6 +184,7 @@ const backfillRegistrationStream = async ({
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} deps.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} deps.overseasSitesRepository
  * @param {RowStateRepository} deps.rowStateRepository
+ * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} deps.streamRepository
  * @returns {Promise<EstateBackfillSummary>}
  */
 export const backfillEstateRowStates = async ({
@@ -183,13 +192,15 @@ export const backfillEstateRowStates = async ({
   wasteRecordsRepository,
   summaryLogsRepository,
   overseasSitesRepository,
-  rowStateRepository
+  rowStateRepository,
+  streamRepository
 }) => {
   const organisations = await organisationsRepository.findAll()
 
   let streamsBackfilled = 0
   let submissionsBackfilled = 0
   let rowStateWrites = 0
+  let headWrites = 0
   const orphanedAccreditations = []
 
   for (const organisation of organisations) {
@@ -201,7 +212,8 @@ export const backfillEstateRowStates = async ({
         wasteRecordsRepository,
         summaryLogsRepository,
         overseasSitesRepository,
-        rowStateRepository
+        rowStateRepository,
+        streamRepository
       })
       if (!result) {
         continue
@@ -212,6 +224,7 @@ export const backfillEstateRowStates = async ({
         streamsBackfilled += 1
         submissionsBackfilled += result.submissionCount
         rowStateWrites += result.rowStateWriteCount
+        headWrites += result.headWriteCount
       }
     }
   }
@@ -221,6 +234,7 @@ export const backfillEstateRowStates = async ({
     streamsBackfilled,
     submissionsBackfilled,
     rowStateWrites,
+    headWrites,
     orphanedAccreditations
   }
 }

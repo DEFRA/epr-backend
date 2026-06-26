@@ -240,7 +240,12 @@ const calculateMetrics = (wasteRecords) => {
  * Resolves the accreditation (when one exists, any status), commits the
  * per-row state for every submission (flag-gated, partitioned by accreditation
  * existence), and updates the waste balance only for accredited
- * balance-bearing submissions.
+ * balance-bearing submissions. A registered-only / no-accreditation submission
+ * (null partition) has no balance path, so — behind its own dedicated flag,
+ * independent of the row-state flag — it instead emits a zero-delta committed
+ * head so the head-anchored read model has a head to resolve once reg-only reads
+ * go live. The head is balance-neutral, so emitting it independently of its
+ * row-state membership is harmless before the read cutover.
  *
  * @param {object} params
  * @param {object} params.summaryLog
@@ -297,6 +302,17 @@ const commitStateAndBalance = async ({
       user,
       overseasSites,
       summaryLogId: summaryLog.file.id
+    })
+  } else if (featureFlags?.isRegisteredOnlyCommittedHeadsEnabled()) {
+    await wasteBalancesRepository.appendRegisteredOnlyHead({
+      registrationId: summaryLog.registrationId,
+      organisationId: summaryLog.organisationId,
+      summaryLogId: summaryLog.file.id,
+      createdBy: {
+        id: user.id,
+        ...(user.name && { name: user.name }),
+        email: user.email
+      }
     })
   }
 }

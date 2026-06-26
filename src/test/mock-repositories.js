@@ -148,6 +148,7 @@ export const createMockWasteBalancesRepository = (overrides = {}) => ({
   creditFullBalanceForIssuedPrnCancellation: vi.fn(),
   appendStreamEvent: vi.fn(),
   getPrnCatchupEvents: vi.fn(),
+  appendRegisteredOnlyHead: vi.fn(),
   ...overrides
 })
 

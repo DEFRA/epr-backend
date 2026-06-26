@@ -4,6 +4,8 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 
 import { backfillRegistrationRowStates } from './backfill-registration-rowstates.js'
 
@@ -11,6 +13,11 @@ const partition = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1'
+}
+const nullPartition = {
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  accreditationId: null
 }
 const accreditation = { id: 'acc-1' }
 /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} */
@@ -53,7 +60,8 @@ describe('backfillRegistrationRowStates', () => {
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      rowStateRepository,
+      streamRepository: createInMemoryStreamRepository()()
     })
 
     expect(
@@ -82,7 +90,8 @@ describe('backfillRegistrationRowStates', () => {
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      rowStateRepository,
+      streamRepository: createInMemoryStreamRepository()()
     })
 
     const history = await rowHistory(rowStateRepository, 'row-1')
@@ -112,7 +121,8 @@ describe('backfillRegistrationRowStates', () => {
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      rowStateRepository,
+      streamRepository: createInMemoryStreamRepository()()
     })
 
     const history = await rowHistory(rowStateRepository, 'row-1')
@@ -138,7 +148,8 @@ describe('backfillRegistrationRowStates', () => {
         summaryLogs,
         accreditation,
         overseasSites,
-        rowStateRepository
+        rowStateRepository,
+        streamRepository: createInMemoryStreamRepository()()
       })
 
     await run()
@@ -170,9 +181,136 @@ describe('backfillRegistrationRowStates', () => {
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      rowStateRepository,
+      streamRepository: createInMemoryStreamRepository()()
     })
 
-    expect(summary).toEqual({ submissionCount: 2, rowStateWriteCount: 3 })
+    expect(summary).toEqual({
+      submissionCount: 2,
+      rowStateWriteCount: 3,
+      headWriteCount: 0
+    })
+  })
+
+  describe('registered-only committed heads', () => {
+    it('emits a zero-delta committed head per submission into the null partition', async () => {
+      const summaryLogs = [
+        submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
+        submittedLog('sl-2', '2025-02-01T00:00:00.000Z')
+      ]
+      const wasteRecords = [
+        receivedRecord('row-1', [
+          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        ])
+      ]
+      const rowStateRepository = createInMemoryRowStateRepository()()
+      const streamRepository = createInMemoryStreamRepository()()
+
+      await backfillRegistrationRowStates({
+        partition: nullPartition,
+        wasteRecords,
+        summaryLogs,
+        accreditation: null,
+        overseasSites,
+        rowStateRepository,
+        streamRepository
+      })
+
+      const heads = await streamRepository.findAllByPartition('reg-1', null)
+      expect(heads.map((h) => h.kind)).toEqual([
+        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+      ])
+      expect(
+        heads.map((h) => /** @type {any} */ (h.payload).summaryLogId)
+      ).toEqual(['sl-1', 'sl-2'])
+      expect(heads.every((h) => h.closingBalance.amount === 0)).toBe(true)
+      expect(heads.every((h) => h.closingBalance.availableAmount === 0)).toBe(
+        true
+      )
+    })
+
+    it('is idempotent — a second run emits no duplicate head', async () => {
+      const summaryLogs = [
+        submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
+        submittedLog('sl-2', '2025-02-01T00:00:00.000Z')
+      ]
+      const wasteRecords = [
+        receivedRecord('row-1', [
+          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        ])
+      ]
+      const rowStateRepository = createInMemoryRowStateRepository()()
+      const streamRepository = createInMemoryStreamRepository()()
+      const run = () =>
+        backfillRegistrationRowStates({
+          partition: nullPartition,
+          wasteRecords,
+          summaryLogs,
+          accreditation: null,
+          overseasSites,
+          rowStateRepository,
+          streamRepository
+        })
+
+      await run()
+      const summary = await run()
+
+      const heads = await streamRepository.findAllByPartition('reg-1', null)
+      expect(heads).toHaveLength(2)
+      expect(summary.headWriteCount).toBe(0)
+    })
+
+    it('emits no committed head for an accredited (non-null) partition', async () => {
+      const summaryLogs = [submittedLog('sl-1', '2025-01-01T00:00:00.000Z')]
+      const wasteRecords = [
+        receivedRecord('row-1', [
+          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        ])
+      ]
+      const rowStateRepository = createInMemoryRowStateRepository()()
+      const streamRepository = createInMemoryStreamRepository()()
+
+      const summary = await backfillRegistrationRowStates({
+        partition,
+        wasteRecords,
+        summaryLogs,
+        accreditation,
+        overseasSites,
+        rowStateRepository,
+        streamRepository
+      })
+
+      expect(await streamRepository.findAllByPartition('reg-1', 'acc-1')).toEqual(
+        []
+      )
+      expect(summary.headWriteCount).toBe(0)
+    })
+
+    it('reports headWriteCount for migration logging', async () => {
+      const summaryLogs = [
+        submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
+        submittedLog('sl-2', '2025-02-01T00:00:00.000Z')
+      ]
+      const wasteRecords = [
+        receivedRecord('row-1', [
+          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        ])
+      ]
+      const rowStateRepository = createInMemoryRowStateRepository()()
+      const streamRepository = createInMemoryStreamRepository()()
+
+      const summary = await backfillRegistrationRowStates({
+        partition: nullPartition,
+        wasteRecords,
+        summaryLogs,
+        accreditation: null,
+        overseasSites,
+        rowStateRepository,
+        streamRepository
+      })
+
+      expect(summary.headWriteCount).toBe(2)
+    })
   })
 })

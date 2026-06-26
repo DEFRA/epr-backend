@@ -29,4 +29,13 @@ describe('createConfigFeatureFlags', () => {
     expect(flags.isWasteRecordStatesEnabled()).toBe(true)
     expect(config.get).toHaveBeenCalledWith('featureFlags.wasteRecordStates')
   })
+
+  it('returns true when registeredOnlyCommittedHeads flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isRegisteredOnlyCommittedHeadsEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.registeredOnlyCommittedHeads'
+    )
+  })
 })
