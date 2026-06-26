@@ -10,6 +10,7 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * @typedef {Object} WasteBalanceClassification
  * @property {boolean} included - Whether the record is included in the waste balance
  * @property {WasteBalanceClassificationReason[]} reasons - Exclusion reasons; empty when included
+ * @property {number | null} tonnage - Rounded waste balance tonnage; null when excluded
  */
 
 /**
@@ -27,7 +28,7 @@ export const getWasteBalanceClassification = (
   overseasSites
 ) => {
   if (record.excludedFromWasteBalance) {
-    return { included: false, reasons: [] }
+    return { included: false, reasons: [], tonnage: null }
   }
 
   const schema = findSchemaForProcessingType(
@@ -36,7 +37,7 @@ export const getWasteBalanceClassification = (
   )
 
   if (!schema?.classifyForWasteBalance) {
-    return { included: false, reasons: [] }
+    return { included: false, reasons: [], tonnage: null }
   }
 
   const result = schema.classifyForWasteBalance(record.data, {
@@ -45,8 +46,8 @@ export const getWasteBalanceClassification = (
   })
 
   if (result.outcome === ROW_OUTCOME.INCLUDED) {
-    return { included: true, reasons: [] }
+    return { included: true, reasons: [], tonnage: result.transactionAmount }
   }
 
-  return { included: false, reasons: result.reasons }
+  return { included: false, reasons: result.reasons, tonnage: null }
 }

@@ -449,6 +449,7 @@ describe('streamCsvExport', () => {
     expect(cells[5]).toBe('Yes') // Accredited column
     expect(cells[9]).toBe('false')
     expect(cells[10]).toContain('OUTSIDE_ACCREDITATION_PERIOD')
+    expect(cells[11]).toBe('') // Waste Balance Tonnage empty when excluded
   })
 
   it('emits empty Waste Balance Exclusion Reason when the record is included', async () => {
@@ -483,7 +484,8 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
     expect(cells[9]).toBe('true')
-    expect(cells[10]).toBe('')
+    expect(cells[10]).toBe('') // Waste Balance Exclusion Reason empty when included
+    expect(Number(cells[11])).toBeGreaterThan(0) // Waste Balance Tonnage populated when included
   })
 
   it('reads Accredited "Yes" with the number for a suspended accreditation', async () => {
@@ -560,9 +562,9 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(3)
-    // Within the same type, lower rowId emits first (Row ID is metadata col 11)
-    expect(out[1].trim().split(',')[11]).toBe('1001')
-    expect(out[2].trim().split(',')[11]).toBe('2002')
+    // Within the same type, lower rowId emits first (Row ID is metadata col 12)
+    expect(out[1].trim().split(',')[12]).toBe('1001')
+    expect(out[2].trim().split(',')[12]).toBe('2002')
   })
 
   it('orders rowIds naturally so "9" comes before "10"', async () => {
@@ -578,8 +580,8 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(3)
-    expect(out[1].trim().split(',')[11]).toBe('9')
-    expect(out[2].trim().split(',')[11]).toBe('10')
+    expect(out[1].trim().split(',')[12]).toBe('9')
+    expect(out[2].trim().split(',')[12]).toBe('10')
   })
 
   it('treats a missing accreditation as registered-only', async () => {
