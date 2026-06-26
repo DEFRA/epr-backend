@@ -50,7 +50,8 @@ export const summaryLogsGet = {
       status: summaryLog.status,
       ...transformValidationResponse(summaryLog.validation),
       ...(summaryLog.loads && { loads: summaryLog.loads }),
-      ...(summaryLog.status === SUMMARY_LOG_STATUS.VALIDATED && {
+      ...((summaryLog.status === SUMMARY_LOG_STATUS.VALIDATED ||
+        summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED) && {
         loadsByReportingPeriod:
           summaryLog.loadsByReportingPeriod ?? emptyLoadsByReportingPeriod()
       }),
