@@ -1,5 +1,4 @@
-import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
-import { coerceStoredTonnages } from '#waste-records/application/stored-tonnage-coercion.js'
+import { projectRowState } from '#waste-records/application/project-row-state.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /**
@@ -94,12 +93,9 @@ export const reconstructSubmissionRowStates = ({
       if (data === null) {
         return []
       }
-      const classified = classifyWasteRecord(
-        { ...record, data },
-        accreditation,
-        overseasSites
-      )
-      return [{ ...classified, data: coerceStoredTonnages(classified.data) }]
+      return [
+        projectRowState({ ...record, data }, accreditation, overseasSites)
+      ]
     })
     return { summaryLogId: log.id, entries }
   })
