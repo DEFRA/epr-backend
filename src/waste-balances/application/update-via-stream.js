@@ -2,8 +2,7 @@
 
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
-import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
-import { appendToStream } from './append-to-stream.js'
+import { appendSummaryLogSubmittedEvent } from './append-summary-log-submitted-event.js'
 import { recordWasteBalanceUpdateAudit } from './audit.js'
 import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 
@@ -50,23 +49,19 @@ export const performUpdateViaStream = async ({
     creditTotal = toNumber(add(creditTotal, getTargetAmount(classification)))
   }
 
-  const event = await appendToStream(
-    {
-      repository: streamRepository,
-      registrationId,
-      accreditationId: accreditation.id,
-      organisationId
-    },
-    {
-      kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-      payload: { summaryLogId, creditTotal },
-      createdBy: {
-        id: user.id,
-        ...(user.name && { name: user.name }),
-        email: user.email
-      }
+  const event = await appendSummaryLogSubmittedEvent({
+    repository: streamRepository,
+    registrationId,
+    accreditationId: accreditation.id,
+    organisationId,
+    summaryLogId,
+    creditTotal,
+    createdBy: {
+      id: user.id,
+      ...(user.name && { name: user.name }),
+      email: user.email
     }
-  )
+  })
 
   await recordWasteBalanceUpdateAudit({
     systemLogsRepository: dependencies.systemLogsRepository,

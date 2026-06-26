@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { appendRegisteredOnlySubmittedEvent } from '#waste-balances/application/append-registered-only-submitted-event.js'
+import { appendSummaryLogSubmittedEvent } from '#waste-balances/application/append-summary-log-submitted-event.js'
 import { findBalanceByPartition } from '#waste-balances/repository/read-balance.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { buildRowStateEntry } from '#waste-records/repository/test-data.js'
@@ -49,11 +49,13 @@ describe('registered-only summary-log submitted event — read-through', () => {
     await seedMembership(rowStateRepository, 'log-1')
     const streamRepository = createInMemoryStreamRepository()()
 
-    await appendRegisteredOnlySubmittedEvent({
+    await appendSummaryLogSubmittedEvent({
       repository: streamRepository,
       registrationId: 'reg-1',
+      accreditationId: null,
       organisationId: 'org-1',
       summaryLogId: 'log-1',
+      creditTotal: 0,
       createdBy
     })
 
@@ -72,11 +74,13 @@ describe('registered-only summary-log submitted event — balance neutrality', (
   it('leaves the null partition with a zero balance', async () => {
     const streamRepository = createInMemoryStreamRepository()()
 
-    await appendRegisteredOnlySubmittedEvent({
+    await appendSummaryLogSubmittedEvent({
       repository: streamRepository,
       registrationId: 'reg-1',
+      accreditationId: null,
       organisationId: 'org-1',
       summaryLogId: 'log-1',
+      creditTotal: 0,
       createdBy
     })
 
@@ -101,11 +105,13 @@ describe('registered-only summary-log submitted event — balance neutrality', (
       })
     ])()
 
-    await appendRegisteredOnlySubmittedEvent({
+    await appendSummaryLogSubmittedEvent({
       repository: streamRepository,
       registrationId: 'reg-1',
+      accreditationId: null,
       organisationId: 'org-1',
       summaryLogId: 'log-1',
+      creditTotal: 0,
       createdBy
     })
 
