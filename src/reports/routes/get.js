@@ -8,6 +8,7 @@ import { derivePeriodStatus } from '#reports/domain/derive-period-status.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+import { reportsCalendarResponseSchema } from './response.schema.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
@@ -47,6 +48,9 @@ export const reportsGet = {
         organisationId: Joi.string().required(),
         registrationId: Joi.string().required()
       })
+    },
+    response: {
+      schema: reportsCalendarResponseSchema
     }
   },
   /**
