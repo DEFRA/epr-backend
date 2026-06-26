@@ -162,7 +162,8 @@ const backfillRegistrationStream = async ({
  * from sparse version history, mirroring the live submission path's write scope:
  * every registration with submitted summary logs contributes — accredited and
  * registered-only alike — partitioned by accreditation existence
- * (`accreditationId ?? null`), and only submitted summary logs are replayed. Accreditation validity and overseas-site approval are read at today's
+ * (`accreditationId ?? null`), and only submitted summary logs are replayed.
+ * Accreditation validity and overseas-site approval are read at today's
  * state, so a backfilled row's classification reflects current factors — the
  * historical-reading drift ADR-0037 accepts for legacy submissions. Re-runnable:
  * every registration's upserts are idempotent. An accreditation referenced by a
