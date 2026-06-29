@@ -1,10 +1,10 @@
 import { describe, beforeEach, expect } from 'vitest'
 
 import { buildStreamEvent } from '../stream-test-data.js'
-import { StreamSequenceError } from '../stream-port.js'
+import { StreamSequenceError, StreamSlotConflictError } from '../stream-port.js'
 
 export const testBulkAppendEventsBehaviour = (it) => {
-  describe('bulkAppendEvents (@migration PAE-1382)', () => {
+  describe('bulkAppendEvents', () => {
     let repository
 
     beforeEach(
@@ -61,6 +61,43 @@ export const testBulkAppendEventsBehaviour = (it) => {
 
       await expect(repository.bulkAppendEvents(events)).rejects.toBeInstanceOf(
         StreamSequenceError
+      )
+    })
+
+    it('throws StreamSequenceError when the first event of an empty partition is not number 1', async () => {
+      const events = [
+        buildStreamEvent({
+          registrationId: 'reg-empty',
+          accreditationId: 'acc-empty',
+          number: 2
+        })
+      ]
+
+      await expect(repository.bulkAppendEvents(events)).rejects.toBeInstanceOf(
+        StreamSequenceError
+      )
+    })
+
+    it('throws StreamSlotConflictError when the starting slot is already occupied', async () => {
+      await repository.appendEvent(
+        buildStreamEvent({
+          registrationId: 'reg-occupied',
+          accreditationId: 'acc-occupied',
+          number: 1
+        })
+      )
+
+      const events = [
+        buildStreamEvent({
+          registrationId: 'reg-occupied',
+          accreditationId: 'acc-occupied',
+          number: 1,
+          payload: { summaryLogId: 'log-clash', creditTotal: 100 }
+        })
+      ]
+
+      await expect(repository.bulkAppendEvents(events)).rejects.toBeInstanceOf(
+        StreamSlotConflictError
       )
     })
 

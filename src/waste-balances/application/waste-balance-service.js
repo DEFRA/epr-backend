@@ -6,7 +6,7 @@ import { currentWasteBalance } from './current-waste-balance.js'
  * folds the ledger once, runs the pure command core against that state, and
  * appends the returned event(s) at the next slot over the event store. The slot
  * index is the optimistic-concurrency guard: a head that moved after the fold
- * leaves the next slot occupied, so `appendEvent` rejects with a
+ * leaves the next slot occupied, so the append rejects with a
  * `StreamSlotConflictError` and the conflict surfaces to the caller — no
  * in-process retry (ADR-0036).
  *
@@ -38,8 +38,8 @@ export const createWasteBalanceService = (streamRepository) => {
   }
 
   /**
-   * Append the decided balance events to the ledger, stamping each with the
-   * ledger identity, its slot, and provenance.
+   * Append the decided balance events to the ledger as one batch, stamping
+   * each with the ledger identity, its slot, and provenance.
    *
    * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId
    * @param {number} head
@@ -47,25 +47,20 @@ export const createWasteBalanceService = (streamRepository) => {
    * @param {import('../repository/stream-schema.js').StreamUserSummary} createdBy
    * @returns {Promise<import('../repository/stream-port.js').StreamEvent[]>}
    */
-  const append = async (ledgerId, head, events, createdBy) => {
-    const appended = []
-    let number = head
-    for (const event of events) {
-      number += 1
-      appended.push(
-        await streamRepository.appendEvent({
-          ...ledgerId,
-          number,
-          kind: event.kind,
-          payload: event.payload,
-          openingBalance: event.openingBalance,
-          closingBalance: event.closingBalance,
-          createdAt: new Date(),
-          createdBy
-        })
-      )
-    }
-    return appended
+  const append = (ledgerId, head, events, createdBy) => {
+    const createdAt = new Date()
+    return streamRepository.bulkAppendEvents(
+      events.map((event, index) => ({
+        ...ledgerId,
+        number: head + index + 1,
+        kind: event.kind,
+        payload: event.payload,
+        openingBalance: event.openingBalance,
+        closingBalance: event.closingBalance,
+        createdAt,
+        createdBy
+      }))
+    )
   }
 
   return {

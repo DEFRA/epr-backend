@@ -107,10 +107,16 @@ export class StreamSequenceError extends Error {
  *   Migration PAE-1382: delete all events for the given partition.
  *   Returns the number of deleted events. No-op on empty partition.
  * @property {(events: StreamEventInsert[]) => Promise<StreamEvent[]>} bulkAppendEvents
- *   Migration PAE-1382: insert multiple events in one call. Validates
- *   sequence: events must be numbered sequentially, and the first event's
- *   number must be `currentMax + 1` (or `1` if the partition is empty).
- *   Throws `StreamSequenceError` on failure. Empty array is a no-op.
+ *   Append a contiguous batch of events. Events must be numbered
+ *   sequentially, and the first event's number must be `currentMax + 1`
+ *   (or `1` if the partition is empty). Throws `StreamSlotConflictError` if
+ *   the starting slot is already occupied, `StreamSequenceError` on a gap or
+ *   non-sequential numbering. Empty array is a no-op.
+ *
+ *   Not isolated: the batch is not rolled back as a unit, so a later slot
+ *   conflict leaves earlier inserts of the same batch committed. A multi-event
+ *   batch is therefore only safe where nothing else writes the partition
+ *   concurrently — a single-event command append or a single-threaded load.
  */
 
 /**
