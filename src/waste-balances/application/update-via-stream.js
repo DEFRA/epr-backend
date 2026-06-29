@@ -2,52 +2,19 @@
 
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
-import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
-import { appendToStream } from './append-to-stream.js'
 import { recordWasteBalanceUpdateAudit } from './audit.js'
 import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
+import { createWasteBalanceService } from './waste-balance-service.js'
 
 /**
- * Append the submission event at the head this submission read. A competing
- * write that advanced the head in between surfaces as a slot/sequence conflict
- * and propagates to the caller (ADR-0036). The caller is the summary-log worker
- * job, so the conflict fails the job and the queue redelivers, recomputing the
- * submission against fresh state.
- *
- * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} repository
- * @param {import('../repository/stream-schema.js').RegistrationOrAccreditationId} partition
- * @param {{ kind: import('../repository/stream-schema.js').StreamEventKind, payload: import('../repository/stream-schema.js').SummaryLogSubmittedPayload, createdBy: import('../repository/stream-schema.js').StreamUserSummary }} event
- */
-const appendSummaryLog = async (
-  repository,
-  { registrationId, accreditationId, organisationId },
-  event
-) => {
-  const latest = await repository.findLatestByPartition(
-    registrationId,
-    accreditationId
-  )
-  const expectedHead = latest ? latest.number : 0
-
-  return appendToStream(
-    {
-      repository,
-      registrationId,
-      accreditationId,
-      organisationId,
-      expectedHead
-    },
-    event
-  )
-}
-
-/**
- * Apply a summary-log submission to the event stream.
+ * Apply a summary-log submission to the event-sourced ledger.
  *
  * Computes the aggregate `creditTotal` (sum of all row-level target amounts)
- * and appends a single `summary-log-submitted` event. The stream's delta
- * arithmetic (creditTotal minus previous creditTotal) replaces the per-row
- * delta reconciliation of the ADR-0031 ledger.
+ * and submits it through the waste balance service, which folds the ledger,
+ * decides the submission event, and appends it. A competing write that advanced
+ * the head since the fold surfaces as a slot conflict and propagates to the
+ * caller (ADR-0036): the caller is the summary-log worker job, so the conflict
+ * fails the job and the queue redelivers, recomputing against fresh state.
  *
  * @param {Object} params
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
@@ -84,17 +51,14 @@ export const performUpdateViaStream = async ({
     creditTotal = toNumber(add(creditTotal, getTargetAmount(classification)))
   }
 
-  const event = await appendSummaryLog(
-    streamRepository,
+  const service = createWasteBalanceService(streamRepository)
+  const [event] = await service.submitSummaryLog(
     { registrationId, accreditationId: accreditation.id, organisationId },
+    { summaryLogId, creditTotal },
     {
-      kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-      payload: { summaryLogId, creditTotal },
-      createdBy: {
-        id: user.id,
-        ...(user.name && { name: user.name }),
-        email: user.email
-      }
+      id: user.id,
+      ...(user.name && { name: user.name }),
+      email: user.email
     }
   )
 

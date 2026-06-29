@@ -91,7 +91,8 @@ const doDeleteByPartition = (storage, registrationId, accreditationId) => {
 }
 
 /**
- * Migration PAE-1382: insert multiple events in one call.
+ * Append a contiguous batch of events. Synchronous and validated up front, so
+ * the whole batch applies or none of it does.
  *
  * @param {StreamEvent[]} storage
  * @param {StreamEventInsert[]} events
@@ -114,6 +115,13 @@ const doBulkAppend = (storage, events) => {
   const expectedStart = currentMax + 1
 
   if (first.number !== expectedStart) {
+    if (partitionEvents.some((e) => e.number === first.number)) {
+      throw new StreamSlotConflictError(
+        first.registrationId,
+        first.accreditationId,
+        first.number
+      )
+    }
     throw new StreamSequenceError(
       first.registrationId,
       first.accreditationId,

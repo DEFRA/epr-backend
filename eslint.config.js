@@ -1,5 +1,6 @@
 import vitest from '@vitest/eslint-plugin'
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
+import importX from 'eslint-plugin-import-x'
 import nodePlugin from 'eslint-plugin-n'
 import neostandard from 'neostandard'
 
@@ -22,6 +23,7 @@ export default [
   ...ns,
   nodePlugin.configs['flat/recommended-module'],
   {
+    plugins: { 'import-x': importX },
     settings: {
       'import-x/resolver-next': [createTypeScriptImportResolver()]
     },
