@@ -8,6 +8,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { StreamSlotConflictError } from '#waste-balances/repository/stream-port.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 
 const REGISTRATION_ID = 'reg-1'
@@ -197,6 +198,64 @@ describe('applyWasteBalanceEffects appended events return', () => {
     )
 
     expect(applied).toEqual([])
+  })
+})
+
+/**
+ * Replace the repository's append with one that lands a single competing event
+ * the first time it is called, then delegates. This makes the effect's append
+ * collide on the slot the competing writer has taken, exercising the
+ * optimistic-concurrency guard.
+ *
+ * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @param {object} competingEvent
+ */
+const landCompetingEventOnFirstAppend = (streamRepository, competingEvent) => {
+  const realAppend = streamRepository.appendEvent.bind(streamRepository)
+  let landed = false
+  streamRepository.appendEvent = async (event) => {
+    if (!landed) {
+      landed = true
+      await realAppend(buildStreamEvent(competingEvent))
+    }
+    return realAppend(event)
+  }
+}
+
+describe('applyWasteBalanceEffects optimistic concurrency', () => {
+  it('surfaces a slot conflict when a competing event takes the targeted slot', async () => {
+    const { wasteBalancesRepository, streamRepository } =
+      await setupLedgerRepository()
+
+    landCompetingEventOnFirstAppend(streamRepository, {
+      registrationId: REGISTRATION_ID,
+      accreditationId: ACCREDITATION_ID,
+      number: 2,
+      kind: STREAM_EVENT_KIND.PRN_CREATED,
+      payload: { prnId: 'competing-prn', amount: 70 },
+      openingBalance: { amount: 100, availableAmount: 100 },
+      closingBalance: { amount: 100, availableAmount: 30 }
+    })
+
+    const events = balanceEventsFor(
+      PRN_STATUS.DRAFT,
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      balanceParamsFor({
+        tonnage: 80,
+        currentStatus: PRN_STATUS.DRAFT,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION
+      })
+    )
+
+    await expect(
+      applyWasteBalanceEffects(wasteBalancesRepository, buildLogger(), events)
+    ).rejects.toBeInstanceOf(StreamSlotConflictError)
+
+    const all = await streamRepository.findAllByPartition(
+      REGISTRATION_ID,
+      ACCREDITATION_ID
+    )
+    expect(all).toHaveLength(2)
   })
 })
 

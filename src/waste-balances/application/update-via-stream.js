@@ -8,6 +8,40 @@ import { recordWasteBalanceUpdateAudit } from './audit.js'
 import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 
 /**
+ * Append the submission event at the head this submission read. A competing
+ * write that advanced the head in between surfaces as a slot/sequence conflict
+ * and propagates to the caller (ADR-0036). The caller is the summary-log worker
+ * job, so the conflict fails the job and the queue redelivers, recomputing the
+ * submission against fresh state.
+ *
+ * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} repository
+ * @param {{ registrationId: string, accreditationId: string, organisationId: string }} partition
+ * @param {{ kind: import('../repository/stream-schema.js').StreamEventKind, payload: import('../repository/stream-schema.js').SummaryLogSubmittedPayload, createdBy: import('../repository/stream-schema.js').StreamUserSummary }} event
+ */
+const appendSummaryLog = async (
+  repository,
+  { registrationId, accreditationId, organisationId },
+  event
+) => {
+  const latest = await repository.findLatestByPartition(
+    registrationId,
+    accreditationId
+  )
+  const expectedHead = latest ? latest.number : 0
+
+  return appendToStream(
+    {
+      repository,
+      registrationId,
+      accreditationId,
+      organisationId,
+      expectedHead
+    },
+    event
+  )
+}
+
+/**
  * Apply a summary-log submission to the event stream.
  *
  * Computes the aggregate `creditTotal` (sum of all row-level target amounts)
@@ -50,13 +84,9 @@ export const performUpdateViaStream = async ({
     creditTotal = toNumber(add(creditTotal, getTargetAmount(classification)))
   }
 
-  const event = await appendToStream(
-    {
-      repository: streamRepository,
-      registrationId,
-      accreditationId: accreditation.id,
-      organisationId
-    },
+  const event = await appendSummaryLog(
+    streamRepository,
+    { registrationId, accreditationId: accreditation.id, organisationId },
     {
       kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
       payload: { summaryLogId, creditTotal },
