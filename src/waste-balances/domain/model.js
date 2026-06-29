@@ -14,13 +14,17 @@
  * @typedef {Object} WasteBalance
  * @property {string} organisationId - Organisation ID
  * @property {string} registrationId - Registration ID (stream partition key)
- * @property {string} accreditationId - Accreditation ID (stream partition key)
+ * @property {string | null} accreditationId - Accreditation ID (stream
+ *   partition key); `null` for a registered-only stream.
  * @property {number} amount - Total balance (credits minus debits)
  * @property {number} availableAmount - Available balance (amount minus pending debits)
  * @property {number} eventNumber - Stream position this balance was resolved
  *   from: the `number` of the latest event. Callers thread it back as
  *   `expectedHead` on a write so the slot index can reject a decision made
  *   against a head that has since moved.
+ * @property {number} creditTotal - The latest summary-log credit total folded
+ *   from the stream — the base the next submission's delta is measured against.
+ *   Zero when the partition has no submission yet.
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
