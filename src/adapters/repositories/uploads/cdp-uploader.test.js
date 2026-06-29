@@ -1,7 +1,13 @@
-import { describe, expect } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { it as baseIt } from '#vite/fixtures/cdp-uploader.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 import { createUploadsRepository } from './cdp-uploader.js'
+
+// The cdpUploaderStack fixture brings up a Docker stack (Floci, Redis, an init
+// container, CDP Uploader, a Socat proxy) whose own startup timeouts reach 120s.
+// The default 60s hook timeout is shorter than that budget, so a cold image pull
+// or CPU contention can time the setup hook out before the containers are ready.
+vi.setConfig({ hookTimeout: 180_000, testTimeout: 180_000 })
 
 // Extend base fixture with contract test specific fixtures
 const it = baseIt.extend({
