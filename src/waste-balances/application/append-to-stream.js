@@ -30,11 +30,8 @@ const openingBalanceFrom = (latest) =>
  *
  * Slot conflicts and idempotency conflicts surface directly to the caller.
  *
- * @param {{
+ * @param {import('../repository/stream-schema.js').RegistrationOrAccreditationId & {
  *   repository: import('../repository/stream-port.js').WasteBalanceStreamRepository,
- *   registrationId: string,
- *   accreditationId: string | null,
- *   organisationId: string,
  *   expectedHead: number
  * }} context
  * @param {{
