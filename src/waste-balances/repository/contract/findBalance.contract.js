@@ -38,7 +38,9 @@ export const testFindBalanceBehaviour = (it) => {
         registrationId: 'reg-1',
         accreditationId: 'acc-123',
         amount: 250,
-        availableAmount: 200
+        availableAmount: 200,
+        eventNumber: 1,
+        creditTotal: 100
       })
     })
 
@@ -96,6 +98,7 @@ export const testFindBalanceBehaviour = (it) => {
 
       expect(result.amount).toBe(175)
       expect(result.availableAmount).toBe(150)
+      expect(result.eventNumber).toBe(2)
     })
   })
 }

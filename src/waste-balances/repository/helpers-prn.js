@@ -16,6 +16,8 @@ import { STREAM_EVENT_KIND } from './stream-schema.js'
  * @param {number} params.tonnage
  * @param {import('./stream-schema.js').StreamUserSummary} params.createdBy
  * @param {import('./stream-schema.js').StreamEventKind} params.streamKind
+ * @param {number} params.expectedHead - Stream position the caller's decision
+ *   was based on; the event is written at `expectedHead + 1`.
  * @returns {Promise<import('./stream-port.js').StreamEvent>} The appended event.
  */
 const appendPrnStreamEvent = async ({
@@ -26,14 +28,16 @@ const appendPrnStreamEvent = async ({
   prnId,
   tonnage,
   createdBy,
-  streamKind
+  streamKind,
+  expectedHead
 }) =>
   appendToStream(
     {
       repository: streamRepository,
       registrationId,
       accreditationId,
-      organisationId
+      organisationId,
+      expectedHead
     },
     {
       kind: streamKind,
@@ -95,7 +99,8 @@ export const performAppendPrnStreamEvent = async ({
     prnId,
     tonnage,
     createdBy,
-    streamKind
+    streamKind,
+    expectedHead: wasteBalance.eventNumber
   })
 }
 
@@ -121,7 +126,8 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
     organisationId,
     prnId,
     tonnage,
-    createdBy
+    createdBy,
+    expectedHead
   } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
@@ -142,7 +148,8 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
     prnId,
     tonnage,
     createdBy,
-    streamKind: STREAM_EVENT_KIND.PRN_CREATED
+    streamKind: STREAM_EVENT_KIND.PRN_CREATED,
+    expectedHead
   })
 }
 
@@ -168,7 +175,8 @@ export const performDeductTotalBalanceForPrnIssue = async ({
     organisationId,
     prnId,
     tonnage,
-    createdBy
+    createdBy,
+    expectedHead
   } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
@@ -189,7 +197,8 @@ export const performDeductTotalBalanceForPrnIssue = async ({
     prnId,
     tonnage,
     createdBy,
-    streamKind: STREAM_EVENT_KIND.PRN_ISSUED
+    streamKind: STREAM_EVENT_KIND.PRN_ISSUED,
+    expectedHead
   })
 }
 
@@ -216,7 +225,8 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
     organisationId,
     prnId,
     tonnage,
-    createdBy
+    createdBy,
+    expectedHead
   } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
@@ -239,7 +249,8 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
     prnId,
     tonnage,
     createdBy,
-    streamKind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
+    streamKind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+    expectedHead
   })
 }
 
@@ -266,7 +277,8 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
     organisationId,
     prnId,
     tonnage,
-    createdBy
+    createdBy,
+    expectedHead
   } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
@@ -289,6 +301,7 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
     prnId,
     tonnage,
     createdBy,
-    streamKind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
+    streamKind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+    expectedHead
   })
 }
