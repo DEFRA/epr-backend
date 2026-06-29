@@ -34,7 +34,8 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-123',
         tonnage: 50,
-        createdBy: { id: 'user-abc' }
+        createdBy: { id: 'user-abc' },
+        expectedHead: 1
       })
 
       const result = await repository.findBalance({
@@ -63,7 +64,8 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-456',
         tonnage: 25.5,
-        createdBy: { id: 'user-xyz' }
+        createdBy: { id: 'user-xyz' },
+        expectedHead: 1
       })
 
       expect(appended.kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
@@ -83,7 +85,8 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-789',
         tonnage: 10,
-        createdBy: { id: 'user-123' }
+        createdBy: { id: 'user-123' },
+        expectedHead: 1
       })
 
       expect(appended).toBeNull()
@@ -112,7 +115,8 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-ledger',
         tonnage: 10,
-        createdBy: { id: 'user-abc' }
+        createdBy: { id: 'user-abc' },
+        expectedHead: 1
       })
 
       const latest = await streamRepository.findLatestByPartition(

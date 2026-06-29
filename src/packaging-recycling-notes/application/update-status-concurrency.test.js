@@ -130,12 +130,21 @@ const COMMITTED_EVENT_NUMBER = 2
  * On the ledger path concurrent writers serialise at the append-only stream
  * slot: the first writer claims the next slot, the second collides with a
  * StreamSlotConflictError. Exactly one writer commits, so the stream holds a
- * single event past the seed.
+ * single event past the seed and the PRN document — persisted only by the
+ * winner, since the loser fails at the stream append before persisting —
+ * reflects that one transition.
  *
  * @param {PromiseSettledResult<unknown>[]} results
  * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @param {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} expectedStatus
  */
-const expectOneWinsOneStreamConflict = async (results, streamRepository) => {
+const expectOneWinsOneStreamConflict = async (
+  results,
+  streamRepository,
+  prnRepository,
+  expectedStatus
+) => {
   const fulfilled = results.filter((r) => r.status === 'fulfilled')
   const rejected = results.filter((r) => r.status === 'rejected')
 
@@ -145,6 +154,9 @@ const expectOneWinsOneStreamConflict = async (results, streamRepository) => {
 
   const latest = await streamRepository.findLatestByPartition(REG_ID, ACC_ID)
   expect(latest?.number).toBe(COMMITTED_EVENT_NUMBER)
+
+  const prn = await prnRepository.findById(PRN_ID)
+  expect(prn?.status.currentStatus).toBe(expectedStatus)
 }
 
 describe('updatePrnStatus concurrency', () => {
@@ -181,7 +193,12 @@ describe('updatePrnStatus concurrency', () => {
 
     const results = await Promise.allSettled([issue(), issue()])
 
-    await expectOneWinsOneStreamConflict(results, streamRepository)
+    await expectOneWinsOneStreamConflict(
+      results,
+      streamRepository,
+      prnRepository,
+      PRN_STATUS.AWAITING_ACCEPTANCE
+    )
   })
 
   it('credits the waste balance only once when two deletes race for an awaiting_authorisation PRN', async () => {
@@ -219,7 +236,12 @@ describe('updatePrnStatus concurrency', () => {
 
     const results = await Promise.allSettled([cancel(), cancel()])
 
-    await expectOneWinsOneStreamConflict(results, streamRepository)
+    await expectOneWinsOneStreamConflict(
+      results,
+      streamRepository,
+      prnRepository,
+      PRN_STATUS.DELETED
+    )
   })
 
   it('credits the waste balance only once when two cancels race for an awaiting_cancellation PRN', async () => {
@@ -258,6 +280,11 @@ describe('updatePrnStatus concurrency', () => {
 
     const results = await Promise.allSettled([cancel(), cancel()])
 
-    await expectOneWinsOneStreamConflict(results, streamRepository)
+    await expectOneWinsOneStreamConflict(
+      results,
+      streamRepository,
+      prnRepository,
+      PRN_STATUS.CANCELLED
+    )
   })
 })

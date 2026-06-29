@@ -593,7 +593,8 @@ describe('Waste balance arithmetic integration tests', () => {
         organisationId: env.organisationId,
         prnId: 'other-prn',
         tonnage: 80,
-        createdBy: { id: 'test-user' }
+        createdBy: { id: 'test-user' },
+        expectedHead: balance.eventNumber
       })
 
       balance = await getWasteBalance(
@@ -1207,13 +1208,19 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn = await createPrn(env, 50)
       await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
+      const headBeforeContention = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        env.registrationId
+      )
       await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
         accreditationId,
         registrationId: env.registrationId,
         organisationId,
         prnId: 'other-prn',
         tonnage: 80,
-        createdBy: { id: 'test-user' }
+        createdBy: { id: 'test-user' },
+        expectedHead: headBeforeContention.eventNumber
       })
 
       const result = await transitionPrnStatus(
@@ -1259,13 +1266,19 @@ describe('Waste balance arithmetic integration tests', () => {
       const prnB = await createPrn(env, 50)
       await transitionPrnStatus(env, prnB.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
+      const headBeforeContention = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId,
+        registrationId
+      )
       await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
         accreditationId,
         registrationId: env.registrationId,
         organisationId,
         prnId: 'other-prn',
         tonnage: 20,
-        createdBy: { id: 'test-user' }
+        createdBy: { id: 'test-user' },
+        expectedHead: headBeforeContention.eventNumber
       })
 
       await Promise.allSettled([

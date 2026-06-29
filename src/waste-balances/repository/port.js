@@ -1,4 +1,12 @@
 /**
+ * The `expectedHead` on these params is the stream position the caller's
+ * balance decision (sufficiency check, reversal) was based on. The append is
+ * written at `expectedHead + 1`, so a competing write that has advanced the
+ * head since the caller read it makes the append fail rather than proceed from
+ * a stale position (ADR-0036). The conflict surfaces to the caller.
+ */
+
+/**
  * @typedef {Object} DeductAvailableBalanceParams
  * @property {string} accreditationId
  * @property {string} registrationId
@@ -6,6 +14,7 @@
  * @property {string} prnId
  * @property {number} tonnage
  * @property {import('./stream-schema.js').StreamUserSummary} createdBy
+ * @property {number} expectedHead
  */
 
 /**
@@ -16,6 +25,7 @@
  * @property {string} prnId
  * @property {number} tonnage
  * @property {import('./stream-schema.js').StreamUserSummary} createdBy
+ * @property {number} expectedHead
  */
 
 /**
@@ -26,6 +36,7 @@
  * @property {string} prnId
  * @property {number} tonnage
  * @property {import('./stream-schema.js').StreamUserSummary} createdBy
+ * @property {number} expectedHead
  */
 
 /**
@@ -36,6 +47,7 @@
  * @property {string} prnId
  * @property {number} tonnage
  * @property {import('./stream-schema.js').StreamUserSummary} createdBy
+ * @property {number} expectedHead
  */
 
 /**
