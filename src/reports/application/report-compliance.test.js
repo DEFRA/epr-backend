@@ -4,6 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS,
@@ -190,6 +191,58 @@ describe('generateReportCompliance', () => {
       cadence: 'monthly',
       period: 1
     })
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
+    expect(result).toEqual({
+      periods: EXPECTED_PERIODS,
+      entries: new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: new Map([
+              ['2026:monthly:1', SUBMITTED_DATE],
+              ['2026:monthly:2', null],
+              ['2026:monthly:3', null]
+            ])
+          }
+        ]
+      ])
+    })
+  })
+
+  it('keeps the last submitted date while an in-flight resubmission draft is current', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    // Submission 1: submitted (the date the public register must keep showing)
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    // Submission 2: an in-flight draft for the same period (no submittedAt yet)
+    await reportsRepo.createReport(
+      buildCreateReportParams({
+        organisationId: org.id,
+        registrationId: reg.id,
+        year: 2026,
+        cadence: 'monthly',
+        period: 1,
+        submissionNumber: 2,
+        startDate: '2026-01-01',
+        endDate: '2026-01-31',
+        dueDate: '2026-02-20'
+      })
+    )
 
     const result = await generateReportCompliance(orgRepo, reportsRepo)
 

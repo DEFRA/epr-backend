@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { mergeReportingPeriods } from './merge-reporting-periods.js'
+import { REPORT_STATUS } from './report-status.js'
 
 describe('mergeReportingPeriods', () => {
   const computedPeriods = [
@@ -102,6 +103,105 @@ describe('mergeReportingPeriods', () => {
       status: 'submitted',
       submissionNumber: 1
     })
+  })
+
+  it('exposes the latest submitted report via submittedReport when an in-flight resubmission draft is current', () => {
+    const periodicReports = [
+      {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2026,
+        reports: {
+          monthly: {
+            1: {
+              startDate: '2026-01-01',
+              endDate: '2026-01-31',
+              dueDate: '2026-02-20',
+              current: {
+                id: 'submission-2',
+                status: REPORT_STATUS.IN_PROGRESS,
+                submissionNumber: 2,
+                submittedAt: null,
+                submittedBy: null
+              },
+              previousSubmissions: [
+                {
+                  id: 'submission-1',
+                  status: REPORT_STATUS.SUBMITTED,
+                  submissionNumber: 1,
+                  submittedAt: '2026-02-10T09:00:00.000Z',
+                  submittedBy: {
+                    id: 'user-1',
+                    name: 'Jane Smith',
+                    position: 'Officer'
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+
+    const result = mergeReportingPeriods(
+      computedPeriods,
+      periodicReports,
+      'monthly'
+    )
+
+    // report still points at the in-flight draft (unchanged behaviour)
+    expect(result[0].report).toEqual({
+      id: 'submission-2',
+      status: REPORT_STATUS.IN_PROGRESS,
+      submissionNumber: 2,
+      submittedAt: null,
+      submittedBy: null
+    })
+    // submittedReport recovers the last submitted report, not the draft
+    expect(result[0].submittedReport).toEqual({
+      id: 'submission-1',
+      status: REPORT_STATUS.SUBMITTED,
+      submissionNumber: 1,
+      submittedAt: '2026-02-10T09:00:00.000Z',
+      submittedBy: { id: 'user-1', name: 'Jane Smith', position: 'Officer' }
+    })
+  })
+
+  it('sets submittedReport to null when the period has no submitted report', () => {
+    const periodicReports = [
+      {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2026,
+        reports: {
+          monthly: {
+            1: {
+              startDate: '2026-01-01',
+              endDate: '2026-01-31',
+              dueDate: '2026-02-20',
+              current: {
+                id: 'submission-1',
+                status: REPORT_STATUS.IN_PROGRESS,
+                submissionNumber: 1,
+                submittedAt: null,
+                submittedBy: null
+              },
+              previousSubmissions: []
+            }
+          }
+        }
+      }
+    ]
+
+    const result = mergeReportingPeriods(
+      computedPeriods,
+      periodicReports,
+      'monthly'
+    )
+
+    // period 1 has only an in-flight draft; period 2 has no slot at all
+    expect(result[0].submittedReport).toBeNull()
+    expect(result[1].submittedReport).toBeNull()
   })
 
   it('sets report to null when current is null (no active draft)', () => {

@@ -92,9 +92,17 @@ export const reportsGet = {
       cadence
     )
 
+    // Fields are listed explicitly (rather than spreading the merged period) so
+    // submittedReport never reaches the response: the calendar curates report via
+    // toReportListItem and its schema excludes the full submitted report payload.
     // Calendar periods are ended or carry a report, so periodStatus is non-null.
     const reportingPeriods = merged.map((period) => ({
-      ...period,
+      year: period.year,
+      period: period.period,
+      startDate: period.startDate,
+      endDate: period.endDate,
+      dueDate: period.dueDate,
+      submissionNumber: period.submissionNumber,
       periodStatus: derivePeriodStatus(period),
       report: toReportListItem(period.report)
     }))

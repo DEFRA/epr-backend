@@ -4,6 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
@@ -193,6 +194,60 @@ describe('generateReportSubmissions (integration)', () => {
     expect(byPeriod['Jan 2026'].submittedDate).toBe(
       FIXED_DATE.toISOString().slice(0, 10)
     )
+  })
+
+  it('keeps the last submitted figures while an in-flight resubmission draft is current', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    // Submission 1: submitted, with PRN figures the feed must keep showing
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      prn: {
+        issuedTonnage: 80,
+        freeTonnage: 5,
+        totalRevenue: 40000,
+        averagePricePerTonne: 500
+      }
+    })
+
+    // Submission 2: an in-flight draft for the same period
+    await reportsRepo.createReport(
+      buildCreateReportParams({
+        organisationId: org.id,
+        registrationId: reg.id,
+        year: 2026,
+        cadence: 'monthly',
+        period: 1,
+        submissionNumber: 2,
+        startDate: '2026-01-01',
+        endDate: '2026-01-31',
+        dueDate: '2026-02-20'
+      })
+    )
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+
+    const byPeriod = Object.fromEntries(
+      result.reportSubmissions.map((r) => [r.reportingPeriod, r])
+    )
+    const janRow = byPeriod['Jan 2026']
+
+    // Date and submitter come from the last submitted report, not the draft
+    expect(janRow.submittedDate).toBe(FIXED_DATE.toISOString().slice(0, 10))
+    expect(janRow.submittedBy).toBe('Jane Smith')
+    // Tonnage/PRN figures likewise reflect submission 1, not the empty draft
+    expect(janRow.tonnagePrnsPernsIssued).toBe(80)
+    expect(janRow.freeTonnagePrnsPerns).toBe(5)
+    expect(janRow.totalRevenuePrnsPerns).toBe(40000)
+    expect(janRow.averagePrnPernPricePerTonne).toBe(500)
   })
 })
 
