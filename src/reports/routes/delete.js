@@ -24,7 +24,11 @@ export const reportsDelete = {
     }
   },
   /**
-   * @param {HapiRequest & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
+   * @param {HapiRequest & {
+   *   params: PeriodWithSubmissionPathParams,
+   *   reportsRepository: ReportsRepository,
+   *   systemLogsRepository: SystemLogsRepository
+   * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -87,4 +91,5 @@ export const reportsDelete = {
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { PeriodWithSubmissionPathParams } from './shared.js'
  */
