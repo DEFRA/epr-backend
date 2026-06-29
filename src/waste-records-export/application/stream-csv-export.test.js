@@ -52,7 +52,8 @@ const reprocessorReceivedRecord = (overrides = {}) => ({
 
 const defaultDeps = () => ({
   organisationsRepository: {
-    findAll: vi.fn().mockResolvedValue([])
+    findAll: vi.fn().mockResolvedValue([]),
+    findById: vi.fn().mockResolvedValue(baseOrg())
   },
   wasteRecordsRepository: {
     findByRegistration: vi.fn().mockResolvedValue([]),
@@ -645,6 +646,89 @@ describe('streamCsvExport', () => {
     expect(out[1]).not.toContain('Test Org')
     expect(findByRegistration).toHaveBeenCalledTimes(1)
     expect(findByRegistration).toHaveBeenCalledWith('org-real', 'reg-real')
+  })
+
+  it('fetches a single organisation by id and skips findAll when scoped by organisationId', async () => {
+    const org = baseOrg({
+      id: 'org-scoped',
+      companyDetails: { name: 'Scoped Org' },
+      registrations: [baseRegistration()]
+    })
+    const deps = baseDeps({
+      organisationsRepository: {
+        findById: vi.fn().mockResolvedValue(org),
+        findAll: vi.fn().mockResolvedValue([])
+      },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([reprocessorReceivedRecord()])
+      }
+    })
+
+    const out = await collect(
+      streamCsvExport({ ...deps, organisationId: 'org-scoped' })
+    )
+
+    expect(deps.organisationsRepository.findById).toHaveBeenCalledWith(
+      'org-scoped'
+    )
+    expect(deps.organisationsRepository.findAll).not.toHaveBeenCalled()
+    expect(out).toHaveLength(2)
+    expect(out[1]).toContain('Scoped Org')
+  })
+
+  it('exports only the requested registration when scoped by registrationId', async () => {
+    const org = baseOrg({
+      id: 'org-scoped',
+      registrations: [
+        baseRegistration({ id: 'reg-1' }),
+        baseRegistration({ id: 'reg-2' })
+      ]
+    })
+    const findByRegistration = vi
+      .fn()
+      .mockResolvedValue([reprocessorReceivedRecord()])
+    const deps = baseDeps({
+      organisationsRepository: { findById: vi.fn().mockResolvedValue(org) },
+      wasteRecordsRepository: { findByRegistration }
+    })
+
+    const out = await collect(
+      streamCsvExport({
+        ...deps,
+        organisationId: 'org-scoped',
+        registrationId: 'reg-2'
+      })
+    )
+
+    expect(out).toHaveLength(2) // header + one record for reg-2 only
+    expect(findByRegistration).toHaveBeenCalledTimes(1)
+    expect(findByRegistration).toHaveBeenCalledWith('org-scoped', 'reg-2')
+  })
+
+  it('includes a test organisation when it is explicitly requested by id', async () => {
+    const testOrg = baseOrg({
+      id: 'org-test',
+      orgId: 999999,
+      companyDetails: { name: 'Test Org' },
+      registrations: [baseRegistration({ id: 'reg-test' })]
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findById: vi.fn().mockResolvedValue(testOrg) },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([reprocessorReceivedRecord()])
+      }
+    })
+
+    const out = await collect(
+      streamCsvExport({ ...deps, organisationId: 'org-test' })
+    )
+
+    expect(out).toHaveLength(2)
+    expect(out[1]).toContain('Test Org')
   })
 
   it('propagates errors from the waste records iterator', async () => {

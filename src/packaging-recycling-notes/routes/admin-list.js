@@ -58,7 +58,8 @@ export const adminPackagingRecyclingNotesList = {
       query: Joi.object({
         statuses: createStatusesValidator(Object.values(PRN_STATUS)),
         limit: Joi.number().integer().min(1).max(1000).optional(),
-        cursor: Joi.string().optional()
+        cursor: Joi.string().optional(),
+        accreditationId: Joi.string().optional()
       })
     }
   },
@@ -68,15 +69,42 @@ export const adminPackagingRecyclingNotesList = {
    *   query: {
    *     statuses: PrnStatus[],
    *     limit?: number,
-   *     cursor?: string
+   *     cursor?: string,
+   *     accreditationId?: string
    *   }
    * }} request
    */
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
-    const { statuses, limit, cursor } = request.query
+    const { statuses, limit, cursor, accreditationId } = request.query
 
     try {
+      // When scoped to a single accreditation we read the whole (small) set
+      // for that accreditation and apply the status filter in memory. This
+      // backs the per-registration download on the admin org overview page;
+      // the unscoped path keeps cursor pagination for the global list.
+      if (accreditationId) {
+        const prns =
+          await packagingRecyclingNotesRepository.findByAccreditation(
+            accreditationId
+          )
+
+        const items = prns
+          .filter((prn) => statuses.includes(prn.status.currentStatus))
+          .map(buildResponseItem)
+
+        logger.info({
+          message: `Admin listed ${items.length} PRNs for accreditation ${accreditationId}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+            reference: accreditationId
+          }
+        })
+
+        return h.response({ items, hasMore: false }).code(StatusCodes.OK)
+      }
+
       const effectiveLimit = limit ?? DEFAULT_LIMIT
 
       const result = await packagingRecyclingNotesRepository.findByStatus({

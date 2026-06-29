@@ -323,6 +323,70 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
     })
   })
 
+  describe('accreditation filtering', () => {
+    it('fetches by accreditation instead of by status when accreditationId is given', async () => {
+      const accreditationId = 'acc-789'
+      packagingRecyclingNotesRepository.findByAccreditation.mockResolvedValueOnce(
+        [createMockIssuedPrn()]
+      )
+
+      const response = await injectWithAuth(server, {
+        method: 'GET',
+        url: `${adminListUrl}?statuses=awaiting_acceptance&accreditationId=${accreditationId}`
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(
+        packagingRecyclingNotesRepository.findByAccreditation
+      ).toHaveBeenCalledWith(accreditationId)
+      expect(
+        packagingRecyclingNotesRepository.findByStatus
+      ).not.toHaveBeenCalled()
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.items).toHaveLength(1)
+      expect(payload.hasMore).toBe(false)
+      expect(payload.nextCursor).toBeUndefined()
+    })
+
+    it('filters the accreditation PRNs by the requested statuses', async () => {
+      packagingRecyclingNotesRepository.findByAccreditation.mockResolvedValueOnce(
+        [
+          createMockIssuedPrn({
+            id: 'prn-accepted',
+            status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
+          }),
+          createMockIssuedPrn({
+            id: 'prn-cancelled',
+            status: { currentStatus: PRN_STATUS.CANCELLED, history: [] }
+          })
+        ]
+      )
+
+      const response = await injectWithAuth(server, {
+        method: 'GET',
+        url: `${adminListUrl}?statuses=accepted&accreditationId=acc-789`
+      })
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.items).toHaveLength(1)
+      expect(payload.items[0].id).toBe('prn-accepted')
+    })
+
+    it('returns 500 when findByAccreditation throws', async () => {
+      packagingRecyclingNotesRepository.findByAccreditation.mockRejectedValueOnce(
+        new Error('Database connection lost')
+      )
+
+      const response = await injectWithAuth(server, {
+        method: 'GET',
+        url: `${adminListUrl}?statuses=accepted&accreditationId=acc-789`
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    })
+  })
+
   describe('authentication', () => {
     it('returns 401 when no auth token is provided', async () => {
       const response = await server.inject({
