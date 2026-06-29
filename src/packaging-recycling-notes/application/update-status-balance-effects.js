@@ -69,7 +69,8 @@ export async function deductWasteBalanceIfNeeded(
       organisationId,
       prnId,
       tonnage,
-      createdBy
+      createdBy,
+      expectedHead: balance.eventNumber
     })
   } else {
     throw Boom.badRequest(
@@ -112,7 +113,8 @@ export async function deductTotalBalanceIfNeeded(
       organisationId,
       prnId,
       tonnage,
-      createdBy
+      createdBy,
+      expectedHead: balance.eventNumber
     })
   } else {
     throw Boom.badRequest(
@@ -152,7 +154,8 @@ export async function creditWasteBalanceIfNeeded(
       organisationId,
       prnId,
       tonnage,
-      createdBy
+      createdBy,
+      expectedHead: balance.eventNumber
     })
   } else {
     throw Boom.badRequest(
@@ -192,7 +195,8 @@ export async function creditFullBalanceIfNeeded(
       organisationId,
       prnId,
       tonnage,
-      createdBy
+      createdBy,
+      expectedHead: balance.eventNumber
     })
   } else {
     throw Boom.badRequest(
@@ -316,8 +320,10 @@ const EFFECT_HANDLERS = Object.freeze({
 
 /**
  * Applies the balance events for a status transition, appending one stream
- * event per input event and returning them in order. Each handler appends to
- * the stream or throws.
+ * event per input event and returning them in order. Each handler reads the
+ * balance, then appends at the head it read; a competing write that advanced
+ * the head in between surfaces as a slot/sequence conflict and propagates to
+ * the caller (ADR-0036), failing the transition.
  *
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {import('#common/hapi-types.js').TypedLogger} logger

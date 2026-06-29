@@ -23,11 +23,14 @@ describe('appendToStream', () => {
         ...buildContext()
       }
 
-      const result = await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 1500 },
-        createdBy
-      })
+      const result = await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 1500 },
+          createdBy
+        }
+      )
 
       expect(result.number).toBe(1)
       expect(result.openingBalance).toEqual({ amount: 0, availableAmount: 0 })
@@ -41,17 +44,23 @@ describe('appendToStream', () => {
       const repository = createInMemoryStreamRepository()()
       const context = { repository, ...buildContext() }
 
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 2000 },
-        createdBy
-      })
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 2000 },
+          createdBy
+        }
+      )
 
-      const result = await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-2', creditTotal: 3500 },
-        createdBy
-      })
+      const result = await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-2', creditTotal: 3500 },
+          createdBy
+        }
+      )
 
       expect(result.number).toBe(2)
       expect(result.openingBalance).toEqual({
@@ -68,17 +77,23 @@ describe('appendToStream', () => {
       const repository = createInMemoryStreamRepository()()
       const context = { repository, ...buildContext() }
 
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 2000 },
-        createdBy
-      })
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 2000 },
+          createdBy
+        }
+      )
 
-      const result = await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-2', creditTotal: 1000 },
-        createdBy
-      })
+      const result = await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-2', creditTotal: 1000 },
+          createdBy
+        }
+      )
 
       expect(result.closingBalance).toEqual({
         amount: 1000,
@@ -90,23 +105,32 @@ describe('appendToStream', () => {
       const repository = createInMemoryStreamRepository()()
       const context = { repository, ...buildContext() }
 
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 2000 },
-        createdBy
-      })
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 2000 },
+          createdBy
+        }
+      )
 
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_CREATED,
-        payload: { prnId: 'prn-1', amount: 800 },
-        createdBy
-      })
+      await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 800 },
+          createdBy
+        }
+      )
 
-      const result = await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-2', creditTotal: 3500 },
-        createdBy
-      })
+      const result = await appendToStream(
+        { ...context, expectedHead: 2 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-2', creditTotal: 3500 },
+          createdBy
+        }
+      )
 
       expect(result.number).toBe(3)
       expect(result.openingBalance).toEqual({
@@ -129,7 +153,7 @@ describe('appendToStream', () => {
 
       await expect(
         appendToStream(
-          { repository, ...buildContext() },
+          { repository, ...buildContext(), expectedHead: 0 },
           {
             kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
             payload: { summaryLogId: 'log-1', creditTotal: 100 },
@@ -145,17 +169,23 @@ describe('appendToStream', () => {
       const repository = createInMemoryStreamRepository()()
       const context = { repository, ...buildContext() }
 
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 1000 },
-        createdBy
-      })
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+          createdBy
+        }
+      )
 
-      const result = await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_CREATED,
-        payload: { prnId: 'prn-1', amount: 300 },
-        createdBy
-      })
+      const result = await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 300 },
+          createdBy
+        }
+      )
 
       expect(result.closingBalance).toEqual({
         amount: 1000,
@@ -167,17 +197,23 @@ describe('appendToStream', () => {
       const repository = createInMemoryStreamRepository()()
       const context = { repository, ...buildContext() }
 
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 1000 },
-        createdBy
-      })
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+          createdBy
+        }
+      )
 
-      const result = await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_CREATED,
-        payload: { prnId: 'prn-1', amount: 300 },
-        createdBy
-      })
+      const result = await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 300 },
+          createdBy
+        }
+      )
 
       expect(result.openingBalance).toEqual({
         amount: 1000,
@@ -191,22 +227,31 @@ describe('appendToStream', () => {
       const repository = createInMemoryStreamRepository()()
       const context = { repository, ...buildContext() }
 
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 1000 },
-        createdBy
-      })
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_CREATED,
-        payload: { prnId: 'prn-1', amount: 300 },
-        createdBy
-      })
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+          createdBy
+        }
+      )
+      await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 300 },
+          createdBy
+        }
+      )
 
-      const result = await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_ISSUED,
-        payload: { prnId: 'prn-1', amount: 300 },
-        createdBy
-      })
+      const result = await appendToStream(
+        { ...context, expectedHead: 2 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_ISSUED,
+          payload: { prnId: 'prn-1', amount: 300 },
+          createdBy
+        }
+      )
 
       expect(result.closingBalance).toEqual({
         amount: 700,
@@ -220,22 +265,31 @@ describe('appendToStream', () => {
       const repository = createInMemoryStreamRepository()()
       const context = { repository, ...buildContext() }
 
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 1000 },
-        createdBy
-      })
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_CREATED,
-        payload: { prnId: 'prn-1', amount: 300 },
-        createdBy
-      })
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+          createdBy
+        }
+      )
+      await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 300 },
+          createdBy
+        }
+      )
 
-      const result = await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
-        payload: { prnId: 'prn-1', amount: 300 },
-        createdBy
-      })
+      const result = await appendToStream(
+        { ...context, expectedHead: 2 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+          payload: { prnId: 'prn-1', amount: 300 },
+          createdBy
+        }
+      )
 
       expect(result.closingBalance).toEqual({
         amount: 1000,
@@ -249,32 +303,105 @@ describe('appendToStream', () => {
       const repository = createInMemoryStreamRepository()()
       const context = { repository, ...buildContext() }
 
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 1000 },
-        createdBy
-      })
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_CREATED,
-        payload: { prnId: 'prn-1', amount: 300 },
-        createdBy
-      })
-      await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_ISSUED,
-        payload: { prnId: 'prn-1', amount: 300 },
-        createdBy
-      })
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+          createdBy
+        }
+      )
+      await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 300 },
+          createdBy
+        }
+      )
+      await appendToStream(
+        { ...context, expectedHead: 2 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_ISSUED,
+          payload: { prnId: 'prn-1', amount: 300 },
+          createdBy
+        }
+      )
 
-      const result = await appendToStream(context, {
-        kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
-        payload: { prnId: 'prn-1', amount: 300 },
-        createdBy
-      })
+      const result = await appendToStream(
+        { ...context, expectedHead: 3 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+          payload: { prnId: 'prn-1', amount: 300 },
+          createdBy
+        }
+      )
 
       expect(result.closingBalance).toEqual({
         amount: 1000,
         availableAmount: 1000
       })
+    })
+  })
+
+  describe('optimistic concurrency (expectedHead)', () => {
+    it('rejects an append whose expectedHead is behind the live head', async () => {
+      const repository = createInMemoryStreamRepository()()
+      const context = { repository, ...buildContext() }
+
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+          createdBy
+        }
+      )
+
+      await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 100 },
+          createdBy
+        }
+      )
+
+      await expect(
+        appendToStream(
+          { ...context, expectedHead: 1 },
+          {
+            kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+            payload: { summaryLogId: 'log-2', creditTotal: 2000 },
+            createdBy
+          }
+        )
+      ).rejects.toBeInstanceOf(StreamSlotConflictError)
+    })
+
+    it('appends at expectedHead + 1 when the head has not moved', async () => {
+      const repository = createInMemoryStreamRepository()()
+      const context = { repository, ...buildContext() }
+
+      await appendToStream(
+        { ...context, expectedHead: 0 },
+        {
+          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+          createdBy
+        }
+      )
+
+      const result = await appendToStream(
+        { ...context, expectedHead: 1 },
+        {
+          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 100 },
+          createdBy
+        }
+      )
+
+      expect(result.number).toBe(2)
     })
   })
 
@@ -288,7 +415,7 @@ describe('appendToStream', () => {
 
       await expect(
         appendToStream(
-          { repository, ...buildContext() },
+          { repository, ...buildContext(), expectedHead: 0 },
           {
             kind: /** @type {*} */ ('unknown-kind'),
             payload: { prnId: 'prn-1', amount: 100 },

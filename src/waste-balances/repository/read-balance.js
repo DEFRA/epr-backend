@@ -26,6 +26,7 @@ export const findBalanceByPartition = async (
     registrationId,
     accreditationId,
     amount: latest.closingBalance.amount,
-    availableAmount: latest.closingBalance.availableAmount
+    availableAmount: latest.closingBalance.availableAmount,
+    eventNumber: latest.number
   }
 }

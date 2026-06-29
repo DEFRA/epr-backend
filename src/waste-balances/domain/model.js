@@ -17,6 +17,10 @@
  * @property {string} accreditationId - Accreditation ID (stream partition key)
  * @property {number} amount - Total balance (credits minus debits)
  * @property {number} availableAmount - Available balance (amount minus pending debits)
+ * @property {number} eventNumber - Stream position this balance was resolved
+ *   from: the `number` of the latest event. Callers thread it back as
+ *   `expectedHead` on a write so the slot index can reject a decision made
+ *   against a head that has since moved.
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
