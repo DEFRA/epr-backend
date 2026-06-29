@@ -113,10 +113,14 @@ export class StreamSequenceError extends Error {
  *   the starting slot is already occupied, `StreamSequenceError` on a gap or
  *   non-sequential numbering. Empty array is a no-op.
  *
- *   Not isolated: the batch is not rolled back as a unit, so a later slot
- *   conflict leaves earlier inserts of the same batch committed. A multi-event
- *   batch is therefore only safe where nothing else writes the partition
- *   concurrently — a single-event command append or a single-threaded load.
+ *   A single-event batch is fully concurrency-safe: the slot index admits one
+ *   writer per slot and the loser appends nothing. A multi-event batch is not
+ *   isolated — it is not rolled back as a unit, so a competing writer can leave
+ *   the batch truncated to a committed prefix while the caller sees the slot
+ *   conflict. The slot index still guarantees gap-free contiguity, so the
+ *   surviving prefix folds consistently; what is lost is decision-atomicity
+ *   across the batch. A command that emits more than one event must therefore
+ *   tolerate a re-applied prefix on replay (idempotent or independent events).
  */
 
 /**
