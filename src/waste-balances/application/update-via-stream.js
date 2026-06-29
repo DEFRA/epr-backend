@@ -15,7 +15,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * submission against fresh state.
  *
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} repository
- * @param {{ registrationId: string, accreditationId: string, organisationId: string }} partition
+ * @param {import('../repository/stream-schema.js').RegistrationOrAccreditationId} partition
  * @param {{ kind: import('../repository/stream-schema.js').StreamEventKind, payload: import('../repository/stream-schema.js').SummaryLogSubmittedPayload, createdBy: import('../repository/stream-schema.js').StreamUserSummary }} event
  */
 const appendSummaryLog = async (
