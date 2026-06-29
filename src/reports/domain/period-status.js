@@ -5,11 +5,9 @@ import { REPORT_STATUS } from './report-status.js'
  * lifecycle statuses plus the date-derived "due" and "overdue" states.
  */
 export const PERIOD_STATUS = Object.freeze({
+  ...REPORT_STATUS,
   DUE: 'due',
-  OVERDUE: 'overdue',
-  IN_PROGRESS: REPORT_STATUS.IN_PROGRESS,
-  READY_TO_SUBMIT: REPORT_STATUS.READY_TO_SUBMIT,
-  SUBMITTED: REPORT_STATUS.SUBMITTED
+  OVERDUE: 'overdue'
 })
 
 /**
