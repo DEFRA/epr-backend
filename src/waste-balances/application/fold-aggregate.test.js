@@ -1,0 +1,126 @@
+import { describe, it, expect } from 'vitest'
+
+import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
+import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
+import { buildStreamEvent } from '../repository/stream-test-data.js'
+import { appendToStream } from './append-to-stream.js'
+import { foldAggregate } from './fold-aggregate.js'
+
+const createdBy = { id: 'user-1', name: 'Test User' }
+const partition = { registrationId: 'reg-1', accreditationId: 'acc-1' }
+const context = (repository) => ({
+  repository,
+  registrationId: 'reg-1',
+  accreditationId: 'acc-1',
+  organisationId: 'org-1'
+})
+
+describe('foldAggregate', () => {
+  it('returns null for an empty partition', async () => {
+    const repository = createInMemoryStreamRepository()()
+
+    expect(await foldAggregate(repository, partition)).toBeNull()
+  })
+
+  it('resolves balance, head, and credit total from the stream', async () => {
+    const repository = createInMemoryStreamRepository()()
+
+    await appendToStream(
+      { ...context(repository), expectedHead: 0 },
+      {
+        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+        createdBy
+      }
+    )
+    await appendToStream(
+      { ...context(repository), expectedHead: 1 },
+      {
+        kind: STREAM_EVENT_KIND.PRN_CREATED,
+        payload: { prnId: 'prn-1', amount: 300 },
+        createdBy
+      }
+    )
+
+    const aggregate = await foldAggregate(repository, partition)
+
+    expect(aggregate).toEqual({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1',
+      amount: 1000,
+      availableAmount: 700,
+      eventNumber: 2,
+      creditTotal: 1000
+    })
+  })
+
+  it('carries the latest credit total when several submissions precede a PRN', async () => {
+    const repository = createInMemoryStreamRepository()()
+
+    await appendToStream(
+      { ...context(repository), expectedHead: 0 },
+      {
+        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+        createdBy
+      }
+    )
+    await appendToStream(
+      { ...context(repository), expectedHead: 1 },
+      {
+        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        payload: { summaryLogId: 'log-2', creditTotal: 2500 },
+        createdBy
+      }
+    )
+
+    const aggregate = await foldAggregate(repository, partition)
+
+    expect(aggregate?.creditTotal).toBe(2500)
+    expect(aggregate?.eventNumber).toBe(2)
+  })
+
+  it('keeps the credit-total base at the latest submission when a PRN follows', async () => {
+    const repository = createInMemoryStreamRepository()()
+
+    await appendToStream(
+      { ...context(repository), expectedHead: 0 },
+      {
+        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+        createdBy
+      }
+    )
+    await appendToStream(
+      { ...context(repository), expectedHead: 1 },
+      {
+        kind: STREAM_EVENT_KIND.PRN_CREATED,
+        payload: { prnId: 'prn-1', amount: 300 },
+        createdBy
+      }
+    )
+
+    const aggregate = await foldAggregate(repository, partition)
+
+    expect(aggregate?.creditTotal).toBe(1000)
+  })
+
+  it('reports a zero credit total for a partition with no submission event', async () => {
+    const repository = createInMemoryStreamRepository()()
+    await repository.appendEvent(
+      buildStreamEvent({
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1',
+        number: 1,
+        kind: STREAM_EVENT_KIND.PRN_CREATED,
+        payload: { prnId: 'prn-1', amount: 0 },
+        closingBalance: { amount: 0, availableAmount: 0 }
+      })
+    )
+
+    const aggregate = await foldAggregate(repository, partition)
+
+    expect(aggregate?.creditTotal).toBe(0)
+  })
+})

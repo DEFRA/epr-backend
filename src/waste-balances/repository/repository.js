@@ -7,7 +7,7 @@ import {
   performCreditAvailableBalanceForPrnCancellation,
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers-prn.js'
-import { findBalanceByPartition } from './read-balance.js'
+import { foldAggregate } from '../application/fold-aggregate.js'
 
 /**
  * Creates a waste balances repository. The event-sourced stream is the sole
@@ -24,8 +24,7 @@ import { findBalanceByPartition } from './read-balance.js'
 export const createWasteBalancesRepository = (dependencies) => {
   const { streamRepository } = dependencies
 
-  const findBalance = (partition) =>
-    findBalanceByPartition(streamRepository, partition)
+  const findBalance = (partition) => foldAggregate(streamRepository, partition)
 
   return () => ({
     findBalance,
