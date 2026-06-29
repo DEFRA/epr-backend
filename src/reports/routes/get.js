@@ -92,6 +92,7 @@ export const reportsGet = {
       cadence
     )
 
+    // Calendar periods are ended or carry a report, so periodStatus is non-null.
     const reportingPeriods = merged.map((period) => ({
       ...period,
       periodStatus: derivePeriodStatus(period),
