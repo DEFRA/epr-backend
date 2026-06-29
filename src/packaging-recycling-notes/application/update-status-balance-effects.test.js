@@ -1,21 +1,29 @@
 import { describe, it, expect, vi } from 'vitest'
 
 import {
-  applyWasteBalanceEffects,
-  balanceEventsFor
+  applyPrnBalanceCommand,
+  prnCommandFor
 } from './update-status-balance-effects.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { StreamSlotConflictError } from '#waste-balances/repository/stream-port.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 
 const REGISTRATION_ID = 'reg-1'
 const ACCREDITATION_ID = 'acc-1'
 const ORGANISATION_ID = 'org-1'
-const SEEDED_EVENT_NUMBER = 1
-const APPENDED_EVENT_NUMBER = 2
+const PRN_ID = 'prn-1'
+const TONNAGE = 10
+const SEED_NUMBER = 1
+const APPENDED_NUMBER = 2
+
+const ledgerId = {
+  organisationId: ORGANISATION_ID,
+  registrationId: REGISTRATION_ID,
+  accreditationId: ACCREDITATION_ID
+}
+const createdBy = { id: 'user-1' }
 
 const buildLogger = () => ({
   info: vi.fn(),
@@ -28,316 +36,182 @@ const buildLogger = () => ({
 })
 
 /**
- * An in-memory repository seeded with one stream event so the read resolves a
- * non-zero balance. The next balance effect appends a second event, so the
- * returned watermark is APPENDED_EVENT_NUMBER.
+ * A service over an in-memory stream. With a closing balance the ledger is
+ * seeded with one summary-log event so commands resolve a balance; without one
+ * the ledger is empty and commands reject with NO_LEDGER.
  */
-const setupLedgerRepository = async () => {
-  const streamRepository = createInMemoryStreamRepository()()
-  await streamRepository.appendEvent(
-    buildStreamEvent({
-      registrationId: REGISTRATION_ID,
-      accreditationId: ACCREDITATION_ID,
-      number: SEEDED_EVENT_NUMBER,
-      closingBalance: { amount: 100, availableAmount: 100 }
-    })
-  )
-
-  const wasteBalancesRepository = createWasteBalancesRepository({
-    streamRepository
-  })()
-
-  return { wasteBalancesRepository, streamRepository }
+const serviceWithBalance = (closingBalance) => {
+  const events = closingBalance
+    ? [
+        buildStreamEvent({
+          registrationId: REGISTRATION_ID,
+          accreditationId: ACCREDITATION_ID,
+          organisationId: ORGANISATION_ID,
+          number: SEED_NUMBER,
+          closingBalance
+        })
+      ]
+    : []
+  return createWasteBalanceService(createInMemoryStreamRepository(events)())
 }
 
-const balanceParamsFor = (overrides) => ({
-  prnId: 'prn-1',
-  tonnage: 10,
-  accreditationId: ACCREDITATION_ID,
-  registrationId: REGISTRATION_ID,
-  organisationId: ORGANISATION_ID,
-  createdBy: { id: 'user-1' },
-  ...overrides
-})
-
-const eventsForTransition = (currentStatus, newStatus) =>
-  balanceEventsFor(
+const applyTransition = (service, logger, currentStatus, newStatus) =>
+  applyPrnBalanceCommand(service, logger, {
     currentStatus,
     newStatus,
-    balanceParamsFor({ currentStatus, newStatus })
-  )
-
-describe('applyWasteBalanceEffects appended events return', () => {
-  it('returns the appended event from the deduct-available branch', async () => {
-    const { wasteBalancesRepository, streamRepository } =
-      await setupLedgerRepository()
-
-    const applied = await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      buildLogger(),
-      eventsForTransition(PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION)
-    )
-
-    const latest = await streamRepository.findLatestByPartition(
-      REGISTRATION_ID,
-      ACCREDITATION_ID
-    )
-    expect(applied).toHaveLength(1)
-    expect(applied[0]?.number).toBe(latest?.number)
-    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
+    ledgerId,
+    prnId: PRN_ID,
+    tonnage: TONNAGE,
+    createdBy
   })
 
-  it('returns the appended event from the deduct-total branch', async () => {
-    const { wasteBalancesRepository, streamRepository } =
-      await setupLedgerRepository()
+describe('prnCommandFor', () => {
+  it.each([
+    [
+      PRN_STATUS.DRAFT,
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      'createPrn',
+      'deduct_available'
+    ],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      'issuePrn',
+      'deduct_total'
+    ],
+    [
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.ACCEPTED,
+      'acceptPrn',
+      'append_accepted'
+    ],
+    [
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.AWAITING_CANCELLATION,
+      'rejectPrn',
+      'append_rejected'
+    ],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.DELETED,
+      'cancelPrnCreation',
+      'credit_available'
+    ],
+    [
+      PRN_STATUS.AWAITING_CANCELLATION,
+      PRN_STATUS.CANCELLED,
+      'cancelIssuedPrn',
+      'credit_full'
+    ]
+  ])(
+    'maps %s -> %s to the %s command',
+    (currentStatus, newStatus, method, logOperation) => {
+      expect(prnCommandFor(currentStatus, newStatus)).toEqual({
+        method,
+        logOperation
+      })
+    }
+  )
 
-    const applied = await applyWasteBalanceEffects(
-      wasteBalancesRepository,
+  it('has no command for a transition with no balance effect', () => {
+    expect(
+      prnCommandFor(PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED)
+    ).toBeUndefined()
+  })
+})
+
+describe('applyPrnBalanceCommand on commit', () => {
+  it('appends the decided event and returns it', async () => {
+    const service = serviceWithBalance({ amount: 1000, availableAmount: 1000 })
+
+    const events = await applyTransition(
+      service,
       buildLogger(),
-      eventsForTransition(
+      PRN_STATUS.DRAFT,
+      PRN_STATUS.AWAITING_AUTHORISATION
+    )
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+    expect(events[0]?.number).toBe(APPENDED_NUMBER)
+  })
+
+  it('logs the operation against the PRN', async () => {
+    const service = serviceWithBalance({ amount: 1000, availableAmount: 1000 })
+    const logger = buildLogger()
+
+    await applyTransition(
+      service,
+      logger,
+      PRN_STATUS.DRAFT,
+      PRN_STATUS.AWAITING_AUTHORISATION
+    )
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('deduct_available'),
+        event: expect.objectContaining({
+          action: 'waste_balance_updated',
+          category: 'database',
+          reference: PRN_ID
+        })
+      })
+    )
+    const [entry] = logger.info.mock.calls[0]
+    expect(entry.message).toContain(PRN_ID)
+    expect(entry.message).toContain(String(TONNAGE))
+  })
+})
+
+describe('applyPrnBalanceCommand on rejection', () => {
+  it('throws a 400 naming the accreditation when no ledger exists', async () => {
+    const service = serviceWithBalance(null)
+
+    await expect(
+      applyTransition(
+        service,
+        buildLogger(),
+        PRN_STATUS.DRAFT,
+        PRN_STATUS.AWAITING_AUTHORISATION
+      )
+    ).rejects.toMatchObject({
+      isBoom: true,
+      output: { statusCode: 400 },
+      message: `No waste balance found for accreditation: ${ACCREDITATION_ID}`
+    })
+  })
+
+  it('throws a 409 when the available balance is exhausted on creation', async () => {
+    const service = serviceWithBalance({ amount: 500, availableAmount: 0 })
+
+    await expect(
+      applyTransition(
+        service,
+        buildLogger(),
+        PRN_STATUS.DRAFT,
+        PRN_STATUS.AWAITING_AUTHORISATION
+      )
+    ).rejects.toMatchObject({
+      isBoom: true,
+      output: { statusCode: 409 },
+      message: 'Insufficient available waste balance'
+    })
+  })
+
+  it('throws a 409 when the total balance is exhausted on issuance', async () => {
+    const service = serviceWithBalance({ amount: 0, availableAmount: 500 })
+
+    await expect(
+      applyTransition(
+        service,
+        buildLogger(),
         PRN_STATUS.AWAITING_AUTHORISATION,
         PRN_STATUS.AWAITING_ACCEPTANCE
       )
-    )
-
-    const latest = await streamRepository.findLatestByPartition(
-      REGISTRATION_ID,
-      ACCREDITATION_ID
-    )
-    expect(applied[0]?.number).toBe(latest?.number)
-    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
-  })
-
-  it('returns the appended event from the credit-available branch', async () => {
-    const { wasteBalancesRepository, streamRepository } =
-      await setupLedgerRepository()
-
-    const applied = await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      buildLogger(),
-      eventsForTransition(PRN_STATUS.AWAITING_AUTHORISATION, PRN_STATUS.DELETED)
-    )
-
-    const latest = await streamRepository.findLatestByPartition(
-      REGISTRATION_ID,
-      ACCREDITATION_ID
-    )
-    expect(applied[0]?.number).toBe(latest?.number)
-    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
-  })
-
-  it('returns the appended event from the prn-accepted branch', async () => {
-    const { wasteBalancesRepository, streamRepository } =
-      await setupLedgerRepository()
-
-    const applied = await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      buildLogger(),
-      eventsForTransition(PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED)
-    )
-
-    const latest = await streamRepository.findLatestByPartition(
-      REGISTRATION_ID,
-      ACCREDITATION_ID
-    )
-    expect(applied[0]?.kind).toBe(STREAM_EVENT_KIND.PRN_ACCEPTED)
-    expect(applied[0]?.number).toBe(latest?.number)
-    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
-  })
-
-  it('returns the appended event from the prn-rejected branch', async () => {
-    const { wasteBalancesRepository, streamRepository } =
-      await setupLedgerRepository()
-
-    const applied = await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      buildLogger(),
-      eventsForTransition(
-        PRN_STATUS.AWAITING_ACCEPTANCE,
-        PRN_STATUS.AWAITING_CANCELLATION
-      )
-    )
-
-    const latest = await streamRepository.findLatestByPartition(
-      REGISTRATION_ID,
-      ACCREDITATION_ID
-    )
-    expect(applied[0]?.kind).toBe(STREAM_EVENT_KIND.PRN_REJECTED)
-    expect(applied[0]?.number).toBe(latest?.number)
-    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
-  })
-
-  it('returns the appended event from the credit-full branch', async () => {
-    const { wasteBalancesRepository, streamRepository } =
-      await setupLedgerRepository()
-
-    const applied = await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      buildLogger(),
-      eventsForTransition(
-        PRN_STATUS.AWAITING_CANCELLATION,
-        PRN_STATUS.CANCELLED
-      )
-    )
-
-    const latest = await streamRepository.findLatestByPartition(
-      REGISTRATION_ID,
-      ACCREDITATION_ID
-    )
-    expect(applied[0]?.number).toBe(latest?.number)
-    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
-  })
-
-  it('returns an empty array when the events array is empty', async () => {
-    const { wasteBalancesRepository } = await setupLedgerRepository()
-
-    const applied = await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      buildLogger(),
-      []
-    )
-
-    expect(applied).toEqual([])
-  })
-})
-
-/**
- * Replace the repository's append with one that lands a single competing event
- * the first time it is called, then delegates. This makes the effect's append
- * collide on the slot the competing writer has taken, exercising the
- * optimistic-concurrency guard.
- *
- * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
- * @param {object} competingEvent
- */
-const landCompetingEventOnFirstAppend = (streamRepository, competingEvent) => {
-  const realAppend = streamRepository.appendEvent.bind(streamRepository)
-  let landed = false
-  streamRepository.appendEvent = async (event) => {
-    if (!landed) {
-      landed = true
-      await realAppend(buildStreamEvent(competingEvent))
-    }
-    return realAppend(event)
-  }
-}
-
-describe('applyWasteBalanceEffects optimistic concurrency', () => {
-  it('surfaces a slot conflict when a competing event takes the targeted slot', async () => {
-    const { wasteBalancesRepository, streamRepository } =
-      await setupLedgerRepository()
-
-    landCompetingEventOnFirstAppend(streamRepository, {
-      registrationId: REGISTRATION_ID,
-      accreditationId: ACCREDITATION_ID,
-      number: 2,
-      kind: STREAM_EVENT_KIND.PRN_CREATED,
-      payload: { prnId: 'competing-prn', amount: 70 },
-      openingBalance: { amount: 100, availableAmount: 100 },
-      closingBalance: { amount: 100, availableAmount: 30 }
+    ).rejects.toMatchObject({
+      isBoom: true,
+      output: { statusCode: 409 },
+      message: 'Insufficient total waste balance'
     })
-
-    const events = balanceEventsFor(
-      PRN_STATUS.DRAFT,
-      PRN_STATUS.AWAITING_AUTHORISATION,
-      balanceParamsFor({
-        tonnage: 80,
-        currentStatus: PRN_STATUS.DRAFT,
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION
-      })
-    )
-
-    await expect(
-      applyWasteBalanceEffects(wasteBalancesRepository, buildLogger(), events)
-    ).rejects.toBeInstanceOf(StreamSlotConflictError)
-
-    const all = await streamRepository.findAllByPartition(
-      REGISTRATION_ID,
-      ACCREDITATION_ID
-    )
-    expect(all).toHaveLength(2)
-  })
-})
-
-describe('balanceEventsFor', () => {
-  const params = balanceParamsFor({
-    currentStatus: PRN_STATUS.DRAFT,
-    newStatus: PRN_STATUS.AWAITING_AUTHORISATION
-  })
-
-  it('emits a prn-created event for PRN creation', () => {
-    expect(
-      balanceEventsFor(
-        PRN_STATUS.DRAFT,
-        PRN_STATUS.AWAITING_AUTHORISATION,
-        params
-      )
-    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_CREATED, params }])
-  })
-
-  it('emits a prn-issued event for PRN issuance', () => {
-    expect(
-      balanceEventsFor(
-        PRN_STATUS.AWAITING_AUTHORISATION,
-        PRN_STATUS.AWAITING_ACCEPTANCE,
-        params
-      )
-    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_ISSUED, params }])
-  })
-
-  it('emits a prn-creation-cancelled event for deleting a PRN awaiting authorisation', () => {
-    expect(
-      balanceEventsFor(
-        PRN_STATUS.AWAITING_AUTHORISATION,
-        PRN_STATUS.DELETED,
-        params
-      )
-    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED, params }])
-  })
-
-  it('emits a prn-cancelled-after-issue event for cancelling an issued PRN', () => {
-    expect(
-      balanceEventsFor(
-        PRN_STATUS.AWAITING_CANCELLATION,
-        PRN_STATUS.CANCELLED,
-        params
-      )
-    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, params }])
-  })
-
-  it('emits a prn-accepted event for accepting an issued PRN', () => {
-    expect(
-      balanceEventsFor(
-        PRN_STATUS.AWAITING_ACCEPTANCE,
-        PRN_STATUS.ACCEPTED,
-        params
-      )
-    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_ACCEPTED, params }])
-  })
-
-  it('emits a prn-rejected event for requesting cancellation of an issued PRN', () => {
-    expect(
-      balanceEventsFor(
-        PRN_STATUS.AWAITING_ACCEPTANCE,
-        PRN_STATUS.AWAITING_CANCELLATION,
-        params
-      )
-    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_REJECTED, params }])
-  })
-
-  it('emits no events when discarding a draft PRN', () => {
-    expect(
-      balanceEventsFor(PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED, params)
-    ).toEqual([])
-  })
-
-  it('emits no events for an awaiting-authorisation to cancelled move the state machine forbids', () => {
-    expect(
-      balanceEventsFor(
-        PRN_STATUS.AWAITING_AUTHORISATION,
-        PRN_STATUS.CANCELLED,
-        params
-      )
-    ).toEqual([])
   })
 })

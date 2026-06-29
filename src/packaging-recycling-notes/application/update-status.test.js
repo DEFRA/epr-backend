@@ -148,7 +148,12 @@ const seedRepositories = ({
   const organisationsRepository = createInMemoryOrganisationsRepository([
     buildOrgWithAccreditation({ accreditation, withAccreditation })
   ])()
-  return { prnRepository, wasteBalancesRepository, organisationsRepository }
+  return {
+    prnRepository,
+    streamRepository,
+    wasteBalancesRepository,
+    organisationsRepository
+  }
 }
 
 const readBalance = (wasteBalancesRepository) =>
@@ -341,24 +346,18 @@ describe('updatePrnStatus', () => {
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })
 
-    it('treats an absent available amount as zero when creating', async () => {
+    it('rejects creation when the available balance is exhausted', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 1,
           status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-        })
+        }),
+        balance: { amount: 500, availableAmount: 0 }
       })
 
       await expect(
         callUpdate({
           ...repositories,
-          // The stream-backed balance always carries both amounts; a partial
-          // balance only arises from a hand-built double, exercising the guard.
-          wasteBalancesRepository: {
-            findBalance: vi
-              .fn()
-              .mockResolvedValue({ accreditationId: ACC_ID, amount: 500 })
-          },
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER
         })
@@ -438,7 +437,7 @@ describe('updatePrnStatus', () => {
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })
 
-    it('treats an absent total amount as zero when issuing', async () => {
+    it('rejects issuance when the total balance is exhausted', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 1,
@@ -446,20 +445,13 @@ describe('updatePrnStatus', () => {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
             history: []
           }
-        })
+        }),
+        balance: { amount: 0, availableAmount: 200 }
       })
 
       await expect(
         callUpdate({
           ...repositories,
-          // The stream-backed balance always carries both amounts; a partial
-          // balance only arises from a hand-built double, exercising the guard.
-          wasteBalancesRepository: {
-            findBalance: vi.fn().mockResolvedValue({
-              accreditationId: ACC_ID,
-              availableAmount: 200
-            })
-          },
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
           actor: PRN_ACTOR.SIGNATORY
         })

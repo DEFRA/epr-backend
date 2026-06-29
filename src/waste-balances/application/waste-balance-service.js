@@ -1,5 +1,24 @@
-import { submitSummaryLog as decideSummaryLog } from '../domain/commands.js'
+import {
+  submitSummaryLog as decideSummaryLog,
+  createPrn as decideCreatePrn,
+  issuePrn as decideIssuePrn,
+  cancelPrnCreation as decideCancelPrnCreation,
+  cancelIssuedPrn as decideCancelIssuedPrn,
+  acceptPrn as decideAcceptPrn,
+  rejectPrn as decideRejectPrn,
+  PRN_COMMAND_STATUS,
+  PRN_COMMAND_REJECTION
+} from '../domain/commands.js'
 import { currentWasteBalance } from './current-waste-balance.js'
+
+/**
+ * The outcome of a PRN command: the appended stream events when it commits, or
+ * the reason it did not. The application layer turns a rejection into the
+ * contextual error its callers expect.
+ *
+ * @typedef {{ status: 'committed', events: import('../repository/stream-port.js').StreamEvent[] }
+ *   | { status: 'rejected', reason: import('../domain/commands.js').PrnCommandRejection }} PrnCommandResult
+ */
 
 /**
  * The single application boundary over the waste balance ledger. Each command
@@ -63,6 +82,35 @@ export const createWasteBalanceService = (streamRepository) => {
     )
   }
 
+  /**
+   * Run a PRN command: fold the ledger, reject when it does not exist yet
+   * (PRN commands always act on an open ledger), run the pure decider, and
+   * append the decided events when it commits. The no-ledger rejection lives
+   * here, in one place, rather than in each decider.
+   *
+   * @param {(balance: import('../repository/stream-schema.js').StreamBalanceSnapshot, payload: import('../repository/stream-schema.js').PrnPayload) => import('../domain/commands.js').PrnDecision} decide
+   * @returns {(ledgerId: import('../repository/stream-schema.js').WasteBalanceLedgerId, payload: import('../repository/stream-schema.js').PrnPayload, createdBy: import('../repository/stream-schema.js').StreamUserSummary) => Promise<PrnCommandResult>}
+   */
+  const runPrnCommand = (decide) => async (ledgerId, payload, createdBy) => {
+    const { state, head } = await fold(ledgerId)
+    if (!state) {
+      return {
+        status: PRN_COMMAND_STATUS.REJECTED,
+        reason: PRN_COMMAND_REJECTION.NO_LEDGER
+      }
+    }
+
+    const decision = decide(state.balance, payload)
+    if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
+      return decision
+    }
+
+    return {
+      status: PRN_COMMAND_STATUS.COMMITTED,
+      events: await append(ledgerId, head, decision.events, createdBy)
+    }
+  }
+
   return {
     /**
      * Record a summary-log submission against the ledger.
@@ -80,6 +128,13 @@ export const createWasteBalanceService = (streamRepository) => {
         decideSummaryLog(state, submission),
         createdBy
       )
-    }
+    },
+
+    createPrn: runPrnCommand(decideCreatePrn),
+    issuePrn: runPrnCommand(decideIssuePrn),
+    cancelPrnCreation: runPrnCommand(decideCancelPrnCreation),
+    cancelIssuedPrn: runPrnCommand(decideCancelIssuedPrn),
+    acceptPrn: runPrnCommand(decideAcceptPrn),
+    rejectPrn: runPrnCommand(decideRejectPrn)
   }
 }
