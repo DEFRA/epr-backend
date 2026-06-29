@@ -39,7 +39,8 @@ export const testFindBalanceBehaviour = (it) => {
         accreditationId: 'acc-123',
         amount: 250,
         availableAmount: 200,
-        eventNumber: 1
+        eventNumber: 1,
+        creditTotal: 100
       })
     })
 
