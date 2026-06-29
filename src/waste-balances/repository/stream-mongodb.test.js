@@ -177,4 +177,46 @@ describe('MongoDB stream repository', () => {
       })
     })
   })
+
+  describe('bulkAppendEvents error translation', () => {
+    it('rethrows non-conflict MongoDB errors unchanged', async () => {
+      const upstream = new Error('connection lost')
+      const stubCollection = {
+        createIndex: () => Promise.resolve(),
+        findOne: () => Promise.resolve(null),
+        insertMany: () => Promise.reject(upstream)
+      }
+      const stubDb = { collection: () => stubCollection }
+
+      const repository = (
+        await createMongoStreamRepository(/** @type {*} */ (stubDb))
+      )()
+
+      await expect(
+        repository.bulkAppendEvents([buildStreamEvent({ number: 1 })])
+      ).rejects.toBe(upstream)
+    })
+
+    it('classifies a slot conflict raised when inserting the batch', async () => {
+      const mongoError = Object.assign(new Error('E11000'), {
+        writeErrors: [{ code: 11000, keyPattern: { number: 1 } }]
+      })
+      const stubCollection = {
+        createIndex: () => Promise.resolve(),
+        findOne: () => Promise.resolve(null),
+        insertMany: () => Promise.reject(mongoError)
+      }
+      const stubDb = { collection: () => stubCollection }
+
+      const repository = (
+        await createMongoStreamRepository(/** @type {*} */ (stubDb))
+      )()
+
+      await expect(
+        repository.bulkAppendEvents([buildStreamEvent({ number: 1 })])
+      ).rejects.toMatchObject({
+        name: 'StreamSlotConflictError'
+      })
+    })
+  })
 })
