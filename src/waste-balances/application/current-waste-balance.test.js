@@ -4,7 +4,7 @@ import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { buildStreamEvent } from '../repository/stream-test-data.js'
 import { appendToStream } from './append-to-stream.js'
-import { foldAggregate } from './fold-aggregate.js'
+import { currentWasteBalance } from './current-waste-balance.js'
 
 const createdBy = { id: 'user-1', name: 'Test User' }
 const partition = { registrationId: 'reg-1', accreditationId: 'acc-1' }
@@ -15,11 +15,11 @@ const context = (repository) => ({
   organisationId: 'org-1'
 })
 
-describe('foldAggregate', () => {
+describe('currentWasteBalance', () => {
   it('returns null for an empty partition', async () => {
     const repository = createInMemoryStreamRepository()()
 
-    expect(await foldAggregate(repository, partition)).toBeNull()
+    expect(await currentWasteBalance(repository, partition)).toBeNull()
   })
 
   it('resolves balance, head, and credit total from the stream', async () => {
@@ -42,9 +42,9 @@ describe('foldAggregate', () => {
       }
     )
 
-    const aggregate = await foldAggregate(repository, partition)
+    const balance = await currentWasteBalance(repository, partition)
 
-    expect(aggregate).toEqual({
+    expect(balance).toEqual({
       organisationId: 'org-1',
       registrationId: 'reg-1',
       accreditationId: 'acc-1',
@@ -75,10 +75,10 @@ describe('foldAggregate', () => {
       }
     )
 
-    const aggregate = await foldAggregate(repository, partition)
+    const balance = await currentWasteBalance(repository, partition)
 
-    expect(aggregate?.creditTotal).toBe(2500)
-    expect(aggregate?.eventNumber).toBe(2)
+    expect(balance?.creditTotal).toBe(2500)
+    expect(balance?.eventNumber).toBe(2)
   })
 
   it('keeps the credit-total base at the latest submission when a PRN follows', async () => {
@@ -101,9 +101,9 @@ describe('foldAggregate', () => {
       }
     )
 
-    const aggregate = await foldAggregate(repository, partition)
+    const balance = await currentWasteBalance(repository, partition)
 
-    expect(aggregate?.creditTotal).toBe(1000)
+    expect(balance?.creditTotal).toBe(1000)
   })
 
   it('reports a zero credit total for a partition with no submission event', async () => {
@@ -119,8 +119,8 @@ describe('foldAggregate', () => {
       })
     )
 
-    const aggregate = await foldAggregate(repository, partition)
+    const balance = await currentWasteBalance(repository, partition)
 
-    expect(aggregate?.creditTotal).toBe(0)
+    expect(balance?.creditTotal).toBe(0)
   })
 })

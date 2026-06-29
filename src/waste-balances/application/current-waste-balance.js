@@ -1,19 +1,19 @@
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 
 /**
- * Fold a ledger into the waste-balance aggregate a decision is made against. The
- * event-sourced ledger is the sole record of the balance: the latest event's
+ * The current waste balance for a registration or accreditation, read from its
+ * ledger. The ledger is the sole record of the balance: the latest event's
  * closing balance is the resolved amount, its `number` is the head, and the
- * latest `summary-log-submitted` event supplies the running credit total. An
- * empty ledger means no balance exists for the registration or accreditation, so
- * the fold resolves to `null`.
+ * latest `summary-log-submitted` event supplies the running credit total. A
+ * registration or accreditation with no events yet has no balance, so this
+ * resolves to `null`.
  *
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
  * @param {{ registrationId: string, accreditationId: string | null }} ledger - The
- *   registration or accreditation whose ledger is folded.
+ *   registration or accreditation whose ledger is read.
  * @returns {Promise<import('../domain/model.js').WasteBalance | null>}
  */
-export const foldAggregate = async (
+export const currentWasteBalance = async (
   streamRepository,
   { registrationId, accreditationId }
 ) => {

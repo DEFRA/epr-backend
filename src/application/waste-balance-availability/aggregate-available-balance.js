@@ -55,9 +55,10 @@ const buildLatestStreamEventLookupStage = () => ({
   }
 })
 
-// Mirrors foldAggregate
-// (waste-balances/application/fold-aggregate.js): the latest stream closing
-// balance is the source of truth, resolving to zero when the stream is empty.
+// Mirrors currentWasteBalance
+// (waste-balances/application/current-waste-balance.js): the latest stream
+// closing balance is the source of truth, resolving to zero when the stream is
+// empty.
 const buildStreamAvailableAmountStage = () => ({
   $addFields: {
     availableAmount: {

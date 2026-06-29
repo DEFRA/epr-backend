@@ -8,9 +8,9 @@ import {
 
 /**
  * The ledger state a command decides against: the resolved balance and the
- * running summary-log credit total. It is the fold of the whole ledger with the
- * identity and head left off — a command needs neither. `null` when the ledger
- * has no events yet.
+ * running summary-log credit total — the whole ledger reduced to what a command
+ * needs, with identity and head left off. `null` when the ledger has no events
+ * yet.
  *
  * @typedef {Object} LedgerState
  * @property {import('../repository/stream-schema.js').StreamBalanceSnapshot} balance
