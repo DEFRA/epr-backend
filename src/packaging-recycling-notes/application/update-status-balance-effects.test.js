@@ -214,4 +214,25 @@ describe('applyPrnBalanceCommand on rejection', () => {
       message: 'Insufficient total waste balance'
     })
   })
+
+  it.each([
+    ['acceptance', PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED],
+    [
+      'rejection',
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.AWAITING_CANCELLATION
+    ]
+  ])(
+    'throws a 500 on %s when the ledger is missing, as that state is unreachable',
+    async (_label, currentStatus, newStatus) => {
+      const service = serviceWithBalance(null)
+
+      await expect(
+        applyTransition(service, buildLogger(), currentStatus, newStatus)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
+    }
+  )
 })

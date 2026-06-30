@@ -107,6 +107,18 @@ const REJECTION_TO_ERROR = Object.freeze({
 })
 
 /**
+ * Commands that act on a PRN already created and issued. Both transitions only
+ * follow ones that opened the ledger, so a missing ledger here is not a client
+ * error but a broken invariant — surfaced as a 500 rather than the contextual
+ * 400 the reachable commands return.
+ *
+ * @type {ReadonlySet<string>}
+ */
+const COMMANDS_REQUIRING_OPEN_LEDGER = Object.freeze(
+  new Set(['acceptPrn', 'rejectPrn'])
+)
+
+/**
  * Run the waste-balance command for a status transition through the service,
  * folding once and appending the decided events. A rejection becomes the
  * caller-facing error; a commit is logged and its appended stream events
@@ -139,6 +151,14 @@ export async function applyPrnBalanceCommand(
   )
 
   if (result.status === PRN_COMMAND_STATUS.REJECTED) {
+    if (
+      result.reason === PRN_COMMAND_REJECTION.NO_LEDGER &&
+      COMMANDS_REQUIRING_OPEN_LEDGER.has(command.method)
+    ) {
+      throw Boom.badImplementation(
+        `${command.method} reached a missing waste balance ledger for accreditation ${ledgerId.accreditationId}; a created and issued PRN must have an open ledger`
+      )
+    }
     throw REJECTION_TO_ERROR[result.reason](ledgerId.accreditationId)
   }
 
