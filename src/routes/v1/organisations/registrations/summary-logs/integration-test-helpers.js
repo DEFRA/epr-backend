@@ -629,6 +629,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     repositories: {
       summaryLogsRepository: () => summaryLogsRepository,
       uploadsRepository,
+      streamRepository: () => streamRepository,
       wasteBalancesRepository: () => wasteBalancesRepository,
       wasteRecordsRepository: () => wasteRecordsRepository,
       packagingRecyclingNotesRepository: () =>

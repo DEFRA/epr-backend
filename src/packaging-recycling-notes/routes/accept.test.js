@@ -80,6 +80,7 @@ const startServer = async (prn) => {
     },
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
+      streamRepository: () => streamRepository,
       wasteBalancesRepository: createWasteBalancesRepository({
         streamRepository
       }),

@@ -34,6 +34,7 @@ import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organ
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepositoryPlugin } from '#waste-balances/repository/inmemory.plugin.js'
+import { createInMemoryStreamRepositoryPlugin } from '#waste-balances/repository/stream-inmemory.plugin.js'
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 import { createInMemoryWasteRecordStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
 
@@ -107,6 +108,10 @@ const repositoryConfigs = [
   {
     name: 'wasteRecordStatesRepository',
     createDefault: createInMemoryWasteRecordStatesRepositoryPlugin
+  },
+  {
+    name: 'streamRepository',
+    createDefault: createInMemoryStreamRepositoryPlugin
   },
   {
     name: 'wasteBalancesRepository',
