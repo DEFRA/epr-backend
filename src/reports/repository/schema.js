@@ -5,6 +5,7 @@ import {
 } from '#domain/organisations/model.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
 import Joi from 'joi'
 
 const START_YEAR = 2024
@@ -232,13 +233,5 @@ export const markSubmittedReportsRequiringResubmissionSchema = Joi.object({
   registrationId: MONGO_ID_SCHEMA,
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required(),
-  periods: Joi.array()
-    .items(
-      Joi.object({
-        year: YEAR_SCHEMA,
-        cadence: cadenceSchema,
-        period: periodSchema
-      })
-    )
-    .required()
+  periods: Joi.array().items(periodRefSchema).required()
 })
