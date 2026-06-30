@@ -485,9 +485,7 @@ const performMarkSubmittedReportsRequiringResubmission = async (
           year: 1,
           cadence: 1,
           period: 1,
-          submissionNumber: 1,
-          'resubmissionRequired.summaryLogId': 1,
-          'source.summaryLogId': 1
+          submissionNumber: 1
         }
       }
     )
@@ -503,24 +501,49 @@ const performMarkSubmittedReportsRequiringResubmission = async (
       return latest
     }, new Map())
 
-  const alreadyHandled = (doc) =>
-    doc.resubmissionRequired?.summaryLogId === summaryLogId ||
-    doc.source?.summaryLogId === summaryLogId
+  const flaggedIds = [...latestSubmittedByPeriod.values()].map((doc) => doc.id)
 
-  const toFlag = [...latestSubmittedByPeriod.values()].filter(
-    (doc) => !alreadyHandled(doc)
-  )
-
-  if (toFlag.length === 0) {
+  if (flaggedIds.length === 0) {
     return []
   }
 
-  await reportsCollection(db).updateMany(
-    { id: { $in: toFlag.map((doc) => doc.id) } },
+  // Idempotency and concurrency safety live in the write filter (not a prior JS
+  // read), so a redelivered or concurrent submit of the same log cannot
+  // double-flag, over-increment the version, or emit a second audit event.
+  // Mirrors performMarkActiveReportsStale.
+  const { modifiedCount } = await reportsCollection(db).updateMany(
+    {
+      id: { $in: flaggedIds },
+      'resubmissionRequired.summaryLogId': { $ne: summaryLogId },
+      'source.summaryLogId': { $ne: summaryLogId }
+    },
     { $set: { resubmissionRequired }, $inc: { version: 1 } }
   )
 
-  return toFlag.map((doc) => ({
+  if (modifiedCount === 0) {
+    return []
+  }
+
+  const flaggedDocs = await reportsCollection(db)
+    .find(
+      {
+        id: { $in: flaggedIds },
+        'resubmissionRequired.summaryLogId': summaryLogId
+      },
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          year: 1,
+          cadence: 1,
+          period: 1,
+          submissionNumber: 1
+        }
+      }
+    )
+    .toArray()
+
+  return flaggedDocs.map((doc) => ({
     reportId: doc.id,
     year: doc.year,
     cadence: doc.cadence,
