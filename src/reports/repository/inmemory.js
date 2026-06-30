@@ -9,6 +9,7 @@ import { STALE_REASON } from '#reports/domain/stale.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {
   groupAsPeriodicReports,
+  latestSubmissionPerPeriod,
   prepareCreateReportParams,
   transformToPeriodicReports
 } from '#root/reports/repository/helpers.js'
@@ -378,17 +379,7 @@ const markSubmittedReportsRequiringResubmission = async (
       wantedPeriods.has(periodKey(r))
   )
 
-  // Highest submissionNumber wins: sort desc so the first seen per period is latest.
-  const latestSubmittedByPeriod = submitted
-    .sort((a, b) => b.submissionNumber - a.submissionNumber)
-    .reduce((latest, r) => {
-      if (!latest.has(periodKey(r))) {
-        latest.set(periodKey(r), r)
-      }
-      return latest
-    }, /** @type {Map<string, Report>} */ (new Map()))
-
-  const toFlag = [...latestSubmittedByPeriod.values()].filter(
+  const toFlag = latestSubmissionPerPeriod(submitted).filter(
     (report) => !alreadyHandled(report)
   )
 

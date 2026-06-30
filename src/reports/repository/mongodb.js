@@ -14,6 +14,7 @@ import {
 import {
   transformToPeriodicReports,
   groupAsPeriodicReports,
+  latestSubmissionPerPeriod,
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
 import {
@@ -22,7 +23,6 @@ import {
 } from '#root/reports/domain/report-status.js'
 import { STALE_REASON } from '#root/reports/domain/stale.js'
 import { RESUBMISSION_REASON } from '#root/reports/domain/resubmission.js'
-import { periodKey } from '#root/reports/domain/period-key.js'
 
 /**
  * @import {
@@ -522,17 +522,7 @@ const performMarkSubmittedReportsRequiringResubmission = async (
     )
     .toArray()
 
-  // Highest submissionNumber wins: sort desc so the first seen per period is latest.
-  const latestSubmittedByPeriod = submitted
-    .sort((a, b) => b.submissionNumber - a.submissionNumber)
-    .reduce((latest, doc) => {
-      if (!latest.has(periodKey(doc))) {
-        latest.set(periodKey(doc), doc)
-      }
-      return latest
-    }, new Map())
-
-  const flaggedIds = [...latestSubmittedByPeriod.values()].map((doc) => doc.id)
+  const flaggedIds = latestSubmissionPerPeriod(submitted).map((doc) => doc.id)
 
   if (flaggedIds.length === 0) {
     return []

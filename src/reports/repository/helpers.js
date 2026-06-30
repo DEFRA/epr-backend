@@ -2,7 +2,30 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
+import { periodKey } from '#reports/domain/period-key.js'
 import { randomUUID } from 'node:crypto'
+
+/**
+ * Picks the latest submission (highest submissionNumber) per reporting period
+ * from a flat list of report-like documents. Shared by the in-memory and
+ * mongodb adapters so the "latest per period" rule lives in one place.
+ *
+ * @template {{ year: number, cadence: string, period: number, submissionNumber: number }} T
+ * @param {T[]} reports
+ * @returns {T[]}
+ */
+export const latestSubmissionPerPeriod = (reports) => [
+  ...[...reports]
+    .sort((a, b) => b.submissionNumber - a.submissionNumber)
+    .reduce((latest, report) => {
+      const key = periodKey(report)
+      if (!latest.has(key)) {
+        latest.set(key, report)
+      }
+      return latest
+    }, /** @type {Map<string, T>} */ (new Map()))
+    .values()
+]
 
 /**
  * Groups `arr` by `keyFn`, then maps each group through `valueFn`.
