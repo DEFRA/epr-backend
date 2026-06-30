@@ -36,6 +36,14 @@ const buildReceivedRecord = (overrides = {}) => ({
   ...overrides
 })
 
+/**
+ * @param {{
+ *   organisations?: any[],
+ *   wasteRecords?: any[],
+ *   summaryLogs?: any[],
+ *   overseasSites?: any[]
+ * }} [options]
+ */
 const createServerWithRepos = ({
   organisations = [],
   wasteRecords = [],
