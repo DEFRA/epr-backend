@@ -3,6 +3,10 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { StreamSlotConflictError } from '../repository/stream-port.js'
+import {
+  PRN_COMMAND_STATUS,
+  PRN_COMMAND_REJECTION
+} from '../domain/commands.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 
 const ledgerId = {
@@ -95,6 +99,173 @@ describe('createWasteBalanceService', () => {
 
       const all = await streamRepository.findAllByPartition('reg-1', 'acc-1')
       expect(all).toHaveLength(1)
+    })
+  })
+
+  describe('PRN commands', () => {
+    const seedLedger = (creditTotal = 1000) =>
+      service.submitSummaryLog(
+        ledgerId,
+        { summaryLogId: 'seed', creditTotal },
+        createdBy
+      )
+
+    it('createPrn commits a prn-created event ringfencing the available balance', async () => {
+      await seedLedger()
+
+      const result = await service.createPrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      expect(result.status).toBe(PRN_COMMAND_STATUS.COMMITTED)
+      const [event] = result.events
+      expect(event.number).toBe(2)
+      expect(event.kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+      expect(event.payload).toEqual({ prnId: 'prn-1', amount: 100 })
+      expect(event.closingBalance).toEqual({
+        amount: 1000,
+        availableAmount: 900
+      })
+    })
+
+    it('createPrn rejects insufficient available balance without appending', async () => {
+      await seedLedger(50)
+
+      const result = await service.createPrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      expect(result).toEqual({
+        status: PRN_COMMAND_STATUS.REJECTED,
+        reason: PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE
+      })
+      const all = await streamRepository.findAllByPartition('reg-1', 'acc-1')
+      expect(all).toHaveLength(1)
+    })
+
+    it('rejects with no-ledger when the partition has no events', async () => {
+      const result = await service.createPrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      expect(result).toEqual({
+        status: PRN_COMMAND_STATUS.REJECTED,
+        reason: PRN_COMMAND_REJECTION.NO_LEDGER
+      })
+    })
+
+    it('issuePrn commits a prn-issued event deducting the total balance', async () => {
+      await seedLedger()
+
+      const result = await service.issuePrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 75 },
+        createdBy
+      )
+
+      expect(result.status).toBe(PRN_COMMAND_STATUS.COMMITTED)
+      expect(result.events[0].closingBalance).toEqual({
+        amount: 925,
+        availableAmount: 1000
+      })
+    })
+
+    it('issuePrn rejects insufficient total balance', async () => {
+      await seedLedger(50)
+
+      const result = await service.issuePrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      expect(result.reason).toBe(
+        PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE
+      )
+    })
+
+    it('cancelPrnCreation commits a credit of the available balance', async () => {
+      await seedLedger()
+      await service.createPrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      const result = await service.cancelPrnCreation(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      expect(result.events[0].kind).toBe(
+        STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
+      )
+      expect(result.events[0].closingBalance).toEqual({
+        amount: 1000,
+        availableAmount: 1000
+      })
+    })
+
+    it('cancelIssuedPrn commits a credit of both balances', async () => {
+      await seedLedger()
+      await service.issuePrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      const result = await service.cancelIssuedPrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      expect(result.events[0].kind).toBe(
+        STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
+      )
+      expect(result.events[0].closingBalance).toEqual({
+        amount: 1000,
+        availableAmount: 1100
+      })
+    })
+
+    it('acceptPrn commits a status-only event leaving the balance unchanged', async () => {
+      await seedLedger()
+
+      const result = await service.acceptPrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      expect(result.events[0].kind).toBe(STREAM_EVENT_KIND.PRN_ACCEPTED)
+      expect(result.events[0].closingBalance).toEqual({
+        amount: 1000,
+        availableAmount: 1000
+      })
+    })
+
+    it('rejectPrn commits a status-only event leaving the balance unchanged', async () => {
+      await seedLedger()
+
+      const result = await service.rejectPrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 100 },
+        createdBy
+      )
+
+      expect(result.events[0].kind).toBe(STREAM_EVENT_KIND.PRN_REJECTED)
+      expect(result.events[0].closingBalance).toEqual({
+        amount: 1000,
+        availableAmount: 1000
+      })
     })
   })
 })

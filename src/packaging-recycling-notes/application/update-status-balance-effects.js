@@ -5,205 +5,15 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import {
+  PRN_COMMAND_STATUS,
+  PRN_COMMAND_REJECTION
+} from '#waste-balances/domain/commands.js'
 
 /**
- * @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository
+ * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
- * @typedef {import('#waste-balances/repository/stream-schema.js').StreamEventKind} StreamEventKind
  */
-
-/**
- * Payload carried by a balance event — what the stream append needs and what
- * the logger needs for ops correlation. `currentStatus`/`newStatus` are
- * transition metadata preserved for logging only.
- *
- * @typedef {Object} BalanceEventParams
- * @property {PrnStatus} currentStatus
- * @property {PrnStatus} newStatus
- * @property {string} accreditationId
- * @property {string} registrationId
- * @property {string} organisationId
- * @property {string} prnId
- * @property {number} tonnage
- * @property {import('#waste-balances/repository/stream-schema.js').StreamUserSummary} createdBy
- */
-
-/**
- * @typedef {Object} BalanceEvent
- * @property {StreamEventKind} kind
- * @property {BalanceEventParams} params
- */
-
-/**
- * Deducts available waste balance when creating a PRN.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {Object} params
- */
-export async function deductWasteBalanceIfNeeded(
-  wasteBalancesRepository,
-  params
-) {
-  const {
-    accreditationId,
-    registrationId,
-    organisationId,
-    prnId,
-    tonnage,
-    createdBy
-  } = params
-  const balance = await wasteBalancesRepository.findBalance({
-    registrationId,
-    accreditationId
-  })
-
-  if (balance) {
-    if ((balance.availableAmount ?? 0) < tonnage) {
-      throw Boom.conflict('Insufficient available waste balance')
-    }
-
-    return wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
-      accreditationId,
-      registrationId,
-      organisationId,
-      prnId,
-      tonnage,
-      createdBy,
-      expectedHead: balance.eventNumber
-    })
-  } else {
-    throw Boom.badRequest(
-      `No waste balance found for accreditation: ${accreditationId}`
-    )
-  }
-}
-
-/**
- * Deducts total waste balance when issuing a PRN.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {Object} params
- */
-export async function deductTotalBalanceIfNeeded(
-  wasteBalancesRepository,
-  params
-) {
-  const {
-    accreditationId,
-    registrationId,
-    organisationId,
-    prnId,
-    tonnage,
-    createdBy
-  } = params
-  const balance = await wasteBalancesRepository.findBalance({
-    registrationId,
-    accreditationId
-  })
-
-  if (balance) {
-    if ((balance.amount ?? 0) < tonnage) {
-      throw Boom.conflict('Insufficient total waste balance')
-    }
-
-    return wasteBalancesRepository.deductTotalBalanceForPrnIssue({
-      accreditationId,
-      registrationId,
-      organisationId,
-      prnId,
-      tonnage,
-      createdBy,
-      expectedHead: balance.eventNumber
-    })
-  } else {
-    throw Boom.badRequest(
-      `No waste balance found for accreditation: ${accreditationId}`
-    )
-  }
-}
-
-/**
- * Credits available waste balance when cancelling a PRN from awaiting_authorisation.
- * Reverses the ringfencing that occurred when the PRN was created.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {Object} params
- */
-export async function creditWasteBalanceIfNeeded(
-  wasteBalancesRepository,
-  params
-) {
-  const {
-    accreditationId,
-    registrationId,
-    organisationId,
-    prnId,
-    tonnage,
-    createdBy
-  } = params
-  const balance = await wasteBalancesRepository.findBalance({
-    registrationId,
-    accreditationId
-  })
-
-  if (balance) {
-    return wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
-      accreditationId,
-      registrationId,
-      organisationId,
-      prnId,
-      tonnage,
-      createdBy,
-      expectedHead: balance.eventNumber
-    })
-  } else {
-    throw Boom.badRequest(
-      `No waste balance found for accreditation: ${accreditationId}`
-    )
-  }
-}
-
-/**
- * Credits both amount and availableAmount when cancelling an issued PRN.
- * Reverses both the creation ringfence and the issue deduction.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {Object} params
- */
-export async function creditFullBalanceIfNeeded(
-  wasteBalancesRepository,
-  params
-) {
-  const {
-    accreditationId,
-    registrationId,
-    organisationId,
-    prnId,
-    tonnage,
-    createdBy
-  } = params
-  const balance = await wasteBalancesRepository.findBalance({
-    registrationId,
-    accreditationId
-  })
-
-  if (balance) {
-    return wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({
-      accreditationId,
-      registrationId,
-      organisationId,
-      prnId,
-      tonnage,
-      createdBy,
-      expectedHead: balance.eventNumber
-    })
-  } else {
-    throw Boom.badRequest(
-      `No waste balance found for accreditation: ${accreditationId}`
-    )
-  }
-}
 
 /**
  * Operational system log capturing that a waste balance write committed.
@@ -234,124 +44,132 @@ export function logWasteBalanceUpdate(
 }
 
 /**
- * Transition table keyed by `${currentStatus}|${newStatus}`. Each entry names
- * the stream event kind the transition writes. Transitions without an entry
- * have no balance effect. Keys must be transitions the state machine
+ * Maps a permitted status transition to the waste-balance service command it
+ * runs and the operation label its system log carries. Transitions without an
+ * entry have no balance effect. Keys must be transitions the state machine
  * (`PRN_STATUS_TRANSITIONS`) actually permits.
  *
- * @type {Record<string, StreamEventKind>}
+ * @type {Record<string, { method: 'createPrn' | 'issuePrn' | 'cancelPrnCreation' | 'cancelIssuedPrn' | 'acceptPrn' | 'rejectPrn', logOperation: string }>}
  */
-const TRANSITION_TO_EVENT_KIND = Object.freeze({
-  [`${PRN_STATUS.DRAFT}|${PRN_STATUS.AWAITING_AUTHORISATION}`]:
-    STREAM_EVENT_KIND.PRN_CREATED,
-  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.AWAITING_ACCEPTANCE}`]:
-    STREAM_EVENT_KIND.PRN_ISSUED,
-  [`${PRN_STATUS.AWAITING_ACCEPTANCE}|${PRN_STATUS.ACCEPTED}`]:
-    STREAM_EVENT_KIND.PRN_ACCEPTED,
-  [`${PRN_STATUS.AWAITING_ACCEPTANCE}|${PRN_STATUS.AWAITING_CANCELLATION}`]:
-    STREAM_EVENT_KIND.PRN_REJECTED,
-  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.DELETED}`]:
-    STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
-  [`${PRN_STATUS.AWAITING_CANCELLATION}|${PRN_STATUS.CANCELLED}`]:
-    STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
-})
-
-/**
- * Derives the balance events a status transition would write. An empty array
- * means the transition has no balance effect — callers use that to skip the
- * stream-write decision read entirely. The kinds align with `STREAM_EVENT_KIND`
- * so the live-write path, backfill, and the stream itself share one vocabulary.
- *
- * @param {PrnStatus} currentStatus
- * @param {PrnStatus} newStatus
- * @param {BalanceEventParams} params
- * @returns {BalanceEvent[]}
- */
-export function balanceEventsFor(currentStatus, newStatus, params) {
-  const kind = TRANSITION_TO_EVENT_KIND[`${currentStatus}|${newStatus}`]
-  return kind ? [{ kind, params }] : []
-}
-
-/**
- * Append a status-only stream event (PRN_ACCEPTED, PRN_REJECTED). No balance
- * change; the repository method throws loudly if no balance exists.
- *
- * @param {import('#waste-balances/repository/stream-schema.js').StreamEventKind} streamKind
- */
-const appendStatusOnlyStreamEvent =
-  (streamKind) => async (wasteBalancesRepository, params) =>
-    wasteBalancesRepository.appendStreamEvent({
-      ...params,
-      streamKind
-    })
-
-/**
- * Per-kind dispatch: each kind pairs an effect handler with its log-operation
- * label. Balance-affecting kinds append a balance movement to the stream;
- * status-only kinds (PRN_ACCEPTED, PRN_REJECTED) append a status event with no
- * balance change.
- */
-const EFFECT_HANDLERS = Object.freeze({
-  [STREAM_EVENT_KIND.PRN_CREATED]: {
-    apply: deductWasteBalanceIfNeeded,
+const TRANSITION_TO_COMMAND = Object.freeze({
+  [`${PRN_STATUS.DRAFT}|${PRN_STATUS.AWAITING_AUTHORISATION}`]: {
+    method: 'createPrn',
     logOperation: 'deduct_available'
   },
-  [STREAM_EVENT_KIND.PRN_ISSUED]: {
-    apply: deductTotalBalanceIfNeeded,
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.AWAITING_ACCEPTANCE}`]: {
+    method: 'issuePrn',
     logOperation: 'deduct_total'
   },
-  [STREAM_EVENT_KIND.PRN_ACCEPTED]: {
-    apply: appendStatusOnlyStreamEvent(STREAM_EVENT_KIND.PRN_ACCEPTED),
+  [`${PRN_STATUS.AWAITING_ACCEPTANCE}|${PRN_STATUS.ACCEPTED}`]: {
+    method: 'acceptPrn',
     logOperation: 'append_accepted'
   },
-  [STREAM_EVENT_KIND.PRN_REJECTED]: {
-    apply: appendStatusOnlyStreamEvent(STREAM_EVENT_KIND.PRN_REJECTED),
+  [`${PRN_STATUS.AWAITING_ACCEPTANCE}|${PRN_STATUS.AWAITING_CANCELLATION}`]: {
+    method: 'rejectPrn',
     logOperation: 'append_rejected'
   },
-  [STREAM_EVENT_KIND.PRN_CREATION_CANCELLED]: {
-    apply: creditWasteBalanceIfNeeded,
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.DELETED}`]: {
+    method: 'cancelPrnCreation',
     logOperation: 'credit_available'
   },
-  [STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE]: {
-    apply: creditFullBalanceIfNeeded,
+  [`${PRN_STATUS.AWAITING_CANCELLATION}|${PRN_STATUS.CANCELLED}`]: {
+    method: 'cancelIssuedPrn',
     logOperation: 'credit_full'
   }
 })
 
 /**
- * Applies the balance events for a status transition, appending one stream
- * event per input event and returning them in order. Each handler reads the
- * balance, then appends at the head it read; a competing write that advanced
- * the head in between surfaces as a slot/sequence conflict and propagates to
- * the caller (ADR-0036), failing the transition.
+ * The waste-balance command a status transition runs, or `undefined` when the
+ * transition has no balance effect.
  *
- * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {PrnStatus} currentStatus
+ * @param {PrnStatus} newStatus
+ */
+export const prnCommandFor = (currentStatus, newStatus) =>
+  TRANSITION_TO_COMMAND[`${currentStatus}|${newStatus}`]
+
+/**
+ * Turn a command rejection into the error its callers expect. The domain
+ * decider reports the rejection as data; the contextual HTTP-shaped error is
+ * built here, where the ledger identity is in hand.
+ *
+ * @type {Record<import('#waste-balances/domain/commands.js').PrnCommandRejection, (accreditationId: string) => Error>}
+ */
+const REJECTION_TO_ERROR = Object.freeze({
+  [PRN_COMMAND_REJECTION.NO_LEDGER]: (accreditationId) =>
+    Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    ),
+  [PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE]: () =>
+    Boom.conflict('Insufficient available waste balance'),
+  [PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE]: () =>
+    Boom.conflict('Insufficient total waste balance')
+})
+
+/**
+ * Commands that act on a PRN already created and issued. Both transitions only
+ * follow ones that opened the ledger, so a missing ledger here is not a client
+ * error but a broken invariant — surfaced as a 500 rather than the contextual
+ * 400 the reachable commands return.
+ *
+ * @type {ReadonlySet<string>}
+ */
+const COMMANDS_REQUIRING_OPEN_LEDGER = Object.freeze(
+  new Set(['acceptPrn', 'rejectPrn'])
+)
+
+/**
+ * Run the waste-balance command for a status transition through the service,
+ * folding once and appending the decided events. A rejection becomes the
+ * caller-facing error; a commit is logged and its appended stream events
+ * returned for the projection fold. The slot index is the optimistic-concurrency
+ * guard: a head that moved after the fold surfaces as a slot conflict and
+ * propagates to the caller (ADR-0036).
+ *
+ * @param {WasteBalanceService} service
  * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {BalanceEvent[]} events
+ * @param {Object} command
+ * @param {PrnStatus} command.currentStatus
+ * @param {PrnStatus} command.newStatus
+ * @param {import('#waste-balances/repository/stream-schema.js').WasteBalanceLedgerId & { accreditationId: string }} command.ledgerId
+ * @param {string} command.prnId
+ * @param {number} command.tonnage
+ * @param {import('#waste-balances/repository/stream-schema.js').StreamUserSummary} command.createdBy
  * @returns {Promise<Array<import('#waste-balances/repository/stream-port.js').StreamEvent>>}
  */
-export async function applyWasteBalanceEffects(
-  wasteBalancesRepository,
+export async function applyPrnBalanceCommand(
+  service,
   logger,
-  events
+  { currentStatus, newStatus, ledgerId, prnId, tonnage, createdBy }
 ) {
-  const applied = []
-  for (const event of events) {
-    const handler = EFFECT_HANDLERS[event.kind]
-    const { currentStatus, newStatus, ...balanceParams } = event.params
-    const streamEvent = await handler.apply(
-      wasteBalancesRepository,
-      balanceParams
-    )
-    applied.push(streamEvent)
-    logWasteBalanceUpdate(
-      logger,
-      handler.logOperation,
-      balanceParams.prnId,
-      balanceParams.tonnage,
-      currentStatus,
-      newStatus
-    )
+  const command = prnCommandFor(currentStatus, newStatus)
+
+  const result = await service[command.method](
+    ledgerId,
+    { prnId, amount: tonnage },
+    createdBy
+  )
+
+  if (result.status === PRN_COMMAND_STATUS.REJECTED) {
+    if (
+      result.reason === PRN_COMMAND_REJECTION.NO_LEDGER &&
+      COMMANDS_REQUIRING_OPEN_LEDGER.has(command.method)
+    ) {
+      throw Boom.badImplementation(
+        `${command.method} reached a missing waste balance ledger for accreditation ${ledgerId.accreditationId}; a created and issued PRN must have an open ledger`
+      )
+    }
+    throw REJECTION_TO_ERROR[result.reason](ledgerId.accreditationId)
   }
-  return applied
+
+  logWasteBalanceUpdate(
+    logger,
+    command.logOperation,
+    prnId,
+    tonnage,
+    currentStatus,
+    newStatus
+  )
+
+  return result.events
 }

@@ -124,6 +124,7 @@ const startServer = async ({ currentStatus, events }) => {
         createInMemoryPackagingRecyclingNotesRepository([
           buildPrn(currentStatus)
         ]),
+      streamRepository: () => streamRepository,
       wasteBalancesRepository: createWasteBalancesRepository({
         streamRepository
       }),
