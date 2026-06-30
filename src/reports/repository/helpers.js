@@ -44,6 +44,7 @@ export const groupAsPeriodicReports = (
     submissionNumber: doc.submissionNumber,
     submittedAt: doc.status.submitted?.at ?? null,
     submittedBy: doc.status.submitted?.by ?? null,
+    resubmissionRequired: doc.resubmissionRequired ?? null,
     recyclingActivity: {
       totalTonnageReceived: doc.recyclingActivity?.totalTonnageReceived,
       tonnageRecycled: doc.recyclingActivity?.tonnageRecycled,

@@ -178,6 +178,7 @@
  * @property {number} submissionNumber
  * @property {string|null} submittedAt - ISO timestamp of submission, or null if not submitted
  * @property {UserSummary|null} submittedBy - User who submitted, or null if not submitted
+ * @property {ReportResubmissionRequired|null} resubmissionRequired - set when a later summary log restated this submitted period
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]

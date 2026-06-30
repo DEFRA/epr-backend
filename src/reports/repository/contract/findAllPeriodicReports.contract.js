@@ -90,6 +90,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
                 submissionNumber: 1,
                 submittedAt: null,
                 submittedBy: null,
+                resubmissionRequired: null,
                 recyclingActivity: {
                   totalTonnageReceived: 120,
                   tonnageRecycled: 95.5,
@@ -164,6 +165,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         submissionNumber: 2,
         submittedAt: null,
         submittedBy: null,
+        resubmissionRequired: null,
         recyclingActivity: {
           totalTonnageReceived: 120,
           tonnageRecycled: 95.5,
@@ -196,6 +198,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
           submissionNumber: 1,
           submittedAt: expect.any(String),
           submittedBy: DEFAULT_CHANGED_BY,
+          resubmissionRequired: null,
           recyclingActivity: {
             totalTonnageReceived: 120,
             tonnageRecycled: 95.5,

@@ -298,7 +298,8 @@ const performFindPeriodicReports = async (db, params) => {
           dueDate: 1,
           'status.currentStatus': 1,
           'status.created': 1,
-          'status.submitted': 1
+          'status.submitted': 1,
+          resubmissionRequired: 1
         }
       }
     )
