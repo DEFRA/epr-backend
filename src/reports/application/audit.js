@@ -6,6 +6,11 @@ import {
   safeAudit
 } from '#auditing/helpers.js'
 
+/**
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { MarkReportRequiringResubmissionResult } from '#reports/repository/port.js'
+ */
+
 /** @type {import('#repositories/system-logs/port.js').SystemLog['createdBy']} */
 const SYSTEM_ACTOR = Object.freeze({
   id: 'system',
@@ -202,10 +207,10 @@ export async function auditMarkReportsStale({
  * audit and system logs. Emits one CDP audit event and one system-log record
  * per report, in a single DB round-trip.
  * @param {{
- *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
+ *   systemLogsRepository: SystemLogsRepository,
  *   organisationId: string,
  *   registrationId: string,
- *   reportsRequiringResubmission: import('#reports/repository/port.js').MarkReportRequiringResubmissionResult[]
+ *   reportsRequiringResubmission: MarkReportRequiringResubmissionResult[]
  * }} params
  */
 export async function auditMarkReportsRequiringResubmission({
