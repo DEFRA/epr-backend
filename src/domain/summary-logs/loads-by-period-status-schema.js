@@ -53,9 +53,20 @@ const periodStatusByChangeSchema = Joi.object({
   adjusted: periodStatusGroupSchema.required()
 })
 
+// One closed (submitted) reporting period this upload added or adjusted loads
+// in. Drives resubmission detection at submit time.
+const closedPeriodSchema = Joi.object({
+  year: Joi.number().integer().required(),
+  cadence: Joi.string().required(),
+  period: Joi.number().integer().required()
+})
+
 export const loadsByReportingPeriodSchema = Joi.object({
   openPeriodLoads: periodStatusByChangeSchema.required(),
-  closedPeriodLoads: periodStatusByChangeSchema.required()
+  closedPeriodLoads: periodStatusByChangeSchema.required(),
+  // Optional with a default so logs written before this field existed still
+  // validate on read.
+  closedPeriods: Joi.array().items(closedPeriodSchema).default([])
 })
 
 // Every bucket carries an empty rows list, matching the uniform populated
@@ -69,5 +80,6 @@ const emptyChange = () => ({ added: emptyGroup(), adjusted: emptyGroup() })
 /** Default loadsByReportingPeriod for validated logs without period-status data. */
 export const emptyLoadsByReportingPeriod = () => ({
   openPeriodLoads: emptyChange(),
-  closedPeriodLoads: emptyChange()
+  closedPeriodLoads: emptyChange(),
+  closedPeriods: []
 })

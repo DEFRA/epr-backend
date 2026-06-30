@@ -198,6 +198,56 @@ export async function auditMarkReportsStale({
 }
 
 /**
+ * Audits a bulk markSubmittedReportsRequiringResubmission operation via CDP
+ * audit and system logs. Emits one CDP audit event and one system-log record
+ * per report, in a single DB round-trip.
+ * @param {{
+ *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   reportsRequiringResubmission: import('#reports/repository/port.js').MarkReportRequiringResubmissionResult[]
+ * }} params
+ */
+export async function auditMarkReportsRequiringResubmission({
+  systemLogsRepository,
+  organisationId,
+  registrationId,
+  reportsRequiringResubmission
+}) {
+  const payloads = reportsRequiringResubmission.map(
+    ({
+      reportId,
+      year,
+      cadence,
+      period,
+      submissionNumber,
+      resubmissionRequired
+    }) => ({
+      user: SYSTEM_ACTOR,
+      event: {
+        category: AUDIT_CATEGORY,
+        subCategory: AUDIT_SUB_CATEGORY,
+        action: 'mark-requiring-resubmission'
+      },
+      context: {
+        organisationId,
+        registrationId,
+        year,
+        cadence,
+        period,
+        submissionNumber,
+        reportId,
+        previous: { resubmissionRequired: null },
+        next: { resubmissionRequired }
+      }
+    })
+  )
+
+  payloads.forEach((p) => safeAudit(p))
+  await recordSystemLogs(systemLogsRepository, payloads)
+}
+
+/**
  * Audits a report creation via CDP audit and system logs.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params

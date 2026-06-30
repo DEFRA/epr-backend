@@ -51,16 +51,19 @@ function buildConsumerDeps(server, { config }) {
 
   const { featureFlags } = server
 
-  // Pre-wired closure: captures repos at plugin level; receives org/reg/sl-id at call time
+  // Pre-wired closure: captures repos at plugin level; receives org/reg/sl-id
+  // and the upload's closed periods at call time
   const onSummaryLogSubmittedReportHook = (
     organisationId,
     registrationId,
-    summaryLogId
+    summaryLogId,
+    closedPeriods
   ) =>
     onSummaryLogUploaded({
       organisationId,
       registrationId,
       summaryLogId,
+      closedPeriods,
       reportsRepository,
       systemLogsRepository
     })

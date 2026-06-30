@@ -4,6 +4,8 @@ import {
   buildSubmittedPeriods,
   isDateInSubmittedPeriod
 } from '#reports/domain/submitted-periods.js'
+import { periodForDate } from '#reports/domain/period-for-date.js'
+import { periodKey } from '#reports/domain/period-key.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
@@ -17,6 +19,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {PROCESSING_TYPE_TABLES} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {PeriodRef} from '#reports/domain/period-key.js' */
 
 /** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
 
@@ -52,7 +55,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
  */
 
 /**
- * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange }} LoadsByReportingPeriod
+ * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange, closedPeriods: PeriodRef[] }} LoadsByReportingPeriod
  */
 
 /**
@@ -92,7 +95,8 @@ const emptyChange = () => ({
 /** @returns {LoadsByReportingPeriod} */
 const emptyResult = () => ({
   openPeriodLoads: emptyChange(),
-  closedPeriodLoads: emptyChange()
+  closedPeriodLoads: emptyChange(),
+  closedPeriods: []
 })
 
 /**
@@ -127,6 +131,38 @@ const classifyPeriodStatus = (
   }
 
   return hasAnyDate ? PERIOD_STATUS.OPEN : null
+}
+
+/**
+ * The closed (submitted) periods a record's dates fall in. Mirrors
+ * {@link classifyPeriodStatus} but yields the period identities rather than a
+ * single open/closed verdict, so resubmission detection knows which submitted
+ * periods this change touched.
+ *
+ * @param {Record<string, string | Date | null | undefined>} data
+ * @param {string[]} reportingDateFields
+ * @param {Set<string>} submittedPeriods
+ * @param {string} cadence
+ * @returns {PeriodRef[]}
+ */
+const closedPeriodRefsFor = (
+  data,
+  reportingDateFields,
+  submittedPeriods,
+  cadence
+) => {
+  const refs = []
+  for (const field of reportingDateFields) {
+    const dateValue = data[field]
+    if (
+      dateValue &&
+      isDateInSubmittedPeriod(submittedPeriods, dateValue, cadence)
+    ) {
+      const { year, period } = periodForDate(dateValue, cadence)
+      refs.push({ year, cadence, period })
+    }
+  }
+  return refs
 }
 
 /**
@@ -384,6 +420,9 @@ export const classifyByPeriodStatus = ({
   /** @type {PeriodStatusEntry[]} */
   const entries = []
 
+  /** @type {Map<string, PeriodRef>} */
+  const closedPeriodsByKey = new Map()
+
   for (const wasteRecord of wasteRecords) {
     const { record, outcome } = wasteRecord
     const status = determineRecordStatus(record, summaryLogId)
@@ -391,6 +430,29 @@ export const classifyByPeriodStatus = ({
 
     if (outcome === ROW_OUTCOME.IGNORED || status === 'unchanged' || !schema) {
       continue
+    }
+
+    // An adjustment also touches the period the load is moving out of, so
+    // include the existing record's dates alongside the new ones.
+    const changedData =
+      status === 'added'
+        ? [record.data]
+        : [
+            record.data,
+            existingRecordsMap.get(`${record.type}:${record.rowId}`)?.data
+          ]
+    for (const data of changedData) {
+      if (!data) {
+        continue
+      }
+      for (const ref of closedPeriodRefsFor(
+        data,
+        schema.reportingDateFields,
+        submittedPeriods,
+        cadence
+      )) {
+        closedPeriodsByKey.set(periodKey(ref), ref)
+      }
     }
 
     if (status === 'added') {
@@ -432,5 +494,8 @@ export const classifyByPeriodStatus = ({
     }
   }
 
-  return reduceEntries(entries)
+  return {
+    ...reduceEntries(entries),
+    closedPeriods: [...closedPeriodsByKey.values()]
+  }
 }

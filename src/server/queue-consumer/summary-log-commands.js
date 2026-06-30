@@ -17,6 +17,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 /** @typedef {import('#feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository */
+/** @typedef {import('#reports/domain/period-key.js').PeriodRef} PeriodRef */
 
 /**
  * @typedef {object} SummaryLogHandlerDeps
@@ -30,7 +31,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {ReportsRepository} reportsRepository
  * @property {SummaryLogExtractor} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
- * @property {(organisationId: string, registrationId: string) => Promise<void>} onSummaryLogSubmittedReportHook
+ * @property {(organisationId: string, registrationId: string, summaryLogId: string, closedPeriods: PeriodRef[]) => Promise<void>} onSummaryLogSubmittedReportHook
  */
 
 const userSchema = Joi.object({

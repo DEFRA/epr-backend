@@ -13,7 +13,8 @@ const {
   auditReportStatusTransition,
   auditReportCreate,
   auditReportDelete,
-  auditMarkReportsStale
+  auditMarkReportsStale,
+  auditMarkReportsRequiringResubmission
 } = await import('./audit.js')
 
 const mockInsert = vi.fn()
@@ -350,6 +351,104 @@ describe('auditMarkReportsStale', () => {
           reportId: 'rep-1',
           previous: { stale: null },
           next: { stale }
+        }
+      }
+    ])
+  })
+})
+
+describe('auditMarkReportsRequiringResubmission', () => {
+  const systemActor = { id: 'system', email: 'system', scope: [], role: null }
+  const mockInsertMany = vi.fn()
+
+  /** @type {import('#reports/repository/port.js').ReportResubmissionRequired} */
+  const resubmissionRequired = {
+    uploadedAt: '2025-06-01T12:00:00.000Z',
+    reason: 'closed_period_restated',
+    summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+  }
+
+  const reportsRequiringResubmission = [
+    {
+      reportId: 'rep-1',
+      year: 2025,
+      cadence: 'quarterly',
+      period: 1,
+      submissionNumber: 1,
+      resubmissionRequired
+    }
+  ]
+
+  const buildSystemLogsRepository = () =>
+    /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
+      /** @type {unknown} */ ({
+        insert: mockInsert,
+        insertMany: mockInsertMany,
+        find: vi.fn(),
+        findSummaryLogSubmitActors: vi.fn()
+      })
+    )
+
+  beforeEach(() => {
+    mockInsertMany.mockResolvedValue(undefined)
+  })
+
+  it('sends one CDP audit event per report', async () => {
+    await auditMarkReportsRequiringResubmission({
+      systemLogsRepository: buildSystemLogsRepository(),
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      reportsRequiringResubmission
+    })
+
+    expect(mockAudit).toHaveBeenCalledExactlyOnceWith({
+      user: systemActor,
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'reports',
+        action: 'mark-requiring-resubmission'
+      },
+      context: {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2025,
+        cadence: 'quarterly',
+        period: 1,
+        submissionNumber: 1,
+        reportId: 'rep-1',
+        previous: { resubmissionRequired: null },
+        next: { resubmissionRequired }
+      }
+    })
+  })
+
+  it('batch-inserts one system log per report', async () => {
+    await auditMarkReportsRequiringResubmission({
+      systemLogsRepository: buildSystemLogsRepository(),
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      reportsRequiringResubmission
+    })
+
+    expect(mockInsertMany).toHaveBeenCalledExactlyOnceWith([
+      {
+        createdAt: new Date('2025-06-01T12:00:00.000Z'),
+        createdBy: systemActor,
+        event: {
+          category: 'waste-reporting',
+          subCategory: 'reports',
+          action: 'mark-requiring-resubmission'
+        },
+        context: {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          year: 2025,
+          cadence: 'quarterly',
+          period: 1,
+          submissionNumber: 1,
+          reportId: 'rep-1',
+          previous: { resubmissionRequired: null },
+          next: { resubmissionRequired }
         }
       }
     ])

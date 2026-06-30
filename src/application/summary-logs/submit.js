@@ -12,6 +12,10 @@ import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
 /**
+ * @import { PeriodRef } from '#reports/domain/period-key.js'
+ */
+
+/**
  * @typedef {object} SubmitDependencies
  * @property {object} logger
  * @property {object} summaryLogsRepository
@@ -23,7 +27,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#domain/summary-logs/worker/port.js').SubmitUser} user
- * @property {(organisationId: string, registrationId: string, summaryLogId: string) => Promise<void>} onSummaryLogSubmittedReportHook
+ * @property {(organisationId: string, registrationId: string, summaryLogId: string, closedPeriods: PeriodRef[]) => Promise<void>} onSummaryLogSubmittedReportHook
  */
 
 /**
@@ -101,7 +105,8 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
   await onSummaryLogSubmittedReportHook(
     summaryLog.organisationId,
     summaryLog.registrationId,
-    summaryLogId
+    summaryLogId,
+    summaryLog.loadsByReportingPeriod?.closedPeriods ?? []
   )
 
   await summaryLogsRepository.update(
