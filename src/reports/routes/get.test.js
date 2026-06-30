@@ -734,6 +734,122 @@ describe(`GET ${reportsGetPath}`, () => {
       })
     })
 
+    describe('periodStatus derivation', () => {
+      // Apr 10 2026: monthly periods Jan and Feb are past their due dates
+      // (the 20th of the following month) while Mar is ended but not yet due.
+      beforeAll(() => {
+        vi.useFakeTimers({
+          now: new Date('2026-04-10T12:00:00Z'),
+          toFake: ['Date']
+        })
+      })
+
+      afterAll(() => {
+        vi.useRealTimers()
+      })
+
+      const createAccreditedServer = () =>
+        createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          createInMemoryReportsRepository(),
+          'approved'
+        )
+
+      const findPeriod = async (
+        server,
+        organisationId,
+        registrationId,
+        period
+      ) => {
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        return payload.reportingPeriods.find((p) => p.period === period)
+      }
+
+      it.each([
+        { period: 1, expected: 'overdue', when: 'past its due date' },
+        { period: 3, expected: 'due', when: 'before its due date' }
+      ])(
+        'derives "$expected" for an ended period $when with no report',
+        async ({ period, expected }) => {
+          const { server, organisationId, registrationId } =
+            await createAccreditedServer()
+
+          const item = await findPeriod(
+            server,
+            organisationId,
+            registrationId,
+            period
+          )
+
+          expect(item.report).toBeNull()
+          expect(item.periodStatus).toBe(expected)
+        }
+      )
+
+      it('derives periodStatus from the stored report status when a report exists', async () => {
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          reportsRepositoryFactory,
+          'approved'
+        )
+
+        await reportsRepositoryFactory().createReport({
+          organisationId,
+          registrationId,
+          year: 2026,
+          cadence: 'monthly',
+          period: 1,
+          startDate: '2026-01-01',
+          endDate: '2026-01-31',
+          dueDate: '2026-02-20',
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
+          material: 'plastic',
+          wasteProcessingType: 'exporter',
+          source: {
+            summaryLogId: 'sl-1',
+            lastUploadedAt: '2026-01-15T00:00:00.000Z'
+          },
+          prn: null,
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: []
+          }
+        })
+
+        const january = await findPeriod(
+          server,
+          organisationId,
+          registrationId,
+          1
+        )
+
+        expect(january.report.status).toBe('in_progress')
+        expect(january.periodStatus).toBe('in_progress')
+      })
+    })
+
     describe('registration not found', () => {
       it('returns 404', async () => {
         const { server, organisationId } = await createServer()

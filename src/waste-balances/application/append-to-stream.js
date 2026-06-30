@@ -2,7 +2,7 @@ import { STREAM_EVENT_KIND, ZERO_BALANCE } from '../repository/stream-schema.js'
 import {
   closingForSummaryLogSubmitted,
   closingForPrn
-} from './stream-closing-balance.js'
+} from '../domain/stream-closing-balance.js'
 
 /**
  * @param {import('../repository/stream-port.js').StreamEvent | null} latest
