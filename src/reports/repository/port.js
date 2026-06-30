@@ -92,7 +92,21 @@
  */
 
 /**
+ * Provenance of a report: the summary log it was last (re)built from.
+ * @typedef {{ summaryLogId: string, lastUploadedAt: string | null }} ReportSource
+ */
+
+/**
  * @typedef {{ uploadedAt: string, reason: StaleReason, summaryLogId?: string }} ReportStale
+ */
+
+/**
+ * @typedef {{ uploadedAt: string, reason: ResubmissionReason, summaryLogId: string }} ReportResubmissionRequired
+ */
+
+/**
+ * A reporting-period reference (org/reg are implied by the call).
+ * @typedef {{ year: number, cadence: string, period: number }} PeriodRef
  */
 
 /**
@@ -106,6 +120,31 @@
  * @property {number} period
  * @property {number} submissionNumber
  * @property {ReportStale} stale
+ */
+
+/**
+ * Parameters for {@link ReportsRepository.markSubmittedReportsRequiringResubmission}.
+ * @typedef {{
+ *   organisationId: string,
+ *   registrationId: string,
+ *   summaryLogId: string,
+ *   uploadedAt: string,
+ *   periods: PeriodRef[]
+ * }} MarkSubmittedReportsRequiringResubmissionParams
+ */
+
+/**
+ * Per-report result returned by
+ * {@link ReportsRepository.markSubmittedReportsRequiringResubmission}.
+ * Contains the fields needed to audit the resubmission-required transition.
+ * @typedef {{
+ *   reportId: string,
+ *   year: number,
+ *   cadence: string,
+ *   period: number,
+ *   submissionNumber: number,
+ *   resubmissionRequired: ReportResubmissionRequired
+ * }} MarkReportRequiringResubmissionResult
  */
 
 /**
@@ -132,7 +171,9 @@
  * @property {PrnData} [prn]
  * @property {string} [supportingInformation]
  * @property {SourceData} [sourceData]
+ * @property {ReportSource} [source]
  * @property {ReportStale} [stale]
+ * @property {ReportResubmissionRequired} [resubmissionRequired]
  */
 
 /**
@@ -205,7 +246,7 @@
  * @property {WasteSent} [wasteSent]
  * @property {PrnData | null} [prn]
  * @property {string} [supportingInformation]
- * @property {{ summaryLogId: string, lastUploadedAt: string | null }} source
+ * @property {ReportSource} source
  */
 
 /**
@@ -256,6 +297,10 @@
  *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
  *   skipping any report already built from `summaryLogId` or already stale from it.
  *   Returns the per-report stale details for auditing.
+ * @property {(params: MarkSubmittedReportsRequiringResubmissionParams) => Promise<MarkReportRequiringResubmissionResult[]>} markSubmittedReportsRequiringResubmission
+ *   For each given period, flags the latest submitted report as requiring resubmission,
+ *   skipping any report already flagged from `summaryLogId` or built from it.
+ *   Returns the per-report details for auditing.
  */
 
 /**
@@ -264,6 +309,7 @@
 
 /**
  * @import { StaleReason } from '#reports/domain/stale.js'
+ * @import { ResubmissionReason } from '#reports/domain/resubmission.js'
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

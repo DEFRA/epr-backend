@@ -226,3 +226,19 @@ export const markActiveReportsStaleSchema = Joi.object({
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required()
 })
+
+export const markSubmittedReportsRequiringResubmissionSchema = Joi.object({
+  organisationId: MONGO_ID_SCHEMA,
+  registrationId: MONGO_ID_SCHEMA,
+  summaryLogId: Joi.string().required(),
+  uploadedAt: Joi.string().isoDate().required(),
+  periods: Joi.array()
+    .items(
+      Joi.object({
+        year: YEAR_SCHEMA,
+        cadence: cadenceSchema,
+        period: periodSchema
+      })
+    )
+    .required()
+})

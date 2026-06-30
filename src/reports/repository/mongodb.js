@@ -7,6 +7,7 @@ import {
   validateFindPeriodicReports,
   validateFindReportById,
   validateMarkActiveReportsStale,
+  validateMarkSubmittedReportsRequiringResubmission,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -20,13 +21,17 @@ import {
   ACTIVE_REPORT_STATUSES
 } from '#root/reports/domain/report-status.js'
 import { STALE_REASON } from '#root/reports/domain/stale.js'
+import { RESUBMISSION_REASON } from '#root/reports/domain/resubmission.js'
 
 /**
  * @import {
  *   CreateReportParams,
  *   DeleteReportParams,
  *   FindPeriodicReportsParams,
+ *   MarkReportRequiringResubmissionResult,
+ *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
+ *   PeriodRef,
  *   Report,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
@@ -429,6 +434,104 @@ const performMarkActiveReportsStale = async (
 }
 
 /**
+ * For each given period, flags the latest submitted report as requiring
+ * resubmission. Skips a period whose latest submitted report is already flagged
+ * from this `summaryLogId` or was itself built from it (retry-safe).
+ *
+ * @param {Db} db
+ * @param {MarkSubmittedReportsRequiringResubmissionParams} params
+ * @returns {Promise<MarkReportRequiringResubmissionResult[]>}
+ */
+const performMarkSubmittedReportsRequiringResubmission = async (
+  db,
+  { organisationId, registrationId, summaryLogId, uploadedAt, periods }
+) => {
+  validateMarkSubmittedReportsRequiringResubmission({
+    organisationId,
+    registrationId,
+    summaryLogId,
+    uploadedAt,
+    periods
+  })
+
+  if (periods.length === 0) {
+    return []
+  }
+
+  const resubmissionRequired = {
+    uploadedAt,
+    reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
+    summaryLogId
+  }
+
+  const periodKey = (/** @type {PeriodRef} */ ref) =>
+    `${ref.year}:${ref.cadence}:${ref.period}`
+
+  const submitted = await reportsCollection(db)
+    .find(
+      {
+        organisationId,
+        registrationId,
+        'status.currentStatus': REPORT_STATUS.SUBMITTED,
+        $or: periods.map(({ year, cadence, period }) => ({
+          year,
+          cadence,
+          period
+        }))
+      },
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          year: 1,
+          cadence: 1,
+          period: 1,
+          submissionNumber: 1,
+          'resubmissionRequired.summaryLogId': 1,
+          'source.summaryLogId': 1
+        }
+      }
+    )
+    .toArray()
+
+  // Highest submissionNumber wins: sort desc so the first seen per period is latest.
+  const latestSubmittedByPeriod = submitted
+    .sort((a, b) => b.submissionNumber - a.submissionNumber)
+    .reduce((latest, doc) => {
+      if (!latest.has(periodKey(doc))) {
+        latest.set(periodKey(doc), doc)
+      }
+      return latest
+    }, new Map())
+
+  const alreadyHandled = (doc) =>
+    doc.resubmissionRequired?.summaryLogId === summaryLogId ||
+    doc.source?.summaryLogId === summaryLogId
+
+  const toFlag = [...latestSubmittedByPeriod.values()].filter(
+    (doc) => !alreadyHandled(doc)
+  )
+
+  if (toFlag.length === 0) {
+    return []
+  }
+
+  await reportsCollection(db).updateMany(
+    { id: { $in: toFlag.map((doc) => doc.id) } },
+    { $set: { resubmissionRequired }, $inc: { version: 1 } }
+  )
+
+  return toFlag.map((doc) => ({
+    reportId: doc.id,
+    year: doc.year,
+    cadence: doc.cadence,
+    period: doc.period,
+    submissionNumber: doc.submissionNumber,
+    resubmissionRequired
+  }))
+}
+
+/**
  * Creates a MongoDB-backed reports repository.
  *
  * @param {Db} db
@@ -457,6 +560,8 @@ export const createReportsRepository = async (db) => {
         registrationId,
         summaryLogId,
         uploadedAt
-      )
+      ),
+    markSubmittedReportsRequiringResubmission: (params) =>
+      performMarkSubmittedReportsRequiringResubmission(db, params)
   })
 }
