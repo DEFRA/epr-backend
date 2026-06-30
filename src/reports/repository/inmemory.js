@@ -4,6 +4,7 @@ import {
   REPORT_STATUS
 } from '#reports/domain/report-status.js'
 import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
+import { periodKey } from '#reports/domain/period-key.js'
 import { STALE_REASON } from '#reports/domain/stale.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {
@@ -31,7 +32,6 @@ import {
  *   MarkReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
- *   PeriodRef,
  *   Report,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
@@ -364,8 +364,6 @@ const markSubmittedReportsRequiringResubmission = async (
     summaryLogId
   }
 
-  const periodKey = (/** @type {PeriodRef} */ ref) =>
-    `${ref.year}:${ref.cadence}:${ref.period}`
   const wantedPeriods = new Set(periods.map(periodKey))
 
   const alreadyHandled = (/** @type {Report} */ report) =>

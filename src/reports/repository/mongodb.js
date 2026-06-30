@@ -22,6 +22,7 @@ import {
 } from '#root/reports/domain/report-status.js'
 import { STALE_REASON } from '#root/reports/domain/stale.js'
 import { RESUBMISSION_REASON } from '#root/reports/domain/resubmission.js'
+import { periodKey } from '#root/reports/domain/period-key.js'
 
 /**
  * @import {
@@ -31,7 +32,6 @@ import { RESUBMISSION_REASON } from '#root/reports/domain/resubmission.js'
  *   MarkReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
- *   PeriodRef,
  *   Report,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
@@ -463,9 +463,6 @@ const performMarkSubmittedReportsRequiringResubmission = async (
     reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
     summaryLogId
   }
-
-  const periodKey = (/** @type {PeriodRef} */ ref) =>
-    `${ref.year}:${ref.cadence}:${ref.period}`
 
   const submitted = await reportsCollection(db)
     .find(

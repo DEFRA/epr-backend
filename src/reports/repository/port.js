@@ -105,11 +105,6 @@
  */
 
 /**
- * A reporting-period reference (org/reg are implied by the call).
- * @typedef {{ year: number, cadence: string, period: number }} PeriodRef
- */
-
-/**
  * Per-report result returned by {@link ReportsRepository.markActiveReportsStale}.
  * Contains the fields needed to audit the stale transition.
  *
@@ -310,6 +305,7 @@
 /**
  * @import { StaleReason } from '#reports/domain/stale.js'
  * @import { ResubmissionReason } from '#reports/domain/resubmission.js'
+ * @import { PeriodRef } from '#reports/domain/period-key.js'
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
