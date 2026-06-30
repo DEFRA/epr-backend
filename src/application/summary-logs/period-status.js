@@ -150,20 +150,18 @@ const closedPeriodRefsFor = (
   reportingDateFields,
   submittedPeriods,
   cadence
-) => {
-  const refs = []
-  for (const field of reportingDateFields) {
+) =>
+  reportingDateFields.flatMap((field) => {
     const dateValue = data[field]
     if (
-      dateValue &&
-      isDateInSubmittedPeriod(submittedPeriods, dateValue, cadence)
+      !dateValue ||
+      !isDateInSubmittedPeriod(submittedPeriods, dateValue, cadence)
     ) {
-      const { year, period } = periodForDate(dateValue, cadence)
-      refs.push({ year, cadence, period })
+      return []
     }
-  }
-  return refs
-}
+    const { year, period } = periodForDate(dateValue, cadence)
+    return [{ year, cadence, period }]
+  })
 
 /**
  * @param {ValidatedWasteRecord['record']} record
@@ -441,19 +439,17 @@ export const classifyByPeriodStatus = ({
             record.data,
             existingRecordsMap.get(`${record.type}:${record.rowId}`)?.data
           ]
-    for (const data of changedData) {
-      if (!data) {
-        continue
-      }
-      for (const ref of closedPeriodRefsFor(
-        data,
-        schema.reportingDateFields,
-        submittedPeriods,
-        cadence
-      )) {
-        closedPeriodsByKey.set(periodKey(ref), ref)
-      }
-    }
+    changedData
+      .filter(Boolean)
+      .flatMap((data) =>
+        closedPeriodRefsFor(
+          data,
+          schema.reportingDateFields,
+          submittedPeriods,
+          cadence
+        )
+      )
+      .forEach((ref) => closedPeriodsByKey.set(periodKey(ref), ref))
 
     if (status === 'added') {
       const period = classifyPeriodStatus(
