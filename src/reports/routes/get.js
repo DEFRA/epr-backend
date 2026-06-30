@@ -4,11 +4,10 @@ import Joi from 'joi'
 import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
-import { derivePeriodStatus } from '#reports/domain/derive-period-status.js'
+import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
-import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { reportsCalendarResponseSchema } from './response.schema.js'
 
 /**
@@ -94,31 +93,10 @@ export const reportsGet = {
     )
 
     // Calendar periods are ended or carry a report, so periodStatus is non-null.
-    const reportingPeriods = merged.flatMap((period) => {
-      const item = {
-        ...period,
-        periodStatus: derivePeriodStatus(period),
-        report: toReportListItem(period.report)
-      }
-
-      const current = period.report
-      if (!current?.resubmissionRequired) {
-        return [item]
-      }
-
-      // A later summary log restated this submitted period: emit an additional
-      // skeleton item prompting a correction at the next submission number. The
-      // original submitted item stays alongside it.
-      return [
-        item,
-        {
-          ...period,
-          submissionNumber: current.submissionNumber + 1,
-          periodStatus: PERIOD_STATUS.REQUIRES_RESUBMISSION,
-          report: null
-        }
-      ]
-    })
+    const reportingPeriods = buildCalendarPeriods(merged).map((period) => ({
+      ...period,
+      report: toReportListItem(period.report)
+    }))
 
     return h.response({ cadence, reportingPeriods }).code(StatusCodes.OK)
   }
