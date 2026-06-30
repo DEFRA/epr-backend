@@ -1,10 +1,10 @@
 import {
-  add,
+  addRounded,
   toDecimal,
   roundToTwoDecimalPlaces,
   toNumber
 } from '#common/helpers/decimal-utils.js'
-import { groupAndSum, isYes } from './helpers.js'
+import { groupAndSum, isYes, TONNAGE_DECIMAL_PLACES } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { isDateInRange } from './filter-records-by-date.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
@@ -86,7 +86,11 @@ function getTonnageRepatriated(repatriatedRecords) {
       .filter(({ type }) => type === WASTE_RECORD_TYPE.EXPORTED)
       .reduce(
         (sum, { data }) =>
-          add(sum, toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)),
+          addRounded(
+            sum,
+            toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED),
+            TONNAGE_DECIMAL_PLACES
+          ),
         toDecimal(0)
       )
   )
@@ -103,7 +107,12 @@ function calculateTonnageReceivedNotExported(
         ({ data }) => !isDateInRange(data.DATE_OF_EXPORT, startDate, endDate)
       )
       .reduce(
-        (sum, { data }) => add(sum, toNumber(data.TONNAGE_RECEIVED_FOR_EXPORT)),
+        (sum, { data }) =>
+          addRounded(
+            sum,
+            toNumber(data.TONNAGE_RECEIVED_FOR_EXPORT),
+            TONNAGE_DECIMAL_PLACES
+          ),
         toDecimal(0)
       )
   )
@@ -134,7 +143,11 @@ export function aggregateWasteExported({
 
   const totalTonnageExportedDecimal = exportedRecords.reduce(
     (sum, { data }) =>
-      add(sum, toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)),
+      addRounded(
+        sum,
+        toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED),
+        TONNAGE_DECIMAL_PLACES
+      ),
     toDecimal(0)
   )
   const totalTonnageExported = roundToTwoDecimalPlaces(
@@ -148,14 +161,18 @@ export function aggregateWasteExported({
         const stopped = isYes(data.WAS_THE_WASTE_STOPPED)
         return {
           refusedDecimal: refused
-            ? add(acc.refusedDecimal, tonnage)
+            ? addRounded(acc.refusedDecimal, tonnage, TONNAGE_DECIMAL_PLACES)
             : acc.refusedDecimal,
           stoppedDecimal: stopped
-            ? add(acc.stoppedDecimal, tonnage)
+            ? addRounded(acc.stoppedDecimal, tonnage, TONNAGE_DECIMAL_PLACES)
             : acc.stoppedDecimal,
           refusedOrStoppedDecimal:
             refused || stopped
-              ? add(acc.refusedOrStoppedDecimal, tonnage)
+              ? addRounded(
+                  acc.refusedOrStoppedDecimal,
+                  tonnage,
+                  TONNAGE_DECIMAL_PLACES
+                )
               : acc.refusedOrStoppedDecimal
         }
       },

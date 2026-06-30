@@ -247,7 +247,7 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
             tonnageReceived: 29.69
           }
         ],
-        totalTonnageReceived: 84.09,
+        totalTonnageReceived: 84.08,
         tonnageRecycled: null,
         tonnageNotRecycled: null
       },
@@ -272,16 +272,16 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
           { orsId: '893', tonnageExported: 1.26 },
           { orsId: '143', tonnageExported: 3.07 }
         ],
-        totalTonnageExported: 10.33,
+        totalTonnageExported: 10.34,
         tonnageReceivedNotExported: null,
-        tonnageRefusedAtDestination: 7.34,
+        tonnageRefusedAtDestination: 7.35,
         tonnageStoppedDuringExport: 6.01,
-        totalTonnageRefusedOrStopped: 10.33,
-        tonnageRepatriated: 10.33
+        totalTonnageRefusedOrStopped: 10.34,
+        tonnageRepatriated: 10.34
       },
       wasteSent: {
         tonnageSentToReprocessor: 0,
-        tonnageSentToExporter: 49.03,
+        tonnageSentToExporter: 49.02,
         tonnageSentToAnotherSite: 0,
         finalDestinations: [
           {

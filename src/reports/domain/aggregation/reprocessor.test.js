@@ -53,7 +53,7 @@ describe('#aggregateReportDetail — REPROCESSOR_REGISTERED_ONLY quarterly Q1 20
             tonnageReceived: 14.44
           }
         ],
-        totalTonnageReceived: 52.82,
+        totalTonnageReceived: 52.83,
         tonnageRecycled: null,
         tonnageNotRecycled: null
       },
