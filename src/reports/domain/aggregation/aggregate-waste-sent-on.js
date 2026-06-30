@@ -1,5 +1,5 @@
 import {
-  add,
+  addRounded,
   roundToTwoDecimalPlaces,
   toDecimal,
   toNumber
@@ -7,7 +7,8 @@ import {
 import {
   formatAddress,
   groupAndSum,
-  isTonnageGreaterThanZero
+  isTonnageGreaterThanZero,
+  TONNAGE_DECIMAL_PLACES
 } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
@@ -24,11 +25,23 @@ function sumByFacilityType(validEntries) {
     const facilityType = data.FINAL_DESTINATION_FACILITY_TYPE
 
     if (facilityType === 'Reprocessor') {
-      toReprocessorDecimal = add(toReprocessorDecimal, tonnage)
+      toReprocessorDecimal = addRounded(
+        toReprocessorDecimal,
+        tonnage,
+        TONNAGE_DECIMAL_PLACES
+      )
     } else if (facilityType === 'Exporter') {
-      toExporterDecimal = add(toExporterDecimal, tonnage)
+      toExporterDecimal = addRounded(
+        toExporterDecimal,
+        tonnage,
+        TONNAGE_DECIMAL_PLACES
+      )
     } else {
-      toAnotherSiteDecimal = add(toAnotherSiteDecimal, tonnage)
+      toAnotherSiteDecimal = addRounded(
+        toAnotherSiteDecimal,
+        tonnage,
+        TONNAGE_DECIMAL_PLACES
+      )
     }
   }
 
