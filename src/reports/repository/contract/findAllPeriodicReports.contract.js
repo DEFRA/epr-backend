@@ -275,5 +275,31 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         )
       })
     })
+
+    it('surfaces resubmissionRequired on the latest submitted report', async () => {
+      await createAndSubmitReport(repository)
+      await repository.markSubmittedReportsRequiringResubmission({
+        organisationId: DEFAULT_ORG_ID,
+        registrationId: DEFAULT_REG_ID,
+        summaryLogId: 'sl-resub',
+        uploadedAt: '2026-06-01T12:00:00.000Z',
+        periods: [
+          {
+            year: DEFAULT_REPORT_YEAR,
+            cadence: 'monthly',
+            period: DEFAULT_REPORT_PERIOD
+          }
+        ]
+      })
+
+      const [result] = await repository.findAllPeriodicReports()
+      const slot = result.reports.monthly[DEFAULT_REPORT_PERIOD]
+
+      expect(slot.current.resubmissionRequired).toEqual({
+        uploadedAt: '2026-06-01T12:00:00.000Z',
+        reason: 'closed_period_restated',
+        summaryLogId: 'sl-resub'
+      })
+    })
   })
 }

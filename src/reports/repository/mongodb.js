@@ -335,6 +335,7 @@ const performFindAllPeriodicReports = async (db) => {
           'status.currentStatus': 1,
           'status.created': 1,
           'status.submitted': 1,
+          resubmissionRequired: 1,
           'recyclingActivity.totalTonnageReceived': 1,
           'recyclingActivity.tonnageRecycled': 1,
           'recyclingActivity.tonnageNotRecycled': 1,
