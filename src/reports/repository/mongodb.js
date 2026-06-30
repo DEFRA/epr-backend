@@ -361,6 +361,66 @@ const performFindAllPeriodicReports = async (db) => {
 }
 
 /**
+ * Atomically flags the reports matched by `selectFilter` with a summary-log
+ * marker, then returns the flagged reports (sans marker) for auditing. The
+ * `$ne` guards plus the modifiedCount gate make a redelivered or concurrent
+ * submit of the same log a no-op (no double-flag, version over-increment, or
+ * duplicate audit). The stale and resubmission marks differ only in how they
+ * select candidate reports.
+ *
+ * @param {Db} db
+ * @param {{
+ *   selectFilter: object,
+ *   readScope: object,
+ *   summaryLogId: string,
+ *   field: string,
+ *   value: object
+ * }} params
+ * @returns {Promise<Array<{ reportId: string, year: number, cadence: string, period: number, submissionNumber: number }>>}
+ */
+const flagReportsBySummaryLog = async (
+  db,
+  { selectFilter, readScope, summaryLogId, field, value }
+) => {
+  const { modifiedCount } = await reportsCollection(db).updateMany(
+    {
+      ...selectFilter,
+      [`${field}.summaryLogId`]: { $ne: summaryLogId },
+      'source.summaryLogId': { $ne: summaryLogId }
+    },
+    { $set: { [field]: value }, $inc: { version: 1 } }
+  )
+
+  if (modifiedCount === 0) {
+    return []
+  }
+
+  const flaggedDocs = await reportsCollection(db)
+    .find(
+      { ...readScope, [`${field}.summaryLogId`]: summaryLogId },
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          year: 1,
+          cadence: 1,
+          period: 1,
+          submissionNumber: 1
+        }
+      }
+    )
+    .toArray()
+
+  return flaggedDocs.map((doc) => ({
+    reportId: doc.id,
+    year: doc.year,
+    cadence: doc.cadence,
+    period: doc.period,
+    submissionNumber: doc.submissionNumber
+  }))
+}
+
+/**
  * Bulk-marks all active reports not sourced from `summaryLogId` as stale.
  * Skips reports already stale from this SL (retry-safe) and reports built from it (already current).
  *
@@ -391,48 +451,19 @@ const performMarkActiveReportsStale = async (
     summaryLogId
   }
 
-  const filter = {
-    organisationId,
-    registrationId,
-    'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
-    'stale.summaryLogId': { $ne: summaryLogId },
-    'source.summaryLogId': { $ne: summaryLogId }
-  }
-
-  const { modifiedCount } = await reportsCollection(db).updateMany(filter, {
-    $set: { stale },
-    $inc: { version: 1 }
+  const flagged = await flagReportsBySummaryLog(db, {
+    selectFilter: {
+      organisationId,
+      registrationId,
+      'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] }
+    },
+    readScope: { organisationId, registrationId },
+    summaryLogId,
+    field: 'stale',
+    value: stale
   })
 
-  if (modifiedCount === 0) {
-    return []
-  }
-
-  const updatedDocs = await reportsCollection(db)
-    .find(
-      { organisationId, registrationId, 'stale.summaryLogId': summaryLogId },
-      {
-        projection: {
-          _id: 0,
-          id: 1,
-          year: 1,
-          cadence: 1,
-          period: 1,
-          submissionNumber: 1,
-          stale: 1
-        }
-      }
-    )
-    .toArray()
-
-  return updatedDocs.map((d) => ({
-    reportId: d.id,
-    year: d.year,
-    cadence: d.cadence,
-    period: d.period,
-    submissionNumber: d.submissionNumber,
-    stale: /** @type {import('./port.js').ReportStale} */ (d.stale)
-  }))
+  return flagged.map((report) => ({ ...report, stale }))
 }
 
 /**
@@ -507,50 +538,16 @@ const performMarkSubmittedReportsRequiringResubmission = async (
     return []
   }
 
-  // Idempotency and concurrency safety live in the write filter (not a prior JS
-  // read), so a redelivered or concurrent submit of the same log cannot
-  // double-flag, over-increment the version, or emit a second audit event.
-  // Mirrors performMarkActiveReportsStale.
-  const { modifiedCount } = await reportsCollection(db).updateMany(
-    {
-      id: { $in: flaggedIds },
-      'resubmissionRequired.summaryLogId': { $ne: summaryLogId },
-      'source.summaryLogId': { $ne: summaryLogId }
-    },
-    { $set: { resubmissionRequired }, $inc: { version: 1 } }
-  )
+  const scope = { id: { $in: flaggedIds } }
+  const flagged = await flagReportsBySummaryLog(db, {
+    selectFilter: scope,
+    readScope: scope,
+    summaryLogId,
+    field: 'resubmissionRequired',
+    value: resubmissionRequired
+  })
 
-  if (modifiedCount === 0) {
-    return []
-  }
-
-  const flaggedDocs = await reportsCollection(db)
-    .find(
-      {
-        id: { $in: flaggedIds },
-        'resubmissionRequired.summaryLogId': summaryLogId
-      },
-      {
-        projection: {
-          _id: 0,
-          id: 1,
-          year: 1,
-          cadence: 1,
-          period: 1,
-          submissionNumber: 1
-        }
-      }
-    )
-    .toArray()
-
-  return flaggedDocs.map((doc) => ({
-    reportId: doc.id,
-    year: doc.year,
-    cadence: doc.cadence,
-    period: doc.period,
-    submissionNumber: doc.submissionNumber,
-    resubmissionRequired
-  }))
+  return flagged.map((report) => ({ ...report, resubmissionRequired }))
 }
 
 /**
