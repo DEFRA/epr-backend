@@ -1,6 +1,15 @@
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
-import wasteRecordsRegisteredOnly from './test-data/reprocessor-registered-only.json'
-import wasteRecordsAccredited from './test-data/reprocessor-on-input-accredited.json'
+import wasteRecordsRegisteredOnlyJson from './test-data/reprocessor-registered-only.json' with { type: 'json' }
+import wasteRecordsAccreditedJson from './test-data/reprocessor-on-input-accredited.json' with { type: 'json' }
+
+const wasteRecordsRegisteredOnly =
+  /** @type {import('#domain/waste-records/model.js').WasteRecord[]} */ (
+    /** @type {unknown} */ (wasteRecordsRegisteredOnlyJson)
+  )
+const wasteRecordsAccredited =
+  /** @type {import('#domain/waste-records/model.js').WasteRecord[]} */ (
+    /** @type {unknown} */ (wasteRecordsAccreditedJson)
+  )
 
 describe('#aggregateReportDetail — REPROCESSOR_REGISTERED_ONLY quarterly Q1 2026', () => {
   it('aggregates in-period records into the full report detail', () => {

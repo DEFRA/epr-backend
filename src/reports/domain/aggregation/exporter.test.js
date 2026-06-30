@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
-import wasteRecordsAccredited from './test-data/exporter-accredited.json'
-import wasteRecordsRegisteredOnly from './test-data/exporter-reg-only.json'
+import wasteRecordsAccreditedJson from './test-data/exporter-accredited.json' with { type: 'json' }
+import wasteRecordsRegisteredOnlyJson from './test-data/exporter-reg-only.json' with { type: 'json' }
+
+const wasteRecordsAccredited =
+  /** @type {import('#domain/waste-records/model.js').WasteRecord[]} */ (
+    /** @type {unknown} */ (wasteRecordsAccreditedJson)
+  )
+const wasteRecordsRegisteredOnly =
+  /** @type {import('#domain/waste-records/model.js').WasteRecord[]} */ (
+    /** @type {unknown} */ (wasteRecordsRegisteredOnlyJson)
+  )
 
 describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', () => {
   const orsDetailsMap = new Map([
