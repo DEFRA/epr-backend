@@ -1,3 +1,5 @@
+import Joi from 'joi'
+
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
@@ -14,14 +16,21 @@ export const getWasteRecordsExportPath = '/v1/admin/waste-records/export.csv'
 // just second-precision and then re-add `Z` after swapping `:` for `-`.
 const ISO_MILLISECOND_SUFFIX_LENGTH = 5
 
-const buildFilename = () => {
+/**
+ * @param {string} [organisationId]
+ * @returns {string}
+ */
+const buildFilename = (organisationId) => {
   // ISO is `YYYY-MM-DDTHH:MM:SS.sssZ`; we want second precision and `:` swapped
   // for `-` so the name is filesystem-safe.
   const stamp = new Date()
     .toISOString()
     .slice(0, -ISO_MILLISECOND_SUFFIX_LENGTH)
     .replaceAll(':', '-')
-  return `waste-records-${stamp}Z.csv`
+  // Include the org id when scoped so a file emailed to a single org is
+  // self-identifying.
+  const scope = organisationId ? `${organisationId}-` : ''
+  return `waste-records-${scope}${stamp}Z.csv`
 }
 
 export const wasteRecordsExportRoute = {
@@ -29,22 +38,38 @@ export const wasteRecordsExportRoute = {
   path: getWasteRecordsExportPath,
   options: {
     auth: getAuthConfig([SCOPES.adminRead]),
-    tags: ['api', 'admin']
+    tags: ['api', 'admin'],
+    validate: {
+      query: Joi.object({
+        organisationId: Joi.string().optional(),
+        // A registration only makes sense within an organisation, so require
+        // its parent id alongside it.
+        registrationId: Joi.string().optional().when('organisationId', {
+          is: Joi.exist(),
+          otherwise: Joi.forbidden()
+        })
+      })
+    }
   },
   /**
    * @param {HapiRequest & {
    *   organisationsRepository: OrganisationsRepository,
    *   wasteRecordsRepository: WasteRecordsRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
-   *   overseasSitesRepository: OverseasSitesRepository
+   *   overseasSitesRepository: OverseasSitesRepository,
+   *   query: { organisationId?: string, registrationId?: string }
    * }} request
    */
   handler: (request, h) => {
+    const { organisationId, registrationId } = request.query
+
     const stream = streamCsvExportToReadable({
       organisationsRepository: request.organisationsRepository,
       wasteRecordsRepository: request.wasteRecordsRepository,
       summaryLogsRepository: request.summaryLogsRepository,
-      overseasSitesRepository: request.overseasSitesRepository
+      overseasSitesRepository: request.overseasSitesRepository,
+      organisationId,
+      registrationId
     })
 
     return h
@@ -52,7 +77,7 @@ export const wasteRecordsExportRoute = {
       .type('text/csv; charset=utf-8')
       .header(
         'Content-Disposition',
-        `attachment; filename="${buildFilename()}"`
+        `attachment; filename="${buildFilename(organisationId)}"`
       )
   }
 }
