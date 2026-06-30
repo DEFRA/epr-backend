@@ -136,7 +136,7 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
       expect(report.resubmissionRequired).toBeUndefined()
     })
 
-    it('is idempotent — second call with same summaryLogId returns []', async () => {
+    it('is idempotent - second call with same summaryLogId returns []', async () => {
       await createAndSubmitReport(repository)
 
       const first = await repository.markSubmittedReportsRequiringResubmission({
