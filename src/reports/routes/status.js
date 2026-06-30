@@ -54,7 +54,11 @@ export const reportsStatus = {
     }
   },
   /**
-   * @param {HapiRequest<{ status: ReportStatus, version: number, submissionDeclaredBy?: string }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
+   * @param {HapiRequest<{ status: ReportStatus, version: number, submissionDeclaredBy?: string }> & {
+   *   params: PeriodWithSubmissionPathParams,
+   *   reportsRepository: ReportsRepository,
+   *   systemLogsRepository: SystemLogsRepository
+   * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -129,4 +133,5 @@ export const reportsStatus = {
  * @import { ReportStatus } from '#reports/domain/report-status.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { PeriodWithSubmissionPathParams } from './shared.js'
  */
