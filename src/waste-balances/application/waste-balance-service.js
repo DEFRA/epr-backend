@@ -10,6 +10,7 @@ import {
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
 import { currentWasteBalance } from './current-waste-balance.js'
+import { validateAccreditationId } from '../repository/validation.js'
 
 /**
  * The outcome of a PRN command: the appended stream events when it commits, or
@@ -135,6 +136,26 @@ export const createWasteBalanceService = (streamRepository) => {
     cancelPrnCreation: runPrnCommand(decideCancelPrnCreation),
     cancelIssuedPrn: runPrnCommand(decideCancelIssuedPrn),
     acceptPrn: runPrnCommand(decideAcceptPrn),
-    rejectPrn: runPrnCommand(decideRejectPrn)
+    rejectPrn: runPrnCommand(decideRejectPrn),
+
+    /**
+     * The PRN's stream events after a watermark: the catch-up tail a read
+     * projection folds onto a fetched PRN to bring it current.
+     *
+     * @param {{ registrationId: string, accreditationId: string, prnId: string, afterEventNumber: number }} params
+     * @returns {Promise<import('../repository/stream-port.js').StreamEvent[]>}
+     */
+    prnCatchupEvents: async ({
+      registrationId,
+      accreditationId,
+      prnId,
+      afterEventNumber
+    }) =>
+      streamRepository.findEventsByPrnIdAfter(
+        registrationId,
+        validateAccreditationId(accreditationId),
+        prnId,
+        afterEventNumber
+      )
   }
 }
