@@ -4,6 +4,7 @@ import { Decimal128 } from 'mongodb'
 import {
   abs,
   add,
+  addRounded,
   equals,
   greaterThan,
   isZero,
@@ -12,6 +13,13 @@ import {
   toDecimal,
   toNumber
 } from '#common/helpers/decimal-utils.js'
+
+// decimal.js's default export is typed as the Decimal type, not a constructor,
+// so `new DecimalCtor(...)` is not constructable under jsconfig. Cast to the
+// constructor type for instantiation (mirrors decimal-utils.js itself).
+const DecimalCtor = /** @type {import('decimal.js').Decimal.Constructor} */ (
+  Decimal
+)
 
 describe('decimal-utils', () => {
   describe('toDecimal', () => {
@@ -28,7 +36,7 @@ describe('decimal-utils', () => {
     })
 
     it('should return the same Decimal instance if already a Decimal', () => {
-      const decimal = new Decimal(42)
+      const decimal = new DecimalCtor(42)
       const result = toDecimal(decimal)
       expect(result).toBe(decimal)
     })
@@ -72,7 +80,7 @@ describe('decimal-utils', () => {
 
   describe('toNumber', () => {
     it('should convert a Decimal to number', () => {
-      const decimal = new Decimal(42.5)
+      const decimal = new DecimalCtor(42.5)
       const result = toNumber(decimal)
       expect(result).toBe(42.5)
       expect(typeof result).toBe('number')
@@ -99,12 +107,12 @@ describe('decimal-utils', () => {
     })
 
     it('should handle negative numbers', () => {
-      const result = toNumber(new Decimal(-42.5))
+      const result = toNumber(new DecimalCtor(-42.5))
       expect(result).toBe(-42.5)
     })
 
     it('should handle zero', () => {
-      const result = toNumber(new Decimal(0))
+      const result = toNumber(new DecimalCtor(0))
       expect(result).toBe(0)
     })
 
@@ -127,7 +135,7 @@ describe('decimal-utils', () => {
     })
 
     it('should add two Decimals', () => {
-      const result = add(new Decimal(10), new Decimal(5))
+      const result = add(new DecimalCtor(10), new DecimalCtor(5))
       expect(result.toNumber()).toBe(15)
     })
 
@@ -158,6 +166,49 @@ describe('decimal-utils', () => {
     })
   })
 
+  describe('addRounded', () => {
+    it('should round the value to the given decimal places before adding', () => {
+      // 0.005 rounds half-up to 0.01, then added to the accumulator
+      const result = addRounded(toDecimal(0), '0.005', 2)
+      expect(result).toBeInstanceOf(Decimal)
+      expect(result.toNumber()).toBe(0.01)
+    })
+
+    it('should leave the accumulator untouched when it carries more precision', () => {
+      // value 0.001 rounds to 0.00; the accumulator 0.011 must be preserved
+      const result = addRounded(toDecimal('0.011'), '0.001', 2)
+      expect(result.toNumber()).toBe(0.011)
+    })
+
+    it('should round each value independently so the running total follows round-each-then-sum', () => {
+      let total = toDecimal(0)
+      total = addRounded(total, '1.005', 2)
+      total = addRounded(total, '2.005', 2)
+
+      // round-each-then-sum: 1.01 + 2.01 = 3.02
+      expect(total.toNumber()).toBe(3.02)
+      // sum-then-round would instead give 3.01 - proving the methods diverge
+      expect(roundToTwoDecimalPlaces(add('1.005', '2.005'))).toBe(3.01)
+    })
+
+    it('should support decimal places other than two', () => {
+      // 1.2345 rounds half-up at three decimal places to 1.235
+      const result = addRounded(toDecimal(0), '1.2345', 3)
+      expect(result.toNumber()).toBe(1.235)
+    })
+
+    it('should treat a null value as zero', () => {
+      const result = addRounded(toDecimal('5'), null, 2)
+      expect(result.toNumber()).toBe(5)
+    })
+
+    it('should handle negative values', () => {
+      const result = addRounded(toDecimal('10'), '-2.005', 2)
+      // -2.005 rounds away from zero to -2.01
+      expect(result.toNumber()).toBe(7.99)
+    })
+  })
+
   describe('subtract', () => {
     it('should subtract two numbers', () => {
       const result = subtract(10, 5)
@@ -171,7 +222,7 @@ describe('decimal-utils', () => {
     })
 
     it('should subtract two Decimals', () => {
-      const result = subtract(new Decimal(10), new Decimal(5))
+      const result = subtract(new DecimalCtor(10), new DecimalCtor(5))
       expect(result.toNumber()).toBe(5)
     })
 
@@ -216,7 +267,7 @@ describe('decimal-utils', () => {
     })
 
     it('should return true for equal Decimals', () => {
-      expect(equals(new Decimal(10), new Decimal(10))).toBe(true)
+      expect(equals(new DecimalCtor(10), new DecimalCtor(10))).toBe(true)
     })
 
     it('should return true for mixed types with same value', () => {
@@ -269,7 +320,7 @@ describe('decimal-utils', () => {
     })
 
     it('should handle Decimal input', () => {
-      const result = abs(new Decimal(-42.5))
+      const result = abs(new DecimalCtor(-42.5))
       expect(result.toNumber()).toBe(42.5)
     })
 
@@ -298,7 +349,7 @@ describe('decimal-utils', () => {
     })
 
     it('should handle Decimal inputs', () => {
-      expect(greaterThan(new Decimal(10), new Decimal(5))).toBe(true)
+      expect(greaterThan(new DecimalCtor(10), new DecimalCtor(5))).toBe(true)
     })
 
     it('should handle mixed types', () => {
@@ -335,7 +386,7 @@ describe('decimal-utils', () => {
     })
 
     it('should return true for zero Decimal', () => {
-      expect(isZero(new Decimal(0))).toBe(true)
+      expect(isZero(new DecimalCtor(0))).toBe(true)
     })
 
     it('should return false for positive number', () => {
@@ -407,20 +458,20 @@ describe('decimal-utils', () => {
   describe('Decimal configuration', () => {
     it('should use ROUND_HALF_UP rounding mode', () => {
       // Create a calculation that requires rounding
-      const value = new Decimal('2.5')
+      const value = new DecimalCtor('2.5')
       const rounded = value.toDecimalPlaces(0)
       expect(rounded.toNumber()).toBe(3) // ROUND_HALF_UP rounds 2.5 to 3
     })
 
     it('should use ROUND_HALF_UP for negative values', () => {
-      const value = new Decimal('-2.5')
+      const value = new DecimalCtor('-2.5')
       const rounded = value.toDecimalPlaces(0)
       expect(rounded.toNumber()).toBe(-3) // ROUND_HALF_UP rounds -2.5 to -3
     })
 
     it('should support 34 digits precision', () => {
       // Test that we can handle MongoDB Decimal128 precision
-      const value = new Decimal('1.2345678901234567890123456789012345')
+      const value = new DecimalCtor('1.2345678901234567890123456789012345')
       expect(value.toString()).toContain('1.234567890123456789012345678901234')
     })
   })

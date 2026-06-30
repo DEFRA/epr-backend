@@ -1,4 +1,11 @@
-import { add, isZero, toDecimal } from '#common/helpers/decimal-utils.js'
+import { addRounded, isZero, toDecimal } from '#common/helpers/decimal-utils.js'
+
+/**
+ * Decimal places that report tonnage values are rounded to before summing.
+ * The canonical precision for the round-each-then-sum convention
+ * (ADR 0027/0028), matching the waste balance.
+ */
+export const TONNAGE_DECIMAL_PLACES = 2
 
 /**
  * Returns true when a field value is 'yes' (case-insensitive, trimmed).
@@ -45,9 +52,23 @@ export function groupAndSum(items, getKey, getFields, getTonnage) {
     const tonnage = getTonnage(item)
 
     if (map.has(key)) {
-      map.get(key).tonnageDecimal = add(map.get(key).tonnageDecimal, tonnage)
+      const group = map.get(key)
+      group.tonnageDecimal = addRounded(
+        group.tonnageDecimal,
+        tonnage,
+        TONNAGE_DECIMAL_PLACES
+      )
     } else {
-      map.set(key, { ...getFields(item), tonnageDecimal: toDecimal(tonnage) })
+      // Seed the group from zero so the first row is rounded too, not just
+      // subsequent ones - otherwise single-row groups escape round-each-then-sum.
+      map.set(key, {
+        ...getFields(item),
+        tonnageDecimal: addRounded(
+          toDecimal(0),
+          tonnage,
+          TONNAGE_DECIMAL_PLACES
+        )
+      })
     }
   }
 
