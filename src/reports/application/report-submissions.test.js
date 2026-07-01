@@ -203,8 +203,8 @@ describe('generateReportSubmissions (integration)', () => {
     const org = await buildApprovedOrg(orgRepo)
     const reg = org.registrations[0]
 
-    // Submission 1 submitted with PRN figures the feed must keep showing, with
-    // an in-flight submission 2 draft sitting over it
+    // Submission 1 submitted with PRN figures and a note the feed must keep
+    // showing, with an in-flight submission 2 draft sitting over it
     await seedInFlightResubmission(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
@@ -216,7 +216,8 @@ describe('generateReportSubmissions (integration)', () => {
         freeTonnage: 5,
         totalRevenue: 40000,
         averagePricePerTonne: 500
-      }
+      },
+      supportingInformation: 'Submission 1 note to the regulator'
     })
 
     const result = await generateReportSubmissions(orgRepo, reportsRepo)
@@ -229,11 +230,13 @@ describe('generateReportSubmissions (integration)', () => {
     // Date and submitter come from the last submitted report, not the draft
     expect(janRow.submittedDate).toBe(FIXED_DATE.toISOString().slice(0, 10))
     expect(janRow.submittedBy).toBe('Jane Smith')
-    // Tonnage/PRN figures likewise reflect submission 1, not the empty draft
+    // Tonnage/PRN figures and the note to the regulator likewise reflect
+    // submission 1, not the empty draft
     expect(janRow.tonnagePrnsPernsIssued).toBe(80)
     expect(janRow.freeTonnagePrnsPerns).toBe(5)
     expect(janRow.totalRevenuePrnsPerns).toBe(40000)
     expect(janRow.averagePrnPernPricePerTonne).toBe(500)
+    expect(janRow.noteToRegulator).toBe('Submission 1 note to the regulator')
   })
 
   it('shows the latest submitted figures once a resubmission has itself been submitted', async () => {
@@ -243,7 +246,7 @@ describe('generateReportSubmissions (integration)', () => {
     const org = await buildApprovedOrg(orgRepo)
     const reg = org.registrations[0]
 
-    // Submission 1: submitted, with the original PRN figures
+    // Submission 1: submitted, with the original PRN figures and note
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
@@ -255,11 +258,12 @@ describe('generateReportSubmissions (integration)', () => {
         freeTonnage: 5,
         totalRevenue: 40000,
         averagePricePerTonne: 500
-      }
+      },
+      supportingInformation: 'Note on the original submission'
     })
 
     // Submission 2: a correction, itself submitted a day later with revised
-    // figures (April has not yet ended, so the period set is unchanged)
+    // figures and note (April has not yet ended, so the period set is unchanged)
     vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
@@ -273,7 +277,8 @@ describe('generateReportSubmissions (integration)', () => {
         freeTonnage: 8,
         totalRevenue: 60000,
         averagePricePerTonne: 500
-      }
+      },
+      supportingInformation: 'Note on the corrected submission'
     })
 
     const result = await generateReportSubmissions(orgRepo, reportsRepo)
@@ -292,12 +297,14 @@ describe('generateReportSubmissions (integration)', () => {
 
     const janRow = byPeriod['Jan 2026']
 
-    // The correction's date, submitter and revised figures win over submission 1's
+    // The correction's date, submitter, revised figures and note win over
+    // submission 1's
     expect(janRow.submittedDate).toBe('2026-04-18')
     expect(janRow.submittedBy).toBe('Jane Smith')
     expect(janRow.tonnagePrnsPernsIssued).toBe(120)
     expect(janRow.freeTonnagePrnsPerns).toBe(8)
     expect(janRow.totalRevenuePrnsPerns).toBe(60000)
+    expect(janRow.noteToRegulator).toBe('Note on the corrected submission')
   })
 })
 

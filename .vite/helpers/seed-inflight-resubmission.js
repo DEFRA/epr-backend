@@ -7,18 +7,26 @@ import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
  * Both projections must keep showing submission 1's figures until submission 2
  * is itself submitted.
  *
+ * The identity fields apply to both submissions; any further content (e.g. prn,
+ * supportingInformation) is set on the submitted report, so tests can assert
+ * those fields survive the in-flight draft.
+ *
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {{
  *   organisationId: string,
  *   registrationId: string,
  *   year: number,
  *   cadence: string,
- *   period: number,
- *   prn?: import('#reports/repository/port.js').CreateReportParams['prn']
- * }} params
+ *   period: number
+ * } & Partial<import('#reports/repository/port.js').CreateReportParams>} params
  */
 export async function seedInFlightResubmission(reportsRepository, params) {
-  const { prn, ...base } = params
-  await buildSubmittedReport(reportsRepository, prn ? { ...base, prn } : base)
-  await buildDraftReport(reportsRepository, { ...base, submissionNumber: 2 })
+  const { organisationId, registrationId, year, cadence, period, ...content } =
+    params
+  const identity = { organisationId, registrationId, year, cadence, period }
+  await buildSubmittedReport(reportsRepository, { ...identity, ...content })
+  await buildDraftReport(reportsRepository, {
+    ...identity,
+    submissionNumber: 2
+  })
 }
