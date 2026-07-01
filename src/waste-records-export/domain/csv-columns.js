@@ -70,6 +70,10 @@ export const METADATA_COLUMNS = Object.freeze([
   OSR_NAME_REVISED
 ])
 
+export const METADATA_COL_INDEX = Object.freeze(
+  Object.fromEntries(METADATA_COLUMNS.map((name, i) => [name, i]))
+)
+
 // Both fields are already rendered in the metadata prefix:
 //   ROW_ID            -> 'Row ID'
 //   processingType    -> 'Operator Processing Type'
@@ -138,6 +142,19 @@ export const buildHeaderRow = (dataFieldColumns) => [
   ...dataFieldColumns
 ]
 
+const formatReason = (r) => (r.field ? `${r.code}: ${r.field}` : r.code)
+
+const buildWasteBalanceCells = (classification) => {
+  if (!classification) {
+    return ['', '', '']
+  }
+  return [
+    String(classification.included),
+    classification.reasons.map(formatReason).join('; '),
+    classification.tonnage ?? ''
+  ]
+}
+
 /**
  * @typedef {Object} BuildDataRowInput
  * @property {Organisation} org
@@ -145,7 +162,7 @@ export const buildHeaderRow = (dataFieldColumns) => [
  * @property {Accreditation | null} accreditation
  * @property {WasteRecord} record
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
- * @property {WasteBalanceClassification} wasteBalanceClassification
+ * @property {WasteBalanceClassification | null} wasteBalanceClassification
  * @property {Record<string, import('./overseas-sites-context.js').OverseasSiteContextEntry>} [overseasSites]
  * @property {string[]} dataFieldColumns
  */
@@ -193,11 +210,7 @@ export const buildDataRow = ({
     accreditation?.accreditationNumber ?? '',
     record.type,
     summaryLogEntry?.submittedAt ?? '',
-    wasteBalanceClassification.included ? 'true' : 'false',
-    wasteBalanceClassification.reasons
-      .map((r) => (r.field ? `${r.code}: ${r.field}` : r.code))
-      .join('; '),
-    wasteBalanceClassification.tonnage ?? '',
+    ...buildWasteBalanceCells(wasteBalanceClassification),
     String(record.rowId),
     orsDetails?.country ?? '',
     orsDetails?.siteName ?? ''
