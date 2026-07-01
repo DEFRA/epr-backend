@@ -92,20 +92,18 @@ export const reportsGet = {
       cadence
     )
 
-    // Fields are listed explicitly (rather than spreading the merged period) so
-    // submittedReport never reaches the response: the calendar curates report via
-    // toReportListItem and its schema excludes the full submitted report payload.
-    // Calendar periods are ended or carry a report, so periodStatus is non-null.
-    const reportingPeriods = merged.map((period) => ({
-      year: period.year,
-      period: period.period,
-      startDate: period.startDate,
-      endDate: period.endDate,
-      dueDate: period.dueDate,
-      submissionNumber: period.submissionNumber,
-      periodStatus: derivePeriodStatus(period),
-      report: toReportListItem(period.report)
-    }))
+    // submittedReport is omitted so the heavy latest-submitted payload never
+    // reaches the response; the remaining fields pass through, with report
+    // curated via toReportListItem. Calendar periods are ended or carry a
+    // report, so periodStatus is non-null.
+    const reportingPeriods = merged.map((period) => {
+      const { submittedReport: _submittedReport, ...rest } = period
+      return {
+        ...rest,
+        periodStatus: derivePeriodStatus(period),
+        report: toReportListItem(period.report)
+      }
+    })
 
     return h.response({ cadence, reportingPeriods }).code(StatusCodes.OK)
   }
