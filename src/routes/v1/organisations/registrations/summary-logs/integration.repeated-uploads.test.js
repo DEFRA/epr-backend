@@ -14,10 +14,11 @@ import { buildReadOrganisation } from '#repositories/organisations/contract/test
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import {
   createMockOverseasSitesRepository,
-  createMockWasteBalancesRepository
+  createMockWasteBalanceService
 } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -255,7 +256,8 @@ describe('Repeated uploads of identical data', () => {
       const syncWasteRecords = syncFromSummaryLog({
         extractor: summaryLogExtractor,
         wasteRecordRepository: wasteRecordsRepository,
-        wasteBalancesRepository: createMockWasteBalancesRepository(),
+        wasteBalanceService: createMockWasteBalanceService(),
+        rowStateRepository: createInMemoryRowStateRepository()(),
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])

@@ -6,7 +6,6 @@ import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
@@ -81,9 +80,6 @@ const startServer = async (prn) => {
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       streamRepository: () => streamRepository,
-      wasteBalancesRepository: createWasteBalancesRepository({
-        streamRepository
-      }),
       organisationsRepository: () => ({})
     },
     featureFlags: createInMemoryFeatureFlags()
@@ -251,9 +247,6 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
           findByPrnNumber: async () => {
             throw new Error('Database connection lost')
           }
-        }),
-        wasteBalancesRepository: createWasteBalancesRepository({
-          streamRepository
         }),
         organisationsRepository: () => ({})
       },

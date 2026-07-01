@@ -153,7 +153,7 @@ const resolveAccreditation = async (
  * @param {object} params
  * @param {object} params.parsedData
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
- * @param {import('#waste-balances/repository/port.js').WasteBalancesRepository} params.wasteBalancesRepository
+ * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
  * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
@@ -162,7 +162,7 @@ const resolveAccreditation = async (
 const updateWasteBalances = async ({
   parsedData,
   accreditation,
-  wasteBalancesRepository,
+  wasteBalanceService,
   wasteRecords,
   user,
   overseasSites,
@@ -176,7 +176,7 @@ const updateWasteBalances = async ({
     processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT
 
   if (shouldCalculateWasteBalance) {
-    await wasteBalancesRepository.updateWasteBalanceTransactions(
+    await wasteBalanceService.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
       { user, accreditation, overseasSites, summaryLogId }
     )
@@ -252,7 +252,7 @@ const calculateMetrics = (wasteRecords) => {
  * @param {object} params.organisationsRepository
  * @param {import('#waste-records/repository/port.js').RowStateRepository} params.rowStateRepository
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
- * @param {object} params.wasteBalancesRepository
+ * @param {object} params.wasteBalanceService
  */
 const commitStateAndBalance = async ({
   summaryLog,
@@ -264,7 +264,7 @@ const commitStateAndBalance = async ({
   organisationsRepository,
   rowStateRepository,
   featureFlags,
-  wasteBalancesRepository
+  wasteBalanceService
 }) => {
   const accreditation = accreditationId
     ? await resolveAccreditation(
@@ -292,7 +292,7 @@ const commitStateAndBalance = async ({
     await updateWasteBalances({
       parsedData,
       accreditation,
-      wasteBalancesRepository,
+      wasteBalanceService,
       wasteRecords,
       user,
       overseasSites,
@@ -307,7 +307,7 @@ const commitStateAndBalance = async ({
  * @param {Object} dependencies - The service dependencies
  * @param {Object} dependencies.extractor - The summary log extractor
  * @param {Object} dependencies.wasteRecordRepository - The waste record repository
- * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
+ * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} dependencies.wasteBalanceService - The waste balance application service
  * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
  * @param {import('#waste-records/repository/port.js').RowStateRepository} dependencies.rowStateRepository - The waste record states repository
@@ -319,7 +319,7 @@ export const syncFromSummaryLog = (dependencies) => {
   const {
     extractor,
     wasteRecordRepository,
-    wasteBalancesRepository,
+    wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
     rowStateRepository,
@@ -409,7 +409,7 @@ export const syncFromSummaryLog = (dependencies) => {
       organisationsRepository,
       rowStateRepository,
       featureFlags,
-      wasteBalancesRepository
+      wasteBalanceService
     })
 
     // 10. Count created/updated records for metrics

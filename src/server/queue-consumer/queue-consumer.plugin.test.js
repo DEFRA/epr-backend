@@ -44,7 +44,7 @@ describe('commandQueueConsumerPlugin', () => {
         summaryLogsRepository: {},
         organisationsRepository: {},
         wasteRecordsRepository: {},
-        wasteBalancesRepository: {},
+        wasteBalanceService: {},
         uploadsRepository: {},
         reportsRepository: {},
         systemLogsRepository: {}
@@ -104,7 +104,7 @@ describe('commandQueueConsumerPlugin', () => {
           'summaryLogsRepository',
           'organisationsRepository',
           'wasteRecordsRepository',
-          'wasteBalancesRepository',
+          'wasteBalanceService',
           'uploadsRepository',
           'reportsRepository',
           'systemLogsRepository'
@@ -176,7 +176,7 @@ describe('commandQueueConsumerPlugin', () => {
           summaryLogsRepository: server.app.summaryLogsRepository,
           organisationsRepository: server.app.organisationsRepository,
           wasteRecordsRepository: server.app.wasteRecordsRepository,
-          wasteBalancesRepository: server.app.wasteBalancesRepository,
+          wasteBalanceService: server.app.wasteBalanceService,
           reportsRepository: server.app.reportsRepository,
           summaryLogExtractor: expect.any(Object),
           onSummaryLogUploaded: expect.any(Function)
