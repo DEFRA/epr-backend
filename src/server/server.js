@@ -44,6 +44,7 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
+import { runWasteBalanceDuplicateEventsReport } from '#server/run-waste-balance-duplicate-events-report.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -224,6 +225,7 @@ async function createServer(options = {}) {
     copyFormFilesToS3(server)
     runOrganisationValidationSweep(server)
     runDuplicateAccreditationLinkMigration(server)
+    runWasteBalanceDuplicateEventsReport(server)
   })
 
   return server
