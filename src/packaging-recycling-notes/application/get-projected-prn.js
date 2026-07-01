@@ -1,9 +1,10 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
- * @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository
+ * @typedef {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} WasteBalanceStreamRepository
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  */
 
@@ -14,15 +15,17 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
  * stream query: a deleted PRN is terminal and has no further events to project.
  *
  * @param {PackagingRecyclingNote | null} prn
- * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {WasteBalanceStreamRepository} streamRepository
  * @returns {Promise<PackagingRecyclingNote | null>}
  */
-const projectFromStreamTail = async (prn, wasteBalancesRepository) => {
+const projectFromStreamTail = async (prn, streamRepository) => {
   if (!prn || prn.status.currentStatus === PRN_STATUS.DELETED) {
     return prn
   }
 
-  const tailEvents = await wasteBalancesRepository.getPrnCatchupEvents({
+  const tailEvents = await createWasteBalanceService(
+    streamRepository
+  ).prnCatchupEvents({
     registrationId: prn.registrationId,
     accreditationId: prn.accreditation.id,
     prnId: prn.id,
@@ -37,17 +40,17 @@ const projectFromStreamTail = async (prn, wasteBalancesRepository) => {
  *
  * @param {Object} params
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {WasteBalancesRepository} params.wasteBalancesRepository
+ * @param {WasteBalanceStreamRepository} params.streamRepository
  * @param {string} params.prnId
  * @returns {Promise<PackagingRecyclingNote | null>}
  */
 export const getProjectedPrnById = async ({
   packagingRecyclingNotesRepository,
-  wasteBalancesRepository,
+  streamRepository,
   prnId
 }) => {
   const prn = await packagingRecyclingNotesRepository.findById(prnId)
-  return projectFromStreamTail(prn, wasteBalancesRepository)
+  return projectFromStreamTail(prn, streamRepository)
 }
 
 /**
@@ -57,15 +60,15 @@ export const getProjectedPrnById = async ({
  *
  * @param {Object} params
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {WasteBalancesRepository} params.wasteBalancesRepository
+ * @param {WasteBalanceStreamRepository} params.streamRepository
  * @param {string} params.prnNumber
  * @returns {Promise<PackagingRecyclingNote | null>}
  */
 export const getProjectedPrnByNumber = async ({
   packagingRecyclingNotesRepository,
-  wasteBalancesRepository,
+  streamRepository,
   prnNumber
 }) => {
   const prn = await packagingRecyclingNotesRepository.findByPrnNumber(prnNumber)
-  return projectFromStreamTail(prn, wasteBalancesRepository)
+  return projectFromStreamTail(prn, streamRepository)
 }
