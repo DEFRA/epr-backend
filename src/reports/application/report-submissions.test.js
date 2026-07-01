@@ -4,7 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
+import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
@@ -219,19 +219,14 @@ describe('generateReportSubmissions (integration)', () => {
     })
 
     // Submission 2: an in-flight draft for the same period
-    await reportsRepo.createReport(
-      buildCreateReportParams({
-        organisationId: org.id,
-        registrationId: reg.id,
-        year: 2026,
-        cadence: 'monthly',
-        period: 1,
-        submissionNumber: 2,
-        startDate: '2026-01-01',
-        endDate: '2026-01-31',
-        dueDate: '2026-02-20'
-      })
-    )
+    await buildDraftReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      submissionNumber: 2
+    })
 
     const result = await generateReportSubmissions(orgRepo, reportsRepo)
 
