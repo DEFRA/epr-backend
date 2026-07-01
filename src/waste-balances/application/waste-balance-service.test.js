@@ -321,4 +321,32 @@ describe('createWasteBalanceService', () => {
       })
     })
   })
+
+  describe('currentBalance', () => {
+    it('resolves to null for a ledger with no events', async () => {
+      expect(await service.currentBalance(ledgerId)).toBeNull()
+    })
+
+    it('folds the ledger into its current balance', async () => {
+      await service.submitSummaryLog(
+        ledgerId,
+        { summaryLogId: 'log-A', creditTotal: 150 },
+        createdBy
+      )
+      await service.createPrn(
+        ledgerId,
+        { prnId: 'prn-1', amount: 40 },
+        createdBy
+      )
+
+      const balance = await service.currentBalance(ledgerId)
+
+      expect(balance).toMatchObject({
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1',
+        amount: 150,
+        availableAmount: 110
+      })
+    })
+  })
 })
