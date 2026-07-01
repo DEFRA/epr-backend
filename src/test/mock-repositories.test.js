@@ -97,7 +97,8 @@ describe('mock-repositories', () => {
         'creditAvailableBalanceForPrnCancellation',
         'creditFullBalanceForIssuedPrnCancellation',
         'appendStreamEvent',
-        'getPrnCatchupEvents'
+        'getPrnCatchupEvents',
+        'appendRegisteredOnlySubmittedEvent'
       ]
     },
     createMockOverseasSitesRepository: {

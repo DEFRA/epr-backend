@@ -1,5 +1,8 @@
 import { validateAccreditationId } from './validation.js'
-import { performUpdateWasteBalanceTransactions } from './helpers.js'
+import {
+  performUpdateWasteBalanceTransactions,
+  performAppendRegisteredOnlySubmittedEvent
+} from './helpers.js'
 import {
   performAppendPrnStreamEvent,
   performDeductAvailableBalanceForPrnCreation,
@@ -70,6 +73,11 @@ export const createWasteBalancesRepository = (dependencies) => {
         appendParams,
         findBalance,
         dependencies
+      }),
+    appendRegisteredOnlySubmittedEvent: async (params) =>
+      performAppendRegisteredOnlySubmittedEvent({
+        ...params,
+        streamRepository
       }),
     getPrnCatchupEvents: async ({
       registrationId,

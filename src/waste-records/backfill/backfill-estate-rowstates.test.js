@@ -9,6 +9,8 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import {
   buildAccreditation,
   buildOrganisation,
@@ -66,7 +68,8 @@ const inMemoryDeps = ({ organisations, wasteRecords }) => ({
   wasteRecordsRepository: createInMemoryWasteRecordsRepository(wasteRecords)(),
   summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
   overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-  rowStateRepository: createInMemoryRowStateRepository()()
+  rowStateRepository: createInMemoryRowStateRepository()(),
+  streamRepository: createInMemoryStreamRepository()()
 })
 
 describe('backfillEstateRowStates', () => {
@@ -118,8 +121,57 @@ describe('backfillEstateRowStates', () => {
       streamsBackfilled: 1,
       submissionsBackfilled: 2,
       rowStateWrites: 2,
+      submittedEventWrites: 0,
       orphanedAccreditations: []
     })
+    expect(
+      await deps.streamRepository.findAllByPartition('reg-1', 'acc-1')
+    ).toEqual([])
+  })
+
+  it('emits zero-delta summary-log submitted events for a registered-only registration so its latest state reads through', async () => {
+    const registration = reprocessorRegistration({ id: 'reg-ro' })
+    delete registration.accreditationId
+    const organisation = buildOrganisation({
+      registrations: [registration],
+      accreditations: []
+    })
+    const wasteRecords = [
+      receivedRecord(organisation.id, 'reg-ro', 'row-1', [
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } }
+      ])
+    ]
+    const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
+    await insertLog(deps.summaryLogsRepository, 'sl-1', {
+      organisationId: organisation.id,
+      registrationId: 'reg-ro',
+      submittedAt: '2025-01-01T00:00:00.000Z'
+    })
+    await insertLog(deps.summaryLogsRepository, 'sl-2', {
+      organisationId: organisation.id,
+      registrationId: 'reg-ro',
+      submittedAt: '2025-02-01T00:00:00.000Z'
+    })
+
+    const summary = await backfillEstateRowStates(deps)
+
+    const submittedEvents = await deps.streamRepository.findAllByPartition(
+      'reg-ro',
+      null
+    )
+    expect(submittedEvents.map((event) => event.kind)).toEqual([
+      STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+      STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+    ])
+    expect(
+      submittedEvents.map(
+        (event) => /** @type {any} */ (event.payload).summaryLogId
+      )
+    ).toEqual([fileId('sl-1'), fileId('sl-2')])
+    expect(
+      submittedEvents.every((event) => event.closingBalance.amount === 0)
+    ).toBe(true)
+    expect(summary.submittedEventWrites).toBe(2)
   })
 
   it('backfills a registered-only registration under a null-accreditation partition', async () => {

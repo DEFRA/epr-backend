@@ -29,4 +29,13 @@ describe('createConfigFeatureFlags', () => {
     expect(flags.isWasteRecordStatesEnabled()).toBe(true)
     expect(config.get).toHaveBeenCalledWith('featureFlags.wasteRecordStates')
   })
+
+  it('returns true when registeredOnlySubmittedEvents flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isRegisteredOnlySubmittedEventsEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.registeredOnlySubmittedEvents'
+    )
+  })
 })
