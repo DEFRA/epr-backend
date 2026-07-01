@@ -21,7 +21,7 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository,
  *   wasteRecordStatesRepository: import('#waste-records/repository/port.js').RowStateRepository,
- *   wasteBalancesRepository: import('#waste-balances/repository/port.js').WasteBalancesRepository,
+ *   wasteBalanceService: ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>,
  *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
  *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
  * }} QueueConsumerRepositories
@@ -44,7 +44,7 @@ function buildConsumerDeps(server, { config }) {
     organisationsRepository,
     wasteRecordsRepository,
     wasteRecordStatesRepository,
-    wasteBalancesRepository,
+    wasteBalanceService,
     reportsRepository,
     systemLogsRepository
   } = /** @type {QueueConsumerRepositories} */ (server.app)
@@ -73,7 +73,7 @@ function buildConsumerDeps(server, { config }) {
     organisationsRepository,
     wasteRecordsRepository,
     wasteRecordStatesRepository,
-    wasteBalancesRepository,
+    wasteBalanceService,
     featureFlags,
     reportsRepository,
     summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
@@ -88,7 +88,7 @@ export const commandQueueConsumerPlugin = {
     'summaryLogsRepository',
     'organisationsRepository',
     'wasteRecordsRepository',
-    'wasteBalancesRepository',
+    'wasteBalanceService',
     'uploadsRepository',
     'reportsRepository',
     'systemLogsRepository'

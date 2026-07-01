@@ -1,9 +1,9 @@
-import { createWasteBalancesRepository } from './repository.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMongoStreamRepository } from './stream-mongodb.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
-export const mongoWasteBalancesRepositoryPlugin = {
-  name: 'wasteBalancesRepository',
+export const mongoWasteBalanceServicePlugin = {
+  name: 'wasteBalanceService',
   version: '1.0.0',
   dependencies: ['mongodb'],
 
@@ -11,12 +11,9 @@ export const mongoWasteBalancesRepositoryPlugin = {
     const streamFactory = await createMongoStreamRepository(server.db)
     const streamRepository = streamFactory()
 
-    const factory = createWasteBalancesRepository({
-      streamRepository
-    })
-    const repository = factory()
-
-    registerRepository(server, 'wasteBalancesRepository', () => repository)
     registerRepository(server, 'streamRepository', () => streamRepository)
+    registerRepository(server, 'wasteBalanceService', () =>
+      createWasteBalanceService(streamRepository)
+    )
   }
 }

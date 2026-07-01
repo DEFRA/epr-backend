@@ -12,7 +12,7 @@ import { buildReadOrganisation } from '#repositories/organisations/contract/test
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -29,19 +29,17 @@ import assert from 'node:assert/strict'
 export { asStandardUser } from '#test/inject-auth.js'
 
 /**
- * Reads an accreditation's waste balance and asserts it is present, so callers
- * can read its fields without a null guard at every assertion site.
+ * Reads an accreditation's waste balance from the environment's service and
+ * asserts it is present, so callers can read its fields without a null guard at
+ * every assertion site. The organisation is taken from the environment.
  *
- * @param {{ findBalance: (partition: { registrationId: string, accreditationId: string }) => Promise<import('#waste-balances/domain/model.js').WasteBalance | null> }} wasteBalancesRepository
+ * @param {{ wasteBalanceService: ReturnType<typeof createWasteBalanceService>, organisationId: string }} env
  * @param {string} accreditationId
  * @param {string} registrationId
  */
-export const getWasteBalance = async (
-  wasteBalancesRepository,
-  accreditationId,
-  registrationId
-) => {
-  const balance = await wasteBalancesRepository.findBalance({
+export const getWasteBalance = async (env, accreditationId, registrationId) => {
+  const balance = await env.wasteBalanceService.currentBalance({
+    organisationId: env.organisationId,
     registrationId,
     accreditationId
   })
@@ -553,11 +551,10 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     findSummaryLogSubmitActors: vi.fn()
   }
 
-  const wasteBalancesRepositoryFactory = createWasteBalancesRepository({
+  const wasteBalanceService = createWasteBalanceService(
     streamRepository,
-    systemLogsRepository: systemLogsForBalanceAudit
-  })
-  const wasteBalancesRepository = wasteBalancesRepositoryFactory()
+    systemLogsForBalanceAudit
+  )
 
   const fileDataMap = {}
   const dynamicExtractor = {
@@ -612,7 +609,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
     wasteRecordRepository: wasteRecordsRepository,
-    wasteBalancesRepository,
+    wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
     rowStateRepository,
@@ -630,7 +627,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       summaryLogsRepository: () => summaryLogsRepository,
       uploadsRepository,
       streamRepository: () => streamRepository,
-      wasteBalancesRepository: () => wasteBalancesRepository,
+      wasteBalanceService: () => wasteBalanceService,
       wasteRecordsRepository: () => wasteRecordsRepository,
       packagingRecyclingNotesRepository: () =>
         packagingRecyclingNotesRepository,
@@ -649,7 +646,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   return {
     server,
     summaryLogsRepository,
-    wasteBalancesRepository,
+    wasteBalanceService,
     wasteRecordsRepository,
     packagingRecyclingNotesRepository,
     organisationsRepository,

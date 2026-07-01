@@ -322,6 +322,20 @@ describe('createWasteBalanceService', () => {
     })
   })
 
+  describe('updateWasteBalanceTransactions', () => {
+    it('does not touch the ledger when there are no waste records to credit', async () => {
+      await service.updateWasteBalanceTransactions([], {
+        user: createdBy,
+        accreditation: { id: 'acc-1' },
+        overseasSites: /** @type {*} */ (new Map()),
+        summaryLogId: 'log-A'
+      })
+
+      const all = await streamRepository.findAllByPartition('reg-1', 'acc-1')
+      expect(all).toHaveLength(0)
+    })
+  })
+
   describe('currentBalance', () => {
     it('resolves to null for a ledger with no events', async () => {
       expect(await service.currentBalance(ledgerId)).toBeNull()

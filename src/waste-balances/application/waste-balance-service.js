@@ -10,6 +10,8 @@ import {
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
 import { currentWasteBalance } from './current-waste-balance.js'
+import { markExcludedRecords } from './mark-excluded-records.js'
+import { performUpdateViaStream } from './update-via-stream.js'
 import { validateAccreditationId } from '../repository/validation.js'
 
 /**
@@ -19,6 +21,17 @@ import { validateAccreditationId } from '../repository/validation.js'
  *
  * @typedef {{ status: 'committed', events: import('../repository/stream-port.js').StreamEvent[] }
  *   | { status: 'rejected', reason: import('../domain/commands.js').PrnCommandRejection }} PrnCommandResult
+ */
+
+/**
+ * Records a summary-log submission against a ledger, returning the appended
+ * event(s).
+ *
+ * @typedef {(
+ *   ledgerId: import('../repository/stream-schema.js').WasteBalanceLedgerId,
+ *   submission: import('../repository/stream-schema.js').SummaryLogSubmittedPayload,
+ *   createdBy: import('../repository/stream-schema.js').StreamUserSummary
+ * ) => Promise<import('../repository/stream-port.js').StreamEvent[]>} SubmitSummaryLog
  */
 
 /**
@@ -121,38 +134,80 @@ const createLedgerCommands = (streamRepository) => {
  * in-process retry (ADR-0036).
  *
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [systemLogsRepository]
+ *   Sink for the balance-update audit trail. Omitted outside the summary-log
+ *   write path, where the audit is not emitted.
  */
-export const createWasteBalanceService = (streamRepository) => {
+export const createWasteBalanceService = (
+  streamRepository,
+  systemLogsRepository
+) => {
   const { fold, append, runPrnCommand } = createLedgerCommands(streamRepository)
+
+  /**
+   * Record a summary-log submission against the ledger.
+   *
+   * @type {SubmitSummaryLog}
+   */
+  const submitSummaryLog = async (ledgerId, submission, createdBy) => {
+    const { state, head } = await fold(ledgerId)
+    return append(
+      ledgerId,
+      head,
+      decideSummaryLog(state, submission),
+      createdBy
+    )
+  }
 
   return {
     /**
      * The current balance folded from the ledger, or `null` when the ledger
      * has no events yet. This is the read side of the same fold the commands
-     * decide against; the partition key is all it needs.
+     * decide against.
      *
-     * @param {{ registrationId: string, accreditationId: string | null }} ledgerId
+     * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId
      * @returns {Promise<import('../domain/model.js').WasteBalance | null>}
      */
     currentBalance: (ledgerId) =>
       currentWasteBalance(streamRepository, ledgerId),
 
+    submitSummaryLog,
+
     /**
-     * Record a summary-log submission against the ledger.
+     * Credit the ledger from a summary log's waste records: mark each row's
+     * balance inclusion, then fold, decide, and append the aggregate
+     * submission. The sole write entry the summary-log worker calls.
      *
-     * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId
-     * @param {import('../repository/stream-schema.js').SummaryLogSubmittedPayload} submission
-     * @param {import('../repository/stream-schema.js').StreamUserSummary} createdBy
-     * @returns {Promise<import('../repository/stream-port.js').StreamEvent[]>}
+     * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
+     * @param {Object} options
+     * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
+     * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation
+     * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
+     * @param {string} options.summaryLogId
+     * @returns {Promise<void>}
      */
-    submitSummaryLog: async (ledgerId, submission, createdBy) => {
-      const { state, head } = await fold(ledgerId)
-      return append(
-        ledgerId,
-        head,
-        decideSummaryLog(state, submission),
-        createdBy
-      )
+    updateWasteBalanceTransactions: async (
+      wasteRecords,
+      { user, accreditation, overseasSites, summaryLogId }
+    ) => {
+      const annotatedRecords = markExcludedRecords(wasteRecords)
+
+      if (annotatedRecords.length === 0) {
+        return
+      }
+
+      await performUpdateViaStream({
+        wasteRecords: annotatedRecords,
+        accreditation: {
+          ...accreditation,
+          id: validateAccreditationId(accreditation.id)
+        },
+        submitSummaryLog,
+        dependencies: { systemLogsRepository },
+        user,
+        overseasSites,
+        summaryLogId
+      })
     },
 
     createPrn: runPrnCommand(decideCreatePrn),

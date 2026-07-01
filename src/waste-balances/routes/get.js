@@ -77,6 +77,7 @@ export const wasteBalanceGet = {
         }
 
         const balance = await service.currentBalance({
+          organisationId,
           registrationId,
           accreditationId
         })
