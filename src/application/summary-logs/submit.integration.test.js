@@ -24,7 +24,7 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createMockWasteBalancesRepository } from '#test/mock-repositories.js'
+import { createMockWasteBalanceService } from '#test/mock-repositories.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 const VALID_FROM = '2025-01-01'
@@ -127,7 +127,7 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     organisationsRepository,
     wasteRecordsRepository,
     wasteRecordStatesRepository: createInMemoryRowStateRepository()(),
-    wasteBalancesRepository: createMockWasteBalancesRepository(),
+    wasteBalanceService: createMockWasteBalanceService(),
     featureFlags: createInMemoryFeatureFlags(),
     summaryLogExtractor,
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
