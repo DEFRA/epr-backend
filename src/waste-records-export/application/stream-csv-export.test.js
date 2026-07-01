@@ -4,6 +4,8 @@ import {
 } from './stream-csv-export.js'
 import {
   METADATA_COLUMNS,
+  OSR_COUNTRY_REVISED,
+  OSR_NAME_REVISED,
   buildDataFieldColumns,
   buildHeaderRow
 } from '../domain/csv-columns.js'
@@ -340,6 +342,66 @@ describe('streamCsvExport', () => {
     // "Included in Waste Balance" is the 10th metadata column (index 9) → true
     const cells = out[1].trim().split(',')
     expect(cells[9]).toBe('true')
+  })
+
+  it('populates the derived OSR columns from the approved overseas site matched by OSR_ID', async () => {
+    const org = baseOrg({
+      registrations: [
+        baseRegistration({
+          overseasSites: { '001': { overseasSiteId: 'site-a' } }
+        })
+      ]
+    })
+    const exportedRecord = {
+      type: WASTE_RECORD_TYPE.EXPORTED,
+      rowId: '4001',
+      data: {
+        processingType: PROCESSING_TYPES.EXPORTER,
+        OSR_ID: '001',
+        DATE_OF_EXPORT: '2026-03-01'
+      },
+      versions: [{ summaryLog: { id: 'sl-1' } }]
+    }
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([exportedRecord])
+      },
+      overseasSitesRepository: {
+        findAll: vi.fn().mockResolvedValue([
+          {
+            id: 'site-a',
+            validFrom: new Date('2026-01-01'),
+            name: 'Acme Recycling',
+            country: 'Germany'
+          }
+        ])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const header = buildHeaderRow(buildDataFieldColumns([]))
+    const cells = out[1].trim().split(',')
+    expect(cells[header.indexOf(OSR_COUNTRY_REVISED)]).toBe('Germany')
+    expect(cells[header.indexOf(OSR_NAME_REVISED)]).toBe('Acme Recycling')
+  })
+
+  it('leaves the derived OSR columns blank for a reprocessor row with no OSR_ID', async () => {
+    const org = baseOrg({ registrations: [baseRegistration()] })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([reprocessorReceivedRecord()])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const header = buildHeaderRow(buildDataFieldColumns([]))
+    const cells = out[1].trim().split(',')
+    expect(cells[header.indexOf(OSR_COUNTRY_REVISED)]).toBe('')
+    expect(cells[header.indexOf(OSR_NAME_REVISED)]).toBe('')
   })
 
   const exporterAccreditation = {

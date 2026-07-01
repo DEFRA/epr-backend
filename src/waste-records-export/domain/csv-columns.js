@@ -16,6 +16,33 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 
 const FORMULA_INJECTION_PREFIX = /^[=+\-@]/
 
+const ORS_ID_DIGITS = 3
+
+/**
+ * Zero-pad an OSR_ID to the 3-digit form used as the overseas-sites context
+ * key (e.g. `1` -> `'001'`). Mirrors the report aggregation lookup so both
+ * paths resolve the same site for a given record.
+ *
+ * @param {string | number} orsId
+ * @returns {string}
+ */
+const zeroPadOrsId = (orsId) => String(orsId).padStart(ORS_ID_DIGITS, '0')
+
+export const OSR_COUNTRY_REVISED = 'OSR_COUNTRY_REVISED'
+export const OSR_NAME_REVISED = 'OSR_NAME_REVISED'
+
+/**
+ * Export-only columns derived from the approved overseas-sites data (looked up
+ * by the record's OSR_ID) rather than from the unreliable user-entered
+ * summary-log values. Appended after the dynamic data-field columns. The order
+ * here defines the column order and must match the derived cells emitted by
+ * `buildDataRow`.
+ */
+export const DERIVED_OSR_COLUMNS = Object.freeze([
+  OSR_COUNTRY_REVISED,
+  OSR_NAME_REVISED
+])
+
 /**
  * Prefix a string cell that opens with =, +, - or @ with an apostrophe so
  * spreadsheet software treats it as literal text rather than a formula.
@@ -102,14 +129,16 @@ export const buildDataFieldColumns = (observedKeys) => {
 }
 
 /**
- * Compose the full header row from the dynamic data-field columns.
+ * Compose the full header row from the dynamic data-field columns, with the
+ * derived OSR columns appended at the far right.
  *
  * @param {string[]} dataFieldColumns
  * @returns {string[]}
  */
 export const buildHeaderRow = (dataFieldColumns) => [
   ...METADATA_COLUMNS,
-  ...dataFieldColumns
+  ...dataFieldColumns,
+  ...DERIVED_OSR_COLUMNS
 ]
 
 /**
@@ -120,14 +149,20 @@ export const buildHeaderRow = (dataFieldColumns) => [
  * @property {WasteRecord} record
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
  * @property {WasteBalanceClassification} wasteBalanceClassification
+ * @property {Record<string, import('./overseas-sites-context.js').OverseasSiteContextEntry>} [overseasSites]
  * @property {string[]} dataFieldColumns
  */
 
 /**
  * Build a single CSV data row in the same column order as
- * `[...METADATA_COLUMNS, ...dataFieldColumns]`. Numeric data cells stay
- * numbers so they serialise unquoted; string cells are formula-injection
- * sanitised.
+ * `[...METADATA_COLUMNS, ...dataFieldColumns, ...DERIVED_OSR_COLUMNS]`.
+ * Numeric data cells stay numbers so they serialise unquoted; string cells
+ * are formula-injection sanitised.
+ *
+ * The derived OSR columns are looked up from the approved overseas-sites
+ * context by the record's OSR_ID. They are blank when the record has no
+ * OSR_ID or no matching approved site is found — which also leaves them blank
+ * for reprocessor rows, whose registrations carry no overseas sites.
  *
  * @param {BuildDataRowInput} input
  * @returns {(string | number)[]}
@@ -139,6 +174,7 @@ export const buildDataRow = ({
   record,
   summaryLogEntry,
   wasteBalanceClassification,
+  overseasSites,
   dataFieldColumns
 }) => {
   const accredited = accreditation !== null ? 'Yes' : 'No'
@@ -167,5 +203,12 @@ export const buildDataRow = ({
     return value === null || value === undefined ? '' : value
   })
 
-  return [...metadata, ...dataCells].map(sanitiseFormulaInjection)
+  const orsDetails = data.OSR_ID
+    ? overseasSites?.[zeroPadOrsId(data.OSR_ID)]
+    : undefined
+  const derivedCells = [orsDetails?.country ?? '', orsDetails?.siteName ?? '']
+
+  return [...metadata, ...dataCells, ...derivedCells].map(
+    sanitiseFormulaInjection
+  )
 }
