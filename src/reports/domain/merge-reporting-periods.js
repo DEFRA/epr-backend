@@ -61,6 +61,10 @@ function indexPersistedSlots(periodicReports, cadence) {
  *   report: ReportSummary | null;
  *   submittedReport: ReportSummary | null;
  * }} MergedPeriod
+ *
+ * `report` is the current report and MAY be an unsubmitted in-flight draft. Do
+ * not use it for public-facing or regulator output: read `submittedReport` (the
+ * latest submitted report) for anything a resubmission draft must not blank out.
  */
 
 /**
