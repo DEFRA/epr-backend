@@ -405,6 +405,31 @@ const markSubmittedReportsRequiringResubmission = async (
 }
 
 /**
+ * Returns true when any report for the org/reg has a SUBMITTED status.history
+ * entry stamped strictly after `since`.
+ *
+ * @param {Map<string, Object>} reports
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} since - ISO timestamp
+ * @returns {Promise<boolean>}
+ */
+const hasReportSubmittedSince = async (
+  reports,
+  organisationId,
+  registrationId,
+  since
+) =>
+  [...reports.values()].some(
+    (report) =>
+      report.organisationId === organisationId &&
+      report.registrationId === registrationId &&
+      report.status.history.some(
+        (entry) => entry.status === REPORT_STATUS.SUBMITTED && entry.at > since
+      )
+  )
+
+/**
  * Create an in-memory reports repository.
  *
  * The store is used by reference so test fixtures can seed data directly.
@@ -437,6 +462,8 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
         uploadedAt
       ),
     markSubmittedReportsRequiringResubmission: (params) =>
-      markSubmittedReportsRequiringResubmission(reports, params)
+      markSubmittedReportsRequiringResubmission(reports, params),
+    hasReportSubmittedSince: (organisationId, registrationId, since) =>
+      hasReportSubmittedSince(reports, organisationId, registrationId, since)
   })
 }

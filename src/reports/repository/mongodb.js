@@ -541,6 +541,35 @@ const performMarkSubmittedReportsRequiringResubmission = async (
 }
 
 /**
+ * Returns true when any report for the org/reg has a SUBMITTED status.history
+ * entry stamped strictly after `since`.
+ *
+ * @param {Db} db
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} since - ISO timestamp
+ * @returns {Promise<boolean>}
+ */
+const performHasReportSubmittedSince = async (
+  db,
+  organisationId,
+  registrationId,
+  since
+) => {
+  const match = await reportsCollection(db).findOne(
+    {
+      organisationId,
+      registrationId,
+      'status.history': {
+        $elemMatch: { status: REPORT_STATUS.SUBMITTED, at: { $gt: since } }
+      }
+    },
+    { projection: { _id: 1 } }
+  )
+  return match !== null
+}
+
+/**
  * Creates a MongoDB-backed reports repository.
  *
  * @param {Db} db
@@ -571,6 +600,8 @@ export const createReportsRepository = async (db) => {
         uploadedAt
       ),
     markSubmittedReportsRequiringResubmission: (params) =>
-      performMarkSubmittedReportsRequiringResubmission(db, params)
+      performMarkSubmittedReportsRequiringResubmission(db, params),
+    hasReportSubmittedSince: (organisationId, registrationId, since) =>
+      performHasReportSubmittedSince(db, organisationId, registrationId, since)
   })
 }

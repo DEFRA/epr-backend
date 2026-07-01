@@ -297,6 +297,10 @@
  *   For each given period, flags the latest submitted report as requiring resubmission,
  *   skipping any report already flagged from `summaryLogId` or built from it.
  *   Returns the per-report details for auditing.
+ * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
+ *   Returns true when any report for the org/reg has a SUBMITTED status.history
+ *   entry stamped strictly after `since` (an ISO timestamp). Used to detect a
+ *   period closing during the summary log validate-to-submit window.
  */
 
 /**
