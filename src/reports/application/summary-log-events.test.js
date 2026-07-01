@@ -10,7 +10,7 @@ import {
   DEFAULT_REPORT_PERIOD,
   DEFAULT_CHANGED_BY
 } from '#reports/repository/contract/test-data.js'
-import { onSummaryLogUploaded } from './summary-log-events.js'
+import { createOnSummaryLogUploaded } from './summary-log-events.js'
 
 // helpers
 
@@ -18,6 +18,10 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
+
+/**
+ * @import { SummaryLogUploadedParams, SummaryLogUploadedRepositories } from './summary-log-events.js'
+ */
 
 const mockAuditMarkReportsStale = vi.fn()
 const mockAuditMarkReportsRequiringResubmission = vi.fn()
@@ -27,6 +31,18 @@ vi.mock('#reports/application/audit.js', () => ({
   auditMarkReportsRequiringResubmission: (...args) =>
     mockAuditMarkReportsRequiringResubmission(...args)
 }))
+
+/**
+ * @param {SummaryLogUploadedParams & SummaryLogUploadedRepositories} args
+ */
+const onSummaryLogUploaded = ({
+  reportsRepository,
+  systemLogsRepository,
+  ...params
+}) =>
+  createOnSummaryLogUploaded({ reportsRepository, systemLogsRepository })(
+    params
+  )
 
 const buildSystemLogsRepository = () => ({
   insert: vi.fn().mockResolvedValue(undefined),

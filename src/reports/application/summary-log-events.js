@@ -6,73 +6,86 @@ import {
 
 /**
  * @import { PeriodRef } from '#reports/domain/period-key.js'
+ * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  */
 
 /**
- * Called after a new summary log is successfully submitted for an org/reg.
- * Marks all active (in_progress / ready_to_submit) reports as stale, and flags
- * the latest submitted report of each closed period the upload restated as
- * requiring resubmission. Audits each batch in a single call.
+ * @typedef {{
+ *   reportsRepository: ReportsRepository,
+ *   systemLogsRepository: SystemLogsRepository
+ * }} SummaryLogUploadedRepositories
  *
- * @param {{
+ * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
  *   summaryLogId: string,
- *   closedPeriods?: PeriodRef[],
- *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
- *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
- * }} params
- * @returns {Promise<void>}
+ *   closedPeriods?: PeriodRef[]
+ * }} SummaryLogUploadedParams
+ *
+ * @typedef {(params: SummaryLogUploadedParams) => Promise<void>} OnSummaryLogUploaded
  */
-export async function onSummaryLogUploaded({
-  organisationId,
-  registrationId,
-  summaryLogId,
-  closedPeriods = [],
-  reportsRepository,
-  systemLogsRepository
-}) {
-  const uploadedAt = new Date().toISOString()
 
-  const reportsMarkedStale = await reportsRepository.markActiveReportsStale(
+/**
+ * Builds the summary-log-uploaded handler, closing over the repositories that
+ * stay fixed for the server's lifetime. The returned handler is called after a
+ * new summary log is successfully submitted for an org/reg: it marks all active
+ * (in_progress / ready_to_submit) reports as stale, and flags the latest
+ * submitted report of each closed period the upload restated as requiring
+ * resubmission. Audits each batch in a single call.
+ *
+ * @param {SummaryLogUploadedRepositories} repositories
+ * @returns {OnSummaryLogUploaded}
+ */
+export const createOnSummaryLogUploaded =
+  ({ reportsRepository, systemLogsRepository }) =>
+  async ({
     organisationId,
     registrationId,
     summaryLogId,
-    uploadedAt
-  )
+    closedPeriods = []
+  }) => {
+    const uploadedAt = new Date().toISOString()
 
-  if (reportsMarkedStale.length > 0) {
-    logger.info({
-      message: `Reports marked as stale: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
-    })
-
-    await auditMarkReportsStale({
-      systemLogsRepository,
-      organisationId,
-      registrationId,
-      reportsMarkedStale
-    })
-  }
-
-  const reportsRequiringResubmission =
-    await reportsRepository.markSubmittedReportsRequiringResubmission({
+    const reportsMarkedStale = await reportsRepository.markActiveReportsStale(
       organisationId,
       registrationId,
       summaryLogId,
-      uploadedAt,
-      periods: closedPeriods
-    })
+      uploadedAt
+    )
 
-  if (reportsRequiringResubmission.length > 0) {
-    logger.info({
-      message: `Reports flagged requiring resubmission: ${reportsRequiringResubmission.map((r) => r.reportId).join(', ')}`
-    })
+    if (reportsMarkedStale.length > 0) {
+      logger.info({
+        message: `Reports marked as stale: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
+      })
 
-    await auditMarkReportsRequiringResubmission({
-      systemLogsRepository,
-      organisationId,
-      registrationId,
-      reportsRequiringResubmission
-    })
+      await auditMarkReportsStale({
+        systemLogsRepository,
+        organisationId,
+        registrationId,
+        reportsMarkedStale
+      })
+    }
+
+    const reportsRequiringResubmission =
+      await reportsRepository.markSubmittedReportsRequiringResubmission({
+        organisationId,
+        registrationId,
+        summaryLogId,
+        uploadedAt,
+        periods: closedPeriods
+      })
+
+    if (reportsRequiringResubmission.length > 0) {
+      logger.info({
+        message: `Reports flagged requiring resubmission: ${reportsRequiringResubmission.map((r) => r.reportId).join(', ')}`
+      })
+
+      await auditMarkReportsRequiringResubmission({
+        systemLogsRepository,
+        organisationId,
+        registrationId,
+        reportsRequiringResubmission
+      })
+    }
   }
-}
