@@ -1,5 +1,5 @@
 import {
-  add,
+  addRounded,
   roundToTwoDecimalPlaces,
   toDecimal,
   toNumber
@@ -7,7 +7,8 @@ import {
 import {
   formatAddress,
   groupAndSum,
-  isTonnageGreaterThanZero
+  isTonnageGreaterThanZero,
+  TONNAGE_DECIMAL_PLACES
 } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
@@ -29,7 +30,8 @@ export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
   })
 
   const totalTonnageDecimal = validEntries.reduce(
-    (acc, { data }) => add(acc, data[tonnageField]),
+    (acc, { data }) =>
+      addRounded(acc, data[tonnageField], TONNAGE_DECIMAL_PLACES),
     toDecimal(0)
   )
 
