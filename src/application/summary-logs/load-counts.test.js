@@ -471,14 +471,12 @@ describe('countByWasteBalanceInclusion', () => {
         }
       ]
 
-      // This would throw due to accessing versions[-1]
-      // But this is an invalid state that shouldn't occur in practice
-      expect(() =>
-        countByWasteBalanceInclusion({
-          wasteRecords,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID
-        })
-      ).toThrow()
+      const result = countByWasteBalanceInclusion({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.unchanged.included.rowIds).toEqual(['row-1'])
     })
   })
 

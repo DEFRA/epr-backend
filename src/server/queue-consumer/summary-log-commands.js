@@ -8,6 +8,10 @@ import {
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
+/**
+ * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+ */
+
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -17,6 +21,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 /** @typedef {import('#feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository */
+/** @typedef {import('#reports/domain/period-key.js').PeriodRef} PeriodRef */
 
 /**
  * @typedef {object} SummaryLogHandlerDeps
@@ -30,7 +35,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {ReportsRepository} reportsRepository
  * @property {SummaryLogExtractor} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
- * @property {(organisationId: string, registrationId: string) => Promise<void>} onSummaryLogSubmittedReportHook
+ * @property {OnSummaryLogUploaded} onSummaryLogUploaded
  */
 
 const userSchema = Joi.object({
@@ -102,8 +107,7 @@ export const summaryLogCommandHandlers = [
     execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
       await submitSummaryLog(payload.summaryLogId, {
         ...deps,
-        user: payload.user,
-        onSummaryLogSubmittedReportHook: deps.onSummaryLogSubmittedReportHook
+        user: payload.user
       })
     },
     onFailure: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {

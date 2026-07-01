@@ -3,6 +3,8 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
+/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+
 const mockAudit = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
@@ -13,7 +15,8 @@ const {
   auditReportStatusTransition,
   auditReportCreate,
   auditReportDelete,
-  auditMarkReportsStale
+  auditMarkReportsStale,
+  auditMarkReportsRequiringResubmission
 } = await import('./audit.js')
 
 const mockInsert = vi.fn()
@@ -21,7 +24,7 @@ const mockInsert = vi.fn()
 let systemLogsRepository
 
 const createMockRequest = () =>
-  /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+  /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: SystemLogsRepository }} */ ({
     auth: {
       credentials: {
         id: 'user-1',
@@ -258,99 +261,107 @@ describe('auditReportDelete', () => {
   })
 })
 
-describe('auditMarkReportsStale', () => {
-  const systemActor = { id: 'system', email: 'system', scope: [], role: null }
+const systemActor = { id: 'system', email: 'system', scope: [], role: null }
+
+const buildSystemLogsRepository = (
+  /** @type {import('vitest').Mock} */ insertMany
+) =>
+  /** @type {SystemLogsRepository} */ (
+    /** @type {unknown} */ ({
+      insert: mockInsert,
+      insertMany,
+      find: vi.fn(),
+      findSummaryLogSubmitActors: vi.fn()
+    })
+  )
+
+/** @type {import('#reports/repository/port.js').ReportStale} */
+const stale = {
+  uploadedAt: '2025-06-01T12:00:00.000Z',
+  reason: 'summary_log_changed',
+  summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+}
+
+/** @type {import('#reports/repository/port.js').ReportResubmissionRequired} */
+const resubmissionRequired = {
+  uploadedAt: '2025-06-01T12:00:00.000Z',
+  reason: 'closed_period_restated',
+  summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+}
+
+const flaggedReport = {
+  reportId: 'rep-1',
+  year: 2025,
+  cadence: 'quarterly',
+  period: 1,
+  submissionNumber: 1
+}
+
+describe.each([
+  {
+    name: 'auditMarkReportsStale',
+    action: 'mark-stale',
+    field: 'stale',
+    flag: stale,
+    run: (/** @type {SystemLogsRepository} */ systemLogsRepository) =>
+      auditMarkReportsStale({
+        systemLogsRepository,
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        reportsMarkedStale: [{ ...flaggedReport, stale }]
+      })
+  },
+  {
+    name: 'auditMarkReportsRequiringResubmission',
+    action: 'mark-requiring-resubmission',
+    field: 'resubmissionRequired',
+    flag: resubmissionRequired,
+    run: (/** @type {SystemLogsRepository} */ systemLogsRepository) =>
+      auditMarkReportsRequiringResubmission({
+        systemLogsRepository,
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        reportsRequiringResubmission: [
+          { ...flaggedReport, resubmissionRequired }
+        ]
+      })
+  }
+])('$name', ({ action, field, flag, run }) => {
   const mockInsertMany = vi.fn()
 
-  /** @type {import('#reports/repository/port.js').ReportStale} */
-  const stale = {
-    uploadedAt: '2025-06-01T12:00:00.000Z',
-    reason: 'summary_log_changed',
-    summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+  const event = { category: 'waste-reporting', subCategory: 'reports', action }
+
+  const context = {
+    ...flaggedReport,
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    previous: { [field]: null },
+    next: { [field]: flag }
   }
-
-  const reportsMarkedStale = [
-    {
-      reportId: 'rep-1',
-      year: 2025,
-      cadence: 'quarterly',
-      period: 1,
-      submissionNumber: 1,
-      stale
-    }
-  ]
-
-  const buildSystemLogsRepository = () =>
-    /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
-      /** @type {unknown} */ ({
-        insert: mockInsert,
-        insertMany: mockInsertMany,
-        find: vi.fn(),
-        findSummaryLogSubmitActors: vi.fn()
-      })
-    )
 
   beforeEach(() => {
     mockInsertMany.mockResolvedValue(undefined)
   })
 
   it('sends one CDP audit event per report', async () => {
-    await auditMarkReportsStale({
-      systemLogsRepository: buildSystemLogsRepository(),
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      reportsMarkedStale
-    })
+    await run(buildSystemLogsRepository(mockInsertMany))
 
     expect(mockAudit).toHaveBeenCalledExactlyOnceWith({
       user: systemActor,
-      event: {
-        category: 'waste-reporting',
-        subCategory: 'reports',
-        action: 'mark-stale'
-      },
-      context: {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        year: 2025,
-        cadence: 'quarterly',
-        period: 1,
-        submissionNumber: 1,
-        reportId: 'rep-1',
-        previous: { stale: null },
-        next: { stale }
-      }
+      event,
+      context
     })
   })
 
   it('batch-inserts one system log per report', async () => {
-    await auditMarkReportsStale({
-      systemLogsRepository: buildSystemLogsRepository(),
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      reportsMarkedStale
-    })
+    await run(buildSystemLogsRepository(mockInsertMany))
 
     expect(mockInsertMany).toHaveBeenCalledExactlyOnceWith([
       {
         createdAt: new Date('2025-06-01T12:00:00.000Z'),
         createdBy: systemActor,
-        event: {
-          category: 'waste-reporting',
-          subCategory: 'reports',
-          action: 'mark-stale'
-        },
-        context: {
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          year: 2025,
-          cadence: 'quarterly',
-          period: 1,
-          submissionNumber: 1,
-          reportId: 'rep-1',
-          previous: { stale: null },
-          next: { stale }
-        }
+        event,
+        context
       }
     ])
   })

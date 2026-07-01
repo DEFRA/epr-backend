@@ -6,6 +6,14 @@ import {
   safeAudit
 } from '#auditing/helpers.js'
 
+/**
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import {
+ *   MarkReportStaleResult,
+ *   MarkSubmittedReportRequiringResubmissionResult
+ * } from '#reports/repository/port.js'
+ */
+
 /** @type {import('#repositories/system-logs/port.js').SystemLog['createdBy']} */
 const SYSTEM_ACTOR = Object.freeze({
   id: 'system',
@@ -155,14 +163,57 @@ export async function auditReportDelete(request, params) {
 }
 
 /**
- * Audits a bulk markActiveReportsStale operation via CDP audit and system logs.
- * Emits one CDP audit event and one system-log record per report.
- * Uses {@link recordSystemLogs} for a single DB round-trip across all records.
+ * Audits a bulk report-flag transition (mark-stale / mark-requiring-resubmission)
+ * via CDP audit and system logs. Emits one CDP audit event and one system-log
+ * record per report, in a single DB round-trip.
  * @param {{
- *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
+ *   systemLogsRepository: SystemLogsRepository,
  *   organisationId: string,
  *   registrationId: string,
- *   reportsMarkedStale: import('#reports/repository/port.js').MarkReportStaleResult[]
+ *   action: string,
+ *   field: string,
+ *   results: Array<MarkReportStaleResult | MarkSubmittedReportRequiringResubmissionResult>
+ * }} params
+ */
+async function auditReportFlagTransition({
+  systemLogsRepository,
+  organisationId,
+  registrationId,
+  action,
+  field,
+  results
+}) {
+  const payloads = results.map((result) => ({
+    user: SYSTEM_ACTOR,
+    event: {
+      category: AUDIT_CATEGORY,
+      subCategory: AUDIT_SUB_CATEGORY,
+      action
+    },
+    context: {
+      organisationId,
+      registrationId,
+      year: result.year,
+      cadence: result.cadence,
+      period: result.period,
+      submissionNumber: result.submissionNumber,
+      reportId: result.reportId,
+      previous: { [field]: null },
+      next: { [field]: /** @type {Record<string, unknown>} */ (result)[field] }
+    }
+  }))
+
+  payloads.forEach((p) => safeAudit(p))
+  await recordSystemLogs(systemLogsRepository, payloads)
+}
+
+/**
+ * Audits a bulk markActiveReportsStale operation.
+ * @param {{
+ *   systemLogsRepository: SystemLogsRepository,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   reportsMarkedStale: MarkReportStaleResult[]
  * }} params
  */
 export async function auditMarkReportsStale({
@@ -171,30 +222,39 @@ export async function auditMarkReportsStale({
   registrationId,
   reportsMarkedStale
 }) {
-  const payloads = reportsMarkedStale.map(
-    ({ reportId, year, cadence, period, submissionNumber, stale }) => ({
-      user: SYSTEM_ACTOR,
-      event: {
-        category: AUDIT_CATEGORY,
-        subCategory: AUDIT_SUB_CATEGORY,
-        action: 'mark-stale'
-      },
-      context: {
-        organisationId,
-        registrationId,
-        year,
-        cadence,
-        period,
-        submissionNumber,
-        reportId,
-        previous: { stale: null },
-        next: { stale }
-      }
-    })
-  )
+  await auditReportFlagTransition({
+    systemLogsRepository,
+    organisationId,
+    registrationId,
+    action: 'mark-stale',
+    field: 'stale',
+    results: reportsMarkedStale
+  })
+}
 
-  payloads.forEach((p) => safeAudit(p))
-  await recordSystemLogs(systemLogsRepository, payloads)
+/**
+ * Audits a bulk markSubmittedReportsRequiringResubmission operation.
+ * @param {{
+ *   systemLogsRepository: SystemLogsRepository,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   reportsRequiringResubmission: MarkSubmittedReportRequiringResubmissionResult[]
+ * }} params
+ */
+export async function auditMarkReportsRequiringResubmission({
+  systemLogsRepository,
+  organisationId,
+  registrationId,
+  reportsRequiringResubmission
+}) {
+  await auditReportFlagTransition({
+    systemLogsRepository,
+    organisationId,
+    registrationId,
+    action: 'mark-requiring-resubmission',
+    field: 'resubmissionRequired',
+    results: reportsRequiringResubmission
+  })
 }
 
 /**

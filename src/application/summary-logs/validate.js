@@ -25,6 +25,7 @@ import {
   classifyLoads,
   fetchPeriodicReports,
   filterWasteBalanceRecords,
+  gateClosedPeriods,
   resolveOverseasSitesContext
 } from './classify-and-persist.js'
 import { logValidationIssues } from './validate-issue-logging.js'
@@ -599,7 +600,7 @@ const classifyAndPersistResult = async ({
   await persistValidationResult({
     issues,
     loads,
-    loadsByReportingPeriod,
+    loadsByReportingPeriod: gateClosedPeriods(loadsByReportingPeriod),
     loadsByWasteRecordType,
     meta,
     status,
