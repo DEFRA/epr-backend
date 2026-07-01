@@ -70,6 +70,10 @@ export const METADATA_COLUMNS = Object.freeze([
   OSR_NAME_REVISED
 ])
 
+export const METADATA_COL_INDEX = Object.freeze(
+  Object.fromEntries(METADATA_COLUMNS.map((name, i) => [name, i]))
+)
+
 // Both fields are already rendered in the metadata prefix:
 //   ROW_ID            -> 'Row ID'
 //   processingType    -> 'Operator Processing Type'
