@@ -1,31 +1,37 @@
-import Boom from '@hapi/boom'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
+import {
+  ACTIVE_REPORT_STATUSES,
+  REPORT_STATUS
+} from '#reports/domain/report-status.js'
+import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
+import { periodKey } from '#reports/domain/period-key.js'
+import { STALE_REASON } from '#reports/domain/stale.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {
-  REPORT_STATUS,
-  ACTIVE_REPORT_STATUSES
-} from '#reports/domain/report-status.js'
-import { STALE_REASON } from '#reports/domain/stale.js'
+  groupAsPeriodicReports,
+  latestSubmissionPerPeriod,
+  prepareCreateReportParams,
+  transformToPeriodicReports
+} from '#root/reports/repository/helpers.js'
+import Boom from '@hapi/boom'
 import {
   validateCreateReport,
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
   validateMarkActiveReportsStale,
+  validateMarkSubmittedReportsRequiringResubmission,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
-import {
-  prepareCreateReportParams,
-  groupAsPeriodicReports,
-  transformToPeriodicReports
-} from '#root/reports/repository/helpers.js'
 
 /**
  * @import {
  *   CreateReportParams,
  *   DeleteReportParams,
  *   FindPeriodicReportsParams,
+ *   MarkReportRequiringResubmissionResult,
+ *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
  *   Report,
  *   ReportsRepositoryFactory,
@@ -337,6 +343,68 @@ const markActiveReportsStale = async (
 }
 
 /**
+ * @param {Map<string, Object>} reports
+ * @param {MarkSubmittedReportsRequiringResubmissionParams} params
+ * @returns {Promise<MarkReportRequiringResubmissionResult[]>}
+ */
+const markSubmittedReportsRequiringResubmission = async (
+  reports,
+  { organisationId, registrationId, summaryLogId, uploadedAt, periods }
+) => {
+  validateMarkSubmittedReportsRequiringResubmission({
+    organisationId,
+    registrationId,
+    summaryLogId,
+    uploadedAt,
+    periods
+  })
+
+  const resubmissionRequired = {
+    uploadedAt,
+    reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
+    summaryLogId
+  }
+
+  const wantedPeriods = new Set(periods.map(periodKey))
+
+  const alreadyHandled = (/** @type {Report} */ report) =>
+    report.resubmissionRequired?.summaryLogId === summaryLogId ||
+    report.source?.summaryLogId === summaryLogId
+
+  const submitted = /** @type {Report[]} */ ([...reports.values()]).filter(
+    (r) =>
+      r.organisationId === organisationId &&
+      r.registrationId === registrationId &&
+      r.status.currentStatus === REPORT_STATUS.SUBMITTED &&
+      wantedPeriods.has(periodKey(r))
+  )
+
+  const toFlag = latestSubmissionPerPeriod(submitted).filter(
+    (report) => !alreadyHandled(report)
+  )
+
+  const persistResubmissionFlag = (/** @type {Report} */ report) =>
+    reports.set(report.id, {
+      ...report,
+      resubmissionRequired,
+      version: report.version + 1
+    })
+
+  toFlag.forEach(persistResubmissionFlag)
+
+  return toFlag.map((report) =>
+    structuredClone({
+      reportId: report.id,
+      year: report.year,
+      cadence: report.cadence,
+      period: report.period,
+      submissionNumber: report.submissionNumber,
+      resubmissionRequired
+    })
+  )
+}
+
+/**
  * Create an in-memory reports repository.
  *
  * The store is used by reference so test fixtures can seed data directly.
@@ -367,6 +435,8 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
         registrationId,
         summaryLogId,
         uploadedAt
-      )
+      ),
+    markSubmittedReportsRequiringResubmission: (params) =>
+      markSubmittedReportsRequiringResubmission(reports, params)
   })
 }
