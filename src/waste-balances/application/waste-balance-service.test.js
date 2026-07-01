@@ -281,22 +281,22 @@ describe('createWasteBalanceService', () => {
     }
 
     it('returns the PRN tail events after the watermark in order', async () => {
-      await streamRepository.appendEvent(
+      await streamRepository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-1',
           accreditationId: 'acc-1',
           number: 1,
           payload: { prnId: 'prn-1', amount: 10 }
         })
-      )
-      await streamRepository.appendEvent(
+      ])
+      await streamRepository.appendEvents([
         buildPrnIssuedEvent({
           registrationId: 'reg-1',
           accreditationId: 'acc-1',
           number: 2,
           payload: { prnId: 'prn-1', amount: 10 }
         })
-      )
+      ])
 
       const events = await service.prnCatchupEvents({
         ...catchupParams,

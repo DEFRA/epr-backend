@@ -4,11 +4,12 @@
  * Surface is deliberately minimal: only primitives where two correct adapters
  * could meaningfully implement things differently (persistence, native conflict
  * signal translation). Domain logic — balance arithmetic, retry on
- * slot conflict — lives above the port in `appendToStream`, not on adapters.
+ * slot conflict — lives above the port in the waste balance service, not on
+ * adapters.
  */
 
 /**
- * Raised by `appendEvent` when a `(registrationId, accreditationId, number)`
+ * Raised by `appendEvents` when a `(registrationId, accreditationId, number)`
  * slot is already occupied. Adapters translate their native conflict signal
  * (MongoDB `E11000`, in-memory index check) into this typed error so callers
  * can react uniformly.
@@ -38,7 +39,7 @@ export class StreamSlotConflictError extends Error {
 }
 
 /**
- * Raised by `appendEvent` when the event's `number` is not the next
+ * Raised by `appendEvents` when the event's `number` is not the next
  * sequential value for its partition. The stream is strictly append-only
  * with no gaps: event N requires event N-1 to exist (or N must be 1 for
  * an empty stream).
@@ -81,15 +82,6 @@ export class StreamSequenceError extends Error {
 
 /**
  * @typedef {Object} WasteBalanceStreamRepository
- * @property {(event: StreamEventInsert) => Promise<StreamEvent>} appendEvent
- *   Persist a single event. Returns the stored event with its assigned `id`.
- *
- *   Throws `StreamSequenceError` if the event's `number` is not the next
- *   sequential value for its partition (i.e. `currentMax + 1`, or `1` for
- *   an empty stream). The stream is strictly sequential with no gaps.
- *
- *   Throws `StreamSlotConflictError` if the
- *   `(registrationId, accreditationId, number)` slot is already occupied.
  * @property {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent | null>} findLatestByPartition
  *   Return the highest-numbered event for the stream partition, or `null`
  *   if none exist.
@@ -106,7 +98,7 @@ export class StreamSequenceError extends Error {
  * @property {(registrationId: string, accreditationId: string | null) => Promise<number>} deleteByPartition
  *   Migration PAE-1382: delete all events for the given partition.
  *   Returns the number of deleted events. No-op on empty partition.
- * @property {(events: StreamEventInsert[]) => Promise<StreamEvent[]>} bulkAppendEvents
+ * @property {(events: StreamEventInsert[]) => Promise<StreamEvent[]>} appendEvents
  *   Append a contiguous batch of events. Events must be numbered
  *   sequentially, and the first event's number must be `currentMax + 1`
  *   (or `1` if the partition is empty). Throws `StreamSlotConflictError` if
