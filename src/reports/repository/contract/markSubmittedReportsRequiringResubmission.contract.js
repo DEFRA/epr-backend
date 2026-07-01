@@ -23,6 +23,12 @@ const period = (period, overrides = {}) => ({
   ...overrides
 })
 
+const expectedResubmission = {
+  uploadedAt: UPLOADED_AT,
+  reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
+  summaryLogId: SL_ID
+}
+
 export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
   describe('markSubmittedReportsRequiringResubmission', () => {
     let repository
@@ -37,17 +43,20 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
       }
     )
 
+    const callMark = (overrides = {}) =>
+      repository.markSubmittedReportsRequiringResubmission({
+        organisationId: DEFAULT_ORG_ID,
+        registrationId: DEFAULT_REG_ID,
+        summaryLogId: SL_ID,
+        uploadedAt: UPLOADED_AT,
+        periods: [period(MONTHLY_PERIODS.January)],
+        ...overrides
+      })
+
     it('flags the latest submitted report for an affected period', async () => {
       const reportId = await createAndSubmitReport(repository)
 
-      const flagged =
-        await repository.markSubmittedReportsRequiringResubmission({
-          organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID,
-          summaryLogId: SL_ID,
-          uploadedAt: UPLOADED_AT,
-          periods: [period(MONTHLY_PERIODS.January)]
-        })
+      const flagged = await callMark()
 
       expect(flagged).toHaveLength(1)
       expect(flagged[0]).toMatchObject({
@@ -56,19 +65,11 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
         cadence: 'monthly',
         period: MONTHLY_PERIODS.January,
         submissionNumber: 1,
-        resubmissionRequired: {
-          uploadedAt: UPLOADED_AT,
-          reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-          summaryLogId: SL_ID
-        }
+        resubmissionRequired: expectedResubmission
       })
 
       const report = await repository.findReportById(reportId)
-      expect(report.resubmissionRequired).toEqual({
-        uploadedAt: UPLOADED_AT,
-        reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-        summaryLogId: SL_ID
-      })
+      expect(report.resubmissionRequired).toEqual(expectedResubmission)
     })
 
     it('does not touch submitted reports in periods that were not listed', async () => {
@@ -79,14 +80,7 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
         period: MONTHLY_PERIODS.February
       })
 
-      const flagged =
-        await repository.markSubmittedReportsRequiringResubmission({
-          organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID,
-          summaryLogId: SL_ID,
-          uploadedAt: UPLOADED_AT,
-          periods: [period(MONTHLY_PERIODS.January)]
-        })
+      const flagged = await callMark()
 
       expect(flagged.map((r) => r.period)).toEqual([MONTHLY_PERIODS.January])
 
@@ -100,14 +94,7 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
         submissionNumber: 2
       })
 
-      const flagged =
-        await repository.markSubmittedReportsRequiringResubmission({
-          organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID,
-          summaryLogId: SL_ID,
-          uploadedAt: UPLOADED_AT,
-          periods: [period(MONTHLY_PERIODS.January)]
-        })
+      const flagged = await callMark()
 
       expect(flagged).toHaveLength(1)
       expect(flagged[0]).toMatchObject({
@@ -121,14 +108,7 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
         buildCreateReportParams()
       )
 
-      const flagged =
-        await repository.markSubmittedReportsRequiringResubmission({
-          organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID,
-          summaryLogId: SL_ID,
-          uploadedAt: UPLOADED_AT,
-          periods: [period(MONTHLY_PERIODS.January)]
-        })
+      const flagged = await callMark()
 
       expect(flagged).toEqual([])
 
@@ -139,24 +119,10 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
     it('is idempotent - second call with same summaryLogId returns []', async () => {
       await createAndSubmitReport(repository)
 
-      const first = await repository.markSubmittedReportsRequiringResubmission({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
-        summaryLogId: SL_ID,
-        uploadedAt: UPLOADED_AT,
-        periods: [period(MONTHLY_PERIODS.January)]
-      })
+      const first = await callMark()
       expect(first).toHaveLength(1)
 
-      const second = await repository.markSubmittedReportsRequiringResubmission(
-        {
-          organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID,
-          summaryLogId: SL_ID,
-          uploadedAt: UPLOADED_AT,
-          periods: [period(MONTHLY_PERIODS.January)]
-        }
-      )
+      const second = await callMark()
       expect(second).toEqual([])
     })
 
@@ -166,27 +132,13 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
         source: { summaryLogId: 'sl-1', lastUploadedAt: UPLOADED_AT }
       })
 
-      const flagged =
-        await repository.markSubmittedReportsRequiringResubmission({
-          organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID,
-          summaryLogId: 'sl-1',
-          uploadedAt: UPLOADED_AT,
-          periods: [period(MONTHLY_PERIODS.January)]
-        })
+      const flagged = await callMark({ summaryLogId: 'sl-1' })
 
       expect(flagged).toEqual([])
     })
 
     it('returns [] when no submitted reports exist in the given periods', async () => {
-      const flagged =
-        await repository.markSubmittedReportsRequiringResubmission({
-          organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID,
-          summaryLogId: SL_ID,
-          uploadedAt: UPLOADED_AT,
-          periods: [period(MONTHLY_PERIODS.January)]
-        })
+      const flagged = await callMark()
 
       expect(flagged).toEqual([])
     })
@@ -194,14 +146,7 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
     it('returns [] when no periods are given', async () => {
       await createAndSubmitReport(repository)
 
-      const flagged =
-        await repository.markSubmittedReportsRequiringResubmission({
-          organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID,
-          summaryLogId: SL_ID,
-          uploadedAt: UPLOADED_AT,
-          periods: []
-        })
+      const flagged = await callMark({ periods: [] })
 
       expect(flagged).toEqual([])
     })
