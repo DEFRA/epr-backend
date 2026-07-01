@@ -140,6 +140,62 @@ describe('mergeReportingPeriods', () => {
     expect(result[1].submittedReport).toBeNull()
   })
 
+  it('selects the latest submitted report when several sit under an in-flight draft', () => {
+    const periodicReports = [
+      {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2026,
+        reports: {
+          monthly: {
+            1: {
+              startDate: '2026-01-01',
+              endDate: '2026-01-31',
+              dueDate: '2026-02-20',
+              // current is the in-flight submission 3 draft; previousSubmissions
+              // are ordered by submissionNumber descending
+              current: reportSummary({
+                id: 'submission-3',
+                submissionNumber: 3
+              }),
+              previousSubmissions: [
+                reportSummary({
+                  id: 'submission-2',
+                  status: REPORT_STATUS.SUBMITTED,
+                  submissionNumber: 2
+                }),
+                reportSummary({
+                  id: 'submission-1',
+                  status: REPORT_STATUS.SUBMITTED,
+                  submissionNumber: 1
+                })
+              ]
+            }
+          }
+        }
+      }
+    ]
+
+    const result = mergeReportingPeriods(
+      computedPeriods,
+      periodicReports,
+      'monthly'
+    )
+
+    // report is the draft (current); submittedReport skips it for the latest
+    // submitted, which is submission 2, not the older submission 1
+    expect(result[0].report).toEqual(
+      reportSummary({ id: 'submission-3', submissionNumber: 3 })
+    )
+    expect(result[0].submittedReport).toEqual(
+      reportSummary({
+        id: 'submission-2',
+        status: REPORT_STATUS.SUBMITTED,
+        submissionNumber: 2
+      })
+    )
+  })
+
   it('sets report to null when current is null (no active draft)', () => {
     const periodicReports = [
       {
