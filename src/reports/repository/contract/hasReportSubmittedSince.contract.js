@@ -64,6 +64,28 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       ).toBe(false)
     })
 
+    it('compares by instant, not raw string, across equivalent ISO forms', async () => {
+      const reportId = await createAndSubmitReport(repository, {
+        organisationId,
+        registrationId
+      })
+      const { status } = await repository.findReportById(reportId)
+      const submittedAt = status.submitted.at
+
+      // Same instant as the submission, but written with a numeric offset rather
+      // than 'Z'. A raw string compare mis-sorts this ('Z' > '+'), which would
+      // wrongly report the submission as being "after" its own timestamp.
+      const sameInstantOffsetForm = submittedAt.replace('Z', '+00:00')
+
+      expect(
+        await repository.hasReportSubmittedSince(
+          organisationId,
+          registrationId,
+          sameInstantOffsetForm
+        )
+      ).toBe(false)
+    })
+
     it('returns false when the only report is not submitted', async () => {
       await repository.createReport(
         buildCreateReportParams({ organisationId, registrationId })

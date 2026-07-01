@@ -76,6 +76,9 @@ const RECEIVED_HEADERS = [
   'CARRIER_VEHICLE_REGISTRATION_NUMBER'
 ]
 
+const TARE_WEIGHT = 100
+const PALLET_WEIGHT = 50
+
 const receivedRow = (
   rowNumber,
   rowId,
@@ -90,9 +93,9 @@ const receivedRow = (
     '03 03 08',
     'Glass - pre-sorted',
     'No',
-    netWeight + 150,
-    100,
-    50,
+    netWeight + TARE_WEIGHT + PALLET_WEIGHT,
+    TARE_WEIGHT,
+    PALLET_WEIGHT,
     netWeight,
     'Yes',
     'Actual weight (100%)',

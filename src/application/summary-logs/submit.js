@@ -28,18 +28,17 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  */
 
 /**
- * Rejects submission when a report closed a period during the validate-to-submit
- * window. The operator confirmed a preview built from the periodic reports as
- * they stood at validate; a report submitted since (keyed on the log's immutable
- * createdAt) means that confirmed preview no longer matches what would be
- * written, so the log is failed and the operator re-uploads. See PAE-1686.
+ * Fails submission if any report for this registration was submitted since the
+ * log's createdAt, closing the validate-to-submit race where a period closes
+ * after the operator confirmed the preview. Deliberately blunt: it fires on any
+ * submission, not only periods this log touches. See PAE-1686.
  *
  * @param {object} summaryLog
  * @param {string} summaryLogId
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @returns {Promise<void>}
  */
-const assertNoPeriodClosedSinceCreation = async (
+const assertNoReportSubmittedSinceCreation = async (
   summaryLog,
   summaryLogId,
   reportsRepository
@@ -169,7 +168,7 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     )
   }
 
-  await assertNoPeriodClosedSinceCreation(
+  await assertNoReportSubmittedSinceCreation(
     summaryLog,
     summaryLogId,
     reportsRepository
