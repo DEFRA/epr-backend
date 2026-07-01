@@ -68,6 +68,16 @@ const prnIssuedExporterRecord = buildWasteRecord({
 })
 
 describe('getWasteBalanceClassification', () => {
+  it('returns null when accreditation is null (e.g. cancelled or reg-only)', () => {
+    const record = buildWasteRecord({
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT }
+    })
+    expect(
+      getWasteBalanceClassification(record, null, ORS_VALIDATION_DISABLED)
+    ).toBeNull()
+  })
+
   it('returns included:false and empty reasons when record is manually excluded', () => {
     const record = buildWasteRecord({
       type: WASTE_RECORD_TYPE.RECEIVED,
@@ -124,7 +134,8 @@ describe('getWasteBalanceClassification', () => {
       accreditation,
       ORS_VALIDATION_DISABLED
     )
-    expect(result.included).toBe(false)
-    expect(result.reasons).toContainEqual({ code: 'PRN_ISSUED' })
+    expect(result).not.toBeNull()
+    expect(result?.included).toBe(false)
+    expect(result?.reasons).toContainEqual({ code: 'PRN_ISSUED' })
   })
 })
