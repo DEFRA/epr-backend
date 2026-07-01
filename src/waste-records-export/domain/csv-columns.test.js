@@ -114,7 +114,8 @@ describe('csv-columns', () => {
 
   describe('buildDataRow', () => {
     const dataFieldColumns = buildDataFieldColumns([])
-    const dataCol = (name) => METADATA_COLUMNS.length + dataFieldColumns.indexOf(name)
+    const dataCol = (name) =>
+      METADATA_COLUMNS.length + dataFieldColumns.indexOf(name)
 
     const userFixture = {
       fullName: 'Test User',
@@ -234,11 +235,15 @@ describe('csv-columns', () => {
       expect(row[METADATA_COL_INDEX['Organisation Name']]).toBe('Acme Ltd')
       expect(row[METADATA_COL_INDEX['Registration Number']]).toBe('REG-001')
       expect(row[METADATA_COL_INDEX['Material']]).toBe('plastic')
-      expect(row[METADATA_COL_INDEX['Operator Processing Type']]).toBe('REPROCESSOR_INPUT')
+      expect(row[METADATA_COL_INDEX['Operator Processing Type']]).toBe(
+        'REPROCESSOR_INPUT'
+      )
       expect(row[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
       expect(row[METADATA_COL_INDEX['Accreditation Number']]).toBe('ACC-001')
       expect(row[METADATA_COL_INDEX['Waste Record Type']]).toBe('received')
-      expect(row[METADATA_COL_INDEX['Submitted At']]).toBe('2026-04-15T09:00:00Z')
+      expect(row[METADATA_COL_INDEX['Submitted At']]).toBe(
+        '2026-04-15T09:00:00Z'
+      )
       expect(row[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
       expect(row[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
       expect(row[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe(9)
@@ -370,8 +375,12 @@ describe('csv-columns', () => {
           tonnage: null
         }
       })
-      expect(excluded[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
-      expect(excluded[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('PRN_ISSUED; MISSING_REQUIRED_FIELD: EWC_CODE')
+      expect(excluded[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
+        'false'
+      )
+      expect(
+        excluded[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]
+      ).toBe('PRN_ISSUED; MISSING_REQUIRED_FIELD: EWC_CODE')
       expect(excluded[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
 
       const included = buildDataRow({
@@ -382,7 +391,9 @@ describe('csv-columns', () => {
           tonnage: -5.25
         }
       })
-      expect(included[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
+      expect(included[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
+        'true'
+      )
       expect(included[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe(-5.25)
     })
 

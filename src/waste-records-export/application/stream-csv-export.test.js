@@ -521,7 +521,9 @@ describe('streamCsvExport', () => {
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
-    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toContain('OUTSIDE_ACCREDITATION_PERIOD')
+    expect(
+      cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]
+    ).toContain('OUTSIDE_ACCREDITATION_PERIOD')
     expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
   })
 
@@ -558,7 +560,9 @@ describe('streamCsvExport', () => {
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
     expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
-    expect(Number(cells[METADATA_COL_INDEX['Waste Balance Tonnage']])).toBeGreaterThan(0)
+    expect(
+      Number(cells[METADATA_COL_INDEX['Waste Balance Tonnage']])
+    ).toBeGreaterThan(0)
   })
 
   it('reads Accredited "Yes" with the number for a suspended accreditation', async () => {
