@@ -46,7 +46,7 @@ describe('createCommandQueueConsumer', () => {
   let summaryLogsRepository
   let organisationsRepository
   let wasteRecordsRepository
-  let wasteBalancesRepository
+  let wasteBalanceService
   let summaryLogExtractor
   let onSummaryLogSubmittedReportHook
   let mockConsumer
@@ -76,7 +76,7 @@ describe('createCommandQueueConsumer', () => {
 
     organisationsRepository = {}
     wasteRecordsRepository = {}
-    wasteBalancesRepository = {}
+    wasteBalanceService = {}
     summaryLogExtractor = {}
     onSummaryLogSubmittedReportHook = vi.fn().mockResolvedValue(undefined)
 
@@ -123,7 +123,7 @@ describe('createCommandQueueConsumer', () => {
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        wasteBalancesRepository,
+        wasteBalanceService,
         summaryLogExtractor,
         onSummaryLogSubmittedReportHook
       },
@@ -141,7 +141,7 @@ describe('createCommandQueueConsumer', () => {
             summaryLogsRepository,
             organisationsRepository,
             wasteRecordsRepository,
-            wasteBalancesRepository,
+            wasteBalanceService,
             summaryLogExtractor
           },
           []

@@ -8,14 +8,17 @@ import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
  * registration or accreditation with no events yet has no balance, so this
  * resolves to `null`.
  *
+ * The `organisationId` on the result is the caller's own — carried through from
+ * the ledger id it asked for, not recovered from the latest event.
+ *
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
- * @param {{ registrationId: string, accreditationId: string | null }} ledger - The
+ * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId - The
  *   registration or accreditation whose ledger is read.
  * @returns {Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const currentWasteBalance = async (
   streamRepository,
-  { registrationId, accreditationId }
+  { organisationId, registrationId, accreditationId }
 ) => {
   const latest = await streamRepository.findLatestByPartition(
     registrationId,
@@ -39,7 +42,7 @@ export const currentWasteBalance = async (
     : 0
 
   return {
-    organisationId: latest.organisationId,
+    organisationId,
     registrationId,
     accreditationId,
     amount: latest.closingBalance.amount,

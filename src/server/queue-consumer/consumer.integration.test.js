@@ -67,7 +67,7 @@ describe('SQS command queue consumer integration', () => {
   let summaryLogsRepository
   let organisationsRepository
   let wasteRecordsRepository
-  let wasteBalancesRepository
+  let wasteBalanceService
   let summaryLogExtractor
 
   beforeEach(() => {
@@ -81,7 +81,7 @@ describe('SQS command queue consumer integration', () => {
 
     organisationsRepository = {}
     wasteRecordsRepository = {}
-    wasteBalancesRepository = {}
+    wasteBalanceService = {}
 
     // Mock extractor - not used in these tests but required by consumer
     summaryLogExtractor = {}
@@ -101,7 +101,7 @@ describe('SQS command queue consumer integration', () => {
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        wasteBalancesRepository,
+        wasteBalanceService,
         summaryLogExtractor
       },
       summaryLogCommandHandlers
@@ -147,7 +147,7 @@ describe('SQS command queue consumer integration', () => {
               summaryLogsRepository,
               organisationsRepository,
               wasteRecordsRepository,
-              wasteBalancesRepository,
+              wasteBalanceService,
               summaryLogExtractor
             },
             summaryLogCommandHandlers
@@ -222,7 +222,7 @@ describe('SQS command queue consumer integration', () => {
                 summaryLogsRepository,
                 organisationsRepository,
                 wasteRecordsRepository,
-                wasteBalancesRepository,
+                wasteBalanceService,
                 summaryLogExtractor,
                 user
               })
@@ -617,7 +617,7 @@ describe('SQS command queue consumer integration', () => {
             summaryLogsRepository,
             organisationsRepository,
             wasteRecordsRepository,
-            wasteBalancesRepository,
+            wasteBalanceService,
             summaryLogExtractor
           },
           summaryLogCommandHandlers

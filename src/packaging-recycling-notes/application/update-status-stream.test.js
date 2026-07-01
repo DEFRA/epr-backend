@@ -8,7 +8,6 @@ import {
 import { REGULATOR } from '#domain/organisations/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 
 vi.mock('./metrics.js', () => ({
@@ -120,12 +119,8 @@ const buildLedgerRepositories = (storedPrn, events = []) => {
   const packagingRecyclingNotesRepository =
     createInMemoryPackagingRecyclingNotesRepository([storedPrn])(buildLogger())
   const streamRepository = createInMemoryStreamRepository(events)()
-  const wasteBalancesRepository = createWasteBalancesRepository({
-    streamRepository
-  })()
   return {
     packagingRecyclingNotesRepository,
-    wasteBalancesRepository,
     streamRepository
   }
 }
@@ -435,18 +430,15 @@ describe('updatePrnStatus composes the read fold with the real CAS-enforcing rep
         history: []
       }
     })
-    const {
-      packagingRecyclingNotesRepository,
-      wasteBalancesRepository,
-      streamRepository
-    } = buildLedgerRepositories(storedPrn, [
-      buildStreamEvent(STREAM_EVENT_KIND.PRN_CREATED, 1),
-      buildStreamEvent(STREAM_EVENT_KIND.PRN_ISSUED, 2)
-    ])
+    const { packagingRecyclingNotesRepository, streamRepository } =
+      buildLedgerRepositories(storedPrn, [
+        buildStreamEvent(STREAM_EVENT_KIND.PRN_CREATED, 1),
+        buildStreamEvent(STREAM_EVENT_KIND.PRN_ISSUED, 2)
+      ])
 
     const projected = await getProjectedPrnByNumber({
       packagingRecyclingNotesRepository,
-      wasteBalancesRepository,
+      streamRepository,
       prnNumber: PRN_NUMBER
     })
     expect(projected?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)

@@ -16,6 +16,29 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 
 const FORMULA_INJECTION_PREFIX = /^[=+\-@]/
 
+const ORS_ID_DIGITS = 3
+
+/**
+ * Zero-pad an OSR_ID to the 3-digit form used as the overseas-sites context
+ * key (e.g. `1` -> `'001'`). Mirrors the report aggregation lookup so both
+ * paths resolve the same site for a given record.
+ *
+ * @param {string | number} orsId
+ * @returns {string}
+ */
+const zeroPadOrsId = (orsId) => String(orsId).padStart(ORS_ID_DIGITS, '0')
+
+/**
+ * Derived export columns computed from the approved overseas-sites data
+ * (looked up by the record's OSR_ID) rather than from the unreliable
+ * user-entered summary-log values. Emitted as part of the metadata prefix
+ * (see `METADATA_COLUMNS`), the same way as the waste-balance columns — hence
+ * the spaced, Title Case headers that distinguish them from the
+ * SCREAMING_SNAKE data-field columns.
+ */
+export const OSR_COUNTRY_REVISED = 'OSR Country Revised'
+export const OSR_NAME_REVISED = 'OSR Name Revised'
+
 /**
  * Prefix a string cell that opens with =, +, - or @ with an apostrophe so
  * spreadsheet software treats it as literal text rather than a formula.
@@ -42,8 +65,14 @@ export const METADATA_COLUMNS = Object.freeze([
   'Included in Waste Balance',
   'Waste Balance Exclusion Reason',
   'Waste Balance Tonnage',
-  'Row ID'
+  'Row ID',
+  OSR_COUNTRY_REVISED,
+  OSR_NAME_REVISED
 ])
+
+export const METADATA_COL_INDEX = Object.freeze(
+  Object.fromEntries(METADATA_COLUMNS.map((name, i) => [name, i]))
+)
 
 // Both fields are already rendered in the metadata prefix:
 //   ROW_ID            -> 'Row ID'
@@ -102,7 +131,8 @@ export const buildDataFieldColumns = (observedKeys) => {
 }
 
 /**
- * Compose the full header row from the dynamic data-field columns.
+ * Compose the full header row from the fixed metadata prefix and the dynamic
+ * data-field columns.
  *
  * @param {string[]} dataFieldColumns
  * @returns {string[]}
@@ -112,6 +142,19 @@ export const buildHeaderRow = (dataFieldColumns) => [
   ...dataFieldColumns
 ]
 
+const formatReason = (r) => (r.field ? `${r.code}: ${r.field}` : r.code)
+
+const buildWasteBalanceCells = (classification) => {
+  if (!classification) {
+    return ['', '', '']
+  }
+  return [
+    String(classification.included),
+    classification.reasons.map(formatReason).join('; '),
+    classification.tonnage ?? ''
+  ]
+}
+
 /**
  * @typedef {Object} BuildDataRowInput
  * @property {Organisation} org
@@ -119,7 +162,8 @@ export const buildHeaderRow = (dataFieldColumns) => [
  * @property {Accreditation | null} accreditation
  * @property {WasteRecord} record
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
- * @property {WasteBalanceClassification} wasteBalanceClassification
+ * @property {WasteBalanceClassification | null} wasteBalanceClassification
+ * @property {Record<string, import('./overseas-sites-context.js').OverseasSiteContextEntry>} [overseasSites]
  * @property {string[]} dataFieldColumns
  */
 
@@ -128,6 +172,13 @@ export const buildHeaderRow = (dataFieldColumns) => [
  * `[...METADATA_COLUMNS, ...dataFieldColumns]`. Numeric data cells stay
  * numbers so they serialise unquoted; string cells are formula-injection
  * sanitised.
+ *
+ * The derived OSR columns (OSR_COUNTRY_REVISED / OSR_NAME_REVISED) sit at the
+ * end of the metadata prefix and are looked up from the approved
+ * overseas-sites context by the record's OSR_ID. They are blank when the
+ * record has no OSR_ID or no matching approved site is found — which also
+ * leaves them blank for reprocessor rows, whose registrations carry no
+ * overseas sites.
  *
  * @param {BuildDataRowInput} input
  * @returns {(string | number)[]}
@@ -139,10 +190,15 @@ export const buildDataRow = ({
   record,
   summaryLogEntry,
   wasteBalanceClassification,
+  overseasSites,
   dataFieldColumns
 }) => {
   const accredited = accreditation !== null ? 'Yes' : 'No'
   const data = record.data
+
+  const orsDetails = data.OSR_ID
+    ? overseasSites?.[zeroPadOrsId(data.OSR_ID)]
+    : undefined
 
   const metadata = [
     uppercaseString(registration.submittedToRegulator),
@@ -154,12 +210,10 @@ export const buildDataRow = ({
     accreditation?.accreditationNumber ?? '',
     record.type,
     summaryLogEntry?.submittedAt ?? '',
-    wasteBalanceClassification.included ? 'true' : 'false',
-    wasteBalanceClassification.reasons
-      .map((r) => (r.field ? `${r.code}: ${r.field}` : r.code))
-      .join('; '),
-    wasteBalanceClassification.tonnage ?? '',
-    String(record.rowId)
+    ...buildWasteBalanceCells(wasteBalanceClassification),
+    String(record.rowId),
+    orsDetails?.country ?? '',
+    orsDetails?.siteName ?? ''
   ]
 
   const dataCells = dataFieldColumns.map((field) => {
