@@ -20,9 +20,8 @@ const DUPLICATE_THRESHOLD = 1
  * @typedef {Object} DuplicateGroup
  * @property {Record<string, string | null>} _id - the business identity that repeated
  * @property {number} count - how many slots carry that identity
- * @property {number[]} numbers - the partition slot numbers of the repeated events
- * @property {import('mongodb').ObjectId[]} eventIds - storage ids, to locate each event
- * @property {Date[]} createdAt - when each duplicate was written
+ * @property {number[]} numbers - the partition slot numbers of the repeated events, which (with the identity) locate them
+ * @property {Date[]} createdAt - when each duplicate was written; near-simultaneous times confirm one action written twice
  */
 
 const groupByIdentityStages = (
@@ -33,7 +32,6 @@ const groupByIdentityStages = (
       _id: identity,
       count: { $sum: 1 },
       numbers: { $push: '$number' },
-      eventIds: { $push: '$_id' },
       createdAt: { $push: '$createdAt' }
     }
   },
@@ -81,15 +79,20 @@ export const duplicateSummaryLogEventsPipeline = () => [
  * findings for review. That is the sanctioned route to production data — there
  * is no ad-hoc production query.
  *
+ * `allowDiskUse` is set because the stream grows without bound and the `$group`
+ * must accumulate every distinct identity before the count filter — the peak
+ * would otherwise risk the in-memory aggregation limit on a large collection.
+ *
  * Each result row has the shape of a {@link DuplicateGroup}.
  *
  * @param {Pick<import('mongodb').Collection, 'aggregate'>} collection - the waste-balance-events collection
  * @returns {Promise<{ prn: import('mongodb').Document[], summaryLog: import('mongodb').Document[] }>}
  */
 export const findDuplicateBusinessEvents = async (collection) => {
+  const options = { allowDiskUse: true }
   const [prn, summaryLog] = await Promise.all([
-    collection.aggregate(duplicatePrnEventsPipeline()).toArray(),
-    collection.aggregate(duplicateSummaryLogEventsPipeline()).toArray()
+    collection.aggregate(duplicatePrnEventsPipeline(), options).toArray(),
+    collection.aggregate(duplicateSummaryLogEventsPipeline(), options).toArray()
   ])
   return { prn, summaryLog }
 }

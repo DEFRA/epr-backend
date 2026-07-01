@@ -96,7 +96,11 @@ describe('runWasteBalanceDuplicateEventsReport', () => {
             kind: 'prn-created'
           },
           count: 2,
-          numbers: [1, 2]
+          numbers: [1, 2],
+          createdAt: [
+            new Date('2026-01-15T10:00:00.000Z'),
+            new Date('2026-01-15T10:00:00.050Z')
+          ]
         }
       ]
     })
@@ -106,7 +110,7 @@ describe('runWasteBalanceDuplicateEventsReport', () => {
     expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Duplicate waste-balance event: registrationId=reg-1 accreditationId=acc-1 prnId=prn-1 kind=prn-created count=2 numbers=[1,2]'
+        'Duplicate waste-balance event: registrationId=reg-1 accreditationId=acc-1 prnId=prn-1 kind=prn-created count=2 numbers=[1,2] createdAt=[2026-01-15T10:00:00.000Z,2026-01-15T10:00:00.050Z]'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -124,7 +128,12 @@ describe('runWasteBalanceDuplicateEventsReport', () => {
             summaryLogId: 'log-1'
           },
           count: 3,
-          numbers: [1, 2, 3]
+          numbers: [1, 2, 3],
+          createdAt: [
+            new Date('2026-01-15T10:00:00.000Z'),
+            new Date('2026-01-15T10:00:00.020Z'),
+            new Date('2026-01-15T10:00:00.040Z')
+          ]
         }
       ]
     })
@@ -133,7 +142,7 @@ describe('runWasteBalanceDuplicateEventsReport', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Duplicate waste-balance event: registrationId=reg-1 accreditationId=null summaryLogId=log-1 count=3 numbers=[1,2,3]'
+        'Duplicate waste-balance event: registrationId=reg-1 accreditationId=null summaryLogId=log-1 count=3 numbers=[1,2,3] createdAt=[2026-01-15T10:00:00.000Z,2026-01-15T10:00:00.020Z,2026-01-15T10:00:00.040Z]'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:

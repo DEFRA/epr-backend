@@ -13,7 +13,10 @@ const formatFinding = (group) => {
   const identity = Object.entries(group._id)
     .map(([field, value]) => `${field}=${value}`)
     .join(' ')
-  return `Duplicate waste-balance event: ${identity} count=${group.count} numbers=[${group.numbers.join(',')}]`
+  const createdAt = group.createdAt
+    .map((/** @type {Date} */ at) => new Date(at).toISOString())
+    .join(',')
+  return `Duplicate waste-balance event: ${identity} count=${group.count} numbers=[${group.numbers.join(',')}] createdAt=[${createdAt}]`
 }
 
 /**
