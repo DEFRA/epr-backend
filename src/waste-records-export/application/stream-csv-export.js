@@ -69,7 +69,7 @@ const encodeRow = async (cells) => {
  * @param {Organisation} input.org
  * @param {Registration} input.registration
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} input.accreditation
- * @param {Record<string, { validFrom: Date | null }>} input.overseasSites
+ * @param {Record<string, import('../domain/overseas-sites-context.js').OverseasSiteContextEntry>} input.overseasSites
  * @param {Map<string, { submittedAt: string }>} input.summaryLogMap
  * @param {WasteRecord} input.record
  * @param {string[]} input.dataFieldColumns
@@ -101,6 +101,7 @@ const rowForRecord = ({
       accreditation,
       overseasSites
     ),
+    overseasSites,
     dataFieldColumns
   })
 }
