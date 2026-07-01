@@ -4,7 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
+import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS,
@@ -220,23 +220,14 @@ describe('generateReportCompliance', () => {
     const org = await buildApprovedOrg(orgRepo)
     const reg = org.registrations[0]
 
-    // Submission 1: submitted (the date the public register must keep showing)
-    await buildSubmittedReport(reportsRepo, {
+    // Submission 1 submitted (the date the public register must keep showing),
+    // with an in-flight submission 2 draft sitting over it
+    await seedInFlightResubmission(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
       year: 2026,
       cadence: 'monthly',
       period: 1
-    })
-
-    // Submission 2: an in-flight draft for the same period (no submittedAt yet)
-    await buildDraftReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
-      year: 2026,
-      cadence: 'monthly',
-      period: 1,
-      submissionNumber: 2
     })
 
     const result = await generateReportCompliance(orgRepo, reportsRepo)
