@@ -4,6 +4,10 @@ import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { StreamSlotConflictError } from '../repository/stream-port.js'
 import {
+  buildPrnCreatedEvent,
+  buildPrnIssuedEvent
+} from '../repository/stream-test-data.js'
+import {
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
@@ -265,6 +269,55 @@ describe('createWasteBalanceService', () => {
       expect(result.events[0].closingBalance).toEqual({
         amount: 1000,
         availableAmount: 1000
+      })
+    })
+  })
+
+  describe('prnCatchupEvents', () => {
+    const catchupParams = {
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1',
+      prnId: 'prn-1'
+    }
+
+    it('returns the PRN tail events after the watermark in order', async () => {
+      await streamRepository.appendEvent(
+        buildPrnCreatedEvent({
+          registrationId: 'reg-1',
+          accreditationId: 'acc-1',
+          number: 1,
+          payload: { prnId: 'prn-1', amount: 10 }
+        })
+      )
+      await streamRepository.appendEvent(
+        buildPrnIssuedEvent({
+          registrationId: 'reg-1',
+          accreditationId: 'acc-1',
+          number: 2,
+          payload: { prnId: 'prn-1', amount: 10 }
+        })
+      )
+
+      const events = await service.prnCatchupEvents({
+        ...catchupParams,
+        afterEventNumber: 1
+      })
+
+      expect(events).toHaveLength(1)
+      expect(events[0].number).toBe(2)
+      expect(events[0].kind).toBe(STREAM_EVENT_KIND.PRN_ISSUED)
+    })
+
+    it('throws Boom badData when the accreditation id is invalid', async () => {
+      await expect(
+        service.prnCatchupEvents({
+          ...catchupParams,
+          accreditationId: undefined,
+          afterEventNumber: 0
+        })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 422 }
       })
     })
   })
