@@ -13,6 +13,11 @@ import {
   createAndSubmitReport
 } from '#reports/repository/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import {
+  REPROCESSOR_RECEIVED_HEADERS,
+  createReprocessorReceivedRowValues,
+  createStandardMeta
+} from '#routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
@@ -25,104 +30,21 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 const VALID_FROM = '2025-01-01'
 const VALID_TO = '2025-12-31'
 
-const META = {
-  REGISTRATION_NUMBER: {
-    value: 'REG-123',
-    location: { sheet: 'Data', row: 1, column: 'B' }
-  },
-  PROCESSING_TYPE: {
-    value: 'REPROCESSOR_INPUT',
-    location: { sheet: 'Data', row: 2, column: 'B' }
-  },
-  MATERIAL: {
-    value: 'Paper_and_board',
-    location: { sheet: 'Data', row: 3, column: 'B' }
-  },
-  TEMPLATE_VERSION: {
-    value: 5,
-    location: { sheet: 'Data', row: 4, column: 'B' }
-  },
-  ACCREDITATION_NUMBER: {
-    value: 'ACC-123',
-    location: { sheet: 'Data', row: 5, column: 'B' }
-  }
-}
-
-const RECEIVED_HEADERS = [
-  'ROW_ID',
-  'DATE_RECEIVED_FOR_REPROCESSING',
-  'EWC_CODE',
-  'DESCRIPTION_WASTE',
-  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-  'GROSS_WEIGHT',
-  'TARE_WEIGHT',
-  'PALLET_WEIGHT',
-  'NET_WEIGHT',
-  'BAILING_WIRE_PROTOCOL',
-  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-  'WEIGHT_OF_NON_TARGET_MATERIALS',
-  'RECYCLABLE_PROPORTION_PERCENTAGE',
-  'TONNAGE_RECEIVED_FOR_RECYCLING',
-  'SUPPLIER_NAME',
-  'SUPPLIER_ADDRESS',
-  'SUPPLIER_POSTCODE',
-  'SUPPLIER_EMAIL',
-  'SUPPLIER_PHONE_NUMBER',
-  'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
-  'YOUR_REFERENCE',
-  'WEIGHBRIDGE_TICKET',
-  'CARRIER_NAME',
-  'CBD_REG_NUMBER',
-  'CARRIER_VEHICLE_REGISTRATION_NUMBER'
-]
-
-const TARE_WEIGHT = 100
-const PALLET_WEIGHT = 50
-
-const receivedRow = (
-  rowNumber,
-  rowId,
-  netWeight,
-  nonTargetWeight,
-  tonnage
-) => ({
-  rowNumber,
-  values: [
-    rowId,
-    '2025-01-15T00:00:00.000Z',
-    '03 03 08',
-    'Glass - pre-sorted',
-    'No',
-    netWeight + TARE_WEIGHT + PALLET_WEIGHT,
-    TARE_WEIGHT,
-    PALLET_WEIGHT,
-    netWeight,
-    'Yes',
-    'Actual weight (100%)',
-    nonTargetWeight,
-    0.85,
-    tonnage,
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    ''
-  ]
-})
+const META = createStandardMeta('REPROCESSOR_INPUT')
 
 const RECEIVED_DATA = {
   RECEIVED_LOADS_FOR_REPROCESSING: {
     location: { sheet: 'Received', row: 7, column: 'A' },
-    headers: RECEIVED_HEADERS,
+    headers: REPROCESSOR_RECEIVED_HEADERS,
     rows: [
-      receivedRow(8, 1001, 850, 50, 678.98),
-      receivedRow(9, 1002, 765, 45, 611.028)
+      {
+        rowNumber: 8,
+        values: createReprocessorReceivedRowValues({ rowId: 1001 })
+      },
+      {
+        rowNumber: 9,
+        values: createReprocessorReceivedRowValues({ rowId: 1002 })
+      }
     ]
   }
 }

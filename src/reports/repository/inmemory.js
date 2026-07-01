@@ -419,22 +419,18 @@ const hasReportSubmittedSince = async (
   organisationId,
   registrationId,
   since
-) => {
-  // status.history `at` is always written as canonical `new Date().toISOString()`.
-  // Normalise the caller's timestamp to the same form so the lexical comparison
-  // tracks chronological order even when `since` arrives in an equivalent but
-  // different ISO form (e.g. an offset like +00:00 rather than Z).
-  const sinceIso = new Date(since).toISOString()
-  return [...reports.values()].some(
+) =>
+  // Both `at` and `since` are canonical `new Date().toISOString()` values, so a
+  // lexical compare tracks chronological order (the ISO invariant this codebase
+  // relies on throughout).
+  [...reports.values()].some(
     (report) =>
       report.organisationId === organisationId &&
       report.registrationId === registrationId &&
       report.status.history.some(
-        (entry) =>
-          entry.status === REPORT_STATUS.SUBMITTED && entry.at > sinceIso
+        (entry) => entry.status === REPORT_STATUS.SUBMITTED && entry.at > since
       )
   )
-}
 
 /**
  * Create an in-memory reports repository.

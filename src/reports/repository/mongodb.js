@@ -556,17 +556,15 @@ const performHasReportSubmittedSince = async (
   registrationId,
   since
 ) => {
-  // status.history `at` is always stored as canonical `new Date().toISOString()`.
-  // Normalise the caller's timestamp to the same form so the `$gt` string compare
-  // tracks chronological order even when `since` arrives in an equivalent but
-  // different ISO form (e.g. an offset like +00:00 rather than Z).
-  const sinceIso = new Date(since).toISOString()
+  // Both `at` and `since` are canonical `new Date().toISOString()` values, so the
+  // `$gt` string compare tracks chronological order (the ISO invariant this
+  // codebase relies on throughout).
   const match = await reportsCollection(db).findOne(
     {
       organisationId,
       registrationId,
       'status.history': {
-        $elemMatch: { status: REPORT_STATUS.SUBMITTED, at: { $gt: sinceIso } }
+        $elemMatch: { status: REPORT_STATUS.SUBMITTED, at: { $gt: since } }
       }
     },
     { projection: { _id: 1 } }
