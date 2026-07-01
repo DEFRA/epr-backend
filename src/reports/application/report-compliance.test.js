@@ -265,6 +265,56 @@ describe('generateReportCompliance', () => {
     })
   })
 
+  it('shows the resubmission date once submission 2 has itself been submitted', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    // Submission 1: submitted on the original date
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    // Submission 2: a correction, itself submitted a day later (April has not
+    // yet ended, so the applicable period set is unchanged)
+    vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      submissionNumber: 2
+    })
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
+    // The register shows the correction's date, not submission 1's
+    expect(result).toEqual({
+      periods: EXPECTED_PERIODS,
+      entries: new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: new Map([
+              ['2026:monthly:1', '2026-04-18'],
+              ['2026:monthly:2', null],
+              ['2026:monthly:3', null]
+            ])
+          }
+        ]
+      ])
+    })
+  })
+
   it('records submitted date for a registered-only (quarterly) operator', async () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()

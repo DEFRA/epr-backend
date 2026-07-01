@@ -249,6 +249,61 @@ describe('generateReportSubmissions (integration)', () => {
     expect(janRow.totalRevenuePrnsPerns).toBe(40000)
     expect(janRow.averagePrnPernPricePerTonne).toBe(500)
   })
+
+  it('shows the latest submitted figures once a resubmission has itself been submitted', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    // Submission 1: submitted, with the original PRN figures
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      prn: {
+        issuedTonnage: 80,
+        freeTonnage: 5,
+        totalRevenue: 40000,
+        averagePricePerTonne: 500
+      }
+    })
+
+    // Submission 2: a correction, itself submitted a day later with revised
+    // figures (April has not yet ended, so the period set is unchanged)
+    vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      submissionNumber: 2,
+      prn: {
+        issuedTonnage: 120,
+        freeTonnage: 8,
+        totalRevenue: 60000,
+        averagePricePerTonne: 500
+      }
+    })
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+
+    const byPeriod = Object.fromEntries(
+      result.reportSubmissions.map((r) => [r.reportingPeriod, r])
+    )
+    const janRow = byPeriod['Jan 2026']
+
+    // The correction's date, submitter and revised figures win over submission 1's
+    expect(janRow.submittedDate).toBe('2026-04-18')
+    expect(janRow.submittedBy).toBe('Jane Smith')
+    expect(janRow.tonnagePrnsPernsIssued).toBe(120)
+    expect(janRow.freeTonnagePrnsPerns).toBe(8)
+    expect(janRow.totalRevenuePrnsPerns).toBe(60000)
+  })
 })
 
 // ---------------------------------------------------------------------------

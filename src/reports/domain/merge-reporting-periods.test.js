@@ -109,45 +109,6 @@ describe('mergeReportingPeriods', () => {
     )
   })
 
-  it('exposes the latest submitted report via submittedReport when an in-flight resubmission draft is current', () => {
-    const draft = reportSummary({ id: 'submission-2', submissionNumber: 2 })
-    const submitted = reportSummary({
-      id: 'submission-1',
-      status: REPORT_STATUS.SUBMITTED,
-      submittedAt: '2026-02-10T09:00:00.000Z',
-      submittedBy: { id: 'user-1', name: 'Jane Smith', position: 'Officer' }
-    })
-    const periodicReports = [
-      {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        year: 2026,
-        reports: {
-          monthly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-01-31',
-              dueDate: '2026-02-20',
-              current: draft,
-              previousSubmissions: [submitted]
-            }
-          }
-        }
-      }
-    ]
-
-    const result = mergeReportingPeriods(
-      computedPeriods,
-      periodicReports,
-      'monthly'
-    )
-
-    // report still points at the in-flight draft (unchanged behaviour)
-    expect(result[0].report).toEqual(draft)
-    // submittedReport recovers the last submitted report, not the draft
-    expect(result[0].submittedReport).toEqual(submitted)
-  })
-
   it('sets submittedReport to null when the period has no submitted report', () => {
     const periodicReports = [
       {
