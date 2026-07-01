@@ -32,10 +32,12 @@ const zeroPadOrsId = (orsId) => String(orsId).padStart(ORS_ID_DIGITS, '0')
  * Derived export columns computed from the approved overseas-sites data
  * (looked up by the record's OSR_ID) rather than from the unreliable
  * user-entered summary-log values. Emitted as part of the metadata prefix
- * (see `METADATA_COLUMNS`), the same way as the waste-balance columns.
+ * (see `METADATA_COLUMNS`), the same way as the waste-balance columns — hence
+ * the spaced, Title Case headers that distinguish them from the
+ * SCREAMING_SNAKE data-field columns.
  */
-export const OSR_COUNTRY_REVISED = 'OSR_COUNTRY_REVISED'
-export const OSR_NAME_REVISED = 'OSR_NAME_REVISED'
+export const OSR_COUNTRY_REVISED = 'OSR Country Revised'
+export const OSR_NAME_REVISED = 'OSR Name Revised'
 
 /**
  * Prefix a string cell that opens with =, +, - or @ with an apostrophe so

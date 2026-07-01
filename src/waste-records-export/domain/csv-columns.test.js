@@ -32,8 +32,8 @@ describe('csv-columns', () => {
         'Waste Balance Exclusion Reason',
         'Waste Balance Tonnage',
         'Row ID',
-        'OSR_COUNTRY_REVISED',
-        'OSR_NAME_REVISED'
+        'OSR Country Revised',
+        'OSR Name Revised'
       ])
     })
 
