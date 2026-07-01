@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { mergeReportingPeriods } from './merge-reporting-periods.js'
+import { REPORT_STATUS } from './report-status.js'
+
+/**
+ * Builds a complete report summary so persisted-report literals satisfy the
+ * ReportSummary type; override only the fields a test cares about.
+ * @param {Partial<import('../repository/port.js').ReportSummary>} [overrides]
+ * @returns {import('../repository/port.js').ReportSummary}
+ */
+const reportSummary = (overrides = {}) => ({
+  id: 'report-id',
+  status: REPORT_STATUS.IN_PROGRESS,
+  submissionNumber: 1,
+  submittedAt: null,
+  submittedBy: null,
+  ...overrides
+})
 
 describe('mergeReportingPeriods', () => {
   const computedPeriods = [
@@ -41,11 +57,7 @@ describe('mergeReportingPeriods', () => {
               startDate: '2026-01-01',
               endDate: '2026-01-31',
               dueDate: '2026-02-20',
-              current: {
-                id: 'report-uuid-1',
-                status: 'in_progress',
-                submissionNumber: 1
-              },
+              current: reportSummary({ id: 'report-uuid-1' }),
               previousSubmissions: []
             }
           }
@@ -59,11 +71,7 @@ describe('mergeReportingPeriods', () => {
       'monthly'
     )
 
-    expect(result[0].report).toEqual({
-      id: 'report-uuid-1',
-      status: 'in_progress',
-      submissionNumber: 1
-    })
+    expect(result[0].report).toEqual(reportSummary({ id: 'report-uuid-1' }))
     expect(result[1].report).toBeNull()
   })
 
@@ -79,11 +87,10 @@ describe('mergeReportingPeriods', () => {
               startDate: '2026-01-01',
               endDate: '2026-01-31',
               dueDate: '2026-02-20',
-              current: {
+              current: reportSummary({
                 id: 'report-uuid-1',
-                status: 'submitted',
-                submissionNumber: 1
-              },
+                status: REPORT_STATUS.SUBMITTED
+              }),
               previousSubmissions: []
             }
           }
@@ -97,11 +104,96 @@ describe('mergeReportingPeriods', () => {
       'monthly'
     )
 
-    expect(result[0].report).toEqual({
-      id: 'report-uuid-1',
-      status: 'submitted',
-      submissionNumber: 1
-    })
+    expect(result[0].report).toEqual(
+      reportSummary({ id: 'report-uuid-1', status: REPORT_STATUS.SUBMITTED })
+    )
+  })
+
+  it('sets submittedReport to null when the period has no submitted report', () => {
+    const periodicReports = [
+      {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2026,
+        reports: {
+          monthly: {
+            1: {
+              startDate: '2026-01-01',
+              endDate: '2026-01-31',
+              dueDate: '2026-02-20',
+              current: reportSummary({ id: 'submission-1' }),
+              previousSubmissions: []
+            }
+          }
+        }
+      }
+    ]
+
+    const result = mergeReportingPeriods(
+      computedPeriods,
+      periodicReports,
+      'monthly'
+    )
+
+    // period 1 has only an in-flight draft; period 2 has no slot at all
+    expect(result[0].submittedReport).toBeNull()
+    expect(result[1].submittedReport).toBeNull()
+  })
+
+  it('selects the latest submitted report when several sit under an in-flight draft', () => {
+    const periodicReports = [
+      {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2026,
+        reports: {
+          monthly: {
+            1: {
+              startDate: '2026-01-01',
+              endDate: '2026-01-31',
+              dueDate: '2026-02-20',
+              // current is the in-flight submission 3 draft; previousSubmissions
+              // are ordered by submissionNumber descending
+              current: reportSummary({
+                id: 'submission-3',
+                submissionNumber: 3
+              }),
+              previousSubmissions: [
+                reportSummary({
+                  id: 'submission-2',
+                  status: REPORT_STATUS.SUBMITTED,
+                  submissionNumber: 2
+                }),
+                reportSummary({
+                  id: 'submission-1',
+                  status: REPORT_STATUS.SUBMITTED,
+                  submissionNumber: 1
+                })
+              ]
+            }
+          }
+        }
+      }
+    ]
+
+    const result = mergeReportingPeriods(
+      computedPeriods,
+      periodicReports,
+      'monthly'
+    )
+
+    // report is the draft (current); submittedReport skips it for the latest
+    // submitted, which is submission 2, not the older submission 1
+    expect(result[0].report).toEqual(
+      reportSummary({ id: 'submission-3', submissionNumber: 3 })
+    )
+    expect(result[0].submittedReport).toEqual(
+      reportSummary({
+        id: 'submission-2',
+        status: REPORT_STATUS.SUBMITTED,
+        submissionNumber: 2
+      })
+    )
   })
 
   it('sets report to null when current is null (no active draft)', () => {
@@ -118,7 +210,10 @@ describe('mergeReportingPeriods', () => {
               dueDate: '2026-02-20',
               current: null,
               previousSubmissions: [
-                { id: 'old-report-id', status: 'submitted' }
+                reportSummary({
+                  id: 'old-report-id',
+                  status: REPORT_STATUS.SUBMITTED
+                })
               ]
             }
           }
@@ -147,11 +242,7 @@ describe('mergeReportingPeriods', () => {
               startDate: '2026-03-01',
               endDate: '2026-03-31',
               dueDate: '2026-04-20',
-              current: {
-                id: 'report-uuid-3',
-                status: 'in_progress',
-                submissionNumber: 1
-              },
+              current: reportSummary({ id: 'report-uuid-3' }),
               previousSubmissions: []
             }
           }
@@ -167,12 +258,8 @@ describe('mergeReportingPeriods', () => {
 
     expect(result).toHaveLength(3)
     const period3 = result.find((p) => p.period === 3)
-    expect(period3.report).toEqual({
-      id: 'report-uuid-3',
-      status: 'in_progress',
-      submissionNumber: 1
-    })
-    expect(period3.startDate).toBe('2026-03-01')
+    expect(period3?.report).toEqual(reportSummary({ id: 'report-uuid-3' }))
+    expect(period3?.startDate).toBe('2026-03-01')
   })
 
   it('ignores persisted slots with null current not in computed set', () => {
@@ -188,7 +275,12 @@ describe('mergeReportingPeriods', () => {
               endDate: '2026-03-31',
               dueDate: '2026-04-20',
               current: null,
-              previousSubmissions: [{ id: 'old-id', status: 'submitted' }]
+              previousSubmissions: [
+                reportSummary({
+                  id: 'old-id',
+                  status: REPORT_STATUS.SUBMITTED
+                })
+              ]
             }
           }
         }
@@ -216,7 +308,7 @@ describe('mergeReportingPeriods', () => {
               startDate: '2026-01-01',
               endDate: '2026-03-31',
               dueDate: '2026-04-20',
-              current: { id: 'quarterly-report', status: 'in_progress' },
+              current: reportSummary({ id: 'quarterly-report' }),
               previousSubmissions: []
             }
           }
@@ -246,7 +338,7 @@ describe('mergeReportingPeriods', () => {
               startDate: '2025-12-01',
               endDate: '2025-12-31',
               dueDate: '2026-01-20',
-              current: { id: 'report-2025-12', status: 'in_progress' },
+              current: reportSummary({ id: 'report-2025-12' }),
               previousSubmissions: []
             }
           }

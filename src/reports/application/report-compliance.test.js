@@ -4,6 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS,
@@ -203,6 +204,94 @@ describe('generateReportCompliance', () => {
             organisationId: org.id,
             submittedDates: new Map([
               ['2026:monthly:1', SUBMITTED_DATE],
+              ['2026:monthly:2', null],
+              ['2026:monthly:3', null]
+            ])
+          }
+        ]
+      ])
+    })
+  })
+
+  it('keeps the last submitted date while an in-flight resubmission draft is current', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    // Submission 1 submitted (the date the public register must keep showing),
+    // with an in-flight submission 2 draft sitting over it
+    await seedInFlightResubmission(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
+    expect(result).toEqual({
+      periods: EXPECTED_PERIODS,
+      entries: new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: new Map([
+              ['2026:monthly:1', SUBMITTED_DATE],
+              ['2026:monthly:2', null],
+              ['2026:monthly:3', null]
+            ])
+          }
+        ]
+      ])
+    })
+  })
+
+  it('shows the resubmission date once submission 2 has itself been submitted', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    // Submission 1: submitted on the original date
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    // Submission 2: a correction, itself submitted a day later (April has not
+    // yet ended, so the applicable period set is unchanged)
+    vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      submissionNumber: 2
+    })
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
+    // The register shows the correction's date, not submission 1's
+    expect(result).toEqual({
+      periods: EXPECTED_PERIODS,
+      entries: new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: new Map([
+              ['2026:monthly:1', '2026-04-18'],
               ['2026:monthly:2', null],
               ['2026:monthly:3', null]
             ])

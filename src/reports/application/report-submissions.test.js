@@ -4,6 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
@@ -193,6 +194,117 @@ describe('generateReportSubmissions (integration)', () => {
     expect(byPeriod['Jan 2026'].submittedDate).toBe(
       FIXED_DATE.toISOString().slice(0, 10)
     )
+  })
+
+  it('keeps the last submitted figures while an in-flight resubmission draft is current', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    // Submission 1 submitted with PRN figures and a note the feed must keep
+    // showing, with an in-flight submission 2 draft sitting over it
+    await seedInFlightResubmission(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      prn: {
+        issuedTonnage: 80,
+        freeTonnage: 5,
+        totalRevenue: 40000,
+        averagePricePerTonne: 500
+      },
+      supportingInformation: 'Submission 1 note to the regulator'
+    })
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+
+    const byPeriod = Object.fromEntries(
+      result.reportSubmissions.map((r) => [r.reportingPeriod, r])
+    )
+    const janRow = byPeriod['Jan 2026']
+
+    // Date and submitter come from the last submitted report, not the draft
+    expect(janRow.submittedDate).toBe(FIXED_DATE.toISOString().slice(0, 10))
+    expect(janRow.submittedBy).toBe('Jane Smith')
+    // Tonnage/PRN figures and the note to the regulator likewise reflect
+    // submission 1, not the empty draft
+    expect(janRow.tonnagePrnsPernsIssued).toBe(80)
+    expect(janRow.freeTonnagePrnsPerns).toBe(5)
+    expect(janRow.totalRevenuePrnsPerns).toBe(40000)
+    expect(janRow.averagePrnPernPricePerTonne).toBe(500)
+    expect(janRow.noteToRegulator).toBe('Submission 1 note to the regulator')
+  })
+
+  it('shows the latest submitted figures once a resubmission has itself been submitted', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    // Submission 1: submitted, with the original PRN figures and note
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      prn: {
+        issuedTonnage: 80,
+        freeTonnage: 5,
+        totalRevenue: 40000,
+        averagePricePerTonne: 500
+      },
+      supportingInformation: 'Note on the original submission'
+    })
+
+    // Submission 2: a correction, itself submitted a day later with revised
+    // figures and note (April has not yet ended, so the period set is unchanged)
+    vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      submissionNumber: 2,
+      prn: {
+        issuedTonnage: 120,
+        freeTonnage: 8,
+        totalRevenue: 60000,
+        averagePricePerTonne: 500
+      },
+      supportingInformation: 'Note on the corrected submission'
+    })
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+
+    const byPeriod = Object.fromEntries(
+      result.reportSubmissions.map((r) => [r.reportingPeriod, r])
+    )
+
+    // Advancing the clock to 18 Apr must not change the applicable period set:
+    // April has not yet ended, so no Apr row appears
+    expect(Object.keys(byPeriod).sort()).toEqual([
+      'Feb 2026',
+      'Jan 2026',
+      'Mar 2026'
+    ])
+
+    const janRow = byPeriod['Jan 2026']
+
+    // The correction's date, submitter, revised figures and note win over
+    // submission 1's
+    expect(janRow.submittedDate).toBe('2026-04-18')
+    expect(janRow.submittedBy).toBe('Jane Smith')
+    expect(janRow.tonnagePrnsPernsIssued).toBe(120)
+    expect(janRow.freeTonnagePrnsPerns).toBe(8)
+    expect(janRow.totalRevenuePrnsPerns).toBe(60000)
+    expect(janRow.noteToRegulator).toBe('Note on the corrected submission')
   })
 })
 

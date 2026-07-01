@@ -169,7 +169,7 @@ function buildRow(
     dueDate: mergedPeriod.dueDate,
     submittedDate,
     submittedBy,
-    ...buildTonnageFields(mergedPeriod.report)
+    ...buildTonnageFields(mergedPeriod.submittedReport)
   }
 }
 
@@ -197,15 +197,15 @@ async function buildSubmissionRows(
     )
 
     return merged.map((mergedPeriod) => {
-      const report = mergedPeriod.report
+      const submittedReport = mergedPeriod.submittedReport
       return buildRow(
         org,
         registration,
         cadence,
         mergedPeriod,
         accreditationNumber,
-        report?.submittedAt?.slice(0, 10) ?? '',
-        report?.submittedBy?.name ?? ''
+        submittedReport?.submittedAt?.slice(0, 10) ?? '',
+        submittedReport?.submittedBy?.name ?? ''
       )
     })
   })

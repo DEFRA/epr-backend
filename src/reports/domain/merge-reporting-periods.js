@@ -2,6 +2,27 @@
  * @import { PeriodicReport, ReportSummary } from '../repository/port.js'
  */
 
+import { REPORT_STATUS } from './report-status.js'
+
+/**
+ * Selects the latest submitted report for a period slot.
+ *
+ * The slot's reports are ordered by submissionNumber descending (current is the
+ * highest), so the first submitted report found is the most recent one. An
+ * in-flight resubmission draft sits in `current` and is skipped, so it never
+ * masks the last submitted report.
+ *
+ * @param {{ current: ReportSummary | null, previousSubmissions: ReportSummary[] }} slot
+ * @returns {ReportSummary | null}
+ */
+function selectLatestSubmittedReport(slot) {
+  return (
+    [slot.current, ...slot.previousSubmissions].find(
+      (report) => report?.status === REPORT_STATUS.SUBMITTED
+    ) ?? null
+  )
+}
+
 /**
  * Indexes persisted periodic-report slots by "year:period" key for a given cadence.
  * @param {PeriodicReport[]} periodicReports
@@ -38,15 +59,21 @@ function indexPersistedSlots(periodicReports, cadence) {
  *   dueDate: string;
  *   submissionNumber: number;
  *   report: ReportSummary | null;
+ *   submittedReport: ReportSummary | null;
  * }} MergedPeriod
+ *
+ * `report` is the current report and MAY be an unsubmitted in-flight draft. Do
+ * not use it for public-facing or regulator output: read `submittedReport` (the
+ * latest submitted report) for anything a resubmission draft must not blank out.
  */
 
 /**
  * Merges computed reporting periods with persisted periodic-report slots.
  *
  * For each period:
- * - If a persisted slot exists with a non-null current report, include report: { id, status }
- * - If no persisted slot or current is null, set report: null
+ * - `report` is the current report (highest submissionNumber), or null
+ * - `submittedReport` is the latest submitted report, so an in-flight
+ *   resubmission draft in `report` never masks the last submitted figures
  * - Periods with active drafts that aren't in the computed set are appended
  *
  * @param {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string}>} computedPeriods
@@ -73,7 +100,8 @@ export function mergeReportingPeriods(
       endDate: cp.endDate,
       dueDate: cp.dueDate,
       submissionNumber: slot?.current?.submissionNumber ?? 1,
-      report: slot?.current ?? null
+      report: slot?.current ?? null,
+      submittedReport: slot ? selectLatestSubmittedReport(slot) : null
     })
   }
 
@@ -89,7 +117,8 @@ export function mergeReportingPeriods(
       endDate: slot.endDate,
       dueDate: slot.dueDate,
       submissionNumber: slot.current.submissionNumber,
-      report: slot.current
+      report: slot.current,
+      submittedReport: selectLatestSubmittedReport(slot)
     })
   }
 

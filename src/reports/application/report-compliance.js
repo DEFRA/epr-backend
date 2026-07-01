@@ -92,7 +92,7 @@ export async function generateReportCompliance(
       for (const mergedPeriod of merged) {
         submittedDates.set(
           `${mergedPeriod.year}:${cadence}:${mergedPeriod.period}`,
-          mergedPeriod.report?.submittedAt?.slice(0, 10) ?? null
+          mergedPeriod.submittedReport?.submittedAt?.slice(0, 10) ?? null
         )
       }
     }
