@@ -96,6 +96,59 @@ describe('findDuplicateBusinessEvents', () => {
     expect(prn).toHaveLength(0)
   })
 
+  it('does not flag the same PRN event kind across different partitions', async (/** @type {*} */ {
+    streamCollection
+  }) => {
+    await streamCollection.insertMany([
+      buildPrnCreatedEvent({
+        registrationId: 'reg-1',
+        number: 1,
+        payload: { prnId: 'prn-1', amount: 50 }
+      }),
+      buildPrnCreatedEvent({
+        registrationId: 'reg-2',
+        number: 1,
+        payload: { prnId: 'prn-1', amount: 50 }
+      })
+    ])
+
+    const { prn } = await findDuplicateBusinessEvents(streamCollection)
+
+    expect(prn).toHaveLength(0)
+  })
+
+  it('sorts findings by descending count so the worst duplication surfaces first', async (/** @type {*} */ {
+    streamCollection
+  }) => {
+    await streamCollection.insertMany([
+      buildPrnCreatedEvent({
+        number: 1,
+        payload: { prnId: 'prn-twice', amount: 50 }
+      }),
+      buildPrnCreatedEvent({
+        number: 2,
+        payload: { prnId: 'prn-twice', amount: 50 }
+      }),
+      buildPrnCreatedEvent({
+        number: 3,
+        payload: { prnId: 'prn-thrice', amount: 50 }
+      }),
+      buildPrnCreatedEvent({
+        number: 4,
+        payload: { prnId: 'prn-thrice', amount: 50 }
+      }),
+      buildPrnCreatedEvent({
+        number: 5,
+        payload: { prnId: 'prn-thrice', amount: 50 }
+      })
+    ])
+
+    const { prn } = await findDuplicateBusinessEvents(streamCollection)
+
+    expect(prn.map((group) => group.count)).toEqual([3, 2])
+    expect(prn[0]._id.prnId).toBe('prn-thrice')
+  })
+
   it('flags a summary-log submission that appears more than once in a partition', async (/** @type {*} */ {
     streamCollection
   }) => {

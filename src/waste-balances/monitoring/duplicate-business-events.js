@@ -72,11 +72,14 @@ export const duplicateSummaryLogEventsPipeline = () => [
 /**
  * Read-only sweep of the waste-balance event stream for duplicate business
  * events — the signature of the pre-optimistic-concurrency append path writing
- * two events for one action. Runs both pipelines against the given collection.
+ * two events for one action. Runs both pipelines against the given collection
+ * and returns the flagged groups. The aggregations run server-side, so only the
+ * duplicate groups come back rather than the whole collection.
  *
- * To run through the CDP terminal (`/query-cdp-mongodb`), paste each pipeline
- * into mongosh:
- *   db.getCollection("waste-balance-events").aggregate(<pipeline>)
+ * The startup diagnostic `run-waste-balance-duplicate-events-report` is the
+ * caller: it runs this against each environment's live data and logs the
+ * findings for review. That is the sanctioned route to production data — there
+ * is no ad-hoc production query.
  *
  * Each result row has the shape of a {@link DuplicateGroup}.
  *
