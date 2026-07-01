@@ -127,6 +127,17 @@ export const createWasteBalanceService = (streamRepository) => {
 
   return {
     /**
+     * The current balance folded from the ledger, or `null` when the ledger
+     * has no events yet. This is the read side of the same fold the commands
+     * decide against; the partition key is all it needs.
+     *
+     * @param {{ registrationId: string, accreditationId: string | null }} ledgerId
+     * @returns {Promise<import('../domain/model.js').WasteBalance | null>}
+     */
+    currentBalance: (ledgerId) =>
+      currentWasteBalance(streamRepository, ledgerId),
+
+    /**
      * Record a summary-log submission against the ledger.
      *
      * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId
