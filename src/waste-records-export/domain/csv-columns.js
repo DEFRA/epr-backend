@@ -142,6 +142,19 @@ export const buildHeaderRow = (dataFieldColumns) => [
   ...dataFieldColumns
 ]
 
+const formatReason = (r) => (r.field ? `${r.code}: ${r.field}` : r.code)
+
+const buildWasteBalanceCells = (classification) => {
+  if (!classification) {
+    return ['', '', '']
+  }
+  return [
+    String(classification.included),
+    classification.reasons.map(formatReason).join('; '),
+    classification.tonnage ?? ''
+  ]
+}
+
 /**
  * @typedef {Object} BuildDataRowInput
  * @property {Organisation} org
@@ -197,15 +210,7 @@ export const buildDataRow = ({
     accreditation?.accreditationNumber ?? '',
     record.type,
     summaryLogEntry?.submittedAt ?? '',
-    wasteBalanceClassification
-      ? String(wasteBalanceClassification.included)
-      : '',
-    wasteBalanceClassification
-      ? wasteBalanceClassification.reasons
-          .map((r) => (r.field ? `${r.code}: ${r.field}` : r.code))
-          .join('; ')
-      : '',
-    wasteBalanceClassification?.tonnage ?? '',
+    ...buildWasteBalanceCells(wasteBalanceClassification),
     String(record.rowId),
     orsDetails?.country ?? '',
     orsDetails?.siteName ?? ''
