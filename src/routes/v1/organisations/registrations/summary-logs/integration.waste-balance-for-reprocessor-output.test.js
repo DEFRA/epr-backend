@@ -144,7 +144,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'output'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
+      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         { rowId: 3001, productUkPackagingWeightProportion: 100 },
@@ -159,7 +159,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
       const balance = await getWasteBalance(
-        wasteBalancesRepository,
+        env,
         accreditationId,
         registrationId
       )
@@ -174,7 +174,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'output'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
+      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData(
         [{ rowId: 3001, productUkPackagingWeightProportion: 100 }],
@@ -196,7 +196,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       )
 
       const balance = await getWasteBalance(
-        wasteBalancesRepository,
+        env,
         accreditationId,
         registrationId
       )
@@ -211,7 +211,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'output'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
+      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         {
@@ -236,7 +236,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       )
 
       const balance = await getWasteBalance(
-        wasteBalancesRepository,
+        env,
         accreditationId,
         registrationId
       )
@@ -249,7 +249,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'output'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
+      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         {
@@ -274,7 +274,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       )
 
       const balance = await getWasteBalance(
-        wasteBalancesRepository,
+        env,
         accreditationId,
         registrationId
       )
@@ -287,7 +287,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'output'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
+      const { accreditationId, registrationId } = env
 
       // 1. Initial Submission: 100 tonnes
       const uploadData1 = createUploadData([
@@ -302,11 +302,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         uploadData1
       )
 
-      let balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      let balance = await getWasteBalance(env, accreditationId, registrationId)
       expect(balance.amount).toBe(100)
 
       // 2. Update Submission: 150 tonnes (Increase)
@@ -326,11 +322,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         uploadData2
       )
 
-      balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      balance = await getWasteBalance(env, accreditationId, registrationId)
       expect(balance.amount).toBe(150)
 
       // 3. Update Submission: 120 tonnes (Decrease)
@@ -350,11 +342,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         uploadData3
       )
 
-      balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      balance = await getWasteBalance(env, accreditationId, registrationId)
       expect(balance.amount).toBe(120)
     })
   })

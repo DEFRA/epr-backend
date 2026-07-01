@@ -7,7 +7,11 @@ import { appendToStream } from './append-to-stream.js'
 import { currentWasteBalance } from './current-waste-balance.js'
 
 const createdBy = { id: 'user-1', name: 'Test User' }
-const partition = { registrationId: 'reg-1', accreditationId: 'acc-1' }
+const partition = {
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  accreditationId: 'acc-1'
+}
 const context = (repository) => ({
   repository,
   registrationId: 'reg-1',

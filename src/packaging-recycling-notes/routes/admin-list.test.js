@@ -48,7 +48,7 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
       repositories: {
         packagingRecyclingNotesRepository: () =>
           packagingRecyclingNotesRepository,
-        wasteBalancesRepository: () => ({}),
+        wasteBalanceService: () => ({}),
         organisationsRepository: () => ({})
       }
     })
