@@ -31,6 +31,32 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  */
 
 /**
+ * Loads the summary log and asserts it is in the SUBMITTING state, throwing a
+ * PermanentError if it is missing or in any other state.
+ *
+ * @param {SubmitDependencies['summaryLogsRepository']} summaryLogsRepository
+ * @param {string} summaryLogId
+ */
+const loadSubmittingSummaryLog = async (
+  summaryLogsRepository,
+  summaryLogId
+) => {
+  const existing = await summaryLogsRepository.findById(summaryLogId)
+
+  if (!existing) {
+    throw new PermanentError(`Summary log ${summaryLogId} not found`)
+  }
+
+  if (existing.summaryLog.status !== SUMMARY_LOG_STATUS.SUBMITTING) {
+    throw new PermanentError(
+      `Summary log must be in submitting status. Current status: ${existing.summaryLog.status}`
+    )
+  }
+
+  return existing
+}
+
+/**
  * Submits a summary log by syncing its waste records and updating status.
  *
  * @param {string} summaryLogId
@@ -52,19 +78,10 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     onSummaryLogSubmittedReportHook
   } = deps
 
-  const existing = await summaryLogsRepository.findById(summaryLogId)
-
-  if (!existing) {
-    throw new PermanentError(`Summary log ${summaryLogId} not found`)
-  }
-
-  const { version, summaryLog } = existing
-
-  if (summaryLog.status !== SUMMARY_LOG_STATUS.SUBMITTING) {
-    throw new PermanentError(
-      `Summary log must be in submitting status. Current status: ${summaryLog.status}`
-    )
-  }
+  const { version, summaryLog } = await loadSubmittingSummaryLog(
+    summaryLogsRepository,
+    summaryLogId
+  )
 
   const {
     file: { id: fileId, name: filename }
