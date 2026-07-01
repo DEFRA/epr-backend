@@ -23,12 +23,17 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       }
     )
 
-    it('returns true when a report was submitted after the timestamp', async () => {
-      await createAndSubmitReport(repository, {
+    it('returns true when the timestamp is before the submission instant', async () => {
+      const reportId = await createAndSubmitReport(repository, {
         organisationId,
         registrationId
       })
+      const { status } = await repository.findReportById(reportId)
+      const oneMsBefore = new Date(
+        new Date(status.submitted.at).getTime() - 1
+      ).toISOString()
 
+      // Well before the submission.
       expect(
         await repository.hasReportSubmittedSince(
           organisationId,
@@ -36,9 +41,18 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
           BEFORE
         )
       ).toBe(true)
+
+      // One millisecond before: still strictly after -> matches (lower boundary).
+      expect(
+        await repository.hasReportSubmittedSince(
+          organisationId,
+          registrationId,
+          oneMsBefore
+        )
+      ).toBe(true)
     })
 
-    it('returns false when the submission is not strictly after the timestamp', async () => {
+    it('returns false when the timestamp is at or after the submission instant', async () => {
       const reportId = await createAndSubmitReport(repository, {
         organisationId,
         registrationId
@@ -46,7 +60,7 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       const { status } = await repository.findReportById(reportId)
       const submittedAt = status.submitted.at
 
-      // Boundary: `since` equal to the submission time must not match (strict >).
+      // Exactly at the submission instant: not strictly after (strict >).
       expect(
         await repository.hasReportSubmittedSince(
           organisationId,
@@ -55,6 +69,7 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
         )
       ).toBe(false)
 
+      // Well after the submission.
       expect(
         await repository.hasReportSubmittedSince(
           organisationId,
