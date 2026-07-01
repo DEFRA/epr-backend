@@ -120,21 +120,17 @@ const classifyPeriodStatus = (
   submittedPeriods,
   cadence
 ) => {
-  let hasAnyDate = false
+  const dates = reportingDateFields.map((field) => data[field])
 
-  for (const field of reportingDateFields) {
-    const dateValue = data[field]
-    if (!dateValue) {
-      continue
-    }
-
-    hasAnyDate = true
-    if (isDateInSubmittedPeriod(submittedPeriods, dateValue, cadence)) {
-      return PERIOD_STATUS.CLOSED
-    }
+  if (
+    dates.some(
+      (date) => date && isDateInSubmittedPeriod(submittedPeriods, date, cadence)
+    )
+  ) {
+    return PERIOD_STATUS.CLOSED
   }
 
-  return hasAnyDate ? PERIOD_STATUS.OPEN : null
+  return dates.some(Boolean) ? PERIOD_STATUS.OPEN : null
 }
 
 /**
