@@ -2,15 +2,6 @@ import { describe, it, expect, vi } from 'vitest'
 import { createConfigFeatureFlags } from './feature-flags.config.js'
 
 describe('createConfigFeatureFlags', () => {
-  it('returns true when closedPeriodAdjustments flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isClosedPeriodAdjustmentsEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.closedPeriodAdjustments'
-    )
-  })
-
   it('returns true when devEndpoints flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)

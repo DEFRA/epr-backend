@@ -527,5 +527,13 @@ function getConfig(overrides = {}) {
 
 const isProductionEnvironment = () => config.get('cdpEnvironment') === 'prod'
 const isLocalEnvironment = () => config.get('cdpEnvironment') === 'local'
+const isClosedPeriodAdjustmentsEnabled = () =>
+  config.get('featureFlags.closedPeriodAdjustments')
 
-export { config, getConfig, isLocalEnvironment, isProductionEnvironment }
+export {
+  config,
+  getConfig,
+  isClosedPeriodAdjustmentsEnabled,
+  isLocalEnvironment,
+  isProductionEnvironment
+}

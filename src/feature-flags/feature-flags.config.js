@@ -2,14 +2,11 @@
  * @returns {import('./feature-flags.port.js').FeatureFlags}
  */
 export const createConfigFeatureFlags = (config) => ({
-  isClosedPeriodAdjustmentsEnabled() {
-    return config.get('featureFlags.closedPeriodAdjustments')
+  isDevEndpointsEnabled() {
+    return config.get('featureFlags.devEndpoints')
   },
   isCopyFormFilesToS3Enabled() {
     return config.get('featureFlags.copyFormFilesToS3')
-  },
-  isDevEndpointsEnabled() {
-    return config.get('featureFlags.devEndpoints')
   },
   isFixDuplicateAccreditationLinksEnabled() {
     return config.get('featureFlags.fixDuplicateAccreditationLinks')

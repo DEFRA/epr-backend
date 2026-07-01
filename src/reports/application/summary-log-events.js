@@ -1,3 +1,4 @@
+import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   auditMarkReportsStale,
@@ -8,14 +9,12 @@ import {
  * @import { PeriodRef } from '#reports/domain/period-key.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
- * @import { FeatureFlags } from '#feature-flags/feature-flags.port.js'
  */
 
 /**
  * @typedef {{
  *   reportsRepository: ReportsRepository,
- *   systemLogsRepository: SystemLogsRepository,
- *   featureFlags: FeatureFlags
+ *   systemLogsRepository: SystemLogsRepository
  * }} SummaryLogUploadedRepositories
  *
  * @typedef {{
@@ -40,7 +39,7 @@ import {
  * @returns {OnSummaryLogUploaded}
  */
 export const createOnSummaryLogUploaded =
-  ({ reportsRepository, systemLogsRepository, featureFlags }) =>
+  ({ reportsRepository, systemLogsRepository }) =>
   async ({
     organisationId,
     registrationId,
@@ -69,7 +68,7 @@ export const createOnSummaryLogUploaded =
       })
     }
 
-    if (!featureFlags.isClosedPeriodAdjustmentsEnabled()) {
+    if (!isClosedPeriodAdjustmentsEnabled()) {
       return
     }
 

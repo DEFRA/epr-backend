@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { STALE_REASON } from '#reports/domain/stale.js'
 import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { config } from '#root/config.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
@@ -22,8 +22,9 @@ import {
 
 /**
  * @import { SummaryLogUploadedParams, SummaryLogUploadedRepositories } from './summary-log-events.js'
- * @import { FeatureFlags } from '#feature-flags/feature-flags.port.js'
  */
+
+const CLOSED_PERIOD_ADJUSTMENTS = 'featureFlags.closedPeriodAdjustments'
 
 const mockAuditMarkReportsStale = vi.fn()
 const mockAuditMarkReportsRequiringResubmission = vi.fn()
@@ -35,19 +36,16 @@ vi.mock('#reports/application/audit.js', () => ({
 }))
 
 /**
- * @param {SummaryLogUploadedParams & Omit<SummaryLogUploadedRepositories, 'featureFlags'> & { featureFlags?: FeatureFlags }} args
+ * @param {SummaryLogUploadedParams & SummaryLogUploadedRepositories} args
  */
 const onSummaryLogUploaded = ({
   reportsRepository,
   systemLogsRepository,
-  featureFlags = createInMemoryFeatureFlags({ closedPeriodAdjustments: true }),
   ...params
 }) =>
-  createOnSummaryLogUploaded({
-    reportsRepository,
-    systemLogsRepository,
-    featureFlags
-  })(params)
+  createOnSummaryLogUploaded({ reportsRepository, systemLogsRepository })(
+    params
+  )
 
 const buildSystemLogsRepository = () => ({
   insert: vi.fn().mockResolvedValue(undefined),
@@ -68,6 +66,7 @@ const closedPeriod = {
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(FIXED_NOW))
+  config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
   mockAuditMarkReportsStale.mockResolvedValue(undefined)
   mockAuditMarkReportsRequiringResubmission.mockResolvedValue(undefined)
 })
@@ -75,6 +74,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
   vi.clearAllMocks()
+  config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
 })
 
 describe('onSummaryLogUploaded', () => {
@@ -275,6 +275,7 @@ describe('onSummaryLogUploaded', () => {
   })
 
   it('does not flag resubmission when the closed-period-adjustments flag is off', async () => {
+    config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const { id: reportId } = await createAndSubmitReport(
       reportsRepositoryFactory()
@@ -286,10 +287,7 @@ describe('onSummaryLogUploaded', () => {
       summaryLogId: DEFAULT_SL_ID,
       closedPeriods: [closedPeriod],
       reportsRepository: reportsRepositoryFactory(),
-      systemLogsRepository: buildSystemLogsRepository(),
-      featureFlags: createInMemoryFeatureFlags({
-        closedPeriodAdjustments: false
-      })
+      systemLogsRepository: buildSystemLogsRepository()
     })
 
     const unchanged = await reportsRepositoryFactory().findReportById(reportId)
