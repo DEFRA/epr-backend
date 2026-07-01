@@ -16,7 +16,7 @@ export const STREAM_EVENT_KIND = Object.freeze({
 
 const kindValues = Object.values(STREAM_EVENT_KIND)
 
-const PRN_KINDS = new Set([
+export const PRN_KINDS = new Set([
   STREAM_EVENT_KIND.PRN_CREATED,
   STREAM_EVENT_KIND.PRN_ISSUED,
   STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,

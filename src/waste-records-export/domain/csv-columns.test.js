@@ -1,6 +1,8 @@
 import {
   METADATA_COLUMNS,
   SCHEMA_FIELD_NAMES,
+  OSR_COUNTRY_REVISED,
+  OSR_NAME_REVISED,
   buildDataFieldColumns,
   buildHeaderRow,
   buildDataRow
@@ -29,7 +31,16 @@ describe('csv-columns', () => {
         'Included in Waste Balance',
         'Waste Balance Exclusion Reason',
         'Waste Balance Tonnage',
-        'Row ID'
+        'Row ID',
+        'OSR Country Revised',
+        'OSR Name Revised'
+      ])
+    })
+
+    it('ends with the derived OSR columns', () => {
+      expect(METADATA_COLUMNS.slice(-2)).toEqual([
+        OSR_COUNTRY_REVISED,
+        OSR_NAME_REVISED
       ])
     })
   })
@@ -90,7 +101,7 @@ describe('csv-columns', () => {
   })
 
   describe('buildHeaderRow', () => {
-    it('returns metadata columns followed by the supplied data field columns', () => {
+    it('returns the metadata columns followed by the supplied data field columns', () => {
       const dataFieldColumns = ['ALPHA', 'BETA']
       expect(buildHeaderRow(dataFieldColumns)).toEqual([
         ...METADATA_COLUMNS,
@@ -373,6 +384,84 @@ describe('csv-columns', () => {
       })
       expect(included[9]).toBe('true') // Included in Waste Balance
       expect(included[11]).toBe(-5.25) // Waste Balance Tonnage (numeric, can be negative)
+    })
+
+    describe('derived OSR columns', () => {
+      const countryIdx = METADATA_COLUMNS.indexOf(OSR_COUNTRY_REVISED)
+      const nameIdx = METADATA_COLUMNS.indexOf(OSR_NAME_REVISED)
+
+      const overseasSites = {
+        '001': {
+          validFrom: new Date('2026-01-01'),
+          siteName: 'Acme Recycling',
+          country: 'Germany'
+        }
+      }
+
+      it('populates OSR_COUNTRY_REVISED and OSR_NAME_REVISED from the site matched by OSR_ID', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({
+            data: { ...recordFixture.data, OSR_ID: '001' }
+          }),
+          overseasSites
+        })
+        expect(row[countryIdx]).toBe('Germany')
+        expect(row[nameIdx]).toBe('Acme Recycling')
+      })
+
+      it('zero-pads OSR_ID before looking up the approved site', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({ data: { ...recordFixture.data, OSR_ID: 1 } }),
+          overseasSites
+        })
+        expect(row[countryIdx]).toBe('Germany')
+        expect(row[nameIdx]).toBe('Acme Recycling')
+      })
+
+      it('leaves both derived columns blank when the record has no OSR_ID', () => {
+        const row = buildDataRow({ ...baseInput, overseasSites })
+        expect(row[countryIdx]).toBe('')
+        expect(row[nameIdx]).toBe('')
+      })
+
+      it('leaves both derived columns blank when OSR_ID has no matching approved site', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({
+            data: { ...recordFixture.data, OSR_ID: '999' }
+          }),
+          overseasSites
+        })
+        expect(row[countryIdx]).toBe('')
+        expect(row[nameIdx]).toBe('')
+      })
+
+      it('leaves both derived columns blank when the matched site has null name and country', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({
+            data: { ...recordFixture.data, OSR_ID: '001' }
+          }),
+          overseasSites: {
+            '001': { validFrom: null, siteName: null, country: null }
+          }
+        })
+        expect(row[countryIdx]).toBe('')
+        expect(row[nameIdx]).toBe('')
+      })
+
+      it('leaves both derived columns blank when no overseas-sites context is supplied', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({
+            data: { ...recordFixture.data, OSR_ID: '001' }
+          })
+        })
+        expect(row[countryIdx]).toBe('')
+        expect(row[nameIdx]).toBe('')
+      })
     })
   })
 })
