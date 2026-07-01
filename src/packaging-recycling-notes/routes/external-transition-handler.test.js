@@ -12,7 +12,6 @@ import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { config } from '#root/config.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -125,9 +124,6 @@ const startServer = async ({ currentStatus, events }) => {
           buildPrn(currentStatus)
         ]),
       streamRepository: () => streamRepository,
-      wasteBalancesRepository: createWasteBalancesRepository({
-        streamRepository
-      }),
       organisationsRepository: () => ({})
     },
     featureFlags: createInMemoryFeatureFlags()
