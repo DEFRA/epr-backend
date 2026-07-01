@@ -1,7 +1,6 @@
 import {
   METADATA_COLUMNS,
   SCHEMA_FIELD_NAMES,
-  DERIVED_OSR_COLUMNS,
   OSR_COUNTRY_REVISED,
   OSR_NAME_REVISED,
   buildDataFieldColumns,
@@ -32,7 +31,16 @@ describe('csv-columns', () => {
         'Included in Waste Balance',
         'Waste Balance Exclusion Reason',
         'Waste Balance Tonnage',
-        'Row ID'
+        'Row ID',
+        'OSR_COUNTRY_REVISED',
+        'OSR_NAME_REVISED'
+      ])
+    })
+
+    it('ends with the derived OSR columns', () => {
+      expect(METADATA_COLUMNS.slice(-2)).toEqual([
+        OSR_COUNTRY_REVISED,
+        OSR_NAME_REVISED
       ])
     })
   })
@@ -93,19 +101,13 @@ describe('csv-columns', () => {
   })
 
   describe('buildHeaderRow', () => {
-    it('returns metadata columns, the supplied data field columns, then the derived OSR columns', () => {
+    it('returns the metadata columns followed by the supplied data field columns', () => {
       const dataFieldColumns = ['ALPHA', 'BETA']
       expect(buildHeaderRow(dataFieldColumns)).toEqual([
         ...METADATA_COLUMNS,
         'ALPHA',
-        'BETA',
-        ...DERIVED_OSR_COLUMNS
+        'BETA'
       ])
-    })
-
-    it('appends OSR_COUNTRY_REVISED then OSR_NAME_REVISED as the final columns', () => {
-      const header = buildHeaderRow([])
-      expect(header.slice(-2)).toEqual([OSR_COUNTRY_REVISED, OSR_NAME_REVISED])
     })
   })
 
@@ -219,13 +221,9 @@ describe('csv-columns', () => {
       dataFieldColumns
     }
 
-    it('produces a row whose length matches metadata + dataFieldColumns + derived OSR columns', () => {
+    it('produces a row whose length matches metadata + dataFieldColumns', () => {
       const row = buildDataRow(baseInput)
-      expect(row.length).toBe(
-        METADATA_COLUMNS.length +
-          dataFieldColumns.length +
-          DERIVED_OSR_COLUMNS.length
-      )
+      expect(row.length).toBe(METADATA_COLUMNS.length + dataFieldColumns.length)
     })
 
     it('formats the metadata prefix correctly', () => {
@@ -389,11 +387,8 @@ describe('csv-columns', () => {
     })
 
     describe('derived OSR columns', () => {
-      const derivedBase = METADATA_COLUMNS.length + dataFieldColumns.length
-      const countryIdx =
-        derivedBase + DERIVED_OSR_COLUMNS.indexOf(OSR_COUNTRY_REVISED)
-      const nameIdx =
-        derivedBase + DERIVED_OSR_COLUMNS.indexOf(OSR_NAME_REVISED)
+      const countryIdx = METADATA_COLUMNS.indexOf(OSR_COUNTRY_REVISED)
+      const nameIdx = METADATA_COLUMNS.indexOf(OSR_NAME_REVISED)
 
       const overseasSites = {
         '001': {
