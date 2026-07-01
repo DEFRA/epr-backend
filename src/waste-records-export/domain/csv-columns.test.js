@@ -358,6 +358,16 @@ describe('csv-columns', () => {
       expect(row[8]).toBe('')
     })
 
+    it('emits empty WB columns when wasteBalanceClassification is null', () => {
+      const row = buildDataRow({
+        ...baseInput,
+        wasteBalanceClassification: null
+      })
+      expect(row[9]).toBe('') // Included in Waste Balance
+      expect(row[10]).toBe('') // Waste Balance Exclusion Reason
+      expect(row[11]).toBe('') // Waste Balance Tonnage
+    })
+
     it('emits waste balance columns from the classification', () => {
       const excluded = buildDataRow({
         ...baseInput,

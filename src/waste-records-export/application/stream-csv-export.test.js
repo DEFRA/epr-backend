@@ -286,8 +286,19 @@ describe('streamCsvExport', () => {
   it('builds the ORS context once per registration from the pre-loaded sites map', async () => {
     const validFrom = new Date('2026-01-01')
     const org = baseOrg({
+      accreditations: [
+        {
+          id: 'acc-1',
+          status: 'approved',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: []
+        }
+      ],
       registrations: [
         baseRegistration({
+          accreditation: null,
+          accreditationId: 'acc-1',
           overseasSites: {
             '001': { overseasSiteId: 'site-a' }
           }
@@ -645,6 +656,38 @@ describe('streamCsvExport', () => {
     expect(out).toHaveLength(3)
     expect(out[1].trim().split(',')[12]).toBe('9')
     expect(out[2].trim().split(',')[12]).toBe('10')
+  })
+
+  it('emits empty WB columns for an operator with a cancelled accreditation', async () => {
+    const cancelledAccreditation = {
+      id: 'acc-1',
+      status: 'cancelled',
+      accreditationNumber: 'ACC-CAN-1',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    }
+    const org = baseOrg({
+      accreditations: [cancelledAccreditation],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([reprocessorReceivedRecord()])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[5]).toBe('No') // Accredited
+    expect(cells[9]).toBe('') // Included in Waste Balance
+    expect(cells[10]).toBe('') // Waste Balance Exclusion Reason
+    expect(cells[11]).toBe('') // Waste Balance Tonnage
   })
 
   it('treats a missing accreditation as registered-only', async () => {

@@ -145,7 +145,7 @@ export const buildHeaderRow = (dataFieldColumns) => [
  * @property {Accreditation | null} accreditation
  * @property {WasteRecord} record
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
- * @property {WasteBalanceClassification} wasteBalanceClassification
+ * @property {WasteBalanceClassification | null} wasteBalanceClassification
  * @property {Record<string, import('./overseas-sites-context.js').OverseasSiteContextEntry>} [overseasSites]
  * @property {string[]} dataFieldColumns
  */
@@ -193,11 +193,15 @@ export const buildDataRow = ({
     accreditation?.accreditationNumber ?? '',
     record.type,
     summaryLogEntry?.submittedAt ?? '',
-    wasteBalanceClassification.included ? 'true' : 'false',
-    wasteBalanceClassification.reasons
-      .map((r) => (r.field ? `${r.code}: ${r.field}` : r.code))
-      .join('; '),
-    wasteBalanceClassification.tonnage ?? '',
+    wasteBalanceClassification
+      ? String(wasteBalanceClassification.included)
+      : '',
+    wasteBalanceClassification
+      ? wasteBalanceClassification.reasons
+          .map((r) => (r.field ? `${r.code}: ${r.field}` : r.code))
+          .join('; ')
+      : '',
+    wasteBalanceClassification?.tonnage ?? '',
     String(record.rowId),
     orsDetails?.country ?? '',
     orsDetails?.siteName ?? ''
