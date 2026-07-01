@@ -281,6 +281,15 @@ describe('generateReportSubmissions (integration)', () => {
     const byPeriod = Object.fromEntries(
       result.reportSubmissions.map((r) => [r.reportingPeriod, r])
     )
+
+    // Advancing the clock to 18 Apr must not change the applicable period set:
+    // April has not yet ended, so no Apr row appears
+    expect(Object.keys(byPeriod).sort()).toEqual([
+      'Feb 2026',
+      'Jan 2026',
+      'Mar 2026'
+    ])
+
     const janRow = byPeriod['Jan 2026']
 
     // The correction's date, submitter and revised figures win over submission 1's
