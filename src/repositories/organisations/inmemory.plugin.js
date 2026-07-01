@@ -1,5 +1,5 @@
 import { createInMemoryOrganisationsRepository } from './inmemory.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
  * @param {Object[]} [initialOrganisations]
@@ -14,7 +14,7 @@ export function createInMemoryOrganisationsRepositoryPlugin(
   return {
     name: 'organisationsRepository',
     register: (server) => {
-      registerRepository(server, 'organisationsRepository', () => repository)
+      registerDependency(server, 'organisationsRepository', () => repository)
     }
   }
 }

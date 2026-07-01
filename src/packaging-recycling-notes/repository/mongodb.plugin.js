@@ -1,6 +1,6 @@
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { createPrnVisibilityFilter } from '#packaging-recycling-notes/application/prn-visibility-filter.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 
 export const packagingRecyclingNotesRepositoryPlugin = {
@@ -22,7 +22,7 @@ export const packagingRecyclingNotesRepositoryPlugin = {
       excludeOrganisationIds
     )
 
-    registerRepository(server, 'packagingRecyclingNotesRepository', (request) =>
+    registerDependency(server, 'packagingRecyclingNotesRepository', (request) =>
       createRepository(request.logger)
     )
   }

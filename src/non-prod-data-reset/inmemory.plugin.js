@@ -1,4 +1,4 @@
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 /** @import { NonProdDataReset } from './mongodb.js' */
 
@@ -17,6 +17,6 @@ const noopReset = {
 export const createInMemoryNonProdDataResetPlugin = () => ({
   name: 'nonProdDataReset',
   register: (server) => {
-    registerRepository(server, 'nonProdDataReset', () => noopReset)
+    registerDependency(server, 'nonProdDataReset', () => noopReset)
   }
 })

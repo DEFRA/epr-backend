@@ -1,4 +1,4 @@
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import { createOverseasSitesRepository } from './mongodb.js'
 
 export const overseasSitesRepositoryPlugin = {
@@ -13,6 +13,6 @@ export const overseasSitesRepositoryPlugin = {
 
     const createRepository = await createOverseasSitesRepository(db)
 
-    registerRepository(server, 'overseasSitesRepository', createRepository)
+    registerDependency(server, 'overseasSitesRepository', createRepository)
   }
 }

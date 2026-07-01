@@ -1,5 +1,5 @@
 import { createInMemoryPublicRegisterRepository } from './inmemory.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
  * @param {Object} [config]
@@ -11,7 +11,7 @@ export function createInMemoryPublicRegisterRepositoryPlugin(config) {
   return {
     name: 'publicRegisterRepository',
     register: (server) => {
-      registerRepository(server, 'publicRegisterRepository', () => repository)
+      registerDependency(server, 'publicRegisterRepository', () => repository)
     }
   }
 }

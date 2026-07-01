@@ -6,6 +6,8 @@
  * @import {LockManager} from 'mongo-locks'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {WasteBalanceStreamRepository} from '#waste-balances/repository/stream-port.js'
+ * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService
  */
 
 /**
@@ -61,6 +63,8 @@
  *  logger: TypedLogger,
  *  organisationsRepository: OrganisationsRepository,
  *  systemLogsRepository: SystemLogsRepository,
+ *  streamRepository: WasteBalanceStreamRepository,
+ *  wasteBalanceService: WasteBalanceService,
  *  payload: T,
  *  server: HapiServer,
  *  featureFlags: FeatureFlags

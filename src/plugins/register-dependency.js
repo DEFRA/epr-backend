@@ -1,5 +1,5 @@
 /**
- * Registers a repository on both server.app and request objects.
+ * Registers a named dependency on both server.app and request objects.
  *
  * - server.app[name]: Created once at startup using server.logger.
  *   Use this for background jobs (queue consumers, workers) that run outside
@@ -10,9 +10,9 @@
  *
  * @param {import('@hapi/hapi').Server} server - Hapi server instance
  * @param {string} name - Property name to register (e.g. 'organisationsRepository')
- * @param {(request: {logger: import('#common/hapi-types.js').TypedLogger}) => unknown} getInstance - Factory function that returns the repository instance
+ * @param {(request: {logger: import('#common/hapi-types.js').TypedLogger}) => unknown} getInstance - Factory function that returns the dependency instance
  */
-export const registerRepository = (server, name, getInstance) => {
+export const registerDependency = (server, name, getInstance) => {
   // Register on server.app for background jobs (using server.logger)
   server.app[name] = getInstance({ logger: server.logger })
 
