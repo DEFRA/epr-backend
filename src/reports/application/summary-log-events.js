@@ -8,12 +8,14 @@ import {
  * @import { PeriodRef } from '#reports/domain/period-key.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { FeatureFlags } from '#feature-flags/feature-flags.port.js'
  */
 
 /**
  * @typedef {{
  *   reportsRepository: ReportsRepository,
- *   systemLogsRepository: SystemLogsRepository
+ *   systemLogsRepository: SystemLogsRepository,
+ *   featureFlags: FeatureFlags
  * }} SummaryLogUploadedRepositories
  *
  * @typedef {{
@@ -38,7 +40,7 @@ import {
  * @returns {OnSummaryLogUploaded}
  */
 export const createOnSummaryLogUploaded =
-  ({ reportsRepository, systemLogsRepository }) =>
+  ({ reportsRepository, systemLogsRepository, featureFlags }) =>
   async ({
     organisationId,
     registrationId,
@@ -65,6 +67,10 @@ export const createOnSummaryLogUploaded =
         registrationId,
         reportsMarkedStale
       })
+    }
+
+    if (!featureFlags.isClosedPeriodAdjustmentsEnabled()) {
+      return
     }
 
     const reportsRequiringResubmission =

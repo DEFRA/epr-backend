@@ -2,6 +2,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { STALE_REASON } from '#reports/domain/stale.js'
 import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
@@ -21,6 +22,7 @@ import {
 
 /**
  * @import { SummaryLogUploadedParams, SummaryLogUploadedRepositories } from './summary-log-events.js'
+ * @import { FeatureFlags } from '#feature-flags/feature-flags.port.js'
  */
 
 const mockAuditMarkReportsStale = vi.fn()
@@ -33,16 +35,19 @@ vi.mock('#reports/application/audit.js', () => ({
 }))
 
 /**
- * @param {SummaryLogUploadedParams & SummaryLogUploadedRepositories} args
+ * @param {SummaryLogUploadedParams & Omit<SummaryLogUploadedRepositories, 'featureFlags'> & { featureFlags?: FeatureFlags }} args
  */
 const onSummaryLogUploaded = ({
   reportsRepository,
   systemLogsRepository,
+  featureFlags = createInMemoryFeatureFlags({ closedPeriodAdjustments: true }),
   ...params
 }) =>
-  createOnSummaryLogUploaded({ reportsRepository, systemLogsRepository })(
-    params
-  )
+  createOnSummaryLogUploaded({
+    reportsRepository,
+    systemLogsRepository,
+    featureFlags
+  })(params)
 
 const buildSystemLogsRepository = () => ({
   insert: vi.fn().mockResolvedValue(undefined),
@@ -262,6 +267,29 @@ describe('onSummaryLogUploaded', () => {
       summaryLogId: DEFAULT_SL_ID,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
+    })
+
+    const unchanged = await reportsRepositoryFactory().findReportById(reportId)
+    expect(unchanged.resubmissionRequired).toBeUndefined()
+    expect(mockAuditMarkReportsRequiringResubmission).not.toHaveBeenCalled()
+  })
+
+  it('does not flag resubmission when the closed-period-adjustments flag is off', async () => {
+    const reportsRepositoryFactory = createInMemoryReportsRepository()
+    const { id: reportId } = await createAndSubmitReport(
+      reportsRepositoryFactory()
+    )
+
+    await onSummaryLogUploaded({
+      organisationId: DEFAULT_ORG_ID,
+      registrationId: DEFAULT_REG_ID,
+      summaryLogId: DEFAULT_SL_ID,
+      closedPeriods: [closedPeriod],
+      reportsRepository: reportsRepositoryFactory(),
+      systemLogsRepository: buildSystemLogsRepository(),
+      featureFlags: createInMemoryFeatureFlags({
+        closedPeriodAdjustments: false
+      })
     })
 
     const unchanged = await reportsRepositoryFactory().findReportById(reportId)

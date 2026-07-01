@@ -3,6 +3,9 @@
  * @returns {import('./feature-flags.port.js').FeatureFlags}
  */
 export const createInMemoryFeatureFlags = (flags = {}) => ({
+  isClosedPeriodAdjustmentsEnabled() {
+    return flags.closedPeriodAdjustments ?? false
+  },
   isCopyFormFilesToS3Enabled() {
     return flags.copyFormFilesToS3 ?? false
   },

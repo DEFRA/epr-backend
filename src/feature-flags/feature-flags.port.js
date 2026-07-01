@@ -1,15 +1,17 @@
 /**
  * @typedef {Object} FeatureFlags
- * @property {() => boolean} isDevEndpointsEnabled
+ * @property {() => boolean} isClosedPeriodAdjustmentsEnabled
  * @property {() => boolean} isCopyFormFilesToS3Enabled
+ * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isFixDuplicateAccreditationLinksEnabled
  * @property {() => boolean} isWasteRecordStatesEnabled
  */
 
 /**
  * @typedef {Object} FeatureFlagOverrides
- * @property {boolean} [devEndpoints]
+ * @property {boolean} [closedPeriodAdjustments]
  * @property {boolean} [copyFormFilesToS3]
+ * @property {boolean} [devEndpoints]
  * @property {boolean} [fixDuplicateAccreditationLinks]
  * @property {boolean} [wasteRecordStates]
  */

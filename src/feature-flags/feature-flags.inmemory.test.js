@@ -2,6 +2,21 @@ import { describe, it, expect } from 'vitest'
 import { createInMemoryFeatureFlags } from './feature-flags.inmemory.js'
 
 describe('createInMemoryFeatureFlags', () => {
+  it('returns true when closedPeriodAdjustments flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ closedPeriodAdjustments: true })
+    expect(flags.isClosedPeriodAdjustmentsEnabled()).toBe(true)
+  })
+
+  it('returns false when closedPeriodAdjustments flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ closedPeriodAdjustments: false })
+    expect(flags.isClosedPeriodAdjustmentsEnabled()).toBe(false)
+  })
+
+  it('returns false when closedPeriodAdjustments flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isClosedPeriodAdjustmentsEnabled()).toBe(false)
+  })
+
   it('returns true when copyFormFilesToS3 flag is enabled', () => {
     const flags = createInMemoryFeatureFlags({ copyFormFilesToS3: true })
     expect(flags.isCopyFormFilesToS3Enabled()).toBe(true)

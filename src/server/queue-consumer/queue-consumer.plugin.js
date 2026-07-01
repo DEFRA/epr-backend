@@ -53,7 +53,8 @@ function buildConsumerDeps(server, { config }) {
 
   const onSummaryLogUploaded = createOnSummaryLogUploaded({
     reportsRepository,
-    systemLogsRepository
+    systemLogsRepository,
+    featureFlags
   })
 
   return {
