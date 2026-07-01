@@ -19,9 +19,14 @@ for (const item of ns) {
   }
 }
 
+// neostandard already registers the `n` plugin, so drop the duplicate `plugins`
+// key from eslint-plugin-n's recommended config (v18+ errors on redefinition)
+const { plugins: _n, ...nodeRecommendedModule } =
+  nodePlugin.configs['flat/recommended-module']
+
 export default [
   ...ns,
-  nodePlugin.configs['flat/recommended-module'],
+  nodeRecommendedModule,
   {
     plugins: { 'import-x': importX },
     settings: {
