@@ -1,5 +1,5 @@
 import { createSystemLogsRepository } from './inmemory.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 /** @returns {import('@hapi/hapi').Plugin<void>} */
 export function createInMemorySystemLogsRepositoryPlugin() {
@@ -8,7 +8,7 @@ export function createInMemorySystemLogsRepositoryPlugin() {
   return {
     name: 'systemLogsRepository',
     register: (server) => {
-      registerRepository(server, 'systemLogsRepository', (request) =>
+      registerDependency(server, 'systemLogsRepository', (request) =>
         factory(request.logger)
       )
     }

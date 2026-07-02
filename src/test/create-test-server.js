@@ -18,7 +18,7 @@ import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { featureFlags as featureFlagsPlugin } from '#plugins/feature-flags.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import { router } from '#plugins/router.js'
 import { getConfig } from '#root/config.js'
 
@@ -76,7 +76,7 @@ function createRepositoryPlugin(name, repositoryOrFactory) {
   return {
     name,
     register: (server) => {
-      registerRepository(server, name, (request) => {
+      registerDependency(server, name, (request) => {
         if (isFactory) {
           // Factory: call with logger (ignored if factory doesn't need it)
           return repositoryOrFactory(request.logger)

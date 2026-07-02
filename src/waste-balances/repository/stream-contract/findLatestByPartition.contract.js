@@ -25,14 +25,14 @@ export const testFindLatestByPartitionBehaviour = (it) => {
     })
 
     it('returns the only event when one exists', async () => {
-      const stored = await repository.appendEvent(
+      const [stored] = await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-single',
           accreditationId: 'acc-single',
           number: 1,
           closingBalance: { amount: 50, availableAmount: 40 }
         })
-      )
+      ])
 
       const result = await repository.findLatestByPartition(
         'reg-single',
@@ -46,7 +46,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
     })
 
     it('returns the highest-numbered event when many exist', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-many',
           accreditationId: 'acc-many',
@@ -54,8 +54,8 @@ export const testFindLatestByPartitionBehaviour = (it) => {
           payload: { summaryLogId: 'log-1', creditTotal: 100 },
           closingBalance: { amount: 10, availableAmount: 10 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-many',
           accreditationId: 'acc-many',
@@ -63,8 +63,8 @@ export const testFindLatestByPartitionBehaviour = (it) => {
           payload: { summaryLogId: 'log-2', creditTotal: 200 },
           closingBalance: { amount: 20, availableAmount: 18 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-many',
           accreditationId: 'acc-many',
@@ -72,7 +72,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
           payload: { summaryLogId: 'log-3', creditTotal: 300 },
           closingBalance: { amount: 30, availableAmount: 25 }
         })
-      )
+      ])
 
       const result = await repository.findLatestByPartition(
         'reg-many',
@@ -84,21 +84,21 @@ export const testFindLatestByPartitionBehaviour = (it) => {
     })
 
     it('isolates results by partition', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-x',
           accreditationId: 'acc-x',
           number: 1
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-y',
           accreditationId: 'acc-y',
           number: 1,
           payload: { summaryLogId: 'log-y', creditTotal: 500 }
         })
-      )
+      ])
 
       const x = await repository.findLatestByPartition('reg-x', 'acc-x')
       const y = await repository.findLatestByPartition('reg-y', 'acc-y')
@@ -110,22 +110,22 @@ export const testFindLatestByPartitionBehaviour = (it) => {
     })
 
     it('treats null and non-null accreditationId as separate streams', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-null-test',
           accreditationId: null,
           number: 1,
           closingBalance: { amount: 0, availableAmount: 0 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-null-test',
           accreditationId: 'acc-non-null',
           number: 1,
           closingBalance: { amount: 999, availableAmount: 999 }
         })
-      )
+      ])
 
       const nullStream = await repository.findLatestByPartition(
         'reg-null-test',
@@ -147,7 +147,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
     })
 
     it('round-trips high-precision amounts exactly', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-precision',
           accreditationId: 'acc-precision',
@@ -156,7 +156,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
           openingBalance: { amount: 0, availableAmount: 0 },
           closingBalance: { amount: 200.005, availableAmount: 200.005 }
         })
-      )
+      ])
 
       const result = await repository.findLatestByPartition(
         'reg-precision',

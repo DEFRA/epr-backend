@@ -3,7 +3,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { PrnNumberConflictError } from './port.js'
@@ -434,7 +434,7 @@ export function createInMemoryPackagingRecyclingNotesRepositoryPlugin(
   return {
     name: 'packagingRecyclingNotesRepository',
     register: (server) => {
-      registerRepository(
+      registerDependency(
         server,
         'packagingRecyclingNotesRepository',
         (request) => factory(request.logger)

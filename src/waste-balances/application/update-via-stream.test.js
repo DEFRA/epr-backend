@@ -246,7 +246,7 @@ describe('performUpdateViaStream', () => {
 
   describe('empty input', () => {
     it('does not touch the stream when no waste records are provided', async () => {
-      const appendSpy = vi.spyOn(streamRepository, 'appendEvent')
+      const appendSpy = vi.spyOn(streamRepository, 'appendEvents')
 
       await performUpdateViaStream({
         wasteRecords: [],
