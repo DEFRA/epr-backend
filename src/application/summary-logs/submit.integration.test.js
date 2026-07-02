@@ -23,8 +23,9 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createMockWasteBalanceService } from '#test/mock-repositories.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 const VALID_FROM = '2025-01-01'
@@ -127,7 +128,9 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     organisationsRepository,
     wasteRecordsRepository,
     wasteRecordStatesRepository: createInMemoryRowStateRepository()(),
-    wasteBalanceService: createMockWasteBalanceService(),
+    wasteBalanceService: createWasteBalanceService(
+      createInMemoryStreamRepository()()
+    ),
     featureFlags: createInMemoryFeatureFlags(),
     summaryLogExtractor,
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
