@@ -11,14 +11,15 @@ const submittedReport = (overrides = {}) => ({
   ...overrides
 })
 
-const period = (report) => ({
+const period = (report, overrides = {}) => ({
   year: 2026,
   period: 1,
   startDate: '2026-01-01',
   endDate: '2026-01-31',
   dueDate: '2026-02-20',
   submissionNumber: report?.submissionNumber ?? 1,
-  report
+  report,
+  ...overrides
 })
 
 describe('buildCalendarPeriods', () => {
@@ -49,14 +50,8 @@ describe('buildCalendarPeriods', () => {
   })
 
   it('expands each period locally, inserting the skeleton immediately after its origin', () => {
-    const flagged = {
-      year: 2026,
-      period: 1,
-      startDate: '2026-01-01',
-      endDate: '2026-01-31',
-      dueDate: '2026-02-20',
-      submissionNumber: 1,
-      report: submittedReport({
+    const flagged = period(
+      submittedReport({
         id: 'report-jan',
         resubmissionRequired: {
           uploadedAt: '2026-05-01T12:00:00.000Z',
@@ -64,27 +59,22 @@ describe('buildCalendarPeriods', () => {
           summaryLogId: 'sl-2'
         }
       })
-    }
+    )
 
-    const submitted = {
-      year: 2026,
+    const submitted = period(submittedReport({ id: 'report-feb' }), {
       period: 2,
       startDate: '2026-02-01',
       endDate: '2026-02-28',
-      dueDate: '2026-03-20',
-      submissionNumber: 1,
-      report: submittedReport({ id: 'report-feb' })
-    }
+      dueDate: '2026-03-20'
+    })
 
-    const noReport = {
+    const noReport = period(null, {
       year: 2999,
       period: 3,
       startDate: '2999-03-01',
       endDate: '2999-03-31',
-      dueDate: '2999-04-20',
-      submissionNumber: 1,
-      report: null
-    }
+      dueDate: '2999-04-20'
+    })
 
     const result = buildCalendarPeriods([flagged, submitted, noReport])
 
