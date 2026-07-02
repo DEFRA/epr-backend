@@ -177,7 +177,10 @@ describe('commandQueueConsumerPlugin', () => {
           organisationsRepository: server.app.organisationsRepository,
           wasteRecordsRepository: server.app.wasteRecordsRepository,
           wasteBalanceService: server.app.wasteBalanceService,
-          reportsRepository: server.app.reportsRepository,
+          reportsService: expect.objectContaining({
+            hasReportSubmittedSince: expect.any(Function),
+            findPeriodicReports: expect.any(Function)
+          }),
           summaryLogExtractor: expect.any(Object),
           onSummaryLogUploaded: expect.any(Function)
         },

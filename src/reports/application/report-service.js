@@ -13,6 +13,31 @@ import { errorCodes } from '#reports/enums/error-codes.js'
  */
 
 /**
+ * Application-layer facade over the reports repository for cross-module reads.
+ * Consumers outside the reports module (for example summary-logs) depend on this
+ * service rather than the repository port directly. See PAE-1686.
+ *
+ * @typedef {object} ReportsService
+ * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
+ * @property {(params: import('#reports/repository/port.js').FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
+ */
+
+/**
+ * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
+ * @returns {ReportsService}
+ */
+export const createReportsService = (reportsRepository) => ({
+  hasReportSubmittedSince: (organisationId, registrationId, since) =>
+    reportsRepository.hasReportSubmittedSince(
+      organisationId,
+      registrationId,
+      since
+    ),
+
+  findPeriodicReports: (params) => reportsRepository.findPeriodicReports(params)
+})
+
+/**
  * Finds the report ID for a specific submission number within periodic reports,
  * checking both the current slot and previous submissions.
  * @param {PeriodicReport[]} periodicReports
