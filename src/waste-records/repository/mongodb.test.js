@@ -7,7 +7,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   createMongoRowStateRepository,
   ensureRowStatesCollection,
-  WASTE_BALANCE_ROW_STATES_COLLECTION_NAME
+  SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
 } from './mongodb.js'
 import { testRowStateRepositoryContract } from './port.contract.js'
 import { buildRowStateEntry, DEFAULT_PARTITION } from './test-data.js'
@@ -24,13 +24,13 @@ const it = mongoIt.extend({
   rowStatesCollection: async (/** @type {*} */ { mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
     await ensureRowStatesCollection(database)
-    await use(database.collection(WASTE_BALANCE_ROW_STATES_COLLECTION_NAME))
+    await use(database.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME))
   },
 
   rowStateRepository: async (/** @type {*} */ { mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
     await database
-      .collection(WASTE_BALANCE_ROW_STATES_COLLECTION_NAME)
+      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
       .deleteMany({})
     const factory = await createMongoRowStateRepository(database)
     await use(factory)
@@ -44,7 +44,7 @@ describe('ensureRowStatesCollection', () => {
   beforeEach(async (/** @type {*} */ { mongoClient }) => {
     await mongoClient
       .db(DATABASE_NAME)
-      .collection(WASTE_BALANCE_ROW_STATES_COLLECTION_NAME)
+      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
       .deleteMany({})
   })
 
@@ -52,7 +52,9 @@ describe('ensureRowStatesCollection', () => {
     rowStatesCollection
   }) => {
     const indexes = await rowStatesCollection.indexes()
-    expect(indexKeyFor(indexes, 'membership')).toEqual({ summaryLogIds: 1 })
+    expect(indexKeyFor(indexes, 'summary_log_membership')).toEqual({
+      summaryLogIds: 1
+    })
   })
 
   it('creates the row-history index', async (/** @type {*} */ {
@@ -71,7 +73,7 @@ describe('ensureRowStatesCollection', () => {
     rowStatesCollection
   }) => {
     const indexes = await rowStatesCollection.indexes()
-    expect(indexKeyFor(indexes, 'waste_record_state_identity')).toEqual({
+    expect(indexKeyFor(indexes, 'summary_log_row_state_identity')).toEqual({
       organisationId: 1,
       registrationId: 1,
       accreditationId: 1,
@@ -80,7 +82,8 @@ describe('ensureRowStatesCollection', () => {
       contentHash: 1
     })
     expect(
-      indexes.find((idx) => idx.name === 'waste_record_state_identity')?.unique
+      indexes.find((idx) => idx.name === 'summary_log_row_state_identity')
+        ?.unique
     ).toBe(true)
   })
 
