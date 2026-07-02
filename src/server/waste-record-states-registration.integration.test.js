@@ -51,7 +51,7 @@ describe('waste-record-states repository registration', () => {
 
     beforeAll(async () => {
       delete process.env.FEATURE_FLAG_WASTE_RECORD_STATES
-      delete process.env.FEATURE_FLAG_WASTE_RECORD_STATES_BACKFILL
+      delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL
       server = await bootServer()
     })
 
@@ -78,7 +78,7 @@ describe('waste-record-states repository registration', () => {
 
     beforeAll(async () => {
       process.env.FEATURE_FLAG_WASTE_RECORD_STATES = 'true'
-      delete process.env.FEATURE_FLAG_WASTE_RECORD_STATES_BACKFILL
+      delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL
       server = await bootServer()
     })
 
