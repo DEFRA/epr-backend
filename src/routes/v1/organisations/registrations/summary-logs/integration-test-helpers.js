@@ -18,6 +18,7 @@ import { createInMemoryRowStateRepository } from '#waste-records/repository/inme
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createReportsService } from '#reports/application/report-service.js'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -31,17 +32,15 @@ export { asStandardUser } from '#test/inject-auth.js'
 /**
  * Reads an accreditation's waste balance from the environment's service and
  * asserts it is present, so callers can read its fields without a null guard at
- * every assertion site. The organisation is taken from the environment.
+ * every assertion site. The ledger id is taken entirely from the environment.
  *
- * @param {{ wasteBalanceService: ReturnType<typeof createWasteBalanceService>, organisationId: string }} env
- * @param {string} accreditationId
- * @param {string} registrationId
+ * @param {{ wasteBalanceService: ReturnType<typeof createWasteBalanceService>, organisationId: string, registrationId: string, accreditationId: string }} env
  */
-export const getWasteBalance = async (env, accreditationId, registrationId) => {
+export const getWasteBalance = async (env) => {
   const balance = await env.wasteBalanceService.currentBalance({
     organisationId: env.organisationId,
-    registrationId,
-    accreditationId
+    registrationId: env.registrationId,
+    accreditationId: env.accreditationId
   })
   assert(balance)
   return balance
@@ -482,7 +481,7 @@ export const createTestInfrastructure = async (
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
-    reportsRepository: /** @type {any} */ ({
+    reportsService: /** @type {any} */ ({
       findPeriodicReports: async () => []
     }),
     overseasSitesRepository,
@@ -600,7 +599,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
-    reportsRepository,
+    reportsService: createReportsService(reportsRepository),
     overseasSitesRepository,
     summaryLogExtractor: dynamicExtractor,
     logger: mockLogger

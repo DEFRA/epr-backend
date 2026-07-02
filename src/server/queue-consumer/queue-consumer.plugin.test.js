@@ -19,6 +19,8 @@ vi.mock('./ors-import-commands.js')
 const { createSqsClient } = await import('#common/helpers/sqs/sqs-client.js')
 const { createSummaryLogExtractor } =
   await import('#application/summary-logs/extractor.js')
+const { createOnSummaryLogUploaded } =
+  await import('#reports/application/summary-log-events.js')
 const { createCommandQueueConsumer } = await import('./consumer.js')
 const { summaryLogCommandHandlers } = await import('./summary-log-commands.js')
 const { orsImportCommandHandlers } = await import('./ors-import-commands.js')
@@ -65,6 +67,7 @@ describe('commandQueueConsumerPlugin', () => {
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
     vi.mocked(createSummaryLogExtractor).mockReturnValue({ extract: vi.fn() })
+    vi.mocked(createOnSummaryLogUploaded).mockReturnValue(vi.fn())
     vi.mocked(createCommandQueueConsumer).mockResolvedValue(
       /** @type {Consumer} */ (/** @type {unknown} */ (mockConsumer))
     )
@@ -174,9 +177,12 @@ describe('commandQueueConsumerPlugin', () => {
           organisationsRepository: server.app.organisationsRepository,
           wasteRecordsRepository: server.app.wasteRecordsRepository,
           wasteBalanceService: server.app.wasteBalanceService,
-          reportsRepository: server.app.reportsRepository,
+          reportsService: expect.objectContaining({
+            hasReportSubmittedSince: expect.any(Function),
+            findPeriodicReports: expect.any(Function)
+          }),
           summaryLogExtractor: expect.any(Object),
-          onSummaryLogSubmittedReportHook: expect.any(Function)
+          onSummaryLogUploaded: expect.any(Function)
         },
         [...summaryLogCommandHandlers]
       )

@@ -541,6 +541,38 @@ const performMarkSubmittedReportsRequiringResubmission = async (
 }
 
 /**
+ * Returns true when any report for the org/reg was submitted strictly after
+ * `since`. SUBMITTED is terminal and each submission is a distinct document, so
+ * the denormalised `status.submitted` slot is the single submission instant and
+ * is directly indexable.
+ *
+ * @param {Db} db
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} since - ISO timestamp
+ * @returns {Promise<boolean>}
+ */
+const performHasReportSubmittedSince = async (
+  db,
+  organisationId,
+  registrationId,
+  since
+) => {
+  // Both `at` and `since` are canonical `new Date().toISOString()` values, so the
+  // `$gt` string compare tracks chronological order (the ISO invariant this
+  // codebase relies on throughout).
+  const match = await reportsCollection(db).findOne(
+    {
+      organisationId,
+      registrationId,
+      'status.submitted.at': { $gt: since }
+    },
+    { projection: { _id: 1 } }
+  )
+  return match !== null
+}
+
+/**
  * Creates a MongoDB-backed reports repository.
  *
  * @param {Db} db
@@ -571,6 +603,8 @@ export const createReportsRepository = async (db) => {
         uploadedAt
       ),
     markSubmittedReportsRequiringResubmission: (params) =>
-      performMarkSubmittedReportsRequiringResubmission(db, params)
+      performMarkSubmittedReportsRequiringResubmission(db, params),
+    hasReportSubmittedSince: (organisationId, registrationId, since) =>
+      performHasReportSubmittedSince(db, organisationId, registrationId, since)
   })
 }

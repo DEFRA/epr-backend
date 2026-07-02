@@ -18,15 +18,15 @@ import { buildReadOrganisation } from '#repositories/organisations/contract/test
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import {
-  createMockOverseasSitesRepository,
-  createMockWasteBalanceService
-} from '#test/mock-repositories.js'
+import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -357,14 +357,18 @@ describe('Submission and placeholder tests', () => {
         wasteRecordsRepository,
         summaryLogExtractor: validationExtractor,
         logger: mockLogger,
-        reportsRepository: createInMemoryReportsRepository()(),
+        reportsService: createReportsService(
+          createInMemoryReportsRepository()()
+        ),
         overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
 
       const syncWasteRecords = syncFromSummaryLog({
         extractor: transformationExtractor,
         wasteRecordRepository: wasteRecordsRepository,
-        wasteBalanceService: createMockWasteBalanceService(),
+        wasteBalanceService: createWasteBalanceService(
+          createInMemoryStreamRepository()()
+        ),
         rowStateRepository: createInMemoryRowStateRepository()(),
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
@@ -812,7 +816,9 @@ describe('Submission and placeholder tests', () => {
         wasteRecordsRepository,
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: createInMemoryReportsRepository()(),
+        reportsService: createReportsService(
+          createInMemoryReportsRepository()()
+        ),
         overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
       const featureFlags = createInMemoryFeatureFlags()

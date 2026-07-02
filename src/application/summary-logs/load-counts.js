@@ -1,5 +1,5 @@
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { RECORD_CHANGE, determineRecordStatus } from './record-change.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
@@ -85,30 +85,6 @@ const emptyInclusionBucket = () => ({
 })
 
 /**
- * Determines the classification for a transformed record
- *
- * Classification is based on whether a version was added in this upload:
- * - added: Record was created in this upload (1 version, status CREATED, matching summaryLogId)
- * - adjusted: Record had a version added in this upload (last version has status UPDATED and matching summaryLogId)
- * - unchanged: No version was added in this upload
- *
- * @param {ValidatedWasteRecord['record']} record - The waste record
- * @param {string} summaryLogId - The current summary log ID
- * @returns {'added'|'unchanged'|'adjusted'} The classification
- */
-const determineRecordStatus = (record, summaryLogId) => {
-  const lastVersion = record.versions[record.versions.length - 1]
-
-  // Check if the last version was created in this upload
-  if (lastVersion.summaryLog?.id !== summaryLogId) {
-    return 'unchanged'
-  }
-
-  // Version was added in this upload - determine if added or adjusted
-  return lastVersion.status === VERSION_STATUS.CREATED ? 'added' : 'adjusted'
-}
-
-/**
  * Returns a new load category with the rowId added (up to MAX_ROW_IDS)
  *
  * @param {LoadCategory} category - The existing category
@@ -171,7 +147,10 @@ export const countByWasteBalanceInclusion = ({ wasteRecords, summaryLogId }) =>
   wasteRecords.reduce(
     (acc, { record, outcome }) => {
       const status = determineRecordStatus(record, summaryLogId)
-      if (outcome === ROW_OUTCOME.IGNORED && status === 'unchanged') {
+      if (
+        outcome === ROW_OUTCOME.IGNORED &&
+        status === RECORD_CHANGE.UNCHANGED
+      ) {
         return acc
       }
       const key = outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'

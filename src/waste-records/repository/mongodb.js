@@ -20,8 +20,7 @@ import { createHash } from 'node:crypto'
 
 import { validateRowStateInsert, validateRowStateRead } from './validation.js'
 
-export const WASTE_BALANCE_ROW_STATES_COLLECTION_NAME =
-  'waste-balance-row-states'
+export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
 
 /**
  * Ensures the row-states collection exists with the indexes required by the
@@ -37,9 +36,12 @@ export const WASTE_BALANCE_ROW_STATES_COLLECTION_NAME =
  * @returns {Promise<Collection>}
  */
 export async function ensureRowStatesCollection(db) {
-  const collection = db.collection(WASTE_BALANCE_ROW_STATES_COLLECTION_NAME)
+  const collection = db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
 
-  await collection.createIndex({ summaryLogIds: 1 }, { name: 'membership' })
+  await collection.createIndex(
+    { summaryLogIds: 1 },
+    { name: 'summary_log_membership' }
+  )
 
   await collection.createIndex(
     {
@@ -60,7 +62,7 @@ export async function ensureRowStatesCollection(db) {
       wasteRecordType: 1,
       contentHash: 1
     },
-    { name: 'waste_record_state_identity', unique: true }
+    { name: 'summary_log_row_state_identity', unique: true }
   )
 
   return collection

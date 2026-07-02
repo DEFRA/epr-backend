@@ -405,6 +405,33 @@ const markSubmittedReportsRequiringResubmission = async (
 }
 
 /**
+ * Returns true when any report for the org/reg was submitted strictly after
+ * `since`. SUBMITTED is terminal and each submission is a distinct document, so
+ * the denormalised `status.submitted` slot is the single submission instant.
+ *
+ * @param {Map<string, Object>} reports
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} since - ISO timestamp
+ * @returns {Promise<boolean>}
+ */
+const hasReportSubmittedSince = async (
+  reports,
+  organisationId,
+  registrationId,
+  since
+) =>
+  // Both `at` and `since` are canonical `new Date().toISOString()` values, so a
+  // lexical compare tracks chronological order (the ISO invariant this codebase
+  // relies on throughout).
+  [...reports.values()].some(
+    (report) =>
+      report.organisationId === organisationId &&
+      report.registrationId === registrationId &&
+      report.status.submitted?.at > since
+  )
+
+/**
  * Create an in-memory reports repository.
  *
  * The store is used by reference so test fixtures can seed data directly.
@@ -437,6 +464,8 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
         uploadedAt
       ),
     markSubmittedReportsRequiringResubmission: (params) =>
-      markSubmittedReportsRequiringResubmission(reports, params)
+      markSubmittedReportsRequiringResubmission(reports, params),
+    hasReportSubmittedSince: (organisationId, registrationId, since) =>
+      hasReportSubmittedSince(reports, organisationId, registrationId, since)
   })
 }

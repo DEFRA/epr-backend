@@ -35,6 +35,7 @@ import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submiss
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
+import { mongoStreamRepositoryPlugin } from '#waste-balances/repository/stream-mongodb.plugin.js'
 import { mongoWasteBalanceServicePlugin } from '#waste-balances/repository/mongodb.plugin.js'
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
@@ -44,7 +45,6 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
-import { runWasteBalanceDuplicateEventsReport } from '#server/run-waste-balance-duplicate-events-report.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -124,6 +124,7 @@ function getProductionPlugins(config) {
     mongoSummaryLogsRepositoryPlugin,
     mongoFormSubmissionsRepositoryPlugin,
     mongoWasteRecordsRepositoryPlugin,
+    mongoStreamRepositoryPlugin,
     mongoWasteBalanceServicePlugin,
     mongoSystemLogsRepositoryPlugin,
     s3UploadsRepositoryPlugin,
@@ -222,7 +223,6 @@ async function createServer(options = {}) {
     copyFormFilesToS3(server)
     runOrganisationValidationSweep(server)
     runDuplicateAccreditationLinkMigration(server)
-    runWasteBalanceDuplicateEventsReport(server)
   })
 
   return server

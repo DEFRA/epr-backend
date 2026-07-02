@@ -15,11 +15,10 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import {
-  createMockOverseasSitesRepository,
-  createMockWasteBalanceService
-} from '#test/mock-repositories.js'
+import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -245,7 +244,7 @@ describe('Repeated uploads of identical data', () => {
         wasteRecordsRepository,
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: /** @type {any} */ ({
+        reportsService: /** @type {any} */ ({
           findPeriodicReports: async () => []
         }),
         overseasSitesRepository: createMockOverseasSitesRepository({
@@ -256,7 +255,9 @@ describe('Repeated uploads of identical data', () => {
       const syncWasteRecords = syncFromSummaryLog({
         extractor: summaryLogExtractor,
         wasteRecordRepository: wasteRecordsRepository,
-        wasteBalanceService: createMockWasteBalanceService(),
+        wasteBalanceService: createWasteBalanceService(
+          createInMemoryStreamRepository()()
+        ),
         rowStateRepository: createInMemoryRowStateRepository()(),
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({

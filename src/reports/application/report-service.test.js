@@ -12,7 +12,8 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod,
-  fetchReportBySubmissionNumber
+  fetchReportBySubmissionNumber,
+  createReportsService
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
@@ -87,7 +88,9 @@ const defaultParams = () => {
     registrationId: registration.id,
     registration,
     year: 2024,
-    cadence: 'monthly',
+    cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
+      'monthly'
+    ),
     period: 1,
     submissionNumber: 1,
     overseasSitesRepository: createInMemoryOverseasSitesRepository()()
@@ -507,5 +510,45 @@ describe('report-service', () => {
         expect(report.prn?.issuedTonnage).toBe(50)
       })
     })
+  })
+})
+
+describe('createReportsService', () => {
+  it('delegates hasReportSubmittedSince to the repository and returns its result', async () => {
+    const reportsRepository = /** @type {any} */ ({
+      hasReportSubmittedSince: vi.fn().mockResolvedValue(true),
+      findPeriodicReports: vi.fn()
+    })
+    const service = createReportsService(reportsRepository)
+
+    const result = await service.hasReportSubmittedSince(
+      'org-1',
+      'reg-1',
+      '2026-07-01T00:00:00.000Z'
+    )
+
+    expect(reportsRepository.hasReportSubmittedSince).toHaveBeenCalledWith(
+      'org-1',
+      'reg-1',
+      '2026-07-01T00:00:00.000Z'
+    )
+    expect(result).toBe(true)
+  })
+
+  it('delegates findPeriodicReports to the repository and returns its result', async () => {
+    const periodicReports = [
+      { organisationId: 'org-1', registrationId: 'reg-1' }
+    ]
+    const reportsRepository = /** @type {any} */ ({
+      hasReportSubmittedSince: vi.fn(),
+      findPeriodicReports: vi.fn().mockResolvedValue(periodicReports)
+    })
+    const service = createReportsService(reportsRepository)
+
+    const params = { organisationId: 'org-1', registrationId: 'reg-1' }
+    const result = await service.findPeriodicReports(params)
+
+    expect(reportsRepository.findPeriodicReports).toHaveBeenCalledWith(params)
+    expect(result).toBe(periodicReports)
   })
 })

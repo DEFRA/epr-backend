@@ -12,6 +12,10 @@ import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
 /**
+ * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+ */
+
+/**
  * @typedef {object} SubmitDependencies
  * @property {object} logger
  * @property {object} summaryLogsRepository
@@ -20,20 +24,54 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {import('#waste-records/repository/port.js').RowStateRepository} wasteRecordStatesRepository
  * @property {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} wasteBalanceService
  * @property {import('#feature-flags/feature-flags.port.js').FeatureFlags} featureFlags
+ * @property {import('#reports/application/report-service.js').ReportsService} reportsService
  * @property {object} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#domain/summary-logs/worker/port.js').SubmitUser} user
- * @property {(organisationId: string, registrationId: string, summaryLogId: string) => Promise<void>} onSummaryLogSubmittedReportHook
+ * @property {OnSummaryLogUploaded} onSummaryLogUploaded
  */
 
 /**
- * Submits a summary log by syncing its waste records and updating status.
+ * Fails submission if any report for this registration was submitted since the
+ * log's createdAt, closing the validate-to-submit race where a period closes
+ * after the operator confirmed the preview. Deliberately blunt: it fires on any
+ * submission, not only periods this log touches. See PAE-1686.
+ *
+ * @param {object} summaryLog
+ * @param {string} summaryLogId
+ * @param {import('#reports/application/report-service.js').ReportsService} reportsService
+ * @returns {Promise<void>}
+ */
+const assertNoReportSubmittedSinceCreation = async (
+  summaryLog,
+  summaryLogId,
+  reportsService
+) => {
+  const reportSubmittedSinceCreation =
+    await reportsService.hasReportSubmittedSince(
+      summaryLog.organisationId,
+      summaryLog.registrationId,
+      summaryLog.createdAt
+    )
+
+  if (reportSubmittedSinceCreation) {
+    throw new PermanentError(
+      `Summary log ${summaryLogId} is stale: a report was submitted for this registration after the summary log was created`
+    )
+  }
+}
+
+/**
+ * Syncs the summary log's waste records, transitions it to SUBMITTED and records
+ * the submission metrics.
  *
  * @param {string} summaryLogId
+ * @param {number} version
+ * @param {object} summaryLog
  * @param {SubmitDependencies} deps
  * @returns {Promise<void>}
  */
-export const submitSummaryLog = async (summaryLogId, deps) => {
+const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
   const {
     logger,
     summaryLogsRepository,
@@ -45,22 +83,8 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     summaryLogExtractor,
     overseasSitesRepository,
     user,
-    onSummaryLogSubmittedReportHook
+    onSummaryLogUploaded
   } = deps
-
-  const existing = await summaryLogsRepository.findById(summaryLogId)
-
-  if (!existing) {
-    throw new PermanentError(`Summary log ${summaryLogId} not found`)
-  }
-
-  const { version, summaryLog } = existing
-
-  if (summaryLog.status !== SUMMARY_LOG_STATUS.SUBMITTING) {
-    throw new PermanentError(
-      `Summary log must be in submitting status. Current status: ${summaryLog.status}`
-    )
-  }
 
   const {
     file: { id: fileId, name: filename }
@@ -98,11 +122,12 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
   await summaryLogMetrics.recordWasteRecordsCreated({ processingType }, created)
   await summaryLogMetrics.recordWasteRecordsUpdated({ processingType }, updated)
 
-  await onSummaryLogSubmittedReportHook(
-    summaryLog.organisationId,
-    summaryLog.registrationId,
-    summaryLogId
-  )
+  await onSummaryLogUploaded({
+    organisationId: summaryLog.organisationId,
+    registrationId: summaryLog.registrationId,
+    summaryLogId,
+    closedPeriods: summaryLog.loadsByReportingPeriod?.closedPeriods ?? []
+  })
 
   await summaryLogsRepository.update(
     summaryLogId,
@@ -122,4 +147,37 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
       action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
     }
   })
+}
+
+/**
+ * Submits a summary log by syncing its waste records and updating status.
+ *
+ * @param {string} summaryLogId
+ * @param {SubmitDependencies} deps
+ * @returns {Promise<void>}
+ */
+export const submitSummaryLog = async (summaryLogId, deps) => {
+  const { summaryLogsRepository, reportsService } = deps
+
+  const existing = await summaryLogsRepository.findById(summaryLogId)
+
+  if (!existing) {
+    throw new PermanentError(`Summary log ${summaryLogId} not found`)
+  }
+
+  const { version, summaryLog } = existing
+
+  if (summaryLog.status !== SUMMARY_LOG_STATUS.SUBMITTING) {
+    throw new PermanentError(
+      `Summary log must be in submitting status. Current status: ${summaryLog.status}`
+    )
+  }
+
+  await assertNoReportSubmittedSinceCreation(
+    summaryLog,
+    summaryLogId,
+    reportsService
+  )
+
+  await syncAndFinalise(summaryLogId, version, summaryLog, deps)
 }

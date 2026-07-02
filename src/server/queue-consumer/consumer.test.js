@@ -13,6 +13,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createReportsService } from '#reports/application/report-service.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -47,8 +49,9 @@ describe('createCommandQueueConsumer', () => {
   let organisationsRepository
   let wasteRecordsRepository
   let wasteBalanceService
+  let reportsRepository
   let summaryLogExtractor
-  let onSummaryLogSubmittedReportHook
+  let onSummaryLogUploaded
   let mockConsumer
   let eventHandlers
 
@@ -77,8 +80,9 @@ describe('createCommandQueueConsumer', () => {
     organisationsRepository = {}
     wasteRecordsRepository = {}
     wasteBalanceService = {}
+    reportsRepository = createInMemoryReportsRepository()()
     summaryLogExtractor = {}
-    onSummaryLogSubmittedReportHook = vi.fn().mockResolvedValue(undefined)
+    onSummaryLogUploaded = vi.fn().mockResolvedValue(undefined)
 
     mockConsumer = {
       on: vi.fn((event, handler) => {
@@ -124,8 +128,9 @@ describe('createCommandQueueConsumer', () => {
         organisationsRepository,
         wasteRecordsRepository,
         wasteBalanceService,
+        reportsService: createReportsService(reportsRepository),
         summaryLogExtractor,
-        onSummaryLogSubmittedReportHook
+        onSummaryLogUploaded
       },
       summaryLogCommandHandlers
     )
