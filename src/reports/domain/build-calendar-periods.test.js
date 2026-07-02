@@ -22,30 +22,6 @@ const period = (report) => ({
 })
 
 describe('buildCalendarPeriods', () => {
-  it('keeps a single item with null status for a period with no report', () => {
-    const futurePeriod = {
-      year: 2999,
-      period: 1,
-      startDate: '2999-01-01',
-      endDate: '2999-12-31',
-      dueDate: '3000-02-20',
-      submissionNumber: 1,
-      report: null
-    }
-
-    expect(buildCalendarPeriods([futurePeriod])).toEqual([
-      { ...futurePeriod, periodStatus: null }
-    ])
-  })
-
-  it('keeps a single item for a submitted period that is not flagged', () => {
-    const submitted = period(submittedReport())
-
-    expect(buildCalendarPeriods([submitted])).toEqual([
-      { ...submitted, periodStatus: 'submitted' }
-    ])
-  })
-
   it('emits a requires_resubmission skeleton for a flagged submitted period', () => {
     const flagged = period(
       submittedReport({
@@ -70,5 +46,58 @@ describe('buildCalendarPeriods', () => {
       report: null,
       dueDate: '2026-02-20'
     })
+  })
+
+  it('expands each period locally, inserting the skeleton immediately after its origin', () => {
+    const flagged = {
+      year: 2026,
+      period: 1,
+      startDate: '2026-01-01',
+      endDate: '2026-01-31',
+      dueDate: '2026-02-20',
+      submissionNumber: 1,
+      report: submittedReport({
+        id: 'report-jan',
+        resubmissionRequired: {
+          uploadedAt: '2026-05-01T12:00:00.000Z',
+          reason: 'closed_period_restated',
+          summaryLogId: 'sl-2'
+        }
+      })
+    }
+
+    const submitted = {
+      year: 2026,
+      period: 2,
+      startDate: '2026-02-01',
+      endDate: '2026-02-28',
+      dueDate: '2026-03-20',
+      submissionNumber: 1,
+      report: submittedReport({ id: 'report-feb' })
+    }
+
+    const noReport = {
+      year: 2999,
+      period: 3,
+      startDate: '2999-03-01',
+      endDate: '2999-03-31',
+      dueDate: '2999-04-20',
+      submissionNumber: 1,
+      report: null
+    }
+
+    const result = buildCalendarPeriods([flagged, submitted, noReport])
+
+    expect(result).toEqual([
+      { ...flagged, periodStatus: 'submitted' },
+      {
+        ...flagged,
+        submissionNumber: 2,
+        periodStatus: 'requires_resubmission',
+        report: null
+      },
+      { ...submitted, periodStatus: 'submitted' },
+      { ...noReport, periodStatus: null }
+    ])
   })
 })
