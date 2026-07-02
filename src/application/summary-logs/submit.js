@@ -12,6 +12,10 @@ import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
 /**
+ * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+ */
+
+/**
  * @typedef {object} SubmitDependencies
  * @property {object} logger
  * @property {object} summaryLogsRepository
@@ -24,7 +28,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#domain/summary-logs/worker/port.js').SubmitUser} user
- * @property {(organisationId: string, registrationId: string, summaryLogId: string) => Promise<void>} onSummaryLogSubmittedReportHook
+ * @property {OnSummaryLogUploaded} onSummaryLogUploaded
  */
 
 /**
@@ -79,7 +83,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     summaryLogExtractor,
     overseasSitesRepository,
     user,
-    onSummaryLogSubmittedReportHook
+    onSummaryLogUploaded
   } = deps
 
   const {
@@ -118,11 +122,12 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
   await summaryLogMetrics.recordWasteRecordsCreated({ processingType }, created)
   await summaryLogMetrics.recordWasteRecordsUpdated({ processingType }, updated)
 
-  await onSummaryLogSubmittedReportHook(
-    summaryLog.organisationId,
-    summaryLog.registrationId,
-    summaryLogId
-  )
+  await onSummaryLogUploaded({
+    organisationId: summaryLog.organisationId,
+    registrationId: summaryLog.registrationId,
+    summaryLogId,
+    closedPeriods: summaryLog.loadsByReportingPeriod?.closedPeriods ?? []
+  })
 
   await summaryLogsRepository.update(
     summaryLogId,
