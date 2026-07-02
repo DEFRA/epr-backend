@@ -6,8 +6,13 @@ import {
   deleteReportParamsSchema,
   findPeriodicReportsSchema,
   findReportByIdSchema,
-  markActiveReportsStaleSchema
+  markActiveReportsStaleSchema,
+  markSubmittedReportsRequiringResubmissionSchema
 } from './schema.js'
+
+/**
+ * @import { MarkSubmittedReportsRequiringResubmissionParams } from './port.js'
+ */
 
 /**
  * @param {import('./port.js').CreateReportParams} params
@@ -111,6 +116,23 @@ export const validateMarkActiveReportsStale = (params) => {
   const { error, value } = markActiveReportsStaleSchema.validate(params, {
     abortEarly: false
   })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
+ * @param {MarkSubmittedReportsRequiringResubmissionParams} params
+ * @returns {MarkSubmittedReportsRequiringResubmissionParams}
+ */
+export const validateMarkSubmittedReportsRequiringResubmission = (params) => {
+  const { error, value } =
+    markSubmittedReportsRequiringResubmissionSchema.validate(params, {
+      abortEarly: false
+    })
 
   if (error) {
     throw Boom.badRequest(error.message)
