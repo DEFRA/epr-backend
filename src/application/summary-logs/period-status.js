@@ -104,6 +104,18 @@ const emptyResult = () => ({
 })
 
 /**
+ * Whether a reporting date falls in a submitted (closed) period. A missing
+ * date is never in a closed period.
+ *
+ * @param {string | Date | null | undefined} date
+ * @param {Set<string>} submittedPeriods
+ * @param {Cadence} cadence
+ * @returns {date is string | Date}
+ */
+const isSubmittedDate = (date, submittedPeriods, cadence) =>
+  date ? isDateInSubmittedPeriod(submittedPeriods, date, cadence) : false
+
+/**
  * Applies the closed-wins rule: if ANY date field falls in a submitted
  * (closed) period, the record is classified as closed.
  * Returns null if no date fields have a value.
@@ -122,11 +134,7 @@ const classifyPeriodStatus = (
 ) => {
   const dates = reportingDateFields.map((field) => data[field])
 
-  if (
-    dates.some(
-      (date) => date && isDateInSubmittedPeriod(submittedPeriods, date, cadence)
-    )
-  ) {
+  if (dates.some((date) => isSubmittedDate(date, submittedPeriods, cadence))) {
     return PERIOD_STATUS.CLOSED
   }
 
@@ -153,12 +161,11 @@ const closedPeriodRefsFor = (
 ) =>
   reportingDateFields.flatMap((field) => {
     const dateValue = data[field]
-    if (
-      !dateValue ||
-      !isDateInSubmittedPeriod(submittedPeriods, dateValue, cadence)
-    ) {
+
+    if (!isSubmittedDate(dateValue, submittedPeriods, cadence)) {
       return []
     }
+
     const { year, period } = periodForDate(dateValue, cadence)
     return [{ year, cadence, period }]
   })
