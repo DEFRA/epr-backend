@@ -1,7 +1,7 @@
 import { createUploadsRepository } from './cdp-uploader.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 export const s3UploadsRepositoryPlugin = {
   name: 'uploadsRepository',
@@ -22,6 +22,6 @@ export const s3UploadsRepositoryPlugin = {
       orsBucket: config.get('cdpUploader.orsBucket')
     })
 
-    registerRepository(server, 'uploadsRepository', () => repository)
+    registerDependency(server, 'uploadsRepository', () => repository)
   }
 }

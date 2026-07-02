@@ -1,5 +1,5 @@
 import { createFormSubmissionsRepository } from './inmemory.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
  * @typedef {Object} FormSubmissionsInitialData
@@ -25,7 +25,7 @@ export function createInMemoryFormSubmissionsRepositoryPlugin(
   return {
     name: 'formSubmissionsRepository',
     register: (server) => {
-      registerRepository(server, 'formSubmissionsRepository', () => repository)
+      registerDependency(server, 'formSubmissionsRepository', () => repository)
     }
   }
 }
