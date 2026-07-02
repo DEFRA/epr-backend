@@ -1,6 +1,6 @@
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { isIncludedInWasteBalance } from '#waste-records-export/domain/is-included-in-waste-balance.js'
+import { getWasteBalanceClassification } from '#waste-records-export/domain/is-included-in-waste-balance.js'
 
 /**
  * The waste-record type of a row, however the source names it — waste record
@@ -69,11 +69,12 @@ const classificationDivergencesBetween = ({
     }
     const wasteRecordStateIncluded =
       wasteRecordState.classification.outcome === ROW_OUTCOME.INCLUDED
-    const legacyIncluded = isIncludedInWasteBalance(
+    const legacyClassification = getWasteBalanceClassification(
       record,
       accreditation,
       overseasSites
     )
+    const legacyIncluded = legacyClassification?.included === true
     if (wasteRecordStateIncluded === legacyIncluded) {
       return []
     }
