@@ -29,7 +29,7 @@ import { RESUBMISSION_REASON } from '#root/reports/domain/resubmission.js'
  *   CreateReportParams,
  *   DeleteReportParams,
  *   FindPeriodicReportsParams,
- *   MarkReportRequiringResubmissionResult,
+ *   MarkSubmittedReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
  *   Report,
@@ -473,7 +473,7 @@ const performMarkActiveReportsStale = async (
  *
  * @param {Db} db
  * @param {MarkSubmittedReportsRequiringResubmissionParams} params
- * @returns {Promise<MarkReportRequiringResubmissionResult[]>}
+ * @returns {Promise<MarkSubmittedReportRequiringResubmissionResult[]>}
  */
 const performMarkSubmittedReportsRequiringResubmission = async (
   db,

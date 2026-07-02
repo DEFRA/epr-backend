@@ -139,7 +139,7 @@
  *   period: number,
  *   submissionNumber: number,
  *   resubmissionRequired: ReportResubmissionRequired
- * }} MarkReportRequiringResubmissionResult
+ * }} MarkSubmittedReportRequiringResubmissionResult
  */
 
 /**
@@ -293,7 +293,7 @@
  *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
  *   skipping any report already built from `summaryLogId` or already stale from it.
  *   Returns the per-report stale details for auditing.
- * @property {(params: MarkSubmittedReportsRequiringResubmissionParams) => Promise<MarkReportRequiringResubmissionResult[]>} markSubmittedReportsRequiringResubmission
+ * @property {(params: MarkSubmittedReportsRequiringResubmissionParams) => Promise<MarkSubmittedReportRequiringResubmissionResult[]>} markSubmittedReportsRequiringResubmission
  *   For each given period, flags the latest submitted report as requiring resubmission,
  *   skipping any report already flagged from `summaryLogId` or built from it.
  *   Returns the per-report details for auditing.

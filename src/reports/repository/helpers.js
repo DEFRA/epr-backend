@@ -10,6 +10,11 @@ import { randomUUID } from 'node:crypto'
  * from a flat list of report-like documents. Shared by the in-memory and
  * mongodb adapters so the "latest per period" rule lives in one place.
  *
+ * Invariant: `submissionNumber` is unique per period among submitted reports
+ * (each resubmission increments it), so the highest value identifies a single
+ * report. Ties are not expected; if two shared a submissionNumber the tie-break
+ * would fall to input order, which is not a meaningful ordering here.
+ *
  * @template {{ year: number, cadence: string, period: number, submissionNumber: number }} T
  * @param {T[]} reports
  * @returns {T[]}

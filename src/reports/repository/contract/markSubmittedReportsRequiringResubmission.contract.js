@@ -126,9 +126,13 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
       expect(second).toEqual([])
     })
 
-    it('skips reports whose source.summaryLogId matches the given summaryLogId', async () => {
-      // The report was itself produced from 'sl-1' (test-data.js default source)
+    it('skips the whole period when its latest submission was built from the given summaryLogId', async () => {
       await createAndSubmitReport(repository, {
+        submissionNumber: 1,
+        source: { summaryLogId: 'sl-other', lastUploadedAt: UPLOADED_AT }
+      })
+      await createAndSubmitReport(repository, {
+        submissionNumber: 2,
         source: { summaryLogId: 'sl-1', lastUploadedAt: UPLOADED_AT }
       })
 

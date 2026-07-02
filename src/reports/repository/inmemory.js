@@ -30,7 +30,7 @@ import {
  *   CreateReportParams,
  *   DeleteReportParams,
  *   FindPeriodicReportsParams,
- *   MarkReportRequiringResubmissionResult,
+ *   MarkSubmittedReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
  *   Report,
@@ -345,7 +345,7 @@ const markActiveReportsStale = async (
 /**
  * @param {Map<string, Object>} reports
  * @param {MarkSubmittedReportsRequiringResubmissionParams} params
- * @returns {Promise<MarkReportRequiringResubmissionResult[]>}
+ * @returns {Promise<MarkSubmittedReportRequiringResubmissionResult[]>}
  */
 const markSubmittedReportsRequiringResubmission = async (
   reports,
