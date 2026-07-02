@@ -13,6 +13,7 @@ import {
   createAndSubmitReport
 } from '#reports/repository/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createReportsService } from '#reports/application/report-service.js'
 import {
   REPROCESSOR_RECEIVED_HEADERS,
   createReprocessorReceivedRowValues,
@@ -134,7 +135,7 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     featureFlags: createInMemoryFeatureFlags(),
     summaryLogExtractor,
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-    reportsRepository,
+    reportsService: createReportsService(reportsRepository),
     user: SUBMIT_USER,
     onSummaryLogUploaded: vi.fn().mockResolvedValue(undefined)
   }

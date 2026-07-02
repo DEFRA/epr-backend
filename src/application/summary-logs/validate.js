@@ -53,7 +53,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
 /** @import {LoadsByReportingPeriod} from './period-status.js' */
-/** @import {ReportsRepository} from '#reports/repository/port.js' */
+/** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
@@ -565,7 +565,7 @@ const classifyAndPersistResult = async ({
   summaryLog,
   summaryLogsRepository,
   version,
-  reportsRepository,
+  reportsService,
   organisationsRepository,
   overseasSitesRepository
 }) => {
@@ -573,7 +573,7 @@ const classifyAndPersistResult = async ({
     registration,
     status,
     summaryLog,
-    reportsRepository
+    reportsService
   })
 
   const overseasSites = await resolveOverseasSitesContext({
@@ -618,7 +618,7 @@ const classifyAndPersistResult = async ({
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   wasteRecordsRepository: WasteRecordsRepository,
- *   reportsRepository: ReportsRepository,
+ *   reportsService: ReportsService,
  *   overseasSitesRepository: OverseasSitesRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
@@ -629,7 +629,7 @@ export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
   wasteRecordsRepository,
-  reportsRepository,
+  reportsService,
   overseasSitesRepository,
   summaryLogExtractor
 }) => {
@@ -698,7 +698,7 @@ export const createSummaryLogsValidator = ({
       summaryLog,
       summaryLogsRepository,
       version,
-      reportsRepository,
+      reportsService,
       organisationsRepository,
       overseasSitesRepository
     })
