@@ -4,32 +4,13 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import {
-  BACKFILL_ACTOR,
-  STREAM_EVENT_KIND
-} from '#waste-balances/repository/stream-schema.js'
-import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 
 import { backfillRegistrationRowStates } from './backfill-registration-rowstates.js'
-
-const streamWithService = () => {
-  const streamRepository = createInMemoryStreamRepository()()
-  return {
-    streamRepository,
-    wasteBalanceService: createWasteBalanceService(streamRepository)
-  }
-}
 
 const partition = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1'
-}
-const nullPartition = {
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: null
 }
 const accreditation = { id: 'acc-1' }
 /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} */
@@ -72,8 +53,7 @@ describe('backfillRegistrationRowStates', () => {
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository,
-      ...streamWithService()
+      rowStateRepository
     })
 
     expect(
@@ -102,8 +82,7 @@ describe('backfillRegistrationRowStates', () => {
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository,
-      ...streamWithService()
+      rowStateRepository
     })
 
     const history = await rowHistory(rowStateRepository, 'row-1')
@@ -133,8 +112,7 @@ describe('backfillRegistrationRowStates', () => {
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository,
-      ...streamWithService()
+      rowStateRepository
     })
 
     const history = await rowHistory(rowStateRepository, 'row-1')
@@ -160,8 +138,7 @@ describe('backfillRegistrationRowStates', () => {
         summaryLogs,
         accreditation,
         overseasSites,
-        rowStateRepository,
-        ...streamWithService()
+        rowStateRepository
       })
 
     await run()
@@ -193,255 +170,9 @@ describe('backfillRegistrationRowStates', () => {
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository,
-      ...streamWithService()
+      rowStateRepository
     })
 
-    expect(summary).toEqual({
-      submissionCount: 2,
-      rowStateWriteCount: 3,
-      submittedEventWriteCount: 0
-    })
-  })
-
-  describe('registered-only summary-log submitted events', () => {
-    it('emits a zero-delta summary-log submitted event per submission into the null partition', async () => {
-      const summaryLogs = [
-        submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
-        submittedLog('sl-2', '2025-02-01T00:00:00.000Z')
-      ]
-      const wasteRecords = [
-        receivedRecord('row-1', [
-          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
-        ])
-      ]
-      const rowStateRepository = createInMemoryRowStateRepository()()
-      const { streamRepository, wasteBalanceService } = streamWithService()
-
-      await backfillRegistrationRowStates({
-        partition: nullPartition,
-        wasteRecords,
-        summaryLogs,
-        accreditation: null,
-        overseasSites,
-        rowStateRepository,
-        streamRepository,
-        wasteBalanceService
-      })
-
-      const submittedEvents = await streamRepository.findAllByPartition(
-        'reg-1',
-        null
-      )
-      expect(submittedEvents.map((event) => event.kind)).toEqual([
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
-      ])
-      expect(
-        submittedEvents.map(
-          (event) => /** @type {any} */ (event.payload).summaryLogId
-        )
-      ).toEqual(['sl-1', 'sl-2'])
-      expect(
-        submittedEvents.every((event) => event.closingBalance.amount === 0)
-      ).toBe(true)
-      expect(
-        submittedEvents.every(
-          (event) => event.closingBalance.availableAmount === 0
-        )
-      ).toBe(true)
-    })
-
-    it('is idempotent — a second run emits no duplicate event', async () => {
-      const summaryLogs = [
-        submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
-        submittedLog('sl-2', '2025-02-01T00:00:00.000Z')
-      ]
-      const wasteRecords = [
-        receivedRecord('row-1', [
-          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
-        ])
-      ]
-      const rowStateRepository = createInMemoryRowStateRepository()()
-      const { streamRepository, wasteBalanceService } = streamWithService()
-      const run = () =>
-        backfillRegistrationRowStates({
-          partition: nullPartition,
-          wasteRecords,
-          summaryLogs,
-          accreditation: null,
-          overseasSites,
-          rowStateRepository,
-          streamRepository,
-          wasteBalanceService
-        })
-
-      await run()
-      const summary = await run()
-
-      const submittedEvents = await streamRepository.findAllByPartition(
-        'reg-1',
-        null
-      )
-      expect(submittedEvents).toHaveLength(2)
-      expect(summary.submittedEventWriteCount).toBe(0)
-    })
-
-    it('emits no summary-log submitted event for an accredited (non-null) partition', async () => {
-      const summaryLogs = [submittedLog('sl-1', '2025-01-01T00:00:00.000Z')]
-      const wasteRecords = [
-        receivedRecord('row-1', [
-          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
-        ])
-      ]
-      const rowStateRepository = createInMemoryRowStateRepository()()
-      const { streamRepository, wasteBalanceService } = streamWithService()
-
-      const summary = await backfillRegistrationRowStates({
-        partition,
-        wasteRecords,
-        summaryLogs,
-        accreditation,
-        overseasSites,
-        rowStateRepository,
-        streamRepository,
-        wasteBalanceService
-      })
-
-      expect(
-        await streamRepository.findAllByPartition('reg-1', 'acc-1')
-      ).toEqual([])
-      expect(summary.submittedEventWriteCount).toBe(0)
-    })
-
-    it('stamps each backfilled event with its original submission date, not today', async () => {
-      const summaryLogs = [
-        submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
-        submittedLog('sl-2', '2025-02-01T00:00:00.000Z')
-      ]
-      const wasteRecords = [
-        receivedRecord('row-1', [
-          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
-        ])
-      ]
-      const rowStateRepository = createInMemoryRowStateRepository()()
-      const { streamRepository, wasteBalanceService } = streamWithService()
-
-      await backfillRegistrationRowStates({
-        partition: nullPartition,
-        wasteRecords,
-        summaryLogs,
-        accreditation: null,
-        overseasSites,
-        rowStateRepository,
-        streamRepository,
-        wasteBalanceService
-      })
-
-      const submittedEvents = await streamRepository.findAllByPartition(
-        'reg-1',
-        null
-      )
-      expect(
-        submittedEvents.map((event) => event.createdAt.toISOString())
-      ).toEqual(['2025-01-01T00:00:00.000Z', '2025-02-01T00:00:00.000Z'])
-    })
-
-    it('attributes each backfilled event to its original submitter, not the backfill actor', async () => {
-      const summaryLogs = [
-        {
-          ...submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
-          submittedBy: { id: 'user-1', name: 'Ada', email: 'ada@example.com' }
-        },
-        {
-          ...submittedLog('sl-2', '2025-02-01T00:00:00.000Z'),
-          submittedBy: { id: 'user-2', name: 'Grace' }
-        }
-      ]
-      const wasteRecords = [
-        receivedRecord('row-1', [
-          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
-        ])
-      ]
-      const rowStateRepository = createInMemoryRowStateRepository()()
-      const { streamRepository, wasteBalanceService } = streamWithService()
-
-      await backfillRegistrationRowStates({
-        partition: nullPartition,
-        wasteRecords,
-        summaryLogs,
-        accreditation: null,
-        overseasSites,
-        rowStateRepository,
-        streamRepository,
-        wasteBalanceService
-      })
-
-      const submittedEvents = await streamRepository.findAllByPartition(
-        'reg-1',
-        null
-      )
-      expect(submittedEvents.map((event) => event.createdBy)).toEqual([
-        { id: 'user-1', name: 'Ada', email: 'ada@example.com' },
-        { id: 'user-2', name: 'Grace' }
-      ])
-    })
-
-    it('falls back to the backfill actor when a submission has no recovered submitter', async () => {
-      const summaryLogs = [submittedLog('sl-1', '2025-01-01T00:00:00.000Z')]
-      const wasteRecords = [
-        receivedRecord('row-1', [
-          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
-        ])
-      ]
-      const rowStateRepository = createInMemoryRowStateRepository()()
-      const { streamRepository, wasteBalanceService } = streamWithService()
-
-      await backfillRegistrationRowStates({
-        partition: nullPartition,
-        wasteRecords,
-        summaryLogs,
-        accreditation: null,
-        overseasSites,
-        rowStateRepository,
-        streamRepository,
-        wasteBalanceService
-      })
-
-      const submittedEvents = await streamRepository.findAllByPartition(
-        'reg-1',
-        null
-      )
-      expect(submittedEvents.map((event) => event.createdBy)).toEqual([
-        BACKFILL_ACTOR
-      ])
-    })
-
-    it('reports submittedEventWriteCount for migration logging', async () => {
-      const summaryLogs = [
-        submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
-        submittedLog('sl-2', '2025-02-01T00:00:00.000Z')
-      ]
-      const wasteRecords = [
-        receivedRecord('row-1', [
-          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
-        ])
-      ]
-      const rowStateRepository = createInMemoryRowStateRepository()()
-      const { streamRepository, wasteBalanceService } = streamWithService()
-
-      const summary = await backfillRegistrationRowStates({
-        partition: nullPartition,
-        wasteRecords,
-        summaryLogs,
-        accreditation: null,
-        overseasSites,
-        rowStateRepository,
-        streamRepository,
-        wasteBalanceService
-      })
-
-      expect(summary.submittedEventWriteCount).toBe(2)
-    })
+    expect(summary).toEqual({ submissionCount: 2, rowStateWriteCount: 3 })
   })
 })

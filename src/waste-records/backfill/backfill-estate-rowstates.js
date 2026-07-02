@@ -3,7 +3,6 @@ import { StatusCodes } from 'http-status-codes'
 
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { buildSystemLogSubmitters } from '#waste-balances/application/summary-log-submitters.js'
 
 import { backfillRegistrationRowStates } from './backfill-registration-rowstates.js'
 
@@ -32,7 +31,6 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  * @property {number} streamsBackfilled - Registration streams that received row states
  * @property {number} submissionsBackfilled
  * @property {number} rowStateWrites
- * @property {number} submittedEventWrites - Registered-only summary-log submitted events emitted
  * @property {OrphanedAccreditation[]} orphanedAccreditations
  */
 
@@ -44,7 +42,6 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  * @typedef {Object} StreamBackfilled
  * @property {number} submissionCount
  * @property {number} rowStateWriteCount
- * @property {number} submittedEventWriteCount
  *
  * @typedef {Object} StreamOrphaned
  * @property {OrphanedAccreditation} orphanedAccreditation
@@ -55,59 +52,16 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  * `file.id`, not the summary-log document id — the live write path keys both on
  * `file.id`, so the backfill must too or it reconstructs nothing. A submitted
  * summary log always carries `submittedAt` (stamped at submission), which the
- * status filter upstream guarantees is the only kind reaching this mapping. The
- * recovered original submitter (keyed by `file.id`) rides along as `submittedBy`
- * when one was found, so the replayed submitted event is attributed to the
- * person who made the submission rather than the backfill actor.
+ * status filter upstream guarantees is the only kind reaching this mapping.
  *
  * @param {SummaryLogWithId} log
- * @param {Map<string, import('#waste-balances/repository/stream-schema.js').StreamUserSummary>} submitters
  * @returns {OrderedSummaryLog}
  */
-const toOrderedSummaryLog = ({ summaryLog }, submitters) => {
-  const submittedBy = submitters.get(summaryLog.file.id)
-  return {
-    id: summaryLog.file.id,
-    status: summaryLog.status,
-    submittedAt: /** @type {string} */ (summaryLog.submittedAt),
-    ...(submittedBy && { submittedBy })
-  }
-}
-
-/**
- * The submitted summary logs for one registration, in the order the reconstruct
- * step replays them, each carrying the recovered original submitter (keyed by
- * `file.id`) when the submit audit yielded one. Only submitted logs are kept,
- * mirroring the live write scope; drafts and in-flight submissions are dropped.
- *
- * @param {Object} args
- * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
- * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} args.systemLogsRepository
- * @param {string} args.organisationId
- * @param {string} args.registrationId
- * @returns {Promise<OrderedSummaryLog[]>}
- */
-const loadSubmittedSummaryLogs = async ({
-  summaryLogsRepository,
-  systemLogsRepository,
-  organisationId,
-  registrationId
-}) => {
-  const logs = await summaryLogsRepository.findAllByOrgReg(
-    organisationId,
-    registrationId
-  )
-  const submitActors = await systemLogsRepository.findSummaryLogSubmitActors(
-    logs.map((log) => String(log.id))
-  )
-  const submitters = buildSystemLogSubmitters({
-    submitActors,
-    summaryLogDocs: logs
-  })
-  return logs
-    .filter((log) => log.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED)
-    .map((log) => toOrderedSummaryLog(log, submitters))
-}
+const toOrderedSummaryLog = ({ summaryLog }) => ({
+  id: summaryLog.file.id,
+  status: summaryLog.status,
+  submittedAt: /** @type {string} */ (summaryLog.submittedAt)
+})
 
 /**
  * Backfill one registration's stream, mirroring the live write scope: every
@@ -127,9 +81,6 @@ const loadSubmittedSummaryLogs = async ({
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
  * @param {RowStateRepository} args.rowStateRepository
- * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} args.systemLogsRepository
- * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} args.streamRepository
- * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} args.wasteBalanceService
  * @returns {Promise<StreamBackfilled | StreamOrphaned | null>}
  */
 const backfillRegistrationStream = async ({
@@ -139,19 +90,17 @@ const backfillRegistrationStream = async ({
   wasteRecordsRepository,
   summaryLogsRepository,
   overseasSitesRepository,
-  rowStateRepository,
-  systemLogsRepository,
-  streamRepository,
-  wasteBalanceService
+  rowStateRepository
 }) => {
   const { accreditationId } = registration
 
-  const summaryLogs = await loadSubmittedSummaryLogs({
-    summaryLogsRepository,
-    systemLogsRepository,
-    organisationId: organisation.id,
-    registrationId: registration.id
-  })
+  const logs = await summaryLogsRepository.findAllByOrgReg(
+    organisation.id,
+    registration.id
+  )
+  const summaryLogs = logs
+    .filter((log) => log.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED)
+    .map(toOrderedSummaryLog)
   if (summaryLogs.length === 0) {
     return null
   }
@@ -191,7 +140,7 @@ const backfillRegistrationStream = async ({
     registration.id
   )
 
-  const { submissionCount, rowStateWriteCount, submittedEventWriteCount } =
+  const { submissionCount, rowStateWriteCount } =
     await backfillRegistrationRowStates({
       partition: {
         organisationId: organisation.id,
@@ -202,12 +151,10 @@ const backfillRegistrationStream = async ({
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository,
-      streamRepository,
-      wasteBalanceService
+      rowStateRepository
     })
 
-  return { submissionCount, rowStateWriteCount, submittedEventWriteCount }
+  return { submissionCount, rowStateWriteCount }
 }
 
 /**
@@ -219,12 +166,9 @@ const backfillRegistrationStream = async ({
  * Accreditation validity and overseas-site approval are read at today's
  * state, so a backfilled row's classification reflects current factors — the
  * historical-reading drift ADR-0037 accepts for legacy submissions. Re-runnable:
- * every registration's upserts are idempotent. Registered-only streams, which
- * never formed a summary-log submitted event on the live path, additionally
- * receive a balance-neutral zero-delta event per submission so every submission
- * has its submitted event; emission is idempotent too. An accreditation referenced
- * by a registration but missing from the organisation is surfaced and skipped,
- * not fatal.
+ * every registration's upserts are idempotent. An accreditation referenced by a
+ * registration but missing from the organisation is surfaced and skipped, not
+ * fatal.
  *
  * @param {Object} deps
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} deps.organisationsRepository
@@ -232,9 +176,6 @@ const backfillRegistrationStream = async ({
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} deps.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} deps.overseasSitesRepository
  * @param {RowStateRepository} deps.rowStateRepository
- * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
- * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} deps.streamRepository
- * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} deps.wasteBalanceService
  * @returns {Promise<EstateBackfillSummary>}
  */
 export const backfillEstateRowStates = async ({
@@ -242,17 +183,13 @@ export const backfillEstateRowStates = async ({
   wasteRecordsRepository,
   summaryLogsRepository,
   overseasSitesRepository,
-  rowStateRepository,
-  systemLogsRepository,
-  streamRepository,
-  wasteBalanceService
+  rowStateRepository
 }) => {
   const organisations = await organisationsRepository.findAll()
 
   let streamsBackfilled = 0
   let submissionsBackfilled = 0
   let rowStateWrites = 0
-  let submittedEventWrites = 0
   const orphanedAccreditations = []
 
   for (const organisation of organisations) {
@@ -264,10 +201,7 @@ export const backfillEstateRowStates = async ({
         wasteRecordsRepository,
         summaryLogsRepository,
         overseasSitesRepository,
-        rowStateRepository,
-        systemLogsRepository,
-        streamRepository,
-        wasteBalanceService
+        rowStateRepository
       })
       if (!result) {
         continue
@@ -278,7 +212,6 @@ export const backfillEstateRowStates = async ({
         streamsBackfilled += 1
         submissionsBackfilled += result.submissionCount
         rowStateWrites += result.rowStateWriteCount
-        submittedEventWrites += result.submittedEventWriteCount
       }
     }
   }
@@ -288,7 +221,6 @@ export const backfillEstateRowStates = async ({
     streamsBackfilled,
     submissionsBackfilled,
     rowStateWrites,
-    submittedEventWrites,
     orphanedAccreditations
   }
 }

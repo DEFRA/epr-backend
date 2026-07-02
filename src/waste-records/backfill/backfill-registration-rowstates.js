@@ -1,8 +1,3 @@
-import {
-  BACKFILL_ACTOR,
-  STREAM_EVENT_KIND
-} from '#waste-balances/repository/stream-schema.js'
-
 import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstates.js'
 
 /**
@@ -10,7 +5,6 @@ import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstat
  * @import { RowStateRepository } from '#waste-records/repository/port.js'
  * @import { WasteRecord } from '#domain/waste-records/model.js'
  * @import { OrderedSummaryLog } from './reconstruct-submission-rowstates.js'
- * @import { WasteBalanceStreamRepository } from '#waste-balances/repository/stream-port.js'
  */
 
 /**
@@ -19,33 +13,7 @@ import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstat
  * @typedef {Object} RegistrationBackfillSummary
  * @property {number} submissionCount - Submitted summary logs replayed
  * @property {number} rowStateWriteCount - Row-state entries upserted across them
- * @property {number} submittedEventWriteCount - Registered-only summary-log submitted events emitted
  */
-
-/**
- * The summary-log ids of registered-only summary-log submitted events already present in a
- * null-accreditation partition, so a re-run never double-emits an event.
- *
- * @param {WasteBalanceStreamRepository} streamRepository
- * @param {string} registrationId
- * @returns {Promise<Set<string>>}
- */
-const existingSubmittedEventSummaryLogIds = async (
-  streamRepository,
-  registrationId
-) => {
-  const events = await streamRepository.findAllByPartition(registrationId, null)
-  return new Set(
-    events
-      .filter((event) => event.kind === STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
-      .map(
-        (event) =>
-          /** @type {import('#waste-balances/repository/stream-schema.js').SummaryLogSubmittedPayload} */ (
-            event.payload
-          ).summaryLogId
-      )
-  )
-}
 
 /**
  * Backfill one registration's waste record states from its sparse version
@@ -58,14 +26,6 @@ const existingSubmittedEventSummaryLogIds = async (
  * depends on an earlier submission's document already existing when a later one
  * that shares its state is written.
  *
- * Registered-only registrations (null partition) form no summary-log submitted
- * event on the live path, so the same sweep emits a zero-delta
- * `summary-log-submitted` event per submission, in stream order, so every
- * submission has its submitted event. Emission is balance-neutral and
- * idempotent: an event is skipped when one already exists for its summary log,
- * so a re-run emits none. Accredited partitions keep the events their original
- * processing wrote and emit none here.
- *
  * @param {Object} params
  * @param {RowStatePartition} params.partition
  * @param {WasteRecord[]} params.wasteRecords
@@ -73,8 +33,6 @@ const existingSubmittedEventSummaryLogIds = async (
  * @param {Object} params.accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {RowStateRepository} params.rowStateRepository
- * @param {WasteBalanceStreamRepository} params.streamRepository
- * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
  * @returns {Promise<RegistrationBackfillSummary>}
  */
 export const backfillRegistrationRowStates = async ({
@@ -83,9 +41,7 @@ export const backfillRegistrationRowStates = async ({
   summaryLogs,
   accreditation,
   overseasSites,
-  rowStateRepository,
-  streamRepository,
-  wasteBalanceService
+  rowStateRepository
 }) => {
   const submissions = reconstructSubmissionRowStates({
     wasteRecords,
@@ -94,44 +50,11 @@ export const backfillRegistrationRowStates = async ({
     overseasSites
   })
 
-  const emitsSubmittedEvents = partition.accreditationId === null
-  const existingSubmittedEvents = emitsSubmittedEvents
-    ? await existingSubmittedEventSummaryLogIds(
-        streamRepository,
-        partition.registrationId
-      )
-    : new Set()
-
   let rowStateWriteCount = 0
-  let submittedEventWriteCount = 0
-  for (const {
-    summaryLogId,
-    entries,
-    submittedAt,
-    submittedBy
-  } of submissions) {
+  for (const { summaryLogId, entries } of submissions) {
     await rowStateRepository.upsertRowStates(partition, entries, summaryLogId)
     rowStateWriteCount += entries.length
-
-    if (emitsSubmittedEvents && !existingSubmittedEvents.has(summaryLogId)) {
-      await wasteBalanceService.submitSummaryLog(
-        {
-          registrationId: partition.registrationId,
-          accreditationId: null,
-          organisationId: partition.organisationId
-        },
-        { summaryLogId, creditTotal: 0 },
-        submittedBy ?? BACKFILL_ACTOR,
-        new Date(submittedAt)
-      )
-      existingSubmittedEvents.add(summaryLogId)
-      submittedEventWriteCount += 1
-    }
   }
 
-  return {
-    submissionCount: submissions.length,
-    rowStateWriteCount,
-    submittedEventWriteCount
-  }
+  return { submissionCount: submissions.length, rowStateWriteCount }
 }
