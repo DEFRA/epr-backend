@@ -1,5 +1,5 @@
 import { isProductionEnvironment } from '#root/config.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import { createNonProdDataReset } from './mongodb.js'
 
 /**
@@ -28,6 +28,6 @@ export const nonProdDataResetPlugin = {
     const reset = createNonProdDataReset(db, {
       isProduction: isProductionEnvironment()
     })
-    registerRepository(server, 'nonProdDataReset', () => reset)
+    registerDependency(server, 'nonProdDataReset', () => reset)
   }
 }

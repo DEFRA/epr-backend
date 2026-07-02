@@ -2,10 +2,6 @@ import { StatusCodes } from 'http-status-codes'
 import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
 import { wasteBalanceResponseSchema } from './response.schema.js'
-import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-
-/** @typedef {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} WasteBalanceStreamRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 export const wasteBalanceGetPath =
   '/v1/organisations/{organisationId}/waste-balances'
@@ -43,19 +39,18 @@ export const wasteBalanceGet = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {streamRepository: WasteBalanceStreamRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (
-    { streamRepository, organisationsRepository, query, params },
+    { wasteBalanceService, organisationsRepository, query, params },
     h
   ) => {
     const { organisationId } = params
     const accreditationIds = new Set(
       /** @type {string} */ (query.accreditationIds).split(',')
     )
-    const service = createWasteBalanceService(streamRepository)
 
     const [organisation] = await organisationsRepository.findByIds([
       organisationId
@@ -76,7 +71,7 @@ export const wasteBalanceGet = {
           return null
         }
 
-        const balance = await service.currentBalance({
+        const balance = await wasteBalanceService.currentBalance({
           organisationId,
           registrationId,
           accreditationId

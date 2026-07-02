@@ -1,5 +1,5 @@
 import { createReportsRepository } from './mongodb.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 export const mongoReportsRepositoryPlugin = {
   name: 'reportsRepository',
@@ -10,6 +10,6 @@ export const mongoReportsRepositoryPlugin = {
     const factory = await createReportsRepository(server.db)
     const repository = factory()
 
-    registerRepository(server, 'reportsRepository', () => repository)
+    registerDependency(server, 'reportsRepository', () => repository)
   }
 }

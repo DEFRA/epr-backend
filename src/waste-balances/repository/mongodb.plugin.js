@@ -1,18 +1,22 @@
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { createMongoStreamRepository } from './stream-mongodb.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
+/**
+ * Builds the waste balance service over the shared stream from
+ * `server.app.streamRepository`, so `mongoStreamRepositoryPlugin` must register
+ * before this plugin.
+ */
 export const mongoWasteBalanceServicePlugin = {
   name: 'wasteBalanceService',
   version: '1.0.0',
-  dependencies: ['mongodb'],
+  dependencies: ['streamRepository'],
 
-  register: async (server) => {
-    const streamFactory = await createMongoStreamRepository(server.db)
-    const streamRepository = streamFactory()
-
-    registerRepository(server, 'streamRepository', () => streamRepository)
-    registerRepository(server, 'wasteBalanceService', () =>
+  register: (server) => {
+    const streamRepository =
+      /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
+        server.app.streamRepository
+      )
+    registerDependency(server, 'wasteBalanceService', () =>
       createWasteBalanceService(streamRepository)
     )
   }

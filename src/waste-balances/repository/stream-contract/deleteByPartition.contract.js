@@ -19,21 +19,21 @@ export const testDeleteByPartitionBehaviour = (it) => {
     )
 
     it('deletes all events for the given partition and returns the count', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-del',
           accreditationId: 'acc-del',
           number: 1
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-del',
           accreditationId: 'acc-del',
           number: 2,
           payload: { summaryLogId: 'log-2', creditTotal: 200 }
         })
-      )
+      ])
 
       const count = await repository.deleteByPartition('reg-del', 'acc-del')
 
@@ -53,20 +53,20 @@ export const testDeleteByPartitionBehaviour = (it) => {
     })
 
     it('does not affect events in other partitions', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-keep',
           accreditationId: 'acc-keep',
           number: 1
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-remove',
           accreditationId: 'acc-remove',
           number: 1
         })
-      )
+      ])
 
       await repository.deleteByPartition('reg-remove', 'acc-remove')
 
@@ -79,14 +79,14 @@ export const testDeleteByPartitionBehaviour = (it) => {
     })
 
     it("deletes one accreditation's partition without touching the same registration's registered-only stream", async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-shared',
           accreditationId: 'acc-1',
           number: 1
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-shared',
           accreditationId: null,
@@ -94,7 +94,7 @@ export const testDeleteByPartitionBehaviour = (it) => {
           payload: { summaryLogId: 'reg-only-log', creditTotal: 0 },
           closingBalance: { amount: 0, availableAmount: 0 }
         })
-      )
+      ])
 
       const count = await repository.deleteByPartition('reg-shared', 'acc-1')
 

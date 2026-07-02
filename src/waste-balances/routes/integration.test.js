@@ -87,7 +87,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
       await insertOrganisation(database)
 
       const streamRepository = (await createMongoStreamRepository(database))()
-      await streamRepository.appendEvent(
+      await streamRepository.appendEvents([
         buildStreamEvent({
           accreditationId: accreditationId1,
           organisationId,
@@ -95,8 +95,8 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
           number: 1,
           closingBalance: { amount: 1000, availableAmount: 750 }
         })
-      )
-      await streamRepository.appendEvent(
+      ])
+      await streamRepository.appendEvents([
         buildStreamEvent({
           accreditationId: accreditationId2,
           organisationId,
@@ -104,7 +104,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
           number: 1,
           closingBalance: { amount: 2500, availableAmount: 2500 }
         })
-      )
+      ])
 
       server = await createServer({ mongoUri: globalThis.__MONGO_URI__ })
       await server.initialize()

@@ -122,51 +122,6 @@ const findDuplicateKeyWriteError = (error) => {
 
 /**
  * @param {Collection} collection
- * @returns {(event: StreamEventInsert) => Promise<StreamEvent>}
- */
-const performAppendEvent = (collection) => async (event) => {
-  const validated = validateStreamEventInsert(event)
-
-  const latest = await collection.findOne(
-    {
-      registrationId: validated.registrationId,
-      accreditationId: validated.accreditationId
-    },
-    { sort: { number: -1 }, projection: { number: 1 } }
-  )
-
-  const expectedNumber = (latest?.number ?? 0) + 1
-
-  if (validated.number !== expectedNumber) {
-    if (validated.number <= (latest?.number ?? 0)) {
-      throw new StreamSlotConflictError(
-        validated.registrationId,
-        validated.accreditationId,
-        validated.number
-      )
-    }
-    throw new StreamSequenceError(
-      validated.registrationId,
-      validated.accreditationId,
-      validated.number,
-      expectedNumber
-    )
-  }
-
-  try {
-    const result = await collection.insertOne(validated)
-    return toStreamEvent({ _id: result.insertedId, ...validated })
-  } catch (error) {
-    const classified = classifyDuplicateKeyError(error, validated)
-    if (classified) {
-      throw classified
-    }
-    throw error
-  }
-}
-
-/**
- * @param {Collection} collection
  * @returns {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent | null>}
  */
 const performFindLatestByPartition =
@@ -252,7 +207,7 @@ const performDeleteByPartition =
  * @param {Collection} collection
  * @returns {(events: import('./stream-schema.js').StreamEventInsert[]) => Promise<import('./stream-schema.js').StreamEvent[]>}
  */
-const performBulkAppendEvents = (collection) => async (events) => {
+const performAppendEvents = (collection) => async (events) => {
   if (events.length === 0) {
     return []
   }
@@ -323,13 +278,12 @@ export const createMongoStreamRepository = async (db) => {
   const collection = await ensureStreamCollection(db)
 
   return () => ({
-    appendEvent: performAppendEvent(collection),
     findLatestByPartition: performFindLatestByPartition(collection),
     findLatestByPartitionAndKind:
       performFindLatestByPartitionAndKind(collection),
     findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection),
     findAllByPartition: performFindAllByPartition(collection),
     deleteByPartition: performDeleteByPartition(collection),
-    bulkAppendEvents: performBulkAppendEvents(collection)
+    appendEvents: performAppendEvents(collection)
   })
 }

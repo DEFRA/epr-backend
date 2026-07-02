@@ -1,5 +1,5 @@
 import { createSystemLogsRepository } from './mongodb.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 // Per-request instantiation: needs request.logger for error logging.
 export const mongoSystemLogsRepositoryPlugin = {
@@ -10,7 +10,7 @@ export const mongoSystemLogsRepositoryPlugin = {
   register: async (server) => {
     const factory = await createSystemLogsRepository(server.db)
 
-    registerRepository(server, 'systemLogsRepository', (request) =>
+    registerDependency(server, 'systemLogsRepository', (request) =>
       factory(request.logger)
     )
   }
