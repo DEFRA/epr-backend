@@ -5,6 +5,7 @@ import {
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+import { createReportsService } from '#reports/application/report-service.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
 import { orsImportCommandHandlers } from './ors-import-commands.js'
@@ -66,7 +67,7 @@ function buildConsumerDeps(server, { config }) {
     wasteRecordStatesRepository,
     wasteBalanceService,
     featureFlags,
-    reportsRepository,
+    reportsService: createReportsService(reportsRepository),
     summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
     onSummaryLogUploaded
   }
