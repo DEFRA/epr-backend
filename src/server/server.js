@@ -111,6 +111,10 @@ function getSwaggerPlugins() {
   ]
 }
 
+export const shouldRegisterWasteRecordStates = (config) =>
+  config.get('featureFlags.wasteRecordStates') ||
+  config.get('featureFlags.wasteRecordStatesBackfill')
+
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
@@ -126,7 +130,6 @@ function getProductionPlugins(config) {
     mongoSummaryLogsRepositoryPlugin,
     mongoFormSubmissionsRepositoryPlugin,
     mongoWasteRecordsRepositoryPlugin,
-    mongoWasteRecordStatesRepositoryPlugin,
     mongoStreamRepositoryPlugin,
     mongoWasteBalanceServicePlugin,
     mongoSystemLogsRepositoryPlugin,
@@ -137,6 +140,16 @@ function getProductionPlugins(config) {
     overseasSitesRepositoryPlugin,
     orsImportsRepositoryPlugin
   ]
+
+  // Defer row-state repository construction (and thus ensureRowStatesCollection
+  // creating the collection + indexes) until a row-state flag is on, so nothing
+  // is built ahead of the ADR-0037 switch-on. Register for either flag: the
+  // backfill sweep and the forward-write path both need the repository, and the
+  // flip choreography can leave the backfill flag off by the time forward writes
+  // begin.
+  if (shouldRegisterWasteRecordStates(config)) {
+    plugins.push(mongoWasteRecordStatesRepositoryPlugin)
+  }
 
   plugins.push(mongoReportsRepositoryPlugin)
 
