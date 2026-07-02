@@ -374,7 +374,7 @@ const baseConfig = {
       doc: 'Feature Flag: Persist waste record states on summary-log submission (ADR-0037)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_WASTE_RECORD_STATES'
+      env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES'
     }
   },
   formSubmissionOverrides: {

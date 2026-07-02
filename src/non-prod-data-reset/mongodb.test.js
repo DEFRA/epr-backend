@@ -63,7 +63,7 @@ const COLLECTIONS = [
   'summary-logs',
   'overseas-sites',
   'system-logs',
-  'waste-balance-row-states'
+  'summary-log-row-states'
 ]
 
 const mockS3Config = { s3Client: {}, preSignedUrlExpiry: 60 }
@@ -213,7 +213,6 @@ const seedDownstreamForOrganisation = async (
   await repositories.wasteRecords.appendVersions(
     organisationId,
     registrationId,
-    // @ts-expect-error -- partial waste record map sufficient for seeding
     toWasteRecordVersions({
       received: { 'row-1': { version, data } }
     })
@@ -273,7 +272,7 @@ const seedStagingCollections = async (database, orgId) => {
 const EMPTY_COUNTS = {
   'packaging-recycling-notes': 0,
   'waste-balance-events': 0,
-  'waste-balance-row-states': 0,
+  'summary-log-row-states': 0,
   reports: 0,
   'waste-records': 0,
   'summary-logs': 0,
@@ -312,7 +311,7 @@ describe('non-prod data reset (mongo)', () => {
       expect(counts).toEqual({
         'packaging-recycling-notes': 2,
         'waste-balance-events': 1,
-        'waste-balance-row-states': 1,
+        'summary-log-row-states': 1,
         reports: 1,
         'waste-records': 1,
         'summary-logs': 1,
@@ -366,7 +365,7 @@ describe('non-prod data reset (mongo)', () => {
       ).toBe(1)
       expect(
         await database
-          .collection('waste-balance-row-states')
+          .collection('summary-log-row-states')
           .countDocuments({ organisationId: other.organisationId })
       ).toBe(1)
       expect(
