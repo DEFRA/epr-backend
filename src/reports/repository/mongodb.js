@@ -541,8 +541,10 @@ const performMarkSubmittedReportsRequiringResubmission = async (
 }
 
 /**
- * Returns true when any report for the org/reg has a SUBMITTED status.history
- * entry stamped strictly after `since`.
+ * Returns true when any report for the org/reg was submitted strictly after
+ * `since`. SUBMITTED is terminal and each submission is a distinct document, so
+ * the denormalised `status.submitted` slot is the single submission instant and
+ * is directly indexable.
  *
  * @param {Db} db
  * @param {string} organisationId
@@ -563,9 +565,7 @@ const performHasReportSubmittedSince = async (
     {
       organisationId,
       registrationId,
-      'status.history': {
-        $elemMatch: { status: REPORT_STATUS.SUBMITTED, at: { $gt: since } }
-      }
+      'status.submitted.at': { $gt: since }
     },
     { projection: { _id: 1 } }
   )

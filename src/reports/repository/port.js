@@ -298,10 +298,10 @@
  *   skipping any report already flagged from `summaryLogId` or built from it.
  *   Returns the per-report details for auditing.
  * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
- *   Returns true when any report for the org/reg has a SUBMITTED status.history
- *   entry stamped strictly after `since` (a canonical ISO timestamp, as produced
- *   by toISOString throughout). Used to detect a period closing during the
- *   summary log validate-to-submit window.
+ *   Returns true when any report for the org/reg was submitted strictly after
+ *   `since` (a canonical ISO timestamp, as produced by toISOString throughout),
+ *   read from the denormalised `status.submitted` slot. Used to detect a period
+ *   closing during the summary log validate-to-submit window.
  */
 
 /**

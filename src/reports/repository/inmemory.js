@@ -405,8 +405,9 @@ const markSubmittedReportsRequiringResubmission = async (
 }
 
 /**
- * Returns true when any report for the org/reg has a SUBMITTED status.history
- * entry stamped strictly after `since`.
+ * Returns true when any report for the org/reg was submitted strictly after
+ * `since`. SUBMITTED is terminal and each submission is a distinct document, so
+ * the denormalised `status.submitted` slot is the single submission instant.
  *
  * @param {Map<string, Object>} reports
  * @param {string} organisationId
@@ -427,9 +428,7 @@ const hasReportSubmittedSince = async (
     (report) =>
       report.organisationId === organisationId &&
       report.registrationId === registrationId &&
-      report.status.history.some(
-        (entry) => entry.status === REPORT_STATUS.SUBMITTED && entry.at > since
-      )
+      report.status.submitted?.at > since
   )
 
 /**
