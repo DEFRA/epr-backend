@@ -346,17 +346,23 @@ const baseConfig = {
     }
   },
   featureFlags: {
-    devEndpoints: {
-      doc: 'Feature Flag: Enable development endpoints',
+    closedPeriodAdjustments: {
+      doc: 'Feature Flag: Flag submitted reports as requiring resubmission when a later summary log restates a closed period',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_DEV_ENDPOINTS'
+      env: 'FEATURE_FLAG_CLOSED_PERIOD_ADJUSTMENTS'
     },
     copyFormFilesToS3: {
       doc: 'Feature Flag: Copy form files to S3 on startup',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
+    },
+    devEndpoints: {
+      doc: 'Feature Flag: Enable development endpoints',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
     fixDuplicateAccreditationLinks: {
       doc: 'Feature Flag: Fix duplicate accreditation links in existing organisation data on startup',
@@ -527,5 +533,13 @@ function getConfig(overrides = {}) {
 
 const isProductionEnvironment = () => config.get('cdpEnvironment') === 'prod'
 const isLocalEnvironment = () => config.get('cdpEnvironment') === 'local'
+const isClosedPeriodAdjustmentsEnabled = () =>
+  config.get('featureFlags.closedPeriodAdjustments')
 
-export { config, getConfig, isLocalEnvironment, isProductionEnvironment }
+export {
+  config,
+  getConfig,
+  isClosedPeriodAdjustmentsEnabled,
+  isLocalEnvironment,
+  isProductionEnvironment
+}
