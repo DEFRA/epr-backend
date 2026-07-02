@@ -1,6 +1,7 @@
 import Joi from 'joi'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
 
 /**
  * Shared Joi schema for loads classified by reporting period status.
@@ -55,7 +56,11 @@ const periodStatusByChangeSchema = Joi.object({
 
 export const loadsByReportingPeriodSchema = Joi.object({
   openPeriodLoads: periodStatusByChangeSchema.required(),
-  closedPeriodLoads: periodStatusByChangeSchema.required()
+  closedPeriodLoads: periodStatusByChangeSchema.required(),
+  // The closed (submitted) periods this upload added or adjusted loads in, which
+  // drive resubmission detection at submit time. Optional with a default so logs
+  // written before this field existed still validate on read.
+  closedPeriods: Joi.array().items(periodRefSchema).default([])
 })
 
 // Every bucket carries an empty rows list, matching the uniform populated
@@ -69,5 +74,6 @@ const emptyChange = () => ({ added: emptyGroup(), adjusted: emptyGroup() })
 /** Default loadsByReportingPeriod for validated logs without period-status data. */
 export const emptyLoadsByReportingPeriod = () => ({
   openPeriodLoads: emptyChange(),
-  closedPeriodLoads: emptyChange()
+  closedPeriodLoads: emptyChange(),
+  closedPeriods: []
 })

@@ -4,7 +4,7 @@ import {
 } from '#common/enums/index.js'
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { onSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
 import { orsImportCommandHandlers } from './ors-import-commands.js'
@@ -51,19 +51,10 @@ function buildConsumerDeps(server, { config }) {
 
   const { featureFlags } = server
 
-  // Pre-wired closure: captures repos at plugin level; receives org/reg/sl-id at call time
-  const onSummaryLogSubmittedReportHook = (
-    organisationId,
-    registrationId,
-    summaryLogId
-  ) =>
-    onSummaryLogUploaded({
-      organisationId,
-      registrationId,
-      summaryLogId,
-      reportsRepository,
-      systemLogsRepository
-    })
+  const onSummaryLogUploaded = createOnSummaryLogUploaded({
+    reportsRepository,
+    systemLogsRepository
+  })
 
   return {
     sqsClient,
@@ -77,7 +68,7 @@ function buildConsumerDeps(server, { config }) {
     featureFlags,
     reportsRepository,
     summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
-    onSummaryLogSubmittedReportHook
+    onSummaryLogUploaded
   }
 }
 

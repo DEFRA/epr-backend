@@ -108,7 +108,8 @@ const emptyPeriod = () => ({
 })
 const emptyResult = () => ({
   openPeriodLoads: emptyPeriod(),
-  closedPeriodLoads: emptyPeriod()
+  closedPeriodLoads: emptyPeriod(),
+  closedPeriods: []
 })
 
 /**
@@ -616,6 +617,120 @@ describe('classifyByPeriodStatus', () => {
           }
         ]
       })
+    })
+  })
+
+  describe('closed periods', () => {
+    const submittedJan = buildSubmittedReport({ period: 1, year: 2026 })
+
+    it('returns the distinct closed periods that received added loads', () => {
+      const result = classifyByPeriodStatus({
+        ...baseParams,
+        periodicReports: [submittedJan],
+        wasteRecords: [
+          buildWasteRecord({
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15',
+              GROSS_WEIGHT: '42.5'
+            }
+          })
+        ]
+      })
+
+      expect(result.closedPeriods).toEqual([
+        { year: 2026, cadence: 'monthly', period: 1 }
+      ])
+    })
+
+    it('deduplicates a period touched by more than one load', () => {
+      const result = classifyByPeriodStatus({
+        ...baseParams,
+        periodicReports: [submittedJan],
+        wasteRecords: [
+          buildWasteRecord({
+            rowId: '10001',
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: '2026-01-10',
+              GROSS_WEIGHT: '10'
+            }
+          }),
+          buildWasteRecord({
+            rowId: '10002',
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: '2026-01-20',
+              GROSS_WEIGHT: '20'
+            }
+          })
+        ]
+      })
+
+      expect(result.closedPeriods).toEqual([
+        { year: 2026, cadence: 'monthly', period: 1 }
+      ])
+    })
+
+    it('includes the closed period a load was moved out of', () => {
+      const existingRecordsMap = new Map([
+        [
+          'received:10001',
+          /** @type {WasteRecord} */ (
+            /** @type {unknown} */ ({
+              type: 'received',
+              rowId: '10001',
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15',
+                GROSS_WEIGHT: '30'
+              }
+            })
+          )
+        ]
+      ])
+
+      const result = classifyByPeriodStatus({
+        ...baseParams,
+        periodicReports: [submittedJan],
+        existingRecordsMap,
+        wasteRecords: [
+          buildWasteRecord({
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: '2026-02-15',
+              GROSS_WEIGHT: '30'
+            },
+            versionStatus: VERSION_STATUS.UPDATED,
+            previousVersions: [
+              {
+                summaryLog: { id: 'sl-old' },
+                status: VERSION_STATUS.CREATED,
+                data: {
+                  DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15',
+                  GROSS_WEIGHT: '30'
+                }
+              }
+            ]
+          })
+        ]
+      })
+
+      expect(result.closedPeriods).toEqual([
+        { year: 2026, cadence: 'monthly', period: 1 }
+      ])
+    })
+
+    it('is empty when no loads fall in a closed period', () => {
+      const result = classifyByPeriodStatus({
+        ...baseParams,
+        periodicReports: [submittedJan],
+        wasteRecords: [
+          buildWasteRecord({
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: '2026-02-15',
+              GROSS_WEIGHT: '10'
+            }
+          })
+        ]
+      })
+
+      expect(result.closedPeriods).toEqual([])
     })
   })
 })

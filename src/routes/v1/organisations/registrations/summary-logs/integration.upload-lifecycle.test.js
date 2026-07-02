@@ -160,7 +160,8 @@ describe('Summary logs upload lifecycle', () => {
                 balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
                 nonBalanceAffecting: { count: 0, rows: [] }
               }
-            }
+            },
+            closedPeriods: []
           },
           loadsByWasteRecordType: [
             {

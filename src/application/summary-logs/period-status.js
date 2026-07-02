@@ -1,14 +1,18 @@
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { periodForDate } from '#reports/domain/period-for-date.js'
+import { periodKey } from '#reports/domain/period-key.js'
 import {
   buildSubmittedPeriods,
   isDateInSubmittedPeriod
 } from '#reports/domain/submitted-periods.js'
-import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
-import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import { RECORD_CHANGE, determineRecordStatus } from './record-change.js'
 
 /** Internal reporting-period status. Not serialised: mapped to output keys via PERIOD_TO_KEY. */
 const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
+
+/** @typedef {typeof PERIOD_STATUS[keyof typeof PERIOD_STATUS]} PeriodStatus */
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
@@ -17,6 +21,9 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {PROCESSING_TYPE_TABLES} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {PeriodRef} from '#reports/domain/period-key.js' */
+/** @import {Cadence} from '#reports/domain/cadence.js' */
+/** @import {RecordChange} from './record-change.js' */
 
 /** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
 
@@ -52,7 +59,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
  */
 
 /**
- * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange }} LoadsByReportingPeriod
+ * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange, closedPeriods: PeriodRef[] }} LoadsByReportingPeriod
  */
 
 /**
@@ -66,8 +73,8 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
  * leg: a record's net contribution to a single period's balance. Inclusion is
  * derived from tonnageDelta at fold time, not stored here.
  * @typedef {Object} PeriodStatusEntry
- * @property {'open' | 'closed'} period
- * @property {'added' | 'adjusted'} change
+ * @property {PeriodStatus} period
+ * @property {RecordChange} change
  * @property {number} count - 1 per leg, so a record counts once per period it touches
  * @property {number} tonnageDelta - rounded to 2dp; non-zero means balanceAffecting
  * @property {string} rowId - the record's row ID; carried onto every leg
@@ -92,8 +99,21 @@ const emptyChange = () => ({
 /** @returns {LoadsByReportingPeriod} */
 const emptyResult = () => ({
   openPeriodLoads: emptyChange(),
-  closedPeriodLoads: emptyChange()
+  closedPeriodLoads: emptyChange(),
+  closedPeriods: []
 })
+
+/**
+ * Whether a reporting date falls in a submitted (closed) period. A missing
+ * date is never in a closed period.
+ *
+ * @param {string | Date | null | undefined} date
+ * @param {Set<string>} submittedPeriods
+ * @param {Cadence} cadence
+ * @returns {date is string | Date}
+ */
+const isSubmittedDate = (date, submittedPeriods, cadence) =>
+  date ? isDateInSubmittedPeriod(submittedPeriods, date, cadence) : false
 
 /**
  * Applies the closed-wins rule: if ANY date field falls in a submitted
@@ -103,8 +123,8 @@ const emptyResult = () => ({
  * @param {Record<string, string | Date | null | undefined>} data
  * @param {string[]} reportingDateFields
  * @param {Set<string>} submittedPeriods
- * @param {string} cadence
- * @returns {'open' | 'closed' | null}
+ * @param {Cadence} cadence
+ * @returns {PeriodStatus | null}
  */
 const classifyPeriodStatus = (
   data,
@@ -112,34 +132,83 @@ const classifyPeriodStatus = (
   submittedPeriods,
   cadence
 ) => {
-  let hasAnyDate = false
+  const dates = reportingDateFields.map((field) => data[field])
 
-  for (const field of reportingDateFields) {
-    const dateValue = data[field]
-    if (!dateValue) {
-      continue
-    }
-
-    hasAnyDate = true
-    if (isDateInSubmittedPeriod(submittedPeriods, dateValue, cadence)) {
-      return PERIOD_STATUS.CLOSED
-    }
+  if (dates.some((date) => isSubmittedDate(date, submittedPeriods, cadence))) {
+    return PERIOD_STATUS.CLOSED
   }
 
-  return hasAnyDate ? PERIOD_STATUS.OPEN : null
+  return dates.some(Boolean) ? PERIOD_STATUS.OPEN : null
 }
 
 /**
- * @param {ValidatedWasteRecord['record']} record
- * @param {string} summaryLogId
- * @returns {'added' | 'adjusted' | 'unchanged'}
+ * The closed (submitted) periods a record's dates fall in. Mirrors
+ * {@link classifyPeriodStatus} but yields the period identities rather than a
+ * single open/closed verdict, so resubmission detection knows which submitted
+ * periods this change touched.
+ *
+ * @param {Record<string, string | Date | null | undefined>} data
+ * @param {string[]} reportingDateFields
+ * @param {Set<string>} submittedPeriods
+ * @param {Cadence} cadence
+ * @returns {PeriodRef[]}
  */
-const determineRecordStatus = (record, summaryLogId) => {
-  const lastVersion = record.versions.at(-1)
-  if (lastVersion?.summaryLog?.id !== summaryLogId) {
-    return 'unchanged'
-  }
-  return lastVersion.status === VERSION_STATUS.CREATED ? 'added' : 'adjusted'
+const closedPeriodRefsFor = (
+  data,
+  reportingDateFields,
+  submittedPeriods,
+  cadence
+) =>
+  reportingDateFields.flatMap((field) => {
+    const dateValue = data[field]
+
+    if (!isSubmittedDate(dateValue, submittedPeriods, cadence)) {
+      return []
+    }
+
+    const { year, period } = periodForDate(dateValue, cadence)
+    return [{ year, cadence, period }]
+  })
+
+/**
+ * The closed (submitted) periods a single added/adjusted record touches. An
+ * adjustment also touches the period the load is moving out of, so the existing
+ * record's dates are included alongside the new ones.
+ *
+ * @param {ValidatedWasteRecord['record']} record
+ * @param {RecordChange} status
+ * @param {TableSchema} schema
+ * @param {Map<string, WasteRecord>} existingRecordsMap
+ * @param {Set<string>} submittedPeriods
+ * @param {Cadence} cadence
+ * @returns {PeriodRef[]}
+ */
+const closedPeriodRefsForRecord = (
+  record,
+  status,
+  schema,
+  existingRecordsMap,
+  submittedPeriods,
+  cadence
+) => {
+  const changedData =
+    status === RECORD_CHANGE.ADDED
+      ? [record.data]
+      : [
+          record.data,
+          existingRecordsMap.get(`${record.type}:${record.rowId}`)?.data
+        ]
+
+  return changedData
+    .filter(Boolean)
+    .flatMap((data) =>
+      closedPeriodRefsFor(
+        data,
+        schema.reportingDateFields,
+        submittedPeriods,
+        cadence
+      )
+    )
 }
 
 /**
@@ -169,7 +238,7 @@ const classifyRow = (schema, data, context) => {
  * naturally falls into nonBalanceAffecting at fold time.
  *
  * @param {Object} params
- * @param {'open' | 'closed'} params.period
+ * @param {PeriodStatus} params.period
  * @param {number} params.transactionAmount
  * @param {RowIdentity} params.identity
  * @returns {PeriodStatusEntry[]}
@@ -177,7 +246,7 @@ const classifyRow = (schema, data, context) => {
 const classifyAddedRecord = ({ period, transactionAmount, identity }) => [
   {
     period,
-    change: 'added',
+    change: RECORD_CHANGE.ADDED,
     count: 1,
     tonnageDelta: roundToTwoDecimalPlaces(transactionAmount),
     ...identity
@@ -192,8 +261,8 @@ const classifyAddedRecord = ({ period, transactionAmount, identity }) => [
  * Each leg's delta is rounded to 2dp so the fold can decide inclusion from it.
  *
  * @param {Object} params
- * @param {'open' | 'closed' | null} params.oldPeriod
- * @param {'open' | 'closed' | null} params.newPeriod
+ * @param {PeriodStatus | null} params.oldPeriod
+ * @param {PeriodStatus | null} params.newPeriod
  * @param {number} params.oldAmount
  * @param {number} params.newAmount
  * @param {RowIdentity} params.identity
@@ -206,7 +275,7 @@ const classifyAdjustedRecord = ({
   newAmount,
   identity
 }) => {
-  /** @type {Map<'open' | 'closed', number>} */
+  /** @type {Map<PeriodStatus, number>} */
   const legs = new Map()
   if (oldPeriod) {
     legs.set(oldPeriod, (legs.get(oldPeriod) ?? 0) - oldAmount)
@@ -220,7 +289,7 @@ const classifyAdjustedRecord = ({
   // inflow into the new), so the period it left does not look empty.
   return [...legs].map(([period, tonnageDelta]) => ({
     period,
-    change: 'adjusted',
+    change: RECORD_CHANGE.ADJUSTED,
     count: 1,
     tonnageDelta: roundToTwoDecimalPlaces(tonnageDelta),
     ...identity
@@ -229,7 +298,7 @@ const classifyAdjustedRecord = ({
 
 /**
  * Maps a record's internal period status to its output bucket key.
- * @type {Record<'open' | 'closed', 'openPeriodLoads' | 'closedPeriodLoads'>}
+ * @type {Record<PeriodStatus, 'openPeriodLoads' | 'closedPeriodLoads'>}
  */
 const PERIOD_TO_KEY = {
   [PERIOD_STATUS.OPEN]: 'openPeriodLoads',
@@ -294,7 +363,7 @@ const reduceEntries = (entries) => {
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {TableSchema} params.schema
  * @param {Set<string>} params.submittedPeriods
- * @param {'monthly' | 'quarterly'} params.cadence
+ * @param {Cadence} params.cadence
  * @param {ClassificationContext} params.context
  * @returns {PeriodStatusEntry[]}
  */
@@ -364,7 +433,7 @@ const classifyAdjustedWasteRecord = ({
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {PeriodicReport[]} params.periodicReports
- * @param {'monthly' | 'quarterly'} params.cadence
+ * @param {Cadence} params.cadence
  * @param {string} params.summaryLogId
  * @param {ProcessingTypeSchemas} params.tableSchemas
  * @param {ClassificationContext} params.classificationContext
@@ -384,16 +453,32 @@ export const classifyByPeriodStatus = ({
   /** @type {PeriodStatusEntry[]} */
   const entries = []
 
+  /** @type {Map<string, PeriodRef>} */
+  const closedPeriodsByKey = new Map()
+
   for (const wasteRecord of wasteRecords) {
     const { record, outcome } = wasteRecord
     const status = determineRecordStatus(record, summaryLogId)
     const schema = tableSchemas[wasteRecord.tableName]
 
-    if (outcome === ROW_OUTCOME.IGNORED || status === 'unchanged' || !schema) {
+    if (
+      outcome === ROW_OUTCOME.IGNORED ||
+      status === RECORD_CHANGE.UNCHANGED ||
+      !schema
+    ) {
       continue
     }
 
-    if (status === 'added') {
+    closedPeriodRefsForRecord(
+      record,
+      status,
+      schema,
+      existingRecordsMap,
+      submittedPeriods,
+      cadence
+    ).forEach((ref) => closedPeriodsByKey.set(periodKey(ref), ref))
+
+    if (status === RECORD_CHANGE.ADDED) {
       const period = classifyPeriodStatus(
         record.data,
         schema.reportingDateFields,
@@ -432,5 +517,8 @@ export const classifyByPeriodStatus = ({
     }
   }
 
-  return reduceEntries(entries)
+  return {
+    ...reduceEntries(entries),
+    closedPeriods: [...closedPeriodsByKey.values()]
+  }
 }
