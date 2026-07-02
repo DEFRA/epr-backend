@@ -90,6 +90,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
                 submissionNumber: 1,
                 submittedAt: null,
                 submittedBy: null,
+                resubmissionRequired: null,
                 recyclingActivity: {
                   totalTonnageReceived: 120,
                   tonnageRecycled: 95.5,
@@ -164,6 +165,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         submissionNumber: 2,
         submittedAt: null,
         submittedBy: null,
+        resubmissionRequired: null,
         recyclingActivity: {
           totalTonnageReceived: 120,
           tonnageRecycled: 95.5,
@@ -196,6 +198,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
           submissionNumber: 1,
           submittedAt: expect.any(String),
           submittedBy: DEFAULT_CHANGED_BY,
+          resubmissionRequired: null,
           recyclingActivity: {
             totalTonnageReceived: 120,
             tonnageRecycled: 95.5,
@@ -270,6 +273,32 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         expect(Object.keys(doc.reports.monthly)).toContain(
           String(MONTHLY_PERIODS.January)
         )
+      })
+    })
+
+    it('surfaces resubmissionRequired on the latest submitted report', async () => {
+      await createAndSubmitReport(repository)
+      await repository.markSubmittedReportsRequiringResubmission({
+        organisationId: DEFAULT_ORG_ID,
+        registrationId: DEFAULT_REG_ID,
+        summaryLogId: 'sl-resub',
+        uploadedAt: '2026-06-01T12:00:00.000Z',
+        periods: [
+          {
+            year: DEFAULT_REPORT_YEAR,
+            cadence: 'monthly',
+            period: DEFAULT_REPORT_PERIOD
+          }
+        ]
+      })
+
+      const [result] = await repository.findAllPeriodicReports()
+      const slot = result.reports.monthly[DEFAULT_REPORT_PERIOD]
+
+      expect(slot.current.resubmissionRequired).toEqual({
+        uploadedAt: '2026-06-01T12:00:00.000Z',
+        reason: 'closed_period_restated',
+        summaryLogId: 'sl-resub'
       })
     })
   })
