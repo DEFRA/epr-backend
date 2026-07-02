@@ -136,7 +136,7 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsRepository,
     user: SUBMIT_USER,
-    onSummaryLogSubmittedReportHook: vi.fn().mockResolvedValue(undefined)
+    onSummaryLogUploaded: vi.fn().mockResolvedValue(undefined)
   }
 
   return {
