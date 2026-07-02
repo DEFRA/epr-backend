@@ -213,7 +213,6 @@ const seedDownstreamForOrganisation = async (
   await repositories.wasteRecords.appendVersions(
     organisationId,
     registrationId,
-    // @ts-expect-error -- partial waste record map sufficient for seeding
     toWasteRecordVersions({
       received: { 'row-1': { version, data } }
     })
