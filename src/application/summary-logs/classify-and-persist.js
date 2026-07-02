@@ -1,4 +1,3 @@
-import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 import { isNil } from '#common/helpers/is-nil.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
@@ -115,20 +114,6 @@ export const classifyLoads = ({
 
   return { loads, loadsByWasteRecordType, loadsByReportingPeriod }
 }
-
-/**
- * Gates the closed-period refs behind the closed-period-adjustments feature.
- * When the feature is off, returns the loads with closedPeriods emptied so
- * nothing is persisted (or surfaced on the summary-log response) while it is
- * disabled; the open/closed load breakdown is untouched.
- *
- * @param {LoadsByReportingPeriod | null} loadsByReportingPeriod
- * @returns {LoadsByReportingPeriod | null}
- */
-export const gateClosedPeriods = (loadsByReportingPeriod) =>
-  loadsByReportingPeriod && !isClosedPeriodAdjustmentsEnabled()
-    ? { ...loadsByReportingPeriod, closedPeriods: [] }
-    : loadsByReportingPeriod
 
 /**
  * Fetches periodic reports for the validated summary log.
