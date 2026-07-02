@@ -1,5 +1,5 @@
 import { createWasteRecordsRepository } from './mongodb.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 export const mongoWasteRecordsRepositoryPlugin = {
   name: 'wasteRecordsRepository',
@@ -10,6 +10,6 @@ export const mongoWasteRecordsRepositoryPlugin = {
     const factory = await createWasteRecordsRepository(server.db)
     const repository = factory()
 
-    registerRepository(server, 'wasteRecordsRepository', () => repository)
+    registerDependency(server, 'wasteRecordsRepository', () => repository)
   }
 }

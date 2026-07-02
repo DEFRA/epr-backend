@@ -6,7 +6,6 @@ import { vi } from 'vitest'
 /** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
 /** @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js' */
-/** @import {WasteBalancesRepository} from '#waste-balances/repository/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 
 /**
@@ -129,25 +128,6 @@ export const createMockPackagingRecyclingNotesRepository = (
   rollbackIssuance: vi.fn(),
   rollbackPendingCancellation: vi.fn(),
   rollbackIssuedCancellation: vi.fn(),
-  ...overrides
-})
-
-/**
- * Builds a fully-typed WasteBalancesRepository mock with every method as a
- * vi.fn(). Pass `overrides` to stub specific methods for a test.
- *
- * @param {Partial<WasteBalancesRepository>} [overrides]
- * @returns {WasteBalancesRepository}
- */
-export const createMockWasteBalancesRepository = (overrides = {}) => ({
-  findBalance: vi.fn(),
-  updateWasteBalanceTransactions: vi.fn(),
-  deductAvailableBalanceForPrnCreation: vi.fn(),
-  deductTotalBalanceForPrnIssue: vi.fn(),
-  creditAvailableBalanceForPrnCancellation: vi.fn(),
-  creditFullBalanceForIssuedPrnCancellation: vi.fn(),
-  appendStreamEvent: vi.fn(),
-  getPrnCatchupEvents: vi.fn(),
   ...overrides
 })
 

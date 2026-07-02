@@ -43,7 +43,7 @@ describe('summaryLogCommandHandlers', () => {
       summaryLogsRepository: { findById: vi.fn(), update: vi.fn() },
       organisationsRepository: {},
       wasteRecordsRepository: {},
-      wasteBalancesRepository: {},
+      wasteBalanceService: {},
       summaryLogExtractor: {}
     }
   })

@@ -1,5 +1,5 @@
 import { isNil } from '#common/helpers/is-nil.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import { ObjectId } from 'mongodb'
 import { validateOverseasSiteInsert } from './validation.js'
 
@@ -177,7 +177,7 @@ export function createInMemoryOverseasSitesRepositoryPlugin(initialSites) {
   return {
     name: 'overseasSitesRepository',
     register: (server) => {
-      registerRepository(server, 'overseasSitesRepository', () => repository)
+      registerDependency(server, 'overseasSitesRepository', () => repository)
     }
   }
 }

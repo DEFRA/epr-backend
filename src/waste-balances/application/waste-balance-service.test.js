@@ -321,22 +321,22 @@ describe('createWasteBalanceService', () => {
     }
 
     it('returns the PRN tail events after the watermark in order', async () => {
-      await streamRepository.appendEvent(
+      await streamRepository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-1',
           accreditationId: 'acc-1',
           number: 1,
           payload: { prnId: 'prn-1', amount: 10 }
         })
-      )
-      await streamRepository.appendEvent(
+      ])
+      await streamRepository.appendEvents([
         buildPrnIssuedEvent({
           registrationId: 'reg-1',
           accreditationId: 'acc-1',
           number: 2,
           payload: { prnId: 'prn-1', amount: 10 }
         })
-      )
+      ])
 
       const events = await service.prnCatchupEvents({
         ...catchupParams,
@@ -359,6 +359,20 @@ describe('createWasteBalanceService', () => {
         isBoom: true,
         output: { statusCode: 422 }
       })
+    })
+  })
+
+  describe('updateWasteBalanceTransactions', () => {
+    it('does not touch the ledger when there are no waste records to credit', async () => {
+      await service.updateWasteBalanceTransactions([], {
+        user: createdBy,
+        accreditation: { id: 'acc-1' },
+        overseasSites: /** @type {*} */ (new Map()),
+        summaryLogId: 'log-A'
+      })
+
+      const all = await streamRepository.findAllByPartition('reg-1', 'acc-1')
+      expect(all).toHaveLength(0)
     })
   })
 

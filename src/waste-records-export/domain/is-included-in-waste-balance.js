@@ -20,13 +20,17 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * @param {WasteRecord} record
  * @param {Accreditation | null} accreditation
  * @param {OverseasSitesContext} overseasSites
- * @returns {WasteBalanceClassification}
+ * @returns {WasteBalanceClassification | null} null when waste balance is not applicable (no accreditation)
  */
 export const getWasteBalanceClassification = (
   record,
   accreditation,
   overseasSites
 ) => {
+  if (accreditation === null) {
+    return null
+  }
+
   if (record.excludedFromWasteBalance) {
     return { included: false, reasons: [], tonnage: null }
   }

@@ -96,7 +96,7 @@ const setupRepositories = async ({ prnSeed, balanceSeed }) => {
   const prnRepository = prnFactory(logger)
 
   const streamRepository = createInMemoryStreamRepository()()
-  await streamRepository.appendEvent(
+  await streamRepository.appendEvents([
     buildStreamEvent({
       registrationId: REG_ID,
       accreditationId: ACC_ID,
@@ -107,7 +107,7 @@ const setupRepositories = async ({ prnSeed, balanceSeed }) => {
         availableAmount: balanceSeed.availableAmount
       }
     })
-  )
+  ])
 
   const organisationsRepository = buildOrganisationsRepository()
 

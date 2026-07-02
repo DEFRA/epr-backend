@@ -13,6 +13,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -46,7 +47,8 @@ describe('createCommandQueueConsumer', () => {
   let summaryLogsRepository
   let organisationsRepository
   let wasteRecordsRepository
-  let wasteBalancesRepository
+  let wasteBalanceService
+  let reportsRepository
   let summaryLogExtractor
   let onSummaryLogSubmittedReportHook
   let mockConsumer
@@ -76,7 +78,8 @@ describe('createCommandQueueConsumer', () => {
 
     organisationsRepository = {}
     wasteRecordsRepository = {}
-    wasteBalancesRepository = {}
+    wasteBalanceService = {}
+    reportsRepository = createInMemoryReportsRepository()()
     summaryLogExtractor = {}
     onSummaryLogSubmittedReportHook = vi.fn().mockResolvedValue(undefined)
 
@@ -123,7 +126,8 @@ describe('createCommandQueueConsumer', () => {
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        wasteBalancesRepository,
+        wasteBalanceService,
+        reportsRepository,
         summaryLogExtractor,
         onSummaryLogSubmittedReportHook
       },
@@ -141,7 +145,7 @@ describe('createCommandQueueConsumer', () => {
             summaryLogsRepository,
             organisationsRepository,
             wasteRecordsRepository,
-            wasteBalancesRepository,
+            wasteBalanceService,
             summaryLogExtractor
           },
           []

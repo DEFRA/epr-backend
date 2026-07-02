@@ -1,5 +1,5 @@
 import { createInMemoryUploadsRepository } from './inmemory.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
  * @param {Object} [config]
@@ -11,7 +11,7 @@ export function createInMemoryUploadsRepositoryPlugin(config) {
   return {
     name: 'uploadsRepository',
     register: (server) => {
-      registerRepository(server, 'uploadsRepository', () => repository)
+      registerDependency(server, 'uploadsRepository', () => repository)
     }
   }
 }

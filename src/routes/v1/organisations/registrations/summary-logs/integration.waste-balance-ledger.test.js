@@ -112,7 +112,7 @@ describe('Waste balance stream (Exporter)', () => {
 
   it('appends a single stream event with aggregate creditTotal on first upload', async () => {
     const env = await setupStream()
-    const { streamRepository, registrationId, wasteBalancesRepository } = env
+    const { streamRepository, registrationId, wasteBalanceService } = env
 
     await performSubmission(
       env,
@@ -145,7 +145,8 @@ describe('Waste balance stream (Exporter)', () => {
       availableAmount: 300
     })
 
-    const resolvedBalance = await wasteBalancesRepository.findBalance({
+    const resolvedBalance = await wasteBalanceService.currentBalance({
+      organisationId: env.organisationId,
       registrationId,
       accreditationId: 'ACC-123'
     })

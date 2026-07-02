@@ -7,7 +7,6 @@ import {
   createMockSystemLogsRepository,
   createMockFormSubmissionsRepository,
   createMockPackagingRecyclingNotesRepository,
-  createMockWasteBalancesRepository,
   createMockOverseasSitesRepository
 } from '#test/mock-repositories.js'
 
@@ -85,19 +84,6 @@ describe('mock-repositories', () => {
         'rollbackIssuance',
         'rollbackPendingCancellation',
         'rollbackIssuedCancellation'
-      ]
-    },
-    createMockWasteBalancesRepository: {
-      build: createMockWasteBalancesRepository,
-      methods: [
-        'findBalance',
-        'updateWasteBalanceTransactions',
-        'deductAvailableBalanceForPrnCreation',
-        'deductTotalBalanceForPrnIssue',
-        'creditAvailableBalanceForPrnCancellation',
-        'creditFullBalanceForIssuedPrnCancellation',
-        'appendStreamEvent',
-        'getPrnCatchupEvents'
       ]
     },
     createMockOverseasSitesRepository: {

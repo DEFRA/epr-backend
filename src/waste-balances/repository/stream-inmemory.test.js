@@ -18,7 +18,7 @@ const extendedIt = base.extend({
 describe('waste-balances stream repository - in-memory implementation', () => {
   it('exposes the stream port surface', () => {
     const repository = createInMemoryStreamRepository()()
-    expect(repository.appendEvent).toBeTypeOf('function')
+    expect(repository.appendEvents).toBeTypeOf('function')
     expect(repository.findLatestByPartition).toBeTypeOf('function')
     expect(repository.findLatestByPartitionAndKind).toBeTypeOf('function')
     expect(repository.findEventsByPrnIdAfter).toBeTypeOf('function')

@@ -1,21 +1,22 @@
-import { createWasteBalancesRepository } from './repository.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
- * Reads the waste balance over the shared in-memory stream from
+ * Builds the waste balance service over the shared in-memory stream from
  * `server.app.streamRepository`, so `createInMemoryStreamRepositoryPlugin` must
  * register before this plugin.
  */
-export function createInMemoryWasteBalancesRepositoryPlugin() {
+export function createInMemoryWasteBalanceServicePlugin() {
   return {
-    name: 'wasteBalancesRepository',
+    name: 'wasteBalanceService',
     register: (server) => {
       const streamRepository =
         /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
           server.app.streamRepository
         )
-      const repository = createWasteBalancesRepository({ streamRepository })()
-      registerRepository(server, 'wasteBalancesRepository', () => repository)
+      registerDependency(server, 'wasteBalanceService', () =>
+        createWasteBalanceService(streamRepository)
+      )
     }
   }
 }

@@ -13,7 +13,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
 /** @typedef {import('#waste-records/repository/port.js').RowStateRepository} RowStateRepository */
-/** @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository */
+/** @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService */
 /** @typedef {import('#feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository */
@@ -25,7 +25,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {OrganisationsRepository} organisationsRepository
  * @property {WasteRecordsRepository} wasteRecordsRepository
  * @property {RowStateRepository} wasteRecordStatesRepository
- * @property {WasteBalancesRepository} wasteBalancesRepository
+ * @property {WasteBalanceService} wasteBalanceService
  * @property {FeatureFlags} featureFlags
  * @property {ReportsRepository} reportsRepository
  * @property {SummaryLogExtractor} summaryLogExtractor

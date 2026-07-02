@@ -57,7 +57,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
-          wasteBalancesRepository: () => ({}),
+          wasteBalanceService: () => ({}),
           organisationsRepository: () => ({})
         },
         featureFlags: createInMemoryFeatureFlags()

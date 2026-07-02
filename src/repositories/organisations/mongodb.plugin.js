@@ -1,5 +1,5 @@
 import { createOrganisationsRepository } from './mongodb.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
  * @typedef {Object} MongoOrganisationsRepositoryPluginOptions
@@ -19,6 +19,6 @@ export const mongoOrganisationsRepositoryPlugin = {
     )
     const repository = factory()
 
-    registerRepository(server, 'organisationsRepository', () => repository)
+    registerDependency(server, 'organisationsRepository', () => repository)
   }
 }
