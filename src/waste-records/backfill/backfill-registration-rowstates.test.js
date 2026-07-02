@@ -6,8 +6,17 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 
 import { backfillRegistrationRowStates } from './backfill-registration-rowstates.js'
+
+const streamWithService = () => {
+  const streamRepository = createInMemoryStreamRepository()()
+  return {
+    streamRepository,
+    wasteBalanceService: createWasteBalanceService(streamRepository)
+  }
+}
 
 const partition = {
   organisationId: 'org-1',
@@ -61,7 +70,7 @@ describe('backfillRegistrationRowStates', () => {
       accreditation,
       overseasSites,
       rowStateRepository,
-      streamRepository: createInMemoryStreamRepository()()
+      ...streamWithService()
     })
 
     expect(
@@ -91,7 +100,7 @@ describe('backfillRegistrationRowStates', () => {
       accreditation,
       overseasSites,
       rowStateRepository,
-      streamRepository: createInMemoryStreamRepository()()
+      ...streamWithService()
     })
 
     const history = await rowHistory(rowStateRepository, 'row-1')
@@ -122,7 +131,7 @@ describe('backfillRegistrationRowStates', () => {
       accreditation,
       overseasSites,
       rowStateRepository,
-      streamRepository: createInMemoryStreamRepository()()
+      ...streamWithService()
     })
 
     const history = await rowHistory(rowStateRepository, 'row-1')
@@ -149,7 +158,7 @@ describe('backfillRegistrationRowStates', () => {
         accreditation,
         overseasSites,
         rowStateRepository,
-        streamRepository: createInMemoryStreamRepository()()
+        ...streamWithService()
       })
 
     await run()
@@ -182,7 +191,7 @@ describe('backfillRegistrationRowStates', () => {
       accreditation,
       overseasSites,
       rowStateRepository,
-      streamRepository: createInMemoryStreamRepository()()
+      ...streamWithService()
     })
 
     expect(summary).toEqual({
@@ -204,7 +213,7 @@ describe('backfillRegistrationRowStates', () => {
         ])
       ]
       const rowStateRepository = createInMemoryRowStateRepository()()
-      const streamRepository = createInMemoryStreamRepository()()
+      const { streamRepository, wasteBalanceService } = streamWithService()
 
       await backfillRegistrationRowStates({
         partition: nullPartition,
@@ -213,7 +222,8 @@ describe('backfillRegistrationRowStates', () => {
         accreditation: null,
         overseasSites,
         rowStateRepository,
-        streamRepository
+        streamRepository,
+        wasteBalanceService
       })
 
       const submittedEvents = await streamRepository.findAllByPartition(
@@ -250,7 +260,7 @@ describe('backfillRegistrationRowStates', () => {
         ])
       ]
       const rowStateRepository = createInMemoryRowStateRepository()()
-      const streamRepository = createInMemoryStreamRepository()()
+      const { streamRepository, wasteBalanceService } = streamWithService()
       const run = () =>
         backfillRegistrationRowStates({
           partition: nullPartition,
@@ -259,7 +269,8 @@ describe('backfillRegistrationRowStates', () => {
           accreditation: null,
           overseasSites,
           rowStateRepository,
-          streamRepository
+          streamRepository,
+          wasteBalanceService
         })
 
       await run()
@@ -281,7 +292,7 @@ describe('backfillRegistrationRowStates', () => {
         ])
       ]
       const rowStateRepository = createInMemoryRowStateRepository()()
-      const streamRepository = createInMemoryStreamRepository()()
+      const { streamRepository, wasteBalanceService } = streamWithService()
 
       const summary = await backfillRegistrationRowStates({
         partition,
@@ -290,7 +301,8 @@ describe('backfillRegistrationRowStates', () => {
         accreditation,
         overseasSites,
         rowStateRepository,
-        streamRepository
+        streamRepository,
+        wasteBalanceService
       })
 
       expect(
@@ -310,7 +322,7 @@ describe('backfillRegistrationRowStates', () => {
         ])
       ]
       const rowStateRepository = createInMemoryRowStateRepository()()
-      const streamRepository = createInMemoryStreamRepository()()
+      const { streamRepository, wasteBalanceService } = streamWithService()
 
       const summary = await backfillRegistrationRowStates({
         partition: nullPartition,
@@ -319,7 +331,8 @@ describe('backfillRegistrationRowStates', () => {
         accreditation: null,
         overseasSites,
         rowStateRepository,
-        streamRepository
+        streamRepository,
+        wasteBalanceService
       })
 
       expect(summary.submittedEventWriteCount).toBe(2)

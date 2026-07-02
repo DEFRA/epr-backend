@@ -19,17 +19,11 @@ import { getProjectedPrnByNumber } from '#packaging-recycling-notes/application/
  * @import { HapiRequest, MachineCredentials } from '#common/hapi-types.js'
  * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
- * @import { WasteBalancesRepository } from '#waste-balances/repository/port.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  */
 
 /**
  * @typedef {HapiRequest & {
- *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
- *   wasteBalancesRepository: WasteBalancesRepository,
- *   organisationsRepository: OrganisationsRepository,
- *   systemLogsRepository: SystemLogsRepository
+ *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository
  * }} ExternalTransitionRequest
  */
 
@@ -57,7 +51,7 @@ export function createExternalTransitionHandler({
       )
       const {
         packagingRecyclingNotesRepository,
-        wasteBalancesRepository,
+        streamRepository,
         organisationsRepository,
         params,
         payload,
@@ -68,7 +62,7 @@ export function createExternalTransitionHandler({
       try {
         const prn = await getProjectedPrnByNumber({
           packagingRecyclingNotesRepository,
-          wasteBalancesRepository,
+          streamRepository,
           prnNumber
         })
 
@@ -89,7 +83,7 @@ export function createExternalTransitionHandler({
 
         const updatedPrn = await updatePrnStatus({
           prnRepository: packagingRecyclingNotesRepository,
-          wasteBalancesRepository,
+          streamRepository,
           organisationsRepository,
           logger,
           id: prn.id,

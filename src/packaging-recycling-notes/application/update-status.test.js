@@ -9,7 +9,7 @@ import {
 import { REGULATOR, ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
@@ -67,7 +67,7 @@ const buildPrn = (overrides = {}) => ({
 })
 
 /**
- * Seed an opening waste balance as a single stream event. `findBalance`
+ * Seed an opening waste balance as a single stream event. `currentBalance`
  * resolves the latest event's closing balance, so this is the balance the
  * transition opens against.
  *
@@ -142,17 +142,21 @@ const seedRepositories = ({
   const streamRepository = createInMemoryStreamRepository(
     balance ? [buildOpeningBalanceEvent(balance)] : []
   )()
-  const wasteBalancesRepository = createWasteBalancesRepository({
-    streamRepository
-  })()
+  const wasteBalanceService = createWasteBalanceService(streamRepository)
   const organisationsRepository = createInMemoryOrganisationsRepository([
     buildOrgWithAccreditation({ accreditation, withAccreditation })
   ])()
-  return { prnRepository, wasteBalancesRepository, organisationsRepository }
+  return {
+    prnRepository,
+    streamRepository,
+    wasteBalanceService,
+    organisationsRepository
+  }
 }
 
-const readBalance = (wasteBalancesRepository) =>
-  wasteBalancesRepository.findBalance({
+const readBalance = (wasteBalanceService) =>
+  wasteBalanceService.currentBalance({
+    organisationId: ORG_ID,
     registrationId: REG_ID,
     accreditationId: ACC_ID
   })
@@ -278,9 +282,9 @@ describe('updatePrnStatus', () => {
       )
       expect(reread?.version).toBe(2)
 
-      expect(
-        await readBalance(repositories.wasteBalancesRepository)
-      ).toMatchObject({ amount: 1000, availableAmount: 900 })
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        { amount: 1000, availableAmount: 900 }
+      )
     })
 
     it('allows creation when the tonnage equals the available balance exactly', async () => {
@@ -298,9 +302,9 @@ describe('updatePrnStatus', () => {
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER
       })
 
-      expect(
-        await readBalance(repositories.wasteBalancesRepository)
-      ).toMatchObject({ amount: 500, availableAmount: 0 })
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        { amount: 500, availableAmount: 0 }
+      )
     })
 
     it('throws conflict and leaves the balance untouched when the tonnage exceeds the available balance', async () => {
@@ -320,9 +324,9 @@ describe('updatePrnStatus', () => {
         })
       ).rejects.toThrow('Insufficient available waste balance')
 
-      expect(
-        await readBalance(repositories.wasteBalancesRepository)
-      ).toMatchObject({ amount: 500, availableAmount: 50 })
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        { amount: 500, availableAmount: 50 }
+      )
     })
 
     it('throws when creating a PRN with no waste balance', async () => {
@@ -341,24 +345,18 @@ describe('updatePrnStatus', () => {
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })
 
-    it('treats an absent available amount as zero when creating', async () => {
+    it('rejects creation when the available balance is exhausted', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 1,
           status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-        })
+        }),
+        balance: { amount: 500, availableAmount: 0 }
       })
 
       await expect(
         callUpdate({
           ...repositories,
-          // The stream-backed balance always carries both amounts; a partial
-          // balance only arises from a hand-built double, exercising the guard.
-          wasteBalancesRepository: {
-            findBalance: vi
-              .fn()
-              .mockResolvedValue({ accreditationId: ACC_ID, amount: 500 })
-          },
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER
         })
@@ -389,9 +387,9 @@ describe('updatePrnStatus', () => {
       expect(reread?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
       expect(reread?.prnNumber).toMatch(/^ER26\d{5}$/)
 
-      expect(
-        await readBalance(repositories.wasteBalancesRepository)
-      ).toMatchObject({ amount: 925, availableAmount: 1000 })
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        { amount: 925, availableAmount: 1000 }
+      )
     })
 
     it('throws conflict and leaves the balance untouched when the tonnage exceeds the total balance', async () => {
@@ -414,9 +412,9 @@ describe('updatePrnStatus', () => {
         })
       ).rejects.toThrow('Insufficient total waste balance')
 
-      expect(
-        await readBalance(repositories.wasteBalancesRepository)
-      ).toMatchObject({ amount: 50, availableAmount: 200 })
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        { amount: 50, availableAmount: 200 }
+      )
     })
 
     it('throws when issuing a PRN with no waste balance', async () => {
@@ -438,7 +436,7 @@ describe('updatePrnStatus', () => {
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })
 
-    it('treats an absent total amount as zero when issuing', async () => {
+    it('rejects issuance when the total balance is exhausted', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 1,
@@ -446,20 +444,13 @@ describe('updatePrnStatus', () => {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
             history: []
           }
-        })
+        }),
+        balance: { amount: 0, availableAmount: 200 }
       })
 
       await expect(
         callUpdate({
           ...repositories,
-          // The stream-backed balance always carries both amounts; a partial
-          // balance only arises from a hand-built double, exercising the guard.
-          wasteBalancesRepository: {
-            findBalance: vi.fn().mockResolvedValue({
-              accreditationId: ACC_ID,
-              availableAmount: 200
-            })
-          },
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
           actor: PRN_ACTOR.SIGNATORY
         })
@@ -510,9 +501,9 @@ describe('updatePrnStatus', () => {
       expect(reread?.status.currentStatusAt).toEqual(explicitTimestamp)
       expect(reread?.version).toBe(2)
 
-      expect(
-        await readBalance(repositories.wasteBalancesRepository)
-      ).toMatchObject({ amount: 1000, availableAmount: 1000 })
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        { amount: 1000, availableAmount: 1000 }
+      )
     })
 
     it('throws when the discard write reports no updated PRN', async () => {
@@ -529,7 +520,7 @@ describe('updatePrnStatus', () => {
             findById: vi.fn().mockResolvedValue(prn),
             updateStatus: vi.fn().mockResolvedValue(null)
           },
-          wasteBalancesRepository: {},
+          wasteBalanceService: {},
           organisationsRepository: {},
           newStatus: PRN_STATUS.DISCARDED,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER
@@ -560,9 +551,9 @@ describe('updatePrnStatus', () => {
       const reread = await repositories.prnRepository.findById(PRN_ID)
       expect(reread?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
 
-      expect(
-        await readBalance(repositories.wasteBalancesRepository)
-      ).toMatchObject({ amount: 500, availableAmount: 1000 })
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        { amount: 500, availableAmount: 1000 }
+      )
     })
 
     it('throws when cancelling an issued PRN with no waste balance', async () => {
@@ -608,9 +599,9 @@ describe('updatePrnStatus', () => {
       const reread = await repositories.prnRepository.findById(PRN_ID)
       expect(reread?.status.currentStatus).toBe(PRN_STATUS.DELETED)
 
-      expect(
-        await readBalance(repositories.wasteBalancesRepository)
-      ).toMatchObject({ amount: 1000, availableAmount: 1000 })
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        { amount: 1000, availableAmount: 1000 }
+      )
     })
 
     it('throws when deleting a pending PRN with no waste balance', async () => {

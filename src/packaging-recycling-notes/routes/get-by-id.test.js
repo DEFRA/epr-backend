@@ -5,6 +5,7 @@ import {
   it,
   expect,
   beforeAll,
+  beforeEach,
   afterAll,
   afterEach
 } from 'vitest'
@@ -16,6 +17,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { packagingRecyclingNoteByIdPath } from './get-by-id.js'
 
 const organisationId = 'org-123'
@@ -86,7 +88,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
     let server
     let packagingRecyclingNotesRepository
     let organisationsRepository
-    let wasteBalancesRepository
+    let streamRepository
 
     beforeAll(async () => {
       packagingRecyclingNotesRepository =
@@ -99,16 +101,12 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         }))
       }
 
-      wasteBalancesRepository = {
-        getPrnCatchupEvents: vi.fn(async () => [])
-      }
-
       server = await createTestServer({
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           organisationsRepository: () => organisationsRepository,
-          wasteBalancesRepository: () => wasteBalancesRepository
+          streamRepository: () => streamRepository
         },
         featureFlags: createInMemoryFeatureFlags()
       })
@@ -116,9 +114,12 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       await server.initialize()
     })
 
+    beforeEach(() => {
+      streamRepository = createInMemoryStreamRepository()()
+    })
+
     afterEach(() => {
       vi.clearAllMocks()
-      wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValue([])
     })
 
     afterAll(async () => {
@@ -412,7 +413,14 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           stalePrn
         )
-        wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValueOnce([
+        await streamRepository.appendEvents([
+          tailEvent(
+            STREAM_EVENT_KIND.PRN_CREATED,
+            1,
+            '2026-02-01T12:00:00.000Z'
+          )
+        ])
+        await streamRepository.appendEvents([
           tailEvent(STREAM_EVENT_KIND.PRN_ISSUED, 2, '2026-02-02T12:00:00.000Z')
         ])
 
@@ -439,7 +447,14 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
-        wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValueOnce([
+        await streamRepository.appendEvents([
+          tailEvent(
+            STREAM_EVENT_KIND.PRN_CREATED,
+            1,
+            '2026-02-01T12:00:00.000Z'
+          )
+        ])
+        await streamRepository.appendEvents([
           tailEvent(
             STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
             2,

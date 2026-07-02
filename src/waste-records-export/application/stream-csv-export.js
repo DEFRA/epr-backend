@@ -25,10 +25,12 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /**
  * @typedef {Object} StreamCsvExportDeps
- * @property {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @property {Pick<OrganisationsRepository, 'findAll' | 'findById'>} organisationsRepository
  * @property {Pick<WasteRecordsRepository, 'findByRegistration' | 'findDistinctDataKeys'>} wasteRecordsRepository
  * @property {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
  * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
+ * @property {string} [organisationId] - When set, export only this organisation.
+ * @property {string} [registrationId] - When set (with organisationId), export only this registration.
  */
 
 const sortById = (a, b) => a.id.localeCompare(b.id)
@@ -67,7 +69,7 @@ const encodeRow = async (cells) => {
  * @param {Organisation} input.org
  * @param {Registration} input.registration
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} input.accreditation
- * @param {Record<string, { validFrom: Date | null }>} input.overseasSites
+ * @param {Record<string, import('../domain/overseas-sites-context.js').OverseasSiteContextEntry>} input.overseasSites
  * @param {Map<string, { submittedAt: string }>} input.summaryLogMap
  * @param {WasteRecord} input.record
  * @param {string[]} input.dataFieldColumns
@@ -99,6 +101,7 @@ const rowForRecord = ({
       accreditation,
       overseasSites
     ),
+    overseasSites,
     dataFieldColumns
   })
 }
@@ -174,12 +177,13 @@ export async function* streamCsvExport(deps) {
     organisationsRepository,
     wasteRecordsRepository,
     summaryLogsRepository,
-    overseasSitesRepository
+    overseasSitesRepository,
+    organisationId,
+    registrationId
   } = deps
 
-  const [allSites, orgs, observedKeys] = await Promise.all([
+  const [allSites, observedKeys] = await Promise.all([
     overseasSitesRepository.findAll(),
-    organisationsRepository.findAll(),
     wasteRecordsRepository.findDistinctDataKeys()
   ])
 
@@ -187,11 +191,11 @@ export async function* streamCsvExport(deps) {
   const dataFieldColumns = buildDataFieldColumns(observedKeys)
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
-  const orgsSorted = orgs
-    .filter((org) => !TEST_ORGANISATIONS.has(org.orgId))
-    .sort(sortById)
+  const orgsSorted = await resolveOrgs(organisationsRepository, organisationId)
   for (const org of orgsSorted) {
-    const registrations = [...(org.registrations ?? [])].sort(sortById)
+    const registrations = [...(org.registrations ?? [])]
+      .filter((reg) => !registrationId || reg.id === registrationId)
+      .sort(sortById)
     for (const registration of registrations) {
       yield* streamRegistrationRows({
         org,
@@ -203,6 +207,26 @@ export async function* streamCsvExport(deps) {
       })
     }
   }
+}
+
+/**
+ * Resolve the organisations to export, sorted by id for deterministic output.
+ *
+ * When an id is given the single organisation is fetched directly (and the
+ * test-organisation exclusion is bypassed — an explicit request wins). The
+ * unscoped path lists every organisation and drops the test ones.
+ *
+ * @param {Pick<OrganisationsRepository, 'findAll' | 'findById'>} organisationsRepository
+ * @param {string} [organisationId]
+ * @returns {Promise<Organisation[]>}
+ */
+async function resolveOrgs(organisationsRepository, organisationId) {
+  if (organisationId) {
+    return [await organisationsRepository.findById(organisationId)]
+  }
+
+  const orgs = await organisationsRepository.findAll()
+  return orgs.filter((org) => !TEST_ORGANISATIONS.has(org.orgId)).sort(sortById)
 }
 
 /**

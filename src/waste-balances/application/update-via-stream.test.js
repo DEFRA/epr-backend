@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
+import { StreamSlotConflictError } from '../repository/stream-port.js'
 import { performUpdateViaStream } from './update-via-stream.js'
+import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
@@ -88,10 +90,15 @@ const buildExporterRecord = ({
 describe('performUpdateViaStream', () => {
   let streamRepository
   let systemLogsRepository
+  let submitSummaryLog
 
   beforeEach(async () => {
     streamRepository = createInMemoryStreamRepository()()
     systemLogsRepository = createSystemLogsRepository()(logger)
+    submitSummaryLog = createWasteBalanceService(
+      streamRepository,
+      systemLogsRepository
+    ).submitSummaryLog
     const { findSchemaForProcessingType } =
       await import('#domain/summary-logs/table-schemas/index.js')
     vi.mocked(findSchemaForProcessingType).mockReturnValue(includingSchema)
@@ -107,7 +114,7 @@ describe('performUpdateViaStream', () => {
       await performUpdateViaStream({
         wasteRecords: records,
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -139,7 +146,7 @@ describe('performUpdateViaStream', () => {
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -153,7 +160,7 @@ describe('performUpdateViaStream', () => {
           buildExporterRecord({ rowId: '3', tonnage: 20 })
         ],
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -189,7 +196,7 @@ describe('performUpdateViaStream', () => {
       await performUpdateViaStream({
         wasteRecords: records,
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -220,7 +227,7 @@ describe('performUpdateViaStream', () => {
       await performUpdateViaStream({
         wasteRecords: records,
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -239,12 +246,12 @@ describe('performUpdateViaStream', () => {
 
   describe('empty input', () => {
     it('does not touch the stream when no waste records are provided', async () => {
-      const appendSpy = vi.spyOn(streamRepository, 'appendEvent')
+      const appendSpy = vi.spyOn(streamRepository, 'appendEvents')
 
       await performUpdateViaStream({
         wasteRecords: [],
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -265,7 +272,7 @@ describe('performUpdateViaStream', () => {
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -296,6 +303,33 @@ describe('performUpdateViaStream', () => {
     })
   })
 
+  describe('without a system-logs repository', () => {
+    it('appends the ledger event but emits no back-office audit', async () => {
+      const auditlessSubmit =
+        createWasteBalanceService(streamRepository).submitSummaryLog
+
+      await performUpdateViaStream({
+        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
+        accreditation,
+        submitSummaryLog: auditlessSubmit,
+        dependencies: {},
+        user,
+        overseasSites,
+        summaryLogId: 'log-A'
+      })
+
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        accreditationId
+      )
+      expect(latest.number).toBe(1)
+      expect(latest.payload.creditTotal).toBe(100)
+
+      const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
+      expect(systemLogs).toHaveLength(0)
+    })
+  })
+
   describe('classifier outcome', () => {
     it('treats records with non-INCLUDED outcome as zero contribution', async () => {
       const { findSchemaForProcessingType } =
@@ -312,7 +346,7 @@ describe('performUpdateViaStream', () => {
       await performUpdateViaStream({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -332,7 +366,7 @@ describe('performUpdateViaStream', () => {
       await performUpdateViaStream({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -354,7 +388,7 @@ describe('performUpdateViaStream', () => {
       await performUpdateViaStream({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
-        streamRepository,
+        submitSummaryLog,
         dependencies: { systemLogsRepository },
         user: {
           id: 'user-2',
@@ -374,6 +408,38 @@ describe('performUpdateViaStream', () => {
         id: 'user-2',
         email: 'noname@example.test'
       })
+    })
+  })
+
+  describe('optimistic concurrency', () => {
+    it('lets one of two concurrent submissions win and surfaces the loser as a slot conflict', async () => {
+      const submit = (summaryLogId, tonnage) =>
+        performUpdateViaStream({
+          wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
+          accreditation,
+          submitSummaryLog,
+          dependencies: { systemLogsRepository },
+          user,
+          overseasSites,
+          summaryLogId
+        })
+
+      const results = await Promise.allSettled([
+        submit('log-A', 150),
+        submit('log-B', 200)
+      ])
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled')
+      const rejected = results.filter((r) => r.status === 'rejected')
+      expect(fulfilled).toHaveLength(1)
+      expect(rejected).toHaveLength(1)
+      expect(rejected[0].reason).toBeInstanceOf(StreamSlotConflictError)
+
+      const all = await streamRepository.findAllByPartition(
+        'reg-1',
+        accreditationId
+      )
+      expect(all).toHaveLength(1)
     })
   })
 })

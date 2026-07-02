@@ -13,8 +13,6 @@ import { getProjectedPrnById } from '#packaging-recycling-notes/application/get-
 
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').GetPrnResponse} GetPrnResponse */
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository */
 
 export const packagingRecyclingNoteByIdPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{prnId}'
@@ -51,14 +49,14 @@ export const packagingRecyclingNoteById = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository, wasteBalancesRepository: WasteBalancesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
       organisationsRepository,
-      wasteBalancesRepository,
+      streamRepository,
       params,
       logger
     } = request
@@ -68,7 +66,7 @@ export const packagingRecyclingNoteById = {
       const [prn, accreditation] = await Promise.all([
         getProjectedPrnById({
           packagingRecyclingNotesRepository,
-          wasteBalancesRepository,
+          streamRepository,
           prnId
         }),
         organisationsRepository.findAccreditationById(

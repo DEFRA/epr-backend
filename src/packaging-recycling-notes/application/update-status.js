@@ -2,8 +2,8 @@ import Boom from '@hapi/boom'
 
 import { prnMetrics } from './metrics.js'
 import {
-  applyWasteBalanceEffects,
-  balanceEventsFor
+  applyPrnBalanceCommand,
+  prnCommandFor
 } from './update-status-balance-effects.js'
 import {
   PRN_STATUS,
@@ -12,6 +12,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
 
 /** Suffixes A-Z for PRN-number collision avoidance on issuance */
@@ -19,7 +20,7 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
- * @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository
+ * @typedef {ReturnType<typeof createWasteBalanceService>} WasteBalanceService
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
@@ -32,7 +33,7 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
  * @typedef {Object} PrnWriteContext
  * @property {PackagingRecyclingNotesRepository} prnRepository
  * @property {OrganisationsRepository} organisationsRepository
- * @property {WasteBalancesRepository} wasteBalancesRepository
+ * @property {WasteBalanceService} service
  * @property {import('#common/hapi-types.js').TypedLogger} logger
  * @property {PackagingRecyclingNote} prn
  * @property {import('#packaging-recycling-notes/repository/port.js').UpdateStatusParams} updateParams
@@ -100,13 +101,16 @@ async function persistProjectionWithIssuanceRetry({
 async function performStreamWrite({
   prnRepository,
   organisationsRepository,
-  wasteBalancesRepository,
+  service,
   logger,
   prn,
-  events,
+  currentStatus,
   newStatus,
   organisationId,
-  accreditationId
+  registrationId,
+  accreditationId,
+  id,
+  user
 }) {
   // The suspension check is hoisted ahead of the stream append so a suspended
   // accreditation is never debited. The fetched accreditation is reused to
@@ -120,11 +124,14 @@ async function performStreamWrite({
     assertAccreditationNotSuspended(accreditation)
   }
 
-  const streamEvents = await applyWasteBalanceEffects(
-    wasteBalancesRepository,
-    logger,
-    events
-  )
+  const streamEvents = await applyPrnBalanceCommand(service, logger, {
+    currentStatus,
+    newStatus,
+    ledgerId: { organisationId, registrationId, accreditationId },
+    prnId: id,
+    tonnage: prn.tonnage,
+    createdBy: user
+  })
 
   const projection = foldPrnFromTailEvents(prn, streamEvents)
 
@@ -159,49 +166,17 @@ async function performStreamWrite({
  * unrecoverable doc/stream divergence. Pre-creation transitions
  * (DRAFT→DISCARDED) are filtered out before this branch is reached.
  */
-async function performLedgerWrite({
-  prnRepository,
-  organisationsRepository,
-  wasteBalancesRepository,
-  logger,
-  prn,
-  newStatus,
-  organisationId,
-  registrationId,
-  accreditationId,
-  user,
-  currentStatus,
-  id
-}) {
-  const events = balanceEventsFor(currentStatus, newStatus, {
-    currentStatus,
-    newStatus,
-    accreditationId,
-    registrationId,
-    organisationId,
-    prnId: id,
-    tonnage: prn.tonnage,
-    createdBy: user
-  })
+async function performLedgerWrite(ctx) {
+  const { currentStatus, newStatus, accreditationId } = ctx
 
-  /* c8 ignore next 5 - defensive: the only legal transition with no balance events (DRAFT→DISCARDED) is handled before this branch */
-  if (events.length === 0) {
+  /* c8 ignore next 5 - defensive: the only legal transition with no balance command (DRAFT→DISCARDED) is handled before this branch */
+  if (!prnCommandFor(currentStatus, newStatus)) {
     throw Boom.badImplementation(
       `No stream events for transition ${currentStatus} -> ${newStatus} on ledger accreditation ${accreditationId}`
     )
   }
 
-  return performStreamWrite({
-    prnRepository,
-    organisationsRepository,
-    wasteBalancesRepository,
-    logger,
-    prn,
-    events,
-    newStatus,
-    organisationId,
-    accreditationId
-  })
+  return performStreamWrite(ctx)
 }
 
 /**
@@ -225,7 +200,7 @@ const performDiscardWrite = async ({ prnRepository, updateParams }) => {
  *
  * @param {Object} params
  * @param {PackagingRecyclingNotesRepository} params.prnRepository
- * @param {WasteBalancesRepository} params.wasteBalancesRepository
+ * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} params.streamRepository
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {string} params.id
@@ -241,7 +216,7 @@ const performDiscardWrite = async ({ prnRepository, updateParams }) => {
  */
 export async function updatePrnStatus({
   prnRepository,
-  wasteBalancesRepository,
+  streamRepository,
   organisationsRepository,
   logger,
   id,
@@ -280,7 +255,7 @@ export async function updatePrnStatus({
   const ctx = {
     prnRepository,
     organisationsRepository,
-    wasteBalancesRepository,
+    service: createWasteBalanceService(streamRepository),
     logger,
     prn,
     updateParams,

@@ -24,14 +24,14 @@ describe(`GET ${streamEventsGetPath}`, () => {
   })
 
   it('returns 200 with stream events for the partition', async () => {
-    await streamRepository.appendEvent(
+    await streamRepository.appendEvents([
       buildStreamEvent({
         registrationId: 'reg-1',
         accreditationId: 'acc-1',
         organisationId: 'org-1',
         number: 1
       })
-    )
+    ])
 
     const response = await server.inject({
       method: 'GET',
@@ -47,22 +47,22 @@ describe(`GET ${streamEventsGetPath}`, () => {
   })
 
   it('returns events ordered by number ascending', async () => {
-    await streamRepository.appendEvent(
+    await streamRepository.appendEvents([
       buildStreamEvent({
         registrationId: 'reg-2',
         accreditationId: 'acc-2',
         organisationId: 'org-2',
         number: 1
       })
-    )
-    await streamRepository.appendEvent(
+    ])
+    await streamRepository.appendEvents([
       buildStreamEvent({
         registrationId: 'reg-2',
         accreditationId: 'acc-2',
         organisationId: 'org-2',
         number: 2
       })
-    )
+    ])
 
     const response = await server.inject({
       method: 'GET',

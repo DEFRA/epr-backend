@@ -9,6 +9,7 @@ import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
  * @import { PeriodicReport } from '#reports/repository/port.js'
+ * @import { Cadence } from '#reports/domain/cadence.js'
  */
 
 /**
@@ -16,7 +17,7 @@ import { errorCodes } from '#reports/enums/error-codes.js'
  * checking both the current slot and previous submissions.
  * @param {PeriodicReport[]} periodicReports
  * @param {number} year
- * @param {string} cadence
+ * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
  * @returns {string|null}
@@ -49,7 +50,7 @@ function findReportIdBySubmissionNumber(
  * @param {string} organisationId
  * @param {string} registrationId
  * @param {number} year
- * @param {string} cadence
+ * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
  * @returns {Promise<import('#reports/repository/port.js').Report | null>}
@@ -106,7 +107,7 @@ function formatSiteAddress(address) {
  * in the cadence's valid range for the year.
  *
  * @param {number} period
- * @param {string} cadence
+ * @param {Cadence} cadence
  * @param {PeriodInfo[]} allPeriods
  * @returns {PeriodInfo}
  */
@@ -135,7 +136,7 @@ const assertValidPeriod = (period, cadence, allPeriods) => {
  *
  * @param {PeriodInfo} periodInfo
  * @param {number} period
- * @param {string} cadence
+ * @param {Cadence} cadence
  * @returns {void}
  */
 const assertPeriodEnded = (periodInfo, period, cadence) => {
@@ -170,7 +171,7 @@ const assertPeriodEnded = (periodInfo, period, cadence) => {
  *
  * @param {PeriodicReport[]} periodicReports
  * @param {number} year
- * @param {string} cadence
+ * @param {Cadence} cadence
  * @param {number} period
  * @returns {void}
  */
@@ -206,7 +207,7 @@ const assertNoExistingReport = (
 
 /**
  * Validates that a period exists for the given cadence and has ended.
- * @param {string} cadence
+ * @param {Cadence} cadence
  * @param {number} year
  * @param {number} period
  * @returns {{ startDate: string, endDate: string, dueDate: string }}
@@ -252,7 +253,7 @@ function buildReportData(aggregated, registration) {
  * @param {string} params.registrationId
  * @param {object} params.registration
  * @param {number} params.year
- * @param {string} params.cadence
+ * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @returns {Promise<import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail>}
@@ -311,7 +312,7 @@ export async function fetchOrGenerateReportForPeriod({
  * @param {string} params.operatorCategory
  * @param {object} params.registration
  * @param {number} params.year
- * @param {string} params.cadence
+ * @param {Cadence} params.cadence
  * @param {number} params.period
  * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | null }>}
  */
@@ -360,7 +361,7 @@ async function getAggregatedReportDetail({
  * @param {string} params.registrationId
  * @param {object} params.registration
  * @param {number} params.year
- * @param {string} params.cadence
+ * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {import('#reports/repository/port.js').UserSummary} params.changedBy

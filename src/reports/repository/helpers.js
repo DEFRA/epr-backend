@@ -2,7 +2,35 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
+import { periodKey } from '#reports/domain/period-key.js'
 import { randomUUID } from 'node:crypto'
+
+/**
+ * Picks the latest submission (highest submissionNumber) per reporting period
+ * from a flat list of report-like documents. Shared by the in-memory and
+ * mongodb adapters so the "latest per period" rule lives in one place.
+ *
+ * Invariant: `submissionNumber` is unique per period among submitted reports
+ * (each resubmission increments it), so the highest value identifies a single
+ * report. Ties are not expected; if two shared a submissionNumber the tie-break
+ * would fall to input order, which is not a meaningful ordering here.
+ *
+ * @template {{ year: number, cadence: string, period: number, submissionNumber: number }} T
+ * @param {T[]} reports
+ * @returns {T[]}
+ */
+export const latestSubmissionPerPeriod = (reports) => [
+  ...[...reports]
+    .sort((a, b) => b.submissionNumber - a.submissionNumber)
+    .reduce((latest, report) => {
+      const key = periodKey(report)
+      if (!latest.has(key)) {
+        latest.set(key, report)
+      }
+      return latest
+    }, /** @type {Map<string, T>} */ (new Map()))
+    .values()
+]
 
 /**
  * Groups `arr` by `keyFn`, then maps each group through `valueFn`.
@@ -44,6 +72,7 @@ export const groupAsPeriodicReports = (
     submissionNumber: doc.submissionNumber,
     submittedAt: doc.status.submitted?.at ?? null,
     submittedBy: doc.status.submitted?.by ?? null,
+    resubmissionRequired: doc.resubmissionRequired ?? null,
     recyclingActivity: {
       totalTonnageReceived: doc.recyclingActivity?.totalTonnageReceived,
       tonnageRecycled: doc.recyclingActivity?.tonnageRecycled,

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildOrganisation,
@@ -26,10 +25,10 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
   const registrationId2 = 'reg-2'
 
   /**
-   * Build an in-memory waste balances repository whose balances resolve their
-   * amounts from a stream seeded with the given closing balances.
+   * Build an in-memory event stream seeded with the given closing balances, so
+   * the route's service folds them into the balances it returns.
    */
-  const buildBalancesRepository = async (balances) => {
+  const buildStreamRepository = async (balances) => {
     const streamRepository = createInMemoryStreamRepository()()
     for (const {
       accreditationId,
@@ -38,7 +37,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       amount,
       availableAmount
     } of balances) {
-      await streamRepository.appendEvent(
+      await streamRepository.appendEvents([
         buildStreamEvent({
           accreditationId,
           organisationId: orgId,
@@ -46,9 +45,9 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
           number: 1,
           closingBalance: { amount, availableAmount }
         })
-      )
+      ])
     }
-    return createWasteBalancesRepository({ streamRepository })
+    return streamRepository
   }
 
   /**
@@ -71,7 +70,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
   const buildServer = async ({ balances, organisations }) =>
     createTestServer({
       repositories: {
-        wasteBalancesRepository: await buildBalancesRepository(balances),
+        streamRepository: await buildStreamRepository(balances),
         organisationsRepository: buildOrganisationsRepository(organisations)
       },
       featureFlags: createInMemoryFeatureFlags({})

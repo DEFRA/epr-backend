@@ -28,51 +28,6 @@ const matchesPartition = (event, registrationId, accreditationId) =>
   event.accreditationId === accreditationId
 
 /**
- * Validates and appends an event to the in-memory storage.
- *
- * @param {StreamEvent[]} storage
- * @param {StreamEventInsert} event
- * @returns {StreamEvent}
- */
-const doAppend = (storage, event) => {
-  const validated = validateStreamEventInsert(event)
-
-  const partitionEvents = storage.filter((existing) =>
-    matchesPartition(
-      existing,
-      validated.registrationId,
-      validated.accreditationId
-    )
-  )
-
-  const currentMax =
-    partitionEvents.length > 0
-      ? /** @type {StreamEvent} */ (partitionEvents.at(-1)).number
-      : 0
-  const expectedNumber = currentMax + 1
-
-  if (validated.number !== expectedNumber) {
-    if (partitionEvents.some((e) => e.number === validated.number)) {
-      throw new StreamSlotConflictError(
-        validated.registrationId,
-        validated.accreditationId,
-        validated.number
-      )
-    }
-    throw new StreamSequenceError(
-      validated.registrationId,
-      validated.accreditationId,
-      validated.number,
-      expectedNumber
-    )
-  }
-
-  const persisted = { id: randomUUID(), ...validated }
-  storage.push(persisted)
-  return structuredClone(persisted)
-}
-
-/**
  * Migration PAE-1382: delete all events for a partition.
  *
  * @param {StreamEvent[]} storage
@@ -91,13 +46,14 @@ const doDeleteByPartition = (storage, registrationId, accreditationId) => {
 }
 
 /**
- * Migration PAE-1382: insert multiple events in one call.
+ * Append a contiguous batch of events. Synchronous and validated up front, so
+ * the whole batch applies or none of it does.
  *
  * @param {StreamEvent[]} storage
  * @param {StreamEventInsert[]} events
  * @returns {StreamEvent[]}
  */
-const doBulkAppend = (storage, events) => {
+const doAppendEvents = (storage, events) => {
   if (events.length === 0) {
     return []
   }
@@ -114,6 +70,13 @@ const doBulkAppend = (storage, events) => {
   const expectedStart = currentMax + 1
 
   if (first.number !== expectedStart) {
+    if (partitionEvents.some((e) => e.number === first.number)) {
+      throw new StreamSlotConflictError(
+        first.registrationId,
+        first.accreditationId,
+        first.number
+      )
+    }
     throw new StreamSequenceError(
       first.registrationId,
       first.accreditationId,
@@ -150,9 +113,6 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
   const storage = initialEvents
 
   return () => ({
-    /** @param {StreamEventInsert} event */
-    appendEvent: async (event) => doAppend(storage, event),
-
     /**
      * @param {string} registrationId
      * @param {string | null} accreditationId
@@ -233,6 +193,6 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
     deleteByPartition: async (registrationId, accreditationId) =>
       doDeleteByPartition(storage, registrationId, accreditationId),
 
-    bulkAppendEvents: async (events) => doBulkAppend(storage, events)
+    appendEvents: async (events) => doAppendEvents(storage, events)
   })
 }

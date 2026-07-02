@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { appendToStream } from '#waste-balances/application/append-to-stream.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { findBalanceByPartition } from '#waste-balances/repository/read-balance.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { buildRowStateEntry } from '#waste-records/repository/test-data.js'
 
@@ -31,6 +29,13 @@ const seedMembership = async (rowStateRepository, summaryLogId) =>
     summaryLogId
   )
 
+const emitRegOnlyEvent = (streamRepository, summaryLogId) =>
+  createWasteBalanceService(streamRepository).submitSummaryLog(
+    nullPartition,
+    { summaryLogId, creditTotal: 0 },
+    createdBy
+  )
+
 describe('registered-only summary-log submitted event — read-through', () => {
   it('returns nothing for the null partition before an event exists (the gap)', async () => {
     const rowStateRepository = createInMemoryRowStateRepository()()
@@ -50,19 +55,7 @@ describe('registered-only summary-log submitted event — read-through', () => {
     await seedMembership(rowStateRepository, 'log-1')
     const streamRepository = createInMemoryStreamRepository()()
 
-    await appendToStream(
-      {
-        repository: streamRepository,
-        registrationId: 'reg-1',
-        accreditationId: null,
-        organisationId: 'org-1'
-      },
-      {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 0 },
-        createdBy
-      }
-    )
+    await emitRegOnlyEvent(streamRepository, 'log-1')
 
     const states = await wasteRecordStatesForRegistration({
       streamRepository,
@@ -79,27 +72,12 @@ describe('registered-only summary-log submitted event — balance neutrality', (
   it('leaves the null partition with a zero balance', async () => {
     const streamRepository = createInMemoryStreamRepository()()
 
-    await appendToStream(
-      {
-        repository: streamRepository,
-        registrationId: 'reg-1',
-        accreditationId: null,
-        organisationId: 'org-1'
-      },
-      {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 0 },
-        createdBy
-      }
-    )
+    await emitRegOnlyEvent(streamRepository, 'log-1')
 
-    const balance = await findBalanceByPartition(
-      streamRepository,
-      /** @type {any} */ ({
-        registrationId: 'reg-1',
-        accreditationId: null
-      })
-    )
+    const balance =
+      await createWasteBalanceService(streamRepository).currentBalance(
+        nullPartition
+      )
     expect(balance).toMatchObject({ amount: 0, availableAmount: 0 })
   })
 
@@ -114,23 +92,14 @@ describe('registered-only summary-log submitted event — balance neutrality', (
       })
     ])()
 
-    await appendToStream(
-      {
-        repository: streamRepository,
-        registrationId: 'reg-1',
-        accreditationId: null,
-        organisationId: 'org-1'
-      },
-      {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 0 },
-        createdBy
-      }
-    )
+    await emitRegOnlyEvent(streamRepository, 'log-1')
 
-    const accreditedBalance = await findBalanceByPartition(streamRepository, {
+    const accreditedBalance = await createWasteBalanceService(
+      streamRepository
+    ).currentBalance({
       registrationId: 'reg-1',
-      accreditationId: 'acc-1'
+      accreditationId: 'acc-1',
+      organisationId: 'org-1'
     })
     expect(accreditedBalance).toMatchObject({ amount: 50, availableAmount: 50 })
   })

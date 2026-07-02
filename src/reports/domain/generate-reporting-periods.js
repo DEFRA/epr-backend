@@ -1,6 +1,10 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
 import { MONTHS_PER_PERIOD } from './cadence.js'
 
+/**
+ * @import { Cadence } from './cadence.js'
+ */
+
 const DUE_DAY = 20
 const MONTHS_IN_YEAR = 12
 
@@ -18,7 +22,7 @@ function computeDueDate(year, endMonth) {
 /**
  * Generates all reporting periods for a given year and cadence.
  *
- * @param {string} cadence - Cadence key ('monthly' or 'quarterly')
+ * @param {Cadence} cadence
  * @param {number} year
  * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report: null}>}
  */
@@ -46,7 +50,7 @@ export function generateAllPeriodsForYear(cadence, year) {
  * Generates reporting periods for a given year and cadence,
  * filtered to only include periods that have ended.
  *
- * @param {string} cadence - Cadence key ('monthly' or 'quarterly')
+ * @param {Cadence} cadence
  * @param {number} year
  * @param {Date} [now] - Current date (defaults to new Date(), injectable for testing)
  * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report: null}>}

@@ -21,9 +21,6 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
- * @import { WasteBalancesRepository } from '#waste-balances/repository/port.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { HapiRequest } from '#common/hapi-types.js'
  */
 
@@ -86,17 +83,14 @@ export const packagingRecyclingNotesUpdateStatus = {
   },
   /**
    * @param {HapiRequest<{ status: PrnStatus }> & {
-   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
-   *   wasteBalancesRepository: WasteBalancesRepository,
-   *   organisationsRepository: OrganisationsRepository,
-   *   systemLogsRepository: SystemLogsRepository
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
-      wasteBalancesRepository,
+      streamRepository,
       organisationsRepository,
       params,
       payload,
@@ -126,7 +120,7 @@ export const packagingRecyclingNotesUpdateStatus = {
 
       const updatedPrn = await updatePrnStatus({
         prnRepository: packagingRecyclingNotesRepository,
-        wasteBalancesRepository,
+        streamRepository,
         organisationsRepository,
         logger,
         id,

@@ -134,7 +134,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const firstUploadData = createUploadData([
         { rowId: 1001, exportTonnage: 100 },
@@ -154,11 +153,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      const balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       // 100 + 200 = 300
       expect(balance.amount).toBe(300)
@@ -169,7 +164,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const firstUploadData = createUploadData([
         { rowId: 1001, exportTonnage: 100 },
@@ -190,11 +184,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      let balance = await getWasteBalance(env)
       expect(balance.amount).toBe(300)
       expect(balance.availableAmount).toBe(300)
 
@@ -222,11 +212,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      balance = await getWasteBalance(env)
 
       // 100 + 100 = 200 (row 1002 revised down from 200 to 100)
       expect(balance.amount).toBe(200)
@@ -237,7 +223,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         { rowId: 2001, prnIssued: 'Yes', exportTonnage: 100 },
@@ -258,11 +243,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         uploadData
       )
 
-      const balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
       // Only row 2002 should contribute (PRN not issued)
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
@@ -272,7 +253,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         {
@@ -297,11 +277,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         uploadData
       )
 
-      const balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
       // Only row 3002 should contribute (within accreditation period)
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
@@ -333,7 +309,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       // First submission: row within accreditation period
       const firstUploadData = createUploadData([
@@ -349,11 +324,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      let balance = await getWasteBalance(env)
       expect(balance.amount).toBe(100)
 
       // Second submission: same row ID but date revised to fall outside accreditation period
@@ -375,11 +346,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      balance = await getWasteBalance(env)
 
       // Balance should now be 0 - the credit was reversed
       expect(balance.amount).toBe(0)
@@ -390,7 +357,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       // First submission: row without PRN issued (gets credited)
       const firstUploadData = createUploadData([
@@ -406,11 +372,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      let balance = await getWasteBalance(env)
       expect(balance.amount).toBe(100)
 
       // Second submission: same row but now PRN has been issued
@@ -427,11 +389,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      balance = await getWasteBalance(env)
 
       // Balance should now be 0 - the credit was reversed because PRN was issued
       expect(balance.amount).toBe(0)
@@ -442,7 +400,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       // First submission: row with PRN already issued (no credit)
       const firstUploadData = createUploadData([
@@ -458,11 +415,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      let balance = await getWasteBalance(env)
 
       // PRN was issued so the row is excluded; the balance resolves to zero
       expect(balance.amount).toBe(0)
@@ -482,11 +435,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      balance = await getWasteBalance(env)
 
       // Balance should now be 100 - credited after PRN status corrected
       expect(balance.amount).toBe(100)
@@ -497,7 +446,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       // First submission: row with all mandatory fields filled — contributes to balance
       const firstUploadData = createUploadData([
@@ -512,11 +460,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      let balance = await getWasteBalance(env)
       expect(balance.amount).toBe(100)
 
       // Second submission: same row but DATE_RECEIVED_BY_OSR removed.
@@ -534,11 +478,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      balance = await getWasteBalance(env)
 
       // Balance should be 0 — the original credit was reversed
       expect(balance.amount).toBe(0)
@@ -549,7 +489,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       // First submission: row with all mandatory fields filled
       const firstUploadData = createUploadData([
@@ -564,11 +503,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      let balance = await getWasteBalance(env)
       expect(balance.amount).toBe(100)
 
       // Second submission: same row but GROSS_WEIGHT removed
@@ -584,11 +519,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      balance = await getWasteBalance(env)
 
       // Balance should be 0 — the original credit was reversed
       expect(balance.amount).toBe(0)
@@ -599,7 +530,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       // Upload a row missing DATE_RECEIVED_BY_OSR — excluded from the start.
       const uploadData = createUploadData([
@@ -614,11 +544,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         uploadData
       )
 
-      const balance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       // The excluded row contributes nothing, so the balance resolves to zero
       expect(balance.amount).toBe(0)
@@ -629,7 +555,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { wasteBalancesRepository, accreditationId, registrationId } = env
 
       const revisions = [
         { tonnage: 100, expectedBalance: 100 },
@@ -648,19 +573,11 @@ describe('Submission and placeholder tests (Exporter)', () => {
           createUploadData([{ rowId: 8001, exportTonnage: rev.tonnage }])
         )
 
-        const balance = await getWasteBalance(
-          wasteBalancesRepository,
-          accreditationId,
-          registrationId
-        )
+        const balance = await getWasteBalance(env)
         expect(balance.amount).toBe(rev.expectedBalance)
       }
 
-      const finalBalance = await getWasteBalance(
-        wasteBalancesRepository,
-        accreditationId,
-        registrationId
-      )
+      const finalBalance = await getWasteBalance(env)
       expect(finalBalance.availableAmount).toBe(200)
     })
   })

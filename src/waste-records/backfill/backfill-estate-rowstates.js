@@ -84,6 +84,7 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
  * @param {RowStateRepository} args.rowStateRepository
  * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} args.streamRepository
+ * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} args.wasteBalanceService
  * @returns {Promise<StreamBackfilled | StreamOrphaned | null>}
  */
 const backfillRegistrationStream = async ({
@@ -94,7 +95,8 @@ const backfillRegistrationStream = async ({
   summaryLogsRepository,
   overseasSitesRepository,
   rowStateRepository,
-  streamRepository
+  streamRepository,
+  wasteBalanceService
 }) => {
   const { accreditationId } = registration
 
@@ -156,7 +158,8 @@ const backfillRegistrationStream = async ({
       accreditation,
       overseasSites,
       rowStateRepository,
-      streamRepository
+      streamRepository,
+      wasteBalanceService
     })
 
   return { submissionCount, rowStateWriteCount, submittedEventWriteCount }
@@ -185,6 +188,7 @@ const backfillRegistrationStream = async ({
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} deps.overseasSitesRepository
  * @param {RowStateRepository} deps.rowStateRepository
  * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} deps.streamRepository
+ * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} deps.wasteBalanceService
  * @returns {Promise<EstateBackfillSummary>}
  */
 export const backfillEstateRowStates = async ({
@@ -193,7 +197,8 @@ export const backfillEstateRowStates = async ({
   summaryLogsRepository,
   overseasSitesRepository,
   rowStateRepository,
-  streamRepository
+  streamRepository,
+  wasteBalanceService
 }) => {
   const organisations = await organisationsRepository.findAll()
 
@@ -213,7 +218,8 @@ export const backfillEstateRowStates = async ({
         summaryLogsRepository,
         overseasSitesRepository,
         rowStateRepository,
-        streamRepository
+        streamRepository,
+        wasteBalanceService
       })
       if (!result) {
         continue

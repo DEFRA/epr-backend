@@ -18,7 +18,7 @@ import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { featureFlags as featureFlagsPlugin } from '#plugins/feature-flags.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import { router } from '#plugins/router.js'
 import { getConfig } from '#root/config.js'
 
@@ -33,7 +33,8 @@ import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/for
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
-import { createInMemoryWasteBalancesRepositoryPlugin } from '#waste-balances/repository/inmemory.plugin.js'
+import { createInMemoryWasteBalanceServicePlugin } from '#waste-balances/repository/inmemory.plugin.js'
+import { createInMemoryStreamRepositoryPlugin } from '#waste-balances/repository/stream-inmemory.plugin.js'
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 import { createInMemoryWasteRecordStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
 
@@ -75,7 +76,7 @@ function createRepositoryPlugin(name, repositoryOrFactory) {
   return {
     name,
     register: (server) => {
-      registerRepository(server, name, (request) => {
+      registerDependency(server, name, (request) => {
         if (isFactory) {
           // Factory: call with logger (ignored if factory doesn't need it)
           return repositoryOrFactory(request.logger)
@@ -109,8 +110,12 @@ const repositoryConfigs = [
     createDefault: createInMemoryWasteRecordStatesRepositoryPlugin
   },
   {
-    name: 'wasteBalancesRepository',
-    createDefault: createInMemoryWasteBalancesRepositoryPlugin
+    name: 'streamRepository',
+    createDefault: createInMemoryStreamRepositoryPlugin
+  },
+  {
+    name: 'wasteBalanceService',
+    createDefault: createInMemoryWasteBalanceServicePlugin
   },
   {
     name: 'systemLogsRepository',

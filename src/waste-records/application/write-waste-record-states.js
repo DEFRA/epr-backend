@@ -1,4 +1,4 @@
-import { markExcludedRecords } from '#waste-balances/repository/helpers.js'
+import { markExcludedRecords } from '#waste-balances/application/mark-excluded-records.js'
 import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
 
 /**

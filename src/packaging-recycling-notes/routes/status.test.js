@@ -22,6 +22,8 @@ import {
 } from '#domain/organisations/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
 
@@ -30,26 +32,35 @@ const registrationId = 'reg-456'
 const accreditationId = 'acc-789'
 const prnId = '507f1f77bcf86cd799439011'
 
+const SEED_BALANCE = { amount: 500, availableAmount: 500 }
+
 /**
- * A valid appended stream event, as the ledger-path balance effects return one.
- * The read-side fold reads `kind`, `number`, `createdAt` and `createdBy` off it.
+ * An in-memory stream seeded with one summary-log submission, opening the
+ * partition's ledger at the given balance so PRN commands resolve against it.
+ * Passing `null` leaves the ledger absent, which the commands reject as
+ * `NO_LEDGER`.
  *
- * @param {import('#waste-balances/repository/stream-schema.js').StreamEventKind} kind
- * @param {number} [number]
+ * @param {{ amount: number, availableAmount: number } | null} [closingBalance]
  */
-const buildAppendedEvent = (kind, number = 2) => ({
-  id: `event-${number}`,
-  registrationId,
-  accreditationId,
-  organisationId,
-  number,
-  kind,
-  payload: { prnId, amount: 100 },
-  openingBalance: { amount: 500, availableAmount: 500 },
-  closingBalance: { amount: 500, availableAmount: 400 },
-  createdAt: new Date('2026-02-03T10:00:00.000Z'),
-  createdBy: { id: 'test-user-id', name: 'Ada Lovelace' }
-})
+const seedStream = (closingBalance = SEED_BALANCE) =>
+  createInMemoryStreamRepository(
+    closingBalance
+      ? [
+          buildStreamEvent({
+            registrationId,
+            accreditationId,
+            organisationId,
+            number: 1,
+            payload: {
+              summaryLogId: 'log-1',
+              creditTotal: closingBalance.amount
+            },
+            openingBalance: { amount: 0, availableAmount: 0 },
+            closingBalance
+          })
+        ]
+      : []
+  )()
 
 const createMockPrn = (overrides = {}) => ({
   id: prnId,
@@ -93,37 +104,14 @@ const createMockPrn = (overrides = {}) => ({
 describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
   setupAuthContext()
 
-  describe('when feature flag is enabled', () => {
+  describe('writing a status transition', () => {
     let server
     let packagingRecyclingNotesRepository
-    let wasteBalancesRepository
+    let streamRepository
     let organisationsRepository
     const mockPrn = createMockPrn()
 
-    const createMockWasteBalance = (overrides = {}) => ({
-      id: 'balance-123',
-      organisationId,
-      accreditationId,
-      amount: 500,
-      availableAmount: 500,
-      version: 1,
-      schemaVersion: 1,
-      ...overrides
-    })
-
     beforeAll(async () => {
-      wasteBalancesRepository = {
-        findBalance: vi.fn().mockResolvedValue(createMockWasteBalance()),
-        getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
-        appendStreamEvent: vi.fn(),
-        deductAvailableBalanceForPrnCreation: vi
-          .fn()
-          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED)),
-        deductTotalBalanceForPrnIssue: vi
-          .fn()
-          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-      }
-
       organisationsRepository = {
         findAccreditationById: vi.fn(async () => ({
           wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -135,7 +123,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
-          wasteBalancesRepository: () => wasteBalancesRepository,
+          streamRepository: () => streamRepository,
           organisationsRepository: () => organisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags()
@@ -145,6 +133,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     beforeEach(() => {
+      streamRepository = seedStream()
       packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
           info: vi.fn(),
@@ -523,7 +512,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         ).toHaveBeenCalledTimes(2)
       })
 
-      it('sets updatedBy to the authenticated user', async () => {
+      it('attributes the appended event to the authenticated user', async () => {
         const userId = 'specific-test-user-id'
         const userName = 'Test User Name'
 
@@ -547,12 +536,13 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        expect(
-          wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            createdBy: expect.objectContaining({ id: userId, name: userName })
-          })
+        const events = await streamRepository.findAllByPartition(
+          registrationId,
+          accreditationId
+        )
+        expect(events.at(-1)?.kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+        expect(events.at(-1)?.createdBy).toEqual(
+          expect.objectContaining({ id: userId, name: userName })
         )
       })
 
@@ -574,15 +564,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        expect(
-          wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            createdBy: expect.objectContaining({
-              id: 'unknown',
-              name: 'unknown'
-            })
-          })
+        const events = await streamRepository.findAllByPartition(
+          registrationId,
+          accreditationId
+        )
+        expect(events.at(-1)?.createdBy).toEqual(
+          expect.objectContaining({ id: 'unknown', name: 'unknown' })
         )
       })
     })
@@ -807,6 +794,23 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       })
+
+      it('returns 400 when the accreditation has no waste balance ledger', async () => {
+        streamRepository = seedStream(null)
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn()
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(response.payload).toContain('No waste balance found')
+      })
     })
 
     describe('actor enforcement', () => {
@@ -839,7 +843,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(response.payload).toContain('is not permitted to transition')
       })
 
-      it('does not trigger waste balance changes for blocked transitions', async () => {
+      it('appends no balance event for blocked transitions', async () => {
         const awaitingAcceptancePrn = createMockPrn({
           prnNumber: 'ER2600001',
           status: {
@@ -865,199 +869,13 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        expect(
-          wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-        ).not.toHaveBeenCalled()
-        expect(
-          wasteBalancesRepository.deductTotalBalanceForPrnIssue
-        ).not.toHaveBeenCalled()
+        const events = await streamRepository.findAllByPartition(
+          registrationId,
+          accreditationId
+        )
+        expect(events).toHaveLength(1)
+        expect(events[0]?.kind).toBe(STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       })
-    })
-  })
-
-  describe('waste balance deduction on PRN creation', () => {
-    let server
-    let packagingRecyclingNotesRepository
-    let wasteBalancesRepository
-    let organisationsRepository
-    const mockPrn = createMockPrn({ tonnage: 50.5 })
-
-    const createMockWasteBalance = (overrides = {}) => ({
-      id: 'balance-123',
-      organisationId,
-      accreditationId,
-      amount: 500,
-      availableAmount: 500,
-      version: 1,
-      schemaVersion: 1,
-      ...overrides
-    })
-
-    beforeAll(async () => {
-      wasteBalancesRepository = {
-        findBalance: vi.fn().mockResolvedValue(createMockWasteBalance()),
-        getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
-        appendStreamEvent: vi.fn(),
-        deductAvailableBalanceForPrnCreation: vi
-          .fn()
-          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED)),
-        deductTotalBalanceForPrnIssue: vi
-          .fn()
-          .mockResolvedValue(buildAppendedEvent(STREAM_EVENT_KIND.PRN_ISSUED))
-      }
-
-      organisationsRepository = {
-        findAccreditationById: vi.fn(async () => ({
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          submittedToRegulator: REGULATOR.EA
-        }))
-      }
-
-      server = await createTestServer({
-        repositories: {
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository,
-          wasteBalancesRepository: () => wasteBalancesRepository,
-          organisationsRepository: () => organisationsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
-      })
-
-      await server.initialize()
-    })
-
-    beforeEach(() => {
-      packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn(),
-          trace: vi.fn(),
-          fatal: vi.fn(),
-          child: vi.fn()
-        })
-      vi.spyOn(packagingRecyclingNotesRepository, 'findById')
-      vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
-      vi.spyOn(packagingRecyclingNotesRepository, 'persistProjection')
-    })
-
-    afterEach(() => {
-      vi.clearAllMocks()
-    })
-
-    afterAll(async () => {
-      await server.stop()
-    })
-
-    it('deducts tonnage from available balance when transitioning to awaiting_authorisation', async () => {
-      const balance = createMockWasteBalance()
-      wasteBalancesRepository.findBalance.mockResolvedValueOnce(balance)
-      wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockResolvedValueOnce(
-        buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED)
-      )
-      packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(mockPrn)
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-        auth: {
-          strategy: 'access-token',
-          credentials: {
-            scope: ['standard_user'],
-            id: 'test-user-id',
-            name: 'Ada Lovelace',
-            email: 'ada@example.com',
-            linkedOrgId: organisationId
-          }
-        },
-        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(
-        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-      ).toHaveBeenCalledWith({
-        accreditationId,
-        registrationId,
-        organisationId,
-        prnId,
-        tonnage: 50.5,
-        createdBy: {
-          id: 'test-user-id',
-          name: 'Ada Lovelace',
-          email: 'ada@example.com'
-        }
-      })
-    })
-
-    it('does not deduct balance for non-creation transitions', async () => {
-      const awaitingAuthPrn = createMockPrn({
-        status: {
-          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          history: [
-            {
-              status: PRN_STATUS.AWAITING_AUTHORISATION,
-              at: new Date(),
-              by: { id: 'user-123', name: 'Test User' }
-            }
-          ]
-        }
-      })
-
-      packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-        awaitingAuthPrn
-      )
-
-      await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
-        payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
-      })
-
-      expect(
-        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-      ).not.toHaveBeenCalled()
-    })
-
-    it('returns 400 when no waste balance exists', async () => {
-      wasteBalancesRepository.findBalance.mockResolvedValueOnce(null)
-      packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-        createMockPrn()
-      )
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
-        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-      expect(
-        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-      ).not.toHaveBeenCalled()
-    })
-
-    it('returns 500 when waste balance deduction fails', async () => {
-      const balance = createMockWasteBalance()
-      wasteBalancesRepository.findBalance.mockResolvedValueOnce(balance)
-      wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockRejectedValueOnce(
-        new Error('Database write failed')
-      )
-      packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-        createMockPrn()
-      )
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
-        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
     })
   })
 })

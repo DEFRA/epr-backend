@@ -4,11 +4,12 @@
  * Surface is deliberately minimal: only primitives where two correct adapters
  * could meaningfully implement things differently (persistence, native conflict
  * signal translation). Domain logic — balance arithmetic, retry on
- * slot conflict — lives above the port in `appendToStream`, not on adapters.
+ * slot conflict — lives above the port in the waste balance service, not on
+ * adapters.
  */
 
 /**
- * Raised by `appendEvent` when a `(registrationId, accreditationId, number)`
+ * Raised by `appendEvents` when a `(registrationId, accreditationId, number)`
  * slot is already occupied. Adapters translate their native conflict signal
  * (MongoDB `E11000`, in-memory index check) into this typed error so callers
  * can react uniformly.
@@ -38,7 +39,7 @@ export class StreamSlotConflictError extends Error {
 }
 
 /**
- * Raised by `appendEvent` when the event's `number` is not the next
+ * Raised by `appendEvents` when the event's `number` is not the next
  * sequential value for its partition. The stream is strictly append-only
  * with no gaps: event N requires event N-1 to exist (or N must be 1 for
  * an empty stream).
@@ -81,15 +82,6 @@ export class StreamSequenceError extends Error {
 
 /**
  * @typedef {Object} WasteBalanceStreamRepository
- * @property {(event: StreamEventInsert) => Promise<StreamEvent>} appendEvent
- *   Persist a single event. Returns the stored event with its assigned `id`.
- *
- *   Throws `StreamSequenceError` if the event's `number` is not the next
- *   sequential value for its partition (i.e. `currentMax + 1`, or `1` for
- *   an empty stream). The stream is strictly sequential with no gaps.
- *
- *   Throws `StreamSlotConflictError` if the
- *   `(registrationId, accreditationId, number)` slot is already occupied.
  * @property {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent | null>} findLatestByPartition
  *   Return the highest-numbered event for the stream partition, or `null`
  *   if none exist.
@@ -106,11 +98,21 @@ export class StreamSequenceError extends Error {
  * @property {(registrationId: string, accreditationId: string | null) => Promise<number>} deleteByPartition
  *   Migration PAE-1382: delete all events for the given partition.
  *   Returns the number of deleted events. No-op on empty partition.
- * @property {(events: StreamEventInsert[]) => Promise<StreamEvent[]>} bulkAppendEvents
- *   Migration PAE-1382: insert multiple events in one call. Validates
- *   sequence: events must be numbered sequentially, and the first event's
- *   number must be `currentMax + 1` (or `1` if the partition is empty).
- *   Throws `StreamSequenceError` on failure. Empty array is a no-op.
+ * @property {(events: StreamEventInsert[]) => Promise<StreamEvent[]>} appendEvents
+ *   Append a contiguous batch of events. Events must be numbered
+ *   sequentially, and the first event's number must be `currentMax + 1`
+ *   (or `1` if the partition is empty). Throws `StreamSlotConflictError` if
+ *   the starting slot is already occupied, `StreamSequenceError` on a gap or
+ *   non-sequential numbering. Empty array is a no-op.
+ *
+ *   A single-event batch is fully concurrency-safe: the slot index admits one
+ *   writer per slot and the loser appends nothing. A multi-event batch is not
+ *   isolated — it is not rolled back as a unit, so a competing writer can leave
+ *   the batch truncated to a committed prefix while the caller sees the slot
+ *   conflict. The slot index still guarantees gap-free contiguity, so the
+ *   surviving prefix folds consistently; what is lost is decision-atomicity
+ *   across the batch. A command that emits more than one event must therefore
+ *   tolerate a re-applied prefix on replay (idempotent or independent events).
  */
 
 /**

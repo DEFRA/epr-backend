@@ -11,6 +11,7 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import {
   buildAccreditation,
   buildOrganisation,
@@ -62,15 +63,20 @@ const receivedRecord = (organisationId, registrationId, rowId, versions) => ({
   versions
 })
 
-const inMemoryDeps = ({ organisations, wasteRecords }) => ({
-  organisationsRepository:
-    createInMemoryOrganisationsRepository(organisations)(),
-  wasteRecordsRepository: createInMemoryWasteRecordsRepository(wasteRecords)(),
-  summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
-  overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-  rowStateRepository: createInMemoryRowStateRepository()(),
-  streamRepository: createInMemoryStreamRepository()()
-})
+const inMemoryDeps = ({ organisations, wasteRecords }) => {
+  const streamRepository = createInMemoryStreamRepository()()
+  return {
+    organisationsRepository:
+      createInMemoryOrganisationsRepository(organisations)(),
+    wasteRecordsRepository:
+      createInMemoryWasteRecordsRepository(wasteRecords)(),
+    summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
+    overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+    rowStateRepository: createInMemoryRowStateRepository()(),
+    streamRepository,
+    wasteBalanceService: createWasteBalanceService(streamRepository)
+  }
+}
 
 describe('backfillEstateRowStates', () => {
   it('backfills every submission of an accredited registration, keyed by file id, and reports the sweep', async () => {

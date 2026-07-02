@@ -16,7 +16,7 @@ export const STREAM_EVENT_KIND = Object.freeze({
 
 const kindValues = Object.values(STREAM_EVENT_KIND)
 
-const PRN_KINDS = new Set([
+export const PRN_KINDS = new Set([
   STREAM_EVENT_KIND.PRN_CREATED,
   STREAM_EVENT_KIND.PRN_ISSUED,
   STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
@@ -66,21 +66,51 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * Shape accepted by `WasteBalanceStreamRepository.appendEvent`. Mirrors
- * `streamEventInsertSchema` — keep the two in sync; the schema is the
- * runtime gate, this typedef is the check-time gate.
+ * The identity of an accreditation, or of a registration in its registered-only
+ * phase (`accreditationId` null). `organisationId` is denormalised owner context
+ * carried for attribution — the storage uniqueness key is
+ * `(registrationId, accreditationId)`, not org — but it always travels with the
+ * id and any event can recover it. Named for what it is: a registration or
+ * accreditation identity, not a ledger-specific type. It is what we key a waste
+ * balance ledger by.
  *
- * @typedef {Object} StreamEventInsert
+ * @typedef {Object} RegistrationOrAccreditationId
+ * @property {string} organisationId
  * @property {string} registrationId
  * @property {string | null} accreditationId
- * @property {string} organisationId
- * @property {number} number
- * @property {StreamEventKind} kind
- * @property {SummaryLogSubmittedPayload | PrnPayload} payload
- * @property {StreamBalanceSnapshot} openingBalance
- * @property {StreamBalanceSnapshot} closingBalance
- * @property {Date} createdAt
- * @property {StreamUserSummary} createdBy
+ */
+
+/**
+ * The id of a waste balance ledger: a ledger is identified by the registration
+ * or accreditation whose balance it records. An alias, so ledger-layer code can
+ * name a ledger id while the value remains, honestly, a registration or
+ * accreditation identity.
+ *
+ * @typedef {RegistrationOrAccreditationId} WasteBalanceLedgerId
+ */
+
+/**
+ * A position within a waste balance ledger: the ledger id plus a sequence
+ * number. The head a decision reads at, the slot it commits to (`number + 1`),
+ * and the coordinate a slot-conflict or sequence error reports on a clash.
+ *
+ * @typedef {WasteBalanceLedgerId & { number: number }} LedgerPosition
+ */
+
+/**
+ * Shape accepted by `WasteBalanceStreamRepository.appendEvents`: the content of
+ * an event at a `LedgerPosition`. Mirrors `streamEventInsertSchema` — keep the
+ * two in sync; the schema is the runtime gate, this typedef is the check-time
+ * gate.
+ *
+ * @typedef {LedgerPosition & {
+ *   kind: StreamEventKind,
+ *   payload: SummaryLogSubmittedPayload | PrnPayload,
+ *   openingBalance: StreamBalanceSnapshot,
+ *   closingBalance: StreamBalanceSnapshot,
+ *   createdAt: Date,
+ *   createdBy: StreamUserSummary
+ * }} StreamEventInsert
  */
 
 /**

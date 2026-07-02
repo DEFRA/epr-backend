@@ -1,6 +1,9 @@
 import {
   METADATA_COLUMNS,
+  METADATA_COL_INDEX,
   SCHEMA_FIELD_NAMES,
+  OSR_COUNTRY_REVISED,
+  OSR_NAME_REVISED,
   buildDataFieldColumns,
   buildHeaderRow,
   buildDataRow
@@ -28,7 +31,17 @@ describe('csv-columns', () => {
         'Submitted At',
         'Included in Waste Balance',
         'Waste Balance Exclusion Reason',
-        'Row ID'
+        'Waste Balance Tonnage',
+        'Row ID',
+        'OSR Country Revised',
+        'OSR Name Revised'
+      ])
+    })
+
+    it('ends with the derived OSR columns', () => {
+      expect(METADATA_COLUMNS.slice(-2)).toEqual([
+        OSR_COUNTRY_REVISED,
+        OSR_NAME_REVISED
       ])
     })
   })
@@ -89,7 +102,7 @@ describe('csv-columns', () => {
   })
 
   describe('buildHeaderRow', () => {
-    it('returns metadata columns followed by the supplied data field columns', () => {
+    it('returns the metadata columns followed by the supplied data field columns', () => {
       const dataFieldColumns = ['ALPHA', 'BETA']
       expect(buildHeaderRow(dataFieldColumns)).toEqual([
         ...METADATA_COLUMNS,
@@ -101,6 +114,8 @@ describe('csv-columns', () => {
 
   describe('buildDataRow', () => {
     const dataFieldColumns = buildDataFieldColumns([])
+    const dataCol = (name) =>
+      METADATA_COLUMNS.length + dataFieldColumns.indexOf(name)
 
     const userFixture = {
       fullName: 'Test User',
@@ -205,7 +220,7 @@ describe('csv-columns', () => {
       summaryLogEntry: {
         submittedAt: '2026-04-15T09:00:00Z'
       },
-      wasteBalanceClassification: { included: true, reasons: [] },
+      wasteBalanceClassification: { included: true, reasons: [], tonnage: 9 },
       dataFieldColumns
     }
 
@@ -216,18 +231,23 @@ describe('csv-columns', () => {
 
     it('formats the metadata prefix correctly', () => {
       const row = buildDataRow(baseInput)
-      expect(row[0]).toBe('EA') // Regulator
-      expect(row[1]).toBe('Acme Ltd') // Organisation Name
-      expect(row[2]).toBe('REG-001') // Registration Number
-      expect(row[3]).toBe('plastic') // Material
-      expect(row[4]).toBe('REPROCESSOR_INPUT') // Operator Processing Type
-      expect(row[5]).toBe('Yes') // Accredited
-      expect(row[6]).toBe('ACC-001') // Accreditation Number
-      expect(row[7]).toBe('received') // Waste Record Type
-      expect(row[8]).toBe('2026-04-15T09:00:00Z') // Submitted At
-      expect(row[9]).toBe('true') // Included in Waste Balance
-      expect(row[10]).toBe('') // Waste Balance Exclusion Reason
-      expect(row[11]).toBe('1001') // Row ID
+      expect(row[METADATA_COL_INDEX['Regulator']]).toBe('EA')
+      expect(row[METADATA_COL_INDEX['Organisation Name']]).toBe('Acme Ltd')
+      expect(row[METADATA_COL_INDEX['Registration Number']]).toBe('REG-001')
+      expect(row[METADATA_COL_INDEX['Material']]).toBe('plastic')
+      expect(row[METADATA_COL_INDEX['Operator Processing Type']]).toBe(
+        'REPROCESSOR_INPUT'
+      )
+      expect(row[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
+      expect(row[METADATA_COL_INDEX['Accreditation Number']]).toBe('ACC-001')
+      expect(row[METADATA_COL_INDEX['Waste Record Type']]).toBe('received')
+      expect(row[METADATA_COL_INDEX['Submitted At']]).toBe(
+        '2026-04-15T09:00:00Z'
+      )
+      expect(row[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
+      expect(row[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
+      expect(row[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe(9)
+      expect(row[METADATA_COL_INDEX['Row ID']]).toBe('1001')
     })
 
     it('emits the glass recycling process in place of "glass" for the Material column', () => {
@@ -238,7 +258,7 @@ describe('csv-columns', () => {
           glassRecyclingProcess: ['glass_re_melt']
         })
       })
-      expect(row[3]).toBe('glass_re_melt') // Material
+      expect(row[METADATA_COL_INDEX['Material']]).toBe('glass_re_melt')
     })
 
     it('emits an empty Registration Number when the registration has none', () => {
@@ -246,27 +266,23 @@ describe('csv-columns', () => {
         ...baseInput,
         registration: buildReg({ registrationNumber: undefined })
       })
-      expect(row[2]).toBe('')
+      expect(row[METADATA_COL_INDEX['Registration Number']]).toBe('')
     })
 
     it('emits an empty Accreditation Number when the row has no accreditation', () => {
       const row = buildDataRow({ ...baseInput, accreditation: null })
-      expect(row[5]).toBe('No') // Accredited
-      expect(row[6]).toBe('') // Accreditation Number
+      expect(row[METADATA_COL_INDEX['Accredited']]).toBe('No')
+      expect(row[METADATA_COL_INDEX['Accreditation Number']]).toBe('')
     })
 
     it('emits empty string when a data field is absent on the record', () => {
       const row = buildDataRow(baseInput)
-      const containerNumberIdx =
-        METADATA_COLUMNS.length + dataFieldColumns.indexOf('CONTAINER_NUMBER')
-      expect(row[containerNumberIdx]).toBe('')
+      expect(row[dataCol('CONTAINER_NUMBER')]).toBe('')
     })
 
     it('passes a numeric data field through as a real number', () => {
       const row = buildDataRow(baseInput)
-      const grossIdx =
-        METADATA_COLUMNS.length + dataFieldColumns.indexOf('GROSS_WEIGHT')
-      expect(row[grossIdx]).toBe(10)
+      expect(row[dataCol('GROSS_WEIGHT')]).toBe(10)
     })
 
     it('apostrophe-prefixes a string data cell that begins with a formula trigger', () => {
@@ -276,10 +292,7 @@ describe('csv-columns', () => {
           data: { ...recordFixture.data, PRODUCT_DESCRIPTION: '=SUM(A1:A2)' }
         })
       })
-      const idx =
-        METADATA_COLUMNS.length +
-        dataFieldColumns.indexOf('PRODUCT_DESCRIPTION')
-      expect(row[idx]).toBe("'=SUM(A1:A2)")
+      expect(row[dataCol('PRODUCT_DESCRIPTION')]).toBe("'=SUM(A1:A2)")
     })
 
     it.each(['+1', '-1', '@cmd'])(
@@ -291,10 +304,7 @@ describe('csv-columns', () => {
             data: { ...recordFixture.data, PRODUCT_DESCRIPTION: value }
           })
         })
-        const idx =
-          METADATA_COLUMNS.length +
-          dataFieldColumns.indexOf('PRODUCT_DESCRIPTION')
-        expect(row[idx]).toBe(`'${value}`)
+        expect(row[dataCol('PRODUCT_DESCRIPTION')]).toBe(`'${value}`)
       }
     )
 
@@ -303,14 +313,12 @@ describe('csv-columns', () => {
         ...baseInput,
         org: { ...orgFixture, companyDetails: { name: '=cmd|calc' } }
       })
-      expect(row[1]).toBe("'=cmd|calc")
+      expect(row[METADATA_COL_INDEX['Organisation Name']]).toBe("'=cmd|calc")
     })
 
     it('does not prefix a numeric cell even though numbers are not strings', () => {
       const row = buildDataRow(baseInput)
-      const grossIdx =
-        METADATA_COLUMNS.length + dataFieldColumns.indexOf('GROSS_WEIGHT')
-      expect(row[grossIdx]).toBe(10)
+      expect(row[dataCol('GROSS_WEIGHT')]).toBe(10)
     })
 
     it('emits values for runtime-observed columns not in any schema', () => {
@@ -337,12 +345,22 @@ describe('csv-columns', () => {
         ...baseInput,
         accreditation: null
       })
-      expect(row[5]).toBe('No')
+      expect(row[METADATA_COL_INDEX['Accredited']]).toBe('No')
     })
 
     it('emits empty Submitted At when no summary log entry is found', () => {
       const row = buildDataRow({ ...baseInput, summaryLogEntry: null })
-      expect(row[8]).toBe('')
+      expect(row[METADATA_COL_INDEX['Submitted At']]).toBe('')
+    })
+
+    it('emits empty WB columns when wasteBalanceClassification is null', () => {
+      const row = buildDataRow({
+        ...baseInput,
+        wasteBalanceClassification: null
+      })
+      expect(row[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('')
+      expect(row[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
+      expect(row[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
     })
 
     it('emits waste balance columns from the classification', () => {
@@ -353,11 +371,108 @@ describe('csv-columns', () => {
           reasons: [
             { code: 'PRN_ISSUED' },
             { code: 'MISSING_REQUIRED_FIELD', field: 'EWC_CODE' }
-          ]
+          ],
+          tonnage: null
         }
       })
-      expect(excluded[9]).toBe('false') // Included in Waste Balance
-      expect(excluded[10]).toBe('PRN_ISSUED; MISSING_REQUIRED_FIELD: EWC_CODE') // Exclusion Reason
+      expect(excluded[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
+        'false'
+      )
+      expect(
+        excluded[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]
+      ).toBe('PRN_ISSUED; MISSING_REQUIRED_FIELD: EWC_CODE')
+      expect(excluded[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
+
+      const included = buildDataRow({
+        ...baseInput,
+        wasteBalanceClassification: {
+          included: true,
+          reasons: [],
+          tonnage: -5.25
+        }
+      })
+      expect(included[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
+        'true'
+      )
+      expect(included[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe(-5.25)
+    })
+
+    describe('derived OSR columns', () => {
+      const countryIdx = METADATA_COLUMNS.indexOf(OSR_COUNTRY_REVISED)
+      const nameIdx = METADATA_COLUMNS.indexOf(OSR_NAME_REVISED)
+
+      const overseasSites = {
+        '001': {
+          validFrom: new Date('2026-01-01'),
+          siteName: 'Acme Recycling',
+          country: 'Germany'
+        }
+      }
+
+      it('populates OSR_COUNTRY_REVISED and OSR_NAME_REVISED from the site matched by OSR_ID', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({
+            data: { ...recordFixture.data, OSR_ID: '001' }
+          }),
+          overseasSites
+        })
+        expect(row[countryIdx]).toBe('Germany')
+        expect(row[nameIdx]).toBe('Acme Recycling')
+      })
+
+      it('zero-pads OSR_ID before looking up the approved site', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({ data: { ...recordFixture.data, OSR_ID: 1 } }),
+          overseasSites
+        })
+        expect(row[countryIdx]).toBe('Germany')
+        expect(row[nameIdx]).toBe('Acme Recycling')
+      })
+
+      it('leaves both derived columns blank when the record has no OSR_ID', () => {
+        const row = buildDataRow({ ...baseInput, overseasSites })
+        expect(row[countryIdx]).toBe('')
+        expect(row[nameIdx]).toBe('')
+      })
+
+      it('leaves both derived columns blank when OSR_ID has no matching approved site', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({
+            data: { ...recordFixture.data, OSR_ID: '999' }
+          }),
+          overseasSites
+        })
+        expect(row[countryIdx]).toBe('')
+        expect(row[nameIdx]).toBe('')
+      })
+
+      it('leaves both derived columns blank when the matched site has null name and country', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({
+            data: { ...recordFixture.data, OSR_ID: '001' }
+          }),
+          overseasSites: {
+            '001': { validFrom: null, siteName: null, country: null }
+          }
+        })
+        expect(row[countryIdx]).toBe('')
+        expect(row[nameIdx]).toBe('')
+      })
+
+      it('leaves both derived columns blank when no overseas-sites context is supplied', () => {
+        const row = buildDataRow({
+          ...baseInput,
+          record: buildRecord({
+            data: { ...recordFixture.data, OSR_ID: '001' }
+          })
+        })
+        expect(row[countryIdx]).toBe('')
+        expect(row[nameIdx]).toBe('')
+      })
     })
   })
 })

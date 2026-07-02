@@ -104,7 +104,7 @@ describe('MongoDB stream repository', () => {
   }) => {
     const database = mongoClient.db(DATABASE_NAME)
     const repository = (await createMongoStreamRepository(database))()
-    expect(repository.appendEvent).toBeTypeOf('function')
+    expect(repository.appendEvents).toBeTypeOf('function')
     expect(repository.findLatestByPartition).toBeTypeOf('function')
     expect(repository.findLatestByPartitionAndKind).toBeTypeOf('function')
     expect(repository.findEventsByPrnIdAfter).toBeTypeOf('function')
@@ -115,13 +115,13 @@ describe('MongoDB stream repository', () => {
     testStreamRepositoryContract(it)
   })
 
-  describe('appendEvent error translation', () => {
+  describe('appendEvents error translation', () => {
     it('rethrows non-conflict MongoDB errors unchanged', async () => {
       const upstream = new Error('connection lost')
       const stubCollection = {
         createIndex: () => Promise.resolve(),
         findOne: () => Promise.resolve(null),
-        insertOne: () => Promise.reject(upstream)
+        insertMany: () => Promise.reject(upstream)
       }
       const stubDb = { collection: () => stubCollection }
 
@@ -130,7 +130,7 @@ describe('MongoDB stream repository', () => {
       )()
 
       await expect(
-        repository.appendEvent(buildStreamEvent({ number: 1 }))
+        repository.appendEvents([buildStreamEvent({ number: 1 })])
       ).rejects.toBe(upstream)
     })
 
@@ -142,7 +142,7 @@ describe('MongoDB stream repository', () => {
       const stubCollection = {
         createIndex: () => Promise.resolve(),
         findOne: () => Promise.resolve(null),
-        insertOne: () => Promise.reject(mongoError)
+        insertMany: () => Promise.reject(mongoError)
       }
       const stubDb = { collection: () => stubCollection }
 
@@ -151,18 +151,18 @@ describe('MongoDB stream repository', () => {
       )()
 
       await expect(
-        repository.appendEvent(buildStreamEvent({ number: 1 }))
+        repository.appendEvents([buildStreamEvent({ number: 1 })])
       ).rejects.toBe(mongoError)
     })
 
-    it('classifies E11000 from writeErrors array', async () => {
+    it('classifies a slot conflict raised when inserting the batch', async () => {
       const mongoError = Object.assign(new Error('E11000'), {
         writeErrors: [{ code: 11000, keyPattern: { number: 1 } }]
       })
       const stubCollection = {
         createIndex: () => Promise.resolve(),
         findOne: () => Promise.resolve(null),
-        insertOne: () => Promise.reject(mongoError)
+        insertMany: () => Promise.reject(mongoError)
       }
       const stubDb = { collection: () => stubCollection }
 
@@ -171,7 +171,7 @@ describe('MongoDB stream repository', () => {
       )()
 
       await expect(
-        repository.appendEvent(buildStreamEvent({ number: 1 }))
+        repository.appendEvents([buildStreamEvent({ number: 1 })])
       ).rejects.toMatchObject({
         name: 'StreamSlotConflictError'
       })

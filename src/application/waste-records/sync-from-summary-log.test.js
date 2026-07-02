@@ -29,15 +29,15 @@ const TEST_USER = {
 
 describe('syncFromSummaryLog', () => {
   let wasteRecordRepository
-  let wasteBalancesRepository
+  let wasteBalanceService
   let organisationsRepository
   let overseasSitesRepository
 
   beforeEach(() => {
     wasteRecordRepository = createInMemoryWasteRecordsRepository()()
-    wasteBalancesRepository = {
+    wasteBalanceService = {
       updateWasteBalanceTransactions: vi.fn(),
-      appendRegisteredOnlySubmittedEvent: vi.fn()
+      submitSummaryLog: vi.fn()
     }
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
@@ -175,7 +175,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
-      wasteBalancesRepository,
+      wasteBalanceService,
       organisationsRepository,
       overseasSitesRepository
     })
@@ -188,7 +188,7 @@ describe('syncFromSummaryLog', () => {
     )
 
     expect(
-      wasteBalancesRepository.updateWasteBalanceTransactions
+      wasteBalanceService.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), {
       user: TEST_USER,
       accreditation,
@@ -885,7 +885,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
-      wasteBalancesRepository,
+      wasteBalanceService,
       organisationsRepository,
       overseasSitesRepository
     })
@@ -893,7 +893,7 @@ describe('syncFromSummaryLog', () => {
     await sync(summaryLog, TEST_USER)
 
     expect(
-      wasteBalancesRepository.updateWasteBalanceTransactions
+      wasteBalanceService.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
@@ -968,7 +968,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
-      wasteBalancesRepository,
+      wasteBalanceService,
       organisationsRepository,
       overseasSitesRepository
     })
@@ -976,7 +976,7 @@ describe('syncFromSummaryLog', () => {
     await sync(summaryLog, TEST_USER)
 
     expect(
-      wasteBalancesRepository.updateWasteBalanceTransactions
+      wasteBalanceService.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), {
       user: TEST_USER,
       accreditation: {
@@ -1017,7 +1017,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
-      wasteBalancesRepository,
+      wasteBalanceService,
       organisationsRepository,
       overseasSitesRepository
     })
@@ -1025,7 +1025,7 @@ describe('syncFromSummaryLog', () => {
     await sync(summaryLog)
 
     expect(
-      wasteBalancesRepository.updateWasteBalanceTransactions
+      wasteBalanceService.updateWasteBalanceTransactions
     ).not.toHaveBeenCalled()
   })
 
@@ -1074,7 +1074,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
-      wasteBalancesRepository,
+      wasteBalanceService,
       organisationsRepository,
       overseasSitesRepository
     })
@@ -1107,7 +1107,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
-      wasteBalancesRepository,
+      wasteBalanceService,
       organisationsRepository,
       overseasSitesRepository
     })
@@ -1550,7 +1550,7 @@ describe('syncFromSummaryLog', () => {
       /** @type {any} */ (syncFromSummaryLog)({
         extractor,
         wasteRecordRepository,
-        wasteBalancesRepository,
+        wasteBalanceService,
         organisationsRepository,
         overseasSitesRepository,
         rowStateRepository,
@@ -1606,7 +1606,7 @@ describe('syncFromSummaryLog', () => {
         summaryLogIds: [fileId]
       })
       expect(
-        wasteBalancesRepository.updateWasteBalanceTransactions
+        wasteBalanceService.updateWasteBalanceTransactions
       ).not.toHaveBeenCalled()
     })
 
@@ -1692,7 +1692,7 @@ describe('syncFromSummaryLog', () => {
         summaryLogIds: [fileId]
       })
       expect(
-        wasteBalancesRepository.updateWasteBalanceTransactions
+        wasteBalanceService.updateWasteBalanceTransactions
       ).not.toHaveBeenCalled()
     })
 
@@ -1743,7 +1743,7 @@ describe('syncFromSummaryLog', () => {
         accreditationId: 'acc-1'
       })
       expect(
-        wasteBalancesRepository.updateWasteBalanceTransactions
+        wasteBalanceService.updateWasteBalanceTransactions
       ).toHaveBeenCalled()
     })
 
@@ -1803,7 +1803,7 @@ describe('syncFromSummaryLog', () => {
       /** @type {any} */ (syncFromSummaryLog)({
         extractor,
         wasteRecordRepository,
-        wasteBalancesRepository,
+        wasteBalanceService,
         organisationsRepository,
         overseasSitesRepository,
         rowStateRepository: createInMemoryRowStateRepository()(),
@@ -1823,16 +1823,17 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor, submittedEventsFlagOn)(summaryLog, TEST_USER)
 
+      expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
+        {
+          registrationId: 'reg-1',
+          accreditationId: null,
+          organisationId: 'org-1'
+        },
+        { summaryLogId: fileId, creditTotal: 0 },
+        { id: TEST_USER.id, email: TEST_USER.email }
+      )
       expect(
-        wasteBalancesRepository.appendRegisteredOnlySubmittedEvent
-      ).toHaveBeenCalledWith({
-        registrationId: 'reg-1',
-        organisationId: 'org-1',
-        summaryLogId: fileId,
-        createdBy: { id: TEST_USER.id, email: TEST_USER.email }
-      })
-      expect(
-        wasteBalancesRepository.updateWasteBalanceTransactions
+        wasteBalanceService.updateWasteBalanceTransactions
       ).not.toHaveBeenCalled()
     })
 
@@ -1850,18 +1851,15 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor, submittedEventsFlagOn)(summaryLog, namedUser)
 
-      expect(
-        wasteBalancesRepository.appendRegisteredOnlySubmittedEvent
-      ).toHaveBeenCalledWith({
-        registrationId: 'reg-1',
-        organisationId: 'org-1',
-        summaryLogId: fileId,
-        createdBy: {
-          id: namedUser.id,
-          name: 'Reg User',
-          email: namedUser.email
-        }
-      })
+      expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
+        {
+          registrationId: 'reg-1',
+          accreditationId: null,
+          organisationId: 'org-1'
+        },
+        { summaryLogId: fileId, creditTotal: 0 },
+        { id: namedUser.id, name: 'Reg User', email: namedUser.email }
+      )
     })
 
     it('does not emit a summary-log submitted event when the dedicated flag is off', async () => {
@@ -1880,9 +1878,7 @@ describe('syncFromSummaryLog', () => {
         createInMemoryFeatureFlags({ registeredOnlySubmittedEvents: false })
       )(summaryLog, TEST_USER)
 
-      expect(
-        wasteBalancesRepository.appendRegisteredOnlySubmittedEvent
-      ).not.toHaveBeenCalled()
+      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
     })
 
     it('does not emit a reg-only event for an accredited submission', async () => {
@@ -1924,9 +1920,7 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor, submittedEventsFlagOn)(summaryLog, TEST_USER)
 
-      expect(
-        wasteBalancesRepository.appendRegisteredOnlySubmittedEvent
-      ).not.toHaveBeenCalled()
+      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
     })
   })
 })

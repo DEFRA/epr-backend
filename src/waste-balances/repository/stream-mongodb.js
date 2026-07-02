@@ -122,51 +122,6 @@ const findDuplicateKeyWriteError = (error) => {
 
 /**
  * @param {Collection} collection
- * @returns {(event: StreamEventInsert) => Promise<StreamEvent>}
- */
-const performAppendEvent = (collection) => async (event) => {
-  const validated = validateStreamEventInsert(event)
-
-  const latest = await collection.findOne(
-    {
-      registrationId: validated.registrationId,
-      accreditationId: validated.accreditationId
-    },
-    { sort: { number: -1 }, projection: { number: 1 } }
-  )
-
-  const expectedNumber = (latest?.number ?? 0) + 1
-
-  if (validated.number !== expectedNumber) {
-    if (validated.number <= (latest?.number ?? 0)) {
-      throw new StreamSlotConflictError(
-        validated.registrationId,
-        validated.accreditationId,
-        validated.number
-      )
-    }
-    throw new StreamSequenceError(
-      validated.registrationId,
-      validated.accreditationId,
-      validated.number,
-      expectedNumber
-    )
-  }
-
-  try {
-    const result = await collection.insertOne(validated)
-    return toStreamEvent({ _id: result.insertedId, ...validated })
-  } catch (error) {
-    const classified = classifyDuplicateKeyError(error, validated)
-    if (classified) {
-      throw classified
-    }
-    throw error
-  }
-}
-
-/**
- * @param {Collection} collection
  * @returns {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent | null>}
  */
 const performFindLatestByPartition =
@@ -240,13 +195,19 @@ const performDeleteByPartition =
   }
 
 /**
- * @migration PAE-1382 — insert multiple events in one call.
- * Validates sequence: events must be numbered sequentially, and the first
- * event's number must be currentMax + 1 (or 1 if empty partition).
+ * Append a contiguous batch of events. Validates sequence: events must be
+ * numbered sequentially, and the first event's number must be currentMax + 1
+ * (or 1 if empty partition). A starting slot occupied by a competing writer
+ * surfaces as a `StreamSlotConflictError`, whether detected on the pre-check
+ * or on the insert itself.
+ *
+ * Not a transaction: the ordered insert commits each event as it goes and is
+ * not rolled back, so a later slot conflict leaves earlier events of the same
+ * batch committed.
  * @param {Collection} collection
  * @returns {(events: import('./stream-schema.js').StreamEventInsert[]) => Promise<import('./stream-schema.js').StreamEvent[]>}
  */
-const performBulkAppendEvents = (collection) => async (events) => {
+const performAppendEvents = (collection) => async (events) => {
   if (events.length === 0) {
     return []
   }
@@ -266,6 +227,13 @@ const performBulkAppendEvents = (collection) => async (events) => {
   const expectedStart = (latest?.number ?? 0) + 1
 
   if (first.number !== expectedStart) {
+    if (first.number <= (latest?.number ?? 0)) {
+      throw new StreamSlotConflictError(
+        first.registrationId,
+        first.accreditationId,
+        first.number
+      )
+    }
     throw new StreamSequenceError(
       first.registrationId,
       first.accreditationId,
@@ -286,11 +254,18 @@ const performBulkAppendEvents = (collection) => async (events) => {
     }
   }
 
-  const result = await collection.insertMany(validated)
-
-  return validated.map((event, i) =>
-    toStreamEvent({ _id: result.insertedIds[i], ...event })
-  )
+  try {
+    const result = await collection.insertMany(validated)
+    return validated.map((event, i) =>
+      toStreamEvent({ _id: result.insertedIds[i], ...event })
+    )
+  } catch (error) {
+    const classified = classifyDuplicateKeyError(error, first)
+    if (classified) {
+      throw classified
+    }
+    throw error
+  }
 }
 
 /**
@@ -303,13 +278,12 @@ export const createMongoStreamRepository = async (db) => {
   const collection = await ensureStreamCollection(db)
 
   return () => ({
-    appendEvent: performAppendEvent(collection),
     findLatestByPartition: performFindLatestByPartition(collection),
     findLatestByPartitionAndKind:
       performFindLatestByPartitionAndKind(collection),
     findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection),
     findAllByPartition: performFindAllByPartition(collection),
     deleteByPartition: performDeleteByPartition(collection),
-    bulkAppendEvents: performBulkAppendEvents(collection)
+    appendEvents: performAppendEvents(collection)
   })
 }

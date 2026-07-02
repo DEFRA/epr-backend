@@ -3,9 +3,6 @@ import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
 import { wasteBalanceResponseSchema } from './response.schema.js'
 
-/** @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-
 export const wasteBalanceGetPath =
   '/v1/organisations/{organisationId}/waste-balances'
 
@@ -42,12 +39,12 @@ export const wasteBalanceGet = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {wasteBalancesRepository: WasteBalancesRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (
-    { wasteBalancesRepository, organisationsRepository, query, params },
+    { wasteBalanceService, organisationsRepository, query, params },
     h
   ) => {
     const { organisationId } = params
@@ -74,7 +71,8 @@ export const wasteBalanceGet = {
           return null
         }
 
-        const balance = await wasteBalancesRepository.findBalance({
+        const balance = await wasteBalanceService.currentBalance({
+          organisationId,
           registrationId,
           accreditationId
         })

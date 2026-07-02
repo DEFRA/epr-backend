@@ -90,6 +90,21 @@ export function add(a, b) {
 }
 
 /**
+ * Add `value` to a running accumulator, rounding `value` to `decimalPlaces`
+ * first (round-each-then-sum). Only `value` is rounded - `acc` is the
+ * already-rounded running total and is left untouched. Returns a Decimal so it
+ * composes in reduce/loop accumulations.
+ *
+ * @param {DecimalValue} acc - Running total (already rounded)
+ * @param {DecimalValue|null|undefined} value - Per-row value to round then add (null/undefined treated as zero)
+ * @param {number} decimalPlaces - Decimal places to round `value` to
+ * @returns {DecimalInstance} Sum as Decimal
+ */
+export function addRounded(acc, value, decimalPlaces) {
+  return add(acc, toDecimal(value).toDecimalPlaces(decimalPlaces))
+}
+
+/**
  * Subtract two values using exact decimal arithmetic.
  *
  * @param {DecimalValue} a - Value to subtract from
