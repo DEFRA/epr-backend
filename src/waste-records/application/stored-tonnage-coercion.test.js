@@ -105,22 +105,37 @@ describe('coerceStoredTonnages', () => {
     expect(stored.reduce((sum, t) => sum + t, 0)).toBeCloseTo(12, 10)
   })
 
-  it('rounds each weight independently — stored NET need not equal stored GROSS minus TARE minus PALLET', () => {
+  it('derives stored NET_WEIGHT from the coerced components so the row reconciles by construction', () => {
+    // Counterexample where independent per-field rounding would break the
+    // stored identity: GROSS=10.004 TARE=0.005 PALLET=0 NET=9.999 passes ingest
+    // (9.999 == 10.004 - 0.005 within tolerance), but rounding each field alone
+    // gives GROSS=10.00, TARE=0.01, NET=10.00 — a stored row where
+    // GROSS - TARE - PALLET = 9.99 ≠ NET = 10.00. Deriving NET from the coerced
+    // components restores the identity at 2dp.
+    const coerced = coerceStoredTonnages({
+      GROSS_WEIGHT: 10.004,
+      TARE_WEIGHT: 0.005,
+      PALLET_WEIGHT: 0,
+      NET_WEIGHT: 9.999
+    })
+
+    expect(coerced.GROSS_WEIGHT).toBe(10)
+    expect(coerced.TARE_WEIGHT).toBe(0.01)
+    expect(coerced.NET_WEIGHT).toBe(9.99)
+    expect(coerced.NET_WEIGHT).toBe(
+      coerced.GROSS_WEIGHT - coerced.TARE_WEIGHT - coerced.PALLET_WEIGHT
+    )
+  })
+
+  it('leaves NET_WEIGHT independently rounded when a weight component is absent', () => {
     const coerced = coerceStoredTonnages({
       GROSS_WEIGHT: 10.005,
-      TARE_WEIGHT: 2.002,
-      PALLET_WEIGHT: 1.001,
       NET_WEIGHT: 7.002
     })
 
-    // Each component carries its own single rounding; the submission-time
-    // identity NET = GROSS - TARE - PALLET is not preserved on stored values
-    // (here 10.01 - 2.00 - 1.00 = 7.01 against a stored NET of 7.00), and
-    // nothing downstream re-derives it.
+    // Without all of GROSS/TARE/PALLET the ingest identity does not apply, so
+    // NET keeps its own single rounding rather than being derived.
     expect(coerced.NET_WEIGHT).toBe(7)
-    expect(
-      coerced.GROSS_WEIGHT - coerced.TARE_WEIGHT - coerced.PALLET_WEIGHT
-    ).toBeCloseTo(7.01, 2)
-    expect(coerced.NET_WEIGHT).not.toBeCloseTo(7.01, 2)
+    expect(coerced.GROSS_WEIGHT).toBe(10.01)
   })
 })

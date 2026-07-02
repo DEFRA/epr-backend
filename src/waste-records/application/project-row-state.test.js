@@ -41,6 +41,30 @@ describe('projectRowState', () => {
     })
   })
 
+  it('stores a row state that reconciles by construction — NET equals GROSS minus TARE minus PALLET at 2dp', () => {
+    const record = {
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: '3',
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      versions: [],
+      data: {
+        processingType: 'REPROCESSOR_REGISTERED_ONLY',
+        GROSS_WEIGHT: 10.004,
+        TARE_WEIGHT: 0.005,
+        PALLET_WEIGHT: 0,
+        NET_WEIGHT: 9.999
+      }
+    }
+
+    const { data } = projectRowState(record, null, overseasSites)
+
+    expect(data.NET_WEIGHT).toBe(9.99)
+    expect(data.NET_WEIGHT).toBe(
+      data.GROSS_WEIGHT - data.TARE_WEIGHT - data.PALLET_WEIGHT
+    )
+  })
+
   it('coerces a copy, leaving the source record data at full precision', () => {
     const record = {
       organisationId: 'org-1',
