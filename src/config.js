@@ -380,7 +380,7 @@ const baseConfig = {
       doc: 'Feature Flag: Run the estate-wide waste-record-state reconstruction backfill on startup (ADR-0037)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_WASTE_RECORD_STATES_BACKFILL'
+      env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL'
     }
   },
   formSubmissionOverrides: {
