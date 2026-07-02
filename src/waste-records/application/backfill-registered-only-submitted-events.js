@@ -278,10 +278,10 @@ export const backfillRegisteredOnlySubmittedEvents = async ({
   const registeredOnlyPlan = []
 
   for (const organisation of organisations) {
-    for (const registration of organisation.registrations) {
-      if ((registration.accreditationId ?? null) !== null) {
-        continue
-      }
+    const registeredOnlyRegistrations = organisation.registrations.filter(
+      (registration) => (registration.accreditationId ?? null) === null
+    )
+    for (const registration of registeredOnlyRegistrations) {
       const result = await backfillRegistrationSubmittedEvents({
         organisation,
         registration,
@@ -294,18 +294,17 @@ export const backfillRegisteredOnlySubmittedEvents = async ({
         wasteBalanceService,
         writeSubmittedEvents
       })
-      if (!result) {
-        continue
-      }
-      registrationsScanned += 1
-      submissionsScanned += result.submissionCount
-      submittedEventWrites += result.plannedEvents.length
-      if (result.plannedEvents.length > 0) {
-        registeredOnlyPlan.push({
-          organisationId: organisation.id,
-          registrationId: registration.id,
-          plannedEvents: result.plannedEvents
-        })
+      if (result) {
+        registrationsScanned += 1
+        submissionsScanned += result.submissionCount
+        submittedEventWrites += result.plannedEvents.length
+        if (result.plannedEvents.length > 0) {
+          registeredOnlyPlan.push({
+            organisationId: organisation.id,
+            registrationId: registration.id,
+            plannedEvents: result.plannedEvents
+          })
+        }
       }
     }
   }

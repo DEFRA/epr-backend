@@ -325,8 +325,8 @@ describe('backfillRegisteredOnlySubmittedEvents', () => {
     const summary = await backfillRegisteredOnlySubmittedEvents(deps)
 
     expect(
-      (await deps.streamRepository.findAllByPartition('reg-ro', null)).length
-    ).toBe(1)
+      await deps.streamRepository.findAllByPartition('reg-ro', null)
+    ).toHaveLength(1)
     expect(summary.submittedEventWrites).toBe(0)
     expect(summary.registeredOnlyPlan).toEqual([])
   })
