@@ -173,7 +173,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .mockImplementation(async ({ projection }) => projection)
     const prnRepository = { findById: vi.fn(), persistProjection }
     const streamRepository = buildSeededStreamRepository()
-    const appendEvents = vi.spyOn(streamRepository, 'bulkAppendEvents')
+    const appendEvents = vi.spyOn(streamRepository, 'appendEvents')
 
     await callUpdate({
       prnRepository,
@@ -205,7 +205,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     const persistProjection = vi.fn()
     const prnRepository = { findById: vi.fn(), persistProjection }
     const streamRepository = buildSeededStreamRepository()
-    const appendEvents = vi.spyOn(streamRepository, 'bulkAppendEvents')
+    const appendEvents = vi.spyOn(streamRepository, 'appendEvents')
 
     await expect(
       callUpdate({
@@ -235,7 +235,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .mockImplementation(async ({ projection }) => projection)
     const prnRepository = { findById: vi.fn(), persistProjection }
     const streamRepository = buildSeededStreamRepository()
-    const appendEvents = vi.spyOn(streamRepository, 'bulkAppendEvents')
+    const appendEvents = vi.spyOn(streamRepository, 'appendEvents')
 
     await callUpdate({
       prnRepository,

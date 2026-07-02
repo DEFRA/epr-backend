@@ -25,30 +25,30 @@ export const testFindAllByPartitionBehaviour = (it) => {
     })
 
     it('returns all events ordered by number ascending', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-all',
           accreditationId: 'acc-all',
           number: 1,
           closingBalance: { amount: 10, availableAmount: 10 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-all',
           accreditationId: 'acc-all',
           number: 2,
           closingBalance: { amount: 20, availableAmount: 18 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-all',
           accreditationId: 'acc-all',
           number: 3,
           closingBalance: { amount: 30, availableAmount: 25 }
         })
-      )
+      ])
 
       const result = await repository.findAllByPartition('reg-all', 'acc-all')
 
@@ -59,20 +59,20 @@ export const testFindAllByPartitionBehaviour = (it) => {
     })
 
     it('does not return events from a different partition', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-a',
           accreditationId: 'acc-a',
           number: 1
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-b',
           accreditationId: 'acc-b',
           number: 1
         })
-      )
+      ])
 
       const result = await repository.findAllByPartition('reg-a', 'acc-a')
 

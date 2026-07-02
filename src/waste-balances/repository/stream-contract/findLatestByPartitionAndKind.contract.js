@@ -18,13 +18,13 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
     )
 
     it('returns null when no events of the given kind exist', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-kind',
           accreditationId: 'acc-kind',
           number: 1
         })
-      )
+      ])
 
       const result = await repository.findLatestByPartitionAndKind(
         'reg-kind',
@@ -36,30 +36,30 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
     })
 
     it('returns the highest-numbered event of the specified kind', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-filter',
           accreditationId: 'acc-filter',
           number: 1,
           payload: { summaryLogId: 'log-1', creditTotal: 100 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-filter',
           accreditationId: 'acc-filter',
           number: 2,
           payload: { prnId: 'prn-1', amount: 50 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-filter',
           accreditationId: 'acc-filter',
           number: 3,
           payload: { summaryLogId: 'log-2', creditTotal: 200 }
         })
-      )
+      ])
 
       const result = await repository.findLatestByPartitionAndKind(
         'reg-filter',
@@ -72,22 +72,22 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
     })
 
     it('isolates results by partition', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-a',
           accreditationId: 'acc-a',
           number: 1,
           payload: { summaryLogId: 'log-a', creditTotal: 100 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-b',
           accreditationId: 'acc-b',
           number: 1,
           payload: { summaryLogId: 'log-b', creditTotal: 200 }
         })
-      )
+      ])
 
       const a = await repository.findLatestByPartitionAndKind(
         'reg-a',
@@ -107,7 +107,7 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
     })
 
     it('treats null and non-null accreditationId as separate streams', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-null',
           accreditationId: null,
@@ -115,8 +115,8 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
           payload: { summaryLogId: 'log-null', creditTotal: 10 },
           closingBalance: { amount: 10, availableAmount: 10 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-null',
           accreditationId: 'acc-present',
@@ -124,7 +124,7 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
           payload: { summaryLogId: 'log-present', creditTotal: 999 },
           closingBalance: { amount: 999, availableAmount: 999 }
         })
-      )
+      ])
 
       const nullResult = await repository.findLatestByPartitionAndKind(
         'reg-null',

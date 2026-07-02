@@ -37,7 +37,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       amount,
       availableAmount
     } of balances) {
-      await streamRepository.appendEvent(
+      await streamRepository.appendEvents([
         buildStreamEvent({
           accreditationId,
           organisationId: orgId,
@@ -45,7 +45,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
           number: 1,
           closingBalance: { amount, availableAmount }
         })
-      )
+      ])
     }
     return streamRepository
   }
