@@ -294,17 +294,18 @@ export const backfillRegisteredOnlySubmittedEvents = async ({
         wasteBalanceService,
         writeSubmittedEvents
       })
-      if (result) {
-        registrationsScanned += 1
-        submissionsScanned += result.submissionCount
-        submittedEventWrites += result.plannedEvents.length
-        if (result.plannedEvents.length > 0) {
-          registeredOnlyPlan.push({
-            organisationId: organisation.id,
-            registrationId: registration.id,
-            plannedEvents: result.plannedEvents
-          })
-        }
+      if (!result) {
+        continue
+      }
+      registrationsScanned += 1
+      submissionsScanned += result.submissionCount
+      submittedEventWrites += result.plannedEvents.length
+      if (result.plannedEvents.length > 0) {
+        registeredOnlyPlan.push({
+          organisationId: organisation.id,
+          registrationId: registration.id,
+          plannedEvents: result.plannedEvents
+        })
       }
     }
   }
