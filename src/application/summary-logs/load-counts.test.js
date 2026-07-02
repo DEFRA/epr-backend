@@ -452,7 +452,7 @@ describe('countByWasteBalanceInclusion', () => {
       expect(result.unchanged.included.count).toBe(1)
     })
 
-    it('handles empty versions array gracefully', () => {
+    it('throws on an empty versions array, a data-integrity state the repository rejects', () => {
       const wasteRecords = [
         {
           tableName: 'RECEIVED_LOADS_FOR_EXPORT',
@@ -471,12 +471,12 @@ describe('countByWasteBalanceInclusion', () => {
         }
       ]
 
-      const result = countByWasteBalanceInclusion({
-        wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
-
-      expect(result.unchanged.included.rowIds).toEqual(['row-1'])
+      expect(() =>
+        countByWasteBalanceInclusion({
+          wasteRecords,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID
+        })
+      ).toThrow('waste record row-1 has no versions')
     })
   })
 

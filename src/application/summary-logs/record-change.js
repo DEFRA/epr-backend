@@ -19,13 +19,20 @@ export const RECORD_CHANGE = Object.freeze({
 /**
  * Classifies how a record changed in this upload from its latest version.
  *
+ * A record always carries at least one version (the repository schema rejects
+ * an empty versions array), so an empty array is a data-integrity violation:
+ * throw loudly rather than silently misclassifying it as unchanged.
+ *
  * @param {ValidatedWasteRecord['record']} record
  * @param {string} summaryLogId
  * @returns {RecordChange}
  */
 export const determineRecordStatus = (record, summaryLogId) => {
   const lastVersion = record.versions.at(-1)
-  if (lastVersion?.summaryLog?.id !== summaryLogId) {
+  if (!lastVersion) {
+    throw new Error(`waste record ${record.rowId} has no versions`)
+  }
+  if (lastVersion.summaryLog?.id !== summaryLogId) {
     return RECORD_CHANGE.UNCHANGED
   }
   return lastVersion.status === VERSION_STATUS.CREATED
