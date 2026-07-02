@@ -104,7 +104,12 @@ export const backfillRegistrationRowStates = async ({
 
   let rowStateWriteCount = 0
   let submittedEventWriteCount = 0
-  for (const { summaryLogId, entries } of submissions) {
+  for (const {
+    summaryLogId,
+    entries,
+    submittedAt,
+    submittedBy
+  } of submissions) {
     await rowStateRepository.upsertRowStates(partition, entries, summaryLogId)
     rowStateWriteCount += entries.length
 
@@ -116,7 +121,8 @@ export const backfillRegistrationRowStates = async ({
           organisationId: partition.organisationId
         },
         { summaryLogId, creditTotal: 0 },
-        BACKFILL_ACTOR
+        submittedBy ?? BACKFILL_ACTOR,
+        new Date(submittedAt)
       )
       existingSubmittedEvents.add(summaryLogId)
       submittedEventWriteCount += 1

@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { buildSystemLogSubmitters } from '#waste-balances/application/summary-log-submitters.js'
 
 import { backfillRegistrationRowStates } from './backfill-registration-rowstates.js'
 
@@ -54,16 +55,24 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  * `file.id`, not the summary-log document id — the live write path keys both on
  * `file.id`, so the backfill must too or it reconstructs nothing. A submitted
  * summary log always carries `submittedAt` (stamped at submission), which the
- * status filter upstream guarantees is the only kind reaching this mapping.
+ * status filter upstream guarantees is the only kind reaching this mapping. The
+ * recovered original submitter (keyed by `file.id`) rides along as `submittedBy`
+ * when one was found, so the replayed submitted event is attributed to the
+ * person who made the submission rather than the backfill actor.
  *
  * @param {SummaryLogWithId} log
+ * @param {Map<string, import('#waste-balances/repository/stream-schema.js').StreamUserSummary>} submitters
  * @returns {OrderedSummaryLog}
  */
-const toOrderedSummaryLog = ({ summaryLog }) => ({
-  id: summaryLog.file.id,
-  status: summaryLog.status,
-  submittedAt: /** @type {string} */ (summaryLog.submittedAt)
-})
+const toOrderedSummaryLog = ({ summaryLog }, submitters) => {
+  const submittedBy = submitters.get(summaryLog.file.id)
+  return {
+    id: summaryLog.file.id,
+    status: summaryLog.status,
+    submittedAt: /** @type {string} */ (summaryLog.submittedAt),
+    ...(submittedBy && { submittedBy })
+  }
+}
 
 /**
  * Backfill one registration's stream, mirroring the live write scope: every
@@ -83,6 +92,7 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
  * @param {RowStateRepository} args.rowStateRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} args.systemLogsRepository
  * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} args.streamRepository
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} args.wasteBalanceService
  * @returns {Promise<StreamBackfilled | StreamOrphaned | null>}
@@ -95,6 +105,7 @@ const backfillRegistrationStream = async ({
   summaryLogsRepository,
   overseasSitesRepository,
   rowStateRepository,
+  systemLogsRepository,
   streamRepository,
   wasteBalanceService
 }) => {
@@ -104,9 +115,16 @@ const backfillRegistrationStream = async ({
     organisation.id,
     registration.id
   )
+  const submitActors = await systemLogsRepository.findSummaryLogSubmitActors(
+    logs.map((log) => String(log.id))
+  )
+  const submitters = buildSystemLogSubmitters({
+    submitActors,
+    summaryLogDocs: logs
+  })
   const summaryLogs = logs
     .filter((log) => log.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED)
-    .map(toOrderedSummaryLog)
+    .map((log) => toOrderedSummaryLog(log, submitters))
   if (summaryLogs.length === 0) {
     return null
   }
@@ -187,6 +205,7 @@ const backfillRegistrationStream = async ({
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} deps.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} deps.overseasSitesRepository
  * @param {RowStateRepository} deps.rowStateRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
  * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} deps.streamRepository
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} deps.wasteBalanceService
  * @returns {Promise<EstateBackfillSummary>}
@@ -197,6 +216,7 @@ export const backfillEstateRowStates = async ({
   summaryLogsRepository,
   overseasSitesRepository,
   rowStateRepository,
+  systemLogsRepository,
   streamRepository,
   wasteBalanceService
 }) => {
@@ -218,6 +238,7 @@ export const backfillEstateRowStates = async ({
         summaryLogsRepository,
         overseasSitesRepository,
         rowStateRepository,
+        systemLogsRepository,
         streamRepository,
         wasteBalanceService
       })

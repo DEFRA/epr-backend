@@ -5,7 +5,10 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import {
+  BACKFILL_ACTOR,
+  STREAM_EVENT_KIND
+} from '#waste-balances/repository/stream-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 
 import { backfillRegistrationRowStates } from './backfill-registration-rowstates.js'
@@ -309,6 +312,109 @@ describe('backfillRegistrationRowStates', () => {
         await streamRepository.findAllByPartition('reg-1', 'acc-1')
       ).toEqual([])
       expect(summary.submittedEventWriteCount).toBe(0)
+    })
+
+    it('stamps each backfilled event with its original submission date, not today', async () => {
+      const summaryLogs = [
+        submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
+        submittedLog('sl-2', '2025-02-01T00:00:00.000Z')
+      ]
+      const wasteRecords = [
+        receivedRecord('row-1', [
+          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        ])
+      ]
+      const rowStateRepository = createInMemoryRowStateRepository()()
+      const { streamRepository, wasteBalanceService } = streamWithService()
+
+      await backfillRegistrationRowStates({
+        partition: nullPartition,
+        wasteRecords,
+        summaryLogs,
+        accreditation: null,
+        overseasSites,
+        rowStateRepository,
+        streamRepository,
+        wasteBalanceService
+      })
+
+      const submittedEvents = await streamRepository.findAllByPartition(
+        'reg-1',
+        null
+      )
+      expect(
+        submittedEvents.map((event) => event.createdAt.toISOString())
+      ).toEqual(['2025-01-01T00:00:00.000Z', '2025-02-01T00:00:00.000Z'])
+    })
+
+    it('attributes each backfilled event to its original submitter, not the backfill actor', async () => {
+      const summaryLogs = [
+        {
+          ...submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
+          submittedBy: { id: 'user-1', name: 'Ada', email: 'ada@example.com' }
+        },
+        {
+          ...submittedLog('sl-2', '2025-02-01T00:00:00.000Z'),
+          submittedBy: { id: 'user-2', name: 'Grace' }
+        }
+      ]
+      const wasteRecords = [
+        receivedRecord('row-1', [
+          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        ])
+      ]
+      const rowStateRepository = createInMemoryRowStateRepository()()
+      const { streamRepository, wasteBalanceService } = streamWithService()
+
+      await backfillRegistrationRowStates({
+        partition: nullPartition,
+        wasteRecords,
+        summaryLogs,
+        accreditation: null,
+        overseasSites,
+        rowStateRepository,
+        streamRepository,
+        wasteBalanceService
+      })
+
+      const submittedEvents = await streamRepository.findAllByPartition(
+        'reg-1',
+        null
+      )
+      expect(submittedEvents.map((event) => event.createdBy)).toEqual([
+        { id: 'user-1', name: 'Ada', email: 'ada@example.com' },
+        { id: 'user-2', name: 'Grace' }
+      ])
+    })
+
+    it('falls back to the backfill actor when a submission has no recovered submitter', async () => {
+      const summaryLogs = [submittedLog('sl-1', '2025-01-01T00:00:00.000Z')]
+      const wasteRecords = [
+        receivedRecord('row-1', [
+          { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+        ])
+      ]
+      const rowStateRepository = createInMemoryRowStateRepository()()
+      const { streamRepository, wasteBalanceService } = streamWithService()
+
+      await backfillRegistrationRowStates({
+        partition: nullPartition,
+        wasteRecords,
+        summaryLogs,
+        accreditation: null,
+        overseasSites,
+        rowStateRepository,
+        streamRepository,
+        wasteBalanceService
+      })
+
+      const submittedEvents = await streamRepository.findAllByPartition(
+        'reg-1',
+        null
+      )
+      expect(submittedEvents.map((event) => event.createdBy)).toEqual([
+        BACKFILL_ACTOR
+      ])
     })
 
     it('reports submittedEventWriteCount for migration logging', async () => {

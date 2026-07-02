@@ -12,6 +12,12 @@ import { createInMemoryRowStateRepository } from '#waste-records/repository/inme
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
+import {
+  SUMMARY_LOG_SUB_CATEGORY,
+  SUMMARY_LOG_SUBMIT_ACTION
+} from '#root/auditing/summary-logs.js'
 import {
   buildAccreditation,
   buildOrganisation,
@@ -73,10 +79,27 @@ const inMemoryDeps = ({ organisations, wasteRecords }) => {
     summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
     overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
     rowStateRepository: createInMemoryRowStateRepository()(),
+    systemLogsRepository: createSystemLogsRepository()(logger),
     streamRepository,
     wasteBalanceService: createWasteBalanceService(streamRepository)
   }
 }
+
+const insertSubmitAudit = (
+  systemLogsRepository,
+  documentId,
+  { organisationId, userId, email }
+) =>
+  systemLogsRepository.insert(
+    buildSystemLog({
+      organisationId,
+      userId,
+      email,
+      subCategory: SUMMARY_LOG_SUB_CATEGORY,
+      action: SUMMARY_LOG_SUBMIT_ACTION,
+      summaryLogId: documentId
+    })
+  )
 
 describe('backfillEstateRowStates', () => {
   it('backfills every submission of an accredited registration, keyed by file id, and reports the sweep', async () => {
@@ -209,6 +232,50 @@ describe('backfillEstateRowStates', () => {
     expect(summary.streamsBackfilled).toBe(1)
     expect(summary.submissionsBackfilled).toBe(1)
     expect(summary.orphanedAccreditations).toEqual([])
+  })
+
+  it('dates each reg-only backfilled event its original submittedAt and attributes it to the recovered submitter', async () => {
+    const registration = reprocessorRegistration({ id: 'reg-ro' })
+    delete registration.accreditationId
+    const organisation = buildOrganisation({
+      registrations: [registration],
+      accreditations: []
+    })
+    const wasteRecords = [
+      receivedRecord(organisation.id, 'reg-ro', 'row-1', [
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } }
+      ])
+    ]
+    const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
+    await insertLog(deps.summaryLogsRepository, 'sl-1', {
+      organisationId: organisation.id,
+      registrationId: 'reg-ro',
+      submittedAt: '2025-01-01T00:00:00.000Z'
+    })
+    await insertLog(deps.summaryLogsRepository, 'sl-2', {
+      organisationId: organisation.id,
+      registrationId: 'reg-ro',
+      submittedAt: '2025-02-01T00:00:00.000Z'
+    })
+    await insertSubmitAudit(deps.systemLogsRepository, 'sl-1', {
+      organisationId: organisation.id,
+      userId: 'user-1',
+      email: 'ada@example.com'
+    })
+
+    await backfillEstateRowStates(deps)
+
+    const submittedEvents = await deps.streamRepository.findAllByPartition(
+      'reg-ro',
+      null
+    )
+    expect(
+      submittedEvents.map((event) => event.createdAt.toISOString())
+    ).toEqual(['2025-01-01T00:00:00.000Z', '2025-02-01T00:00:00.000Z'])
+    expect(submittedEvents.map((event) => event.createdBy)).toEqual([
+      { id: 'user-1', email: 'ada@example.com' },
+      { id: 'system', name: 'backfill' }
+    ])
   })
 
   it('backfills a registered-only processing-type stream rather than dropping it', async () => {
