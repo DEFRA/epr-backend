@@ -318,6 +318,9 @@ const commitStateAndBalance = async ({
         email: user.email
       }
     )
+  } else {
+    // Registered-only submission with the flag off: its summary-log-submitted
+    // event is not recorded yet.
   }
 }
 
