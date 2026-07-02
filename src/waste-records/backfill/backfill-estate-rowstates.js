@@ -75,6 +75,41 @@ const toOrderedSummaryLog = ({ summaryLog }, submitters) => {
 }
 
 /**
+ * The submitted summary logs for one registration, in the order the reconstruct
+ * step replays them, each carrying the recovered original submitter (keyed by
+ * `file.id`) when the submit audit yielded one. Only submitted logs are kept,
+ * mirroring the live write scope; drafts and in-flight submissions are dropped.
+ *
+ * @param {Object} args
+ * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} args.systemLogsRepository
+ * @param {string} args.organisationId
+ * @param {string} args.registrationId
+ * @returns {Promise<OrderedSummaryLog[]>}
+ */
+const loadSubmittedSummaryLogs = async ({
+  summaryLogsRepository,
+  systemLogsRepository,
+  organisationId,
+  registrationId
+}) => {
+  const logs = await summaryLogsRepository.findAllByOrgReg(
+    organisationId,
+    registrationId
+  )
+  const submitActors = await systemLogsRepository.findSummaryLogSubmitActors(
+    logs.map((log) => String(log.id))
+  )
+  const submitters = buildSystemLogSubmitters({
+    submitActors,
+    summaryLogDocs: logs
+  })
+  return logs
+    .filter((log) => log.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED)
+    .map((log) => toOrderedSummaryLog(log, submitters))
+}
+
+/**
  * Backfill one registration's stream, mirroring the live write scope: every
  * registration with at least one submitted summary log is reconstructed,
  * partitioned by accreditation existence (`accreditationId ?? null`) and
@@ -111,20 +146,12 @@ const backfillRegistrationStream = async ({
 }) => {
   const { accreditationId } = registration
 
-  const logs = await summaryLogsRepository.findAllByOrgReg(
-    organisation.id,
-    registration.id
-  )
-  const submitActors = await systemLogsRepository.findSummaryLogSubmitActors(
-    logs.map((log) => String(log.id))
-  )
-  const submitters = buildSystemLogSubmitters({
-    submitActors,
-    summaryLogDocs: logs
+  const summaryLogs = await loadSubmittedSummaryLogs({
+    summaryLogsRepository,
+    systemLogsRepository,
+    organisationId: organisation.id,
+    registrationId: registration.id
   })
-  const summaryLogs = logs
-    .filter((log) => log.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED)
-    .map((log) => toOrderedSummaryLog(log, submitters))
   if (summaryLogs.length === 0) {
     return null
   }
