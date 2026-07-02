@@ -7,12 +7,14 @@ import {
   validateFindPeriodicReports,
   validateFindReportById,
   validateMarkActiveReportsStale,
+  validateMarkSubmittedReportsRequiringResubmission,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
 import {
   transformToPeriodicReports,
   groupAsPeriodicReports,
+  latestSubmissionPerPeriod,
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
 import {
@@ -20,12 +22,15 @@ import {
   ACTIVE_REPORT_STATUSES
 } from '#root/reports/domain/report-status.js'
 import { STALE_REASON } from '#root/reports/domain/stale.js'
+import { RESUBMISSION_REASON } from '#root/reports/domain/resubmission.js'
 
 /**
  * @import {
  *   CreateReportParams,
  *   DeleteReportParams,
  *   FindPeriodicReportsParams,
+ *   MarkSubmittedReportRequiringResubmissionResult,
+ *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
  *   Report,
  *   ReportsRepositoryFactory,
@@ -293,7 +298,8 @@ const performFindPeriodicReports = async (db, params) => {
           dueDate: 1,
           'status.currentStatus': 1,
           'status.created': 1,
-          'status.submitted': 1
+          'status.submitted': 1,
+          resubmissionRequired: 1
         }
       }
     )
@@ -329,6 +335,7 @@ const performFindAllPeriodicReports = async (db) => {
           'status.currentStatus': 1,
           'status.created': 1,
           'status.submitted': 1,
+          resubmissionRequired: 1,
           'recyclingActivity.totalTonnageReceived': 1,
           'recyclingActivity.tonnageRecycled': 1,
           'recyclingActivity.tonnageNotRecycled': 1,
@@ -351,6 +358,66 @@ const performFindAllPeriodicReports = async (db) => {
     .toArray()
 
   return transformToPeriodicReports(docs)
+}
+
+/**
+ * Atomically flags the reports matched by `selectFilter` with a summary-log
+ * marker, then returns the flagged reports (sans marker) for auditing. The
+ * `$ne` guards plus the modifiedCount gate make a redelivered or concurrent
+ * submit of the same log a no-op (no double-flag, version over-increment, or
+ * duplicate audit). The stale and resubmission marks differ only in how they
+ * select candidate reports.
+ *
+ * @param {Db} db
+ * @param {{
+ *   selectFilter: object,
+ *   readScope: object,
+ *   summaryLogId: string,
+ *   field: string,
+ *   value: object
+ * }} params
+ * @returns {Promise<Array<{ reportId: string, year: number, cadence: string, period: number, submissionNumber: number }>>}
+ */
+const flagReportsBySummaryLog = async (
+  db,
+  { selectFilter, readScope, summaryLogId, field, value }
+) => {
+  const { modifiedCount } = await reportsCollection(db).updateMany(
+    {
+      ...selectFilter,
+      [`${field}.summaryLogId`]: { $ne: summaryLogId },
+      'source.summaryLogId': { $ne: summaryLogId }
+    },
+    { $set: { [field]: value }, $inc: { version: 1 } }
+  )
+
+  if (modifiedCount === 0) {
+    return []
+  }
+
+  const flaggedDocs = await reportsCollection(db)
+    .find(
+      { ...readScope, [`${field}.summaryLogId`]: summaryLogId },
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          year: 1,
+          cadence: 1,
+          period: 1,
+          submissionNumber: 1
+        }
+      }
+    )
+    .toArray()
+
+  return flaggedDocs.map((doc) => ({
+    reportId: doc.id,
+    year: doc.year,
+    cadence: doc.cadence,
+    period: doc.period,
+    submissionNumber: doc.submissionNumber
+  }))
 }
 
 /**
@@ -384,26 +451,64 @@ const performMarkActiveReportsStale = async (
     summaryLogId
   }
 
-  const filter = {
-    organisationId,
-    registrationId,
-    'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
-    'stale.summaryLogId': { $ne: summaryLogId },
-    'source.summaryLogId': { $ne: summaryLogId }
-  }
-
-  const { modifiedCount } = await reportsCollection(db).updateMany(filter, {
-    $set: { stale },
-    $inc: { version: 1 }
+  const flagged = await flagReportsBySummaryLog(db, {
+    selectFilter: {
+      organisationId,
+      registrationId,
+      'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] }
+    },
+    readScope: { organisationId, registrationId },
+    summaryLogId,
+    field: 'stale',
+    value: stale
   })
 
-  if (modifiedCount === 0) {
+  return flagged.map((report) => ({ ...report, stale }))
+}
+
+/**
+ * For each given period, flags the latest submitted report as requiring
+ * resubmission. Skips a period whose latest submitted report is already flagged
+ * from this `summaryLogId` or was itself built from it (retry-safe).
+ *
+ * @param {Db} db
+ * @param {MarkSubmittedReportsRequiringResubmissionParams} params
+ * @returns {Promise<MarkSubmittedReportRequiringResubmissionResult[]>}
+ */
+const performMarkSubmittedReportsRequiringResubmission = async (
+  db,
+  { organisationId, registrationId, summaryLogId, uploadedAt, periods }
+) => {
+  validateMarkSubmittedReportsRequiringResubmission({
+    organisationId,
+    registrationId,
+    summaryLogId,
+    uploadedAt,
+    periods
+  })
+
+  if (periods.length === 0) {
     return []
   }
 
-  const updatedDocs = await reportsCollection(db)
+  const resubmissionRequired = {
+    uploadedAt,
+    reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
+    summaryLogId
+  }
+
+  const submitted = await reportsCollection(db)
     .find(
-      { organisationId, registrationId, 'stale.summaryLogId': summaryLogId },
+      {
+        organisationId,
+        registrationId,
+        'status.currentStatus': REPORT_STATUS.SUBMITTED,
+        $or: periods.map(({ year, cadence, period }) => ({
+          year,
+          cadence,
+          period
+        }))
+      },
       {
         projection: {
           _id: 0,
@@ -411,21 +516,60 @@ const performMarkActiveReportsStale = async (
           year: 1,
           cadence: 1,
           period: 1,
-          submissionNumber: 1,
-          stale: 1
+          submissionNumber: 1
         }
       }
     )
     .toArray()
 
-  return updatedDocs.map((d) => ({
-    reportId: d.id,
-    year: d.year,
-    cadence: d.cadence,
-    period: d.period,
-    submissionNumber: d.submissionNumber,
-    stale: /** @type {import('./port.js').ReportStale} */ (d.stale)
-  }))
+  const flaggedIds = latestSubmissionPerPeriod(submitted).map((doc) => doc.id)
+
+  if (flaggedIds.length === 0) {
+    return []
+  }
+
+  const scope = { id: { $in: flaggedIds } }
+  const flagged = await flagReportsBySummaryLog(db, {
+    selectFilter: scope,
+    readScope: scope,
+    summaryLogId,
+    field: 'resubmissionRequired',
+    value: resubmissionRequired
+  })
+
+  return flagged.map((report) => ({ ...report, resubmissionRequired }))
+}
+
+/**
+ * Returns true when any report for the org/reg was submitted strictly after
+ * `since`. SUBMITTED is terminal and each submission is a distinct document, so
+ * the denormalised `status.submitted` slot is the single submission instant and
+ * is directly indexable.
+ *
+ * @param {Db} db
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} since - ISO timestamp
+ * @returns {Promise<boolean>}
+ */
+const performHasReportSubmittedSince = async (
+  db,
+  organisationId,
+  registrationId,
+  since
+) => {
+  // Both `at` and `since` are canonical `new Date().toISOString()` values, so the
+  // `$gt` string compare tracks chronological order (the ISO invariant this
+  // codebase relies on throughout).
+  const match = await reportsCollection(db).findOne(
+    {
+      organisationId,
+      registrationId,
+      'status.submitted.at': { $gt: since }
+    },
+    { projection: { _id: 1 } }
+  )
+  return match !== null
 }
 
 /**
@@ -457,6 +601,10 @@ export const createReportsRepository = async (db) => {
         registrationId,
         summaryLogId,
         uploadedAt
-      )
+      ),
+    markSubmittedReportsRequiringResubmission: (params) =>
+      performMarkSubmittedReportsRequiringResubmission(db, params),
+    hasReportSubmittedSince: (organisationId, registrationId, since) =>
+      performHasReportSubmittedSince(db, organisationId, registrationId, since)
   })
 }
