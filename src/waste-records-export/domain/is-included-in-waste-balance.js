@@ -1,4 +1,6 @@
+import { REGISTERED_ONLY_PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
@@ -20,19 +22,33 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * @param {WasteRecord} record
  * @param {Accreditation | null} accreditation
  * @param {OverseasSitesContext} overseasSites
- * @returns {WasteBalanceClassification | null} null when waste balance is not applicable (no accreditation)
+ * @returns {WasteBalanceClassification}
  */
 export const getWasteBalanceClassification = (
   record,
   accreditation,
   overseasSites
 ) => {
-  if (accreditation === null) {
-    return null
-  }
-
   if (record.excludedFromWasteBalance) {
     return { included: false, reasons: [], tonnage: null }
+  }
+
+  if (!accreditation) {
+    return {
+      included: false,
+      reasons: [{ code: CLASSIFICATION_REASON.NOT_ACCREDITED }],
+      tonnage: null
+    }
+  }
+
+  if (REGISTERED_ONLY_PROCESSING_TYPES.has(record.data?.processingType)) {
+    return {
+      included: false,
+      reasons: [
+        { code: CLASSIFICATION_REASON.SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE }
+      ],
+      tonnage: null
+    }
   }
 
   const schema = findSchemaForProcessingType(
@@ -41,7 +57,13 @@ export const getWasteBalanceClassification = (
   )
 
   if (!schema?.classifyForWasteBalance) {
-    return { included: false, reasons: [], tonnage: null }
+    return {
+      included: false,
+      reasons: [
+        { code: CLASSIFICATION_REASON.SECTION_NOT_INCLUDED_IN_WASTE_BALANCE }
+      ],
+      tonnage: null
+    }
   }
 
   const result = schema.classifyForWasteBalance(record.data, {

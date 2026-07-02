@@ -68,14 +68,50 @@ const prnIssuedExporterRecord = buildWasteRecord({
 })
 
 describe('getWasteBalanceClassification', () => {
-  it('returns null when accreditation is null (e.g. cancelled or reg-only)', () => {
+  it('returns NOT_ACCREDITED when accreditation is null (e.g. cancelled or never accredited)', () => {
     const record = buildWasteRecord({
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT }
     })
     expect(
       getWasteBalanceClassification(record, null, ORS_VALIDATION_DISABLED)
-    ).toBeNull()
+    ).toEqual({
+      included: false,
+      reasons: [{ code: 'NOT_ACCREDITED' }],
+      tonnage: null
+    })
+  })
+
+  it('returns SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE for a registered-only-processing-type row once the operator is accredited', () => {
+    const record = buildWasteRecord({
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      data: { processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY }
+    })
+    expect(
+      getWasteBalanceClassification(
+        record,
+        accreditation,
+        ORS_VALIDATION_DISABLED
+      )
+    ).toEqual({
+      included: false,
+      reasons: [{ code: 'SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE' }],
+      tonnage: null
+    })
+  })
+
+  it('returns NOT_ACCREDITED (not SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE) for a registered-only-processing-type row when accreditation is null', () => {
+    const record = buildWasteRecord({
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      data: { processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY }
+    })
+    expect(
+      getWasteBalanceClassification(record, null, ORS_VALIDATION_DISABLED)
+    ).toEqual({
+      included: false,
+      reasons: [{ code: 'NOT_ACCREDITED' }],
+      tonnage: null
+    })
   })
 
   it('returns included:false and empty reasons when record is manually excluded', () => {
@@ -93,7 +129,7 @@ describe('getWasteBalanceClassification', () => {
     ).toEqual({ included: false, reasons: [], tonnage: null })
   })
 
-  it('returns included:false and empty reasons when no schema or classifyForWasteBalance exists', () => {
+  it('returns SECTION_NOT_INCLUDED_IN_WASTE_BALANCE when no schema or classifyForWasteBalance exists', () => {
     const noSchemaRecord = buildWasteRecord({
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: { processingType: 'NOT_A_REAL_TYPE' }
@@ -104,7 +140,11 @@ describe('getWasteBalanceClassification', () => {
         accreditation,
         ORS_VALIDATION_DISABLED
       )
-    ).toEqual({ included: false, reasons: [], tonnage: null })
+    ).toEqual({
+      included: false,
+      reasons: [{ code: 'SECTION_NOT_INCLUDED_IN_WASTE_BALANCE' }],
+      tonnage: null
+    })
 
     const noClassifyRecord = buildWasteRecord({
       type: WASTE_RECORD_TYPE.SENT_ON,
@@ -116,7 +156,11 @@ describe('getWasteBalanceClassification', () => {
         accreditation,
         ORS_VALIDATION_DISABLED
       )
-    ).toEqual({ included: false, reasons: [], tonnage: null })
+    ).toEqual({
+      included: false,
+      reasons: [{ code: 'SECTION_NOT_INCLUDED_IN_WASTE_BALANCE' }],
+      tonnage: null
+    })
   })
 
   it('returns included:true with tonnage when record is included', () => {

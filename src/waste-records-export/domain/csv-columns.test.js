@@ -353,16 +353,6 @@ describe('csv-columns', () => {
       expect(row[METADATA_COL_INDEX['Submitted At']]).toBe('')
     })
 
-    it('emits empty WB columns when wasteBalanceClassification is null', () => {
-      const row = buildDataRow({
-        ...baseInput,
-        wasteBalanceClassification: null
-      })
-      expect(row[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('')
-      expect(row[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
-      expect(row[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
-    })
-
     it('emits waste balance columns from the classification', () => {
       const excluded = buildDataRow({
         ...baseInput,

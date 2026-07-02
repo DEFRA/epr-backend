@@ -660,7 +660,7 @@ describe('streamCsvExport', () => {
     expect(out[2].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('10')
   })
 
-  it('emits empty WB columns for an operator with a cancelled accreditation', async () => {
+  it('emits false/NOT_ACCREDITED WB columns for an operator with a cancelled accreditation', async () => {
     const cancelledAccreditation = {
       id: 'acc-1',
       status: 'cancelled',
@@ -687,12 +687,14 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
-    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('')
-    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
+      'NOT_ACCREDITED'
+    )
     expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
   })
 
-  it('treats a missing accreditation as registered-only', async () => {
+  it('treats a missing accreditation as unaccredited', async () => {
     const org = baseOrg({
       registrations: [baseRegistration({ accreditation: undefined })]
     })
@@ -708,6 +710,113 @@ describe('streamCsvExport', () => {
     expect(out).toHaveLength(2)
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
+      'NOT_ACCREDITED'
+    )
+  })
+
+  it('emits SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE for a registered-only-processing-type row once the operator is accredited', async () => {
+    const accreditedAccreditation = {
+      id: 'acc-1',
+      status: 'approved',
+      accreditationNumber: 'ACC-999',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    }
+    const org = baseOrg({
+      accreditations: [accreditedAccreditation],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const record = reprocessorReceivedRecord({
+      data: {
+        processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
+        DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01'
+      }
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([record])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
+      'SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE'
+    )
+  })
+
+  it('emits NOT_ACCREDITED (not SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE) for a registered-only-processing-type row when the operator has no accreditation', async () => {
+    const org = baseOrg({
+      registrations: [baseRegistration({ accreditation: undefined })]
+    })
+    const record = reprocessorReceivedRecord({
+      data: {
+        processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
+        DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01'
+      }
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([record])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
+      'NOT_ACCREDITED'
+    )
+  })
+
+  it('emits SECTION_NOT_INCLUDED_IN_WASTE_BALANCE for an accredited-capable processing type whose table has no waste-balance classifier', async () => {
+    const accreditedAccreditation = {
+      id: 'acc-1',
+      status: 'approved',
+      accreditationNumber: 'ACC-998',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    }
+    const org = baseOrg({
+      accreditations: [accreditedAccreditation],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const record = {
+      type: WASTE_RECORD_TYPE.SENT_ON,
+      rowId: '1001',
+      data: {
+        processingType: PROCESSING_TYPES.EXPORTER,
+        DATE_LOAD_LEFT_SITE: '2026-02-01'
+      },
+      versions: [{ summaryLog: { id: 'sl-1' } }]
+    }
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([record])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
+      'SECTION_NOT_INCLUDED_IN_WASTE_BALANCE'
+    )
   })
 
   it('skips organisations that have no registrations array', async () => {
