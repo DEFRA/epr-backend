@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import {
   submitSummaryLog as decideSummaryLog,
   createPrn as decideCreatePrn,
@@ -93,15 +95,28 @@ const createLedgerCommands = (streamRepository) => {
   }
 
   /**
-   * Run a PRN command: fold the ledger, reject when it does not exist yet
-   * (PRN commands always act on an open ledger), run the pure decider, and
-   * append the decided events when it commits. The no-ledger rejection lives
-   * here, in one place, rather than in each decider.
+   * Run a PRN command: assert the positive-amount invariant the pure decider
+   * trusts, fold the ledger, reject when it does not exist yet (PRN commands
+   * always act on an open ledger), run the pure decider, and append the decided
+   * events when it commits. The amount guard and the no-ledger rejection both
+   * live here, in one place, rather than in each decider.
+   *
+   * A non-positive amount is a broken invariant, not a client error: the PRN's
+   * tonnage is validated positive at the HTTP route and the PRN repository
+   * schema, so anything reaching this boundary is internal corruption and
+   * surfaces as a 500 the platform logs and alerts on, rather than slipping past
+   * the deciders' `<` sufficiency check to inflate the balance.
    *
    * @param {(balance: import('../repository/stream-schema.js').StreamBalanceSnapshot, payload: import('../repository/stream-schema.js').PrnPayload) => import('../domain/commands.js').PrnDecision} decide
    * @returns {(ledgerId: import('../repository/stream-schema.js').WasteBalanceLedgerId, payload: import('../repository/stream-schema.js').PrnPayload, createdBy: import('../repository/stream-schema.js').StreamUserSummary) => Promise<PrnCommandResult>}
    */
   const runPrnCommand = (decide) => async (ledgerId, payload, createdBy) => {
+    if (!(payload.amount > 0)) {
+      throw Boom.badImplementation(
+        `PRN amount must be positive at the waste-balance write boundary; received ${payload.amount}`
+      )
+    }
+
     const { state, head } = await fold(ledgerId)
     if (!state) {
       return {
