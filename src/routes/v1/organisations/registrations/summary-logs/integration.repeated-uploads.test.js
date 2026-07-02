@@ -244,7 +244,7 @@ describe('Repeated uploads of identical data', () => {
         wasteRecordsRepository,
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: /** @type {any} */ ({
+        reportsService: /** @type {any} */ ({
           findPeriodicReports: async () => []
         }),
         overseasSitesRepository: createMockOverseasSitesRepository({

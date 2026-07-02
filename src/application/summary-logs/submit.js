@@ -24,7 +24,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {import('#waste-records/repository/port.js').RowStateRepository} wasteRecordStatesRepository
  * @property {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} wasteBalanceService
  * @property {import('#feature-flags/feature-flags.port.js').FeatureFlags} featureFlags
- * @property {import('#reports/repository/port.js').ReportsRepository} reportsRepository
+ * @property {import('#reports/application/report-service.js').ReportsService} reportsService
  * @property {object} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#domain/summary-logs/worker/port.js').SubmitUser} user
@@ -39,16 +39,16 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  *
  * @param {object} summaryLog
  * @param {string} summaryLogId
- * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
+ * @param {import('#reports/application/report-service.js').ReportsService} reportsService
  * @returns {Promise<void>}
  */
 const assertNoReportSubmittedSinceCreation = async (
   summaryLog,
   summaryLogId,
-  reportsRepository
+  reportsService
 ) => {
   const reportSubmittedSinceCreation =
-    await reportsRepository.hasReportSubmittedSince(
+    await reportsService.hasReportSubmittedSince(
       summaryLog.organisationId,
       summaryLog.registrationId,
       summaryLog.createdAt
@@ -157,7 +157,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
  * @returns {Promise<void>}
  */
 export const submitSummaryLog = async (summaryLogId, deps) => {
-  const { summaryLogsRepository, reportsRepository } = deps
+  const { summaryLogsRepository, reportsService } = deps
 
   const existing = await summaryLogsRepository.findById(summaryLogId)
 
@@ -176,7 +176,7 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
   await assertNoReportSubmittedSinceCreation(
     summaryLog,
     summaryLogId,
-    reportsRepository
+    reportsService
   )
 
   await syncAndFinalise(summaryLogId, version, summaryLog, deps)

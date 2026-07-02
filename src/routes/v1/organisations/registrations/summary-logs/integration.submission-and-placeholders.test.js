@@ -18,6 +18,7 @@ import { buildReadOrganisation } from '#repositories/organisations/contract/test
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
@@ -356,7 +357,9 @@ describe('Submission and placeholder tests', () => {
         wasteRecordsRepository,
         summaryLogExtractor: validationExtractor,
         logger: mockLogger,
-        reportsRepository: createInMemoryReportsRepository()(),
+        reportsService: createReportsService(
+          createInMemoryReportsRepository()()
+        ),
         overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
 
@@ -813,7 +816,9 @@ describe('Submission and placeholder tests', () => {
         wasteRecordsRepository,
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: createInMemoryReportsRepository()(),
+        reportsService: createReportsService(
+          createInMemoryReportsRepository()()
+        ),
         overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
       const featureFlags = createInMemoryFeatureFlags()

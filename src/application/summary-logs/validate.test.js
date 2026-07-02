@@ -250,7 +250,7 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
-      reportsRepository: /** @type {any} */ ({
+      reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
       overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
@@ -677,7 +677,7 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
-      reportsRepository: /** @type {any} */ ({
+      reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
       overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
@@ -722,7 +722,7 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
-      reportsRepository: /** @type {any} */ ({
+      reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
       }),
       overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),

@@ -390,7 +390,7 @@ describe('Advanced validation scenarios', () => {
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: /** @type {any} */ ({
+        reportsService: /** @type {any} */ ({
           findPeriodicReports: async () => []
         })
       })
@@ -576,7 +576,7 @@ describe('Advanced validation scenarios', () => {
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: /** @type {any} */ ({
+        reportsService: /** @type {any} */ ({
           findPeriodicReports: async () => []
         })
       })
