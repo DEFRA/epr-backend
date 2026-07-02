@@ -16,7 +16,7 @@ describe('basic-auth strategy', () => {
     path: '/test-basic-auth',
     options: {
       auth: {
-        strategies: ['access-token', BASIC_AUTH]
+        strategies: [BASIC_AUTH]
       }
     },
     handler: () => 'Hello, world!'
