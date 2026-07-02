@@ -78,7 +78,7 @@ const createLedgerCommands = (streamRepository) => {
    */
   const append = (ledgerId, head, events, createdBy) => {
     const createdAt = new Date()
-    return streamRepository.bulkAppendEvents(
+    return streamRepository.appendEvents(
       events.map((event, index) => ({
         ...ledgerId,
         number: head + index + 1,

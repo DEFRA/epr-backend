@@ -98,7 +98,7 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * Shape accepted by `WasteBalanceStreamRepository.appendEvent`: the content of
+ * Shape accepted by `WasteBalanceStreamRepository.appendEvents`: the content of
  * an event at a `LedgerPosition`. Mirrors `streamEventInsertSchema` — keep the
  * two in sync; the schema is the runtime gate, this typedef is the check-time
  * gate.

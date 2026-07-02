@@ -101,7 +101,7 @@ const buildBalanceSeed = (overrides = {}) => ({
  * @param {{ amount: number, availableAmount: number }} balanceSeed
  */
 const seedClosingBalance = (streamRepository, balanceSeed) =>
-  streamRepository.appendEvent(
+  streamRepository.appendEvents([
     buildStreamEvent({
       registrationId: REG_ID,
       accreditationId: ACC_ID,
@@ -112,7 +112,7 @@ const seedClosingBalance = (streamRepository, balanceSeed) =>
         availableAmount: balanceSeed.availableAmount
       }
     })
-  )
+  ])
 
 const buildOrganisationsRepository = () =>
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
