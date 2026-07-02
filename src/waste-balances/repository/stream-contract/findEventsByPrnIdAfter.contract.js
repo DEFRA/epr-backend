@@ -21,22 +21,22 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     )
 
     it('returns events with number greater than the watermark', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-prn',
           accreditationId: 'acc-prn',
           number: 1,
           payload: { prnId: 'prn-watermark', amount: 50 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildPrnCancelledAfterIssueEvent({
           registrationId: 'reg-prn',
           accreditationId: 'acc-prn',
           number: 2,
           payload: { prnId: 'prn-watermark', amount: 50 }
         })
-      )
+      ])
 
       const result = await repository.findEventsByPrnIdAfter(
         'reg-prn',
@@ -53,22 +53,22 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     })
 
     it('filters out events at or below the watermark', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-wm',
           accreditationId: 'acc-wm',
           number: 1,
           payload: { prnId: 'prn-filter', amount: 50 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildPrnCancelledAfterIssueEvent({
           registrationId: 'reg-wm',
           accreditationId: 'acc-wm',
           number: 2,
           payload: { prnId: 'prn-filter', amount: 50 }
         })
-      )
+      ])
 
       const result = await repository.findEventsByPrnIdAfter(
         'reg-wm',
@@ -82,14 +82,14 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     })
 
     it('returns an empty array when no events exist after watermark', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-caught-up',
           accreditationId: 'acc-caught-up',
           number: 1,
           payload: { prnId: 'prn-caught-up', amount: 50 }
         })
-      )
+      ])
 
       const result = await repository.findEventsByPrnIdAfter(
         'reg-caught-up',
@@ -113,22 +113,22 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     })
 
     it('does not return events from a different partition', async () => {
-      await repository.appendEvent(
+      await repository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-a',
           accreditationId: 'acc-a',
           number: 1,
           payload: { prnId: 'prn-shared', amount: 50 }
         })
-      )
-      await repository.appendEvent(
+      ])
+      await repository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-b',
           accreditationId: 'acc-b',
           number: 1,
           payload: { prnId: 'prn-shared', amount: 30 }
         })
-      )
+      ])
 
       const result = await repository.findEventsByPrnIdAfter(
         'reg-a',

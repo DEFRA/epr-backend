@@ -413,16 +413,16 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           stalePrn
         )
-        await streamRepository.appendEvent(
+        await streamRepository.appendEvents([
           tailEvent(
             STREAM_EVENT_KIND.PRN_CREATED,
             1,
             '2026-02-01T12:00:00.000Z'
           )
-        )
-        await streamRepository.appendEvent(
+        ])
+        await streamRepository.appendEvents([
           tailEvent(STREAM_EVENT_KIND.PRN_ISSUED, 2, '2026-02-02T12:00:00.000Z')
-        )
+        ])
 
         const response = await server.inject({
           method: 'GET',
@@ -447,20 +447,20 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
-        await streamRepository.appendEvent(
+        await streamRepository.appendEvents([
           tailEvent(
             STREAM_EVENT_KIND.PRN_CREATED,
             1,
             '2026-02-01T12:00:00.000Z'
           )
-        )
-        await streamRepository.appendEvent(
+        ])
+        await streamRepository.appendEvents([
           tailEvent(
             STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
             2,
             '2026-02-02T12:00:00.000Z'
           )
-        )
+        ])
 
         const response = await server.inject({
           method: 'GET',

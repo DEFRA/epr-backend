@@ -1,5 +1,5 @@
 import { createSummaryLogsRepository } from './mongodb.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
 
@@ -23,7 +23,7 @@ export const mongoSummaryLogsRepositoryPlugin = {
       preSignedUrlExpiry: SIXTY_SECONDS
     })
 
-    registerRepository(server, 'summaryLogsRepository', (request) =>
+    registerDependency(server, 'summaryLogsRepository', (request) =>
       factory(request.logger)
     )
   }

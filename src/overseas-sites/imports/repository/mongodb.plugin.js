@@ -1,4 +1,4 @@
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import { createOrsImportsRepository } from './mongodb.js'
 
 export const orsImportsRepositoryPlugin = {
@@ -13,6 +13,6 @@ export const orsImportsRepositoryPlugin = {
 
     const createRepository = await createOrsImportsRepository(db)
 
-    registerRepository(server, 'orsImportsRepository', createRepository)
+    registerDependency(server, 'orsImportsRepository', createRepository)
   }
 }

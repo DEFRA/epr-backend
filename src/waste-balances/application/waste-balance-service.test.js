@@ -271,6 +271,46 @@ describe('createWasteBalanceService', () => {
         availableAmount: 1000
       })
     })
+
+    it('rejects a zero amount as a broken invariant before deciding', async () => {
+      await seedLedger()
+
+      await expect(
+        service.createPrn(ledgerId, { prnId: 'prn-1', amount: 0 }, createdBy)
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
+    })
+
+    it('rejects a negative amount without inflating the balance', async () => {
+      await seedLedger()
+
+      await expect(
+        service.createPrn(ledgerId, { prnId: 'prn-1', amount: -100 }, createdBy)
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
+
+      const all = await streamRepository.findAllByPartition('reg-1', 'acc-1')
+      expect(all).toHaveLength(1)
+    })
+
+    /** @type {Array<'createPrn' | 'issuePrn' | 'cancelPrnCreation' | 'cancelIssuedPrn' | 'acceptPrn' | 'rejectPrn'>} */
+    const guardedPrnCommands = [
+      'createPrn',
+      'issuePrn',
+      'cancelPrnCreation',
+      'cancelIssuedPrn',
+      'acceptPrn',
+      'rejectPrn'
+    ]
+
+    it.each(guardedPrnCommands)(
+      'guards %s against a non-positive amount at the shared write boundary',
+      async (method) => {
+        await seedLedger()
+
+        await expect(
+          service[method](ledgerId, { prnId: 'prn-1', amount: -1 }, createdBy)
+        ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
+      }
+    )
   })
 
   describe('prnCatchupEvents', () => {
@@ -281,22 +321,22 @@ describe('createWasteBalanceService', () => {
     }
 
     it('returns the PRN tail events after the watermark in order', async () => {
-      await streamRepository.appendEvent(
+      await streamRepository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-1',
           accreditationId: 'acc-1',
           number: 1,
           payload: { prnId: 'prn-1', amount: 10 }
         })
-      )
-      await streamRepository.appendEvent(
+      ])
+      await streamRepository.appendEvents([
         buildPrnIssuedEvent({
           registrationId: 'reg-1',
           accreditationId: 'acc-1',
           number: 2,
           payload: { prnId: 'prn-1', amount: 10 }
         })
-      )
+      ])
 
       const events = await service.prnCatchupEvents({
         ...catchupParams,

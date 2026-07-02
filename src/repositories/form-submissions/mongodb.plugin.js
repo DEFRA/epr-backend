@@ -1,5 +1,5 @@
 import { createFormSubmissionsRepository } from './mongodb.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 export const mongoFormSubmissionsRepositoryPlugin = {
   name: 'formSubmissionsRepository',
@@ -13,6 +13,6 @@ export const mongoFormSubmissionsRepositoryPlugin = {
     )
     const repository = factory()
 
-    registerRepository(server, 'formSubmissionsRepository', () => repository)
+    registerDependency(server, 'formSubmissionsRepository', () => repository)
   }
 }
