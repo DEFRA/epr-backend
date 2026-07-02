@@ -2,7 +2,7 @@ import { createPublicRegisterRepository } from './public-register.js'
 import { publicRegisterConfig } from './config.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 
 export const s3PublicRegisterRepositoryPlugin = {
   name: 'publicRegisterRepository',
@@ -22,6 +22,6 @@ export const s3PublicRegisterRepositoryPlugin = {
       preSignedUrlExpiry: publicRegisterConfig.preSignedUrlExpiry
     })
 
-    registerRepository(server, 'publicRegisterRepository', () => repository)
+    registerDependency(server, 'publicRegisterRepository', () => repository)
   }
 }

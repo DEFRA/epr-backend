@@ -134,7 +134,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         { rowId: 1001, tonnageReceived: 100 },
@@ -147,11 +146,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
-      const balance = await getWasteBalance(
-        env,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       // 100 + 200 = 300
       expect(balance.amount).toBe(300)
@@ -163,7 +158,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData(
         [{ rowId: 1001, tonnageReceived: 500 }], // Initial credit to allow debits
@@ -178,11 +172,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
-      const balance = await getWasteBalance(
-        env,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       // 500 (credit) - 100 (debit) = 400
       expect(balance.amount).toBe(400)
@@ -194,7 +184,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         { rowId: 1001, tonnageReceived: 100, prnIssued: 'Yes' },
@@ -209,11 +198,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance = await getWasteBalance(
-        env,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       expect(balance.amount).toBe(200)
     })
@@ -223,7 +208,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { accreditationId, registrationId } = env
 
       // RECEIVED requires rowId >= 1000; SENT_ON requires rowId >= 5000.
       // The minimums are floors, not walls — a single value >= 5000 satisfies
@@ -244,11 +228,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
-      const balance = await getWasteBalance(
-        env,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       // 500 (credit from RECEIVED) - 100 (debit from SENT_ON) = 400.
       // Regression guard: colliding rowIds across the two tables must not
@@ -264,7 +244,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         {
@@ -287,11 +266,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance = await getWasteBalance(
-        env,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       expect(balance.amount).toBe(200)
     })
@@ -301,7 +276,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData(
         [{ rowId: 1001, tonnageReceived: 500 }], // Initial credit
@@ -327,11 +301,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance = await getWasteBalance(
-        env,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       // 500 (credit) - 50 (debit) = 450
       // Row 5001 should be ignored
@@ -343,7 +313,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { accreditationId, registrationId } = env
 
       // First submission: Valid credit
       const firstUploadData = createUploadData([
@@ -358,7 +327,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         firstUploadData
       )
 
-      let balance = await getWasteBalance(env, accreditationId, registrationId)
+      let balance = await getWasteBalance(env)
       expect(balance.amount).toBe(100)
 
       // Second submission: Revised to PRN Issued (should reverse credit)
@@ -374,7 +343,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         secondUploadData
       )
 
-      balance = await getWasteBalance(env, accreditationId, registrationId)
+      balance = await getWasteBalance(env)
       expect(balance.amount).toBe(0)
     })
 
@@ -383,7 +352,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { accreditationId, registrationId } = env
 
       const uploadData = createUploadData([
         {
@@ -406,11 +374,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance = await getWasteBalance(
-        env,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       // Only row 1002 should contribute
       expect(balance.amount).toBe(200)
@@ -421,7 +385,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         processingType: 'reprocessor',
         reprocessingType: 'input'
       })
-      const { accreditationId, registrationId } = env
 
       // (1000 gross - 100 tare - 50 pallet) = 850 net
       // 850 net * 0.9985 (bailing wire) = 848.725
@@ -448,11 +411,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance = await getWasteBalance(
-        env,
-        accreditationId,
-        registrationId
-      )
+      const balance = await getWasteBalance(env)
 
       expect(balance.amount).toBe(848.73)
     })

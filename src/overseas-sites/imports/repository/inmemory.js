@@ -1,4 +1,4 @@
-import { registerRepository } from '#plugins/register-repository.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import {
   calculateOrsImportExpiresAt,
   isOrsImportStatusTerminal
@@ -70,7 +70,7 @@ export function createInMemoryOrsImportsRepositoryPlugin() {
   return {
     name: 'orsImportsRepository',
     register: (server) => {
-      registerRepository(server, 'orsImportsRepository', () => repository)
+      registerDependency(server, 'orsImportsRepository', () => repository)
     }
   }
 }
