@@ -919,13 +919,26 @@ describe(`GET ${reportsGetPath}`, () => {
             submissionNumber: 2
           })
         )
-        if (toStatus === REPORT_STATUS.READY_TO_SUBMIT) {
+        if (
+          toStatus === REPORT_STATUS.READY_TO_SUBMIT ||
+          toStatus === REPORT_STATUS.SUBMITTED
+        ) {
           await repo.updateReportStatus({
             reportId: id,
             version: 1,
             status: REPORT_STATUS.READY_TO_SUBMIT,
             slot: REPORT_STATUS_SLOT.READY,
             changedBy
+          })
+        }
+        if (toStatus === REPORT_STATUS.SUBMITTED) {
+          await repo.updateReportStatus({
+            reportId: id,
+            version: 2,
+            status: REPORT_STATUS.SUBMITTED,
+            slot: REPORT_STATUS_SLOT.SUBMITTED,
+            changedBy,
+            submissionDeclaredBy: 'Test User'
           })
         }
         return id
@@ -975,6 +988,37 @@ describe(`GET ${reportsGetPath}`, () => {
         const original = january.find((p) => p.periodStatus === 'submitted')
         expect(original.submissionNumber).toBe(1)
         expect(original.report.id).toBe(sub1)
+      })
+
+      it('collapses to a single submitted item once the resubmission is itself submitted', async () => {
+        const year = new Date().getUTCFullYear()
+        const { server, organisationId, registrationId, repo } = await setup()
+
+        await seedFlaggedSubmittedPeriod(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1
+        })
+        const sub2 = await seedResubmissionDraft(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1,
+          toStatus: REPORT_STATUS.SUBMITTED
+        })
+
+        const january = await periodItems(
+          server,
+          organisationId,
+          registrationId,
+          1
+        )
+
+        expect(january).toHaveLength(1)
+        expect(january[0].periodStatus).toBe('submitted')
+        expect(january[0].submissionNumber).toBe(2)
+        expect(january[0].report.id).toBe(sub2)
       })
 
       it('keeps the resubmission slot at requires_resubmission while the draft is in progress', async () => {
