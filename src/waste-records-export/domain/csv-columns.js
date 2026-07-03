@@ -144,16 +144,17 @@ export const buildHeaderRow = (dataFieldColumns) => [
 
 const formatReason = (r) => (r.field ? `${r.code}: ${r.field}` : r.code)
 
-const buildWasteBalanceCells = (classification) => {
-  if (!classification) {
-    return ['', '', '']
-  }
-  return [
-    String(classification.included),
-    classification.reasons.map(formatReason).join('; '),
-    classification.tonnage ?? ''
-  ]
-}
+// `null` means inclusion could not be computed for this record at all (e.g.
+// no accreditation, registered-only template, no classification schema) —
+// rendered as "NA" rather than a reason, since there is no per-row outcome.
+const buildWasteBalanceCells = (classification) =>
+  classification === null
+    ? ['NA', '', '']
+    : [
+        String(classification.included),
+        classification.reasons.map(formatReason).join('; '),
+        classification.tonnage ?? ''
+      ]
 
 /**
  * @typedef {Object} BuildDataRowInput

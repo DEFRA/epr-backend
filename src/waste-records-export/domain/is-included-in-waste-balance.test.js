@@ -68,14 +68,55 @@ const prnIssuedExporterRecord = buildWasteRecord({
 })
 
 describe('getWasteBalanceClassification', () => {
-  it('returns null when accreditation is null (e.g. cancelled or reg-only)', () => {
-    const record = buildWasteRecord({
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT }
+  describe('returns null when inclusion cannot be computed', () => {
+    it.each([
+      [
+        'no accreditation',
+        { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+        null,
+        WASTE_RECORD_TYPE.RECEIVED
+      ],
+      [
+        'registered-only processing type, accredited',
+        { processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY },
+        accreditation,
+        WASTE_RECORD_TYPE.RECEIVED
+      ],
+      [
+        'registered-only processing type, unaccredited',
+        { processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY },
+        null,
+        WASTE_RECORD_TYPE.RECEIVED
+      ],
+      [
+        'no schema for the processing type',
+        { processingType: 'NOT_A_REAL_TYPE' },
+        accreditation,
+        WASTE_RECORD_TYPE.RECEIVED
+      ],
+      [
+        'schema has no classifyForWasteBalance',
+        { processingType: PROCESSING_TYPES.EXPORTER },
+        accreditation,
+        WASTE_RECORD_TYPE.SENT_ON
+      ]
+    ])('%s', (_name, data, acc, type) => {
+      const record = buildWasteRecord({ type, data })
+      expect(
+        getWasteBalanceClassification(record, acc, ORS_VALIDATION_DISABLED)
+      ).toBeNull()
     })
-    expect(
-      getWasteBalanceClassification(record, null, ORS_VALIDATION_DISABLED)
-    ).toBeNull()
+
+    it('the no-accreditation check takes precedence over excludedFromWasteBalance for an unaccredited invalid row', () => {
+      const record = buildWasteRecord({
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+        excludedFromWasteBalance: true
+      })
+      expect(
+        getWasteBalanceClassification(record, null, ORS_VALIDATION_DISABLED)
+      ).toBeNull()
+    })
   })
 
   it('returns included:false and empty reasons when record is manually excluded', () => {
@@ -87,32 +128,6 @@ describe('getWasteBalanceClassification', () => {
     expect(
       getWasteBalanceClassification(
         record,
-        accreditation,
-        ORS_VALIDATION_DISABLED
-      )
-    ).toEqual({ included: false, reasons: [], tonnage: null })
-  })
-
-  it('returns included:false and empty reasons when no schema or classifyForWasteBalance exists', () => {
-    const noSchemaRecord = buildWasteRecord({
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      data: { processingType: 'NOT_A_REAL_TYPE' }
-    })
-    expect(
-      getWasteBalanceClassification(
-        noSchemaRecord,
-        accreditation,
-        ORS_VALIDATION_DISABLED
-      )
-    ).toEqual({ included: false, reasons: [], tonnage: null })
-
-    const noClassifyRecord = buildWasteRecord({
-      type: WASTE_RECORD_TYPE.SENT_ON,
-      data: { processingType: PROCESSING_TYPES.EXPORTER }
-    })
-    expect(
-      getWasteBalanceClassification(
-        noClassifyRecord,
         accreditation,
         ORS_VALIDATION_DISABLED
       )

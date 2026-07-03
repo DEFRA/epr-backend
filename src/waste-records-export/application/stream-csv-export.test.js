@@ -660,7 +660,28 @@ describe('streamCsvExport', () => {
     expect(out[2].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('10')
   })
 
-  it('emits empty WB columns for an operator with a cancelled accreditation', async () => {
+  it('emits NA when inclusion cannot be computed (e.g. no accreditation)', async () => {
+    const org = baseOrg({
+      registrations: [baseRegistration({ accreditation: undefined })]
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([reprocessorReceivedRecord()])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
+  })
+
+  it('emits NA WB columns for an operator with a cancelled accreditation', async () => {
     const cancelledAccreditation = {
       id: 'acc-1',
       status: 'cancelled',
@@ -687,27 +708,9 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
-    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
     expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
     expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
-  })
-
-  it('treats a missing accreditation as registered-only', async () => {
-    const org = baseOrg({
-      registrations: [baseRegistration({ accreditation: undefined })]
-    })
-    const record = reprocessorReceivedRecord()
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([record])
-      }
-    })
-
-    const out = await collect(streamCsvExport(deps))
-    expect(out).toHaveLength(2)
-    const cells = out[1].trim().split(',')
-    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
   })
 
   it('skips organisations that have no registrations array', async () => {
