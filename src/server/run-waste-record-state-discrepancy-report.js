@@ -1,5 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { backfillEstateRowStates } from '#waste-records/backfill/backfill-estate-rowstates.js'
+import { backfillRegistrationStream } from '#waste-records/backfill/backfill-estate-rowstates.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/in-memory-store.js'
 import { runReconciliation } from '#waste-records/monitoring/run-reconciliation.js'
 import {
@@ -11,34 +11,42 @@ import {
 const LOCK_NAME = 'waste-record-state-discrepancy-report'
 
 /**
- * Resolve the waste record state view to reconcile, following the backfill flag.
+ * Build the per-partition waste record state source the reconciliation walk
+ * resolves for each registration, following the backfill flag.
  *
  * With the flag on, the persisted mongodb collection is the live source — the
- * backfill has populated it and forward writes may be extending it — so
- * reconcile it directly. With the flag off, nothing has been written to mongodb
- * yet (the write-gate invariant), so reconstruct the estate into an in-memory
- * adapter and reconcile that dry-run view; mongodb is never touched. Both modes
- * feed the identical reconciliation, so one diagnostic serves every phase of the
- * rollout: pre-flip authorisation, in-window verification of the backfilled
- * estate, and the post-write-flip monitor.
+ * backfill has populated it and forward writes may be extending it — so every
+ * partition reconciles against that one persisted repository (mongodb's unique
+ * index and per-partition reads keep it cheap). With the flag off, nothing has
+ * been written to mongodb yet (the write-gate invariant), so each partition is
+ * reconstructed on its own into a fresh in-memory store that is reconciled and
+ * then discarded before the next — the dry run's peak footprint is one
+ * registration, never the whole estate, and mongodb is never touched. Both
+ * modes feed the identical reconciliation, so one diagnostic serves every phase
+ * of the rollout: pre-flip authorisation, in-window verification of the
+ * backfilled estate, and the post-write-flip monitor.
  *
  * @param {Object} server - Hapi server instance
- * @returns {Promise<import('#waste-records/repository/port.js').RowStateRepository>}
+ * @returns {(context: { organisation: import('#domain/organisations/model.js').Organisation, registration: import('#domain/organisations/registration.js').Registration }) => Promise<import('#waste-records/repository/port.js').RowStateRepository>}
  */
-const wasteRecordStateSource = async (server) => {
+export const wasteRecordStateSource = (server) => {
   if (server.featureFlags.isWasteRecordStatesBackfillEnabled()) {
-    return server.app.wasteRecordStatesRepository
+    return async () => server.app.wasteRecordStatesRepository
   }
 
-  const rowStateRepository = createInMemoryRowStateRepository()()
-  await backfillEstateRowStates({
-    organisationsRepository: server.app.organisationsRepository,
-    wasteRecordsRepository: server.app.wasteRecordsRepository,
-    summaryLogsRepository: server.app.summaryLogsRepository,
-    overseasSitesRepository: server.app.overseasSitesRepository,
-    rowStateRepository
-  })
-  return rowStateRepository
+  return async ({ organisation, registration }) => {
+    const rowStateRepository = createInMemoryRowStateRepository()()
+    await backfillRegistrationStream({
+      organisation,
+      registration,
+      organisationsRepository: server.app.organisationsRepository,
+      wasteRecordsRepository: server.app.wasteRecordsRepository,
+      summaryLogsRepository: server.app.summaryLogsRepository,
+      overseasSitesRepository: server.app.overseasSitesRepository,
+      rowStateRepository
+    })
+    return rowStateRepository
+  }
 }
 
 /**
@@ -59,7 +67,7 @@ const runReport = async (server) => {
   const { reconciliations, census } = await runReconciliation({
     organisationsRepository: server.app.organisationsRepository,
     streamRepository: server.app.streamRepository,
-    wasteRecordStateRepository: await wasteRecordStateSource(server),
+    wasteRecordStateSource: wasteRecordStateSource(server),
     wasteRecordsRepository: server.app.wasteRecordsRepository,
     overseasSitesRepository: server.app.overseasSitesRepository
   })

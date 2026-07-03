@@ -83,7 +83,7 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
  * @param {SummaryLogRowStateRepository} args.summaryLogRowStateRepository
  * @returns {Promise<LedgerBackfilled | LedgerOrphaned | null>}
  */
-const backfillRegistrationLedger = async ({
+export const backfillRegistrationLedger = async ({
   organisation,
   registration,
   organisationsRepository,

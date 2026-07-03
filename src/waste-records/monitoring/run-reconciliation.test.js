@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -67,7 +67,7 @@ describe('runReconciliation', () => {
     const { reconciliations, census } = await runReconciliation({
       organisationsRepository: orgsRepository([org, orgWithoutRegistrations]),
       streamRepository,
-      wasteRecordStateRepository,
+      wasteRecordStateSource: async () => wasteRecordStateRepository,
       wasteRecordsRepository,
       overseasSitesRepository: sitesRepository([
         { id: 'site-1', validFrom: new Date('2026-01-01') }
@@ -82,5 +82,33 @@ describe('runReconciliation', () => {
       partitionsMissingWasteRecordStateData: 1,
       isEstateClean: false
     })
+  })
+
+  it('resolves the waste record state source once per registration partition, in walk order', async () => {
+    const org = {
+      id: 'org-1',
+      registrations: [
+        { id: 'reg-a', accreditationId: 'acc-1', overseasSites: {} },
+        { id: 'reg-b', overseasSites: {} }
+      ],
+      accreditations: [{ id: 'acc-1', status: REG_ACC_STATUS.APPROVED }]
+    }
+
+    const registrationsSeen = []
+    const wasteRecordStateSource = vi.fn(async ({ registration }) => {
+      registrationsSeen.push(registration.id)
+      return createInMemoryRowStateRepository()()
+    })
+
+    await runReconciliation({
+      organisationsRepository: orgsRepository([org]),
+      streamRepository: createInMemoryStreamRepository()(),
+      wasteRecordStateSource,
+      wasteRecordsRepository: createInMemoryWasteRecordsRepository()(),
+      overseasSitesRepository: sitesRepository([])
+    })
+
+    expect(wasteRecordStateSource).toHaveBeenCalledTimes(2)
+    expect(registrationsSeen).toEqual(['reg-a', 'reg-b'])
   })
 })

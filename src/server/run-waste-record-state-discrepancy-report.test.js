@@ -14,11 +14,16 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
+  buildAccreditation,
   buildOrganisationWithRegistration,
+  buildReadOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 
-import { runWasteRecordStateDiscrepancyReport } from './run-waste-record-state-discrepancy-report.js'
+import {
+  runWasteRecordStateDiscrepancyReport,
+  wasteRecordStateSource
+} from './run-waste-record-state-discrepancy-report.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -389,5 +394,158 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
         loggedInfoMessage('no waste record state data')
       )
     })
+  })
+})
+
+// A submitted summary log for an arbitrary registration — the parameterised
+// form the two-registration dry-run estate needs (the single-reg helpers pin
+// reg-1).
+const submittedLogFor = (
+  summaryLogsRepository,
+  documentId,
+  organisationId,
+  registrationId
+) =>
+  summaryLogsRepository.insert(documentId, {
+    status: SUMMARY_LOG_STATUS.SUBMITTED,
+    file: { id: fileTag(documentId), name: `${documentId}.xlsx` },
+    organisationId,
+    registrationId,
+    createdAt: '2025-01-01T00:00:00.000Z',
+    expiresAt: null,
+    submittedAt: '2025-01-01T00:00:00.000Z'
+  })
+
+const receivedRecordFor = (
+  organisationId,
+  registrationId,
+  rowId,
+  versionTag
+) => ({
+  organisationId,
+  registrationId,
+  rowId,
+  type: WASTE_RECORD_TYPE.RECEIVED,
+  data: { supplierName: 'Acme' },
+  versions: [{ summaryLog: { id: versionTag }, data: { supplierName: 'Acme' } }]
+})
+
+const approvedReprocessorAccreditation = (id) =>
+  buildAccreditation({
+    id,
+    wasteProcessingType: 'reprocessor',
+    statusHistory: [
+      { status: 'created', updatedAt: new Date('2024-01-01') },
+      { status: 'approved', updatedAt: new Date('2024-02-01') }
+    ]
+  })
+
+// Two reconstructable registrations under one organisation, each with its own
+// submitted summary log + tagged waste record. Exposes each registration so a
+// caller can drive the per-partition source for one partition at a time.
+const twoRegistrationReconstructableEstate = async () => {
+  const registrationA = reprocessorRegistration({
+    id: 'reg-a',
+    accreditationId: 'acc-a'
+  })
+  const registrationB = reprocessorRegistration({
+    id: 'reg-b',
+    accreditationId: 'acc-b'
+  })
+  const organisation = buildReadOrganisation({
+    registrations: [registrationA, registrationB],
+    accreditations: [
+      approvedReprocessorAccreditation('acc-a'),
+      approvedReprocessorAccreditation('acc-b')
+    ]
+  })
+
+  const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+  await submittedLogFor(summaryLogsRepository, 'sl-a', organisation.id, 'reg-a')
+  await submittedLogFor(summaryLogsRepository, 'sl-b', organisation.id, 'reg-b')
+
+  return {
+    organisation,
+    registrationA,
+    registrationB,
+    organisationsRepository: createInMemoryOrganisationsRepository([
+      organisation
+    ])(),
+    streamRepository: createInMemoryStreamRepository()(),
+    summaryLogsRepository,
+    wasteRecordsRepository: createInMemoryWasteRecordsRepository([
+      receivedRecordFor(organisation.id, 'reg-a', 'row-a', fileTag('sl-a')),
+      receivedRecordFor(organisation.id, 'reg-b', 'row-b', fileTag('sl-b'))
+    ])(),
+    overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+    wasteRecordStatesRepository: untouchedPersistedRepository()
+  }
+}
+
+describe('wasteRecordStateSource', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('flag on: returns the same persisted repository for every partition', async () => {
+    const persisted = untouchedPersistedRepository()
+    const server = buildServer(
+      { wasteRecordStatesRepository: persisted },
+      { backfillEnabled: true }
+    )
+
+    const source = wasteRecordStateSource(server)
+    const first = await source(
+      /** @type {*} */ ({
+        organisation: { id: 'org-1' },
+        registration: { id: 'reg-a' }
+      })
+    )
+    const second = await source(
+      /** @type {*} */ ({
+        organisation: { id: 'org-1' },
+        registration: { id: 'reg-b' }
+      })
+    )
+
+    expect(first).toBe(persisted)
+    expect(second).toBe(persisted)
+  })
+
+  it('flag off: reconstructs a fresh store per registration, scoped to that partition, without touching the persisted collection', async () => {
+    const app = await twoRegistrationReconstructableEstate()
+    const server = buildServer(app, { backfillEnabled: false })
+
+    const source = wasteRecordStateSource(server)
+    const storeA = await source(
+      /** @type {*} */ ({
+        organisation: app.organisation,
+        registration: app.registrationA
+      })
+    )
+    const storeB = await source(
+      /** @type {*} */ ({
+        organisation: app.organisation,
+        registration: app.registrationB
+      })
+    )
+
+    // Distinct store instances — the dry run never accumulates one global store
+    // across partitions.
+    expect(storeA).not.toBe(storeB)
+
+    // Each store holds only its own registration's reconstructed submission:
+    // reg-b's store contains none of reg-a's rows, and vice versa.
+    expect(await storeA.findBySummaryLogId(fileTag('sl-a'))).not.toHaveLength(0)
+    expect(await storeA.findBySummaryLogId(fileTag('sl-b'))).toHaveLength(0)
+    expect(await storeB.findBySummaryLogId(fileTag('sl-b'))).not.toHaveLength(0)
+    expect(await storeB.findBySummaryLogId(fileTag('sl-a'))).toHaveLength(0)
+
+    expect(
+      app.wasteRecordStatesRepository.upsertRowStates
+    ).not.toHaveBeenCalled()
+    expect(
+      app.wasteRecordStatesRepository.findBySummaryLogId
+    ).not.toHaveBeenCalled()
   })
 })
