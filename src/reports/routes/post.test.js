@@ -855,5 +855,35 @@ describe(`POST ${reportsPostPath}`, () => {
         'resubmission_not_permitted'
       )
     })
+
+    it('reports the existing draft, not the disabled flag, when a submission 2 already exists and the flag is off', async () => {
+      const { server, organisationId, registrationId, repo } = await setup()
+
+      const { id } = await repo.createReport(
+        buildSubmission(organisationId, registrationId, 1)
+      )
+      await submitReport(repo, id)
+      await flagPeriod(repo, organisationId, registrationId)
+      const { id: existingDraftId } = await repo.createReport(
+        buildSubmission(organisationId, registrationId, 2)
+      )
+
+      const response = await postSubmission(
+        server,
+        organisationId,
+        registrationId,
+        2
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      const payload = JSON.parse(response.payload)
+      expect(payload.reason).toBeUndefined()
+      expect(payload.existingReport).toMatchObject({
+        id: existingDraftId,
+        cadence: 'quarterly',
+        period: 1,
+        year: 2025
+      })
+    })
   })
 })

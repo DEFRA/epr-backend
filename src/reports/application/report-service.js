@@ -506,7 +506,10 @@ export async function createReportForPeriod({
     registrationId
   })
 
-  assertResubmissionAllowed(
+  // Existence is the more fundamental precondition: a duplicate submission is
+  // reported as such regardless of whether a fresh create would have been
+  // permitted, so the duplicate check runs before the resubmission gate.
+  assertNoExistingReport(
     periodicReports,
     year,
     cadence,
@@ -514,7 +517,7 @@ export async function createReportForPeriod({
     submissionNumber
   )
 
-  assertNoExistingReport(
+  assertResubmissionAllowed(
     periodicReports,
     year,
     cadence,
