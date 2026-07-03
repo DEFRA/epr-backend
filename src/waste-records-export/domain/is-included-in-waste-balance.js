@@ -1,4 +1,3 @@
-import { REGISTERED_ONLY_PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
@@ -19,11 +18,12 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * Mirrors the same logic as the waste-balances calculation path.
  *
  * Returns `null` when inclusion cannot be computed for this record at all
- * (no accreditation, submitted on a registered-only template, or no
- * classification schema for the processing type) — these are registration
- * or template-level states, not a per-row classification outcome, so there
- * is no meaningful reason code to report. The CSV export renders `null` as
- * "NA".
+ * (no accreditation, or no classification schema for the processing type —
+ * which is also how registered-only templates are excluded, since their
+ * table schemas never define `classifyForWasteBalance`) — these are
+ * registration or template-level states, not a per-row classification
+ * outcome, so there is no meaningful reason code to report. The CSV export
+ * renders `null` as "NA".
  *
  * @param {WasteRecord} record
  * @param {Accreditation | null} accreditation
@@ -39,20 +39,12 @@ export const getWasteBalanceClassification = (
     return { included: false, reasons: [], tonnage: null }
   }
 
-  if (!accreditation) {
-    return null
-  }
-
-  if (REGISTERED_ONLY_PROCESSING_TYPES.has(record.data?.processingType)) {
-    return null
-  }
-
   const schema = findSchemaForProcessingType(
     record.data?.processingType,
     record.type
   )
 
-  if (!schema?.classifyForWasteBalance) {
+  if (!accreditation || !schema?.classifyForWasteBalance) {
     return null
   }
 
