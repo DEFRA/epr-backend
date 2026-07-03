@@ -27,7 +27,8 @@ import { reportsPostPath } from './post.js'
 import * as reportAudit from '#reports/application/audit.js'
 
 vi.mock('#reports/application/audit.js', () => ({
-  auditReportCreate: vi.fn().mockResolvedValue(undefined)
+  auditReportCreate: vi.fn().mockResolvedValue(undefined),
+  auditReportDelete: vi.fn().mockResolvedValue(undefined)
 }))
 
 describe(`POST ${reportsPostPath}`, () => {
@@ -153,6 +154,31 @@ describe(`POST ${reportsPostPath}`, () => {
         year: 2025
       }
     })
+  })
+
+  it('allows re-creating the first submission after the initial draft is deleted', async () => {
+    const { server, organisationId, registrationId } = await createServer({
+      wasteProcessingType: 'reprocessor',
+      accreditationId: undefined
+    })
+
+    const first = await makeRequest(server, organisationId, registrationId)
+    expect(first.statusCode).toBe(StatusCodes.CREATED)
+    const firstId = JSON.parse(first.payload).id
+
+    const deleted = await server.inject({
+      method: 'DELETE',
+      url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1, 1),
+      ...asStandardUser({ linkedOrgId: organisationId })
+    })
+    expect(deleted.statusCode).toBe(StatusCodes.NO_CONTENT)
+
+    const recreated = await makeRequest(server, organisationId, registrationId)
+
+    expect(recreated.statusCode).toBe(StatusCodes.CREATED)
+    const payload = JSON.parse(recreated.payload)
+    expect(payload.submissionNumber).toBe(1)
+    expect(payload.id).not.toBe(firstId)
   })
 
   it('returns 404 when registration not found', async () => {
