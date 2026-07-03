@@ -1,4 +1,6 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { backfillEstateRowStates } from '#waste-records/backfill/backfill-estate-rowstates.js'
+import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { runReconciliation } from '#waste-records/monitoring/run-reconciliation.js'
 import {
   formatCensusSummary,
@@ -9,14 +11,47 @@ import {
 const LOCK_NAME = 'waste-record-state-discrepancy-report'
 
 /**
- * Reconcile the waste record state collection (ADR-0037) against the legacy
+ * Resolve the waste record state view to reconcile, following the backfill flag.
+ *
+ * With the flag on, the persisted mongodb collection is the live source — the
+ * backfill has populated it and forward writes may be extending it — so
+ * reconcile it directly. With the flag off, nothing has been written to mongodb
+ * yet (the write-gate invariant), so reconstruct the estate into an in-memory
+ * adapter and reconcile that dry-run view; mongodb is never touched. Both modes
+ * feed the identical reconciliation, so one diagnostic serves every phase of the
+ * rollout: pre-flip authorisation, in-window verification of the backfilled
+ * estate, and the post-write-flip monitor.
+ *
+ * @param {Object} server - Hapi server instance
+ * @returns {Promise<import('#waste-records/repository/port.js').RowStateRepository>}
+ */
+const wasteRecordStateSource = async (server) => {
+  if (server.featureFlags.isWasteRecordStatesBackfillEnabled()) {
+    return server.app.wasteRecordStatesRepository
+  }
+
+  const rowStateRepository = createInMemoryRowStateRepository()()
+  await backfillEstateRowStates({
+    organisationsRepository: server.app.organisationsRepository,
+    wasteRecordsRepository: server.app.wasteRecordsRepository,
+    summaryLogsRepository: server.app.summaryLogsRepository,
+    overseasSitesRepository: server.app.overseasSitesRepository,
+    rowStateRepository
+  })
+  return rowStateRepository
+}
+
+/**
+ * Reconcile the waste record state view (ADR-0037) against the legacy
  * waste-records committed baseline across the estate and log the result for
- * review. Each partition carrying a discrepancy or a classification divergence
- * is logged on its own line; a census summary follows. All at info — under
- * current-factors backfill, divergences (an overseas site approved since a
- * submission, for instance) are expected findings to read and confirm before
- * the write-flag flip, not failures to alarm on. Read-only — every input comes
- * from the production repositories already built at startup.
+ * review. The view follows the backfill flag — the persisted collection when on,
+ * a reconstructed in-memory dry run when off. Each partition carrying a
+ * discrepancy or a classification divergence is logged on its own line; a census
+ * summary follows. All at info — under current-factors backfill, divergences (an
+ * overseas site approved since a submission, for instance) are expected findings
+ * to read and confirm before the write-flag flip, not failures to alarm on.
+ * Read-only — every input comes from the production repositories already built
+ * at startup.
  *
  * @param {Object} server - Hapi server instance
  */
@@ -24,7 +59,7 @@ const runReport = async (server) => {
   const { reconciliations, census } = await runReconciliation({
     organisationsRepository: server.app.organisationsRepository,
     streamRepository: server.app.streamRepository,
-    wasteRecordStateRepository: server.app.wasteRecordStatesRepository,
+    wasteRecordStateRepository: await wasteRecordStateSource(server),
     wasteRecordsRepository: server.app.wasteRecordsRepository,
     overseasSitesRepository: server.app.overseasSitesRepository
   })

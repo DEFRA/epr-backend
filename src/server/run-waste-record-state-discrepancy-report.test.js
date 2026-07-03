@@ -9,6 +9,14 @@ import { createInMemoryStreamRepository } from '#waste-balances/repository/strea
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { buildRowStateEntry } from '#waste-records/repository/test-data.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import {
+  buildOrganisationWithRegistration,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 
 import { runWasteRecordStateDiscrepancyReport } from './run-waste-record-state-discrepancy-report.js'
 
@@ -68,11 +76,112 @@ const streamWithHead = (creditTotal) =>
 
 const buildServer = (
   app,
-  lock = { free: vi.fn().mockResolvedValue(undefined) }
+  {
+    lock = { free: vi.fn().mockResolvedValue(undefined) },
+    backfillEnabled = true
+  } = {}
 ) => ({
   app,
+  featureFlags: {
+    isWasteRecordStatesBackfillEnabled: () => backfillEnabled
+  },
   locker: { lock: vi.fn().mockResolvedValue(lock) }
 })
+
+// A persisted mongo row-state repository the dry-run must never touch — the
+// write-gate invariant is that nothing reads or writes the collection while the
+// backfill flag is off.
+const untouchedPersistedRepository = () => ({
+  upsertRowStates: vi.fn(),
+  findBySummaryLogId: vi.fn(),
+  findRowHistory: vi.fn()
+})
+
+// The summary-log document id and the workbook file.id are distinct values;
+// membership and version tags key on file.id, so fixtures keep them different.
+const fileTag = (documentId) => `file-${documentId}`
+
+const reprocessorRegistration = (overrides) =>
+  buildRegistration({
+    wasteProcessingType: 'reprocessor',
+    overseasSites: {},
+    ...overrides
+  })
+
+const submittedLog = (summaryLogsRepository, documentId, organisationId) =>
+  summaryLogsRepository.insert(documentId, {
+    status: SUMMARY_LOG_STATUS.SUBMITTED,
+    file: { id: fileTag(documentId), name: `${documentId}.xlsx` },
+    organisationId,
+    registrationId: 'reg-1',
+    createdAt: '2025-01-01T00:00:00.000Z',
+    expiresAt: null,
+    submittedAt: '2025-01-01T00:00:00.000Z'
+  })
+
+const receivedRecord = (organisationId, rowId, versionFileTag) => ({
+  organisationId,
+  registrationId: 'reg-1',
+  rowId,
+  type: WASTE_RECORD_TYPE.RECEIVED,
+  data: { supplierName: 'Acme' },
+  versions: [
+    { summaryLog: { id: versionFileTag }, data: { supplierName: 'Acme' } }
+  ]
+})
+
+const approvedReprocessor = () =>
+  buildOrganisationWithRegistration(
+    reprocessorRegistration({ id: 'reg-1', accreditationId: 'acc-1' }),
+    'approved'
+  )
+
+const committedHead = (creditTotal) =>
+  createInMemoryStreamRepository([
+    buildStreamEvent({
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1',
+      payload: { summaryLogId: fileTag('sl-1'), creditTotal }
+    })
+  ])()
+
+// A dry-run estate the reconstruction sweep can rebuild from: a submitted
+// summary log plus the waste record it tagged. Flag off, the runner must
+// reconstruct these into the in-memory adapter and reconcile that.
+const reconstructableEstate = async () => {
+  const organisation = approvedReprocessor()
+  const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+  await submittedLog(summaryLogsRepository, 'sl-1', organisation.id)
+
+  return {
+    organisationsRepository: createInMemoryOrganisationsRepository([
+      organisation
+    ])(),
+    streamRepository: committedHead(0),
+    summaryLogsRepository,
+    wasteRecordsRepository: createInMemoryWasteRecordsRepository([
+      receivedRecord(organisation.id, 'row-1', fileTag('sl-1'))
+    ])(),
+    overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+    wasteRecordStatesRepository: untouchedPersistedRepository()
+  }
+}
+
+// A committed head with no submitted summary log to reconstruct from: the dry
+// run rebuilds nothing, so the partition surfaces as a coverage gap for review.
+const headWithoutReconstructableSubmission = () => {
+  const organisation = approvedReprocessor()
+  return {
+    organisationsRepository: createInMemoryOrganisationsRepository([
+      organisation
+    ])(),
+    streamRepository: committedHead(0),
+    summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
+    wasteRecordsRepository: createInMemoryWasteRecordsRepository()(),
+    overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+    wasteRecordStatesRepository: untouchedPersistedRepository()
+  }
+}
 
 const emptyEstate = () => ({
   organisationsRepository: orgsRepository([]),
@@ -136,7 +245,7 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
 
   it('acquires a lock scoped to the report and releases it afterwards', async () => {
     const lock = { free: vi.fn().mockResolvedValue(undefined) }
-    const server = buildServer(emptyEstate(), lock)
+    const server = buildServer(emptyEstate(), { lock })
 
     await runWasteRecordStateDiscrepancyReport(server)
 
@@ -212,7 +321,7 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
         ...emptyEstate(),
         organisationsRepository: { findAll: vi.fn().mockRejectedValue(error) }
       },
-      lock
+      { lock }
     )
 
     await runWasteRecordStateDiscrepancyReport(server)
@@ -236,6 +345,49 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
       message: 'Failed to run waste record state discrepancy report'
+    })
+  })
+
+  describe('when the backfill flag is off (in-memory dry run)', () => {
+    it('reconstructs the estate in-memory and reconciles it, covering the committed head', async () => {
+      const app = await reconstructableEstate()
+      const server = buildServer(app, { backfillEnabled: false })
+
+      await runWasteRecordStateDiscrepancyReport(server)
+
+      expect(logger.error).not.toHaveBeenCalled()
+      expect(logger.info).toHaveBeenCalledWith(
+        loggedInfoMessage('covered: 1, missing waste record state data: 0')
+      )
+    })
+
+    it('never reads or writes the persisted collection', async () => {
+      const app = await reconstructableEstate()
+      const server = buildServer(app, { backfillEnabled: false })
+
+      await runWasteRecordStateDiscrepancyReport(server)
+
+      expect(
+        app.wasteRecordStatesRepository.findBySummaryLogId
+      ).not.toHaveBeenCalled()
+      expect(
+        app.wasteRecordStatesRepository.upsertRowStates
+      ).not.toHaveBeenCalled()
+    })
+
+    it('surfaces a coverage gap at info when the reconstruction rebuilds nothing for a committed head', async () => {
+      const app = headWithoutReconstructableSubmission()
+      const server = buildServer(app, { backfillEnabled: false })
+
+      await runWasteRecordStateDiscrepancyReport(server)
+
+      expect(logger.error).not.toHaveBeenCalled()
+      expect(
+        app.wasteRecordStatesRepository.findBySummaryLogId
+      ).not.toHaveBeenCalled()
+      expect(logger.info).toHaveBeenCalledWith(
+        loggedInfoMessage('no waste record state data')
+      )
     })
   })
 })
