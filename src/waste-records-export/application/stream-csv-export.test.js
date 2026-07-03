@@ -660,7 +660,7 @@ describe('streamCsvExport', () => {
     expect(out[2].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('10')
   })
 
-  it('emits false/NOT_ACCREDITED WB columns for an operator with a cancelled accreditation', async () => {
+  it('emits NA WB columns for an operator with a cancelled accreditation', async () => {
     const cancelledAccreditation = {
       id: 'acc-1',
       status: 'cancelled',
@@ -687,10 +687,8 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
-    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
-    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
-      'NOT_ACCREDITED'
-    )
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
     expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
   })
 
@@ -710,13 +708,11 @@ describe('streamCsvExport', () => {
     expect(out).toHaveLength(2)
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
-    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
-    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
-      'NOT_ACCREDITED'
-    )
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
   })
 
-  it('emits SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE for a registered-only-processing-type row once the operator is accredited', async () => {
+  it('emits NA for a registered-only-processing-type row once the operator is accredited', async () => {
     const accreditedAccreditation = {
       id: 'acc-1',
       status: 'approved',
@@ -747,13 +743,11 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
-    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
-    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
-      'SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE'
-    )
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
   })
 
-  it('emits NOT_ACCREDITED (not SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE) for a registered-only-processing-type row when the operator has no accreditation', async () => {
+  it('emits NA for a registered-only-processing-type row when the operator has no accreditation', async () => {
     const org = baseOrg({
       registrations: [baseRegistration({ accreditation: undefined })]
     })
@@ -773,13 +767,11 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
-    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
-    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
-      'NOT_ACCREDITED'
-    )
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
   })
 
-  it('emits SECTION_NOT_INCLUDED_IN_WASTE_BALANCE for an accredited-capable processing type whose table has no waste-balance classifier', async () => {
+  it('emits NA for an accredited-capable processing type whose table has no waste-balance classifier', async () => {
     const accreditedAccreditation = {
       id: 'acc-1',
       status: 'approved',
@@ -813,10 +805,8 @@ describe('streamCsvExport', () => {
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
-    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
-    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
-      'SECTION_NOT_INCLUDED_IN_WASTE_BALANCE'
-    )
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
   })
 
   it('skips organisations that have no registrations array', async () => {

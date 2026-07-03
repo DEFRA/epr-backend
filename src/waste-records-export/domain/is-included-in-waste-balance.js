@@ -1,6 +1,5 @@
 import { REGISTERED_ONLY_PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
-import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
@@ -19,10 +18,17 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * Returns the waste balance inclusion status and any exclusion reasons for a record.
  * Mirrors the same logic as the waste-balances calculation path.
  *
+ * Returns `null` when inclusion cannot be computed for this record at all
+ * (no accreditation, submitted on a registered-only template, or no
+ * classification schema for the processing type) — these are registration
+ * or template-level states, not a per-row classification outcome, so there
+ * is no meaningful reason code to report. The CSV export renders `null` as
+ * "NA".
+ *
  * @param {WasteRecord} record
  * @param {Accreditation | null} accreditation
  * @param {OverseasSitesContext} overseasSites
- * @returns {WasteBalanceClassification}
+ * @returns {WasteBalanceClassification | null}
  */
 export const getWasteBalanceClassification = (
   record,
@@ -34,21 +40,11 @@ export const getWasteBalanceClassification = (
   }
 
   if (!accreditation) {
-    return {
-      included: false,
-      reasons: [{ code: CLASSIFICATION_REASON.NOT_ACCREDITED }],
-      tonnage: null
-    }
+    return null
   }
 
   if (REGISTERED_ONLY_PROCESSING_TYPES.has(record.data?.processingType)) {
-    return {
-      included: false,
-      reasons: [
-        { code: CLASSIFICATION_REASON.SUBMITTED_ON_REGISTERED_ONLY_TEMPLATE }
-      ],
-      tonnage: null
-    }
+    return null
   }
 
   const schema = findSchemaForProcessingType(
@@ -57,13 +53,7 @@ export const getWasteBalanceClassification = (
   )
 
   if (!schema?.classifyForWasteBalance) {
-    return {
-      included: false,
-      reasons: [
-        { code: CLASSIFICATION_REASON.SECTION_NOT_INCLUDED_IN_WASTE_BALANCE }
-      ],
-      tonnage: null
-    }
+    return null
   }
 
   const result = schema.classifyForWasteBalance(record.data, {

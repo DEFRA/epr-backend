@@ -387,6 +387,16 @@ describe('csv-columns', () => {
       expect(included[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe(-5.25)
     })
 
+    it('emits "NA" and blank reason/tonnage when inclusion cannot be computed', () => {
+      const row = buildDataRow({
+        ...baseInput,
+        wasteBalanceClassification: null
+      })
+      expect(row[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+      expect(row[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
+      expect(row[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
+    })
+
     describe('derived OSR columns', () => {
       const countryIdx = METADATA_COLUMNS.indexOf(OSR_COUNTRY_REVISED)
       const nameIdx = METADATA_COLUMNS.indexOf(OSR_NAME_REVISED)
