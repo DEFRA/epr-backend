@@ -7,6 +7,11 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
+import { config } from '#root/config.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
@@ -623,5 +628,232 @@ describe(`POST ${reportsPostPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.CREATED)
     const payload = JSON.parse(response.payload)
     expect(payload.prn).toStrictEqual({ issuedTonnage: 250 })
+  })
+
+  describe('resubmission submissions (submissionNumber > 1)', () => {
+    const CLOSED_PERIOD_ADJUSTMENTS = 'featureFlags.closedPeriodAdjustments'
+    const changedBy = { id: 'user-1', name: 'Test', position: 'Officer' }
+
+    afterEach(() => {
+      config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
+    })
+
+    const buildSubmission = (
+      organisationId,
+      registrationId,
+      submissionNumber
+    ) => ({
+      organisationId,
+      registrationId,
+      year: 2025,
+      cadence: 'quarterly',
+      period: 1,
+      startDate: '2025-01-01',
+      endDate: '2025-03-31',
+      dueDate: '2025-05-20',
+      changedBy,
+      submissionNumber,
+      material: 'plastic',
+      wasteProcessingType: 'exporter',
+      source: { summaryLogId: 'sl-1', lastUploadedAt: '2025-01-15' },
+      prn: null,
+      recyclingActivity: {
+        suppliers: [],
+        totalTonnageReceived: 0,
+        tonnageRecycled: null,
+        tonnageNotRecycled: null
+      },
+      wasteSent: {
+        tonnageSentToReprocessor: 0,
+        tonnageSentToExporter: 0,
+        tonnageSentToAnotherSite: 0,
+        finalDestinations: []
+      }
+    })
+
+    const submitReport = async (repo, id) => {
+      await repo.updateReportStatus({
+        reportId: id,
+        version: 1,
+        status: REPORT_STATUS.READY_TO_SUBMIT,
+        slot: REPORT_STATUS_SLOT.READY,
+        changedBy
+      })
+      await repo.updateReportStatus({
+        reportId: id,
+        version: 2,
+        status: REPORT_STATUS.SUBMITTED,
+        slot: REPORT_STATUS_SLOT.SUBMITTED,
+        changedBy,
+        submissionDeclaredBy: 'Test User'
+      })
+    }
+
+    const flagPeriod = (repo, organisationId, registrationId) =>
+      repo.markSubmittedReportsRequiringResubmission({
+        organisationId,
+        registrationId,
+        summaryLogId: 'sl-2',
+        uploadedAt: '2025-06-01T12:00:00.000Z',
+        periods: [{ year: 2025, cadence: 'quarterly', period: 1 }]
+      })
+
+    const setup = async () => {
+      const {
+        server,
+        organisationId,
+        registrationId,
+        reportsRepositoryFactory
+      } = await createServer({
+        wasteProcessingType: 'exporter',
+        accreditationId: undefined
+      })
+      return {
+        server,
+        organisationId,
+        registrationId,
+        repo: reportsRepositoryFactory()
+      }
+    }
+
+    const postSubmission = (server, organisationId, registrationId, n) =>
+      makeRequest(
+        server,
+        organisationId,
+        registrationId,
+        2025,
+        'quarterly',
+        1,
+        n
+      )
+
+    it('creates submission 2 when the flag is on and submission 1 is submitted and flagged', async () => {
+      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
+      const { server, organisationId, registrationId, repo } = await setup()
+
+      const { id } = await repo.createReport(
+        buildSubmission(organisationId, registrationId, 1)
+      )
+      await submitReport(repo, id)
+      await flagPeriod(repo, organisationId, registrationId)
+
+      const response = await postSubmission(
+        server,
+        organisationId,
+        registrationId,
+        2
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+      expect(JSON.parse(response.payload).submissionNumber).toBe(2)
+    })
+
+    it('rejects submission 2 with 409 resubmission_feature_disabled when the flag is off', async () => {
+      const { server, organisationId, registrationId, repo } = await setup()
+
+      const { id } = await repo.createReport(
+        buildSubmission(organisationId, registrationId, 1)
+      )
+      await submitReport(repo, id)
+      await flagPeriod(repo, organisationId, registrationId)
+
+      const response = await postSubmission(
+        server,
+        organisationId,
+        registrationId,
+        2
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).reason).toBe(
+        'resubmission_feature_disabled'
+      )
+    })
+
+    it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is submitted but not flagged', async () => {
+      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
+      const { server, organisationId, registrationId, repo } = await setup()
+
+      const { id } = await repo.createReport(
+        buildSubmission(organisationId, registrationId, 1)
+      )
+      await submitReport(repo, id)
+
+      const response = await postSubmission(
+        server,
+        organisationId,
+        registrationId,
+        2
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).reason).toBe(
+        'resubmission_not_permitted'
+      )
+    })
+
+    it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is still in progress', async () => {
+      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
+      const { server, organisationId, registrationId, repo } = await setup()
+
+      await repo.createReport(
+        buildSubmission(organisationId, registrationId, 1)
+      )
+
+      const response = await postSubmission(
+        server,
+        organisationId,
+        registrationId,
+        2
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).reason).toBe(
+        'resubmission_not_permitted'
+      )
+    })
+
+    it('rejects submission 2 with 409 resubmission_not_permitted when no submission 1 exists', async () => {
+      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
+      const { server, organisationId, registrationId } = await setup()
+
+      const response = await postSubmission(
+        server,
+        organisationId,
+        registrationId,
+        2
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).reason).toBe(
+        'resubmission_not_permitted'
+      )
+    })
+
+    it('rejects submission 3 when submission 2 is not yet submitted', async () => {
+      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
+      const { server, organisationId, registrationId, repo } = await setup()
+
+      const { id } = await repo.createReport(
+        buildSubmission(organisationId, registrationId, 1)
+      )
+      await submitReport(repo, id)
+      await flagPeriod(repo, organisationId, registrationId)
+      await repo.createReport(
+        buildSubmission(organisationId, registrationId, 2)
+      )
+
+      const response = await postSubmission(
+        server,
+        organisationId,
+        registrationId,
+        3
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).reason).toBe(
+        'resubmission_not_permitted'
+      )
+    })
   })
 })
