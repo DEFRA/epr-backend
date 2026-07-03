@@ -59,6 +59,29 @@ describe('reconstructSubmissionRowStates', () => {
     expect(upserts.map((u) => u.summaryLogId)).toEqual(['sl-1', 'sl-2'])
   })
 
+  it('breaks submittedAt ties by id so attribution is deterministic', () => {
+    const summaryLogs = [
+      submittedLog('sl-b', '2025-01-01T00:00:00.000Z'),
+      submittedLog('sl-a', '2025-01-01T00:00:00.000Z')
+    ]
+    const wasteRecords = [
+      receivedRecord('row-1', [
+        { summaryLog: { id: 'sl-b' }, data: { supplierName: 'Acme' } }
+      ])
+    ]
+
+    const upserts = reconstructSubmissionRowStates({
+      wasteRecords,
+      summaryLogs,
+      accreditation,
+      overseasSites
+    })
+
+    expect(upserts.map((u) => u.summaryLogId)).toEqual(['sl-a', 'sl-b'])
+    expect(upserts[0].entries).toEqual([])
+    expect(upserts[1].entries.map((e) => e.rowId)).toEqual(['row-1'])
+  })
+
   it('skips a row at submissions before it was first created', () => {
     const summaryLogs = [
       submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),

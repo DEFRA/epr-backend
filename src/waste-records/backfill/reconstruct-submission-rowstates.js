@@ -86,7 +86,8 @@ export const reconstructSubmissionRowStates = ({
     .filter((log) => log.status === SUMMARY_LOG_STATUS.SUBMITTED)
     .sort(
       (a, b) =>
-        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime()
+        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime() ||
+        a.id.localeCompare(b.id)
     )
 
   const seenSummaryLogIds = new Set()
