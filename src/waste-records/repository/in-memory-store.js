@@ -13,6 +13,11 @@ import { validateRowStateInsert } from './validation.js'
  * reads it back, so nothing is written to mongodb while the backfill flag is
  * off. Shipped in the production image for that path; the test-facing
  * `inmemory.js` re-exports it.
+ *
+ * The production use is a rollout-window mechanism only. Once the row-state
+ * migration is complete — the estate backfilled and the write flag flipped —
+ * the flag-off dry run is removed, and this store loses its production role and
+ * becomes a test double again.
  */
 
 /**
