@@ -1,6 +1,6 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { backfillEstateRowStates } from '#waste-records/backfill/backfill-estate-rowstates.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryRowStateRepository } from '#waste-records/repository/in-memory-store.js'
 import { runReconciliation } from '#waste-records/monitoring/run-reconciliation.js'
 import {
   formatCensusSummary,
