@@ -35,10 +35,6 @@ export const getWasteBalanceClassification = (
   accreditation,
   overseasSites
 ) => {
-  if (record.excludedFromWasteBalance) {
-    return { included: false, reasons: [], tonnage: null }
-  }
-
   const schema = findSchemaForProcessingType(
     record.data?.processingType,
     record.type
@@ -46,6 +42,10 @@ export const getWasteBalanceClassification = (
 
   if (!accreditation || !schema?.classifyForWasteBalance) {
     return null
+  }
+
+  if (record.excludedFromWasteBalance) {
+    return { included: false, reasons: [], tonnage: null }
   }
 
   const result = schema.classifyForWasteBalance(record.data, {
