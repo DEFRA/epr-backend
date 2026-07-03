@@ -3,7 +3,7 @@ import { setup as setupMongo, teardown as teardownMongo } from 'vitest-mongodb'
 import { randomUUID } from 'node:crypto'
 
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { WASTE_BALANCE_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
+import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 
 vi.mock(
   '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
@@ -50,7 +50,7 @@ describe('waste-record-states repository registration', () => {
     let server
 
     beforeAll(async () => {
-      delete process.env.FEATURE_FLAG_WASTE_RECORD_STATES
+      delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES
       delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL
       server = await bootServer()
     })
@@ -66,7 +66,7 @@ describe('waste-record-states repository registration', () => {
 
     it('creates no row-state collection or indexes', async () => {
       const collections = await server.db
-        .listCollections({ name: WASTE_BALANCE_ROW_STATES_COLLECTION_NAME })
+        .listCollections({ name: SUMMARY_LOG_ROW_STATES_COLLECTION_NAME })
         .toArray()
 
       expect(collections).toHaveLength(0)
@@ -77,7 +77,7 @@ describe('waste-record-states repository registration', () => {
     let server
 
     beforeAll(async () => {
-      process.env.FEATURE_FLAG_WASTE_RECORD_STATES = 'true'
+      process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES = 'true'
       delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL
       server = await bootServer()
     })
@@ -85,7 +85,7 @@ describe('waste-record-states repository registration', () => {
     afterAll(async () => {
       await server.db.dropDatabase()
       await server.stop()
-      delete process.env.FEATURE_FLAG_WASTE_RECORD_STATES
+      delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES
     })
 
     it('constructs the row-state repository', () => {
@@ -94,7 +94,7 @@ describe('waste-record-states repository registration', () => {
 
     it('creates the empty collection with its three indexes', async () => {
       const indexes = await server.db
-        .collection(WASTE_BALANCE_ROW_STATES_COLLECTION_NAME)
+        .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
         .listIndexes()
         .toArray()
 
@@ -102,12 +102,12 @@ describe('waste-record-states repository registration', () => {
         indexes.map((index) => [index.name, index])
       )
 
-      expect(indexesByName).toHaveProperty('membership')
+      expect(indexesByName).toHaveProperty('summary_log_membership')
       expect(indexesByName).toHaveProperty('row_history')
-      expect(indexesByName.waste_record_state_identity.unique).toBe(true)
+      expect(indexesByName.summary_log_row_state_identity.unique).toBe(true)
 
       const documentCount = await server.db
-        .collection(WASTE_BALANCE_ROW_STATES_COLLECTION_NAME)
+        .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
         .countDocuments()
 
       expect(documentCount).toBe(0)
