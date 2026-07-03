@@ -1,4 +1,5 @@
 import { CADENCE } from './cadence.js'
+import { periodKey } from './period-key.js'
 import { generateReportingPeriods } from './generate-reporting-periods.js'
 
 /**
@@ -49,7 +50,7 @@ function complianceLabel(cadence, period) {
  */
 function annotate(p, cadence) {
   return {
-    key: `${p.year}:${cadence}:${p.period}`,
+    key: periodKey({ year: p.year, cadence, period: p.period }),
     cadence,
     year: p.year,
     period: p.period,

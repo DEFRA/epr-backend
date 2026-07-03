@@ -1,4 +1,5 @@
 import { CADENCE } from '#reports/domain/cadence.js'
+import { periodKey } from '#reports/domain/period-key.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
@@ -91,7 +92,11 @@ export async function generateReportCompliance(
 
       for (const mergedPeriod of merged) {
         submittedDates.set(
-          `${mergedPeriod.year}:${cadence}:${mergedPeriod.period}`,
+          periodKey({
+            year: mergedPeriod.year,
+            cadence,
+            period: mergedPeriod.period
+          }),
           mergedPeriod.report?.submittedAt?.slice(0, 10) ?? null
         )
       }

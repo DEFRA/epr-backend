@@ -7,6 +7,10 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
+import {
   buildOrganisationWithRegistration,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
@@ -379,6 +383,100 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(january.report).toBeDefined()
         expect(january.report.id).toBeDefined()
         expect(january.report.status).toBe('in_progress')
+      })
+
+      it('emits a requires_resubmission skeleton alongside a flagged submitted period', async () => {
+        const year = new Date().getUTCFullYear()
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          reportsRepositoryFactory,
+          'approved'
+        )
+
+        const reportsRepository = reportsRepositoryFactory()
+        const { id } = await reportsRepository.createReport({
+          organisationId,
+          registrationId,
+          year,
+          cadence: 'monthly',
+          period: 1,
+          startDate: `${year}-01-01`,
+          endDate: `${year}-01-31`,
+          dueDate: `${year}-02-20`,
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
+          material: 'plastic',
+          wasteProcessingType: 'exporter',
+          source: { summaryLogId: 'sl-1', lastUploadedAt: `${year}-01-15` },
+          prn: null,
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: []
+          }
+        })
+
+        const changedBy = { id: 'user-1', name: 'Test', position: 'Officer' }
+        await reportsRepository.updateReportStatus({
+          reportId: id,
+          version: 1,
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          slot: REPORT_STATUS_SLOT.READY,
+          changedBy
+        })
+        await reportsRepository.updateReportStatus({
+          reportId: id,
+          version: 2,
+          status: REPORT_STATUS.SUBMITTED,
+          slot: REPORT_STATUS_SLOT.SUBMITTED,
+          changedBy,
+          submissionDeclaredBy: 'Test User'
+        })
+        await reportsRepository.markSubmittedReportsRequiringResubmission({
+          organisationId,
+          registrationId,
+          summaryLogId: 'sl-2',
+          uploadedAt: `${year}-05-01T12:00:00.000Z`,
+          periods: [{ year, cadence: 'monthly', period: 1 }]
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        const januaryItems = payload.reportingPeriods.filter(
+          (p) => p.period === 1
+        )
+        expect(januaryItems).toHaveLength(2)
+
+        const original = januaryItems.find(
+          (p) => p.periodStatus === 'submitted'
+        )
+        expect(original.submissionNumber).toBe(1)
+        expect(original.report.id).toBe(id)
+
+        const skeleton = januaryItems.find(
+          (p) => p.periodStatus === 'requires_resubmission'
+        )
+        expect(skeleton).toMatchObject({
+          submissionNumber: 2,
+          report: null,
+          dueDate: `${year}-02-20`
+        })
       })
 
       it('curates the report shape: excludes activity payloads', async () => {
