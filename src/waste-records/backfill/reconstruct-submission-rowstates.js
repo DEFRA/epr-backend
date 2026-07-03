@@ -1,4 +1,4 @@
-import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
+import { projectRowState } from '#waste-records/application/project-row-state.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /**
@@ -101,7 +101,7 @@ export const reconstructSubmissionRowStates = ({
         return []
       }
       return [
-        classifyWasteRecord({ ...record, data }, accreditation, overseasSites)
+        projectRowState({ ...record, data }, accreditation, overseasSites)
       ]
     })
     return {
