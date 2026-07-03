@@ -36,7 +36,8 @@ describe('syncFromSummaryLog', () => {
   beforeEach(() => {
     wasteRecordRepository = createInMemoryWasteRecordsRepository()()
     wasteBalanceService = {
-      updateWasteBalanceTransactions: vi.fn()
+      updateWasteBalanceTransactions: vi.fn(),
+      submitSummaryLog: vi.fn()
     }
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
@@ -1770,6 +1771,156 @@ describe('syncFromSummaryLog', () => {
         'reg-1'
       )
       expect(savedRecords).toHaveLength(2)
+    })
+  })
+
+  describe('registered-only summary-log submitted event (forward path)', () => {
+    const submittedEventsFlagOn = createInMemoryFeatureFlags({
+      registeredOnlySubmittedEvents: true
+    })
+
+    const regOnlyData = {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
+          ]
+        }
+      }
+    }
+
+    const syncWith = (extractor, featureFlags) =>
+      /** @type {any} */ (syncFromSummaryLog)({
+        extractor,
+        wasteRecordRepository,
+        wasteBalanceService,
+        organisationsRepository,
+        overseasSitesRepository,
+        rowStateRepository: createInMemoryRowStateRepository()(),
+        featureFlags
+      })
+
+    it('emits a zero-delta summary-log submitted event for a reg-only submission when the flag is on', async () => {
+      const fileId = 'file-flag-on'
+      const summaryLog = {
+        file: { id: fileId, uri: 's3://bucket/flag-on' },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: /** @type {any} */ (regOnlyData)
+      })
+
+      await syncWith(extractor, submittedEventsFlagOn)(summaryLog, TEST_USER)
+
+      expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
+        {
+          registrationId: 'reg-1',
+          accreditationId: null,
+          organisationId: 'org-1'
+        },
+        { summaryLogId: fileId, creditTotal: 0 },
+        { id: TEST_USER.id, email: TEST_USER.email }
+      )
+      expect(
+        wasteBalanceService.updateWasteBalanceTransactions
+      ).not.toHaveBeenCalled()
+    })
+
+    it('includes the user name in createdBy when the user has one', async () => {
+      const fileId = 'file-named-user'
+      const summaryLog = {
+        file: { id: fileId, uri: 's3://bucket/named-user' },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: /** @type {any} */ (regOnlyData)
+      })
+      const namedUser = { ...TEST_USER, name: 'Reg User' }
+
+      await syncWith(extractor, submittedEventsFlagOn)(summaryLog, namedUser)
+
+      expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
+        {
+          registrationId: 'reg-1',
+          accreditationId: null,
+          organisationId: 'org-1'
+        },
+        { summaryLogId: fileId, creditTotal: 0 },
+        { id: namedUser.id, name: 'Reg User', email: namedUser.email }
+      )
+    })
+
+    it('does not emit a summary-log submitted event when the dedicated flag is off', async () => {
+      const fileId = 'file-flag-off'
+      const summaryLog = {
+        file: { id: fileId, uri: 's3://bucket/flag-off' },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: /** @type {any} */ (regOnlyData)
+      })
+
+      await syncWith(
+        extractor,
+        createInMemoryFeatureFlags({ registeredOnlySubmittedEvents: false })
+      )(summaryLog, TEST_USER)
+
+      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
+    })
+
+    it('does not emit a reg-only event for an accredited submission', async () => {
+      const fileId = 'file-accredited'
+      const summaryLog = {
+        file: { id: fileId, uri: 's3://bucket/accredited' },
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      }
+      organisationsRepository.findAccreditationById = vi
+        .fn()
+        .mockResolvedValue({
+          id: 'acc-1',
+          validFrom: '2023-01-01',
+          validTo: '2030-12-31'
+        })
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: /** @type {any} */ ({
+          meta: { PROCESSING_TYPE: { value: 'EXPORTER' } },
+          data: {
+            RECEIVED_LOADS_FOR_EXPORT: {
+              location: { sheet: 'Sheet1', row: 1, column: 'A' },
+              headers: [
+                'ROW_ID',
+                'DATE_RECEIVED_FOR_REPROCESSING',
+                FIELD_GROSS_WEIGHT
+              ],
+              rows: [
+                {
+                  rowNumber: 2,
+                  values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+                }
+              ]
+            }
+          }
+        })
+      })
+
+      await syncWith(extractor, submittedEventsFlagOn)(summaryLog, TEST_USER)
+
+      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
     })
   })
 })

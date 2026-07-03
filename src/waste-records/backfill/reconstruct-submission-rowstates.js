@@ -8,20 +8,27 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /**
  * A submission's reconstructed row-state membership: the entries to upsert
- * against the waste record state collection for one historical submission.
+ * against the waste record state collection for one historical submission,
+ * alongside the provenance the backfill stamps onto its replayed submitted
+ * event — when it happened (`submittedAt`) and who submitted it (`submittedBy`,
+ * absent when the submitter could not be recovered).
  *
  * @typedef {Object} SubmissionRowStates
  * @property {string} summaryLogId
  * @property {ClassifiedRow[]} entries
+ * @property {string} submittedAt - ISO8601 timestamp
+ * @property {import('#waste-balances/repository/stream-schema.js').StreamUserSummary} [submittedBy]
  */
 
 /**
- * A summary log reduced to what drives stream order and membership.
+ * A summary log reduced to what drives stream order, membership, and the
+ * provenance of its replayed submitted event.
  *
  * @typedef {Object} OrderedSummaryLog
  * @property {string} id - Matches the `summaryLog.id` tag on waste-record versions
  * @property {string} status
  * @property {string} submittedAt - ISO8601 timestamp
+ * @property {import('#waste-balances/repository/stream-schema.js').StreamUserSummary} [submittedBy]
  */
 
 /**
@@ -79,7 +86,8 @@ export const reconstructSubmissionRowStates = ({
     .filter((log) => log.status === SUMMARY_LOG_STATUS.SUBMITTED)
     .sort(
       (a, b) =>
-        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime()
+        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime() ||
+        a.id.localeCompare(b.id)
     )
 
   const seenSummaryLogIds = new Set()
@@ -97,6 +105,11 @@ export const reconstructSubmissionRowStates = ({
         projectRowState({ ...record, data }, accreditation, overseasSites)
       ]
     })
-    return { summaryLogId: log.id, entries }
+    return {
+      summaryLogId: log.id,
+      entries,
+      submittedAt: log.submittedAt,
+      ...(log.submittedBy && { submittedBy: log.submittedBy })
+    }
   })
 }

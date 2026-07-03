@@ -65,4 +65,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isWasteRecordStatesEnabled()).toBe(false)
   })
+
+  it('returns true when registeredOnlySubmittedEvents flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      registeredOnlySubmittedEvents: true
+    })
+    expect(flags.isRegisteredOnlySubmittedEventsEnabled()).toBe(true)
+  })
+
+  it('returns false when registeredOnlySubmittedEvents flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      registeredOnlySubmittedEvents: false
+    })
+    expect(flags.isRegisteredOnlySubmittedEventsEnabled()).toBe(false)
+  })
+
+  it('returns false when registeredOnlySubmittedEvents flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isRegisteredOnlySubmittedEventsEnabled()).toBe(false)
+  })
 })
