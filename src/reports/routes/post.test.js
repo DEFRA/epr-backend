@@ -856,7 +856,7 @@ describe(`POST ${reportsPostPath}`, () => {
       )
     })
 
-    it('reports the existing draft, not the disabled flag, when a submission 2 already exists and the flag is off', async () => {
+    it('returns report_already_exists when a submission 2 already exists, even with the flag off', async () => {
       const { server, organisationId, registrationId, repo } = await setup()
 
       const { id } = await repo.createReport(

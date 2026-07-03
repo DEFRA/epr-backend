@@ -944,7 +944,7 @@ describe(`GET ${reportsGetPath}`, () => {
         return id
       }
 
-      it('does not collapse the period to a single ready_to_submit item', async () => {
+      it('emits the submitted original and a requires_resubmission slot carrying the ready-to-submit draft', async () => {
         const year = new Date().getUTCFullYear()
         const { server, organisationId, registrationId, repo } = await setup()
 
@@ -1195,7 +1195,7 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(january[0].periodStatus).toBe('submitted')
       })
 
-      it('does not emit a resubmission slot for an in-progress first submission', async () => {
+      it('emits a single in-progress item for a period with only a first-submission draft', async () => {
         const year = new Date().getUTCFullYear()
         const { server, organisationId, registrationId, repo } = await setup()
 
