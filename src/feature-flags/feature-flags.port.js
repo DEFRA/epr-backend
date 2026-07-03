@@ -4,6 +4,7 @@
  * @property {() => boolean} isCopyFormFilesToS3Enabled
  * @property {() => boolean} isFixDuplicateAccreditationLinksEnabled
  * @property {() => boolean} isWasteRecordStatesEnabled
+ * @property {() => boolean} isWasteRecordStatesBackfillEnabled
  * @property {() => boolean} isRegisteredOnlySubmittedEventsEnabled
  */
 
@@ -13,6 +14,7 @@
  * @property {boolean} [copyFormFilesToS3]
  * @property {boolean} [fixDuplicateAccreditationLinks]
  * @property {boolean} [wasteRecordStates]
+ * @property {boolean} [wasteRecordStatesBackfill]
  * @property {boolean} [registeredOnlySubmittedEvents]
  */
 

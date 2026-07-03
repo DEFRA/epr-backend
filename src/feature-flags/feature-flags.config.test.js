@@ -30,6 +30,15 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.wasteRecordStates')
   })
 
+  it('returns true when wasteRecordStatesBackfill flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isWasteRecordStatesBackfillEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.wasteRecordStatesBackfill'
+    )
+  })
+
   it('returns true when registeredOnlySubmittedEvents flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
