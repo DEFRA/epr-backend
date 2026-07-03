@@ -38,4 +38,13 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.wasteRecordStatesBackfill'
     )
   })
+
+  it('returns true when registeredOnlySubmittedEvents flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isRegisteredOnlySubmittedEventsEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.registeredOnlySubmittedEvents'
+    )
+  })
 })

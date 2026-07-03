@@ -47,6 +47,7 @@ import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
 import { runBackfillWasteRecordStates } from '#server/run-backfill-waste-record-states.js'
+import { runRegOnlySubmittedEventsBackfill } from '#server/run-reg-only-submitted-events-backfill.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -240,6 +241,7 @@ async function createServer(options = {}) {
     runOrganisationValidationSweep(server)
     runDuplicateAccreditationLinkMigration(server)
     runBackfillWasteRecordStates(server)
+    runRegOnlySubmittedEventsBackfill(server)
   })
 
   return server

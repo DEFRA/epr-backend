@@ -17,5 +17,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isWasteRecordStatesBackfillEnabled() {
     return flags.wasteRecordStatesBackfill ?? false
+  },
+  isRegisteredOnlySubmittedEventsEnabled() {
+    return flags.registeredOnlySubmittedEvents ?? false
   }
 })
