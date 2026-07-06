@@ -145,10 +145,14 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
     describe('EWC_CODE validation', () => {
       it.each([
-        ['03 03 08', 'from allowed list'],
-        ['01 03 04*', 'with asterisk suffix from allowed list']
-      ])('accepts valid EWC code %s (%s)', (code) => {
+        { code: '03 03 08', description: 'from allowed list' },
+        {
+          code: '01 03 04*',
+          description: 'with asterisk suffix from allowed list'
+        }
+      ])('accepts valid EWC code $code ($description)', ({ code }) => {
         const { error } = validationSchema.validate({ EWC_CODE: code })
+
         expect(error).toBeUndefined()
       })
 
@@ -235,16 +239,26 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
     describe('CUSTOMS_CODES validation (free text)', () => {
       it.each([
-        ['ABCD012345679', 'alphanumeric code'],
-        ['1234567890', 'numeric only code'],
-        ['ABCDEFGH', 'alpha only code'],
-        ['ABC-123 DEF', 'code with spaces and hyphens'],
-        ['HS:8501.10/20', 'code with common punctuation'],
-        ['\u2018code\u2019 \u2013 ref', 'code with smart quotes and dashes'],
-        ['\u00A3100 \u20AC200', 'code with pound and euro signs'],
-        ['A'.repeat(100), 'code at maximum length (100 chars)']
-      ])('accepts %s (%s)', (code) => {
+        { code: 'ABCD012345679', description: 'alphanumeric code' },
+        { code: '1234567890', description: 'numeric only code' },
+        { code: 'ABCDEFGH', description: 'alpha only code' },
+        { code: 'ABC-123 DEF', description: 'code with spaces and hyphens' },
+        { code: 'HS:8501.10/20', description: 'code with common punctuation' },
+        {
+          code: '\u2018code\u2019 \u2013 ref',
+          description: 'code with smart quotes and dashes'
+        },
+        {
+          code: '\u00A3100 \u20AC200',
+          description: 'code with pound and euro signs'
+        },
+        {
+          code: 'A'.repeat(100),
+          description: 'code at maximum length (100 chars)'
+        }
+      ])('accepts $description ($code)', ({ code }) => {
         const { error } = validationSchema.validate({ CUSTOMS_CODES: code })
+
         expect(error).toBeUndefined()
       })
 
@@ -309,16 +323,16 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(error).toBeUndefined()
       })
 
-      it.each([0, 1000, 'ABC'])(
-        'rejects value %s (out of range or non-numeric)',
-        (value) => {
-          const { error } = validationSchema.validate({ OSR_ID: value })
-          expect(error).toBeDefined()
-          expect(error?.details[0].message).toBe(
-            'must be a 3-digit ID (001-999)'
-          )
-        }
-      )
+      it.each([
+        { value: 0, reason: 'below minimum' },
+        { value: 1000, reason: 'above maximum' },
+        { value: 'ABC', reason: 'non-numeric' }
+      ])('rejects $reason value ($value)', ({ value }) => {
+        const { error } = validationSchema.validate({ OSR_ID: value })
+
+        expect(error).toBeDefined()
+        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
+      })
 
       it('rejects non-integer', () => {
         const { error } = validationSchema.validate({ OSR_ID: 100.5 })
