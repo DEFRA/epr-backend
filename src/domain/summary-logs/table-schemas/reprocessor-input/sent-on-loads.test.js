@@ -5,6 +5,7 @@ import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 import { expectValidationError } from '#common/validation/validation-test-helpers.js'
+import { assertIncluded } from '../shared/classify-test-helpers.js'
 
 describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
   const schema = SENT_ON_LOADS
@@ -184,12 +185,9 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
 
     describe('INCLUDED outcome', () => {
       it('returns INCLUDED with negative transaction amount (debit)', () => {
-        const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation
-        })
-        if (result.outcome !== ROW_OUTCOME.INCLUDED) {
-          throw new Error(`expected INCLUDED outcome, got ${result.outcome}`)
-        }
+        const result = assertIncluded(
+          schema.classifyForWasteBalance(completeRow, { accreditation })
+        )
 
         expect(result.reasons).toEqual([])
         expect(result.transactionAmount).toBe(-25.5)
@@ -200,10 +198,9 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
           ...completeRow,
           TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 25.555
         }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
-        if (result.outcome !== ROW_OUTCOME.INCLUDED) {
-          throw new Error(`expected INCLUDED outcome, got ${result.outcome}`)
-        }
+        const result = assertIncluded(
+          schema.classifyForWasteBalance(row, { accreditation })
+        )
 
         expect(result.transactionAmount).toBe(-25.56)
       })
