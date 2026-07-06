@@ -2,7 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { buildStreamEvent } from '../ledger-test-data.js'
 
-export const testFindAllByPartitionBehaviour = (it) => {
+export const testFindAllInLedgerBehaviour = (it) => {
   describe('findAllInLedger', () => {
     let repository
 
@@ -16,7 +16,7 @@ export const testFindAllByPartitionBehaviour = (it) => {
       }
     )
 
-    it('returns an empty array when no events exist for the partition', async () => {
+    it('returns an empty array when no events exist for the ledger', async () => {
       const result = await repository.findAllInLedger('reg-empty', 'acc-empty')
       expect(result).toEqual([])
     })
@@ -55,7 +55,7 @@ export const testFindAllByPartitionBehaviour = (it) => {
       expect(result[2].number).toBe(3)
     })
 
-    it('does not return events from a different partition', async () => {
+    it('does not return events from a different ledgerId', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-a',

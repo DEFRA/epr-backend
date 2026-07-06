@@ -20,12 +20,12 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  */
 
 /**
- * Partition a row state belongs to. Mirrors the event stream partition
+ * Ledger identity a row state belongs to. Mirrors the event ledger identity
  * `(registrationId, accreditationId)` with `organisationId` denormalised on,
  * exactly as stream events carry it. `accreditationId` is null for
  * registered-only streams.
  *
- * @typedef {Object} RowStatePartition
+ * @typedef {Object} WasteBalanceLedgerId
  * @property {string} organisationId
  * @property {string} registrationId
  * @property {string | null} accreditationId
@@ -33,7 +33,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * A single row from the 1.1 per-row classification list — the unit
- * `upsertRowStates` compares and stores. Carries no partition fields (supplied
+ * `upsertRowStates` compares and stores. Carries no ledger-identity fields (supplied
  * separately) and no membership (assigned at write).
  *
  * @typedef {Object} RowStateEntry
@@ -44,7 +44,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  */
 
 /**
- * Shape accepted by the row-states schema for a stored document — a partition,
+ * Shape accepted by the row-states schema for a stored document — a ledger identity,
  * a row entry's content + classification, and the membership of submissions
  * that committed this exact state.
  *

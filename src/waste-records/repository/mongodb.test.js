@@ -10,7 +10,7 @@ import {
   SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
 } from './mongodb.js'
 import { testRowStateRepositoryContract } from './port.contract.js'
-import { buildRowStateEntry, DEFAULT_PARTITION } from './test-data.js'
+import { buildRowStateEntry, DEFAULT_LEDGER_ID } from './test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -111,7 +111,7 @@ describe('waste record states repository - mongodb implementation', () => {
     testRowStateRepositoryContract(it)
   })
 
-  describe('concurrent same-partition writes', () => {
+  describe('concurrent same-ledger writes', () => {
     const CONCURRENT_WRITERS = 20
 
     it('collapses concurrent identical submissions into a single document with all memberships accreted', async (/** @type {*} */ {
@@ -126,7 +126,7 @@ describe('waste record states repository - mongodb implementation', () => {
 
       await Promise.all(
         summaryLogIds.map((summaryLogId) =>
-          repository.upsertRowStates(DEFAULT_PARTITION, [entry], summaryLogId)
+          repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], summaryLogId)
         )
       )
 
@@ -150,7 +150,7 @@ describe('waste record states repository - mongodb implementation', () => {
 
       await Promise.all(
         Array.from({ length: CONCURRENT_WRITERS }, () =>
-          repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-1')
+          repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-1')
         )
       )
 
@@ -182,7 +182,7 @@ describe('waste record states repository - mongodb implementation', () => {
 
       await expect(
         repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [buildRowStateEntry()],
           'log-1'
         )

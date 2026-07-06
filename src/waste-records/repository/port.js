@@ -27,12 +27,12 @@
  */
 
 /**
- * @typedef {import('./schema.js').RowStatePartition} RowStatePartition
+ * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
 /**
  * @typedef {Object} RowStateRepository
- * @property {(partition: RowStatePartition, rowStates: RowStateEntry[], summaryLogId: string) => Promise<RowState[]>} upsertRowStates
+ * @property {(ledgerId: WasteBalanceLedgerId, rowStates: RowStateEntry[], summaryLogId: string) => Promise<RowState[]>} upsertRowStates
  *   For each row, find the existing state document for that row identity whose
  *   coerced `data` and `classification` equal the incoming entry. If one
  *   exists, `$addToSet` `summaryLogId` onto its membership; otherwise insert a

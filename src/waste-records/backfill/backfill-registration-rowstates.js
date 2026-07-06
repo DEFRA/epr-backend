@@ -1,7 +1,7 @@
 import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstates.js'
 
 /**
- * @import { RowStatePartition } from '#waste-records/repository/schema.js'
+ * @import { WasteBalanceLedgerId } from '#waste-records/repository/schema.js'
  * @import { RowStateRepository } from '#waste-records/repository/port.js'
  * @import { WasteRecord } from '#domain/waste-records/model.js'
  * @import { OrderedSummaryLog } from './reconstruct-submission-rowstates.js'
@@ -27,7 +27,7 @@ import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstat
  * that shares its state is written.
  *
  * @param {Object} params
- * @param {RowStatePartition} params.partition
+ * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {WasteRecord[]} params.wasteRecords
  * @param {OrderedSummaryLog[]} params.summaryLogs
  * @param {Object} params.accreditation
@@ -36,7 +36,7 @@ import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstat
  * @returns {Promise<RegistrationBackfillSummary>}
  */
 export const backfillRegistrationRowStates = async ({
-  partition,
+  ledgerId,
   wasteRecords,
   summaryLogs,
   accreditation,
@@ -52,7 +52,7 @@ export const backfillRegistrationRowStates = async ({
 
   let rowStateWriteCount = 0
   for (const { summaryLogId, entries } of submissions) {
-    await rowStateRepository.upsertRowStates(partition, entries, summaryLogId)
+    await rowStateRepository.upsertRowStates(ledgerId, entries, summaryLogId)
     rowStateWriteCount += entries.length
   }
 

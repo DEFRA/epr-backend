@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildRowStateEntry, DEFAULT_PARTITION } from '../test-data.js'
+import { buildRowStateEntry, DEFAULT_LEDGER_ID } from '../test-data.js'
 
 export const testFindBySummaryLogIdBehaviour = (it) => {
   describe('findBySummaryLogId', () => {
@@ -16,7 +16,7 @@ export const testFindBySummaryLogIdBehaviour = (it) => {
 
     it('returns only documents whose membership contains the id', async () => {
       await repository.upsertRowStates(
-        DEFAULT_PARTITION,
+        DEFAULT_LEDGER_ID,
         [
           buildRowStateEntry({ rowId: 'row-1' }),
           buildRowStateEntry({ rowId: 'row-2' })
@@ -24,7 +24,7 @@ export const testFindBySummaryLogIdBehaviour = (it) => {
         'log-1'
       )
       await repository.upsertRowStates(
-        DEFAULT_PARTITION,
+        DEFAULT_LEDGER_ID,
         [buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } })],
         'log-2'
       )
@@ -37,7 +37,7 @@ export const testFindBySummaryLogIdBehaviour = (it) => {
 
     it('returns the full committed state of a submission', async () => {
       await repository.upsertRowStates(
-        DEFAULT_PARTITION,
+        DEFAULT_LEDGER_ID,
         [
           buildRowStateEntry({ rowId: 'row-1' }),
           buildRowStateEntry({ rowId: 'row-2' }),
@@ -57,9 +57,9 @@ export const testFindBySummaryLogIdBehaviour = (it) => {
     it('returns the full membership verbatim on each document', async () => {
       const entry = buildRowStateEntry()
 
-      await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-1')
-      await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-2')
-      await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-3')
+      await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-1')
+      await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-2')
+      await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-3')
 
       const [doc] = await repository.findBySummaryLogId('log-2')
       expect(doc.summaryLogIds).toEqual(['log-1', 'log-2', 'log-3'])

@@ -112,7 +112,7 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
       expect(result).toEqual([])
     })
 
-    it('does not return events from a different partition', async () => {
+    it('does not return events from a different ledger', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-a',

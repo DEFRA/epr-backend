@@ -285,7 +285,7 @@ const commitStateAndBalance = async ({
     featureFlags,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
     accreditation,
-    partition: {
+    ledgerId: {
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
       accreditationId: accreditationId ?? null

@@ -142,7 +142,7 @@ const backfillRegistrationStream = async ({
 
   const { submissionCount, rowStateWriteCount } =
     await backfillRegistrationRowStates({
-      partition: {
+      ledgerId: {
         organisationId: organisation.id,
         registrationId: registration.id,
         accreditationId: accreditationId ?? null

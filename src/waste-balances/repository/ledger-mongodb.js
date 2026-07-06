@@ -181,7 +181,7 @@ const performFindAllInLedger =
   }
 
 /**
- * @migration PAE-1382 — delete all events for a partition.
+ * @migration PAE-1382 — delete all events for a ledgerId.
  * @param {Collection} collection
  * @returns {(registrationId: string, accreditationId: string | null) => Promise<number>}
  */
@@ -197,7 +197,7 @@ const performDeleteInLedger =
 /**
  * Append a contiguous batch of events. Validates sequence: events must be
  * numbered sequentially, and the first event's number must be currentMax + 1
- * (or 1 if empty partition). A starting slot occupied by a competing writer
+ * (or 1 if empty ledger). A starting slot occupied by a competing writer
  * surfaces as a `LedgerSlotConflictError`, whether detected on the pre-check
  * or on the insert itself.
  *

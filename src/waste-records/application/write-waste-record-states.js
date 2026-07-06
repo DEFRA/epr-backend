@@ -9,7 +9,7 @@ import { projectRowState } from './project-row-state.js'
  * Persists the committed waste-record state of a summary-log submission — one
  * idempotent upsert per row, keyed by row identity, carrying the coerced data
  * and waste-balance classification. Runs for every submission regardless of
- * processing type or accreditation: the partition's `accreditationId` is null
+ * processing type or accreditation: the ledger's `accreditationId` is null
  * for registered-only and no-accreditation registrations, and rows whose schema
  * has no waste balance classify as EXCLUDED with no contribution. The write is
  * gated by the waste-record-states feature flag; with it off this is a no-op,
@@ -25,7 +25,7 @@ import { projectRowState } from './project-row-state.js'
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {{ id: string, validFrom?: string, validTo?: string } | null} params.accreditation
- * @param {import('#waste-records/repository/schema.js').RowStatePartition} params.partition
+ * @param {import('#waste-records/repository/schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {OverseasSitesContext} params.overseasSites
  * @param {string} params.summaryLogId
  * @returns {Promise<void>}
@@ -35,7 +35,7 @@ export const writeWasteRecordStates = async ({
   featureFlags,
   wasteRecords,
   accreditation,
-  partition,
+  ledgerId,
   overseasSites,
   summaryLogId
 }) => {
@@ -48,7 +48,7 @@ export const writeWasteRecordStates = async ({
   )
 
   await rowStateRepository.upsertRowStates(
-    partition,
+    ledgerId,
     classifiedRows,
     summaryLogId
   )

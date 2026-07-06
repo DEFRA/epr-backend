@@ -5,7 +5,7 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
 import { buildStreamEvent } from '../repository/ledger-test-data.js'
 import { currentWasteBalance } from './current-waste-balance.js'
 
-const partition = {
+const ledgerId = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1'
@@ -28,10 +28,10 @@ const prnCreatedEvent = (number, amount, closingBalance) =>
   })
 
 describe('currentWasteBalance', () => {
-  it('returns null for an empty partition', async () => {
+  it('returns null for an empty ledger', async () => {
     const repository = createInMemoryLedgerRepository()()
 
-    expect(await currentWasteBalance(repository, partition)).toBeNull()
+    expect(await currentWasteBalance(repository, ledgerId)).toBeNull()
   })
 
   it('resolves balance, head, and credit total from the ledger', async () => {
@@ -42,7 +42,7 @@ describe('currentWasteBalance', () => {
       prnCreatedEvent(2, 300, { amount: 1000, availableAmount: 700 })
     ])
 
-    const balance = await currentWasteBalance(repository, partition)
+    const balance = await currentWasteBalance(repository, ledgerId)
 
     expect(balance).toEqual({
       organisationId: 'org-1',
@@ -63,7 +63,7 @@ describe('currentWasteBalance', () => {
       submissionEvent(2, 2500)
     ])
 
-    const balance = await currentWasteBalance(repository, partition)
+    const balance = await currentWasteBalance(repository, ledgerId)
 
     expect(balance?.creditTotal).toBe(2500)
     expect(balance?.eventNumber).toBe(2)
@@ -77,12 +77,12 @@ describe('currentWasteBalance', () => {
       prnCreatedEvent(2, 300, { amount: 1000, availableAmount: 700 })
     ])
 
-    const balance = await currentWasteBalance(repository, partition)
+    const balance = await currentWasteBalance(repository, ledgerId)
 
     expect(balance?.creditTotal).toBe(1000)
   })
 
-  it('reports a zero credit total for a partition with no submission event', async () => {
+  it('reports a zero credit total for a ledgerId with no submission event', async () => {
     const repository = createInMemoryLedgerRepository()()
     await repository.appendEvents([
       buildStreamEvent({
@@ -95,7 +95,7 @@ describe('currentWasteBalance', () => {
       })
     ])
 
-    const balance = await currentWasteBalance(repository, partition)
+    const balance = await currentWasteBalance(repository, ledgerId)
 
     expect(balance?.creditTotal).toBe(0)
   })

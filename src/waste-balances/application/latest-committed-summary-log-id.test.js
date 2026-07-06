@@ -7,24 +7,24 @@ import {
 } from '../repository/ledger-test-data.js'
 import { latestCommittedSummaryLogId } from './latest-committed-summary-log-id.js'
 
-const PARTITION = { registrationId: 'reg-1', accreditationId: 'acc-1' }
+const LEDGER_ID = { registrationId: 'reg-1', accreditationId: 'acc-1' }
 
 describe('latestCommittedSummaryLogId', () => {
-  it('returns null when the partition has no events', async () => {
+  it('returns null when the ledger has no events', async () => {
     const ledgerRepository = createInMemoryLedgerRepository()()
 
     expect(
-      await latestCommittedSummaryLogId(ledgerRepository, PARTITION)
+      await latestCommittedSummaryLogId(ledgerRepository, LEDGER_ID)
     ).toBeNull()
   })
 
-  it('returns null when the partition has events but no submission', async () => {
+  it('returns null when the ledger has events but no submission', async () => {
     const ledgerRepository = createInMemoryLedgerRepository([
       buildPrnCreatedEvent({ number: 1 })
     ])()
 
     expect(
-      await latestCommittedSummaryLogId(ledgerRepository, PARTITION)
+      await latestCommittedSummaryLogId(ledgerRepository, LEDGER_ID)
     ).toBeNull()
   })
 
@@ -36,7 +36,7 @@ describe('latestCommittedSummaryLogId', () => {
       })
     ])()
 
-    expect(await latestCommittedSummaryLogId(ledgerRepository, PARTITION)).toBe(
+    expect(await latestCommittedSummaryLogId(ledgerRepository, LEDGER_ID)).toBe(
       'log-1'
     )
   })
@@ -54,7 +54,7 @@ describe('latestCommittedSummaryLogId', () => {
       buildPrnCreatedEvent({ number: 3 })
     ])()
 
-    expect(await latestCommittedSummaryLogId(ledgerRepository, PARTITION)).toBe(
+    expect(await latestCommittedSummaryLogId(ledgerRepository, LEDGER_ID)).toBe(
       'log-2'
     )
   })

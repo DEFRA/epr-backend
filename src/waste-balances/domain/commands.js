@@ -49,7 +49,7 @@ export const PRN_COMMAND_STATUS = Object.freeze({
 
 /**
  * Why a PRN command did not commit. `NO_LEDGER` is raised by the service shell
- * when the partition has no events to decide against; the sufficiency reasons
+ * when the ledger has no events to decide against; the sufficiency reasons
  * are raised by the deciders below.
  */
 export const PRN_COMMAND_REJECTION = Object.freeze({

@@ -24,7 +24,7 @@ export const buildRowState = (overrides = {}) => ({
 
 /**
  * Build a per-row entry as produced by the 1.1 classification list — the
- * shape `upsertRowStates` consumes (no partition fields, no membership).
+ * shape `upsertRowStates` consumes (no ledger-identity fields, no membership).
  * @param {object} [overrides]
  */
 export const buildRowStateEntry = (overrides = {}) => ({
@@ -39,7 +39,7 @@ export const buildRowStateEntry = (overrides = {}) => ({
   ...overrides
 })
 
-export const DEFAULT_PARTITION = Object.freeze({
+export const DEFAULT_LEDGER_ID = Object.freeze({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1'

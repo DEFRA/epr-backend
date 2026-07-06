@@ -3,7 +3,7 @@ import { describe, beforeEach, expect } from 'vitest'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
-import { buildRowStateEntry, DEFAULT_PARTITION } from '../test-data.js'
+import { buildRowStateEntry, DEFAULT_LEDGER_ID } from '../test-data.js'
 
 const excludedClassification = {
   outcome: ROW_OUTCOME.EXCLUDED,
@@ -21,23 +21,23 @@ export const testUpsertRowStatesBehaviour = (it) => {
 
     it('inserts a new state document for a previously unseen row', async () => {
       const [state] = await repository.upsertRowStates(
-        DEFAULT_PARTITION,
+        DEFAULT_LEDGER_ID,
         [buildRowStateEntry()],
         'log-1'
       )
 
       expect(state.id).toEqual(expect.any(String))
       expect(state.id).not.toBe('')
-      expect(state.organisationId).toBe(DEFAULT_PARTITION.organisationId)
-      expect(state.registrationId).toBe(DEFAULT_PARTITION.registrationId)
-      expect(state.accreditationId).toBe(DEFAULT_PARTITION.accreditationId)
+      expect(state.organisationId).toBe(DEFAULT_LEDGER_ID.organisationId)
+      expect(state.registrationId).toBe(DEFAULT_LEDGER_ID.registrationId)
+      expect(state.accreditationId).toBe(DEFAULT_LEDGER_ID.accreditationId)
       expect(state.rowId).toBe('row-1')
       expect(state.summaryLogIds).toEqual(['log-1'])
     })
 
     it('returns one state document per entry, in input order', async () => {
       const states = await repository.upsertRowStates(
-        DEFAULT_PARTITION,
+        DEFAULT_LEDGER_ID,
         [
           buildRowStateEntry({ rowId: 'row-a' }),
           buildRowStateEntry({ rowId: 'row-b' }),
@@ -68,12 +68,12 @@ export const testUpsertRowStatesBehaviour = (it) => {
         const entry = buildRowStateEntry()
 
         const [first] = await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [entry],
           'log-1'
         )
         const [second] = await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [entry],
           'log-2'
         )
@@ -92,12 +92,12 @@ export const testUpsertRowStatesBehaviour = (it) => {
 
       it('inserts a new document when only the row data changes', async () => {
         await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [buildRowStateEntry({ data: { tonnage: 10 } })],
           'log-1'
         )
         await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [buildRowStateEntry({ data: { tonnage: 20 } })],
           'log-2'
         )
@@ -117,12 +117,12 @@ export const testUpsertRowStatesBehaviour = (it) => {
 
       it('inserts a new document when only the classification changes', async () => {
         await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [buildRowStateEntry()],
           'log-1'
         )
         await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [buildRowStateEntry({ classification: excludedClassification })],
           'log-2'
         )
@@ -142,13 +142,13 @@ export const testUpsertRowStatesBehaviour = (it) => {
         const stateB = buildRowStateEntry({ data: { tonnage: 20 } })
 
         const [a1] = await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [stateA],
           'log-1'
         )
-        await repository.upsertRowStates(DEFAULT_PARTITION, [stateB], 'log-2')
+        await repository.upsertRowStates(DEFAULT_LEDGER_ID, [stateB], 'log-2')
         const [a3] = await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [stateA],
           'log-3'
         )
@@ -168,7 +168,7 @@ export const testUpsertRowStatesBehaviour = (it) => {
       it('keeps partitions isolated when deduping identical content', async () => {
         const entry = buildRowStateEntry()
 
-        await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-1')
+        await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-1')
         await repository.upsertRowStates(
           {
             organisationId: 'org-1',
@@ -186,9 +186,9 @@ export const testUpsertRowStatesBehaviour = (it) => {
       it('keeps waste-record types of the same rowId isolated when deduping', async () => {
         const entry = buildRowStateEntry()
 
-        await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-1')
+        await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-1')
         await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [
             buildRowStateEntry({ wasteRecordType: WASTE_RECORD_TYPE.PROCESSED })
           ],
@@ -203,9 +203,9 @@ export const testUpsertRowStatesBehaviour = (it) => {
       it('adds no document and no duplicate membership when a submission is replayed', async () => {
         const entry = buildRowStateEntry()
 
-        await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-1')
+        await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-1')
         const [state] = await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [entry],
           'log-1'
         )
@@ -226,10 +226,10 @@ export const testUpsertRowStatesBehaviour = (it) => {
       it('appends new submissions without dropping or reordering earlier ones', async () => {
         const entry = buildRowStateEntry()
 
-        await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-1')
-        await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-2')
+        await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-1')
+        await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-2')
         const [state] = await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [entry],
           'log-3'
         )
@@ -245,11 +245,11 @@ export const testUpsertRowStatesBehaviour = (it) => {
         })
 
         const [first] = await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [entry],
           'log-1'
         )
-        await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-2')
+        await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-2')
 
         const [stored] = await repository.findRowHistory(
           'org-1',
@@ -265,18 +265,18 @@ export const testUpsertRowStatesBehaviour = (it) => {
         const entry = buildRowStateEntry()
 
         const [first] = await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [entry],
           'log-1'
         )
-        await repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-2')
+        await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-2')
 
         expect(first.summaryLogIds).toEqual(['log-1'])
       })
 
       it('does not let a mutated caller copy bleed back into storage', async () => {
         const [returned] = await repository.upsertRowStates(
-          DEFAULT_PARTITION,
+          DEFAULT_LEDGER_ID,
           [buildRowStateEntry()],
           'log-1'
         )

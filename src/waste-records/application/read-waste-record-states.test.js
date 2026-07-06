@@ -6,7 +6,7 @@ import { createInMemoryRowStateRepository } from '#waste-records/repository/inme
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
   buildRowStateEntry,
-  DEFAULT_PARTITION
+  DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
 import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { wasteRecordStatesForRegistration } from './read-waste-record-states.js'
@@ -18,9 +18,9 @@ const submissionEvent = (number, summaryLogId) =>
   })
 
 const registration = {
-  organisationId: DEFAULT_PARTITION.organisationId,
-  registrationId: DEFAULT_PARTITION.registrationId,
-  accreditationId: DEFAULT_PARTITION.accreditationId
+  organisationId: DEFAULT_LEDGER_ID.organisationId,
+  registrationId: DEFAULT_LEDGER_ID.registrationId,
+  accreditationId: DEFAULT_LEDGER_ID.accreditationId
 }
 
 describe('wasteRecordStatesForRegistration', () => {
@@ -37,7 +37,7 @@ describe('wasteRecordStatesForRegistration', () => {
   it('returns the full committed snapshot at the head submission', async () => {
     const rowStateRepository = createInMemoryRowStateRepository()()
     await rowStateRepository.upsertRowStates(
-      DEFAULT_PARTITION,
+      DEFAULT_LEDGER_ID,
       [
         buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } }),
         buildRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })
@@ -45,7 +45,7 @@ describe('wasteRecordStatesForRegistration', () => {
       'log-1'
     )
     await rowStateRepository.upsertRowStates(
-      DEFAULT_PARTITION,
+      DEFAULT_LEDGER_ID,
       [
         buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } }),
         buildRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })
@@ -73,10 +73,10 @@ describe('wasteRecordStatesForRegistration', () => {
     })
   })
 
-  it('projects to domain content, dropping storage id, membership and partition', async () => {
+  it('projects to domain content, dropping storage id, membership and ledger identity', async () => {
     const rowStateRepository = createInMemoryRowStateRepository()()
     await rowStateRepository.upsertRowStates(
-      DEFAULT_PARTITION,
+      DEFAULT_LEDGER_ID,
       [buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
       'log-1'
     )

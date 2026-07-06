@@ -122,7 +122,7 @@ describe('backfillEstateRowStates', () => {
     })
   })
 
-  it('backfills a registered-only registration under a null-accreditation partition', async () => {
+  it('backfills a registered-only registration under a registered-only ledger', async () => {
     const registration = reprocessorRegistration({ id: 'reg-ro' })
     delete registration.accreditationId
     const organisation = buildOrganisation({

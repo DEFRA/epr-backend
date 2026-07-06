@@ -151,7 +151,7 @@ describe('createWasteBalanceService', () => {
       expect(all).toHaveLength(1)
     })
 
-    it('rejects with no-ledger when the partition has no events', async () => {
+    it('rejects with no-ledger when the ledger has no events', async () => {
       const result = await service.createPrn(
         ledgerId,
         { prnId: 'prn-1', amount: 100 },

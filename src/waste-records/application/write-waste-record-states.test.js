@@ -32,7 +32,7 @@ const buildReceivedRecord = ({ rowId, tonnage }) => ({
 
 const overseasSites = /** @type {any} */ (new Map())
 
-const nullPartition = {
+const registeredOnlyLedgerId = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: null
@@ -51,7 +51,7 @@ describe('writeWasteRecordStates', () => {
       featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: false }),
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 10 })],
       accreditation: null,
-      partition: nullPartition,
+      ledgerId: registeredOnlyLedgerId,
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -65,7 +65,7 @@ describe('writeWasteRecordStates', () => {
       featureFlags: undefined,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 10 })],
       accreditation: null,
-      partition: nullPartition,
+      ledgerId: registeredOnlyLedgerId,
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -80,14 +80,14 @@ describe('writeWasteRecordStates', () => {
         featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: false }),
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 10 })],
         accreditation: null,
-        partition: nullPartition,
+        ledgerId: registeredOnlyLedgerId,
         overseasSites,
         summaryLogId: 'log-A'
       })
     ).resolves.toBeUndefined()
   })
 
-  it('writes a row state per record under the null partition when the flag is on', async () => {
+  it('writes a row state per record under the registered-only ledger when the flag is on', async () => {
     await writeWasteRecordStates({
       rowStateRepository,
       featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: true }),
@@ -96,7 +96,7 @@ describe('writeWasteRecordStates', () => {
         buildRegisteredOnlyRecord({ rowId: 2, tonnage: 20 })
       ],
       accreditation: null,
-      partition: nullPartition,
+      ledgerId: registeredOnlyLedgerId,
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -123,7 +123,7 @@ describe('writeWasteRecordStates', () => {
       featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: true }),
       wasteRecords: [buildReceivedRecord({ rowId: 1, tonnage: 1.005 })],
       accreditation: null,
-      partition: nullPartition,
+      ledgerId: registeredOnlyLedgerId,
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -138,7 +138,7 @@ describe('writeWasteRecordStates', () => {
       featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: true }),
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 7.536 })],
       accreditation: null,
-      partition: nullPartition,
+      ledgerId: registeredOnlyLedgerId,
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -157,7 +157,7 @@ describe('writeWasteRecordStates', () => {
         buildReceivedRecord({ rowId: 3, tonnage: 1.005 })
       ],
       accreditation: null,
-      partition: nullPartition,
+      ledgerId: registeredOnlyLedgerId,
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -173,7 +173,7 @@ describe('writeWasteRecordStates', () => {
     expect(storedTonnages.reduce((sum, t) => sum + t, 0)).toBeCloseTo(3.03, 10)
   })
 
-  it('carries the supplied accreditation id onto the partition', async () => {
+  it('carries the supplied accreditation id onto the ledger', async () => {
     await writeWasteRecordStates({
       rowStateRepository,
       featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: true }),
@@ -183,7 +183,7 @@ describe('writeWasteRecordStates', () => {
         validFrom: '2023-01-01',
         validTo: '2030-12-31'
       },
-      partition: {
+      ledgerId: {
         organisationId: 'org-1',
         registrationId: 'reg-1',
         accreditationId: 'acc-1'
@@ -203,7 +203,7 @@ describe('writeWasteRecordStates', () => {
         featureFlags: createInMemoryFeatureFlags({ wasteRecordStates: true }),
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 10 })],
         accreditation: null,
-        partition: nullPartition,
+        ledgerId: registeredOnlyLedgerId,
         overseasSites,
         summaryLogId: 'log-A'
       })

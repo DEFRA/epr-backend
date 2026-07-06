@@ -7,7 +7,7 @@ import { buildStreamEvent } from '../ledger-test-data.js'
  * @property {import('../ledger-port.js').WasteBalanceLedgerRepositoryFactory} ledgerRepository
  */
 
-export const testDeleteByPartitionBehaviour = (it) => {
+export const testDeleteAllInLedgerBehaviour = (it) => {
   describe('deleteAllInLedger (@migration PAE-1382)', () => {
     /** @type {import('../ledger-port.js').WasteBalanceLedgerRepository} */
     let repository
@@ -18,7 +18,7 @@ export const testDeleteByPartitionBehaviour = (it) => {
       }
     )
 
-    it('deletes all events for the given partition and returns the count', async () => {
+    it('deletes all events for the given ledgerId and returns the count', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-del',
@@ -43,7 +43,7 @@ export const testDeleteByPartitionBehaviour = (it) => {
       expect(latest).toBeNull()
     })
 
-    it('returns 0 when the partition is empty', async () => {
+    it('returns 0 when the ledger is empty', async () => {
       const count = await repository.deleteAllInLedger('reg-empty', 'acc-empty')
 
       expect(count).toBe(0)
@@ -72,7 +72,7 @@ export const testDeleteByPartitionBehaviour = (it) => {
       expect(kept?.registrationId).toBe('reg-keep')
     })
 
-    it("deletes one accreditation's partition without touching the same registration's registered-only ledger", async () => {
+    it("deletes one accreditation's ledgerId without touching the same registration's registered-only ledger", async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-shared',

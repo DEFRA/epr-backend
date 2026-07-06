@@ -109,7 +109,7 @@ const loadSubmittedSummaryLogs = async ({
 
 /**
  * The summary-log ids of registered-only summary-log submitted events already
- * present in a null-accreditation partition, so a re-run never double-emits.
+ * present in a registered-only ledger, so a re-run never double-emits.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {string} registrationId

@@ -23,7 +23,7 @@ describe(`GET ${streamEventsGetPath}`, () => {
     ledgerRepository = server.app.ledgerRepository
   })
 
-  it('returns 200 with stream events for the partition', async () => {
+  it('returns 200 with stream events for the ledger', async () => {
     await ledgerRepository.appendEvents([
       buildStreamEvent({
         registrationId: 'reg-1',

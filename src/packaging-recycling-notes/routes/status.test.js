@@ -36,7 +36,7 @@ const SEED_BALANCE = { amount: 500, availableAmount: 500 }
 
 /**
  * An in-memory stream seeded with one summary-log submission, opening the
- * partition's ledger at the given balance so PRN commands resolve against it.
+ * ledgerId's ledger at the given balance so PRN commands resolve against it.
  * Passing `null` leaves the ledger absent, which the commands reject as
  * `NO_LEDGER`.
  *

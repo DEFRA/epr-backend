@@ -23,7 +23,7 @@ import { validateRowStateInsert } from './validation.js'
  */
 
 /**
- * @typedef {import('./schema.js').RowStatePartition} RowStatePartition
+ * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
 /**
@@ -48,16 +48,16 @@ const matchesCommittedState = (doc, candidate) =>
 
 /**
  * @param {RowState[]} storage
- * @param {RowStatePartition} partition
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {RowStateEntry} entry
  * @param {string} summaryLogId
  * @returns {RowState}
  */
-const upsertOne = (storage, partition, entry, summaryLogId) => {
+const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
   const candidate = validateRowStateInsert({
-    organisationId: partition.organisationId,
-    registrationId: partition.registrationId,
-    accreditationId: partition.accreditationId,
+    organisationId: ledgerId.organisationId,
+    registrationId: ledgerId.registrationId,
+    accreditationId: ledgerId.accreditationId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
     data: entry.data,
@@ -88,13 +88,13 @@ export const createInMemoryRowStateRepository = (initialRowStates = []) => {
 
   return () => ({
     /**
-     * @param {RowStatePartition} partition
+     * @param {WasteBalanceLedgerId} ledgerId
      * @param {RowStateEntry[]} rowStates
      * @param {string} summaryLogId
      */
-    upsertRowStates: async (partition, rowStates, summaryLogId) =>
+    upsertRowStates: async (ledgerId, rowStates, summaryLogId) =>
       rowStates.map((entry) =>
-        upsertOne(storage, partition, entry, summaryLogId)
+        upsertOne(storage, ledgerId, entry, summaryLogId)
       ),
 
     /** @param {string} summaryLogId */

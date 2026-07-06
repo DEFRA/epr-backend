@@ -2,7 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { buildStreamEvent } from '../ledger-test-data.js'
 
-export const testFindLatestByPartitionBehaviour = (it) => {
+export const testFindLatestInLedgerBehaviour = (it) => {
   describe('findLatestInLedger', () => {
     let repository
 
@@ -16,7 +16,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
       }
     )
 
-    it('returns null when no events exist for the partition', async () => {
+    it('returns null when no events exist for the ledger', async () => {
       const result = await repository.findLatestInLedger(
         'reg-empty',
         'acc-empty'
@@ -80,7 +80,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
       expect(result.closingBalance).toEqual({ amount: 30, availableAmount: 25 })
     })
 
-    it('isolates results by partition', async () => {
+    it('isolates results by ledgerId', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-x',

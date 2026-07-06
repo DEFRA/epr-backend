@@ -84,7 +84,7 @@ export const testAppendEventsBehaviour = (it) => {
       )
     })
 
-    it('throws LedgerSequenceError when the first event of an empty partition is not number 1', async () => {
+    it('throws LedgerSequenceError when the first event of an empty ledger is not number 1', async () => {
       const events = [
         buildStreamEvent({
           registrationId: 'reg-empty',
@@ -147,7 +147,7 @@ export const testAppendEventsBehaviour = (it) => {
       )
     })
 
-    it('LedgerSlotConflictError carries the partition identity and slot number', async () => {
+    it('LedgerSlotConflictError carries the ledger identity and slot number', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-slot-err',

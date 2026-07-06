@@ -23,12 +23,12 @@ import { validateStreamEventInsert } from './ledger-validation.js'
  * @param {string} registrationId
  * @param {string | null} accreditationId
  */
-const matchesPartition = (event, registrationId, accreditationId) =>
+const matchesLedger = (event, registrationId, accreditationId) =>
   event.registrationId === registrationId &&
   event.accreditationId === accreditationId
 
 /**
- * Migration PAE-1382: delete all events for a partition.
+ * Migration PAE-1382: delete all events for a ledgerId.
  *
  * @param {LedgerEvent[]} storage
  * @param {string} registrationId
@@ -38,7 +38,7 @@ const matchesPartition = (event, registrationId, accreditationId) =>
 const doDeleteInLedger = (storage, registrationId, accreditationId) => {
   const before = storage.length
   const remaining = storage.filter(
-    (event) => !matchesPartition(event, registrationId, accreditationId)
+    (event) => !matchesLedger(event, registrationId, accreditationId)
   )
   storage.length = 0
   storage.push(...remaining)
@@ -59,18 +59,18 @@ const doAppendEvents = (storage, events) => {
   }
 
   const first = events[0]
-  const partitionEvents = storage.filter((existing) =>
-    matchesPartition(existing, first.registrationId, first.accreditationId)
+  const ledgerEvents = storage.filter((existing) =>
+    matchesLedger(existing, first.registrationId, first.accreditationId)
   )
   const currentMax =
-    partitionEvents.length > 0
-      ? /** @type {LedgerEvent} */ (partitionEvents.at(-1)).number
+    ledgerEvents.length > 0
+      ? /** @type {LedgerEvent} */ (ledgerEvents.at(-1)).number
       : 0
 
   const expectedStart = currentMax + 1
 
   if (first.number !== expectedStart) {
-    if (partitionEvents.some((e) => e.number === first.number)) {
+    if (ledgerEvents.some((e) => e.number === first.number)) {
       throw new LedgerSlotConflictError(
         first.registrationId,
         first.accreditationId,
@@ -119,7 +119,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
      */
     findLatestInLedger: async (registrationId, accreditationId) => {
       const matches = storage.filter((event) =>
-        matchesPartition(event, registrationId, accreditationId)
+        matchesLedger(event, registrationId, accreditationId)
       )
 
       if (matches.length === 0) {
@@ -137,7 +137,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     findLatestInLedgerByKind: async (registrationId, accreditationId, kind) => {
       const matches = storage.filter(
         (event) =>
-          matchesPartition(event, registrationId, accreditationId) &&
+          matchesLedger(event, registrationId, accreditationId) &&
           event.kind === kind
       )
 
@@ -163,7 +163,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
       const matches = storage
         .filter(
           (event) =>
-            matchesPartition(event, registrationId, accreditationId) &&
+            matchesLedger(event, registrationId, accreditationId) &&
             /** @type {*} */ (event.payload).prnId === prnId &&
             event.number > afterNumber
         )
@@ -179,7 +179,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     findAllInLedger: async (registrationId, accreditationId) => {
       const matches = storage
         .filter((event) =>
-          matchesPartition(event, registrationId, accreditationId)
+          matchesLedger(event, registrationId, accreditationId)
         )
         .sort((a, b) => a.number - b.number)
 

@@ -8,7 +8,7 @@ import { latestCommittedSummaryLogId } from '#waste-balances/application/latest-
  * A registration's committed waste-record state projected to its domain
  * content: the row's identity, type, coerced data and classification. The
  * storage artifacts — the cumulative `summaryLogIds` membership and the
- * storage `id` — and the redundant partition stay behind the seam.
+ * storage `id` — and the redundant ledger identity stay behind the seam.
  *
  * @typedef {Object} WasteRecordState
  * @property {string} rowId
@@ -19,7 +19,7 @@ import { latestCommittedSummaryLogId } from '#waste-balances/application/latest-
 
 /**
  * Project a stored row state onto its domain content — the storage↔domain
- * seam where membership, storage id and partition are dropped.
+ * seam where membership, storage id and ledger identity are dropped.
  *
  * @param {RowState} rowState
  * @returns {WasteRecordState}

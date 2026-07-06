@@ -3,7 +3,7 @@ import { describe, beforeEach, expect } from 'vitest'
 import { LEDGER_EVENT_KIND } from '../ledger-schema.js'
 import { buildStreamEvent, buildPrnCreatedEvent } from '../ledger-test-data.js'
 
-export const testFindLatestByPartitionAndKindBehaviour = (it) => {
+export const testFindLatestInLedgerByKindBehaviour = (it) => {
   describe('findLatestInLedgerByKind', () => {
     let repository
 
@@ -71,7 +71,7 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
       expect(result.payload.summaryLogId).toBe('log-2')
     })
 
-    it('isolates results by partition', async () => {
+    it('isolates results by ledgerId', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-a',
@@ -147,7 +147,7 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
       })
     })
 
-    it('returns null when the partition is empty', async () => {
+    it('returns null when the ledger is empty', async () => {
       const result = await repository.findLatestInLedgerByKind(
         'reg-empty',
         'acc-empty',

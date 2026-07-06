@@ -15,7 +15,7 @@ import { wasteRecordStatesForRegistration } from './read-waste-record-states.js'
  * against the event — a zero-delta balance event — surfacing a spurious balance.
  */
 
-const nullPartition = {
+const registeredOnlyLedgerId = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: null
@@ -24,27 +24,27 @@ const createdBy = { id: 'system', name: 'backfill' }
 
 const seedMembership = async (rowStateRepository, summaryLogId) =>
   rowStateRepository.upsertRowStates(
-    nullPartition,
+    registeredOnlyLedgerId,
     [buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
     summaryLogId
   )
 
 const emitRegOnlyEvent = (ledgerRepository, summaryLogId) =>
   createWasteBalanceService(ledgerRepository).submitSummaryLog(
-    nullPartition,
+    registeredOnlyLedgerId,
     { summaryLogId, creditTotal: 0 },
     createdBy
   )
 
 describe('registered-only summary-log submitted event — read-through', () => {
-  it('returns nothing for the null partition before an event exists (the gap)', async () => {
+  it('returns nothing for the registered-only ledger before an event exists (the gap)', async () => {
     const rowStateRepository = createInMemoryRowStateRepository()()
     await seedMembership(rowStateRepository, 'log-1')
 
     const states = await wasteRecordStatesForRegistration({
       ledgerRepository: createInMemoryLedgerRepository()(),
       rowStateRepository,
-      ...nullPartition
+      ...registeredOnlyLedgerId
     })
 
     expect(states).toEqual([])
@@ -60,7 +60,7 @@ describe('registered-only summary-log submitted event — read-through', () => {
     const states = await wasteRecordStatesForRegistration({
       ledgerRepository,
       rowStateRepository,
-      ...nullPartition
+      ...registeredOnlyLedgerId
     })
 
     expect(states.map((s) => s.rowId)).toEqual(['row-1'])
@@ -69,15 +69,14 @@ describe('registered-only summary-log submitted event — read-through', () => {
 })
 
 describe('registered-only summary-log submitted event — balance neutrality', () => {
-  it('leaves the null partition with a zero balance', async () => {
+  it('leaves the registered-only ledger with a zero balance', async () => {
     const ledgerRepository = createInMemoryLedgerRepository()()
 
     await emitRegOnlyEvent(ledgerRepository, 'log-1')
 
-    const balance =
-      await createWasteBalanceService(ledgerRepository).currentBalance(
-        nullPartition
-      )
+    const balance = await createWasteBalanceService(
+      ledgerRepository
+    ).currentBalance(registeredOnlyLedgerId)
     expect(balance).toMatchObject({ amount: 0, availableAmount: 0 })
   })
 

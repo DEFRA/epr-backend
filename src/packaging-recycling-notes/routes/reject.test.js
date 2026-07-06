@@ -40,7 +40,7 @@ const authHeaders = {
 }
 
 /**
- * Seeds the partition's waste balance with a single opening summary-log event.
+ * Seeds the ledger's waste balance with a single opening summary-log event.
  * It carries no `prnId`, so the read-side fold leaves the seeded PRN untouched
  * while `findBalance` still resolves a balance for the status-only append.
  */

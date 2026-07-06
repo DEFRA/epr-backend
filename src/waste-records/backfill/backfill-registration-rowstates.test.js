@@ -7,7 +7,7 @@ import { createInMemoryRowStateRepository } from '#waste-records/repository/inme
 
 import { backfillRegistrationRowStates } from './backfill-registration-rowstates.js'
 
-const partition = {
+const ledgerId = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1'
@@ -48,7 +48,7 @@ describe('backfillRegistrationRowStates', () => {
     const rowStateRepository = createInMemoryRowStateRepository()()
 
     await backfillRegistrationRowStates({
-      partition,
+      ledgerId,
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -77,7 +77,7 @@ describe('backfillRegistrationRowStates', () => {
     const rowStateRepository = createInMemoryRowStateRepository()()
 
     await backfillRegistrationRowStates({
-      partition,
+      ledgerId,
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -107,7 +107,7 @@ describe('backfillRegistrationRowStates', () => {
     const rowStateRepository = createInMemoryRowStateRepository()()
 
     await backfillRegistrationRowStates({
-      partition,
+      ledgerId,
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -133,7 +133,7 @@ describe('backfillRegistrationRowStates', () => {
     const rowStateRepository = createInMemoryRowStateRepository()()
     const run = () =>
       backfillRegistrationRowStates({
-        partition,
+        ledgerId,
         wasteRecords,
         summaryLogs,
         accreditation,
@@ -165,7 +165,7 @@ describe('backfillRegistrationRowStates', () => {
     const rowStateRepository = createInMemoryRowStateRepository()()
 
     const summary = await backfillRegistrationRowStates({
-      partition,
+      ledgerId,
       wasteRecords,
       summaryLogs,
       accreditation,

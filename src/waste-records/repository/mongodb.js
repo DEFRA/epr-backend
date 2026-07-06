@@ -15,7 +15,7 @@ import { createHash } from 'node:crypto'
  */
 
 /**
- * @typedef {import('./schema.js').RowStatePartition} RowStatePartition
+ * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
 import { validateRowStateInsert, validateRowStateRead } from './validation.js'
@@ -26,7 +26,7 @@ export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
  * Ensures the row-states collection exists with the indexes required by the
  * waste record state design: a multikey index on `summaryLogIds` for the
  * committed-state membership query, a row-identity index for row history, and a
- * unique index on the waste-record-state identity (partition + content hash)
+ * unique index on the waste-record-state identity (ledger identity + content hash)
  * that makes the content-addressed dedup atomic under concurrent writers.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
@@ -147,16 +147,16 @@ const addMembership = async (collection, _id, summaryLogId) => {
 
 /**
  * @param {Collection} collection
- * @param {RowStatePartition} partition
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {RowStateEntry} entry
  * @param {string} summaryLogId
  * @returns {Promise<RowState>}
  */
-const upsertOne = async (collection, partition, entry, summaryLogId) => {
+const upsertOne = async (collection, ledgerId, entry, summaryLogId) => {
   const candidate = validateRowStateInsert({
-    organisationId: partition.organisationId,
-    registrationId: partition.registrationId,
-    accreditationId: partition.accreditationId,
+    organisationId: ledgerId.organisationId,
+    registrationId: ledgerId.registrationId,
+    accreditationId: ledgerId.accreditationId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
     data: entry.data,
@@ -192,13 +192,13 @@ const upsertOne = async (collection, partition, entry, summaryLogId) => {
 
 /**
  * @param {Collection} collection
- * @returns {(partition: RowStatePartition, rowStates: RowStateEntry[], summaryLogId: string) => Promise<RowState[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, rowStates: RowStateEntry[], summaryLogId: string) => Promise<RowState[]>}
  */
 const performUpsertRowStates =
-  (collection) => async (partition, rowStates, summaryLogId) => {
+  (collection) => async (ledgerId, rowStates, summaryLogId) => {
     const results = []
     for (const entry of rowStates) {
-      results.push(await upsertOne(collection, partition, entry, summaryLogId))
+      results.push(await upsertOne(collection, ledgerId, entry, summaryLogId))
     }
     return results
   }
