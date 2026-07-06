@@ -15,6 +15,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { randomUUID } from 'crypto'
 import { StatusCodes } from 'http-status-codes'
 import { describe, expect, it } from 'vitest'
+import { logger } from '#common/helpers/logging/logger.js'
 
 describe('GET /v1/me/organisations', () => {
   setupAuthContext()
@@ -559,7 +560,7 @@ describe('GET /v1/me/organisations', () => {
   describe('system log auditing', () => {
     it('should persist a system log when the endpoint is called', async () => {
       const systemLogsRepositoryFactory = createSystemLogsRepository()
-      const systemLogsRepository = systemLogsRepositoryFactory()
+      const systemLogsRepository = systemLogsRepositoryFactory(logger)
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
       const featureFlags = createInMemoryFeatureFlags()
@@ -588,7 +589,7 @@ describe('GET /v1/me/organisations', () => {
 
     it('should persist a token-validation-failed log when the token has no current organisation', async () => {
       const systemLogsRepositoryFactory = createSystemLogsRepository()
-      const systemLogsRepository = systemLogsRepositoryFactory()
+      const systemLogsRepository = systemLogsRepositoryFactory(logger)
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
       const featureFlags = createInMemoryFeatureFlags()
