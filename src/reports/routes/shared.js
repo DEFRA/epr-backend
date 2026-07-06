@@ -13,7 +13,7 @@ export const periodParamsSchema = Joi.object({
   year: Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR).required(),
   cadence: cadenceSchema,
   period: periodSchema,
-  submissionNumber: Joi.number().integer().valid(1).required()
+  submissionNumber: Joi.number().integer().min(1).required()
 })
 
 /**

@@ -1,12 +1,15 @@
 import Boom from '@hapi/boom'
 
-import { rowStateInsertSchema, rowStateReadSchema } from './schema.js'
+import {
+  summaryLogRowStateInsertSchema,
+  summaryLogRowStateReadSchema
+} from './schema.js'
 
 /**
- * @returns {import('./schema.js').RowStateInsert}
+ * @returns {import('./schema.js').SummaryLogRowStateInsert}
  */
-export const validateRowStateInsert = (data) => {
-  const { error, value } = rowStateInsertSchema.validate(data, {
+export const validateSummaryLogRowStateInsert = (data) => {
+  const { error, value } = summaryLogRowStateInsertSchema.validate(data, {
     abortEarly: false
   })
 
@@ -19,10 +22,10 @@ export const validateRowStateInsert = (data) => {
 }
 
 /**
- * @returns {import('./schema.js').RowState}
+ * @returns {import('./schema.js').SummaryLogRowState}
  */
-export const validateRowStateRead = (data) => {
-  const { error, value } = rowStateReadSchema.validate(data, {
+export const validateSummaryLogRowStateRead = (data) => {
+  const { error, value } = summaryLogRowStateReadSchema.validate(data, {
     abortEarly: false
   })
 

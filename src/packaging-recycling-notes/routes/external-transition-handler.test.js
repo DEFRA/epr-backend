@@ -8,12 +8,12 @@ import {
   PRN_STATUS,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { config } from '#root/config.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
   setupAuthContext,
@@ -24,7 +24,7 @@ import { mapTransitionError } from './external-transition-handler.js'
 
 /**
  * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
- * @import { StreamEvent, StreamEventKind } from '#waste-balances/repository/stream-schema.js'
+ * @import { LedgerEvent, LedgerEventKind } from '#waste-balances/repository/ledger-schema.js'
  */
 
 const mockCdpAuditing = vi.fn()
@@ -78,9 +78,9 @@ const buildPrn = (currentStatus) => ({
 })
 
 /**
- * @param {StreamEventKind} kind
+ * @param {LedgerEventKind} kind
  * @param {number} number
- * @returns {StreamEvent}
+ * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number) => ({
   id: `event-${number}`,
@@ -97,7 +97,7 @@ const buildEvent = (kind, number) => ({
 })
 
 let server
-let streamRepository
+let ledgerRepository
 
 /**
  * Starts a test server wired with real in-memory adapters: the PRN store, the
@@ -107,10 +107,10 @@ let streamRepository
  *
  * @param {object} params
  * @param {PrnStatus} params.currentStatus
- * @param {StreamEvent[]} params.events
+ * @param {LedgerEvent[]} params.events
  */
 const startServer = async ({ currentStatus, events }) => {
-  streamRepository = createInMemoryStreamRepository(events)()
+  ledgerRepository = createInMemoryLedgerRepository(events)()
   server = await createTestServer({
     config: {
       packagingRecyclingNotesExternalApi: {
@@ -123,7 +123,7 @@ const startServer = async ({ currentStatus, events }) => {
         createInMemoryPackagingRecyclingNotesRepository([
           buildPrn(currentStatus)
         ]),
-      streamRepository: () => streamRepository,
+      ledgerRepository: () => ledgerRepository,
       organisationsRepository: () => ({})
     },
     featureFlags: createInMemoryFeatureFlags()
@@ -145,7 +145,7 @@ describe('external PRN transition read-side fold', () => {
     // the transition decision on the true status, so the accept conflicts.
     await startServer({
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      events: [buildEvent(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, 1)]
+      events: [buildEvent(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, 1)]
     })
 
     const response = await server.inject({
@@ -161,7 +161,7 @@ describe('external PRN transition read-side fold', () => {
     await startServer({
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       events: [
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: REG_ID,
           accreditationId: ACC_ID,
           organisationId: ORG_ID,
@@ -178,8 +178,8 @@ describe('external PRN transition read-side fold', () => {
 
     expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-    const latest = await streamRepository.findLatestByPartition(REG_ID, ACC_ID)
-    expect(latest.kind).toBe(STREAM_EVENT_KIND.PRN_ACCEPTED)
+    const latest = await ledgerRepository.findLatestInLedger(REG_ID, ACC_ID)
+    expect(latest.kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
     expect(latest.createdBy).toEqual({
       id: externalApiClientId,
       name: 'RPD'

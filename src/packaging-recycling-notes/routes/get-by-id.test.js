@@ -16,8 +16,8 @@ import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { packagingRecyclingNoteByIdPath } from './get-by-id.js'
 
 const organisationId = 'org-123'
@@ -88,7 +88,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
     let server
     let packagingRecyclingNotesRepository
     let organisationsRepository
-    let streamRepository
+    let ledgerRepository
 
     beforeAll(async () => {
       packagingRecyclingNotesRepository =
@@ -106,7 +106,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           organisationsRepository: () => organisationsRepository,
-          streamRepository: () => streamRepository
+          ledgerRepository: () => ledgerRepository
         },
         featureFlags: createInMemoryFeatureFlags()
       })
@@ -115,7 +115,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
     })
 
     beforeEach(() => {
-      streamRepository = createInMemoryStreamRepository()()
+      ledgerRepository = createInMemoryLedgerRepository()()
     })
 
     afterEach(() => {
@@ -413,15 +413,15 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           stalePrn
         )
-        await streamRepository.appendEvents([
+        await ledgerRepository.appendEvents([
           tailEvent(
-            STREAM_EVENT_KIND.PRN_CREATED,
+            LEDGER_EVENT_KIND.PRN_CREATED,
             1,
             '2026-02-01T12:00:00.000Z'
           )
         ])
-        await streamRepository.appendEvents([
-          tailEvent(STREAM_EVENT_KIND.PRN_ISSUED, 2, '2026-02-02T12:00:00.000Z')
+        await ledgerRepository.appendEvents([
+          tailEvent(LEDGER_EVENT_KIND.PRN_ISSUED, 2, '2026-02-02T12:00:00.000Z')
         ])
 
         const response = await server.inject({
@@ -447,16 +447,16 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
-        await streamRepository.appendEvents([
+        await ledgerRepository.appendEvents([
           tailEvent(
-            STREAM_EVENT_KIND.PRN_CREATED,
+            LEDGER_EVENT_KIND.PRN_CREATED,
             1,
             '2026-02-01T12:00:00.000Z'
           )
         ])
-        await streamRepository.appendEvents([
+        await ledgerRepository.appendEvents([
           tailEvent(
-            STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+            LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
             2,
             '2026-02-02T12:00:00.000Z'
           )

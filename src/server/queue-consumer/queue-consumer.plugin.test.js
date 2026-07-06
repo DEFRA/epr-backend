@@ -96,7 +96,7 @@ describe('commandQueueConsumerPlugin', () => {
       }
     })
 
-    it('initialises when wasteRecordStatesRepository is not registered', async () => {
+    it('initialises when summaryLogRowStatesRepository is not registered', async () => {
       const hapiServer = Hapi.server()
 
       await hapiServer.register(

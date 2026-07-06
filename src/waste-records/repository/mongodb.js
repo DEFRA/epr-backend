@@ -3,30 +3,33 @@
 import { createHash } from 'node:crypto'
 
 /**
- * @typedef {import('./schema.js').RowState} RowState
+ * @typedef {import('./schema.js').SummaryLogRowState} SummaryLogRowState
  */
 
 /**
- * @typedef {import('./schema.js').RowStateInsert} RowStateInsert
+ * @typedef {import('./schema.js').SummaryLogRowStateInsert} SummaryLogRowStateInsert
  */
 
 /**
- * @typedef {import('./schema.js').RowStateEntry} RowStateEntry
+ * @typedef {import('./schema.js').SummaryLogRowStateEntry} SummaryLogRowStateEntry
  */
 
 /**
- * @typedef {import('./schema.js').RowStatePartition} RowStatePartition
+ * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
-import { validateRowStateInsert, validateRowStateRead } from './validation.js'
+import {
+  validateSummaryLogRowStateInsert,
+  validateSummaryLogRowStateRead
+} from './validation.js'
 
 export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
 
 /**
  * Ensures the row-states collection exists with the indexes required by the
- * waste record state design: a multikey index on `summaryLogIds` for the
+ * summary-log row state design: a multikey index on `summaryLogIds` for the
  * committed-state membership query, a row-identity index for row history, and a
- * unique index on the waste-record-state identity (partition + content hash)
+ * unique index on the summary-log-row-state identity (ledger identity + content hash)
  * that makes the content-addressed dedup atomic under concurrent writers.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
@@ -35,7 +38,7 @@ export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
  * @param {Db} db
  * @returns {Promise<Collection>}
  */
-export async function ensureRowStatesCollection(db) {
+export async function ensureSummaryLogRowStatesCollection(db) {
   const collection = db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
 
   await collection.createIndex(
@@ -68,9 +71,9 @@ export async function ensureRowStatesCollection(db) {
   return collection
 }
 
-const toRowState = (doc) => {
+const toSummaryLogRowState = (doc) => {
   const { _id, contentHash: _contentHash, ...rest } = doc
-  return validateRowStateRead({ id: _id.toString(), ...rest })
+  return validateSummaryLogRowStateRead({ id: _id.toString(), ...rest })
 }
 
 /**
@@ -99,10 +102,10 @@ const canonicalise = (value) => {
 }
 
 /**
- * @param {RowStateInsert} candidate
+ * @param {SummaryLogRowStateInsert} candidate
  * @returns {string}
  */
-const hashWasteRecordState = (candidate) =>
+const hashSummaryLogRowState = (candidate) =>
   createHash('sha256')
     .update(
       JSON.stringify(
@@ -116,7 +119,7 @@ const hashWasteRecordState = (candidate) =>
 
 /**
  * @param {Collection} collection
- * @param {RowStateInsert} candidate
+ * @param {SummaryLogRowStateInsert} candidate
  * @param {string} contentHash
  * @returns {Promise<import('mongodb').WithId<import('mongodb').Document> | null>}
  */
@@ -134,7 +137,7 @@ const findCommittedStateDoc = (collection, candidate, contentHash) =>
  * @param {Collection} collection
  * @param {import('mongodb').ObjectId} _id
  * @param {string} summaryLogId
- * @returns {Promise<RowState>}
+ * @returns {Promise<SummaryLogRowState>}
  */
 const addMembership = async (collection, _id, summaryLogId) => {
   await collection.updateOne(
@@ -142,28 +145,28 @@ const addMembership = async (collection, _id, summaryLogId) => {
     { $addToSet: { summaryLogIds: summaryLogId } }
   )
   const updated = await collection.findOne({ _id })
-  return toRowState(updated)
+  return toSummaryLogRowState(updated)
 }
 
 /**
  * @param {Collection} collection
- * @param {RowStatePartition} partition
- * @param {RowStateEntry} entry
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {SummaryLogRowStateEntry} entry
  * @param {string} summaryLogId
- * @returns {Promise<RowState>}
+ * @returns {Promise<SummaryLogRowState>}
  */
-const upsertOne = async (collection, partition, entry, summaryLogId) => {
-  const candidate = validateRowStateInsert({
-    organisationId: partition.organisationId,
-    registrationId: partition.registrationId,
-    accreditationId: partition.accreditationId,
+const upsertOne = async (collection, ledgerId, entry, summaryLogId) => {
+  const candidate = validateSummaryLogRowStateInsert({
+    organisationId: ledgerId.organisationId,
+    registrationId: ledgerId.registrationId,
+    accreditationId: ledgerId.accreditationId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
     data: entry.data,
     classification: entry.classification,
     summaryLogIds: [summaryLogId]
   })
-  const contentHash = hashWasteRecordState(candidate)
+  const contentHash = hashSummaryLogRowState(candidate)
 
   const existing = await findCommittedStateDoc(
     collection,
@@ -176,7 +179,11 @@ const upsertOne = async (collection, partition, entry, summaryLogId) => {
 
   try {
     const result = await collection.insertOne({ ...candidate, contentHash })
-    return toRowState({ _id: result.insertedId, ...candidate, contentHash })
+    return toSummaryLogRowState({
+      _id: result.insertedId,
+      ...candidate,
+      contentHash
+    })
   } catch (error) {
     const winner = await findCommittedStateDoc(
       collection,
@@ -192,32 +199,32 @@ const upsertOne = async (collection, partition, entry, summaryLogId) => {
 
 /**
  * @param {Collection} collection
- * @returns {(partition: RowStatePartition, rowStates: RowStateEntry[], summaryLogId: string) => Promise<RowState[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>}
  */
-const performUpsertRowStates =
-  (collection) => async (partition, rowStates, summaryLogId) => {
+const performUpsertSummaryLogRowStates =
+  (collection) => async (ledgerId, summaryLogRowStates, summaryLogId) => {
     const results = []
-    for (const entry of rowStates) {
-      results.push(await upsertOne(collection, partition, entry, summaryLogId))
+    for (const entry of summaryLogRowStates) {
+      results.push(await upsertOne(collection, ledgerId, entry, summaryLogId))
     }
     return results
   }
 
 /**
  * @param {Collection} collection
- * @returns {(summaryLogId: string) => Promise<RowState[]>}
+ * @returns {(summaryLogId: string) => Promise<SummaryLogRowState[]>}
  */
 const performFindBySummaryLogId = (collection) => async (summaryLogId) => {
   const docs = await collection
     .find({ summaryLogIds: summaryLogId })
     .sort({ _id: 1 })
     .toArray()
-  return docs.map(toRowState)
+  return docs.map(toSummaryLogRowState)
 }
 
 /**
  * @param {Collection} collection
- * @returns {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<RowState[]>}
+ * @returns {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>}
  */
 const performFindRowHistory =
   (collection) =>
@@ -226,20 +233,20 @@ const performFindRowHistory =
       .find({ organisationId, registrationId, rowId, wasteRecordType })
       .sort({ _id: 1 })
       .toArray()
-    return docs.map(toRowState)
+    return docs.map(toSummaryLogRowState)
   }
 
 /**
- * Creates a MongoDB-backed waste record state repository.
+ * Creates a MongoDB-backed summary-log row state repository.
  *
  * @param {Db} db
- * @returns {Promise<import('./port.js').RowStateRepositoryFactory>}
+ * @returns {Promise<import('./port.js').SummaryLogRowStateRepositoryFactory>}
  */
-export const createMongoRowStateRepository = async (db) => {
-  const collection = await ensureRowStatesCollection(db)
+export const createMongoSummaryLogRowStateRepository = async (db) => {
+  const collection = await ensureSummaryLogRowStatesCollection(db)
 
   return () => ({
-    upsertRowStates: performUpsertRowStates(collection),
+    upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
     findBySummaryLogId: performFindBySummaryLogId(collection),
     findRowHistory: performFindRowHistory(collection)
   })

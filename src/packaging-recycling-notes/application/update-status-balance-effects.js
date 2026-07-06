@@ -131,11 +131,11 @@ const COMMANDS_REQUIRING_OPEN_LEDGER = Object.freeze(
  * @param {Object} command
  * @param {PrnStatus} command.currentStatus
  * @param {PrnStatus} command.newStatus
- * @param {import('#waste-balances/repository/stream-schema.js').WasteBalanceLedgerId & { accreditationId: string }} command.ledgerId
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & { accreditationId: string }} command.ledgerId
  * @param {string} command.prnId
  * @param {number} command.tonnage
- * @param {import('#waste-balances/repository/stream-schema.js').StreamUserSummary} command.createdBy
- * @returns {Promise<Array<import('#waste-balances/repository/stream-port.js').StreamEvent>>}
+ * @param {import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary} command.createdBy
+ * @returns {Promise<Array<import('#waste-balances/repository/ledger-port.js').LedgerEvent>>}
  */
 export async function applyPrnBalanceCommand(
   service,

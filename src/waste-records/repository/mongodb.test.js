@@ -5,12 +5,12 @@ import { MongoClient } from 'mongodb'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 import {
-  createMongoRowStateRepository,
-  ensureRowStatesCollection,
+  createMongoSummaryLogRowStateRepository,
+  ensureSummaryLogRowStatesCollection,
   SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
 } from './mongodb.js'
-import { testRowStateRepositoryContract } from './port.contract.js'
-import { buildRowStateEntry, DEFAULT_PARTITION } from './test-data.js'
+import { testSummaryLogRowStateRepositoryContract } from './port.contract.js'
+import { buildSummaryLogRowStateEntry, DEFAULT_LEDGER_ID } from './test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -21,18 +21,24 @@ const it = mongoIt.extend({
     await client.close()
   },
 
-  rowStatesCollection: async (/** @type {*} */ { mongoClient }, use) => {
+  summaryLogRowStatesCollection: async (
+    /** @type {*} */ { mongoClient },
+    use
+  ) => {
     const database = mongoClient.db(DATABASE_NAME)
-    await ensureRowStatesCollection(database)
+    await ensureSummaryLogRowStatesCollection(database)
     await use(database.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME))
   },
 
-  rowStateRepository: async (/** @type {*} */ { mongoClient }, use) => {
+  summaryLogRowStateRepository: async (
+    /** @type {*} */ { mongoClient },
+    use
+  ) => {
     const database = mongoClient.db(DATABASE_NAME)
     await database
       .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
       .deleteMany({})
-    const factory = await createMongoRowStateRepository(database)
+    const factory = await createMongoSummaryLogRowStateRepository(database)
     await use(factory)
   }
 })
@@ -40,7 +46,7 @@ const it = mongoIt.extend({
 const indexKeyFor = (indexes, name) =>
   indexes.find((idx) => idx.name === name)?.key
 
-describe('ensureRowStatesCollection', () => {
+describe('ensureSummaryLogRowStatesCollection', () => {
   beforeEach(async (/** @type {*} */ { mongoClient }) => {
     await mongoClient
       .db(DATABASE_NAME)
@@ -49,18 +55,18 @@ describe('ensureRowStatesCollection', () => {
   })
 
   it('creates the membership multikey index', async (/** @type {*} */ {
-    rowStatesCollection
+    summaryLogRowStatesCollection
   }) => {
-    const indexes = await rowStatesCollection.indexes()
+    const indexes = await summaryLogRowStatesCollection.indexes()
     expect(indexKeyFor(indexes, 'summary_log_membership')).toEqual({
       summaryLogIds: 1
     })
   })
 
   it('creates the row-history index', async (/** @type {*} */ {
-    rowStatesCollection
+    summaryLogRowStatesCollection
   }) => {
-    const indexes = await rowStatesCollection.indexes()
+    const indexes = await summaryLogRowStatesCollection.indexes()
     expect(indexKeyFor(indexes, 'row_history')).toEqual({
       organisationId: 1,
       registrationId: 1,
@@ -69,10 +75,10 @@ describe('ensureRowStatesCollection', () => {
     })
   })
 
-  it('creates a unique waste-record-state identity index', async (/** @type {*} */ {
-    rowStatesCollection
+  it('creates a unique summary-log-row-state identity index', async (/** @type {*} */ {
+    summaryLogRowStatesCollection
   }) => {
-    const indexes = await rowStatesCollection.indexes()
+    const indexes = await summaryLogRowStatesCollection.indexes()
     expect(indexKeyFor(indexes, 'summary_log_row_state_identity')).toEqual({
       organisationId: 1,
       registrationId: 1,
@@ -91,34 +97,38 @@ describe('ensureRowStatesCollection', () => {
     mongoClient
   }) => {
     const database = mongoClient.db(DATABASE_NAME)
-    await ensureRowStatesCollection(database)
-    await expect(ensureRowStatesCollection(database)).resolves.toBeDefined()
+    await ensureSummaryLogRowStatesCollection(database)
+    await expect(
+      ensureSummaryLogRowStatesCollection(database)
+    ).resolves.toBeDefined()
   })
 })
 
-describe('waste record states repository - mongodb implementation', () => {
+describe('summary-log row states repository - mongodb implementation', () => {
   it('exposes the row-state port surface', async (/** @type {*} */ {
     mongoClient
   }) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const repository = (await createMongoRowStateRepository(database))()
-    expect(repository.upsertRowStates).toBeTypeOf('function')
+    const repository = (
+      await createMongoSummaryLogRowStateRepository(database)
+    )()
+    expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
     expect(repository.findBySummaryLogId).toBeTypeOf('function')
     expect(repository.findRowHistory).toBeTypeOf('function')
   })
 
   describe('row-state repository contract', () => {
-    testRowStateRepositoryContract(it)
+    testSummaryLogRowStateRepositoryContract(it)
   })
 
-  describe('concurrent same-partition writes', () => {
+  describe('concurrent same-ledger writes', () => {
     const CONCURRENT_WRITERS = 20
 
     it('collapses concurrent identical submissions into a single document with all memberships accreted', async (/** @type {*} */ {
-      rowStateRepository
+      summaryLogRowStateRepository
     }) => {
-      const repository = rowStateRepository()
-      const entry = buildRowStateEntry()
+      const repository = summaryLogRowStateRepository()
+      const entry = buildSummaryLogRowStateEntry()
       const summaryLogIds = Array.from(
         { length: CONCURRENT_WRITERS },
         (_, i) => `log-${i}`
@@ -126,7 +136,11 @@ describe('waste record states repository - mongodb implementation', () => {
 
       await Promise.all(
         summaryLogIds.map((summaryLogId) =>
-          repository.upsertRowStates(DEFAULT_PARTITION, [entry], summaryLogId)
+          repository.upsertSummaryLogRowStates(
+            DEFAULT_LEDGER_ID,
+            [entry],
+            summaryLogId
+          )
         )
       )
 
@@ -142,15 +156,19 @@ describe('waste record states repository - mongodb implementation', () => {
       )
     })
 
-    it('keeps a concurrently-redelivered submission to a single waste-record-state row', async (/** @type {*} */ {
-      rowStateRepository
+    it('keeps a concurrently-redelivered submission to a single summary-log-row-state row', async (/** @type {*} */ {
+      summaryLogRowStateRepository
     }) => {
-      const repository = rowStateRepository()
-      const entry = buildRowStateEntry()
+      const repository = summaryLogRowStateRepository()
+      const entry = buildSummaryLogRowStateEntry()
 
       await Promise.all(
         Array.from({ length: CONCURRENT_WRITERS }, () =>
-          repository.upsertRowStates(DEFAULT_PARTITION, [entry], 'log-1')
+          repository.upsertSummaryLogRowStates(
+            DEFAULT_LEDGER_ID,
+            [entry],
+            'log-1'
+          )
         )
       )
 
@@ -168,7 +186,7 @@ describe('waste record states repository - mongodb implementation', () => {
       expect(committed[0].rowId).toBe('row-1')
     })
 
-    it('rethrows a failed insert that is not a waste-record-state collision', async () => {
+    it('rethrows a failed insert that is not a summary-log-row-state collision', async () => {
       const upstream = new Error('connection lost')
       const stubCollection = {
         createIndex: () => Promise.resolve(),
@@ -177,13 +195,13 @@ describe('waste record states repository - mongodb implementation', () => {
       }
       const stubDb = { collection: () => stubCollection }
       const repository = (
-        await createMongoRowStateRepository(/** @type {*} */ (stubDb))
+        await createMongoSummaryLogRowStateRepository(/** @type {*} */ (stubDb))
       )()
 
       await expect(
-        repository.upsertRowStates(
-          DEFAULT_PARTITION,
-          [buildRowStateEntry()],
+        repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [buildSummaryLogRowStateEntry()],
           'log-1'
         )
       ).rejects.toBe(upstream)

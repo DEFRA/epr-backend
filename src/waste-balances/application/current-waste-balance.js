@@ -1,4 +1,4 @@
-import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
 
 /**
  * The current waste balance for a registration or accreditation, read from its
@@ -11,16 +11,16 @@ import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
  * The `organisationId` on the result is the caller's own — carried through from
  * the ledger id it asked for, not recovered from the latest event.
  *
- * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
- * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId - The
+ * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
+ * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId - The
  *   registration or accreditation whose ledger is read.
  * @returns {Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const currentWasteBalance = async (
-  streamRepository,
+  ledgerRepository,
   { organisationId, registrationId, accreditationId }
 ) => {
-  const latest = await streamRepository.findLatestByPartition(
+  const latest = await ledgerRepository.findLatestInLedger(
     registrationId,
     accreditationId
   )
@@ -29,14 +29,14 @@ export const currentWasteBalance = async (
     return null
   }
 
-  const latestSubmission = await streamRepository.findLatestByPartitionAndKind(
+  const latestSubmission = await ledgerRepository.findLatestInLedgerByKind(
     registrationId,
     accreditationId,
-    STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+    LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
   )
 
   const creditTotal = latestSubmission
-    ? /** @type {import('../repository/stream-schema.js').SummaryLogSubmittedPayload} */ (
+    ? /** @type {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload} */ (
         latestSubmission.payload
       ).creditTotal
     : 0

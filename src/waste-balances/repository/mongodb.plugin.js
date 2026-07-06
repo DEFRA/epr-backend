@@ -2,22 +2,22 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
- * Builds the waste balance service over the shared stream from
- * `server.app.streamRepository`, so `mongoStreamRepositoryPlugin` must register
+ * Builds the waste balance service over the shared ledger from
+ * `server.app.ledgerRepository`, so `mongoLedgerRepositoryPlugin` must register
  * before this plugin.
  */
 export const mongoWasteBalanceServicePlugin = {
   name: 'wasteBalanceService',
   version: '1.0.0',
-  dependencies: ['streamRepository'],
+  dependencies: ['ledgerRepository'],
 
   register: (server) => {
-    const streamRepository =
-      /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
-        server.app.streamRepository
+    const ledgerRepository =
+      /** @type {import('./ledger-port.js').WasteBalanceLedgerRepository} */ (
+        server.app.ledgerRepository
       )
     registerDependency(server, 'wasteBalanceService', () =>
-      createWasteBalanceService(streamRepository)
+      createWasteBalanceService(ledgerRepository)
     )
   }
 }
