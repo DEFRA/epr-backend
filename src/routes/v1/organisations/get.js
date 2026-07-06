@@ -1,7 +1,7 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 export const organisationsGetAllPath = '/v1/organisations'
 
@@ -23,10 +23,7 @@ export const organisationsGetAll = {
   method: 'GET',
   path: organisationsGetAllPath,
   options: {
-    auth: {
-      strategies: ['access-token', BASIC_AUTH],
-      scope: [SCOPES.adminRead, SCOPES.organisationRead]
-    },
+    auth: getAuthConfig([SCOPES.adminRead]),
     tags: ['api', 'admin'],
     validate: {
       query: querySchema
