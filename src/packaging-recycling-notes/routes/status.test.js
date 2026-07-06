@@ -21,9 +21,9 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
 
@@ -43,7 +43,7 @@ const SEED_BALANCE = { amount: 500, availableAmount: 500 }
  * @param {{ amount: number, availableAmount: number } | null} [closingBalance]
  */
 const seedStream = (closingBalance = SEED_BALANCE) =>
-  createInMemoryStreamRepository(
+  createInMemoryLedgerRepository(
     closingBalance
       ? [
           buildStreamEvent({
@@ -107,7 +107,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
   describe('writing a status transition', () => {
     let server
     let packagingRecyclingNotesRepository
-    let streamRepository
+    let ledgerRepository
     let organisationsRepository
     const mockPrn = createMockPrn()
 
@@ -123,7 +123,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
-          streamRepository: () => streamRepository,
+          ledgerRepository: () => ledgerRepository,
           organisationsRepository: () => organisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags()
@@ -133,7 +133,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     beforeEach(() => {
-      streamRepository = seedStream()
+      ledgerRepository = seedStream()
       packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
           info: vi.fn(),
@@ -536,11 +536,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        const events = await streamRepository.findAllByPartition(
+        const events = await ledgerRepository.findAllInLedger(
           registrationId,
           accreditationId
         )
-        expect(events.at(-1)?.kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+        expect(events.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
         expect(events.at(-1)?.createdBy).toEqual(
           expect.objectContaining({ id: userId, name: userName })
         )
@@ -564,7 +564,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        const events = await streamRepository.findAllByPartition(
+        const events = await ledgerRepository.findAllInLedger(
           registrationId,
           accreditationId
         )
@@ -796,7 +796,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       it('returns 400 when the accreditation has no waste balance ledger', async () => {
-        streamRepository = seedStream(null)
+        ledgerRepository = seedStream(null)
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
@@ -869,12 +869,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        const events = await streamRepository.findAllByPartition(
+        const events = await ledgerRepository.findAllInLedger(
           registrationId,
           accreditationId
         )
         expect(events).toHaveLength(1)
-        expect(events[0]?.kind).toBe(STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
+        expect(events[0]?.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       })
     })
   })

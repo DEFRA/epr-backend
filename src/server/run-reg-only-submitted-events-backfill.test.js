@@ -55,7 +55,7 @@ describe('runRegOnlySubmittedEventsBackfill', () => {
         summaryLogsRepository: { name: 'summaryLogs' },
         overseasSitesRepository: { name: 'overseasSites' },
         systemLogsRepository: { name: 'systemLogs' },
-        streamRepository: { name: 'stream' },
+        ledgerRepository: { name: 'stream' },
         wasteBalanceService: { name: 'wasteBalanceService' }
       }
     }
@@ -92,7 +92,7 @@ describe('runRegOnlySubmittedEventsBackfill', () => {
       summaryLogsRepository: mockServer.app.summaryLogsRepository,
       overseasSitesRepository: mockServer.app.overseasSitesRepository,
       systemLogsRepository: mockServer.app.systemLogsRepository,
-      streamRepository: mockServer.app.streamRepository,
+      ledgerRepository: mockServer.app.ledgerRepository,
       wasteBalanceService: mockServer.app.wasteBalanceService,
       writeSubmittedEvents: false
     })

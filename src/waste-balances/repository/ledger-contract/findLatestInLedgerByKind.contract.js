@@ -1,19 +1,19 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { STREAM_EVENT_KIND } from '../stream-schema.js'
-import { buildStreamEvent, buildPrnCreatedEvent } from '../stream-test-data.js'
+import { LEDGER_EVENT_KIND } from '../ledger-schema.js'
+import { buildStreamEvent, buildPrnCreatedEvent } from '../ledger-test-data.js'
 
 export const testFindLatestByPartitionAndKindBehaviour = (it) => {
-  describe('findLatestByPartitionAndKind', () => {
+  describe('findLatestInLedgerByKind', () => {
     let repository
 
     beforeEach(
       async (
-        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
-          streamRepository
+        /** @type {{ ledgerRepository: import('../ledger-port.js').WasteBalanceLedgerRepositoryFactory }} */ {
+          ledgerRepository
         }
       ) => {
-        repository = await streamRepository()
+        repository = await ledgerRepository()
       }
     )
 
@@ -26,10 +26,10 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findLatestByPartitionAndKind(
+      const result = await repository.findLatestInLedgerByKind(
         'reg-kind',
         'acc-kind',
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
       expect(result).toBeNull()
@@ -61,10 +61,10 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findLatestByPartitionAndKind(
+      const result = await repository.findLatestInLedgerByKind(
         'reg-filter',
         'acc-filter',
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
       expect(result.number).toBe(3)
@@ -89,15 +89,15 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
         })
       ])
 
-      const a = await repository.findLatestByPartitionAndKind(
+      const a = await repository.findLatestInLedgerByKind(
         'reg-a',
         'acc-a',
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
-      const b = await repository.findLatestByPartitionAndKind(
+      const b = await repository.findLatestInLedgerByKind(
         'reg-b',
         'acc-b',
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
       expect(a.accreditationId).toBe('acc-a')
@@ -106,7 +106,7 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
       expect(b.payload.summaryLogId).toBe('log-b')
     })
 
-    it('treats null and non-null accreditationId as separate streams', async () => {
+    it('treats null and non-null accreditationId as separate ledgers', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-null',
@@ -126,15 +126,15 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
         })
       ])
 
-      const nullResult = await repository.findLatestByPartitionAndKind(
+      const nullResult = await repository.findLatestInLedgerByKind(
         'reg-null',
         null,
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
-      const nonNullResult = await repository.findLatestByPartitionAndKind(
+      const nonNullResult = await repository.findLatestInLedgerByKind(
         'reg-null',
         'acc-present',
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
       expect(nullResult.closingBalance).toEqual({
@@ -148,10 +148,10 @@ export const testFindLatestByPartitionAndKindBehaviour = (it) => {
     })
 
     it('returns null when the partition is empty', async () => {
-      const result = await repository.findLatestByPartitionAndKind(
+      const result = await repository.findLatestInLedgerByKind(
         'reg-empty',
         'acc-empty',
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
       expect(result).toBeNull()

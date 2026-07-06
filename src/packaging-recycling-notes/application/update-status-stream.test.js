@@ -6,9 +6,9 @@ import {
   SuspendedAccreditationError
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -92,14 +92,14 @@ const buildStreamEvent = (kind, number = APPENDED_WATERMARK) => ({
  * APPENDED_WATERMARK.
  */
 const buildSeededStreamRepository = () =>
-  createInMemoryStreamRepository([
+  createInMemoryLedgerRepository([
     {
       id: 'seed-1',
       registrationId: REG_ID,
       accreditationId: ACC_ID,
       organisationId: ORG_ID,
       number: SEED_NUMBER,
-      kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+      kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
       payload: { summaryLogId: 'seed', creditTotal: 1000 },
       openingBalance: { amount: 0, availableAmount: 0 },
       closingBalance: { amount: 1000, availableAmount: 1000 },
@@ -118,10 +118,10 @@ const buildOrganisationsRepository = (accreditation = {}) => ({
 const buildLedgerRepositories = (storedPrn, events = []) => {
   const packagingRecyclingNotesRepository =
     createInMemoryPackagingRecyclingNotesRepository([storedPrn])(buildLogger())
-  const streamRepository = createInMemoryStreamRepository(events)()
+  const ledgerRepository = createInMemoryLedgerRepository(events)()
   return {
     packagingRecyclingNotesRepository,
-    streamRepository
+    ledgerRepository
   }
 }
 
@@ -150,11 +150,11 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       createInMemoryPackagingRecyclingNotesRepository([storedPrn])(
         buildLogger()
       )
-    const streamRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededStreamRepository()
 
     await callUpdate({
       prnRepository: packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository: buildOrganisationsRepository(),
       providedPrn: storedPrn,
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
@@ -172,12 +172,12 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockImplementation(async ({ projection }) => projection)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const streamRepository = buildSeededStreamRepository()
-    const appendEvents = vi.spyOn(streamRepository, 'appendEvents')
+    const ledgerRepository = buildSeededStreamRepository()
+    const appendEvents = vi.spyOn(ledgerRepository, 'appendEvents')
 
     await callUpdate({
       prnRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository: buildOrganisationsRepository(),
       providedPrn: buildPrn({
         status: {
@@ -204,13 +204,13 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
   it('rejects issuance on a suspended accreditation before appending any event', async () => {
     const persistProjection = vi.fn()
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const streamRepository = buildSeededStreamRepository()
-    const appendEvents = vi.spyOn(streamRepository, 'appendEvents')
+    const ledgerRepository = buildSeededStreamRepository()
+    const appendEvents = vi.spyOn(ledgerRepository, 'appendEvents')
 
     await expect(
       callUpdate({
         prnRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository: buildOrganisationsRepository({
           status: 'suspended'
         }),
@@ -234,12 +234,12 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockImplementation(async ({ projection }) => projection)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const streamRepository = buildSeededStreamRepository()
-    const appendEvents = vi.spyOn(streamRepository, 'appendEvents')
+    const ledgerRepository = buildSeededStreamRepository()
+    const appendEvents = vi.spyOn(ledgerRepository, 'appendEvents')
 
     await callUpdate({
       prnRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository: buildOrganisationsRepository(),
       providedPrn: buildPrn({
         status: {
@@ -269,12 +269,12 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockRejectedValue(new Error('doc write failed'))
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const streamRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededStreamRepository()
 
     await expect(
       callUpdate({
         prnRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository: buildOrganisationsRepository(),
         providedPrn: buildPrn({
           status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
@@ -284,9 +284,9 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
     ).rejects.toThrow('doc write failed')
 
-    const all = await streamRepository.findAllByPartition(REG_ID, ACC_ID)
+    const all = await ledgerRepository.findAllInLedger(REG_ID, ACC_ID)
     expect(all).toHaveLength(2)
-    expect(all.at(-1)?.kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+    expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
   })
 
   it('retries issuance on a PrnNumberConflictError and persists on the second attempt', async () => {
@@ -299,11 +299,11 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
       .mockImplementation(async ({ projection }) => projection)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const streamRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededStreamRepository()
 
     await callUpdate({
       prnRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository: buildOrganisationsRepository(),
       providedPrn: buildPrn({
         status: {
@@ -325,12 +325,12 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockRejectedValue(new PrnNumberConflictError('ER2600001'))
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const streamRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededStreamRepository()
 
     await expect(
       callUpdate({
         prnRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository: buildOrganisationsRepository(),
         providedPrn: buildPrn({
           status: {
@@ -347,12 +347,12 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
   it('throws Boom.badImplementation when persistProjection returns null on issuance', async () => {
     const persistProjection = vi.fn().mockResolvedValue(null)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const streamRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededStreamRepository()
 
     await expect(
       callUpdate({
         prnRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository: buildOrganisationsRepository(),
         providedPrn: buildPrn({
           status: {
@@ -369,12 +369,12 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
   it('throws Boom.badImplementation when persistProjection returns null on a non-issuance ledger write', async () => {
     const persistProjection = vi.fn().mockResolvedValue(null)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const streamRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededStreamRepository()
 
     await expect(
       callUpdate({
         prnRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository: buildOrganisationsRepository(),
         providedPrn: buildPrn({
           status: {
@@ -393,12 +393,12 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockRejectedValue(new Error('doc write failed'))
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const streamRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededStreamRepository()
 
     await expect(
       callUpdate({
         prnRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository: buildOrganisationsRepository(),
         providedPrn: buildPrn({
           status: {
@@ -411,9 +411,9 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
     ).rejects.toThrow('doc write failed')
 
-    const all = await streamRepository.findAllByPartition(REG_ID, ACC_ID)
+    const all = await ledgerRepository.findAllInLedger(REG_ID, ACC_ID)
     expect(all).toHaveLength(2)
-    expect(all.at(-1)?.kind).toBe(STREAM_EVENT_KIND.PRN_ISSUED)
+    expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
   })
 })
 
@@ -430,22 +430,22 @@ describe('updatePrnStatus composes the read fold with the real CAS-enforcing rep
         history: []
       }
     })
-    const { packagingRecyclingNotesRepository, streamRepository } =
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildLedgerRepositories(storedPrn, [
-        buildStreamEvent(STREAM_EVENT_KIND.PRN_CREATED, 1),
-        buildStreamEvent(STREAM_EVENT_KIND.PRN_ISSUED, 2)
+        buildStreamEvent(LEDGER_EVENT_KIND.PRN_CREATED, 1),
+        buildStreamEvent(LEDGER_EVENT_KIND.PRN_ISSUED, 2)
       ])
 
     const projected = await getProjectedPrnByNumber({
       packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       prnNumber: PRN_NUMBER
     })
     expect(projected?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
 
     const accepted = await callUpdate({
       prnRepository: packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository: buildOrganisationsRepository(),
       providedPrn: projected,
       newStatus: PRN_STATUS.ACCEPTED,

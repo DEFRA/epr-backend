@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -25,11 +25,11 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
   const registrationId2 = 'reg-2'
 
   /**
-   * Build an in-memory event stream seeded with the given closing balances, so
+   * Build an in-memory event ledger seeded with the given closing balances, so
    * the route's service folds them into the balances it returns.
    */
   const buildStreamRepository = async (balances) => {
-    const streamRepository = createInMemoryStreamRepository()()
+    const ledgerRepository = createInMemoryLedgerRepository()()
     for (const {
       accreditationId,
       organisationId: orgId,
@@ -37,7 +37,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       amount,
       availableAmount
     } of balances) {
-      await streamRepository.appendEvents([
+      await ledgerRepository.appendEvents([
         buildStreamEvent({
           accreditationId,
           organisationId: orgId,
@@ -47,7 +47,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
         })
       ])
     }
-    return streamRepository
+    return ledgerRepository
   }
 
   /**
@@ -70,7 +70,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
   const buildServer = async ({ balances, organisations }) =>
     createTestServer({
       repositories: {
-        streamRepository: await buildStreamRepository(balances),
+        ledgerRepository: await buildStreamRepository(balances),
         organisationsRepository: buildOrganisationsRepository(organisations)
       },
       featureFlags: createInMemoryFeatureFlags({})
@@ -314,7 +314,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
   })
 
   describe('zero balance handling', () => {
-    it('resolves a registered accreditation with no stream events to zero amounts', async () => {
+    it('resolves a registered accreditation with no ledger events to zero amounts', async () => {
       const server = await buildServer({
         balances: [],
         organisations: [

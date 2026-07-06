@@ -115,7 +115,7 @@ describe('backfillEstateRowStates', () => {
     expect(doc.accreditationId).toBe('acc-1')
     expect(summary).toEqual({
       organisationsScanned: 1,
-      streamsBackfilled: 1,
+      ledgersBackfilled: 1,
       submissionsBackfilled: 2,
       rowStateWrites: 2,
       orphanedAccreditations: []
@@ -148,12 +148,12 @@ describe('backfillEstateRowStates', () => {
     )
     expect(docs.map((d) => d.rowId)).toEqual(['row-1'])
     expect(docs[0].accreditationId).toBeNull()
-    expect(summary.streamsBackfilled).toBe(1)
+    expect(summary.ledgersBackfilled).toBe(1)
     expect(summary.submissionsBackfilled).toBe(1)
     expect(summary.orphanedAccreditations).toEqual([])
   })
 
-  it('backfills a registered-only processing-type stream rather than dropping it', async () => {
+  it('backfills a registered-only processing-type ledger rather than dropping it', async () => {
     const registration = reprocessorRegistration({ id: 'reg-ro-pt' })
     delete registration.accreditationId
     const organisation = buildOrganisation({
@@ -185,11 +185,11 @@ describe('backfillEstateRowStates', () => {
     )
     expect(docs.map((d) => d.rowId)).toEqual(['row-1'])
     expect(docs[0].accreditationId).toBeNull()
-    expect(summary.streamsBackfilled).toBe(1)
+    expect(summary.ledgersBackfilled).toBe(1)
     expect(summary.submissionsBackfilled).toBe(1)
   })
 
-  it('replays only submitted logs and skips streams whose logs are all unsubmitted', async () => {
+  it('replays only submitted logs and skips ledgers whose logs are all unsubmitted', async () => {
     const regA = reprocessorRegistration({
       id: 'reg-a',
       accreditationId: 'acc-a'
@@ -242,7 +242,7 @@ describe('backfillEstateRowStates', () => {
     expect(
       await deps.rowStateRepository.findBySummaryLogId(fileId('sl-b-bad'))
     ).toEqual([])
-    expect(summary.streamsBackfilled).toBe(1)
+    expect(summary.ledgersBackfilled).toBe(1)
     expect(summary.submissionsBackfilled).toBe(1)
   })
 
@@ -279,7 +279,7 @@ describe('backfillEstateRowStates', () => {
     expect(
       await deps.rowStateRepository.findBySummaryLogId(fileId('sl-1'))
     ).toEqual([])
-    expect(summary.streamsBackfilled).toBe(0)
+    expect(summary.ledgersBackfilled).toBe(0)
   })
 
   it('propagates an unexpected accreditation-lookup error rather than recording it as orphaned', async () => {

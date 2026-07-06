@@ -17,7 +17,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
  * @property {string} summaryLogId
  * @property {ClassifiedRow[]} entries
  * @property {string} submittedAt - ISO8601 timestamp
- * @property {import('#waste-balances/repository/stream-schema.js').StreamUserSummary} [submittedBy]
+ * @property {import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary} [submittedBy]
  */
 
 /**
@@ -28,7 +28,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
  * @property {string} id - Matches the `summaryLog.id` tag on waste-record versions
  * @property {string} status
  * @property {string} submittedAt - ISO8601 timestamp
- * @property {import('#waste-balances/repository/stream-schema.js').StreamUserSummary} [submittedBy]
+ * @property {import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary} [submittedBy]
  */
 
 /**

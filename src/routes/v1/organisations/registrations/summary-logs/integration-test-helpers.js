@@ -13,7 +13,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
@@ -540,7 +540,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
-  const streamRepository = createInMemoryStreamRepository()()
+  const ledgerRepository = createInMemoryLedgerRepository()()
   const rowStateRepository = createInMemoryRowStateRepository()()
 
   const systemLogsForBalanceAudit = {
@@ -551,7 +551,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   }
 
   const wasteBalanceService = createWasteBalanceService(
-    streamRepository,
+    ledgerRepository,
     systemLogsForBalanceAudit
   )
 
@@ -625,7 +625,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     repositories: {
       summaryLogsRepository: () => summaryLogsRepository,
       uploadsRepository,
-      streamRepository: () => streamRepository,
+      ledgerRepository: () => ledgerRepository,
       wasteBalanceService: () => wasteBalanceService,
       wasteRecordsRepository: () => wasteRecordsRepository,
       packagingRecyclingNotesRepository: () =>
@@ -654,7 +654,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     registrationId,
     accreditationId,
     fileDataMap,
-    streamRepository,
+    ledgerRepository,
     rowStateRepository,
     systemLogsForBalanceAudit,
     reportsRepository

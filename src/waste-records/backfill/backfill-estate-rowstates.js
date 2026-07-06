@@ -28,22 +28,22 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  *
  * @typedef {Object} EstateBackfillSummary
  * @property {number} organisationsScanned
- * @property {number} streamsBackfilled - Registration streams that received row states
+ * @property {number} ledgersBackfilled - Registration ledgers that received row states
  * @property {number} submissionsBackfilled
  * @property {number} rowStateWrites
  * @property {OrphanedAccreditation[]} orphanedAccreditations
  */
 
 /**
- * What backfilling a single registration stream contributed: either an orphaned
+ * What backfilling a single registration ledger contributed: either an orphaned
  * accreditation to surface, or the submission and write counts it committed.
- * `null` means the stream was skipped (no submitted summary logs).
+ * `null` means the ledger was skipped (no submitted summary logs).
  *
- * @typedef {Object} StreamBackfilled
+ * @typedef {Object} LedgerBackfilled
  * @property {number} submissionCount
  * @property {number} rowStateWriteCount
  *
- * @typedef {Object} StreamOrphaned
+ * @typedef {Object} LedgerOrphaned
  * @property {OrphanedAccreditation} orphanedAccreditation
  */
 
@@ -64,7 +64,7 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
 })
 
 /**
- * Backfill one registration's stream, mirroring the live write scope: every
+ * Backfill one registration's ledger, mirroring the live write scope: every
  * registration with at least one submitted summary log is reconstructed,
  * partitioned by accreditation existence (`accreditationId ?? null`) and
  * classified against today's accreditation (or null for a registered-only
@@ -81,7 +81,7 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
  * @param {RowStateRepository} args.rowStateRepository
- * @returns {Promise<StreamBackfilled | StreamOrphaned | null>}
+ * @returns {Promise<LedgerBackfilled | LedgerOrphaned | null>}
  */
 const backfillRegistrationStream = async ({
   organisation,
@@ -187,7 +187,7 @@ export const backfillEstateRowStates = async ({
 }) => {
   const organisations = await organisationsRepository.findAll()
 
-  let streamsBackfilled = 0
+  let ledgersBackfilled = 0
   let submissionsBackfilled = 0
   let rowStateWrites = 0
   const orphanedAccreditations = []
@@ -209,7 +209,7 @@ export const backfillEstateRowStates = async ({
       if ('orphanedAccreditation' in result) {
         orphanedAccreditations.push(result.orphanedAccreditation)
       } else {
-        streamsBackfilled += 1
+        ledgersBackfilled += 1
         submissionsBackfilled += result.submissionCount
         rowStateWrites += result.rowStateWriteCount
       }
@@ -218,7 +218,7 @@ export const backfillEstateRowStates = async ({
 
   return {
     organisationsScanned: organisations.length,
-    streamsBackfilled,
+    ledgersBackfilled,
     submissionsBackfilled,
     rowStateWrites,
     orphanedAccreditations

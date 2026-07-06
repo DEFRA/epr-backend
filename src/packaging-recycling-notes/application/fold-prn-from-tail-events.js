@@ -1,18 +1,18 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 /**
  * Stream-event-kind → PRN currentStatus the event projects to.
  *
  * @type {Record<string, import('#packaging-recycling-notes/domain/model.js').PrnStatus>}
  */
-const STREAM_EVENT_KIND_TO_PRN_STATUS = Object.freeze({
-  [STREAM_EVENT_KIND.PRN_CREATED]: PRN_STATUS.AWAITING_AUTHORISATION,
-  [STREAM_EVENT_KIND.PRN_ISSUED]: PRN_STATUS.AWAITING_ACCEPTANCE,
-  [STREAM_EVENT_KIND.PRN_ACCEPTED]: PRN_STATUS.ACCEPTED,
-  [STREAM_EVENT_KIND.PRN_REJECTED]: PRN_STATUS.AWAITING_CANCELLATION,
-  [STREAM_EVENT_KIND.PRN_CREATION_CANCELLED]: PRN_STATUS.DELETED,
-  [STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE]: PRN_STATUS.CANCELLED
+const LEDGER_EVENT_KIND_TO_PRN_STATUS = Object.freeze({
+  [LEDGER_EVENT_KIND.PRN_CREATED]: PRN_STATUS.AWAITING_AUTHORISATION,
+  [LEDGER_EVENT_KIND.PRN_ISSUED]: PRN_STATUS.AWAITING_ACCEPTANCE,
+  [LEDGER_EVENT_KIND.PRN_ACCEPTED]: PRN_STATUS.ACCEPTED,
+  [LEDGER_EVENT_KIND.PRN_REJECTED]: PRN_STATUS.AWAITING_CANCELLATION,
+  [LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED]: PRN_STATUS.DELETED,
+  [LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE]: PRN_STATUS.CANCELLED
 })
 
 /**
@@ -23,25 +23,25 @@ const STREAM_EVENT_KIND_TO_PRN_STATUS = Object.freeze({
  *
  * @type {Record<string, 'created' | 'issued' | 'accepted' | 'rejected' | 'deleted' | 'cancelled'>}
  */
-const STREAM_EVENT_KIND_TO_STATUS_SLOT = Object.freeze({
-  [STREAM_EVENT_KIND.PRN_CREATED]: 'created',
-  [STREAM_EVENT_KIND.PRN_ISSUED]: 'issued',
-  [STREAM_EVENT_KIND.PRN_ACCEPTED]: 'accepted',
-  [STREAM_EVENT_KIND.PRN_REJECTED]: 'rejected',
-  [STREAM_EVENT_KIND.PRN_CREATION_CANCELLED]: 'deleted',
-  [STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE]: 'cancelled'
+const LEDGER_EVENT_KIND_TO_STATUS_SLOT = Object.freeze({
+  [LEDGER_EVENT_KIND.PRN_CREATED]: 'created',
+  [LEDGER_EVENT_KIND.PRN_ISSUED]: 'issued',
+  [LEDGER_EVENT_KIND.PRN_ACCEPTED]: 'accepted',
+  [LEDGER_EVENT_KIND.PRN_REJECTED]: 'rejected',
+  [LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED]: 'deleted',
+  [LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE]: 'cancelled'
 })
 
 /**
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
- * @param {import('#waste-balances/repository/stream-schema.js').StreamEvent} event
+ * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent} event
  */
 const applyEvent = (prn, event) => {
-  const newStatus = STREAM_EVENT_KIND_TO_PRN_STATUS[event.kind]
+  const newStatus = LEDGER_EVENT_KIND_TO_PRN_STATUS[event.kind]
   if (!newStatus) {
     throw new Error(`Unmappable stream event kind: ${event.kind}`)
   }
-  const slot = STREAM_EVENT_KIND_TO_STATUS_SLOT[event.kind]
+  const slot = LEDGER_EVENT_KIND_TO_STATUS_SLOT[event.kind]
   // PRN actors record id and name only; the event's createdBy may also carry an
   // email (best-view enrichment on the stream), which the PRN document omits.
   const by = { id: event.createdBy.id, name: event.createdBy.name }
@@ -76,10 +76,10 @@ const applyEvent = (prn, event) => {
  * reference unchanged when no events are supplied.
  *
  * Expects events ordered by `number` ascending — the order
- * `WasteBalanceStreamRepository.findEventsByPrnIdAfter` guarantees.
+ * `WasteBalanceLedgerRepository.findEventsByPrnIdAfter` guarantees.
  *
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
- * @param {import('#waste-balances/repository/stream-schema.js').StreamEvent[]} tailEvents
+ * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} tailEvents
  * @returns {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote}
  */
 export const foldPrnFromTailEvents = (prn, tailEvents) => {

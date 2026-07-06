@@ -1,9 +1,9 @@
-import { STREAM_EVENT_KIND } from './stream-schema.js'
+import { LEDGER_EVENT_KIND } from './ledger-schema.js'
 
 const DEFAULT_CREATED_AT = new Date('2026-01-15T10:00:00.000Z')
 
 /**
- * Build a valid stream event (insert shape — no `id`).
+ * Build a valid ledger event (insert shape — no `id`).
  * Defaults to a summary-log-submitted event.
  * @param {object} [overrides]
  */
@@ -12,7 +12,7 @@ export const buildStreamEvent = (overrides = {}) => ({
   accreditationId: 'acc-1',
   organisationId: 'org-1',
   number: 1,
-  kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+  kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: {
     summaryLogId: 'log-1',
     creditTotal: 100
@@ -30,7 +30,7 @@ export const buildStreamEvent = (overrides = {}) => ({
  */
 export const buildPrnCreatedEvent = (overrides = {}) =>
   buildStreamEvent({
-    kind: STREAM_EVENT_KIND.PRN_CREATED,
+    kind: LEDGER_EVENT_KIND.PRN_CREATED,
     payload: { prnId: 'prn-1', amount: 50 },
     openingBalance: { amount: 100, availableAmount: 100 },
     closingBalance: { amount: 100, availableAmount: 50 },
@@ -43,7 +43,7 @@ export const buildPrnCreatedEvent = (overrides = {}) =>
  */
 export const buildPrnIssuedEvent = (overrides = {}) =>
   buildStreamEvent({
-    kind: STREAM_EVENT_KIND.PRN_ISSUED,
+    kind: LEDGER_EVENT_KIND.PRN_ISSUED,
     payload: { prnId: 'prn-1', amount: 50 },
     openingBalance: { amount: 100, availableAmount: 50 },
     closingBalance: { amount: 50, availableAmount: 50 },
@@ -56,7 +56,7 @@ export const buildPrnIssuedEvent = (overrides = {}) =>
  */
 export const buildPrnCreationCancelledEvent = (overrides = {}) =>
   buildStreamEvent({
-    kind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+    kind: LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
     payload: { prnId: 'prn-1', amount: 50 },
     openingBalance: { amount: 100, availableAmount: 50 },
     closingBalance: { amount: 100, availableAmount: 100 },
@@ -69,7 +69,7 @@ export const buildPrnCreationCancelledEvent = (overrides = {}) =>
  */
 export const buildPrnCancelledAfterIssueEvent = (overrides = {}) =>
   buildStreamEvent({
-    kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+    kind: LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
     payload: { prnId: 'prn-1', amount: 50 },
     openingBalance: { amount: 50, availableAmount: 50 },
     closingBalance: { amount: 100, availableAmount: 100 },
@@ -83,7 +83,7 @@ export const buildPrnCancelledAfterIssueEvent = (overrides = {}) =>
  */
 export const buildPrnAcceptedEvent = (overrides = {}) =>
   buildStreamEvent({
-    kind: STREAM_EVENT_KIND.PRN_ACCEPTED,
+    kind: LEDGER_EVENT_KIND.PRN_ACCEPTED,
     payload: { prnId: 'prn-1', amount: 50 },
     openingBalance: { amount: 100, availableAmount: 50 },
     closingBalance: { amount: 100, availableAmount: 50 },
@@ -97,7 +97,7 @@ export const buildPrnAcceptedEvent = (overrides = {}) =>
  */
 export const buildPrnRejectedEvent = (overrides = {}) =>
   buildStreamEvent({
-    kind: STREAM_EVENT_KIND.PRN_REJECTED,
+    kind: LEDGER_EVENT_KIND.PRN_REJECTED,
     payload: { prnId: 'prn-1', amount: 50 },
     openingBalance: { amount: 100, availableAmount: 50 },
     closingBalance: { amount: 100, availableAmount: 50 },

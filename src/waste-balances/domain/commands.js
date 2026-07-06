@@ -1,8 +1,8 @@
-import { STREAM_EVENT_KIND, ZERO_BALANCE } from '../repository/stream-schema.js'
+import { LEDGER_EVENT_KIND, ZERO_BALANCE } from '../repository/ledger-schema.js'
 import {
   closingForSummaryLogSubmitted,
   closingForPrn
-} from './stream-closing-balance.js'
+} from './ledger-closing-balance.js'
 
 /**
  * The ledger state a command decides against: the resolved balance and the
@@ -11,7 +11,7 @@ import {
  * yet.
  *
  * @typedef {Object} LedgerState
- * @property {import('../repository/stream-schema.js').StreamBalanceSnapshot} balance
+ * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
  * @property {number} creditTotal - The latest summary-log credit total, the base
  *   the next submission's delta is measured against.
  */
@@ -22,10 +22,10 @@ import {
  * appends it to the ledger.
  *
  * @typedef {Object} BalanceEvent
- * @property {import('../repository/stream-schema.js').StreamEventKind} kind
- * @property {import('../repository/stream-schema.js').SummaryLogSubmittedPayload | import('../repository/stream-schema.js').PrnPayload} payload
- * @property {import('../repository/stream-schema.js').StreamBalanceSnapshot} openingBalance
- * @property {import('../repository/stream-schema.js').StreamBalanceSnapshot} closingBalance
+ * @property {import('../repository/ledger-schema.js').LedgerEventKind} kind
+ * @property {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload | import('../repository/ledger-schema.js').PrnPayload} payload
+ * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} openingBalance
+ * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} closingBalance
  */
 
 /**
@@ -70,14 +70,14 @@ const EMPTY_STATE = { balance: ZERO_BALANCE, creditTotal: 0 }
  * submission's credit total against the ledger's running total.
  *
  * @param {LedgerState | null} state
- * @param {import('../repository/stream-schema.js').SummaryLogSubmittedPayload} submission
+ * @param {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload} submission
  * @returns {BalanceEvent[]}
  */
 export const submitSummaryLog = (state, { summaryLogId, creditTotal }) => {
   const { balance, creditTotal: previousCreditTotal } = state ?? EMPTY_STATE
   return [
     {
-      kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+      kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
       payload: { summaryLogId, creditTotal },
       openingBalance: balance,
       closingBalance: closingForSummaryLogSubmitted(
@@ -90,9 +90,9 @@ export const submitSummaryLog = (state, { summaryLogId, creditTotal }) => {
 }
 
 /**
- * @param {import('../repository/stream-schema.js').StreamEventKind} kind
- * @param {import('../repository/stream-schema.js').StreamBalanceSnapshot} opening
- * @param {import('../repository/stream-schema.js').PrnPayload} payload
+ * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
+ * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
+ * @param {import('../repository/ledger-schema.js').PrnPayload} payload
  * @returns {PrnDecision}
  */
 const committed = (kind, opening, payload) => ({
@@ -120,64 +120,64 @@ const rejected = (reason) => ({
  * Ringfence available balance for a new PRN. Rejects when the tonnage exceeds
  * the balance available to ringfence.
  *
- * @param {import('../repository/stream-schema.js').StreamBalanceSnapshot} balance
- * @param {import('../repository/stream-schema.js').PrnPayload} payload
+ * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
+ * @param {import('../repository/ledger-schema.js').PrnPayload} payload
  * @returns {PrnDecision}
  */
 export const createPrn = (balance, payload) =>
   balance.availableAmount < payload.amount
     ? rejected(PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE)
-    : committed(STREAM_EVENT_KIND.PRN_CREATED, balance, payload)
+    : committed(LEDGER_EVENT_KIND.PRN_CREATED, balance, payload)
 
 /**
  * Deduct total balance as a PRN is issued. Rejects when the tonnage exceeds the
  * total balance.
  *
- * @param {import('../repository/stream-schema.js').StreamBalanceSnapshot} balance
- * @param {import('../repository/stream-schema.js').PrnPayload} payload
+ * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
+ * @param {import('../repository/ledger-schema.js').PrnPayload} payload
  * @returns {PrnDecision}
  */
 export const issuePrn = (balance, payload) =>
   balance.amount < payload.amount
     ? rejected(PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE)
-    : committed(STREAM_EVENT_KIND.PRN_ISSUED, balance, payload)
+    : committed(LEDGER_EVENT_KIND.PRN_ISSUED, balance, payload)
 
 /**
  * Credit the ringfenced available balance back when a pending PRN is deleted.
  *
- * @param {import('../repository/stream-schema.js').StreamBalanceSnapshot} balance
- * @param {import('../repository/stream-schema.js').PrnPayload} payload
+ * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
+ * @param {import('../repository/ledger-schema.js').PrnPayload} payload
  * @returns {PrnDecision}
  */
 export const cancelPrnCreation = (balance, payload) =>
-  committed(STREAM_EVENT_KIND.PRN_CREATION_CANCELLED, balance, payload)
+  committed(LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED, balance, payload)
 
 /**
  * Credit both balances back when an issued PRN's cancellation completes.
  *
- * @param {import('../repository/stream-schema.js').StreamBalanceSnapshot} balance
- * @param {import('../repository/stream-schema.js').PrnPayload} payload
+ * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
+ * @param {import('../repository/ledger-schema.js').PrnPayload} payload
  * @returns {PrnDecision}
  */
 export const cancelIssuedPrn = (balance, payload) =>
-  committed(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, balance, payload)
+  committed(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, balance, payload)
 
 /**
  * Record a PRN acceptance. No balance movement.
  *
- * @param {import('../repository/stream-schema.js').StreamBalanceSnapshot} balance
- * @param {import('../repository/stream-schema.js').PrnPayload} payload
+ * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
+ * @param {import('../repository/ledger-schema.js').PrnPayload} payload
  * @returns {PrnDecision}
  */
 export const acceptPrn = (balance, payload) =>
-  committed(STREAM_EVENT_KIND.PRN_ACCEPTED, balance, payload)
+  committed(LEDGER_EVENT_KIND.PRN_ACCEPTED, balance, payload)
 
 /**
  * Record a PRN rejection (cancellation request). No balance movement.
  *
- * @param {import('../repository/stream-schema.js').StreamBalanceSnapshot} balance
- * @param {import('../repository/stream-schema.js').PrnPayload} payload
+ * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
+ * @param {import('../repository/ledger-schema.js').PrnPayload} payload
  * @returns {PrnDecision}
  */
 export const rejectPrn = (balance, payload) =>
-  committed(STREAM_EVENT_KIND.PRN_REJECTED, balance, payload)
+  committed(LEDGER_EVENT_KIND.PRN_REJECTED, balance, payload)

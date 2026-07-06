@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { streamEventInsertSchema, STREAM_EVENT_KIND } from './stream-schema.js'
+import { ledgerEventInsertSchema, LEDGER_EVENT_KIND } from './ledger-schema.js'
 import {
   buildStreamEvent,
   buildPrnCreatedEvent,
@@ -9,19 +9,19 @@ import {
   buildPrnCancelledAfterIssueEvent,
   buildPrnAcceptedEvent,
   buildPrnRejectedEvent
-} from './stream-test-data.js'
+} from './ledger-test-data.js'
 import {
   validateStreamEventInsert,
   validateStreamEventRead
-} from './stream-validation.js'
+} from './ledger-validation.js'
 
 const validate = (data) =>
-  streamEventInsertSchema.validate(data, {
+  ledgerEventInsertSchema.validate(data, {
     abortEarly: false,
     stripUnknown: true
   })
 
-describe('stream event insert schema', () => {
+describe('ledger event insert schema', () => {
   it('accepts a valid summary-log-submitted event', () => {
     const { error } = validate(buildStreamEvent())
     expect(error).toBeUndefined()
@@ -35,7 +35,7 @@ describe('stream event insert schema', () => {
   it('accepts a valid prn-issued event', () => {
     const { error } = validate(
       buildStreamEvent({
-        kind: STREAM_EVENT_KIND.PRN_ISSUED,
+        kind: LEDGER_EVENT_KIND.PRN_ISSUED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -45,7 +45,7 @@ describe('stream event insert schema', () => {
   it('accepts a valid prn-creation-cancelled event', () => {
     const { error } = validate(
       buildStreamEvent({
-        kind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+        kind: LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -55,7 +55,7 @@ describe('stream event insert schema', () => {
   it('accepts a valid prn-cancelled-after-issue event', () => {
     const { error } = validate(
       buildStreamEvent({
-        kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+        kind: LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -65,7 +65,7 @@ describe('stream event insert schema', () => {
   it('accepts a valid prn-accepted event', () => {
     const { error } = validate(
       buildStreamEvent({
-        kind: STREAM_EVENT_KIND.PRN_ACCEPTED,
+        kind: LEDGER_EVENT_KIND.PRN_ACCEPTED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -75,7 +75,7 @@ describe('stream event insert schema', () => {
   it('accepts a valid prn-rejected event', () => {
     const { error } = validate(
       buildStreamEvent({
-        kind: STREAM_EVENT_KIND.PRN_REJECTED,
+        kind: LEDGER_EVENT_KIND.PRN_REJECTED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -103,7 +103,7 @@ describe('stream event insert schema', () => {
   it('rejects mismatched kind/payload — prn-created with summaryLogId payload', () => {
     const { error } = validate(
       buildStreamEvent({
-        kind: STREAM_EVENT_KIND.PRN_CREATED,
+        kind: LEDGER_EVENT_KIND.PRN_CREATED,
         payload: { summaryLogId: 'log-1', creditTotal: 100 }
       })
     )
@@ -113,7 +113,7 @@ describe('stream event insert schema', () => {
   it('rejects mismatched kind/payload — summary-log-submitted with prnId payload', () => {
     const { error } = validate(
       buildStreamEvent({
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -142,7 +142,7 @@ describe('stream event insert schema', () => {
     expect(error).toBeUndefined()
   })
 
-  it('accepts accreditationId: null for registered-only streams', () => {
+  it('accepts accreditationId: null for registered-only ledgers', () => {
     const { error } = validate(buildStreamEvent({ accreditationId: null }))
     expect(error).toBeUndefined()
   })
@@ -151,7 +151,7 @@ describe('stream event insert schema', () => {
     const { error } = validate(
       buildStreamEvent({
         accreditationId: null,
-        kind: STREAM_EVENT_KIND.PRN_CREATED,
+        kind: LEDGER_EVENT_KIND.PRN_CREATED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -162,7 +162,7 @@ describe('stream event insert schema', () => {
     const { error } = validate(
       buildStreamEvent({
         accreditationId: null,
-        kind: STREAM_EVENT_KIND.PRN_ACCEPTED,
+        kind: LEDGER_EVENT_KIND.PRN_ACCEPTED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -173,7 +173,7 @@ describe('stream event insert schema', () => {
     const { error } = validate(
       buildStreamEvent({
         accreditationId: null,
-        kind: STREAM_EVENT_KIND.PRN_REJECTED,
+        kind: LEDGER_EVENT_KIND.PRN_REJECTED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -220,7 +220,7 @@ describe('stream event insert schema', () => {
   })
 })
 
-describe('stream event validation', () => {
+describe('ledger event validation', () => {
   describe('validateStreamEventInsert', () => {
     it('returns the validated event for valid input', () => {
       const event = buildStreamEvent()
@@ -230,7 +230,7 @@ describe('stream event validation', () => {
 
     it('throws Boom.badData for invalid input', () => {
       expect(() => validateStreamEventInsert({})).toThrow(
-        /Invalid stream event data/
+        /Invalid ledger event data/
       )
     })
   })
@@ -244,7 +244,7 @@ describe('stream event validation', () => {
 
     it('throws Boom.badImplementation for invalid input', () => {
       expect(() => validateStreamEventRead({ id: 'bad' })).toThrow(
-        /Invalid stream event/
+        /Invalid ledger event/
       )
     })
   })

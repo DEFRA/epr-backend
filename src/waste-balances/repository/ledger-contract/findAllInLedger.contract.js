@@ -1,26 +1,23 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildStreamEvent } from '../stream-test-data.js'
+import { buildStreamEvent } from '../ledger-test-data.js'
 
 export const testFindAllByPartitionBehaviour = (it) => {
-  describe('findAllByPartition', () => {
+  describe('findAllInLedger', () => {
     let repository
 
     beforeEach(
       async (
-        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
-          streamRepository
+        /** @type {{ ledgerRepository: import('../ledger-port.js').WasteBalanceLedgerRepositoryFactory }} */ {
+          ledgerRepository
         }
       ) => {
-        repository = await streamRepository()
+        repository = await ledgerRepository()
       }
     )
 
     it('returns an empty array when no events exist for the partition', async () => {
-      const result = await repository.findAllByPartition(
-        'reg-empty',
-        'acc-empty'
-      )
+      const result = await repository.findAllInLedger('reg-empty', 'acc-empty')
       expect(result).toEqual([])
     })
 
@@ -50,7 +47,7 @@ export const testFindAllByPartitionBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findAllByPartition('reg-all', 'acc-all')
+      const result = await repository.findAllInLedger('reg-all', 'acc-all')
 
       expect(result).toHaveLength(3)
       expect(result[0].number).toBe(1)
@@ -74,7 +71,7 @@ export const testFindAllByPartitionBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findAllByPartition('reg-a', 'acc-a')
+      const result = await repository.findAllInLedger('reg-a', 'acc-a')
 
       expect(result).toHaveLength(1)
       expect(result[0].registrationId).toBe('reg-a')

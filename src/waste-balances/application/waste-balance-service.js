@@ -13,15 +13,15 @@ import {
 } from '../domain/commands.js'
 import { currentWasteBalance } from './current-waste-balance.js'
 import { markExcludedRecords } from './mark-excluded-records.js'
-import { performUpdateViaStream } from './update-via-stream.js'
+import { performUpdateViaLedger } from './update-via-ledger.js'
 import { validateAccreditationId } from '../repository/validation.js'
 
 /**
- * The outcome of a PRN command: the appended stream events when it commits, or
+ * The outcome of a PRN command: the appended ledger events when it commits, or
  * the reason it did not. The application layer turns a rejection into the
  * contextual error its callers expect.
  *
- * @typedef {{ status: 'committed', events: import('../repository/stream-port.js').StreamEvent[] }
+ * @typedef {{ status: 'committed', events: import('../repository/ledger-port.js').LedgerEvent[] }
  *   | { status: 'rejected', reason: import('../domain/commands.js').PrnCommandRejection }} PrnCommandResult
  */
 
@@ -30,30 +30,30 @@ import { validateAccreditationId } from '../repository/validation.js'
  * event(s).
  *
  * @typedef {(
- *   ledgerId: import('../repository/stream-schema.js').WasteBalanceLedgerId,
- *   submission: import('../repository/stream-schema.js').SummaryLogSubmittedPayload,
- *   createdBy: import('../repository/stream-schema.js').StreamUserSummary,
+ *   ledgerId: import('../repository/ledger-schema.js').WasteBalanceLedgerId,
+ *   submission: import('../repository/ledger-schema.js').SummaryLogSubmittedPayload,
+ *   createdBy: import('../repository/ledger-schema.js').LedgerUserSummary,
  *   createdAt?: Date
- * ) => Promise<import('../repository/stream-port.js').StreamEvent[]>} SubmitSummaryLog
+ * ) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} SubmitSummaryLog
  */
 
 /**
- * The ledger command machinery, sharing one captured stream repository: fold
+ * The ledger command machinery, sharing one captured ledger repository: fold
  * the ledger into decidable state, append decided events, and run a PRN command
  * end to end. The service surface is assembled from these.
  *
- * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  */
-const createLedgerCommands = (streamRepository) => {
+const createLedgerCommands = (ledgerRepository) => {
   /**
    * Fold the ledger into the state a command decides against, plus the head the
    * decision is made at.
    *
-   * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId
+   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
    * @returns {Promise<{ state: import('../domain/commands.js').LedgerState | null, head: number }>}
    */
   const fold = async (ledgerId) => {
-    const balance = await currentWasteBalance(streamRepository, ledgerId)
+    const balance = await currentWasteBalance(ledgerRepository, ledgerId)
     if (!balance) {
       return { state: null, head: 0 }
     }
@@ -75,12 +75,12 @@ const createLedgerCommands = (streamRepository) => {
    * defaults to now for a live command; the historical backfill supplies the
    * original submission time so replayed history is dated when it happened.
    *
-   * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId
+   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
    * @param {number} head
    * @param {import('../domain/commands.js').BalanceEvent[]} events
-   * @param {import('../repository/stream-schema.js').StreamUserSummary} createdBy
+   * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
    * @param {Date} [createdAt]
-   * @returns {Promise<import('../repository/stream-port.js').StreamEvent[]>}
+   * @returns {Promise<import('../repository/ledger-port.js').LedgerEvent[]>}
    */
   const append = (
     ledgerId,
@@ -89,7 +89,7 @@ const createLedgerCommands = (streamRepository) => {
     createdBy,
     createdAt = new Date()
   ) => {
-    return streamRepository.appendEvents(
+    return ledgerRepository.appendEvents(
       events.map((event, index) => ({
         ...ledgerId,
         number: head + index + 1,
@@ -116,8 +116,8 @@ const createLedgerCommands = (streamRepository) => {
    * surfaces as a 500 the platform logs and alerts on, rather than slipping past
    * the deciders' `<` sufficiency check to inflate the balance.
    *
-   * @param {(balance: import('../repository/stream-schema.js').StreamBalanceSnapshot, payload: import('../repository/stream-schema.js').PrnPayload) => import('../domain/commands.js').PrnDecision} decide
-   * @returns {(ledgerId: import('../repository/stream-schema.js').WasteBalanceLedgerId, payload: import('../repository/stream-schema.js').PrnPayload, createdBy: import('../repository/stream-schema.js').StreamUserSummary) => Promise<PrnCommandResult>}
+   * @param {(balance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot, payload: import('../repository/ledger-schema.js').PrnPayload) => import('../domain/commands.js').PrnDecision} decide
+   * @returns {(ledgerId: import('../repository/ledger-schema.js').WasteBalanceLedgerId, payload: import('../repository/ledger-schema.js').PrnPayload, createdBy: import('../repository/ledger-schema.js').LedgerUserSummary) => Promise<PrnCommandResult>}
    */
   const runPrnCommand = (decide) => async (ledgerId, payload, createdBy) => {
     if (!(payload.amount > 0)) {
@@ -154,19 +154,19 @@ const createLedgerCommands = (streamRepository) => {
  * appends the returned event(s) at the next slot over the event store. The slot
  * index is the optimistic-concurrency guard: a head that moved after the fold
  * leaves the next slot occupied, so the append rejects with a
- * `StreamSlotConflictError` and the conflict surfaces to the caller — no
+ * `LedgerSlotConflictError` and the conflict surfaces to the caller — no
  * in-process retry (ADR-0036).
  *
- * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [systemLogsRepository]
  *   Sink for the balance-update audit trail. Omitted outside the summary-log
  *   write path, where the audit is not emitted.
  */
 export const createWasteBalanceService = (
-  streamRepository,
+  ledgerRepository,
   systemLogsRepository
 ) => {
-  const { fold, append, runPrnCommand } = createLedgerCommands(streamRepository)
+  const { fold, append, runPrnCommand } = createLedgerCommands(ledgerRepository)
 
   /**
    * Record a summary-log submission against the ledger.
@@ -195,11 +195,11 @@ export const createWasteBalanceService = (
      * has no events yet. This is the read side of the same fold the commands
      * decide against.
      *
-     * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId
+     * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
      * @returns {Promise<import('../domain/model.js').WasteBalance | null>}
      */
     currentBalance: (ledgerId) =>
-      currentWasteBalance(streamRepository, ledgerId),
+      currentWasteBalance(ledgerRepository, ledgerId),
 
     submitSummaryLog,
 
@@ -226,7 +226,7 @@ export const createWasteBalanceService = (
         return
       }
 
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: annotatedRecords,
         accreditation: {
           ...accreditation,
@@ -248,11 +248,11 @@ export const createWasteBalanceService = (
     rejectPrn: runPrnCommand(decideRejectPrn),
 
     /**
-     * The PRN's stream events after a watermark: the catch-up tail a read
+     * The PRN's ledger events after a watermark: the catch-up tail a read
      * projection folds onto a fetched PRN to bring it current.
      *
      * @param {{ registrationId: string, accreditationId: string, prnId: string, afterEventNumber: number }} params
-     * @returns {Promise<import('../repository/stream-port.js').StreamEvent[]>}
+     * @returns {Promise<import('../repository/ledger-port.js').LedgerEvent[]>}
      */
     prnCatchupEvents: async ({
       registrationId,
@@ -260,7 +260,7 @@ export const createWasteBalanceService = (
       prnId,
       afterEventNumber
     }) =>
-      streamRepository.findEventsByPrnIdAfter(
+      ledgerRepository.findEventsByPrnIdAfter(
         registrationId,
         validateAccreditationId(accreditationId),
         prnId,

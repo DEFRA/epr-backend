@@ -14,10 +14,10 @@ export const streamEventsGet = {
     tags: ['api', 'admin']
   },
   handler: async (request, h) => {
-    const { streamRepository } = request
+    const { ledgerRepository } = request
     const { registrationId, accreditationId } = request.params
 
-    const events = await streamRepository.findAllByPartition(
+    const events = await ledgerRepository.findAllInLedger(
       registrationId,
       accreditationId
     )

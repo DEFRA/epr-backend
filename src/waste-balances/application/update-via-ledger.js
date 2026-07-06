@@ -26,7 +26,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {OverseasSitesContext} params.overseasSites
  * @param {string} params.summaryLogId
  */
-export const performUpdateViaStream = async ({
+export const performUpdateViaLedger = async ({
   wasteRecords,
   accreditation,
   submitSummaryLog,

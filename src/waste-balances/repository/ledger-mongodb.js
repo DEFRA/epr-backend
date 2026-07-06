@@ -1,18 +1,18 @@
 /** @import { Collection, Db } from 'mongodb' */
 
 /**
- * @typedef {import('./stream-schema.js').StreamEventInsert} StreamEventInsert
+ * @typedef {import('./ledger-schema.js').LedgerEventInsert} LedgerEventInsert
  */
 
 /**
- * @typedef {import('./stream-schema.js').StreamEvent} StreamEvent
+ * @typedef {import('./ledger-schema.js').LedgerEvent} LedgerEvent
  */
 
-import { StreamSlotConflictError, StreamSequenceError } from './stream-port.js'
+import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
 import {
   validateStreamEventInsert,
   validateStreamEventRead
-} from './stream-validation.js'
+} from './ledger-validation.js'
 
 export const WASTE_BALANCE_EVENTS_COLLECTION_NAME = 'waste-balance-events'
 
@@ -21,8 +21,8 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 const INDEX_NAME_SLOT = 'partition_number'
 
 /**
- * Ensures the stream collection exists with the indexes required by the
- * event-sourced stream design.
+ * Ensures the ledger collection exists with the indexes required by the
+ * event-sourced ledger design.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -69,7 +69,7 @@ const toStreamEvent = (doc) => {
  * `keyPattern` on the write error to determine which index was violated.
  *
  * @param {unknown} error
- * @param {StreamEventInsert} event
+ * @param {LedgerEventInsert} event
  */
 const classifyDuplicateKeyError = (error, event) => {
   const writeError = findDuplicateKeyWriteError(error)
@@ -78,7 +78,7 @@ const classifyDuplicateKeyError = (error, event) => {
   }
 
   if (writeError.keyPattern?.number) {
-    return new StreamSlotConflictError(
+    return new LedgerSlotConflictError(
       event.registrationId,
       event.accreditationId,
       event.number
@@ -122,9 +122,9 @@ const findDuplicateKeyWriteError = (error) => {
 
 /**
  * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent | null>}
+ * @returns {(registrationId: string, accreditationId: string | null) => Promise<LedgerEvent | null>}
  */
-const performFindLatestByPartition =
+const performFindLatestInLedger =
   (collection) => async (registrationId, accreditationId) => {
     const doc = await collection.findOne(
       { registrationId, accreditationId },
@@ -135,9 +135,9 @@ const performFindLatestByPartition =
 
 /**
  * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null, kind: string) => Promise<StreamEvent | null>}
+ * @returns {(registrationId: string, accreditationId: string | null, kind: string) => Promise<LedgerEvent | null>}
  */
-const performFindLatestByPartitionAndKind =
+const performFindLatestInLedgerByKind =
   (collection) => async (registrationId, accreditationId, kind) => {
     const doc = await collection.findOne(
       { registrationId, accreditationId, kind },
@@ -148,7 +148,7 @@ const performFindLatestByPartitionAndKind =
 
 /**
  * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null, prnId: string, afterNumber: number) => Promise<StreamEvent[]>}
+ * @returns {(registrationId: string, accreditationId: string | null, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>}
  */
 const performFindEventsByPrnIdAfter =
   (collection) =>
@@ -168,9 +168,9 @@ const performFindEventsByPrnIdAfter =
 
 /**
  * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent[]>}
+ * @returns {(registrationId: string, accreditationId: string | null) => Promise<LedgerEvent[]>}
  */
-const performFindAllByPartition =
+const performFindAllInLedger =
   (collection) => async (registrationId, accreditationId) => {
     const docs = await collection
       .find({ registrationId, accreditationId })
@@ -185,7 +185,7 @@ const performFindAllByPartition =
  * @param {Collection} collection
  * @returns {(registrationId: string, accreditationId: string | null) => Promise<number>}
  */
-const performDeleteByPartition =
+const performDeleteInLedger =
   (collection) => async (registrationId, accreditationId) => {
     const result = await collection.deleteMany({
       registrationId,
@@ -198,14 +198,14 @@ const performDeleteByPartition =
  * Append a contiguous batch of events. Validates sequence: events must be
  * numbered sequentially, and the first event's number must be currentMax + 1
  * (or 1 if empty partition). A starting slot occupied by a competing writer
- * surfaces as a `StreamSlotConflictError`, whether detected on the pre-check
+ * surfaces as a `LedgerSlotConflictError`, whether detected on the pre-check
  * or on the insert itself.
  *
  * Not a transaction: the ordered insert commits each event as it goes and is
  * not rolled back, so a later slot conflict leaves earlier events of the same
  * batch committed.
  * @param {Collection} collection
- * @returns {(events: import('./stream-schema.js').StreamEventInsert[]) => Promise<import('./stream-schema.js').StreamEvent[]>}
+ * @returns {(events: import('./ledger-schema.js').LedgerEventInsert[]) => Promise<import('./ledger-schema.js').LedgerEvent[]>}
  */
 const performAppendEvents = (collection) => async (events) => {
   if (events.length === 0) {
@@ -228,13 +228,13 @@ const performAppendEvents = (collection) => async (events) => {
 
   if (first.number !== expectedStart) {
     if (first.number <= (latest?.number ?? 0)) {
-      throw new StreamSlotConflictError(
+      throw new LedgerSlotConflictError(
         first.registrationId,
         first.accreditationId,
         first.number
       )
     }
-    throw new StreamSequenceError(
+    throw new LedgerSequenceError(
       first.registrationId,
       first.accreditationId,
       first.number,
@@ -245,7 +245,7 @@ const performAppendEvents = (collection) => async (events) => {
   for (let i = 1; i < validated.length; i++) {
     const expected = first.number + i
     if (validated[i].number !== expected) {
-      throw new StreamSequenceError(
+      throw new LedgerSequenceError(
         validated[i].registrationId,
         validated[i].accreditationId,
         validated[i].number,
@@ -269,21 +269,20 @@ const performAppendEvents = (collection) => async (events) => {
 }
 
 /**
- * Creates a MongoDB-backed stream repository.
+ * Creates a MongoDB-backed ledger repository.
  *
  * @param {Db} db
- * @returns {Promise<import('./stream-port.js').WasteBalanceStreamRepositoryFactory>}
+ * @returns {Promise<import('./ledger-port.js').WasteBalanceLedgerRepositoryFactory>}
  */
-export const createMongoStreamRepository = async (db) => {
+export const createMongoLedgerRepository = async (db) => {
   const collection = await ensureStreamCollection(db)
 
   return () => ({
-    findLatestByPartition: performFindLatestByPartition(collection),
-    findLatestByPartitionAndKind:
-      performFindLatestByPartitionAndKind(collection),
+    findLatestInLedger: performFindLatestInLedger(collection),
+    findLatestInLedgerByKind: performFindLatestInLedgerByKind(collection),
     findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection),
-    findAllByPartition: performFindAllByPartition(collection),
-    deleteByPartition: performDeleteByPartition(collection),
+    findAllInLedger: performFindAllInLedger(collection),
+    deleteAllInLedger: performDeleteInLedger(collection),
     appendEvents: performAppendEvents(collection)
   })
 }

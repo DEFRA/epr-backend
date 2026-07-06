@@ -6,7 +6,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 import {
   asStandardUser,
@@ -112,7 +112,7 @@ describe('Waste balance stream (Exporter)', () => {
 
   it('appends a single stream event with aggregate creditTotal on first upload', async () => {
     const env = await setupStream()
-    const { streamRepository, registrationId, wasteBalanceService } = env
+    const { ledgerRepository, registrationId, wasteBalanceService } = env
 
     await performSubmission(
       env,
@@ -129,14 +129,14 @@ describe('Waste balance stream (Exporter)', () => {
       ])
     )
 
-    const latest = await streamRepository.findLatestByPartition(
+    const latest = await ledgerRepository.findLatestInLedger(
       registrationId,
       'ACC-123'
     )
     expect(latest).not.toBeNull()
     if (!latest) throw new Error('latest stream event is null')
     expect(latest.number).toBe(1)
-    expect(latest.kind).toBe(STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
+    expect(latest.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
     expect(
       /** @type {{ creditTotal: number }} */ (latest.payload).creditTotal
     ).toBe(300)
@@ -156,17 +156,17 @@ describe('Waste balance stream (Exporter)', () => {
 
   it('computes correct delta on re-upload with identical data', async () => {
     const env = await setupStream()
-    const { streamRepository, registrationId } = env
+    const { ledgerRepository, registrationId } = env
     const data = createUploadData([{ rowId: 2001, exportTonnage: 50 }])
 
     await performSubmission(env, 'log-a', 'file-a', data)
-    const afterFirst = await streamRepository.findLatestByPartition(
+    const afterFirst = await ledgerRepository.findLatestInLedger(
       registrationId,
       'ACC-123'
     )
 
     await performSubmission(env, 'log-b', 'file-b', data)
-    const afterSecond = await streamRepository.findLatestByPartition(
+    const afterSecond = await ledgerRepository.findLatestInLedger(
       registrationId,
       'ACC-123'
     )
@@ -179,7 +179,7 @@ describe('Waste balance stream (Exporter)', () => {
 
   it('computes correct delta when a row is corrected on re-upload', async () => {
     const env = await setupStream()
-    const { streamRepository, registrationId } = env
+    const { ledgerRepository, registrationId } = env
 
     await performSubmission(
       env,
@@ -215,7 +215,7 @@ describe('Waste balance stream (Exporter)', () => {
       ])
     )
 
-    const latest = await streamRepository.findLatestByPartition(
+    const latest = await ledgerRepository.findLatestInLedger(
       registrationId,
       'ACC-123'
     )

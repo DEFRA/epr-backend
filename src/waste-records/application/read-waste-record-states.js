@@ -54,7 +54,7 @@ const rowStatesForHead = async (rowStateRepository, head) =>
  * domain content.
  *
  * @param {{
- *   streamRepository: import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository,
+ *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
  *   rowStateRepository: import('#waste-records/repository/port.js').RowStateRepository,
  *   organisationId: string,
  *   registrationId: string,
@@ -63,12 +63,12 @@ const rowStatesForHead = async (rowStateRepository, head) =>
  * @returns {Promise<WasteRecordState[]>}
  */
 export const wasteRecordStatesForRegistration = async ({
-  streamRepository,
+  ledgerRepository,
   rowStateRepository,
   registrationId,
   accreditationId
 }) => {
-  const head = await latestCommittedSummaryLogId(streamRepository, {
+  const head = await latestCommittedSummaryLogId(ledgerRepository, {
     registrationId,
     accreditationId
   })

@@ -3,12 +3,12 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 
 import {
-  createMongoStreamRepository,
+  createMongoLedgerRepository,
   ensureStreamCollection,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
-} from './stream-mongodb.js'
-import { buildStreamEvent } from './stream-test-data.js'
-import { testStreamRepositoryContract } from './stream-port.contract.js'
+} from './ledger-mongodb.js'
+import { buildStreamEvent } from './ledger-test-data.js'
+import { testLedgerRepositoryContract } from './ledger-port.contract.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -25,12 +25,12 @@ const it = mongoIt.extend({
     await use(database.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME))
   },
 
-  streamRepository: async (/** @type {*} */ { mongoClient }, use) => {
+  ledgerRepository: async (/** @type {*} */ { mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
     await database
       .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
       .deleteMany({})
-    const factory = await createMongoStreamRepository(database)
+    const factory = await createMongoLedgerRepository(database)
     await use(factory)
   }
 })
@@ -62,7 +62,7 @@ describe('ensureStreamCollection', () => {
       expect(indexOptionFor(indexes, 'partition_number', 'unique')).toBe(true)
     })
 
-    it('creates the partition_kind_latest index for findLatestByPartitionAndKind', async (/** @type {*} */ {
+    it('creates the partition_kind_latest index for findLatestInLedgerByKind', async (/** @type {*} */ {
       streamCollection
     }) => {
       const indexes = await streamCollection.indexes()
@@ -98,21 +98,21 @@ describe('ensureStreamCollection', () => {
   })
 })
 
-describe('MongoDB stream repository', () => {
-  it('exposes the stream port surface', async (/** @type {*} */ {
+describe('MongoDB ledger repository', () => {
+  it('exposes the ledger port surface', async (/** @type {*} */ {
     mongoClient
   }) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const repository = (await createMongoStreamRepository(database))()
+    const repository = (await createMongoLedgerRepository(database))()
     expect(repository.appendEvents).toBeTypeOf('function')
-    expect(repository.findLatestByPartition).toBeTypeOf('function')
-    expect(repository.findLatestByPartitionAndKind).toBeTypeOf('function')
+    expect(repository.findLatestInLedger).toBeTypeOf('function')
+    expect(repository.findLatestInLedgerByKind).toBeTypeOf('function')
     expect(repository.findEventsByPrnIdAfter).toBeTypeOf('function')
-    expect(repository.findAllByPartition).toBeTypeOf('function')
+    expect(repository.findAllInLedger).toBeTypeOf('function')
   })
 
-  describe('stream repository contract', () => {
-    testStreamRepositoryContract(it)
+  describe('ledger repository contract', () => {
+    testLedgerRepositoryContract(it)
   })
 
   describe('appendEvents error translation', () => {
@@ -126,7 +126,7 @@ describe('MongoDB stream repository', () => {
       const stubDb = { collection: () => stubCollection }
 
       const repository = (
-        await createMongoStreamRepository(/** @type {*} */ (stubDb))
+        await createMongoLedgerRepository(/** @type {*} */ (stubDb))
       )()
 
       await expect(
@@ -147,7 +147,7 @@ describe('MongoDB stream repository', () => {
       const stubDb = { collection: () => stubCollection }
 
       const repository = (
-        await createMongoStreamRepository(/** @type {*} */ (stubDb))
+        await createMongoLedgerRepository(/** @type {*} */ (stubDb))
       )()
 
       await expect(
@@ -167,13 +167,13 @@ describe('MongoDB stream repository', () => {
       const stubDb = { collection: () => stubCollection }
 
       const repository = (
-        await createMongoStreamRepository(/** @type {*} */ (stubDb))
+        await createMongoLedgerRepository(/** @type {*} */ (stubDb))
       )()
 
       await expect(
         repository.appendEvents([buildStreamEvent({ number: 1 })])
       ).rejects.toMatchObject({
-        name: 'StreamSlotConflictError'
+        name: 'LedgerSlotConflictError'
       })
     })
   })

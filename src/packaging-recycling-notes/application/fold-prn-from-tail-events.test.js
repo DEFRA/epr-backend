@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
 
@@ -62,7 +62,7 @@ describe('foldPrnFromTailEvents', () => {
     it('prn-created sets status, slot, history, updatedAt/By and watermark, leaving version to storage', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_CREATED,
+        LEDGER_EVENT_KIND.PRN_CREATED,
         1,
         '2026-02-01T12:00:00.000Z'
       )
@@ -94,12 +94,12 @@ describe('foldPrnFromTailEvents', () => {
     it('leaves version untouched: the persisted-document version is owned by storage, not the fold', () => {
       const prn = basePrn()
       const created = buildEvent(
-        STREAM_EVENT_KIND.PRN_CREATED,
+        LEDGER_EVENT_KIND.PRN_CREATED,
         1,
         '2026-02-01T12:00:00.000Z'
       )
       const issued = buildEvent(
-        STREAM_EVENT_KIND.PRN_ISSUED,
+        LEDGER_EVENT_KIND.PRN_ISSUED,
         2,
         '2026-02-02T12:00:00.000Z'
       )
@@ -112,7 +112,7 @@ describe('foldPrnFromTailEvents', () => {
     it('narrows the event actor to id and name, dropping the stream-only email', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_CREATED,
+        LEDGER_EVENT_KIND.PRN_CREATED,
         1,
         '2026-02-01T12:00:00.000Z',
         { id: 'user-1', name: 'Test User', email: 'test@example.com' }
@@ -136,7 +136,7 @@ describe('foldPrnFromTailEvents', () => {
     it('prn-issued sets currentStatus awaiting_acceptance and issued slot', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_ISSUED,
+        LEDGER_EVENT_KIND.PRN_ISSUED,
         2,
         '2026-02-02T12:00:00.000Z'
       )
@@ -158,7 +158,7 @@ describe('foldPrnFromTailEvents', () => {
     it('prn-accepted sets currentStatus accepted and accepted slot', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_ACCEPTED,
+        LEDGER_EVENT_KIND.PRN_ACCEPTED,
         3,
         '2026-02-03T12:00:00.000Z'
       )
@@ -180,7 +180,7 @@ describe('foldPrnFromTailEvents', () => {
     it('prn-rejected sets currentStatus awaiting_cancellation and rejected slot', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_REJECTED,
+        LEDGER_EVENT_KIND.PRN_REJECTED,
         4,
         '2026-02-04T12:00:00.000Z'
       )
@@ -202,7 +202,7 @@ describe('foldPrnFromTailEvents', () => {
     it('prn-creation-cancelled sets currentStatus deleted and deleted slot', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+        LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
         5,
         '2026-02-05T12:00:00.000Z'
       )
@@ -224,7 +224,7 @@ describe('foldPrnFromTailEvents', () => {
     it('prn-cancelled-after-issue sets currentStatus cancelled and cancelled slot', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+        LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
         6,
         '2026-02-06T12:00:00.000Z'
       )
@@ -248,12 +248,12 @@ describe('foldPrnFromTailEvents', () => {
     it('applies every event in order, populating each slot and appending each history entry', () => {
       const prn = basePrn()
       const created = buildEvent(
-        STREAM_EVENT_KIND.PRN_CREATED,
+        LEDGER_EVENT_KIND.PRN_CREATED,
         1,
         '2026-02-01T12:00:00.000Z'
       )
       const issued = buildEvent(
-        STREAM_EVENT_KIND.PRN_ISSUED,
+        LEDGER_EVENT_KIND.PRN_ISSUED,
         2,
         '2026-02-02T12:00:00.000Z',
         { id: 'signatory', name: 'Sig Natory' }
@@ -294,7 +294,7 @@ describe('foldPrnFromTailEvents', () => {
     it('throws on an unmappable kind (e.g. summary-log-submitted)', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
         1,
         '2026-02-01T12:00:00.000Z'
       )
@@ -310,7 +310,7 @@ describe('foldPrnFromTailEvents', () => {
       const prn = basePrn()
       const snapshot = structuredClone(prn)
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_ISSUED,
+        LEDGER_EVENT_KIND.PRN_ISSUED,
         2,
         '2026-02-02T12:00:00.000Z'
       )
@@ -328,7 +328,7 @@ describe('foldPrnFromTailEvents', () => {
         notes: 'leave me alone'
       }
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+        LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
         5,
         '2026-02-05T12:00:00.000Z'
       )

@@ -1,5 +1,5 @@
 /**
- * Storage-level port for the waste balance event stream.
+ * Storage-level port for the waste balance event ledger.
  *
  * Surface is deliberately minimal: only primitives where two correct adapters
  * could meaningfully implement things differently (persistence, native conflict
@@ -14,7 +14,7 @@
  * (MongoDB `E11000`, in-memory index check) into this typed error so callers
  * can react uniformly.
  */
-export class StreamSlotConflictError extends Error {
+export class LedgerSlotConflictError extends Error {
   /** @type {string} */
   registrationId
   /** @type {string | null} */
@@ -31,7 +31,7 @@ export class StreamSlotConflictError extends Error {
     super(
       `Stream slot already occupied for registration ${registrationId} accreditation ${accreditationId} number ${slotNumber}`
     )
-    this.name = 'StreamSlotConflictError'
+    this.name = 'LedgerSlotConflictError'
     this.registrationId = registrationId
     this.accreditationId = accreditationId
     this.slotNumber = slotNumber
@@ -40,11 +40,11 @@ export class StreamSlotConflictError extends Error {
 
 /**
  * Raised by `appendEvents` when the event's `number` is not the next
- * sequential value for its partition. The stream is strictly append-only
+ * sequential value for its partition. The ledger is strictly append-only
  * with no gaps: event N requires event N-1 to exist (or N must be 1 for
- * an empty stream).
+ * an empty ledger).
  */
-export class StreamSequenceError extends Error {
+export class LedgerSequenceError extends Error {
   /** @type {string} */
   registrationId
   /** @type {string | null} */
@@ -64,7 +64,7 @@ export class StreamSequenceError extends Error {
     super(
       `Stream sequence violation for registration ${registrationId} accreditation ${accreditationId}: expected number ${expectedNumber}, got ${providedNumber}`
     )
-    this.name = 'StreamSequenceError'
+    this.name = 'LedgerSequenceError'
     this.registrationId = registrationId
     this.accreditationId = accreditationId
     this.providedNumber = providedNumber
@@ -73,36 +73,36 @@ export class StreamSequenceError extends Error {
 }
 
 /**
- * @typedef {import('./stream-schema.js').StreamEventInsert} StreamEventInsert
+ * @typedef {import('./ledger-schema.js').LedgerEventInsert} LedgerEventInsert
  */
 
 /**
- * @typedef {import('./stream-schema.js').StreamEvent} StreamEvent
+ * @typedef {import('./ledger-schema.js').LedgerEvent} LedgerEvent
  */
 
 /**
- * @typedef {Object} WasteBalanceStreamRepository
- * @property {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent | null>} findLatestByPartition
- *   Return the highest-numbered event for the stream partition, or `null`
+ * @typedef {Object} WasteBalanceLedgerRepository
+ * @property {(registrationId: string, accreditationId: string | null) => Promise<LedgerEvent | null>} findLatestInLedger
+ *   Return the highest-numbered event for the ledger partition, or `null`
  *   if none exist.
- * @property {(registrationId: string, accreditationId: string | null, kind: import('./stream-schema.js').StreamEventKind) => Promise<StreamEvent | null>} findLatestByPartitionAndKind
- *   Return the highest-numbered event of the given kind for the stream
+ * @property {(registrationId: string, accreditationId: string | null, kind: import('./ledger-schema.js').LedgerEventKind) => Promise<LedgerEvent | null>} findLatestInLedgerByKind
+ *   Return the highest-numbered event of the given kind for the ledger
  *   partition, or `null` if none of that kind exist.
- * @property {(registrationId: string, accreditationId: string | null, prnId: string, afterNumber: number) => Promise<StreamEvent[]>} findEventsByPrnIdAfter
+ * @property {(registrationId: string, accreditationId: string | null, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>} findEventsByPrnIdAfter
  *   Return events referencing the given `prnId` in `payload.prnId` within
  *   the specified partition, with `number > afterNumber`, ordered by
  *   `number` ascending.
- * @property {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent[]>} findAllByPartition
+ * @property {(registrationId: string, accreditationId: string | null) => Promise<LedgerEvent[]>} findAllInLedger
  *   Return all events for the given partition, ordered by `number`
  *   ascending. Returns an empty array if the partition has no events.
- * @property {(registrationId: string, accreditationId: string | null) => Promise<number>} deleteByPartition
+ * @property {(registrationId: string, accreditationId: string | null) => Promise<number>} deleteAllInLedger
  *   Migration PAE-1382: delete all events for the given partition.
  *   Returns the number of deleted events. No-op on empty partition.
- * @property {(events: StreamEventInsert[]) => Promise<StreamEvent[]>} appendEvents
+ * @property {(events: LedgerEventInsert[]) => Promise<LedgerEvent[]>} appendEvents
  *   Append a contiguous batch of events. Events must be numbered
  *   sequentially, and the first event's number must be `currentMax + 1`
- *   (or `1` if the partition is empty). Throws `StreamSlotConflictError` if
- *   the starting slot is already occupied, `StreamSequenceError` on a gap or
+ *   (or `1` if the partition is empty). Throws `LedgerSlotConflictError` if
+ *   the starting slot is already occupied, `LedgerSequenceError` on a gap or
  *   non-sequential numbering. Empty array is a no-op.
  *
  *   A single-event batch is fully concurrency-safe: the slot index admits one
@@ -116,7 +116,7 @@ export class StreamSequenceError extends Error {
  */
 
 /**
- * @typedef {() => WasteBalanceStreamRepository} WasteBalanceStreamRepositoryFactory
+ * @typedef {() => WasteBalanceLedgerRepository} WasteBalanceLedgerRepositoryFactory
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

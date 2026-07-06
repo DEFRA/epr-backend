@@ -200,7 +200,7 @@ const performDiscardWrite = async ({ prnRepository, updateParams }) => {
  *
  * @param {Object} params
  * @param {PackagingRecyclingNotesRepository} params.prnRepository
- * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} params.streamRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {string} params.id
@@ -216,7 +216,7 @@ const performDiscardWrite = async ({ prnRepository, updateParams }) => {
  */
 export async function updatePrnStatus({
   prnRepository,
-  streamRepository,
+  ledgerRepository,
   organisationsRepository,
   logger,
   id,
@@ -255,7 +255,7 @@ export async function updatePrnStatus({
   const ctx = {
     prnRepository,
     organisationsRepository,
-    service: createWasteBalanceService(streamRepository),
+    service: createWasteBalanceService(ledgerRepository),
     logger,
     prn,
     updateParams,

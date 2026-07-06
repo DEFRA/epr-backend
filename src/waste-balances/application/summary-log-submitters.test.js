@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
 import {
   addAttribution,
   buildSystemLogSubmitters,
@@ -328,14 +328,14 @@ describe('emptyAttributionCounts', () => {
 describe('addAttribution', () => {
   it('records an actor under its event kind', () => {
     const matrix = {}
-    addAttribution(matrix, STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED, {
+    addAttribution(matrix, LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED, {
       id: 'user-1',
       name: 'Alice',
       email: 'alice@example.com'
     })
 
     expect(matrix).toEqual({
-      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+      [LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
         nameAndEmail: 1,
         nameOnly: 0,
         emailOnly: 0,
@@ -348,14 +348,14 @@ describe('addAttribution', () => {
 
   it('accumulates several actors of the same kind', () => {
     const matrix = {}
-    addAttribution(matrix, STREAM_EVENT_KIND.PRN_CREATED, {
+    addAttribution(matrix, LEDGER_EVENT_KIND.PRN_CREATED, {
       id: 'user-1',
       name: 'Alice'
     })
-    addAttribution(matrix, STREAM_EVENT_KIND.PRN_CREATED, { id: 'user-2' })
-    addAttribution(matrix, STREAM_EVENT_KIND.PRN_CREATED, null)
+    addAttribution(matrix, LEDGER_EVENT_KIND.PRN_CREATED, { id: 'user-2' })
+    addAttribution(matrix, LEDGER_EVENT_KIND.PRN_CREATED, null)
 
-    expect(matrix[STREAM_EVENT_KIND.PRN_CREATED]).toEqual({
+    expect(matrix[LEDGER_EVENT_KIND.PRN_CREATED]).toEqual({
       nameAndEmail: 0,
       nameOnly: 1,
       emailOnly: 0,
@@ -369,7 +369,7 @@ describe('addAttribution', () => {
 describe('mergeAttributionMatrices', () => {
   it('sums counts per kind per cell across matrices', () => {
     const a = {
-      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+      [LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
         nameAndEmail: 1,
         nameOnly: 0,
         emailOnly: 2,
@@ -379,7 +379,7 @@ describe('mergeAttributionMatrices', () => {
       }
     }
     const b = {
-      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+      [LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
         nameAndEmail: 0,
         nameOnly: 1,
         emailOnly: 1,
@@ -387,7 +387,7 @@ describe('mergeAttributionMatrices', () => {
         noActor: 0,
         scope: 1
       },
-      [STREAM_EVENT_KIND.PRN_ACCEPTED]: {
+      [LEDGER_EVENT_KIND.PRN_ACCEPTED]: {
         nameAndEmail: 0,
         nameOnly: 2,
         emailOnly: 0,
@@ -398,7 +398,7 @@ describe('mergeAttributionMatrices', () => {
     }
 
     expect(mergeAttributionMatrices([a, b])).toEqual({
-      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+      [LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
         nameAndEmail: 1,
         nameOnly: 1,
         emailOnly: 3,
@@ -406,7 +406,7 @@ describe('mergeAttributionMatrices', () => {
         noActor: 1,
         scope: 4
       },
-      [STREAM_EVENT_KIND.PRN_ACCEPTED]: {
+      [LEDGER_EVENT_KIND.PRN_ACCEPTED]: {
         nameAndEmail: 0,
         nameOnly: 2,
         emailOnly: 0,
@@ -425,7 +425,7 @@ describe('mergeAttributionMatrices', () => {
 describe('formatAttributionMatrix', () => {
   it('renders each kind with its cell counts, kinds sorted', () => {
     const matrix = {
-      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+      [LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
         nameAndEmail: 2,
         nameOnly: 0,
         emailOnly: 1,
@@ -433,7 +433,7 @@ describe('formatAttributionMatrix', () => {
         noActor: 1,
         scope: 2
       },
-      [STREAM_EVENT_KIND.PRN_CREATED]: {
+      [LEDGER_EVENT_KIND.PRN_CREATED]: {
         nameAndEmail: 0,
         nameOnly: 4,
         emailOnly: 0,
@@ -455,7 +455,7 @@ describe('formatAttributionMatrix', () => {
 
   it('renders no cell label that CDP PII masking would redact', () => {
     const matrix = {
-      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+      [LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
         nameAndEmail: 1,
         nameOnly: 1,
         emailOnly: 1,

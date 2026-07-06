@@ -3,14 +3,14 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { buildSystemLogSubmitters } from '#waste-balances/application/summary-log-submitters.js'
 import {
   BACKFILL_ACTOR,
-  STREAM_EVENT_KIND
-} from '#waste-balances/repository/stream-schema.js'
+  LEDGER_EVENT_KIND
+} from '#waste-balances/repository/ledger-schema.js'
 import { reconstructSubmissionRowStates } from '#waste-records/backfill/reconstruct-submission-rowstates.js'
 
 /**
  * @import { SummaryLogWithId } from '#repositories/summary-logs/port.js'
  * @import { OrderedSummaryLog } from '#waste-records/backfill/reconstruct-submission-rowstates.js'
- * @import { WasteBalanceStreamRepository } from '#waste-balances/repository/stream-port.js'
+ * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  */
 
 /**
@@ -21,7 +21,7 @@ import { reconstructSubmissionRowStates } from '#waste-records/backfill/reconstr
  * @typedef {Object} PlannedSubmittedEvent
  * @property {string} summaryLogId
  * @property {string} submittedAt - ISO8601 timestamp
- * @property {import('#waste-balances/repository/stream-schema.js').StreamUserSummary} [submittedBy]
+ * @property {import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary} [submittedBy]
  * @property {string[]} membershipRowIds
  */
 
@@ -59,7 +59,7 @@ import { reconstructSubmissionRowStates } from '#waste-records/backfill/reconstr
  * person who made the submission rather than the backfill actor.
  *
  * @param {SummaryLogWithId} log
- * @param {Map<string, import('#waste-balances/repository/stream-schema.js').StreamUserSummary>} submitters
+ * @param {Map<string, import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary>} submitters
  * @returns {OrderedSummaryLog}
  */
 const toOrderedSummaryLog = ({ summaryLog }, submitters) => {
@@ -111,21 +111,21 @@ const loadSubmittedSummaryLogs = async ({
  * The summary-log ids of registered-only summary-log submitted events already
  * present in a null-accreditation partition, so a re-run never double-emits.
  *
- * @param {WasteBalanceStreamRepository} streamRepository
+ * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {string} registrationId
  * @returns {Promise<Set<string>>}
  */
 const existingSubmittedEventSummaryLogIds = async (
-  streamRepository,
+  ledgerRepository,
   registrationId
 ) => {
-  const events = await streamRepository.findAllByPartition(registrationId, null)
+  const events = await ledgerRepository.findAllInLedger(registrationId, null)
   return new Set(
     events
-      .filter((event) => event.kind === STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
+      .filter((event) => event.kind === LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       .map(
         (event) =>
-          /** @type {import('#waste-balances/repository/stream-schema.js').SummaryLogSubmittedPayload} */ (
+          /** @type {import('#waste-balances/repository/ledger-schema.js').SummaryLogSubmittedPayload} */ (
             event.payload
           ).summaryLogId
       )
@@ -149,7 +149,7 @@ const existingSubmittedEventSummaryLogIds = async (
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} args.systemLogsRepository
- * @param {WasteBalanceStreamRepository} args.streamRepository
+ * @param {WasteBalanceLedgerRepository} args.ledgerRepository
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} args.wasteBalanceService
  * @param {boolean} args.writeSubmittedEvents
  * @returns {Promise<{ submissionCount: number, plannedEvents: PlannedSubmittedEvent[] } | null>}
@@ -162,7 +162,7 @@ const backfillRegistrationSubmittedEvents = async ({
   summaryLogsRepository,
   overseasSitesRepository,
   systemLogsRepository,
-  streamRepository,
+  ledgerRepository,
   wasteBalanceService,
   writeSubmittedEvents
 }) => {
@@ -195,7 +195,7 @@ const backfillRegistrationSubmittedEvents = async ({
   })
 
   const existingSubmittedEvents = await existingSubmittedEventSummaryLogIds(
-    streamRepository,
+    ledgerRepository,
     registration.id
   )
 
@@ -254,7 +254,7 @@ const backfillRegistrationSubmittedEvents = async ({
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} deps.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} deps.overseasSitesRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
- * @param {WasteBalanceStreamRepository} deps.streamRepository
+ * @param {WasteBalanceLedgerRepository} deps.ledgerRepository
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} deps.wasteBalanceService
  * @param {boolean} [deps.writeSubmittedEvents] - When false, plan the events without appending them (dry-run)
  * @returns {Promise<RegisteredOnlySweepSummary>}
@@ -265,7 +265,7 @@ export const backfillRegisteredOnlySubmittedEvents = async ({
   summaryLogsRepository,
   overseasSitesRepository,
   systemLogsRepository,
-  streamRepository,
+  ledgerRepository,
   wasteBalanceService,
   writeSubmittedEvents = true
 }) => {
@@ -290,7 +290,7 @@ export const backfillRegisteredOnlySubmittedEvents = async ({
         summaryLogsRepository,
         overseasSitesRepository,
         systemLogsRepository,
-        streamRepository,
+        ledgerRepository,
         wasteBalanceService,
         writeSubmittedEvents
       })

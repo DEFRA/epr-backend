@@ -1,23 +1,23 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildStreamEvent } from '../stream-test-data.js'
+import { buildStreamEvent } from '../ledger-test-data.js'
 
 export const testFindLatestByPartitionBehaviour = (it) => {
-  describe('findLatestByPartition', () => {
+  describe('findLatestInLedger', () => {
     let repository
 
     beforeEach(
       async (
-        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
-          streamRepository
+        /** @type {{ ledgerRepository: import('../ledger-port.js').WasteBalanceLedgerRepositoryFactory }} */ {
+          ledgerRepository
         }
       ) => {
-        repository = await streamRepository()
+        repository = await ledgerRepository()
       }
     )
 
     it('returns null when no events exist for the partition', async () => {
-      const result = await repository.findLatestByPartition(
+      const result = await repository.findLatestInLedger(
         'reg-empty',
         'acc-empty'
       )
@@ -34,7 +34,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findLatestByPartition(
+      const result = await repository.findLatestInLedger(
         'reg-single',
         'acc-single'
       )
@@ -74,10 +74,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findLatestByPartition(
-        'reg-many',
-        'acc-many'
-      )
+      const result = await repository.findLatestInLedger('reg-many', 'acc-many')
 
       expect(result.number).toBe(3)
       expect(result.closingBalance).toEqual({ amount: 30, availableAmount: 25 })
@@ -100,8 +97,8 @@ export const testFindLatestByPartitionBehaviour = (it) => {
         })
       ])
 
-      const x = await repository.findLatestByPartition('reg-x', 'acc-x')
-      const y = await repository.findLatestByPartition('reg-y', 'acc-y')
+      const x = await repository.findLatestInLedger('reg-x', 'acc-x')
+      const y = await repository.findLatestInLedger('reg-y', 'acc-y')
 
       expect(x.number).toBe(1)
       expect(x.accreditationId).toBe('acc-x')
@@ -109,7 +106,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
       expect(y.accreditationId).toBe('acc-y')
     })
 
-    it('treats null and non-null accreditationId as separate streams', async () => {
+    it('treats null and non-null accreditationId as separate ledgers', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-null-test',
@@ -127,11 +124,11 @@ export const testFindLatestByPartitionBehaviour = (it) => {
         })
       ])
 
-      const nullStream = await repository.findLatestByPartition(
+      const nullStream = await repository.findLatestInLedger(
         'reg-null-test',
         null
       )
-      const nonNullStream = await repository.findLatestByPartition(
+      const nonNullStream = await repository.findLatestInLedger(
         'reg-null-test',
         'acc-non-null'
       )
@@ -158,7 +155,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findLatestByPartition(
+      const result = await repository.findLatestInLedger(
         'reg-precision',
         'acc-precision'
       )

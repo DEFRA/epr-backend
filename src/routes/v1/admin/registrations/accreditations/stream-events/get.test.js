@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -16,15 +16,15 @@ describe(`GET ${streamEventsGetPath}`, () => {
   setupAuthContext()
 
   let server
-  let streamRepository
+  let ledgerRepository
 
   beforeEach(async () => {
     server = await createTestServer()
-    streamRepository = server.app.streamRepository
+    ledgerRepository = server.app.ledgerRepository
   })
 
   it('returns 200 with stream events for the partition', async () => {
-    await streamRepository.appendEvents([
+    await ledgerRepository.appendEvents([
       buildStreamEvent({
         registrationId: 'reg-1',
         accreditationId: 'acc-1',
@@ -47,7 +47,7 @@ describe(`GET ${streamEventsGetPath}`, () => {
   })
 
   it('returns events ordered by number ascending', async () => {
-    await streamRepository.appendEvents([
+    await ledgerRepository.appendEvents([
       buildStreamEvent({
         registrationId: 'reg-2',
         accreditationId: 'acc-2',
@@ -55,7 +55,7 @@ describe(`GET ${streamEventsGetPath}`, () => {
         number: 1
       })
     ])
-    await streamRepository.appendEvents([
+    await ledgerRepository.appendEvents([
       buildStreamEvent({
         registrationId: 'reg-2',
         accreditationId: 'acc-2',

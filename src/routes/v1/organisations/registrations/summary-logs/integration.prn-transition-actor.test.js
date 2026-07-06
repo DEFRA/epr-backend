@@ -10,7 +10,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 import {
   asStandardUser,
@@ -167,7 +167,7 @@ describe('PRN transition actor on the waste-balance stream', () => {
 
   it('carries the requesting human id, name and email onto the appended stream event', async () => {
     const env = await setupLedgerEnv()
-    const { streamRepository, registrationId } = env
+    const { ledgerRepository, registrationId } = env
 
     await submitCredit(env, 300)
 
@@ -179,12 +179,12 @@ describe('PRN transition actor on the waste-balance stream', () => {
     })
     expect(response.statusCode).toBe(200)
 
-    const latest = await streamRepository.findLatestByPartition(
+    const latest = await ledgerRepository.findLatestInLedger(
       registrationId,
       LEDGER_ACCREDITATION_ID
     )
     assert(latest)
-    expect(latest.kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+    expect(latest.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
     expect(latest.payload).toEqual({ prnId: prn.id, amount: 50 })
     expect(latest.createdBy).toEqual({
       id: SIGNATORY.id,

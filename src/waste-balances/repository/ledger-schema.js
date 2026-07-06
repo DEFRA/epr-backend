@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-export const STREAM_EVENT_KIND = Object.freeze({
+export const LEDGER_EVENT_KIND = Object.freeze({
   SUMMARY_LOG_SUBMITTED: 'summary-log-submitted',
   PRN_CREATED: 'prn-created',
   PRN_ISSUED: 'prn-issued',
@@ -11,35 +11,35 @@ export const STREAM_EVENT_KIND = Object.freeze({
 })
 
 /**
- * @typedef {typeof STREAM_EVENT_KIND[keyof typeof STREAM_EVENT_KIND]} StreamEventKind
+ * @typedef {typeof LEDGER_EVENT_KIND[keyof typeof LEDGER_EVENT_KIND]} LedgerEventKind
  */
 
-const kindValues = Object.values(STREAM_EVENT_KIND)
+const kindValues = Object.values(LEDGER_EVENT_KIND)
 
 const PRN_KINDS = new Set([
-  STREAM_EVENT_KIND.PRN_CREATED,
-  STREAM_EVENT_KIND.PRN_ISSUED,
-  STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
-  STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
-  STREAM_EVENT_KIND.PRN_ACCEPTED,
-  STREAM_EVENT_KIND.PRN_REJECTED
+  LEDGER_EVENT_KIND.PRN_CREATED,
+  LEDGER_EVENT_KIND.PRN_ISSUED,
+  LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
+  LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+  LEDGER_EVENT_KIND.PRN_ACCEPTED,
+  LEDGER_EVENT_KIND.PRN_REJECTED
 ])
 
 /**
- * @typedef {Object} StreamBalanceSnapshot
+ * @typedef {Object} LedgerBalanceSnapshot
  * @property {number} amount
  * @property {number} availableAmount
  */
 
-/** @type {Readonly<StreamBalanceSnapshot>} */
+/** @type {Readonly<LedgerBalanceSnapshot>} */
 export const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
 
 /**
- * Best-view actor for a stream event. `id` always identifies the actor; `name`
+ * Best-view actor for a ledger event. `id` always identifies the actor; `name`
  * and `email` are present only when the source carries a real value, and are
  * left absent otherwise.
  *
- * @typedef {Object} StreamUserSummary
+ * @typedef {Object} LedgerUserSummary
  * @property {string} id
  * @property {string} [name]
  * @property {string} [email]
@@ -53,7 +53,7 @@ export const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
  * the system. Its id is also the marker the submitter recovery rejects, so a
  * placeholder can never masquerade as a recovered real actor.
  *
- * @type {Readonly<StreamUserSummary>}
+ * @type {Readonly<LedgerUserSummary>}
  */
 export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
@@ -98,26 +98,26 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * Shape accepted by `WasteBalanceStreamRepository.appendEvents`: the content of
- * an event at a `LedgerPosition`. Mirrors `streamEventInsertSchema` — keep the
+ * Shape accepted by `WasteBalanceLedgerRepository.appendEvents`: the content of
+ * an event at a `LedgerPosition`. Mirrors `ledgerEventInsertSchema` — keep the
  * two in sync; the schema is the runtime gate, this typedef is the check-time
  * gate.
  *
  * @typedef {LedgerPosition & {
- *   kind: StreamEventKind,
+ *   kind: LedgerEventKind,
  *   payload: SummaryLogSubmittedPayload | PrnPayload,
- *   openingBalance: StreamBalanceSnapshot,
- *   closingBalance: StreamBalanceSnapshot,
+ *   openingBalance: LedgerBalanceSnapshot,
+ *   closingBalance: LedgerBalanceSnapshot,
  *   createdAt: Date,
- *   createdBy: StreamUserSummary
- * }} StreamEventInsert
+ *   createdBy: LedgerUserSummary
+ * }} LedgerEventInsert
  */
 
 /**
- * Shape returned by `WasteBalanceStreamRepository` reads — `StreamEventInsert` plus
+ * Shape returned by `WasteBalanceLedgerRepository` reads — `LedgerEventInsert` plus
  * the storage-assigned `id`.
  *
- * @typedef {StreamEventInsert & { id: string }} StreamEvent
+ * @typedef {LedgerEventInsert & { id: string }} LedgerEvent
  */
 
 const userSummarySchema = Joi.object({
@@ -141,7 +141,7 @@ const prnPayloadSchema = Joi.object({
   amount: Joi.number().required()
 })
 
-export const streamEventInsertSchema = Joi.object({
+export const ledgerEventInsertSchema = Joi.object({
   registrationId: Joi.string().required(),
   accreditationId: Joi.string().allow(null).required(),
   organisationId: Joi.string().required(),
@@ -150,16 +150,16 @@ export const streamEventInsertSchema = Joi.object({
     .valid(...kindValues)
     .required(),
   payload: Joi.when('kind', {
-    is: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+    is: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
     then: summaryLogPayloadSchema.required()
   }).when('kind', {
     is: Joi.string().valid(
-      STREAM_EVENT_KIND.PRN_CREATED,
-      STREAM_EVENT_KIND.PRN_ISSUED,
-      STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
-      STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
-      STREAM_EVENT_KIND.PRN_ACCEPTED,
-      STREAM_EVENT_KIND.PRN_REJECTED
+      LEDGER_EVENT_KIND.PRN_CREATED,
+      LEDGER_EVENT_KIND.PRN_ISSUED,
+      LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
+      LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+      LEDGER_EVENT_KIND.PRN_ACCEPTED,
+      LEDGER_EVENT_KIND.PRN_REJECTED
     ),
     then: prnPayloadSchema.required()
   }),
@@ -171,12 +171,12 @@ export const streamEventInsertSchema = Joi.object({
   if (value.accreditationId === null && PRN_KINDS.has(value.kind)) {
     return helpers.error('any.custom', {
       message:
-        'PRN events are invalid in registered-only streams (accreditationId is null)'
+        'PRN events are invalid in registered-only ledgers (accreditationId is null)'
     })
   }
   return value
 })
 
-export const streamEventReadSchema = streamEventInsertSchema.keys({
+export const ledgerEventReadSchema = ledgerEventInsertSchema.keys({
   id: Joi.string().required()
 })

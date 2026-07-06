@@ -4,10 +4,10 @@ import { MongoClient, ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createServer } from '#server/server.js'
 import {
-  createMongoStreamRepository,
+  createMongoLedgerRepository,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
-} from '#waste-balances/repository/stream-mongodb.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+} from '#waste-balances/repository/ledger-mongodb.js'
+import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildOrganisation,
   buildRegistration
@@ -86,8 +86,8 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
 
       await insertOrganisation(database)
 
-      const streamRepository = (await createMongoStreamRepository(database))()
-      await streamRepository.appendEvents([
+      const ledgerRepository = (await createMongoLedgerRepository(database))()
+      await ledgerRepository.appendEvents([
         buildStreamEvent({
           accreditationId: accreditationId1,
           organisationId,
@@ -96,7 +96,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
           closingBalance: { amount: 1000, availableAmount: 750 }
         })
       ])
-      await streamRepository.appendEvents([
+      await ledgerRepository.appendEvents([
         buildStreamEvent({
           accreditationId: accreditationId2,
           organisationId,
@@ -115,7 +115,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     await server.stop()
   })
 
-  it('fetches waste balances from the stream for multiple IDs', async () => {
+  it('fetches waste balances from the ledger for multiple IDs', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${accreditationId2}`,
@@ -137,7 +137,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     })
   })
 
-  it('fetches a single waste balance from the stream', async () => {
+  it('fetches a single waste balance from the ledger', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
@@ -189,7 +189,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     expect(result[nonExistentId]).toBeUndefined()
   })
 
-  it('resolves a registered accreditation with no stream events to zero amounts', async () => {
+  it('resolves a registered accreditation with no ledger events to zero amounts', async () => {
     await dbClient
       .db(DATABASE_NAME)
       .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)

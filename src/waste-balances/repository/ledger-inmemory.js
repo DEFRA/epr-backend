@@ -1,25 +1,25 @@
 import { randomUUID } from 'node:crypto'
 
-import { StreamSlotConflictError, StreamSequenceError } from './stream-port.js'
-import { validateStreamEventInsert } from './stream-validation.js'
+import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
+import { validateStreamEventInsert } from './ledger-validation.js'
 
 /**
- * In-memory adapter for the waste balance event stream.
+ * In-memory adapter for the waste balance event ledger.
  *
  * Backed by a single array — fine for tests, fixtures, and contract
  * verification. Not durable, not concurrent-safe across processes.
  */
 
 /**
- * @typedef {import('./stream-schema.js').StreamEvent} StreamEvent
+ * @typedef {import('./ledger-schema.js').LedgerEvent} LedgerEvent
  */
 
 /**
- * @typedef {import('./stream-schema.js').StreamEventInsert} StreamEventInsert
+ * @typedef {import('./ledger-schema.js').LedgerEventInsert} LedgerEventInsert
  */
 
 /**
- * @param {StreamEvent} event
+ * @param {LedgerEvent} event
  * @param {string} registrationId
  * @param {string | null} accreditationId
  */
@@ -30,12 +30,12 @@ const matchesPartition = (event, registrationId, accreditationId) =>
 /**
  * Migration PAE-1382: delete all events for a partition.
  *
- * @param {StreamEvent[]} storage
+ * @param {LedgerEvent[]} storage
  * @param {string} registrationId
  * @param {string | null} accreditationId
  * @returns {number}
  */
-const doDeleteByPartition = (storage, registrationId, accreditationId) => {
+const doDeleteInLedger = (storage, registrationId, accreditationId) => {
   const before = storage.length
   const remaining = storage.filter(
     (event) => !matchesPartition(event, registrationId, accreditationId)
@@ -49,9 +49,9 @@ const doDeleteByPartition = (storage, registrationId, accreditationId) => {
  * Append a contiguous batch of events. Synchronous and validated up front, so
  * the whole batch applies or none of it does.
  *
- * @param {StreamEvent[]} storage
- * @param {StreamEventInsert[]} events
- * @returns {StreamEvent[]}
+ * @param {LedgerEvent[]} storage
+ * @param {LedgerEventInsert[]} events
+ * @returns {LedgerEvent[]}
  */
 const doAppendEvents = (storage, events) => {
   if (events.length === 0) {
@@ -64,20 +64,20 @@ const doAppendEvents = (storage, events) => {
   )
   const currentMax =
     partitionEvents.length > 0
-      ? /** @type {StreamEvent} */ (partitionEvents.at(-1)).number
+      ? /** @type {LedgerEvent} */ (partitionEvents.at(-1)).number
       : 0
 
   const expectedStart = currentMax + 1
 
   if (first.number !== expectedStart) {
     if (partitionEvents.some((e) => e.number === first.number)) {
-      throw new StreamSlotConflictError(
+      throw new LedgerSlotConflictError(
         first.registrationId,
         first.accreditationId,
         first.number
       )
     }
-    throw new StreamSequenceError(
+    throw new LedgerSequenceError(
       first.registrationId,
       first.accreditationId,
       first.number,
@@ -88,7 +88,7 @@ const doAppendEvents = (storage, events) => {
   for (let i = 1; i < events.length; i++) {
     const expected = first.number + i
     if (events[i].number !== expected) {
-      throw new StreamSequenceError(
+      throw new LedgerSequenceError(
         events[i].registrationId,
         events[i].accreditationId,
         events[i].number,
@@ -106,10 +106,10 @@ const doAppendEvents = (storage, events) => {
 }
 
 /**
- * @param {Array<StreamEvent>} [initialEvents]
- * @returns {import('./stream-port.js').WasteBalanceStreamRepositoryFactory}
+ * @param {Array<LedgerEvent>} [initialEvents]
+ * @returns {import('./ledger-port.js').WasteBalanceLedgerRepositoryFactory}
  */
-export const createInMemoryStreamRepository = (initialEvents = []) => {
+export const createInMemoryLedgerRepository = (initialEvents = []) => {
   const storage = initialEvents
 
   return () => ({
@@ -117,7 +117,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
      * @param {string} registrationId
      * @param {string | null} accreditationId
      */
-    findLatestByPartition: async (registrationId, accreditationId) => {
+    findLatestInLedger: async (registrationId, accreditationId) => {
       const matches = storage.filter((event) =>
         matchesPartition(event, registrationId, accreditationId)
       )
@@ -126,19 +126,15 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         return null
       }
 
-      return structuredClone(/** @type {StreamEvent} */ (matches.at(-1)))
+      return structuredClone(/** @type {LedgerEvent} */ (matches.at(-1)))
     },
 
     /**
      * @param {string} registrationId
      * @param {string | null} accreditationId
-     * @param {import('./stream-schema.js').StreamEventKind} kind
+     * @param {import('./ledger-schema.js').LedgerEventKind} kind
      */
-    findLatestByPartitionAndKind: async (
-      registrationId,
-      accreditationId,
-      kind
-    ) => {
+    findLatestInLedgerByKind: async (registrationId, accreditationId, kind) => {
       const matches = storage.filter(
         (event) =>
           matchesPartition(event, registrationId, accreditationId) &&
@@ -149,7 +145,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         return null
       }
 
-      return structuredClone(/** @type {StreamEvent} */ (matches.at(-1)))
+      return structuredClone(/** @type {LedgerEvent} */ (matches.at(-1)))
     },
 
     /**
@@ -180,7 +176,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
      * @param {string} registrationId
      * @param {string | null} accreditationId
      */
-    findAllByPartition: async (registrationId, accreditationId) => {
+    findAllInLedger: async (registrationId, accreditationId) => {
       const matches = storage
         .filter((event) =>
           matchesPartition(event, registrationId, accreditationId)
@@ -190,8 +186,8 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
       return structuredClone(matches)
     },
 
-    deleteByPartition: async (registrationId, accreditationId) =>
-      doDeleteByPartition(storage, registrationId, accreditationId),
+    deleteAllInLedger: async (registrationId, accreditationId) =>
+      doDeleteInLedger(storage, registrationId, accreditationId),
 
     appendEvents: async (events) => doAppendEvents(storage, events)
   })

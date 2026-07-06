@@ -19,7 +19,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildVersionData,
   toWasteRecordVersions

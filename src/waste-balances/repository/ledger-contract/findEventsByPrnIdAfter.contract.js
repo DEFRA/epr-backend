@@ -1,10 +1,10 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { STREAM_EVENT_KIND } from '../stream-schema.js'
+import { LEDGER_EVENT_KIND } from '../ledger-schema.js'
 import {
   buildPrnCreatedEvent,
   buildPrnCancelledAfterIssueEvent
-} from '../stream-test-data.js'
+} from '../ledger-test-data.js'
 
 export const testFindEventsByPrnIdAfterBehaviour = (it) => {
   describe('findEventsByPrnIdAfter', () => {
@@ -12,11 +12,11 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
 
     beforeEach(
       async (
-        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
-          streamRepository
+        /** @type {{ ledgerRepository: import('../ledger-port.js').WasteBalanceLedgerRepositoryFactory }} */ {
+          ledgerRepository
         }
       ) => {
-        repository = await streamRepository()
+        repository = await ledgerRepository()
       }
     )
 
@@ -47,9 +47,9 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
 
       expect(result).toHaveLength(2)
       expect(result[0].number).toBe(1)
-      expect(result[0].kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+      expect(result[0].kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
       expect(result[1].number).toBe(2)
-      expect(result[1].kind).toBe(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
+      expect(result[1].kind).toBe(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
     })
 
     it('filters out events at or below the watermark', async () => {

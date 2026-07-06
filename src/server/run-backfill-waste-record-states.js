@@ -28,7 +28,7 @@ const runBackfill = async (server) => {
   }
 
   logger.info({
-    message: `Waste-record-state backfill complete: organisationsScanned=${summary.organisationsScanned} streamsBackfilled=${summary.streamsBackfilled} submissionsBackfilled=${summary.submissionsBackfilled} rowStateWrites=${summary.rowStateWrites} orphanedAccreditations=${summary.orphanedAccreditations.length}`
+    message: `Waste-record-state backfill complete: organisationsScanned=${summary.organisationsScanned} ledgersBackfilled=${summary.ledgersBackfilled} submissionsBackfilled=${summary.submissionsBackfilled} rowStateWrites=${summary.rowStateWrites} orphanedAccreditations=${summary.orphanedAccreditations.length}`
   })
 }
 

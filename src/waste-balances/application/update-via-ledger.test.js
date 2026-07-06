@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
-import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
-import { StreamSlotConflictError } from '../repository/stream-port.js'
-import { performUpdateViaStream } from './update-via-stream.js'
+import { createInMemoryLedgerRepository } from '../repository/ledger-inmemory.js'
+import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
+import { LedgerSlotConflictError } from '../repository/ledger-port.js'
+import { performUpdateViaLedger } from './update-via-ledger.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -87,16 +87,16 @@ const buildExporterRecord = ({
   excludedFromWasteBalance: false
 })
 
-describe('performUpdateViaStream', () => {
-  let streamRepository
+describe('performUpdateViaLedger', () => {
+  let ledgerRepository
   let systemLogsRepository
   let submitSummaryLog
 
   beforeEach(async () => {
-    streamRepository = createInMemoryStreamRepository()()
+    ledgerRepository = createInMemoryLedgerRepository()()
     systemLogsRepository = createSystemLogsRepository()(logger)
     submitSummaryLog = createWasteBalanceService(
-      streamRepository,
+      ledgerRepository,
       systemLogsRepository
     ).submitSummaryLog
     const { findSchemaForProcessingType } =
@@ -111,7 +111,7 @@ describe('performUpdateViaStream', () => {
         buildExporterRecord({ rowId: '2', tonnage: 50 })
       ]
 
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
         submitSummaryLog,
@@ -121,12 +121,12 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         'reg-1',
         accreditationId
       )
       expect(latest.number).toBe(1)
-      expect(latest.kind).toBe(STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
+      expect(latest.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       expect(latest.payload).toEqual({
         summaryLogId: 'log-A',
         creditTotal: 150
@@ -140,7 +140,7 @@ describe('performUpdateViaStream', () => {
 
   describe('subsequent submission', () => {
     it('computes delta from previous creditTotal', async () => {
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 50 })
@@ -153,7 +153,7 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100, versionId: 'v-1b' }),
           buildExporterRecord({ rowId: '2', tonnage: 80, versionId: 'v-2b' }),
@@ -167,7 +167,7 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-B'
       })
 
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         'reg-1',
         accreditationId
       )
@@ -193,7 +193,7 @@ describe('performUpdateViaStream', () => {
         }
       ]
 
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
         submitSummaryLog,
@@ -203,7 +203,7 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         'reg-1',
         accreditationId
       )
@@ -224,7 +224,7 @@ describe('performUpdateViaStream', () => {
         buildExporterRecord({ rowId: '4', tonnage: includedTonnages[2] })
       ]
 
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
         submitSummaryLog,
@@ -234,7 +234,7 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         'reg-1',
         accreditationId
       )
@@ -245,10 +245,10 @@ describe('performUpdateViaStream', () => {
   })
 
   describe('empty input', () => {
-    it('does not touch the stream when no waste records are provided', async () => {
-      const appendSpy = vi.spyOn(streamRepository, 'appendEvents')
+    it('does not touch the ledger when no waste records are provided', async () => {
+      const appendSpy = vi.spyOn(ledgerRepository, 'appendEvents')
 
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: [],
         accreditation,
         submitSummaryLog,
@@ -266,7 +266,7 @@ describe('performUpdateViaStream', () => {
 
   describe('audit emission', () => {
     it('inserts one system-log entry covering the submission', async () => {
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 50 })
@@ -279,7 +279,7 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         'reg-1',
         accreditationId
       )
@@ -306,9 +306,9 @@ describe('performUpdateViaStream', () => {
   describe('without a system-logs repository', () => {
     it('appends the ledger event but emits no back-office audit', async () => {
       const auditlessSubmit =
-        createWasteBalanceService(streamRepository).submitSummaryLog
+        createWasteBalanceService(ledgerRepository).submitSummaryLog
 
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         submitSummaryLog: auditlessSubmit,
@@ -318,7 +318,7 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         'reg-1',
         accreditationId
       )
@@ -343,7 +343,7 @@ describe('performUpdateViaStream', () => {
         })
       )
 
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         submitSummaryLog,
@@ -353,7 +353,7 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         'reg-1',
         accreditationId
       )
@@ -363,7 +363,7 @@ describe('performUpdateViaStream', () => {
 
   describe('actor attribution', () => {
     it('stamps createdBy with the submitter id, name and email', async () => {
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         submitSummaryLog,
@@ -373,7 +373,7 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         'reg-1',
         accreditationId
       )
@@ -385,7 +385,7 @@ describe('performUpdateViaStream', () => {
     })
 
     it('omits name when the submitter has none, keeping the email distinct', async () => {
-      await performUpdateViaStream({
+      await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         submitSummaryLog,
@@ -400,7 +400,7 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         'reg-1',
         accreditationId
       )
@@ -414,7 +414,7 @@ describe('performUpdateViaStream', () => {
   describe('optimistic concurrency', () => {
     it('lets one of two concurrent submissions win and surfaces the loser as a slot conflict', async () => {
       const submit = (summaryLogId, tonnage) =>
-        performUpdateViaStream({
+        performUpdateViaLedger({
           wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
           accreditation,
           submitSummaryLog,
@@ -433,9 +433,9 @@ describe('performUpdateViaStream', () => {
       const rejected = results.filter((r) => r.status === 'rejected')
       expect(fulfilled).toHaveLength(1)
       expect(rejected).toHaveLength(1)
-      expect(rejected[0].reason).toBeInstanceOf(StreamSlotConflictError)
+      expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
 
-      const all = await streamRepository.findAllByPartition(
+      const all = await ledgerRepository.findAllInLedger(
         'reg-1',
         accreditationId
       )

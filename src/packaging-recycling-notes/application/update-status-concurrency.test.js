@@ -6,13 +6,13 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { StreamSlotConflictError } from '#waste-balances/repository/stream-port.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -97,11 +97,11 @@ const buildBalanceSeed = (overrides = {}) => ({
  * Seed the stream so the seeded balance resolves to its `amount` /
  * `availableAmount` on read.
  *
- * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {{ amount: number, availableAmount: number }} balanceSeed
  */
-const seedClosingBalance = (streamRepository, balanceSeed) =>
-  streamRepository.appendEvents([
+const seedClosingBalance = (ledgerRepository, balanceSeed) =>
+  ledgerRepository.appendEvents([
     buildStreamEvent({
       registrationId: REG_ID,
       accreditationId: ACC_ID,
@@ -128,19 +128,19 @@ const COMMITTED_EVENT_NUMBER = 2
 /**
  * On the ledger path concurrent writers serialise at the append-only stream
  * slot: the first writer claims the next slot, the second collides with a
- * StreamSlotConflictError. Exactly one writer commits, so the stream holds a
+ * LedgerSlotConflictError. Exactly one writer commits, so the stream holds a
  * single event past the seed and the PRN document — persisted only by the
  * winner, since the loser fails at the stream append before persisting —
  * reflects that one transition.
  *
  * @param {PromiseSettledResult<unknown>[]} results
- * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} expectedStatus
  */
 const expectOneWinsOneStreamConflict = async (
   results,
-  streamRepository,
+  ledgerRepository,
   prnRepository,
   expectedStatus
 ) => {
@@ -149,9 +149,9 @@ const expectOneWinsOneStreamConflict = async (
 
   expect(fulfilled).toHaveLength(1)
   expect(rejected).toHaveLength(1)
-  expect(rejected[0].reason).toBeInstanceOf(StreamSlotConflictError)
+  expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
 
-  const latest = await streamRepository.findLatestByPartition(REG_ID, ACC_ID)
+  const latest = await ledgerRepository.findLatestInLedger(REG_ID, ACC_ID)
   expect(latest?.number).toBe(COMMITTED_EVENT_NUMBER)
 
   const prn = await prnRepository.findById(PRN_ID)
@@ -166,14 +166,14 @@ describe('updatePrnStatus concurrency', () => {
     const prnRepository = prnFactory(noopLogger())
 
     const balanceSeed = buildBalanceSeed()
-    const streamRepository = createInMemoryStreamRepository()()
-    await seedClosingBalance(streamRepository, balanceSeed)
+    const ledgerRepository = createInMemoryLedgerRepository()()
+    await seedClosingBalance(ledgerRepository, balanceSeed)
     const organisationsRepository = buildOrganisationsRepository()
 
     const issue = () =>
       updatePrnStatus({
         prnRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository,
         logger: noopLogger(),
         id: PRN_ID,
@@ -189,7 +189,7 @@ describe('updatePrnStatus concurrency', () => {
 
     await expectOneWinsOneStreamConflict(
       results,
-      streamRepository,
+      ledgerRepository,
       prnRepository,
       PRN_STATUS.AWAITING_ACCEPTANCE
     )
@@ -204,14 +204,14 @@ describe('updatePrnStatus concurrency', () => {
     const balanceSeed = buildBalanceSeed({
       availableAmount: RINGFENCED_AVAILABLE
     })
-    const streamRepository = createInMemoryStreamRepository()()
-    await seedClosingBalance(streamRepository, balanceSeed)
+    const ledgerRepository = createInMemoryLedgerRepository()()
+    await seedClosingBalance(ledgerRepository, balanceSeed)
     const organisationsRepository = buildOrganisationsRepository()
 
     const cancel = () =>
       updatePrnStatus({
         prnRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository,
         logger: noopLogger(),
         id: PRN_ID,
@@ -227,7 +227,7 @@ describe('updatePrnStatus concurrency', () => {
 
     await expectOneWinsOneStreamConflict(
       results,
-      streamRepository,
+      ledgerRepository,
       prnRepository,
       PRN_STATUS.DELETED
     )
@@ -243,14 +243,14 @@ describe('updatePrnStatus concurrency', () => {
       availableAmount: RINGFENCED_AVAILABLE,
       amount: ISSUED_AMOUNT
     })
-    const streamRepository = createInMemoryStreamRepository()()
-    await seedClosingBalance(streamRepository, balanceSeed)
+    const ledgerRepository = createInMemoryLedgerRepository()()
+    await seedClosingBalance(ledgerRepository, balanceSeed)
     const organisationsRepository = buildOrganisationsRepository()
 
     const cancel = () =>
       updatePrnStatus({
         prnRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository,
         logger: noopLogger(),
         id: PRN_ID,
@@ -266,7 +266,7 @@ describe('updatePrnStatus concurrency', () => {
 
     await expectOneWinsOneStreamConflict(
       results,
-      streamRepository,
+      ledgerRepository,
       prnRepository,
       PRN_STATUS.CANCELLED
     )

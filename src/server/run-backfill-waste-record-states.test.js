@@ -22,7 +22,7 @@ vi.mock('#waste-records/backfill/backfill-estate-rowstates.js', () => ({
 const seedSummary = (summary = {}) => {
   vi.mocked(backfillEstateRowStates).mockResolvedValue({
     organisationsScanned: 0,
-    streamsBackfilled: 0,
+    ledgersBackfilled: 0,
     submissionsBackfilled: 0,
     rowStateWrites: 0,
     orphanedAccreditations: [],
@@ -104,7 +104,7 @@ describe('runBackfillWasteRecordStates', () => {
   it('logs the backfill summary counts', async () => {
     seedSummary({
       organisationsScanned: 12,
-      streamsBackfilled: 8,
+      ledgersBackfilled: 8,
       submissionsBackfilled: 20,
       rowStateWrites: 140
     })
@@ -114,7 +114,7 @@ describe('runBackfillWasteRecordStates', () => {
     expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-record-state backfill complete: organisationsScanned=12 streamsBackfilled=8 submissionsBackfilled=20 rowStateWrites=140 orphanedAccreditations=0'
+        'Waste-record-state backfill complete: organisationsScanned=12 ledgersBackfilled=8 submissionsBackfilled=20 rowStateWrites=140 orphanedAccreditations=0'
     })
   })
 
@@ -138,7 +138,7 @@ describe('runBackfillWasteRecordStates', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-record-state backfill complete: organisationsScanned=1 streamsBackfilled=0 submissionsBackfilled=0 rowStateWrites=0 orphanedAccreditations=1'
+        'Waste-record-state backfill complete: organisationsScanned=1 ledgersBackfilled=0 submissionsBackfilled=0 rowStateWrites=0 orphanedAccreditations=1'
     })
   })
 

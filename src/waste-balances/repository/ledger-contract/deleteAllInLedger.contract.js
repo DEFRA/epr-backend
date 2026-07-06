@@ -1,20 +1,20 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildStreamEvent } from '../stream-test-data.js'
+import { buildStreamEvent } from '../ledger-test-data.js'
 
 /**
- * @typedef {object} StreamContractContext
- * @property {import('../stream-port.js').WasteBalanceStreamRepositoryFactory} streamRepository
+ * @typedef {object} LedgerContractContext
+ * @property {import('../ledger-port.js').WasteBalanceLedgerRepositoryFactory} ledgerRepository
  */
 
 export const testDeleteByPartitionBehaviour = (it) => {
-  describe('deleteByPartition (@migration PAE-1382)', () => {
-    /** @type {import('../stream-port.js').WasteBalanceStreamRepository} */
+  describe('deleteAllInLedger (@migration PAE-1382)', () => {
+    /** @type {import('../ledger-port.js').WasteBalanceLedgerRepository} */
     let repository
 
     beforeEach(
-      async (/** @type {StreamContractContext} */ { streamRepository }) => {
-        repository = await streamRepository()
+      async (/** @type {LedgerContractContext} */ { ledgerRepository }) => {
+        repository = await ledgerRepository()
       }
     )
 
@@ -35,19 +35,16 @@ export const testDeleteByPartitionBehaviour = (it) => {
         })
       ])
 
-      const count = await repository.deleteByPartition('reg-del', 'acc-del')
+      const count = await repository.deleteAllInLedger('reg-del', 'acc-del')
 
       expect(count).toBe(2)
 
-      const latest = await repository.findLatestByPartition(
-        'reg-del',
-        'acc-del'
-      )
+      const latest = await repository.findLatestInLedger('reg-del', 'acc-del')
       expect(latest).toBeNull()
     })
 
     it('returns 0 when the partition is empty', async () => {
-      const count = await repository.deleteByPartition('reg-empty', 'acc-empty')
+      const count = await repository.deleteAllInLedger('reg-empty', 'acc-empty')
 
       expect(count).toBe(0)
     })
@@ -68,17 +65,14 @@ export const testDeleteByPartitionBehaviour = (it) => {
         })
       ])
 
-      await repository.deleteByPartition('reg-remove', 'acc-remove')
+      await repository.deleteAllInLedger('reg-remove', 'acc-remove')
 
-      const kept = await repository.findLatestByPartition(
-        'reg-keep',
-        'acc-keep'
-      )
+      const kept = await repository.findLatestInLedger('reg-keep', 'acc-keep')
       expect(kept).not.toBeNull()
       expect(kept?.registrationId).toBe('reg-keep')
     })
 
-    it("deletes one accreditation's partition without touching the same registration's registered-only stream", async () => {
+    it("deletes one accreditation's partition without touching the same registration's registered-only ledger", async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-shared',
@@ -96,17 +90,17 @@ export const testDeleteByPartitionBehaviour = (it) => {
         })
       ])
 
-      const count = await repository.deleteByPartition('reg-shared', 'acc-1')
+      const count = await repository.deleteAllInLedger('reg-shared', 'acc-1')
 
       expect(count).toBe(1)
 
-      const accreditationStream = await repository.findLatestByPartition(
+      const accreditationStream = await repository.findLatestInLedger(
         'reg-shared',
         'acc-1'
       )
       expect(accreditationStream).toBeNull()
 
-      const registeredOnlyStream = await repository.findLatestByPartition(
+      const registeredOnlyStream = await repository.findLatestInLedger(
         'reg-shared',
         null
       )

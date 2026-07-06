@@ -2,7 +2,7 @@ import {
   buildEffectiveMaterialStages,
   formatMaterialResults
 } from '#application/common/material-aggregation.js'
-import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/stream-mongodb.js'
+import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const ACCREDITATION_ID_FIELD = '$accreditationId'

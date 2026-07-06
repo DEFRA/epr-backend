@@ -3,12 +3,12 @@ import { describe, it, expect } from 'vitest'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
   buildRowStateEntry,
   DEFAULT_PARTITION
 } from '#waste-records/repository/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { wasteRecordStatesForRegistration } from './read-waste-record-states.js'
 
 const submissionEvent = (number, summaryLogId) =>
@@ -26,7 +26,7 @@ const registration = {
 describe('wasteRecordStatesForRegistration', () => {
   it('returns an empty array when the stream has no submission', async () => {
     const states = await wasteRecordStatesForRegistration({
-      streamRepository: createInMemoryStreamRepository()(),
+      ledgerRepository: createInMemoryLedgerRepository()(),
       rowStateRepository: createInMemoryRowStateRepository()(),
       ...registration
     })
@@ -53,13 +53,13 @@ describe('wasteRecordStatesForRegistration', () => {
       'log-2'
     )
 
-    const streamRepository = createInMemoryStreamRepository([
+    const ledgerRepository = createInMemoryLedgerRepository([
       submissionEvent(1, 'log-1'),
       submissionEvent(2, 'log-2')
     ])()
 
     const states = await wasteRecordStatesForRegistration({
-      streamRepository,
+      ledgerRepository,
       rowStateRepository,
       ...registration
     })
@@ -80,12 +80,12 @@ describe('wasteRecordStatesForRegistration', () => {
       [buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
       'log-1'
     )
-    const streamRepository = createInMemoryStreamRepository([
+    const ledgerRepository = createInMemoryLedgerRepository([
       submissionEvent(1, 'log-1')
     ])()
 
     const [state] = await wasteRecordStatesForRegistration({
-      streamRepository,
+      ledgerRepository,
       rowStateRepository,
       ...registration
     })

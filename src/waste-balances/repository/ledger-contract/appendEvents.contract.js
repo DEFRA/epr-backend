@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildStreamEvent } from '../stream-test-data.js'
-import { StreamSequenceError, StreamSlotConflictError } from '../stream-port.js'
+import { buildStreamEvent } from '../ledger-test-data.js'
+import { LedgerSequenceError, LedgerSlotConflictError } from '../ledger-port.js'
 
 export const testAppendEventsBehaviour = (it) => {
   describe('appendEvents', () => {
@@ -9,11 +9,11 @@ export const testAppendEventsBehaviour = (it) => {
 
     beforeEach(
       async (
-        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
-          streamRepository
+        /** @type {{ ledgerRepository: import('../ledger-port.js').WasteBalanceLedgerRepositoryFactory }} */ {
+          ledgerRepository
         }
       ) => {
-        repository = await streamRepository()
+        repository = await ledgerRepository()
       }
     )
 
@@ -61,7 +61,7 @@ export const testAppendEventsBehaviour = (it) => {
       expect(stored[1].number).toBe(2)
     })
 
-    it('throws StreamSequenceError when first event does not start at currentMax + 1', async () => {
+    it('throws LedgerSequenceError when first event does not start at currentMax + 1', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-seq',
@@ -80,11 +80,11 @@ export const testAppendEventsBehaviour = (it) => {
       ]
 
       await expect(repository.appendEvents(events)).rejects.toBeInstanceOf(
-        StreamSequenceError
+        LedgerSequenceError
       )
     })
 
-    it('throws StreamSequenceError when the first event of an empty partition is not number 1', async () => {
+    it('throws LedgerSequenceError when the first event of an empty partition is not number 1', async () => {
       const events = [
         buildStreamEvent({
           registrationId: 'reg-empty',
@@ -94,11 +94,11 @@ export const testAppendEventsBehaviour = (it) => {
       ]
 
       await expect(repository.appendEvents(events)).rejects.toBeInstanceOf(
-        StreamSequenceError
+        LedgerSequenceError
       )
     })
 
-    it('StreamSequenceError carries the provided and expected numbers', async () => {
+    it('LedgerSequenceError carries the provided and expected numbers', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-seq-err',
@@ -124,7 +124,7 @@ export const testAppendEventsBehaviour = (it) => {
       })
     })
 
-    it('throws StreamSlotConflictError when the starting slot is already occupied', async () => {
+    it('throws LedgerSlotConflictError when the starting slot is already occupied', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-occupied',
@@ -143,11 +143,11 @@ export const testAppendEventsBehaviour = (it) => {
       ]
 
       await expect(repository.appendEvents(events)).rejects.toBeInstanceOf(
-        StreamSlotConflictError
+        LedgerSlotConflictError
       )
     })
 
-    it('StreamSlotConflictError carries the partition identity and slot number', async () => {
+    it('LedgerSlotConflictError carries the partition identity and slot number', async () => {
       await repository.appendEvents([
         buildStreamEvent({
           registrationId: 'reg-slot-err',
@@ -172,7 +172,7 @@ export const testAppendEventsBehaviour = (it) => {
       })
     })
 
-    it('throws StreamSequenceError when events are not sequentially numbered', async () => {
+    it('throws LedgerSequenceError when events are not sequentially numbered', async () => {
       const events = [
         buildStreamEvent({
           registrationId: 'reg-gap',
@@ -188,7 +188,7 @@ export const testAppendEventsBehaviour = (it) => {
       ]
 
       await expect(repository.appendEvents(events)).rejects.toBeInstanceOf(
-        StreamSequenceError
+        LedgerSequenceError
       )
     })
 
@@ -218,7 +218,7 @@ export const testAppendEventsBehaviour = (it) => {
       expect(stored).toEqual([])
     })
 
-    it('appended events are visible via findLatestByPartition', async () => {
+    it('appended events are visible via findLatestInLedger', async () => {
       const events = [
         buildStreamEvent({
           registrationId: 'reg-vis',
@@ -235,10 +235,7 @@ export const testAppendEventsBehaviour = (it) => {
 
       await repository.appendEvents(events)
 
-      const latest = await repository.findLatestByPartition(
-        'reg-vis',
-        'acc-vis'
-      )
+      const latest = await repository.findLatestInLedger('reg-vis', 'acc-vis')
       expect(latest).not.toBeNull()
       expect(latest.number).toBe(2)
     })
