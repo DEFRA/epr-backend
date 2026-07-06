@@ -7,10 +7,10 @@ import {
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR, ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildOrganisation,
@@ -72,7 +72,7 @@ const buildPrn = (overrides = {}) => ({
  * transition opens against.
  *
  * @param {{ amount: number, availableAmount: number }} closingBalance
- * @returns {import('#waste-balances/repository/stream-schema.js').StreamEvent}
+ * @returns {import('#waste-balances/repository/ledger-schema.js').LedgerEvent}
  */
 const buildOpeningBalanceEvent = ({ amount, availableAmount }) => ({
   id: 'opening-balance',
@@ -80,7 +80,7 @@ const buildOpeningBalanceEvent = ({ amount, availableAmount }) => ({
   accreditationId: ACC_ID,
   organisationId: ORG_ID,
   number: 1,
-  kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+  kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: { summaryLogId: 'seed-summary-log', creditTotal: amount },
   openingBalance: { amount: 0, availableAmount: 0 },
   closingBalance: { amount, availableAmount },
@@ -139,16 +139,16 @@ const seedRepositories = ({
   const prnRepository = createInMemoryPackagingRecyclingNotesRepository(
     prn ? [prn] : []
   )(createMockLogger())
-  const streamRepository = createInMemoryStreamRepository(
+  const ledgerRepository = createInMemoryLedgerRepository(
     balance ? [buildOpeningBalanceEvent(balance)] : []
   )()
-  const wasteBalanceService = createWasteBalanceService(streamRepository)
+  const wasteBalanceService = createWasteBalanceService(ledgerRepository)
   const organisationsRepository = createInMemoryOrganisationsRepository([
     buildOrgWithAccreditation({ accreditation, withAccreditation })
   ])()
   return {
     prnRepository,
-    streamRepository,
+    ledgerRepository,
     wasteBalanceService,
     organisationsRepository
   }

@@ -6,9 +6,9 @@ import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { config } from '#root/config.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -40,12 +40,12 @@ const authHeaders = {
 }
 
 /**
- * Seeds the partition's waste balance with a single opening summary-log event.
+ * Seeds the ledger's waste balance with a single opening summary-log event.
  * It carries no `prnId`, so the read-side fold leaves the seeded PRN untouched
  * while `findBalance` still resolves a balance for the status-only append.
  */
 const openingBalanceEvent = () =>
-  buildStreamEvent({
+  buildLedgerEvent({
     registrationId,
     accreditationId,
     organisationId,
@@ -53,7 +53,7 @@ const openingBalanceEvent = () =>
   })
 
 let server
-let streamRepository
+let ledgerRepository
 let packagingRecyclingNotesRepository
 
 /**
@@ -65,7 +65,7 @@ let packagingRecyclingNotesRepository
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null} prn
  */
 const startServer = async (prn) => {
-  streamRepository = createInMemoryStreamRepository([openingBalanceEvent()])()
+  ledgerRepository = createInMemoryLedgerRepository([openingBalanceEvent()])()
   const prnRepositoryFactory = createInMemoryPackagingRecyclingNotesRepository(
     prn ? [prn] : []
   )
@@ -79,7 +79,7 @@ const startServer = async (prn) => {
     },
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
-      streamRepository: () => streamRepository,
+      ledgerRepository: () => ledgerRepository,
       organisationsRepository: () => ({})
     },
     featureFlags: createInMemoryFeatureFlags()
@@ -148,11 +148,11 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
     expect(stored?.updatedBy).toEqual(rpd)
     expect(stored?.status.rejected?.by).toEqual(rpd)
 
-    const latestEvent = await streamRepository.findLatestByPartition(
+    const latestEvent = await ledgerRepository.findLatestInLedger(
       registrationId,
       accreditationId
     )
-    expect(latestEvent.kind).toBe(STREAM_EVENT_KIND.PRN_REJECTED)
+    expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_REJECTED)
     expect(latestEvent.createdBy).toEqual(rpd)
     // Rejection is balance-neutral: the closing balance matches the opening one.
     expect(latestEvent.closingBalance).toEqual(latestEvent.openingBalance)
@@ -220,7 +220,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
   it('returns 500 with spec error format when the repository throws unexpectedly', async () => {
     // No in-memory adapter can simulate an infrastructure failure, so an
     // unexpected throw is injected directly to drive the handler's 500 mapping.
-    streamRepository = createInMemoryStreamRepository([openingBalanceEvent()])()
+    ledgerRepository = createInMemoryLedgerRepository([openingBalanceEvent()])()
     server = await createTestServer({
       config: {
         packagingRecyclingNotesExternalApi: {

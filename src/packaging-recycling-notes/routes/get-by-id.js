@@ -56,7 +56,7 @@ export const packagingRecyclingNoteById = {
     const {
       packagingRecyclingNotesRepository,
       organisationsRepository,
-      streamRepository,
+      ledgerRepository,
       params,
       logger
     } = request
@@ -66,7 +66,7 @@ export const packagingRecyclingNoteById = {
       const [prn, accreditation] = await Promise.all([
         getProjectedPrnById({
           packagingRecyclingNotesRepository,
-          streamRepository,
+          ledgerRepository,
           prnId
         }),
         organisationsRepository.findAccreditationById(

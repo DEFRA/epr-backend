@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 
-import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
-import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
-import { StreamSlotConflictError } from '../repository/stream-port.js'
+import { createInMemoryLedgerRepository } from '../repository/ledger-inmemory.js'
+import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
+import { LedgerSlotConflictError } from '../repository/ledger-port.js'
 import {
   buildPrnCreatedEvent,
   buildPrnIssuedEvent
-} from '../repository/stream-test-data.js'
+} from '../repository/ledger-test-data.js'
 import {
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
@@ -26,17 +26,17 @@ const createdBy = {
 }
 
 describe('createWasteBalanceService', () => {
-  let streamRepository
+  let ledgerRepository
   let service
 
   beforeEach(() => {
-    streamRepository = createInMemoryStreamRepository()()
-    service = createWasteBalanceService(streamRepository)
+    ledgerRepository = createInMemoryLedgerRepository()()
+    service = createWasteBalanceService(ledgerRepository)
   })
 
-  describe('submitSummaryLog', () => {
+  describe('commitSummaryLogSubmittedEvent', () => {
     it('opens the ledger from zero on the first submission', async () => {
-      const [event] = await service.submitSummaryLog(
+      const [event] = await service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'log-A', creditTotal: 150 },
         createdBy
@@ -46,7 +46,7 @@ describe('createWasteBalanceService', () => {
       expect(event.organisationId).toBe('org-1')
       expect(event.registrationId).toBe('reg-1')
       expect(event.accreditationId).toBe('acc-1')
-      expect(event.kind).toBe(STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
+      expect(event.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       expect(event.payload).toEqual({ summaryLogId: 'log-A', creditTotal: 150 })
       expect(event.openingBalance).toEqual({ amount: 0, availableAmount: 0 })
       expect(event.closingBalance).toEqual({
@@ -58,13 +58,13 @@ describe('createWasteBalanceService', () => {
     })
 
     it('appends at the next head, moving the balance by the credit-total delta', async () => {
-      await service.submitSummaryLog(
+      await service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'log-A', creditTotal: 150 },
         createdBy
       )
 
-      const [event] = await service.submitSummaryLog(
+      const [event] = await service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'log-B', creditTotal: 200 },
         createdBy
@@ -83,12 +83,12 @@ describe('createWasteBalanceService', () => {
 
     it('lets one of two concurrent submissions win and surfaces the loser as a slot conflict', async () => {
       const results = await Promise.allSettled([
-        service.submitSummaryLog(
+        service.commitSummaryLogSubmittedEvent(
           ledgerId,
           { summaryLogId: 'log-A', creditTotal: 150 },
           createdBy
         ),
-        service.submitSummaryLog(
+        service.commitSummaryLogSubmittedEvent(
           ledgerId,
           { summaryLogId: 'log-B', creditTotal: 200 },
           createdBy
@@ -99,16 +99,16 @@ describe('createWasteBalanceService', () => {
       const rejected = results.filter((r) => r.status === 'rejected')
       expect(fulfilled).toHaveLength(1)
       expect(rejected).toHaveLength(1)
-      expect(rejected[0].reason).toBeInstanceOf(StreamSlotConflictError)
+      expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
 
-      const all = await streamRepository.findAllByPartition('reg-1', 'acc-1')
+      const all = await ledgerRepository.findAllInLedger('reg-1', 'acc-1')
       expect(all).toHaveLength(1)
     })
   })
 
   describe('PRN commands', () => {
     const seedLedger = (creditTotal = 1000) =>
-      service.submitSummaryLog(
+      service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'seed', creditTotal },
         createdBy
@@ -126,7 +126,7 @@ describe('createWasteBalanceService', () => {
       expect(result.status).toBe(PRN_COMMAND_STATUS.COMMITTED)
       const [event] = result.events
       expect(event.number).toBe(2)
-      expect(event.kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+      expect(event.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
       expect(event.payload).toEqual({ prnId: 'prn-1', amount: 100 })
       expect(event.closingBalance).toEqual({
         amount: 1000,
@@ -147,11 +147,11 @@ describe('createWasteBalanceService', () => {
         status: PRN_COMMAND_STATUS.REJECTED,
         reason: PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE
       })
-      const all = await streamRepository.findAllByPartition('reg-1', 'acc-1')
+      const all = await ledgerRepository.findAllInLedger('reg-1', 'acc-1')
       expect(all).toHaveLength(1)
     })
 
-    it('rejects with no-ledger when the partition has no events', async () => {
+    it('rejects with no-ledger when the ledger has no events', async () => {
       const result = await service.createPrn(
         ledgerId,
         { prnId: 'prn-1', amount: 100 },
@@ -209,7 +209,7 @@ describe('createWasteBalanceService', () => {
       )
 
       expect(result.events[0].kind).toBe(
-        STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
+        LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED
       )
       expect(result.events[0].closingBalance).toEqual({
         amount: 1000,
@@ -232,7 +232,7 @@ describe('createWasteBalanceService', () => {
       )
 
       expect(result.events[0].kind).toBe(
-        STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
+        LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
       )
       expect(result.events[0].closingBalance).toEqual({
         amount: 1000,
@@ -249,7 +249,7 @@ describe('createWasteBalanceService', () => {
         createdBy
       )
 
-      expect(result.events[0].kind).toBe(STREAM_EVENT_KIND.PRN_ACCEPTED)
+      expect(result.events[0].kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
       expect(result.events[0].closingBalance).toEqual({
         amount: 1000,
         availableAmount: 1000
@@ -265,7 +265,7 @@ describe('createWasteBalanceService', () => {
         createdBy
       )
 
-      expect(result.events[0].kind).toBe(STREAM_EVENT_KIND.PRN_REJECTED)
+      expect(result.events[0].kind).toBe(LEDGER_EVENT_KIND.PRN_REJECTED)
       expect(result.events[0].closingBalance).toEqual({
         amount: 1000,
         availableAmount: 1000
@@ -287,7 +287,7 @@ describe('createWasteBalanceService', () => {
         service.createPrn(ledgerId, { prnId: 'prn-1', amount: -100 }, createdBy)
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
 
-      const all = await streamRepository.findAllByPartition('reg-1', 'acc-1')
+      const all = await ledgerRepository.findAllInLedger('reg-1', 'acc-1')
       expect(all).toHaveLength(1)
     })
 
@@ -321,7 +321,7 @@ describe('createWasteBalanceService', () => {
     }
 
     it('returns the PRN tail events after the watermark in order', async () => {
-      await streamRepository.appendEvents([
+      await ledgerRepository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-1',
           accreditationId: 'acc-1',
@@ -329,7 +329,7 @@ describe('createWasteBalanceService', () => {
           payload: { prnId: 'prn-1', amount: 10 }
         })
       ])
-      await streamRepository.appendEvents([
+      await ledgerRepository.appendEvents([
         buildPrnIssuedEvent({
           registrationId: 'reg-1',
           accreditationId: 'acc-1',
@@ -345,7 +345,7 @@ describe('createWasteBalanceService', () => {
 
       expect(events).toHaveLength(1)
       expect(events[0].number).toBe(2)
-      expect(events[0].kind).toBe(STREAM_EVENT_KIND.PRN_ISSUED)
+      expect(events[0].kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
     })
 
     it('throws Boom badData when the accreditation id is invalid', async () => {
@@ -362,16 +362,16 @@ describe('createWasteBalanceService', () => {
     })
   })
 
-  describe('updateWasteBalanceTransactions', () => {
+  describe('submitSummaryLog', () => {
     it('does not touch the ledger when there are no waste records to credit', async () => {
-      await service.updateWasteBalanceTransactions([], {
+      await service.submitSummaryLog([], {
         user: createdBy,
         accreditation: { id: 'acc-1' },
         overseasSites: /** @type {*} */ (new Map()),
         summaryLogId: 'log-A'
       })
 
-      const all = await streamRepository.findAllByPartition('reg-1', 'acc-1')
+      const all = await ledgerRepository.findAllInLedger('reg-1', 'acc-1')
       expect(all).toHaveLength(0)
     })
   })
@@ -382,7 +382,7 @@ describe('createWasteBalanceService', () => {
     })
 
     it('folds the ledger into its current balance', async () => {
-      await service.submitSummaryLog(
+      await service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'log-A', creditTotal: 150 },
         createdBy

@@ -11,11 +11,11 @@ export const createConfigFeatureFlags = (config) => ({
   isFixDuplicateAccreditationLinksEnabled() {
     return config.get('featureFlags.fixDuplicateAccreditationLinks')
   },
-  isWasteRecordStatesEnabled() {
-    return config.get('featureFlags.wasteRecordStates')
+  isSummaryLogRowStatesEnabled() {
+    return config.get('featureFlags.summaryLogRowStates')
   },
-  isWasteRecordStatesBackfillEnabled() {
-    return config.get('featureFlags.wasteRecordStatesBackfill')
+  isSummaryLogRowStatesBackfillEnabled() {
+    return config.get('featureFlags.summaryLogRowStatesBackfill')
   },
   isRegisteredOnlySubmittedEventsEnabled() {
     return config.get('featureFlags.registeredOnlySubmittedEvents')

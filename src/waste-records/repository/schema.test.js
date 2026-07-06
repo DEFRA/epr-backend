@@ -2,22 +2,25 @@ import { describe, it, expect } from 'vitest'
 
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
-import { rowStateInsertSchema } from './schema.js'
-import { validateRowStateInsert, validateRowStateRead } from './validation.js'
-import { buildRowState } from './test-data.js'
+import { summaryLogRowStateInsertSchema } from './schema.js'
+import {
+  validateSummaryLogRowStateInsert,
+  validateSummaryLogRowStateRead
+} from './validation.js'
+import { buildSummaryLogRowState } from './test-data.js'
 
 const validate = (data) =>
-  rowStateInsertSchema.validate(data, { abortEarly: false })
+  summaryLogRowStateInsertSchema.validate(data, { abortEarly: false })
 
 describe('row state insert schema', () => {
   it('accepts a valid INCLUDED row state', () => {
-    const { error } = validate(buildRowState())
+    const { error } = validate(buildSummaryLogRowState())
     expect(error).toBeUndefined()
   })
 
   it('accepts an EXCLUDED row state carrying a reason', () => {
     const { error } = validate(
-      buildRowState({
+      buildSummaryLogRowState({
         classification: {
           outcome: ROW_OUTCOME.EXCLUDED,
           reasons: [{ code: 'MISSING_REQUIRED_FIELD', field: 'tonnage' }],
@@ -29,19 +32,21 @@ describe('row state insert schema', () => {
   })
 
   it('accepts accreditationId: null for registered-only streams', () => {
-    const { error } = validate(buildRowState({ accreditationId: null }))
+    const { error } = validate(
+      buildSummaryLogRowState({ accreditationId: null })
+    )
     expect(error).toBeUndefined()
   })
 
   it('preserves arbitrary coerced data keys', () => {
     const data = { supplierName: 'Acme', tonnage: 10, wasteCode: '12 34 56' }
-    const { value } = validate(buildRowState({ data }))
+    const { value } = validate(buildSummaryLogRowState({ data }))
     expect(value.data).toEqual(data)
   })
 
   it('rejects an unknown outcome', () => {
     const { error } = validate(
-      buildRowState({
+      buildSummaryLogRowState({
         classification: { outcome: 'WAT', reasons: [], transactionAmount: 0 }
       })
     )
@@ -49,13 +54,15 @@ describe('row state insert schema', () => {
   })
 
   it('rejects an unknown waste record type', () => {
-    const { error } = validate(buildRowState({ wasteRecordType: 'nonsense' }))
+    const { error } = validate(
+      buildSummaryLogRowState({ wasteRecordType: 'nonsense' })
+    )
     expect(error).toBeDefined()
   })
 
   it('rejects an unknown classification reason code', () => {
     const { error } = validate(
-      buildRowState({
+      buildSummaryLogRowState({
         classification: {
           outcome: ROW_OUTCOME.EXCLUDED,
           reasons: [{ code: 'NOT_A_REAL_REASON' }],
@@ -67,7 +74,7 @@ describe('row state insert schema', () => {
   })
 
   it('rejects an empty summaryLogIds membership', () => {
-    const { error } = validate(buildRowState({ summaryLogIds: [] }))
+    const { error } = validate(buildSummaryLogRowState({ summaryLogIds: [] }))
     expect(error).toBeDefined()
   })
 
@@ -86,27 +93,29 @@ describe('row state insert schema', () => {
 })
 
 describe('row state validation', () => {
-  describe('validateRowStateInsert', () => {
+  describe('validateSummaryLogRowStateInsert', () => {
     it('returns the validated document for valid input', () => {
-      const doc = buildRowState()
-      const result = validateRowStateInsert(doc)
+      const doc = buildSummaryLogRowState()
+      const result = validateSummaryLogRowStateInsert(doc)
       expect(result.rowId).toBe(doc.rowId)
     })
 
     it('throws Boom.badData for invalid input', () => {
-      expect(() => validateRowStateInsert({})).toThrow(/Invalid row state data/)
+      expect(() => validateSummaryLogRowStateInsert({})).toThrow(
+        /Invalid row state data/
+      )
     })
   })
 
-  describe('validateRowStateRead', () => {
+  describe('validateSummaryLogRowStateRead', () => {
     it('returns the validated document for valid input with id', () => {
-      const doc = { id: 'state-1', ...buildRowState() }
-      const result = validateRowStateRead(doc)
+      const doc = { id: 'state-1', ...buildSummaryLogRowState() }
+      const result = validateSummaryLogRowStateRead(doc)
       expect(result.id).toBe('state-1')
     })
 
     it('throws Boom.badImplementation for invalid input', () => {
-      expect(() => validateRowStateRead({ id: 'bad' })).toThrow(
+      expect(() => validateSummaryLogRowStateRead({ id: 'bad' })).toThrow(
         /Invalid row state/
       )
     })

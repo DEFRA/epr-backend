@@ -19,14 +19,14 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildVersionData,
   toWasteRecordVersions
 } from '#repositories/waste-records/contract/test-data.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
-import { buildRowStateEntry } from '#waste-records/repository/test-data.js'
-import { createMongoRowStateRepository } from '#waste-records/repository/mongodb.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { createMongoSummaryLogRowStateRepository } from '#waste-records/repository/mongodb.js'
 
 import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'
@@ -117,7 +117,8 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       )
       const overseasSitesFactory = await createOverseasSitesRepository(database)
       const systemLogsFactory = await createSystemLogsRepository(database)
-      const rowStatesFactory = await createMongoRowStateRepository(database)
+      const summaryLogRowStatesFactory =
+        await createMongoSummaryLogRowStateRepository(database)
 
       await use({
         organisations: organisationsFactory(),
@@ -127,7 +128,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         summaryLogs: summaryLogsFactory(mockLogger),
         overseasSites: overseasSitesFactory(),
         systemLogs: systemLogsFactory(mockLogger),
-        wasteRecordStates: rowStatesFactory()
+        summaryLogRowStates: summaryLogRowStatesFactory()
       })
     },
 
@@ -226,7 +227,7 @@ const seedDownstreamForOrganisation = async (
   await repositories.systemLogs.insert(buildSystemLog({ organisationId }))
 
   await database.collection('waste-balance-events').insertOne(
-    buildStreamEvent({
+    buildLedgerEvent({
       registrationId,
       accreditationId,
       organisationId,
@@ -234,9 +235,9 @@ const seedDownstreamForOrganisation = async (
     })
   )
 
-  await repositories.wasteRecordStates.upsertRowStates(
+  await repositories.summaryLogRowStates.upsertSummaryLogRowStates(
     { organisationId, registrationId, accreditationId },
-    [buildRowStateEntry()],
+    [buildSummaryLogRowStateEntry()],
     `summary-log-${randomUUID()}`
   )
 }

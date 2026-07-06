@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
 
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
-import { buildRowStateEntry } from '#waste-records/repository/test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 
-import { wasteRecordStatesForRegistration } from './read-waste-record-states.js'
+import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
 
 /**
  * The reg-only summary-log submitted event migration closes the gap where
@@ -15,52 +15,54 @@ import { wasteRecordStatesForRegistration } from './read-waste-record-states.js'
  * against the event — a zero-delta balance event — surfacing a spurious balance.
  */
 
-const nullPartition = {
+const registeredOnlyLedgerId = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: null
 }
 const createdBy = { id: 'system', name: 'backfill' }
 
-const seedMembership = async (rowStateRepository, summaryLogId) =>
-  rowStateRepository.upsertRowStates(
-    nullPartition,
-    [buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
+const seedMembership = async (summaryLogRowStateRepository, summaryLogId) =>
+  summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    registeredOnlyLedgerId,
+    [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
     summaryLogId
   )
 
-const emitRegOnlyEvent = (streamRepository, summaryLogId) =>
-  createWasteBalanceService(streamRepository).submitSummaryLog(
-    nullPartition,
+const emitRegOnlyEvent = (ledgerRepository, summaryLogId) =>
+  createWasteBalanceService(ledgerRepository).commitSummaryLogSubmittedEvent(
+    registeredOnlyLedgerId,
     { summaryLogId, creditTotal: 0 },
     createdBy
   )
 
 describe('registered-only summary-log submitted event — read-through', () => {
-  it('returns nothing for the null partition before an event exists (the gap)', async () => {
-    const rowStateRepository = createInMemoryRowStateRepository()()
-    await seedMembership(rowStateRepository, 'log-1')
+  it('returns nothing for the registered-only ledger before an event exists (the gap)', async () => {
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await seedMembership(summaryLogRowStateRepository, 'log-1')
 
-    const states = await wasteRecordStatesForRegistration({
-      streamRepository: createInMemoryStreamRepository()(),
-      rowStateRepository,
-      ...nullPartition
+    const states = await summaryLogRowStatesForRegistration({
+      ledgerRepository: createInMemoryLedgerRepository()(),
+      summaryLogRowStateRepository,
+      ...registeredOnlyLedgerId
     })
 
     expect(states).toEqual([])
   })
 
   it('returns the membership once the reg-only event is emitted (gap closed)', async () => {
-    const rowStateRepository = createInMemoryRowStateRepository()()
-    await seedMembership(rowStateRepository, 'log-1')
-    const streamRepository = createInMemoryStreamRepository()()
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await seedMembership(summaryLogRowStateRepository, 'log-1')
+    const ledgerRepository = createInMemoryLedgerRepository()()
 
-    await emitRegOnlyEvent(streamRepository, 'log-1')
+    await emitRegOnlyEvent(ledgerRepository, 'log-1')
 
-    const states = await wasteRecordStatesForRegistration({
-      streamRepository,
-      rowStateRepository,
-      ...nullPartition
+    const states = await summaryLogRowStatesForRegistration({
+      ledgerRepository,
+      summaryLogRowStateRepository,
+      ...registeredOnlyLedgerId
     })
 
     expect(states.map((s) => s.rowId)).toEqual(['row-1'])
@@ -69,21 +71,20 @@ describe('registered-only summary-log submitted event — read-through', () => {
 })
 
 describe('registered-only summary-log submitted event — balance neutrality', () => {
-  it('leaves the null partition with a zero balance', async () => {
-    const streamRepository = createInMemoryStreamRepository()()
+  it('leaves the registered-only ledger with a zero balance', async () => {
+    const ledgerRepository = createInMemoryLedgerRepository()()
 
-    await emitRegOnlyEvent(streamRepository, 'log-1')
+    await emitRegOnlyEvent(ledgerRepository, 'log-1')
 
-    const balance =
-      await createWasteBalanceService(streamRepository).currentBalance(
-        nullPartition
-      )
+    const balance = await createWasteBalanceService(
+      ledgerRepository
+    ).currentBalance(registeredOnlyLedgerId)
     expect(balance).toMatchObject({ amount: 0, availableAmount: 0 })
   })
 
   it('does not touch an accredited balance in the same registration', async () => {
-    const streamRepository = createInMemoryStreamRepository([
-      buildStreamEvent({
+    const ledgerRepository = createInMemoryLedgerRepository([
+      buildLedgerEvent({
         registrationId: 'reg-1',
         accreditationId: 'acc-1',
         number: 1,
@@ -92,10 +93,10 @@ describe('registered-only summary-log submitted event — balance neutrality', (
       })
     ])()
 
-    await emitRegOnlyEvent(streamRepository, 'log-1')
+    await emitRegOnlyEvent(ledgerRepository, 'log-1')
 
     const accreditedBalance = await createWasteBalanceService(
-      streamRepository
+      ledgerRepository
     ).currentBalance({
       registrationId: 'reg-1',
       accreditationId: 'acc-1',

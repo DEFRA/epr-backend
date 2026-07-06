@@ -1,15 +1,19 @@
-import { createMongoRowStateRepository } from './mongodb.js'
+import { createMongoSummaryLogRowStateRepository } from './mongodb.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 
-export const mongoWasteRecordStatesRepositoryPlugin = {
-  name: 'wasteRecordStatesRepository',
+export const mongoSummaryLogRowStatesRepositoryPlugin = {
+  name: 'summaryLogRowStatesRepository',
   version: '1.0.0',
   dependencies: ['mongodb'],
 
   register: async (server) => {
-    const factory = await createMongoRowStateRepository(server.db)
+    const factory = await createMongoSummaryLogRowStateRepository(server.db)
     const repository = factory()
 
-    registerDependency(server, 'wasteRecordStatesRepository', () => repository)
+    registerDependency(
+      server,
+      'summaryLogRowStatesRepository',
+      () => repository
+    )
   }
 }

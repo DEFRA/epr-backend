@@ -3,7 +3,7 @@
  */
 
 /**
- * Reduce a submit-audit actor to the stream's `{ id, name?, email? }` summary,
+ * Reduce a submit-audit actor to the ledger's `{ id, name?, email? }` summary,
  * or `null` when no actor is present. The `id` is the proof of the actor; `name`
  * and `email` are distinct labels, each carried only when the audit holds it. An
  * actor identified solely by its id is still a real, attributable actor and is
@@ -12,9 +12,9 @@
  * accounting so both read identity the same way.
  *
  * @param {SubmitAuditActor} [createdBy]
- * @returns {import('../repository/stream-schema.js').StreamUserSummary | null}
+ * @returns {import('../repository/ledger-schema.js').LedgerUserSummary | null}
  */
-export const toStreamActor = (createdBy) => {
+export const toLedgerActor = (createdBy) => {
   if (createdBy?.id === undefined) {
     return null
   }
@@ -91,7 +91,7 @@ export const classifyActorAttribution = (createdBy) => {
  * one event appear. Each kind maps to its accumulated `ActorAttributionCounts`,
  * so the quality of actor attribution can be read per kind before cutover.
  *
- * @typedef {Partial<Record<import('../repository/stream-schema.js').StreamEventKind, ActorAttributionCounts>>} AttributionMatrix
+ * @typedef {Partial<Record<import('../repository/ledger-schema.js').LedgerEventKind, ActorAttributionCounts>>} AttributionMatrix
  */
 
 const ATTRIBUTION_CELLS = /** @type {const} */ ([
@@ -108,7 +108,7 @@ const ATTRIBUTION_CELLS = /** @type {const} */ ([
  * creating the kind's row on first sight.
  *
  * @param {AttributionMatrix} matrix
- * @param {import('../repository/stream-schema.js').StreamEventKind} kind
+ * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
  * @param {SubmitAuditActor} [createdBy]
  */
 export const addAttribution = (matrix, kind, createdBy) => {
@@ -131,7 +131,7 @@ export const mergeAttributionMatrices = (matrices) => {
   for (const matrix of matrices) {
     for (const [rawKind, counts] of Object.entries(matrix)) {
       const kind =
-        /** @type {import('../repository/stream-schema.js').StreamEventKind} */ (
+        /** @type {import('../repository/ledger-schema.js').LedgerEventKind} */ (
           rawKind
         )
       const row = (merged[kind] ??= emptyAttributionCounts())
@@ -174,7 +174,7 @@ export const formatAttributionMatrix = (matrix) =>
     .map((kind) => {
       const row =
         matrix[
-          /** @type {import('../repository/stream-schema.js').StreamEventKind} */ (
+          /** @type {import('../repository/ledger-schema.js').LedgerEventKind} */ (
             kind
           )
         ]
@@ -189,10 +189,10 @@ export const formatAttributionMatrix = (matrix) =>
 /**
  * Recover the real submitting actor for each historical summary log from the
  * dedicated submit system-log audit. The audit names the submitter directly but
- * keys on the summary-log document id (`context.summaryLogId`); the stream keys
+ * keys on the summary-log document id (`context.summaryLogId`); the ledger keys
  * on `summaryLog.file.id`, a different namespace, so the summary-log documents
- * bridge document id → file id. Each actor is reduced to the stream's
- * `{ id, name?, email? }` summary by `toStreamActor`, which rejects only an
+ * bridge document id → file id. Each actor is reduced to the ledger's
+ * `{ id, name?, email? }` summary by `toLedgerActor`, which rejects only an
  * actor with no id at all, keeping genuinely actor-less submissions visible
  * downstream.
  *
@@ -208,7 +208,7 @@ export const formatAttributionMatrix = (matrix) =>
  * @param {Object} params
  * @param {Array<{ summaryLogId: string, createdBy?: SubmitAuditActor }>} params.submitActors
  * @param {Array<{ id: string, summaryLog: { file?: { id?: string } } }>} params.summaryLogDocs
- * @returns {Map<string, import('../repository/stream-schema.js').StreamUserSummary>}
+ * @returns {Map<string, import('../repository/ledger-schema.js').LedgerUserSummary>}
  */
 export const buildSystemLogSubmitters = ({ submitActors, summaryLogDocs }) => {
   const fileIdByDocId = new Map()
@@ -221,7 +221,7 @@ export const buildSystemLogSubmitters = ({ submitActors, summaryLogDocs }) => {
 
   const submitters = new Map()
   for (const { summaryLogId, createdBy } of submitActors) {
-    const actor = toStreamActor(createdBy)
+    const actor = toLedgerActor(createdBy)
     if (actor === null) {
       continue
     }

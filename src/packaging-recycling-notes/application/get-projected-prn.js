@@ -4,7 +4,7 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
- * @typedef {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} WasteBalanceStreamRepository
+ * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  */
 
@@ -15,16 +15,16 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
  * stream query: a deleted PRN is terminal and has no further events to project.
  *
  * @param {PackagingRecyclingNote | null} prn
- * @param {WasteBalanceStreamRepository} streamRepository
+ * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @returns {Promise<PackagingRecyclingNote | null>}
  */
-const projectFromStreamTail = async (prn, streamRepository) => {
+const projectFromStreamTail = async (prn, ledgerRepository) => {
   if (!prn || prn.status.currentStatus === PRN_STATUS.DELETED) {
     return prn
   }
 
   const tailEvents = await createWasteBalanceService(
-    streamRepository
+    ledgerRepository
   ).prnCatchupEvents({
     registrationId: prn.registrationId,
     accreditationId: prn.accreditation.id,
@@ -40,17 +40,17 @@ const projectFromStreamTail = async (prn, streamRepository) => {
  *
  * @param {Object} params
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {WasteBalanceStreamRepository} params.streamRepository
+ * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {string} params.prnId
  * @returns {Promise<PackagingRecyclingNote | null>}
  */
 export const getProjectedPrnById = async ({
   packagingRecyclingNotesRepository,
-  streamRepository,
+  ledgerRepository,
   prnId
 }) => {
   const prn = await packagingRecyclingNotesRepository.findById(prnId)
-  return projectFromStreamTail(prn, streamRepository)
+  return projectFromStreamTail(prn, ledgerRepository)
 }
 
 /**
@@ -60,15 +60,15 @@ export const getProjectedPrnById = async ({
  *
  * @param {Object} params
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {WasteBalanceStreamRepository} params.streamRepository
+ * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {string} params.prnNumber
  * @returns {Promise<PackagingRecyclingNote | null>}
  */
 export const getProjectedPrnByNumber = async ({
   packagingRecyclingNotesRepository,
-  streamRepository,
+  ledgerRepository,
   prnNumber
 }) => {
   const prn = await packagingRecyclingNotesRepository.findByPrnNumber(prnNumber)
-  return projectFromStreamTail(prn, streamRepository)
+  return projectFromStreamTail(prn, ledgerRepository)
 }

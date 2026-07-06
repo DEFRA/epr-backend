@@ -6,13 +6,13 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn,
   buildDraftPrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -95,9 +95,9 @@ const setupRepositories = async ({ prnSeed, balanceSeed }) => {
   const prnFactory = createInMemoryPackagingRecyclingNotesRepository([prnSeed])
   const prnRepository = prnFactory(logger)
 
-  const streamRepository = createInMemoryStreamRepository()()
-  await streamRepository.appendEvents([
-    buildStreamEvent({
+  const ledgerRepository = createInMemoryLedgerRepository()()
+  await ledgerRepository.appendEvents([
+    buildLedgerEvent({
       registrationId: REG_ID,
       accreditationId: ACC_ID,
       organisationId: ORG_ID,
@@ -114,7 +114,7 @@ const setupRepositories = async ({ prnSeed, balanceSeed }) => {
   return {
     logger,
     prnRepository,
-    streamRepository,
+    ledgerRepository,
     organisationsRepository
   }
 }
@@ -144,7 +144,7 @@ const expectWasteBalanceLog = (
 
 describe('updatePrnStatus system logging on successful balance update', () => {
   it('logs deduct_available when a PRN is created from draft', async () => {
-    const { logger, prnRepository, streamRepository, organisationsRepository } =
+    const { logger, prnRepository, ledgerRepository, organisationsRepository } =
       await setupRepositories({
         prnSeed: buildDraftPrn(PRN_BASE),
         balanceSeed: buildBalanceSeed()
@@ -152,7 +152,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
 
     await updatePrnStatus({
       prnRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository,
       logger,
       id: PRN_ID,
@@ -175,7 +175,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
   })
 
   it('logs deduct_total when a PRN is issued', async () => {
-    const { logger, prnRepository, streamRepository, organisationsRepository } =
+    const { logger, prnRepository, ledgerRepository, organisationsRepository } =
       await setupRepositories({
         prnSeed: buildAwaitingAuthorisationPrn(PRN_BASE),
         balanceSeed: buildBalanceSeed({
@@ -185,7 +185,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
 
     await updatePrnStatus({
       prnRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository,
       logger,
       id: PRN_ID,
@@ -208,7 +208,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
   })
 
   it('logs credit_available when a pending PRN is deleted', async () => {
-    const { logger, prnRepository, streamRepository, organisationsRepository } =
+    const { logger, prnRepository, ledgerRepository, organisationsRepository } =
       await setupRepositories({
         prnSeed: buildAwaitingAuthorisationPrn(PRN_BASE),
         balanceSeed: buildBalanceSeed({
@@ -218,7 +218,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
 
     await updatePrnStatus({
       prnRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository,
       logger,
       id: PRN_ID,
@@ -248,7 +248,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
           currentStatus: PRN_STATUS.AWAITING_CANCELLATION
         })
     })
-    const { logger, prnRepository, streamRepository, organisationsRepository } =
+    const { logger, prnRepository, ledgerRepository, organisationsRepository } =
       await setupRepositories({
         prnSeed: awaitingCancellationSeed,
         balanceSeed: buildBalanceSeed({
@@ -259,7 +259,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
 
     await updatePrnStatus({
       prnRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository,
       logger,
       id: PRN_ID,
@@ -282,7 +282,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
   })
 
   it('does not log a balance update for a discard write with no balance effect', async () => {
-    const { logger, prnRepository, streamRepository, organisationsRepository } =
+    const { logger, prnRepository, ledgerRepository, organisationsRepository } =
       await setupRepositories({
         prnSeed: buildDraftPrn(PRN_BASE),
         balanceSeed: buildBalanceSeed()
@@ -290,7 +290,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
 
     await updatePrnStatus({
       prnRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository,
       logger,
       id: PRN_ID,

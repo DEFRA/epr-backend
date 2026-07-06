@@ -3,7 +3,7 @@ import {
   addAttribution,
   formatAttributionMatrix
 } from '#waste-balances/application/summary-log-submitters.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { backfillRegisteredOnlySubmittedEvents } from '#waste-records/application/backfill-registered-only-submitted-events.js'
 
 /**
@@ -47,7 +47,7 @@ const runBackfill = async (server, writeSubmittedEvents) => {
     summaryLogsRepository: server.app.summaryLogsRepository,
     overseasSitesRepository: server.app.overseasSitesRepository,
     systemLogsRepository: server.app.systemLogsRepository,
-    streamRepository: server.app.streamRepository,
+    ledgerRepository: server.app.ledgerRepository,
     wasteBalanceService: server.app.wasteBalanceService,
     writeSubmittedEvents
   })
@@ -74,12 +74,12 @@ const runBackfill = async (server, writeSubmittedEvents) => {
       })
       addAttribution(
         matrix,
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
         submittedBy
       )
       addAttribution(
         totals,
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
         submittedBy
       )
     }
