@@ -191,29 +191,26 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
     })
 
     describe('DESCRIPTION_WASTE validation', () => {
-      it('accepts valid waste description from allowed list', () => {
-        const { error } = validationSchema.validate({
-          DESCRIPTION_WASTE: 'Aluminium - other'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts waste description with percentage value', () => {
-        const { error } = validationSchema.validate({
-          DESCRIPTION_WASTE:
+      it.each([
+        { description: 'Aluminium - other' },
+        {
+          description:
             'Aluminium - AAIG aluminium cans and associated packaging (97.5%)'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts waste description with special characters', () => {
-        // Note: This uses en-dash (–) not hyphen (-)
-        const { error } = validationSchema.validate({
-          DESCRIPTION_WASTE:
+        },
+        {
+          // Note: This uses en-dash (–) not hyphen (-)
+          description:
             'Steel – AAIG steel cans and associated packaging, grade 6E (97.5%)'
-        })
-        expect(error).toBeUndefined()
-      })
+        }
+      ])(
+        'accepts valid waste description "$description"',
+        ({ description }) => {
+          const { error } = validationSchema.validate({
+            DESCRIPTION_WASTE: description
+          })
+          expect(error).toBeUndefined()
+        }
+      )
 
       it('accepts various valid waste descriptions from allowed list', () => {
         const validDescriptions = [
@@ -231,29 +228,16 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         }
       })
 
-      it('rejects invalid waste description', () => {
+      it.each([
+        { label: 'invalid waste description', value: 'Invalid waste type' },
+        {
+          label: 'waste description not in allowed list',
+          value: 'Copper - scrap'
+        },
+        { label: 'non-string waste description', value: 12345 }
+      ])('rejects $label', ({ value }) => {
         const { error } = validationSchema.validate({
-          DESCRIPTION_WASTE: 'Invalid waste type'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a valid waste description from the allowed list'
-        )
-      })
-
-      it('rejects waste description not in allowed list', () => {
-        const { error } = validationSchema.validate({
-          DESCRIPTION_WASTE: 'Copper - scrap'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a valid waste description from the allowed list'
-        )
-      })
-
-      it('rejects non-string waste description', () => {
-        const { error } = validationSchema.validate({
-          DESCRIPTION_WASTE: 12345
+          DESCRIPTION_WASTE: value
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe(
@@ -274,102 +258,68 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
       for (const field of weightFields) {
         describe(`${field} validation`, () => {
-          it('accepts zero', () => {
-            const { error } = validationSchema.validate({ [field]: 0 })
+          it.each([
+            { label: 'zero', value: 0 },
+            { label: 'maximum value (1000)', value: 1000 },
+            { label: 'value within range', value: 500.5 }
+          ])('accepts $label', ({ value }) => {
+            const { error } = validationSchema.validate({ [field]: value })
             expect(error).toBeUndefined()
           })
 
-          it('accepts maximum value (1000)', () => {
-            const { error } = validationSchema.validate({ [field]: 1000 })
-            expect(error).toBeUndefined()
-          })
-
-          it('accepts value within range', () => {
-            const { error } = validationSchema.validate({ [field]: 500.5 })
-            expect(error).toBeUndefined()
-          })
-
-          it('rejects negative value', () => {
-            const { error } = validationSchema.validate({ [field]: -1 })
+          it.each([
+            {
+              label: 'negative value',
+              value: -1,
+              message: 'must be at least 0'
+            },
+            {
+              label: 'value above maximum (1000)',
+              value: 1001,
+              message: 'must be at most 1000'
+            },
+            {
+              label: 'non-number',
+              value: 'not-a-number',
+              message: 'must be a number'
+            }
+          ])('rejects $label', ({ value, message }) => {
+            const { error } = validationSchema.validate({ [field]: value })
             expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be at least 0')
-          })
-
-          it('rejects value above maximum (1000)', () => {
-            const { error } = validationSchema.validate({ [field]: 1001 })
-            expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be at most 1000')
-          })
-
-          it('rejects non-number', () => {
-            const { error } = validationSchema.validate({
-              [field]: 'not-a-number'
-            })
-            expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be a number')
+            expect(error.details[0].message).toBe(message)
           })
         })
       }
     })
 
     describe('RECYCLABLE_PROPORTION_PERCENTAGE validation', () => {
-      it('accepts zero', () => {
+      it.each([
+        { label: 'zero', value: 0 },
+        { label: 'one (100%)', value: 1 },
+        { label: 'value within range (0.5)', value: 0.5 },
+        { label: 'small percentage (0.01 = 1%)', value: 0.01 },
+        { label: 'high percentage (0.99 = 99%)', value: 0.99 }
+      ])('accepts $label', ({ value }) => {
         const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 0
+          RECYCLABLE_PROPORTION_PERCENTAGE: value
         })
         expect(error).toBeUndefined()
       })
 
-      it('accepts one (100%)', () => {
+      it.each([
+        { label: 'negative value', value: -0.1, message: 'must be at least 0' },
+        { label: 'value above 1', value: 1.1, message: 'must be at most 1' },
+        {
+          label: 'non-number',
+          value: 'fifty percent',
+          message: 'must be a number'
+        }
+      ])('rejects $label', ({ value, message }) => {
         const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 1
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts value within range (0.5)', () => {
-        const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 0.5
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts small percentage (0.01 = 1%)', () => {
-        const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 0.01
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts high percentage (0.99 = 99%)', () => {
-        const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 0.99
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects negative value', () => {
-        const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: -0.1
+          RECYCLABLE_PROPORTION_PERCENTAGE: value
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 0')
-      })
-
-      it('rejects value above 1', () => {
-        const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 1.1
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 1')
-      })
-
-      it('rejects non-number', () => {
-        const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 'fifty percent'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
+        expect(error.details[0].message).toBe(message)
       })
     })
 
@@ -388,33 +338,14 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         expect(error).toBeUndefined()
       })
 
-      it('rejects lowercase "yes"', () => {
+      it.each([
+        { label: 'lowercase "yes"', value: 'yes' },
+        { label: 'lowercase "no"', value: 'no' },
+        { label: 'uppercase "YES"', value: 'YES' },
+        { label: 'other strings', value: 'Maybe' }
+      ])('rejects $label', ({ value }) => {
         const { error } = validationSchema.validate({
-          BAILING_WIRE_PROTOCOL: 'yes'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
-      })
-
-      it('rejects lowercase "no"', () => {
-        const { error } = validationSchema.validate({
-          BAILING_WIRE_PROTOCOL: 'no'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
-      })
-
-      it('rejects uppercase "YES"', () => {
-        const { error } = validationSchema.validate({
-          BAILING_WIRE_PROTOCOL: 'YES'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
-      })
-
-      it('rejects other strings', () => {
-        const { error } = validationSchema.validate({
-          BAILING_WIRE_PROTOCOL: 'Maybe'
+          BAILING_WIRE_PROTOCOL: value
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe('must be Yes or No')
@@ -422,67 +353,26 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
     })
 
     describe('HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION validation', () => {
-      it('accepts "AAIG percentage"', () => {
+      it.each([
+        'AAIG percentage',
+        'Actual weight (100%)',
+        'National protocol percentage',
+        'S&I plan agreed methodology',
+        'S&I plan agreed site-specific protocol percentage'
+      ])('accepts "%s"', (value) => {
         const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'AAIG percentage'
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: value
         })
         expect(error).toBeUndefined()
       })
 
-      it('accepts "Actual weight (100%)"', () => {
+      it.each([
+        { label: 'invalid method', value: 'Some other method' },
+        { label: 'case variations', value: 'aaig percentage' },
+        { label: 'non-string', value: 123 }
+      ])('rejects $label', ({ value }) => {
         const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts "National protocol percentage"', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION:
-            'National protocol percentage'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts "S&I plan agreed methodology"', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION:
-            'S&I plan agreed methodology'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts "S&I plan agreed site-specific protocol percentage"', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION:
-            'S&I plan agreed site-specific protocol percentage'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects invalid method', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Some other method'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a valid recyclable proportion calculation method'
-        )
-      })
-
-      it('rejects case variations', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'aaig percentage'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a valid recyclable proportion calculation method'
-        )
-      })
-
-      it('rejects non-string', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 123
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: value
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe(
@@ -506,25 +396,13 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         expect(error).toBeUndefined()
       })
 
-      it('rejects lowercase "yes"', () => {
+      it.each([
+        { label: 'lowercase "yes"', value: 'yes' },
+        { label: 'lowercase "no"', value: 'no' },
+        { label: 'other strings', value: 'N/A' }
+      ])('rejects $label', ({ value }) => {
         const { error } = validationSchema.validate({
-          WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'yes'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
-      })
-
-      it('rejects lowercase "no"', () => {
-        const { error } = validationSchema.validate({
-          WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'no'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
-      })
-
-      it('rejects other strings', () => {
-        const { error } = validationSchema.validate({
-          WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'N/A'
+          WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: value
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe('must be Yes or No')

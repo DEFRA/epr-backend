@@ -120,56 +120,36 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
     })
 
     describe('TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON validation', () => {
-      it('accepts zero', () => {
+      it.each([
+        { label: 'zero', value: 0 },
+        { label: 'maximum value (1000)', value: 1000 },
+        { label: 'value within range', value: 500.5 },
+        { label: 'small decimal value', value: 0.01 }
+      ])('accepts $label', ({ value }) => {
         const { error } = validationSchema.validate({
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 0
+          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: value
         })
         expect(error).toBeUndefined()
       })
 
-      it('accepts maximum value (1000)', () => {
+      it.each([
+        { label: 'negative value', value: -1, message: 'must be at least 0' },
+        {
+          label: 'value above maximum (1000)',
+          value: 1001,
+          message: 'must be at most 1000'
+        },
+        {
+          label: 'non-number',
+          value: 'not-a-number',
+          message: 'must be a number'
+        }
+      ])('rejects $label', ({ value, message }) => {
         const { error } = validationSchema.validate({
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 1000
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts value within range', () => {
-        const { error } = validationSchema.validate({
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 500.5
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts small decimal value', () => {
-        const { error } = validationSchema.validate({
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 0.01
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects negative value', () => {
-        const { error } = validationSchema.validate({
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: -1
+          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: value
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 0')
-      })
-
-      it('rejects value above maximum (1000)', () => {
-        const { error } = validationSchema.validate({
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 1001
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 1000')
-      })
-
-      it('rejects non-number', () => {
-        const { error } = validationSchema.validate({
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 'not-a-number'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
+        expect(error.details[0].message).toBe(message)
       })
     })
 

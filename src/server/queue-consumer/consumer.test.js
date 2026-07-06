@@ -227,32 +227,17 @@ describe('createCommandQueueConsumer', () => {
       expect(result).toBe(mockConsumer)
     })
 
-    it('attaches error handler', async () => {
-      await createConsumer()
+    it.each(['error', 'processing_error', 'timeout_error'])(
+      'attaches %s handler',
+      async (event) => {
+        await createConsumer()
 
-      expect(mockConsumer.on).toHaveBeenCalledWith(
-        'error',
-        expect.any(Function)
-      )
-    })
-
-    it('attaches processing_error handler', async () => {
-      await createConsumer()
-
-      expect(mockConsumer.on).toHaveBeenCalledWith(
-        'processing_error',
-        expect.any(Function)
-      )
-    })
-
-    it('attaches timeout_error handler', async () => {
-      await createConsumer()
-
-      expect(mockConsumer.on).toHaveBeenCalledWith(
-        'timeout_error',
-        expect.any(Function)
-      )
-    })
+        expect(mockConsumer.on).toHaveBeenCalledWith(
+          event,
+          expect.any(Function)
+        )
+      }
+    )
   })
 
   describe('error event handlers', () => {
