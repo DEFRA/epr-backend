@@ -28,43 +28,25 @@ describe('ExcelJS parser performance', () => {
 
   const TIMEOUT_MS = 50_000
 
-  it('should parse Exporter template', { timeout: TIMEOUT_MS }, async () => {
-    const buffer = await readFile(
-      path.join(TEMPLATES_DIR, 'Summary_Log_Exporter.xlsx')
-    )
-
-    const result = await parse(buffer, SUMMARY_LOG_PARSE_OPTIONS)
-
-    expect(result.meta.PROCESSING_TYPE.value).toBe('EXPORTER')
-    expect(result.meta.TEMPLATE_VERSION.value).toBeDefined()
-  })
-
-  it(
-    'should parse Reprocessor Input template',
-    { timeout: TIMEOUT_MS },
-    async () => {
-      const buffer = await readFile(
-        path.join(TEMPLATES_DIR, 'Summary_Log_Reprocessor_Input.xlsx')
-      )
-
-      const result = await parse(buffer, SUMMARY_LOG_PARSE_OPTIONS)
-
-      expect(result.meta.PROCESSING_TYPE.value).toBe('REPROCESSOR_INPUT')
-      expect(result.meta.TEMPLATE_VERSION.value).toBeDefined()
+  it.each([
+    { fixture: 'Summary_Log_Exporter.xlsx', processingType: 'EXPORTER' },
+    {
+      fixture: 'Summary_Log_Reprocessor_Input.xlsx',
+      processingType: 'REPROCESSOR_INPUT'
+    },
+    {
+      fixture: 'Summary_Log_Reprocessor_Output.xlsx',
+      processingType: 'REPROCESSOR_OUTPUT'
     }
-  )
-
-  it(
-    'should parse Reprocessor Output template',
+  ])(
+    'should parse $processingType template',
     { timeout: TIMEOUT_MS },
-    async () => {
-      const buffer = await readFile(
-        path.join(TEMPLATES_DIR, 'Summary_Log_Reprocessor_Output.xlsx')
-      )
+    async ({ fixture, processingType }) => {
+      const buffer = await readFile(path.join(TEMPLATES_DIR, fixture))
 
       const result = await parse(buffer, SUMMARY_LOG_PARSE_OPTIONS)
 
-      expect(result.meta.PROCESSING_TYPE.value).toBe('REPROCESSOR_OUTPUT')
+      expect(result.meta.PROCESSING_TYPE.value).toBe(processingType)
       expect(result.meta.TEMPLATE_VERSION.value).toBeDefined()
     }
   )

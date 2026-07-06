@@ -346,9 +346,18 @@ describe('addOrUpdateOrganisationUser', () => {
   })
 
   describe('edge cases', () => {
-    test('should handle empty string for firstName', async () => {
-      mockTokenPayload.firstName = ''
-      mockTokenPayload.lastName = 'Doe'
+    test.each([
+      ['should handle empty string for firstName', '', 'Doe', 'Doe'],
+      ['should handle empty string for lastName', 'John', '', 'John'],
+      [
+        'should handle unicode characters in names',
+        'José',
+        'García',
+        'José García'
+      ]
+    ])('%s', async (_description, firstName, lastName, expectedFullName) => {
+      mockTokenPayload.firstName = firstName
+      mockTokenPayload.lastName = lastName
 
       await addOrUpdateOrganisationUser(
         mockRequest,
@@ -359,23 +368,7 @@ describe('addOrUpdateOrganisationUser', () => {
       const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
       const newUser = updateCall[2].users[0]
 
-      expect(newUser.fullName).toBe('Doe')
-    })
-
-    test('should handle empty string for lastName', async () => {
-      mockTokenPayload.firstName = 'John'
-      mockTokenPayload.lastName = ''
-
-      await addOrUpdateOrganisationUser(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
-      const newUser = updateCall[2].users[0]
-
-      expect(newUser.fullName).toBe('John')
+      expect(newUser.fullName).toBe(expectedFullName)
     })
 
     test('should work with different contactId formats', async () => {
@@ -401,22 +394,6 @@ describe('addOrUpdateOrganisationUser', () => {
           mockOrganisation
         )
       ).rejects.toThrow('Database connection failed')
-    })
-
-    test('should handle unicode characters in names', async () => {
-      mockTokenPayload.firstName = 'José'
-      mockTokenPayload.lastName = 'García'
-
-      await addOrUpdateOrganisationUser(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
-      const newUser = updateCall[2].users[0]
-
-      expect(newUser.fullName).toBe('José García')
     })
   })
 })

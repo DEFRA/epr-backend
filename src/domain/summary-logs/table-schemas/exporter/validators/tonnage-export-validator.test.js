@@ -54,57 +54,23 @@ describe('extractTonnageExportFields', () => {
   })
 
   describe('when fields are missing', () => {
-    it('returns null when NET_WEIGHT is missing', () => {
-      const row = {
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_EXPORT: 72
-      }
+    const completeRow = {
+      NET_WEIGHT: 100,
+      WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+      BAILING_WIRE_PROTOCOL: 'No',
+      RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+      TONNAGE_RECEIVED_FOR_EXPORT: 72
+    }
 
-      expect(extractTonnageExportFields(row)).toBeNull()
-    })
-
-    it('returns null when WEIGHT_OF_NON_TARGET_MATERIALS is missing', () => {
-      const row = {
-        NET_WEIGHT: 100,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_EXPORT: 72
-      }
-
-      expect(extractTonnageExportFields(row)).toBeNull()
-    })
-
-    it('returns null when BAILING_WIRE_PROTOCOL is missing', () => {
-      const row = {
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_EXPORT: 72
-      }
-
-      expect(extractTonnageExportFields(row)).toBeNull()
-    })
-
-    it('returns null when RECYCLABLE_PROPORTION_PERCENTAGE is missing', () => {
-      const row = {
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'No',
-        TONNAGE_RECEIVED_FOR_EXPORT: 72
-      }
-
-      expect(extractTonnageExportFields(row)).toBeNull()
-    })
-
-    it('returns null when TONNAGE_RECEIVED_FOR_EXPORT is missing', () => {
-      const row = {
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8
-      }
+    it.each([
+      'NET_WEIGHT',
+      'WEIGHT_OF_NON_TARGET_MATERIALS',
+      'BAILING_WIRE_PROTOCOL',
+      'RECYCLABLE_PROPORTION_PERCENTAGE',
+      'TONNAGE_RECEIVED_FOR_EXPORT'
+    ])('returns null when %s is missing', (missingField) => {
+      const row = { ...completeRow }
+      delete row[missingField]
 
       expect(extractTonnageExportFields(row)).toBeNull()
     })
@@ -223,83 +189,64 @@ describe('validateTonnageExport', () => {
       .prefs({ abortEarly: false })
 
   describe('when all fields are present (BAILING_WIRE_PROTOCOL = No)', () => {
-    it('accepts correct calculation ((100 - 10) * 0.8 = 72)', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_EXPORT: 72
-      })
+    it.each([
+      {
+        netWeight: 100,
+        nonTarget: 10,
+        recyclablePct: 0.8,
+        tonnage: 72,
+        description: '(100 - 10) * 0.8 = 72'
+      },
+      {
+        netWeight: 50.5,
+        nonTarget: 5.5,
+        recyclablePct: 0.975,
+        tonnage: 43.875,
+        description: '(50.5 - 5.5) * 0.975 = 43.875'
+      },
+      {
+        netWeight: 100,
+        nonTarget: 10,
+        recyclablePct: 0,
+        tonnage: 0,
+        description: 'zero result when recyclable proportion is zero'
+      },
+      {
+        netWeight: 50,
+        nonTarget: 50,
+        recyclablePct: 0.8,
+        tonnage: 0,
+        description: 'zero result when net equals non-target materials'
+      },
+      {
+        netWeight: 100,
+        nonTarget: 0,
+        recyclablePct: 0.5,
+        tonnage: 50,
+        description: '(100 - 0) * 0.5 = 50'
+      },
+      {
+        netWeight: 100,
+        nonTarget: 10,
+        recyclablePct: 1,
+        tonnage: 90,
+        description: '100% recyclable proportion (100 - 10) * 1 = 90'
+      }
+    ])(
+      'accepts correct calculation: $description',
+      ({ netWeight, nonTarget, recyclablePct, tonnage }) => {
+        const schema = createTestSchema()
+        const { error } = schema.validate({
+          NET_WEIGHT: netWeight,
+          WEIGHT_OF_NON_TARGET_MATERIALS: nonTarget,
+          BAILING_WIRE_PROTOCOL: 'No',
+          RECYCLABLE_PROPORTION_PERCENTAGE: recyclablePct,
+          TONNAGE_RECEIVED_FOR_EXPORT: tonnage
+        })
 
-      expect(error).toBeUndefined()
-    })
-
-    it('accepts correct calculation with decimals ((50.5 - 5.5) * 0.975 = 43.875)', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 50.5,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 5.5,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.975,
-        TONNAGE_RECEIVED_FOR_EXPORT: 43.875
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('accepts zero result when recyclable proportion is zero', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0,
-        TONNAGE_RECEIVED_FOR_EXPORT: 0
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('accepts zero result when net equals non-target materials', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 50,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 50,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_EXPORT: 0
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('accepts calculation when non-target materials is zero ((100 - 0) * 0.5 = 50)', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 0,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.5,
-        TONNAGE_RECEIVED_FOR_EXPORT: 50
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('accepts 100% recyclable proportion ((100 - 10) * 1 = 90)', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 1,
-        TONNAGE_RECEIVED_FOR_EXPORT: 90
-      })
-
-      expect(error).toBeUndefined()
-    })
+        expect(error).toBeUndefined()
+      }
+    )
 
     it('rejects incorrect calculation', () => {
       const schema = createTestSchema()
@@ -392,62 +339,25 @@ describe('validateTonnageExport', () => {
   })
 
   describe('when some fields are missing', () => {
-    it('skips validation when TONNAGE_RECEIVED_FOR_EXPORT is missing', () => {
+    const completeRow = {
+      NET_WEIGHT: 100,
+      WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+      BAILING_WIRE_PROTOCOL: 'No',
+      RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+      TONNAGE_RECEIVED_FOR_EXPORT: 72
+    }
+
+    it.each([
+      'TONNAGE_RECEIVED_FOR_EXPORT',
+      'NET_WEIGHT',
+      'WEIGHT_OF_NON_TARGET_MATERIALS',
+      'BAILING_WIRE_PROTOCOL',
+      'RECYCLABLE_PROPORTION_PERCENTAGE'
+    ])('skips validation when %s is missing', (missingField) => {
       const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('skips validation when NET_WEIGHT is missing', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_EXPORT: 72
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('skips validation when WEIGHT_OF_NON_TARGET_MATERIALS is missing', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 100,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_EXPORT: 72
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('skips validation when BAILING_WIRE_PROTOCOL is missing', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_EXPORT: 72
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('skips validation when RECYCLABLE_PROPORTION_PERCENTAGE is missing', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'No',
-        TONNAGE_RECEIVED_FOR_EXPORT: 72
-      })
+      const row = { ...completeRow }
+      delete row[missingField]
+      const { error } = schema.validate(row)
 
       expect(error).toBeUndefined()
     })
