@@ -47,28 +47,14 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
       })
     })
 
-    it('returns 422 when id is non-numeric', async () => {
+    it.each([
+      ['non-numeric', 'not-a-number'],
+      ['a Mongo ObjectId hex string', '507f1f77bcf86cd799439011'],
+      ['zero or negative', '0']
+    ])('returns 422 when id is %s', async (_description, id) => {
       const response = await server.inject({
         method: 'DELETE',
-        url: '/v1/dev/organisations/not-a-number'
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    })
-
-    it('returns 422 when id is a Mongo ObjectId hex string', async () => {
-      const response = await server.inject({
-        method: 'DELETE',
-        url: '/v1/dev/organisations/507f1f77bcf86cd799439011'
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    })
-
-    it('returns 422 when id is zero or negative', async () => {
-      const response = await server.inject({
-        method: 'DELETE',
-        url: '/v1/dev/organisations/0'
+        url: `/v1/dev/organisations/${id}`
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)

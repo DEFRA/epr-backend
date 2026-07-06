@@ -568,7 +568,30 @@ describe('#getJwtStrategyConfig', () => {
         expect(result.credentials.role).toBeNull()
       })
 
-      test('includes name from firstName and lastName in credentials', async () => {
+      test.each([
+        [
+          'includes name from firstName and lastName',
+          'Test',
+          'User',
+          'Test User'
+        ],
+        ['handles only firstName provided', 'Test', undefined, 'Test'],
+        ['handles only lastName provided', undefined, 'User', 'User'],
+        [
+          'handles neither firstName nor lastName provided',
+          undefined,
+          undefined,
+          ''
+        ],
+        [
+          'trims whitespace from firstName and lastName',
+          '  Test  ',
+          '  User  ',
+          'Test User'
+        ],
+        ['handles null firstName and lastName', null, null, ''],
+        ['handles empty string firstName and lastName', '', '', '']
+      ])('%s', async (_description, firstName, lastName, expectedName) => {
         const config = getJwtStrategyConfig(mockOidcConfigs)
 
         const artifacts = {
@@ -577,8 +600,8 @@ describe('#getJwtStrategyConfig', () => {
               aud: mockDefraClientId,
               contactId: 'defra-contact-123',
               email: 'defra-user@example.com',
-              firstName: 'Test',
-              lastName: 'User',
+              firstName,
+              lastName,
               iss: defraIdMockOidcWellKnownResponse.issuer
             }
           }
@@ -586,129 +609,7 @@ describe('#getJwtStrategyConfig', () => {
 
         const result = await config.validate(artifacts, stubRequest())
 
-        expect(result.credentials.name).toBe('Test User')
-      })
-
-      test('handles only firstName provided', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              aud: mockDefraClientId,
-              contactId: 'defra-contact-123',
-              email: 'defra-user@example.com',
-              firstName: 'Test',
-              iss: defraIdMockOidcWellKnownResponse.issuer
-            }
-          }
-        }
-
-        const result = await config.validate(artifacts, stubRequest())
-
-        expect(result.credentials.name).toBe('Test')
-      })
-
-      test('handles only lastName provided', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              aud: mockDefraClientId,
-              contactId: 'defra-contact-123',
-              email: 'defra-user@example.com',
-              lastName: 'User',
-              iss: defraIdMockOidcWellKnownResponse.issuer
-            }
-          }
-        }
-
-        const result = await config.validate(artifacts, stubRequest())
-
-        expect(result.credentials.name).toBe('User')
-      })
-
-      test('handles neither firstName nor lastName provided', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              aud: mockDefraClientId,
-              contactId: 'defra-contact-123',
-              email: 'defra-user@example.com',
-              iss: defraIdMockOidcWellKnownResponse.issuer
-            }
-          }
-        }
-
-        const result = await config.validate(artifacts, stubRequest())
-
-        expect(result.credentials.name).toBe('')
-      })
-
-      test('trims whitespace from firstName and lastName', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              aud: mockDefraClientId,
-              contactId: 'defra-contact-123',
-              email: 'defra-user@example.com',
-              firstName: '  Test  ',
-              lastName: '  User  ',
-              iss: defraIdMockOidcWellKnownResponse.issuer
-            }
-          }
-        }
-
-        const result = await config.validate(artifacts, stubRequest())
-
-        expect(result.credentials.name).toBe('Test User')
-      })
-
-      test('handles null firstName and lastName', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              aud: mockDefraClientId,
-              contactId: 'defra-contact-123',
-              email: 'defra-user@example.com',
-              firstName: null,
-              lastName: null,
-              iss: defraIdMockOidcWellKnownResponse.issuer
-            }
-          }
-        }
-
-        const result = await config.validate(artifacts, stubRequest())
-
-        expect(result.credentials.name).toBe('')
-      })
-
-      test('handles empty string firstName and lastName', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              aud: mockDefraClientId,
-              contactId: 'defra-contact-123',
-              email: 'defra-user@example.com',
-              firstName: '',
-              lastName: '',
-              iss: defraIdMockOidcWellKnownResponse.issuer
-            }
-          }
-        }
-
-        const result = await config.validate(artifacts, stubRequest())
-
-        expect(result.credentials.name).toBe('')
+        expect(result.credentials.name).toBe(expectedName)
       })
 
       test('does not call getEntraUserRoles for Defra ID tokens', async () => {

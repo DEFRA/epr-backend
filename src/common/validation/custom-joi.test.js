@@ -3,39 +3,17 @@ import { customJoi } from './custom-joi.js'
 
 describe('customJoi', () => {
   describe('coercedString type', () => {
-    it('accepts string values unchanged', () => {
+    it.each([
+      ['accepts string values unchanged', 'hello', 'hello'],
+      ['coerces number to string', 12345, '12345'],
+      ['coerces floating point number to string', 3.14, '3.14'],
+      ['coerces zero to string', 0, '0'],
+      ['coerces negative number to string', -42, '-42']
+    ])('%s', (_description, input, expected) => {
       const schema = customJoi.coercedString()
-      const { error, value } = schema.validate('hello')
+      const { error, value } = schema.validate(input)
       expect(error).toBeUndefined()
-      expect(value).toBe('hello')
-    })
-
-    it('coerces number to string', () => {
-      const schema = customJoi.coercedString()
-      const { error, value } = schema.validate(12345)
-      expect(error).toBeUndefined()
-      expect(value).toBe('12345')
-    })
-
-    it('coerces floating point number to string', () => {
-      const schema = customJoi.coercedString()
-      const { error, value } = schema.validate(3.14)
-      expect(error).toBeUndefined()
-      expect(value).toBe('3.14')
-    })
-
-    it('coerces zero to string', () => {
-      const schema = customJoi.coercedString()
-      const { error, value } = schema.validate(0)
-      expect(error).toBeUndefined()
-      expect(value).toBe('0')
-    })
-
-    it('coerces negative number to string', () => {
-      const schema = customJoi.coercedString()
-      const { error, value } = schema.validate(-42)
-      expect(error).toBeUndefined()
-      expect(value).toBe('-42')
+      expect(value).toBe(expected)
     })
 
     it('supports chained string methods like max()', () => {
