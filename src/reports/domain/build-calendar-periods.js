@@ -61,7 +61,11 @@ export const buildCalendarPeriods = (mergedPeriods) =>
     // is the flagged submitted report itself there is no resubmission draft yet
     // (the pre-draft skeleton); once the operator starts one, `current` is that
     // later draft and the flagged report drops to previousSubmissions.
-    const draft = period.report === flaggedSubmitted ? null : period.report
+    const draft =
+      period.report &&
+      period.report.submissionNumber > flaggedSubmitted.submissionNumber
+        ? period.report
+        : null
 
     return [
       {
