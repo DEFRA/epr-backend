@@ -1,24 +1,24 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { backfillRegistrationStream } from '#waste-records/backfill/backfill-estate-rowstates.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/in-memory-store.js'
+import { backfillRegistrationLedger } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/in-memory-store.js'
 import { runReconciliation } from '#waste-records/monitoring/run-reconciliation.js'
 import {
   formatCensusSummary,
-  formatPartitionDiagnostic,
+  formatLedgerDiagnostic,
   hasReviewableFindings
 } from '#waste-records/monitoring/format-report.js'
 
 const LOCK_NAME = 'waste-record-state-discrepancy-report'
 
 /**
- * Build the per-partition waste record state source the reconciliation walk
+ * Build the per-ledger summary-log row state source the reconciliation walk
  * resolves for each registration, following the backfill flag.
  *
  * With the flag on, the persisted mongodb collection is the live source — the
  * backfill has populated it and forward writes may be extending it — so every
- * partition reconciles against that one persisted repository (mongodb's unique
- * index and per-partition reads keep it cheap). With the flag off, nothing has
- * been written to mongodb yet (the write-gate invariant), so each partition is
+ * ledger reconciles against that one persisted repository (mongodb's unique
+ * index and per-ledger reads keep it cheap). With the flag off, nothing has
+ * been written to mongodb yet (the write-gate invariant), so each ledger is
  * reconstructed on its own into a fresh in-memory store that is reconciled and
  * then discarded before the next — the dry run's peak footprint is one
  * registration, never the whole estate, and mongodb is never touched. Both
@@ -27,25 +27,26 @@ const LOCK_NAME = 'waste-record-state-discrepancy-report'
  * backfilled estate, and the post-write-flip monitor.
  *
  * @param {Object} server - Hapi server instance
- * @returns {(context: { organisation: import('#domain/organisations/model.js').Organisation, registration: import('#domain/organisations/registration.js').Registration }) => Promise<import('#waste-records/repository/port.js').RowStateRepository>}
+ * @returns {(context: { organisation: import('#domain/organisations/model.js').Organisation, registration: import('#domain/organisations/registration.js').Registration }) => Promise<import('#waste-records/repository/port.js').SummaryLogRowStateRepository>}
  */
-export const wasteRecordStateSource = (server) => {
-  if (server.featureFlags.isWasteRecordStatesBackfillEnabled()) {
-    return async () => server.app.wasteRecordStatesRepository
+export const summaryLogRowStateSource = (server) => {
+  if (server.featureFlags.isSummaryLogRowStatesBackfillEnabled()) {
+    return async () => server.app.summaryLogRowStatesRepository
   }
 
   return async ({ organisation, registration }) => {
-    const rowStateRepository = createInMemoryRowStateRepository()()
-    await backfillRegistrationStream({
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await backfillRegistrationLedger({
       organisation,
       registration,
       organisationsRepository: server.app.organisationsRepository,
       wasteRecordsRepository: server.app.wasteRecordsRepository,
       summaryLogsRepository: server.app.summaryLogsRepository,
       overseasSitesRepository: server.app.overseasSitesRepository,
-      rowStateRepository
+      summaryLogRowStateRepository
     })
-    return rowStateRepository
+    return summaryLogRowStateRepository
   }
 }
 
@@ -53,7 +54,7 @@ export const wasteRecordStateSource = (server) => {
  * Reconcile the waste record state view (ADR-0037) against the legacy
  * waste-records committed baseline across the estate and log the result for
  * review. The view follows the backfill flag — the persisted collection when on,
- * a reconstructed in-memory dry run when off. Each partition carrying a
+ * a reconstructed in-memory dry run when off. Each ledger carrying a
  * discrepancy or a classification divergence is logged on its own line; a census
  * summary follows. All at info — under current-factors backfill, divergences (an
  * overseas site approved since a submission, for instance) are expected findings
@@ -66,15 +67,15 @@ export const wasteRecordStateSource = (server) => {
 const runReport = async (server) => {
   const { reconciliations, census } = await runReconciliation({
     organisationsRepository: server.app.organisationsRepository,
-    streamRepository: server.app.streamRepository,
-    wasteRecordStateSource: wasteRecordStateSource(server),
+    ledgerRepository: server.app.ledgerRepository,
+    summaryLogRowStateSource: summaryLogRowStateSource(server),
     wasteRecordsRepository: server.app.wasteRecordsRepository,
     overseasSitesRepository: server.app.overseasSitesRepository
   })
 
   for (const reconciliation of reconciliations) {
     if (hasReviewableFindings(reconciliation)) {
-      logger.info({ message: formatPartitionDiagnostic(reconciliation) })
+      logger.info({ message: formatLedgerDiagnostic(reconciliation) })
     }
   }
 

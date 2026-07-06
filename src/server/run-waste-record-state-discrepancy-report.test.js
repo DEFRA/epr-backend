@@ -4,11 +4,11 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { buildRowStateEntry } from '#waste-records/repository/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -22,7 +22,7 @@ import {
 
 import {
   runWasteRecordStateDiscrepancyReport,
-  wasteRecordStateSource
+  summaryLogRowStateSource
 } from './run-waste-record-state-discrepancy-report.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
@@ -54,7 +54,7 @@ const wasteRecordStateEntry = (
   transactionAmount,
   reasons = []
 ) =>
-  buildRowStateEntry({
+  buildSummaryLogRowStateEntry({
     rowId,
     classification: { outcome, reasons, transactionAmount }
   })
@@ -70,9 +70,9 @@ const approvedOrg = () =>
     }
   ])
 
-const streamWithHead = (creditTotal) =>
-  createInMemoryStreamRepository([
-    buildStreamEvent({
+const ledgerWithHead = (creditTotal) =>
+  createInMemoryLedgerRepository([
+    buildLedgerEvent({
       registrationId: 'reg-1',
       accreditationId: 'acc-1',
       payload: { summaryLogId: 'log-1', creditTotal }
@@ -88,7 +88,7 @@ const buildServer = (
 ) => ({
   app,
   featureFlags: {
-    isWasteRecordStatesBackfillEnabled: () => backfillEnabled
+    isSummaryLogRowStatesBackfillEnabled: () => backfillEnabled
   },
   locker: { lock: vi.fn().mockResolvedValue(lock) }
 })
@@ -97,7 +97,7 @@ const buildServer = (
 // write-gate invariant is that nothing reads or writes the collection while the
 // backfill flag is off.
 const untouchedPersistedRepository = () => ({
-  upsertRowStates: vi.fn(),
+  upsertSummaryLogRowStates: vi.fn(),
   findBySummaryLogId: vi.fn(),
   findRowHistory: vi.fn()
 })
@@ -142,8 +142,8 @@ const approvedReprocessor = () =>
   )
 
 const committedHead = (creditTotal) =>
-  createInMemoryStreamRepository([
-    buildStreamEvent({
+  createInMemoryLedgerRepository([
+    buildLedgerEvent({
       registrationId: 'reg-1',
       accreditationId: 'acc-1',
       payload: { summaryLogId: fileTag('sl-1'), creditTotal }
@@ -162,43 +162,44 @@ const reconstructableEstate = async () => {
     organisationsRepository: createInMemoryOrganisationsRepository([
       organisation
     ])(),
-    streamRepository: committedHead(0),
+    ledgerRepository: committedHead(0),
     summaryLogsRepository,
     wasteRecordsRepository: createInMemoryWasteRecordsRepository([
       receivedRecord(organisation.id, 'row-1', fileTag('sl-1'))
     ])(),
     overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-    wasteRecordStatesRepository: untouchedPersistedRepository()
+    summaryLogRowStatesRepository: untouchedPersistedRepository()
   }
 }
 
 // A committed head with no submitted summary log to reconstruct from: the dry
-// run rebuilds nothing, so the partition surfaces as a coverage gap for review.
+// run rebuilds nothing, so the ledger surfaces as a coverage gap for review.
 const headWithoutReconstructableSubmission = () => {
   const organisation = approvedReprocessor()
   return {
     organisationsRepository: createInMemoryOrganisationsRepository([
       organisation
     ])(),
-    streamRepository: committedHead(0),
+    ledgerRepository: committedHead(0),
     summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
     wasteRecordsRepository: createInMemoryWasteRecordsRepository()(),
     overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-    wasteRecordStatesRepository: untouchedPersistedRepository()
+    summaryLogRowStatesRepository: untouchedPersistedRepository()
   }
 }
 
 const emptyEstate = () => ({
   organisationsRepository: orgsRepository([]),
-  streamRepository: createInMemoryStreamRepository()(),
-  wasteRecordStatesRepository: createInMemoryRowStateRepository()(),
+  ledgerRepository: createInMemoryLedgerRepository()(),
+  summaryLogRowStatesRepository: createInMemorySummaryLogRowStateRepository()(),
   wasteRecordsRepository: createInMemoryWasteRecordsRepository()(),
   overseasSitesRepository: sitesRepository([])
 })
 
 const estateFrom = async (wasteRecordStateEntries, creditTotal) => {
-  const wasteRecordStatesRepository = createInMemoryRowStateRepository()()
-  await wasteRecordStatesRepository.upsertRowStates(
+  const summaryLogRowStatesRepository =
+    createInMemorySummaryLogRowStateRepository()()
+  await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     {
       organisationId: 'org-1',
       registrationId: 'reg-1',
@@ -209,8 +210,8 @@ const estateFrom = async (wasteRecordStateEntries, creditTotal) => {
   )
   return {
     organisationsRepository: approvedOrg(),
-    streamRepository: streamWithHead(creditTotal),
-    wasteRecordStatesRepository,
+    ledgerRepository: ledgerWithHead(creditTotal),
+    summaryLogRowStatesRepository,
     wasteRecordsRepository: createInMemoryWasteRecordsRepository([
       committedRecord('org-1', 'reg-1', 'row-1', 'log-1')
     ])(),
@@ -225,15 +226,15 @@ const cleanReconciledEstate = () =>
 
 // Included waste record state against an excluded legacy record: a
 // classification divergence (the expected overseas-site / factor drift) on an
-// otherwise clean partition.
+// otherwise clean ledger.
 const divergenceOnlyEstate = () =>
   estateFrom([wasteRecordStateEntry('row-1', ROW_OUTCOME.INCLUDED, 10)], 10)
 
 // A committed head with no waste record state data: a backfill coverage gap.
 const estateWithMissingWasteRecordStateData = () => ({
   organisationsRepository: approvedOrg(),
-  streamRepository: streamWithHead(10),
-  wasteRecordStatesRepository: createInMemoryRowStateRepository()(),
+  ledgerRepository: ledgerWithHead(10),
+  summaryLogRowStatesRepository: createInMemorySummaryLogRowStateRepository()(),
   wasteRecordsRepository: createInMemoryWasteRecordsRepository([
     committedRecord('org-1', 'reg-1', 'row-1', 'log-1')
   ])(),
@@ -279,7 +280,7 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
     expect(logger.error).not.toHaveBeenCalled()
   })
 
-  it('logs only the census summary when every partition reconciles cleanly', async () => {
+  it('logs only the census summary when every ledger reconciles cleanly', async () => {
     const server = buildServer(await cleanReconciledEstate())
 
     await runWasteRecordStateDiscrepancyReport(server)
@@ -307,7 +308,7 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
     )
   })
 
-  it('logs a classification divergence on an otherwise clean partition for human review', async () => {
+  it('logs a classification divergence on an otherwise clean ledger for human review', async () => {
     const server = buildServer(await divergenceOnlyEstate())
 
     await runWasteRecordStateDiscrepancyReport(server)
@@ -373,10 +374,10 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
       await runWasteRecordStateDiscrepancyReport(server)
 
       expect(
-        app.wasteRecordStatesRepository.findBySummaryLogId
+        app.summaryLogRowStatesRepository.findBySummaryLogId
       ).not.toHaveBeenCalled()
       expect(
-        app.wasteRecordStatesRepository.upsertRowStates
+        app.summaryLogRowStatesRepository.upsertSummaryLogRowStates
       ).not.toHaveBeenCalled()
     })
 
@@ -388,7 +389,7 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
 
       expect(logger.error).not.toHaveBeenCalled()
       expect(
-        app.wasteRecordStatesRepository.findBySummaryLogId
+        app.summaryLogRowStatesRepository.findBySummaryLogId
       ).not.toHaveBeenCalled()
       expect(logger.info).toHaveBeenCalledWith(
         loggedInfoMessage('no waste record state data')
@@ -442,7 +443,7 @@ const approvedReprocessorAccreditation = (id) =>
 
 // Two reconstructable registrations under one organisation, each with its own
 // submitted summary log + tagged waste record. Exposes each registration so a
-// caller can drive the per-partition source for one partition at a time.
+// caller can drive the per-ledger source for one ledger at a time.
 const twoRegistrationReconstructableEstate = async () => {
   const registrationA = reprocessorRegistration({
     id: 'reg-a',
@@ -471,30 +472,30 @@ const twoRegistrationReconstructableEstate = async () => {
     organisationsRepository: createInMemoryOrganisationsRepository([
       organisation
     ])(),
-    streamRepository: createInMemoryStreamRepository()(),
+    ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogsRepository,
     wasteRecordsRepository: createInMemoryWasteRecordsRepository([
       receivedRecordFor(organisation.id, 'reg-a', 'row-a', fileTag('sl-a')),
       receivedRecordFor(organisation.id, 'reg-b', 'row-b', fileTag('sl-b'))
     ])(),
     overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-    wasteRecordStatesRepository: untouchedPersistedRepository()
+    summaryLogRowStatesRepository: untouchedPersistedRepository()
   }
 }
 
-describe('wasteRecordStateSource', () => {
+describe('summaryLogRowStateSource', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('flag on: returns the same persisted repository for every partition', async () => {
+  it('flag on: returns the same persisted repository for every ledger', async () => {
     const persisted = untouchedPersistedRepository()
     const server = buildServer(
-      { wasteRecordStatesRepository: persisted },
+      { summaryLogRowStatesRepository: persisted },
       { backfillEnabled: true }
     )
 
-    const source = wasteRecordStateSource(server)
+    const source = summaryLogRowStateSource(server)
     const first = await source(
       /** @type {*} */ ({
         organisation: { id: 'org-1' },
@@ -512,11 +513,11 @@ describe('wasteRecordStateSource', () => {
     expect(second).toBe(persisted)
   })
 
-  it('flag off: reconstructs a fresh store per registration, scoped to that partition, without touching the persisted collection', async () => {
+  it('flag off: reconstructs a fresh store per registration, scoped to that ledger, without touching the persisted collection', async () => {
     const app = await twoRegistrationReconstructableEstate()
     const server = buildServer(app, { backfillEnabled: false })
 
-    const source = wasteRecordStateSource(server)
+    const source = summaryLogRowStateSource(server)
     const storeA = await source(
       /** @type {*} */ ({
         organisation: app.organisation,
@@ -531,7 +532,7 @@ describe('wasteRecordStateSource', () => {
     )
 
     // Distinct store instances — the dry run never accumulates one global store
-    // across partitions.
+    // across ledgers.
     expect(storeA).not.toBe(storeB)
 
     // Each store holds only its own registration's reconstructed submission:
@@ -542,10 +543,10 @@ describe('wasteRecordStateSource', () => {
     expect(await storeB.findBySummaryLogId(fileTag('sl-a'))).toHaveLength(0)
 
     expect(
-      app.wasteRecordStatesRepository.upsertRowStates
+      app.summaryLogRowStatesRepository.upsertSummaryLogRowStates
     ).not.toHaveBeenCalled()
     expect(
-      app.wasteRecordStatesRepository.findBySummaryLogId
+      app.summaryLogRowStatesRepository.findBySummaryLogId
     ).not.toHaveBeenCalled()
   })
 })

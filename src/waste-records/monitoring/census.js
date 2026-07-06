@@ -10,32 +10,32 @@ const sum = (reconciliations, amount) =>
 
 /**
  * Roll a set of per-registration reconciliations up into an estate-level
- * census: how many partitions carry waste record state data, how many are
+ * census: how many ledgers carry waste record state data, how many are
  * clean, and the totals behind any discrepancies. A clean estate (no missing
- * rows, no extra rows, no creditTotal drift, every committed partition covered)
+ * rows, no extra rows, no creditTotal drift, every committed ledger covered)
  * reconciles fully against the committed baseline.
  *
  * @param {RegistrationReconciliation[]} reconciliations
  */
 export const summariseCensus = (reconciliations) => ({
-  totalPartitions: reconciliations.length,
-  partitionsWithCommittedSubmission: count(
+  totalLedgers: reconciliations.length,
+  ledgersWithCommittedSubmission: count(
     reconciliations,
     (r) => r.hasCommittedSubmission
   ),
-  partitionsCovered: count(
+  ledgersCovered: count(
     reconciliations,
     (r) => r.hasCommittedSubmission && r.hasWasteRecordStateData
   ),
-  partitionsMissingWasteRecordStateData: count(
+  ledgersMissingSummaryLogRowStateData: count(
     reconciliations,
     (r) => r.hasCommittedSubmission && !r.hasWasteRecordStateData
   ),
-  cleanPartitions: count(reconciliations, (r) => r.isClean),
-  partitionsWithDiscrepancies: count(reconciliations, (r) => !r.isClean),
+  cleanLedgers: count(reconciliations, (r) => r.isClean),
+  ledgersWithDiscrepancies: count(reconciliations, (r) => !r.isClean),
   totalMissingRows: sum(reconciliations, (r) => r.missingRows.length),
   totalExtraRows: sum(reconciliations, (r) => r.extraRows.length),
-  partitionsWithCreditTotalDrift: count(
+  ledgersWithCreditTotalDrift: count(
     reconciliations,
     (r) => r.creditTotal.drift !== 0
   ),

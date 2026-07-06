@@ -33,7 +33,7 @@ const toRowRef = (row) => ({ rowId: row.rowId, wasteRecordType: typeOf(row) })
  * the balance — the included rows' stamped `transactionAmount`. Decomposability
  * (ADR-0037) means this must equal the head event's `creditTotal`.
  *
- * @param {import('#waste-records/application/read-waste-record-states.js').WasteRecordState[]} wasteRecordStates
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
  * @returns {number}
  */
 const wasteRecordStateCreditTotal = (wasteRecordStates) =>
@@ -51,7 +51,7 @@ const wasteRecordStateCreditTotal = (wasteRecordStates) =>
  * reasons so the divergence can be reviewed against expectations.
  *
  * @param {object} input
- * @param {import('#waste-records/application/read-waste-record-states.js').WasteRecordState[]} input.wasteRecordStates
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} input.wasteRecordStates
  * @param {Map<string, import('#domain/waste-records/model.js').WasteRecord>} input.committedByKey
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} input.accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} input.overseasSites
@@ -90,7 +90,7 @@ const classificationDivergencesBetween = ({
 
 /**
  * Reconcile the waste record state collection (ADR-0037) against the legacy
- * waste-records committed baseline for a single registration partition.
+ * waste-records committed baseline for a single registration ledger.
  * Read-only: every input is already loaded; this function only compares.
  *
  * @param {Object} input
@@ -98,7 +98,7 @@ const classificationDivergencesBetween = ({
  * @param {string | null} input.accreditationId
  * @param {string | null} input.head
  * @param {number | null} input.eventCreditTotal
- * @param {import('#waste-records/application/read-waste-record-states.js').WasteRecordState[]} input.wasteRecordStates
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} input.wasteRecordStates
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} input.wasteRecords
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} input.accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} input.overseasSites

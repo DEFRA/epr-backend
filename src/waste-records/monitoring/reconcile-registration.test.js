@@ -10,7 +10,7 @@ import { reconcileRegistration } from './reconcile-registration.js'
 
 /** @import { WasteRecord } from '#domain/waste-records/model.js' */
 
-const partition = {
+const ledger = {
   registrationId: 'reg-1',
   accreditationId: 'acc-1'
 }
@@ -63,9 +63,9 @@ const committedRecord = (rowId, head) => ({
 })
 
 describe('reconcileRegistration', () => {
-  it('treats a partition with no committed submission as clean and uncovered', () => {
+  it('treats a ledger with no committed submission as clean and uncovered', () => {
     const result = reconcileRegistration({
-      ...partition,
+      ...ledger,
       head: null,
       eventCreditTotal: null,
       wasteRecordStates: [],
@@ -89,7 +89,7 @@ describe('reconcileRegistration', () => {
 
   it('reconciles a covered head whose waste record states match the committed rows and event total', () => {
     const result = reconcileRegistration({
-      ...partition,
+      ...ledger,
       head: 'log-2',
       eventCreditTotal: 0,
       wasteRecordStates: [
@@ -120,7 +120,7 @@ describe('reconcileRegistration', () => {
 
   it('flags a committed head with no waste record state data as an uncovered backfill gap', () => {
     const result = reconcileRegistration({
-      ...partition,
+      ...ledger,
       head: 'log-1',
       eventCreditTotal: 10,
       wasteRecordStates: [],
@@ -136,7 +136,7 @@ describe('reconcileRegistration', () => {
 
   it('reports a committed-at-head row absent from the waste record states as missing', () => {
     const result = reconcileRegistration({
-      ...partition,
+      ...ledger,
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [includedWasteRecordState('row-1', 10)],
@@ -156,7 +156,7 @@ describe('reconcileRegistration', () => {
 
   it('reports a waste record state not committed at the head in legacy as extra', () => {
     const result = reconcileRegistration({
-      ...partition,
+      ...ledger,
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [
@@ -176,7 +176,7 @@ describe('reconcileRegistration', () => {
 
   it('reports creditTotal drift when the waste record states do not sum to the event total', () => {
     const result = reconcileRegistration({
-      ...partition,
+      ...ledger,
       head: 'log-2',
       eventCreditTotal: 30,
       wasteRecordStates: [
@@ -201,7 +201,7 @@ describe('reconcileRegistration', () => {
 
   it('reports a row whose waste record state outcome disagrees with the legacy reader as a classification divergence, carrying its reasons', () => {
     const result = reconcileRegistration({
-      ...partition,
+      ...ledger,
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [
@@ -225,7 +225,7 @@ describe('reconcileRegistration', () => {
 
   it('keeps classification divergence out of the cleanliness verdict (context-sensitive signal)', () => {
     const result = reconcileRegistration({
-      ...partition,
+      ...ledger,
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [includedWasteRecordState('row-1', 10)],
@@ -240,7 +240,7 @@ describe('reconcileRegistration', () => {
 
   it('excludes non-included waste record states from the waste record state credit total', () => {
     const result = reconcileRegistration({
-      ...partition,
+      ...ledger,
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [

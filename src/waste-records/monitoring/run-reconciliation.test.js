@@ -2,11 +2,11 @@ import { describe, it, expect, vi } from 'vitest'
 
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { buildRowStateEntry } from '#waste-records/repository/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 import { runReconciliation } from './run-reconciliation.js'
 
@@ -36,24 +36,25 @@ describe('runReconciliation', () => {
 
     const orgWithoutRegistrations = { id: 'org-empty' }
 
-    const wasteRecordStateRepository = createInMemoryRowStateRepository()()
-    await wasteRecordStateRepository.upsertRowStates(
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
       {
         organisationId: 'org-1',
         registrationId: 'reg-acc',
         accreditationId: 'acc-1'
       },
-      [buildRowStateEntry({ rowId: 'row-1' })],
+      [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
       'log-acc'
     )
 
-    const streamRepository = createInMemoryStreamRepository([
-      buildStreamEvent({
+    const ledgerRepository = createInMemoryLedgerRepository([
+      buildLedgerEvent({
         registrationId: 'reg-acc',
         accreditationId: 'acc-1',
         payload: { summaryLogId: 'log-acc', creditTotal: 10 }
       }),
-      buildStreamEvent({
+      buildLedgerEvent({
         registrationId: 'reg-only',
         accreditationId: null,
         payload: { summaryLogId: 'log-only', creditTotal: 0 }
@@ -66,8 +67,8 @@ describe('runReconciliation', () => {
 
     const { reconciliations, census } = await runReconciliation({
       organisationsRepository: orgsRepository([org, orgWithoutRegistrations]),
-      streamRepository,
-      wasteRecordStateSource: async () => wasteRecordStateRepository,
+      ledgerRepository,
+      summaryLogRowStateSource: async () => summaryLogRowStateRepository,
       wasteRecordsRepository,
       overseasSitesRepository: sitesRepository([
         { id: 'site-1', validFrom: new Date('2026-01-01') }
@@ -76,15 +77,15 @@ describe('runReconciliation', () => {
 
     expect(reconciliations).toHaveLength(2)
     expect(census).toMatchObject({
-      totalPartitions: 2,
-      partitionsWithCommittedSubmission: 2,
-      partitionsCovered: 1,
-      partitionsMissingWasteRecordStateData: 1,
+      totalLedgers: 2,
+      ledgersWithCommittedSubmission: 2,
+      ledgersCovered: 1,
+      ledgersMissingSummaryLogRowStateData: 1,
       isEstateClean: false
     })
   })
 
-  it('resolves the waste record state source once per registration partition, in walk order', async () => {
+  it('resolves the summary-log row state source once per registration ledger, in walk order', async () => {
     const org = {
       id: 'org-1',
       registrations: [
@@ -95,20 +96,20 @@ describe('runReconciliation', () => {
     }
 
     const registrationsSeen = []
-    const wasteRecordStateSource = vi.fn(async ({ registration }) => {
+    const summaryLogRowStateSource = vi.fn(async ({ registration }) => {
       registrationsSeen.push(registration.id)
-      return createInMemoryRowStateRepository()()
+      return createInMemorySummaryLogRowStateRepository()()
     })
 
     await runReconciliation({
       organisationsRepository: orgsRepository([org]),
-      streamRepository: createInMemoryStreamRepository()(),
-      wasteRecordStateSource,
+      ledgerRepository: createInMemoryLedgerRepository()(),
+      summaryLogRowStateSource,
       wasteRecordsRepository: createInMemoryWasteRecordsRepository()(),
       overseasSitesRepository: sitesRepository([])
     })
 
-    expect(wasteRecordStateSource).toHaveBeenCalledTimes(2)
+    expect(summaryLogRowStateSource).toHaveBeenCalledTimes(2)
     expect(registrationsSeen).toEqual(['reg-a', 'reg-b'])
   })
 })

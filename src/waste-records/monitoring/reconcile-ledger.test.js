@@ -2,18 +2,18 @@ import { describe, it, expect } from 'vitest'
 
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import {
-  buildRowStateEntry,
-  DEFAULT_PARTITION
+  buildSummaryLogRowStateEntry,
+  DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
-import { reconcilePartition } from './reconcile-partition.js'
+import { reconcileLedger } from './reconcile-ledger.js'
 
-const { organisationId, registrationId, accreditationId } = DEFAULT_PARTITION
+const { organisationId, registrationId, accreditationId } = DEFAULT_LEDGER_ID
 
 const legacyRecord = (rowId, head) => ({
   organisationId,
@@ -26,7 +26,7 @@ const legacyRecord = (rowId, head) => ({
 })
 
 const reconcile = (deps) =>
-  reconcilePartition({
+  reconcileLedger({
     ...deps,
     organisationId,
     registrationId,
@@ -35,11 +35,12 @@ const reconcile = (deps) =>
     overseasSites: ORS_VALIDATION_DISABLED
   })
 
-describe('reconcilePartition', () => {
-  it('reports a partition with no committed submission as uncovered and clean', async () => {
+describe('reconcileLedger', () => {
+  it('reports a ledger with no committed submission as uncovered and clean', async () => {
     const result = await reconcile({
-      streamRepository: createInMemoryStreamRepository()(),
-      wasteRecordStateRepository: createInMemoryRowStateRepository()(),
+      ledgerRepository: createInMemoryLedgerRepository()(),
+      summaryLogRowStateRepository:
+        createInMemorySummaryLogRowStateRepository()(),
       wasteRecordsRepository: createInMemoryWasteRecordsRepository()()
     })
 
@@ -53,11 +54,12 @@ describe('reconcilePartition', () => {
   })
 
   it('reads both collections and flags a committed row missing from the waste record states', async () => {
-    const wasteRecordStateRepository = createInMemoryRowStateRepository()()
-    await wasteRecordStateRepository.upsertRowStates(
-      DEFAULT_PARTITION,
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+      DEFAULT_LEDGER_ID,
       [
-        buildRowStateEntry({
+        buildSummaryLogRowStateEntry({
           rowId: 'row-1',
           classification: {
             outcome: 'INCLUDED',
@@ -69,8 +71,8 @@ describe('reconcilePartition', () => {
       'log-1'
     )
 
-    const streamRepository = createInMemoryStreamRepository([
-      buildStreamEvent({ payload: { summaryLogId: 'log-1', creditTotal: 10 } })
+    const ledgerRepository = createInMemoryLedgerRepository([
+      buildLedgerEvent({ payload: { summaryLogId: 'log-1', creditTotal: 10 } })
     ])()
 
     const wasteRecordsRepository = createInMemoryWasteRecordsRepository([
@@ -79,8 +81,8 @@ describe('reconcilePartition', () => {
     ])()
 
     const result = await reconcile({
-      streamRepository,
-      wasteRecordStateRepository,
+      ledgerRepository,
+      summaryLogRowStateRepository,
       wasteRecordsRepository
     })
 

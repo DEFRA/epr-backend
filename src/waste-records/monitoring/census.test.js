@@ -21,15 +21,15 @@ const reconciliation = (overrides = {}) => ({
 describe('summariseCensus', () => {
   it('summarises an empty estate as clean with zero counts', () => {
     expect(summariseCensus([])).toEqual({
-      totalPartitions: 0,
-      partitionsWithCommittedSubmission: 0,
-      partitionsCovered: 0,
-      partitionsMissingWasteRecordStateData: 0,
-      cleanPartitions: 0,
-      partitionsWithDiscrepancies: 0,
+      totalLedgers: 0,
+      ledgersWithCommittedSubmission: 0,
+      ledgersCovered: 0,
+      ledgersMissingSummaryLogRowStateData: 0,
+      cleanLedgers: 0,
+      ledgersWithDiscrepancies: 0,
       totalMissingRows: 0,
       totalExtraRows: 0,
-      partitionsWithCreditTotalDrift: 0,
+      ledgersWithCreditTotalDrift: 0,
       totalClassificationDivergences: 0,
       isEstateClean: true
     })
@@ -61,15 +61,15 @@ describe('summariseCensus', () => {
     ]
 
     expect(summariseCensus(reconciliations)).toEqual({
-      totalPartitions: 4,
-      partitionsWithCommittedSubmission: 3,
-      partitionsCovered: 2,
-      partitionsMissingWasteRecordStateData: 1,
-      cleanPartitions: 2,
-      partitionsWithDiscrepancies: 2,
+      totalLedgers: 4,
+      ledgersWithCommittedSubmission: 3,
+      ledgersCovered: 2,
+      ledgersMissingSummaryLogRowStateData: 1,
+      cleanLedgers: 2,
+      ledgersWithDiscrepancies: 2,
       totalMissingRows: 2,
       totalExtraRows: 1,
-      partitionsWithCreditTotalDrift: 1,
+      ledgersWithCreditTotalDrift: 1,
       totalClassificationDivergences: 1,
       isEstateClean: false
     })

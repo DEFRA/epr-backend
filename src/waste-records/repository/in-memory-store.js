@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
-import { validateRowStateInsert } from './validation.js'
+import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
- * In-memory implementation of the waste record state repository.
+ * In-memory implementation of the summary-log row state repository.
  *
  * Backed by a single array — fine for tests, fixtures, and contract
  * verification. Not durable, not concurrent-safe across processes. It also
@@ -21,24 +21,24 @@ import { validateRowStateInsert } from './validation.js'
  */
 
 /**
- * @typedef {import('./schema.js').RowState} RowState
+ * @typedef {import('./schema.js').SummaryLogRowState} SummaryLogRowState
  */
 
 /**
- * @typedef {import('./schema.js').RowStateInsert} RowStateInsert
+ * @typedef {import('./schema.js').SummaryLogRowStateInsert} SummaryLogRowStateInsert
  */
 
 /**
- * @typedef {import('./schema.js').RowStateEntry} RowStateEntry
+ * @typedef {import('./schema.js').SummaryLogRowStateEntry} SummaryLogRowStateEntry
  */
 
 /**
- * @typedef {import('./schema.js').RowStatePartition} RowStatePartition
+ * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
 /**
- * @param {RowState} doc
- * @param {RowStateInsert} candidate
+ * @param {SummaryLogRowState} doc
+ * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesRowIdentity = (doc, candidate) =>
   doc.organisationId === candidate.organisationId &&
@@ -48,8 +48,8 @@ const matchesRowIdentity = (doc, candidate) =>
   doc.wasteRecordType === candidate.wasteRecordType
 
 /**
- * @param {RowState} doc
- * @param {RowStateInsert} candidate
+ * @param {SummaryLogRowState} doc
+ * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesCommittedState = (doc, candidate) =>
   matchesRowIdentity(doc, candidate) &&
@@ -57,17 +57,17 @@ const matchesCommittedState = (doc, candidate) =>
   isDeepStrictEqual(doc.classification, candidate.classification)
 
 /**
- * @param {RowState[]} storage
- * @param {RowStatePartition} partition
- * @param {RowStateEntry} entry
+ * @param {SummaryLogRowState[]} storage
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {SummaryLogRowStateEntry} entry
  * @param {string} summaryLogId
- * @returns {RowState}
+ * @returns {SummaryLogRowState}
  */
-const upsertOne = (storage, partition, entry, summaryLogId) => {
-  const candidate = validateRowStateInsert({
-    organisationId: partition.organisationId,
-    registrationId: partition.registrationId,
-    accreditationId: partition.accreditationId,
+const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
+  const candidate = validateSummaryLogRowStateInsert({
+    organisationId: ledgerId.organisationId,
+    registrationId: ledgerId.registrationId,
+    accreditationId: ledgerId.accreditationId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
     data: entry.data,
@@ -90,21 +90,27 @@ const upsertOne = (storage, partition, entry, summaryLogId) => {
 }
 
 /**
- * @param {RowState[]} [initialRowStates]
- * @returns {import('./port.js').RowStateRepositoryFactory}
+ * @param {SummaryLogRowState[]} [initialSummaryLogRowStates]
+ * @returns {import('./port.js').SummaryLogRowStateRepositoryFactory}
  */
-export const createInMemoryRowStateRepository = (initialRowStates = []) => {
-  const storage = initialRowStates
+export const createInMemorySummaryLogRowStateRepository = (
+  initialSummaryLogRowStates = []
+) => {
+  const storage = initialSummaryLogRowStates
 
   return () => ({
     /**
-     * @param {RowStatePartition} partition
-     * @param {RowStateEntry[]} rowStates
+     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {SummaryLogRowStateEntry[]} summaryLogRowStates
      * @param {string} summaryLogId
      */
-    upsertRowStates: async (partition, rowStates, summaryLogId) =>
-      rowStates.map((entry) =>
-        upsertOne(storage, partition, entry, summaryLogId)
+    upsertSummaryLogRowStates: async (
+      ledgerId,
+      summaryLogRowStates,
+      summaryLogId
+    ) =>
+      summaryLogRowStates.map((entry) =>
+        upsertOne(storage, ledgerId, entry, summaryLogId)
       ),
 
     /** @param {string} summaryLogId */

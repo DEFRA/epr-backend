@@ -1,19 +1,19 @@
-import { wasteRecordStatesForRegistration } from '#waste-records/application/read-waste-record-states.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 import { reconcileRegistration } from './reconcile-registration.js'
 
 /**
- * Read the waste record state and legacy waste-record views for one
- * registration partition and reconcile them. Read-only: resolves the committed
- * head from the stream, the waste record states at that head, and the legacy
- * waste-records for the registration, then compares. The stream and waste
- * record state reads reuse the production `wasteRecordStatesForRegistration`
+ * Read the summary-log row state and legacy waste-record views for one
+ * registration ledger and reconcile them. Read-only: resolves the committed
+ * head from the ledger, the summary-log row states at that head, and the legacy
+ * waste-records for the registration, then compares. The ledger and summary-log
+ * row state reads reuse the production `summaryLogRowStatesForRegistration`
  * read model.
  *
  * @param {Object} input
- * @param {import('#waste-balances/repository/stream-port.js').WasteBalanceStreamRepository} input.streamRepository
- * @param {import('#waste-records/repository/port.js').RowStateRepository} input.wasteRecordStateRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} input.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} input.summaryLogRowStateRepository
  * @param {Pick<import('#repositories/waste-records/port.js').WasteRecordsRepository, 'findByRegistration'>} input.wasteRecordsRepository
  * @param {string} input.organisationId
  * @param {string} input.registrationId
@@ -21,9 +21,9 @@ import { reconcileRegistration } from './reconcile-registration.js'
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} input.accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} input.overseasSites
  */
-export const reconcilePartition = async ({
-  streamRepository,
-  wasteRecordStateRepository,
+export const reconcileLedger = async ({
+  ledgerRepository,
+  summaryLogRowStateRepository,
   wasteRecordsRepository,
   organisationId,
   registrationId,
@@ -31,21 +31,21 @@ export const reconcilePartition = async ({
   accreditation,
   overseasSites
 }) => {
-  const latestEvent = await streamRepository.findLatestByPartitionAndKind(
+  const latestEvent = await ledgerRepository.findLatestInLedgerByKind(
     registrationId,
     accreditationId,
-    STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+    LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
   )
   const payload =
-    /** @type {import('#waste-balances/repository/stream-schema.js').SummaryLogSubmittedPayload | undefined} */ (
+    /** @type {import('#waste-balances/repository/ledger-schema.js').SummaryLogSubmittedPayload | undefined} */ (
       latestEvent?.payload
     )
   const head = payload?.summaryLogId ?? null
   const eventCreditTotal = payload?.creditTotal ?? null
 
-  const wasteRecordStates = await wasteRecordStatesForRegistration({
-    streamRepository,
-    rowStateRepository: wasteRecordStateRepository,
+  const wasteRecordStates = await summaryLogRowStatesForRegistration({
+    ledgerRepository,
+    summaryLogRowStateRepository,
     organisationId,
     registrationId,
     accreditationId

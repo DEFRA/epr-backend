@@ -3,7 +3,7 @@
  * @typedef {ReturnType<import('./census.js').summariseCensus>} Census
  */
 
-const partitionLabel = ({ registrationId, accreditationId }) =>
+const ledgerLabel = ({ registrationId, accreditationId }) =>
   accreditationId === null
     ? `registration ${registrationId} (registered-only)`
     : `registration ${registrationId} / accreditation ${accreditationId}`
@@ -24,7 +24,7 @@ const divergenceLabel = (divergence) =>
   ].join(' ')
 
 /**
- * The discrepancies for one partition, each rendered as a fragment. Coverage
+ * The discrepancies for one ledger, each rendered as a fragment. Coverage
  * gaps, missing/extra rows and creditTotal drift are listed alongside
  * classification divergences with their reasons — under current-factors
  * backfill, divergences are expected findings to review (an overseas site
@@ -33,7 +33,7 @@ const divergenceLabel = (divergence) =>
  * @param {RegistrationReconciliation} r
  * @returns {string[]}
  */
-const partitionFindings = (r) => {
+const ledgerFindings = (r) => {
   const findings = []
   if (r.hasCommittedSubmission && !r.hasWasteRecordStateData) {
     findings.push('no waste record state data')
@@ -58,7 +58,7 @@ const partitionFindings = (r) => {
 }
 
 /**
- * Whether a partition carries anything worth logging for review — a hard
+ * Whether a ledger carries anything worth logging for review — a hard
  * discrepancy (coverage gap, missing/extra rows, creditTotal drift) or a
  * classification divergence.
  *
@@ -69,16 +69,16 @@ export const hasReviewableFindings = (r) =>
   !r.isClean || r.classificationDivergences.length > 0
 
 /**
- * Render a single partition's discrepancies as one reviewable line: the
- * partition label, its committed head, and each finding. Mirrors the
- * waste-balance ledger migration diagnostic — one line per affected partition,
+ * Render a single ledger's discrepancies as one reviewable line: the
+ * ledger label, its committed head, and each finding. Mirrors the
+ * waste-balance ledger migration diagnostic — one line per affected ledger,
  * read and confirmed against expectations before the write-flag flip.
  *
  * @param {RegistrationReconciliation} r
  * @returns {string}
  */
-export const formatPartitionDiagnostic = (r) =>
-  `Waste record state discrepancy: ${partitionLabel(r)}, head ${r.head} — ${partitionFindings(r).join('; ')}`
+export const formatLedgerDiagnostic = (r) =>
+  `Waste record state discrepancy: ${ledgerLabel(r)}, head ${r.head} — ${ledgerFindings(r).join('; ')}`
 
 /**
  * Render the estate-level census as a single summary line. No pass/fail
@@ -91,13 +91,13 @@ export const formatPartitionDiagnostic = (r) =>
 export const formatCensusSummary = (census) =>
   [
     'Waste record state reconciliation census:',
-    `partitions: ${census.totalPartitions},`,
-    `with committed submission: ${census.partitionsWithCommittedSubmission},`,
-    `covered: ${census.partitionsCovered},`,
-    `missing waste record state data: ${census.partitionsMissingWasteRecordStateData},`,
-    `with discrepancies: ${census.partitionsWithDiscrepancies},`,
+    `ledgers: ${census.totalLedgers},`,
+    `with committed submission: ${census.ledgersWithCommittedSubmission},`,
+    `covered: ${census.ledgersCovered},`,
+    `missing waste record state data: ${census.ledgersMissingSummaryLogRowStateData},`,
+    `with discrepancies: ${census.ledgersWithDiscrepancies},`,
     `missing rows: ${census.totalMissingRows},`,
     `extra rows: ${census.totalExtraRows},`,
-    `creditTotal drift: ${census.partitionsWithCreditTotalDrift},`,
+    `creditTotal drift: ${census.ledgersWithCreditTotalDrift},`,
     `classification divergences: ${census.totalClassificationDivergences}`
   ].join(' ')

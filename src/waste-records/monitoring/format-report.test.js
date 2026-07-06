@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import {
-  formatCensusSummary,
-  formatPartitionDiagnostic
-} from './format-report.js'
+import { formatCensusSummary, formatLedgerDiagnostic } from './format-report.js'
 
 const cleanReconciliation = {
   registrationId: 'reg-1',
@@ -21,15 +18,15 @@ const cleanReconciliation = {
 }
 
 const census = {
-  totalPartitions: 4,
-  partitionsWithCommittedSubmission: 3,
-  partitionsCovered: 2,
-  partitionsMissingWasteRecordStateData: 1,
-  cleanPartitions: 2,
-  partitionsWithDiscrepancies: 2,
+  totalLedgers: 4,
+  ledgersWithCommittedSubmission: 3,
+  ledgersCovered: 2,
+  ledgersMissingSummaryLogRowStateData: 1,
+  cleanLedgers: 2,
+  ledgersWithDiscrepancies: 2,
   totalMissingRows: 2,
   totalExtraRows: 1,
-  partitionsWithCreditTotalDrift: 1,
+  ledgersWithCreditTotalDrift: 1,
   totalClassificationDivergences: 1,
   isEstateClean: false
 }
@@ -38,7 +35,7 @@ describe('formatCensusSummary', () => {
   it('renders the estate counts without any pass/fail verdict', () => {
     const summary = formatCensusSummary(census)
 
-    expect(summary).toContain('partitions: 4')
+    expect(summary).toContain('ledgers: 4')
     expect(summary).toContain('with committed submission: 3')
     expect(summary).toContain('covered: 2')
     expect(summary).toContain('missing waste record state data: 1')
@@ -53,9 +50,9 @@ describe('formatCensusSummary', () => {
   })
 })
 
-describe('formatPartitionDiagnostic', () => {
-  it('labels the partition and lists its missing rows, drift and coverage gap', () => {
-    const line = formatPartitionDiagnostic({
+describe('formatLedgerDiagnostic', () => {
+  it('labels the ledger and lists its missing rows, drift and coverage gap', () => {
+    const line = formatLedgerDiagnostic({
       ...cleanReconciliation,
       registrationId: 'reg-2',
       hasWasteRecordStateData: false,
@@ -73,8 +70,8 @@ describe('formatPartitionDiagnostic', () => {
     expect(line).toContain('waste record states 5 vs event 30')
   })
 
-  it('labels a registered-only partition and lists extra rows', () => {
-    const line = formatPartitionDiagnostic({
+  it('labels a registered-only ledger and lists extra rows', () => {
+    const line = formatLedgerDiagnostic({
       ...cleanReconciliation,
       registrationId: 'reg-3',
       accreditationId: null,
@@ -87,7 +84,7 @@ describe('formatPartitionDiagnostic', () => {
   })
 
   it('shows each classification divergence with its reasons for human review', () => {
-    const line = formatPartitionDiagnostic({
+    const line = formatLedgerDiagnostic({
       ...cleanReconciliation,
       classificationDivergences: [
         {
@@ -111,7 +108,7 @@ describe('formatPartitionDiagnostic', () => {
   })
 
   it('records a divergence with no stated reasons rather than omitting it', () => {
-    const line = formatPartitionDiagnostic({
+    const line = formatLedgerDiagnostic({
       ...cleanReconciliation,
       classificationDivergences: [
         {
