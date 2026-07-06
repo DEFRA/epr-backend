@@ -162,7 +162,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
           DATE_LOAD_LEFT_SITE: 'not-a-date',
           TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: -1
         })
-        expect(details.length).toBe(3)
+        expect(details).toHaveLength(3)
       })
     })
   })

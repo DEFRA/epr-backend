@@ -615,7 +615,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
           GROSS_WEIGHT: -1,
           RECYCLABLE_PROPORTION_PERCENTAGE: 1.5
         })
-        expect(details.length).toBe(3)
+        expect(details).toHaveLength(3)
       })
 
       it('reports errors for multiple weight fields when invalid', () => {
@@ -624,7 +624,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
           TARE_WEIGHT: -1,
           PALLET_WEIGHT: 1001
         })
-        expect(details.length).toBe(3)
+        expect(details).toHaveLength(3)
       })
 
       it('reports errors for Yes/No fields when invalid', () => {
@@ -632,7 +632,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
           BAILING_WIRE_PROTOCOL: 'maybe',
           WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'unknown'
         })
-        expect(details.length).toBe(2)
+        expect(details).toHaveLength(2)
       })
     })
   })

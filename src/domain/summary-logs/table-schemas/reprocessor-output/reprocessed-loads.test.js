@@ -329,7 +329,7 @@ describe('REPROCESSED_LOADS', () => {
           ROW_ID: 2999,
           PRODUCT_TONNAGE: 1001
         })
-        expect(details.length).toBe(2)
+        expect(details).toHaveLength(2)
       })
 
       it('reports errors for multiple new fields when invalid', () => {
@@ -338,7 +338,7 @@ describe('REPROCESSED_LOADS', () => {
           UK_PACKAGING_WEIGHT_PERCENTAGE: 1.5,
           DATE_LOAD_LEFT_SITE: 'invalid-date'
         })
-        expect(details.length).toBe(3)
+        expect(details).toHaveLength(3)
       })
     })
   })
