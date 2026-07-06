@@ -3,6 +3,7 @@ import { SENT_ON_LOADS } from './sent-on-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
+import { buildAccreditation } from '#domain/organisations/accreditation-test-helpers.js'
 
 describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
   const schema = SENT_ON_LOADS
@@ -86,7 +87,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
       it('rejects ROW_ID below minimum', () => {
         const { error } = validationSchema.validate({ ROW_ID: 4999 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 5000')
+        expect(error?.details[0].message).toBe('must be at least 5000')
       })
 
       it('rejects non-integer ROW_ID', () => {
@@ -115,7 +116,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
           DATE_LOAD_LEFT_SITE: 'not-a-date'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a valid date')
+        expect(error?.details[0].message).toBe('must be a valid date')
       })
     })
 
@@ -149,7 +150,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
           TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: value
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(message)
+        expect(error?.details[0].message).toBe(message)
       })
     })
 
@@ -161,20 +162,20 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
           TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: -1
         })
         expect(error).toBeDefined()
-        expect(error.details.length).toBe(3)
+        expect(error?.details.length).toBe(3)
       })
     })
   })
 
   describe('classifyForWasteBalance', () => {
-    const accreditation = {
+    const accreditation = buildAccreditation({
       validFrom: '2024-01-01',
       validTo: '2024-12-31',
       statusHistory: [
         { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
         { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
       ]
-    }
+    })
 
     const completeRow = {
       ROW_ID: 5000,
@@ -187,7 +188,10 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation
         })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        if (result.outcome !== ROW_OUTCOME.INCLUDED) {
+          throw new Error(`expected INCLUDED outcome, got ${result.outcome}`)
+        }
+
         expect(result.reasons).toEqual([])
         expect(result.transactionAmount).toBe(-25.5)
       })
@@ -198,6 +202,10 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
           TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 25.555
         }
         const result = schema.classifyForWasteBalance(row, { accreditation })
+        if (result.outcome !== ROW_OUTCOME.INCLUDED) {
+          throw new Error(`expected INCLUDED outcome, got ${result.outcome}`)
+        }
+
         expect(result.transactionAmount).toBe(-25.56)
       })
     })
@@ -249,7 +257,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
     describe('INCLUDED outcome - undefined or null accreditation', () => {
       it('returns INCLUDED when accreditation is undefined (accreditation check passes)', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: undefined
+          accreditation: null
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -265,11 +273,11 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
 
       it('returns INCLUDED when accreditation has empty statusHistory', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: {
+          accreditation: buildAccreditation({
             validFrom: '2024-01-01',
             validTo: '2024-12-31',
             statusHistory: []
-          }
+          })
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -278,7 +286,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
 
     describe('IGNORED outcome - suspended accreditation', () => {
       it('returns IGNORED when accreditation was suspended before the row date', () => {
-        const suspendedAccreditation = {
+        const suspendedAccreditation = buildAccreditation({
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
           statusHistory: [
@@ -286,7 +294,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
             { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
             { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' }
           ]
-        }
+        })
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: suspendedAccreditation
         })
@@ -297,7 +305,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
       })
 
       it('returns INCLUDED when accreditation was suspended then re-approved before the row date', () => {
-        const reapprovedAccreditation = {
+        const reapprovedAccreditation = buildAccreditation({
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
           statusHistory: [
@@ -306,7 +314,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
             { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' },
             { status: 'approved', updatedAt: '2024-04-01T00:00:00.000Z' }
           ]
-        }
+        })
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: reapprovedAccreditation
         })

@@ -3,6 +3,7 @@ import { REPROCESSED_LOADS } from './reprocessed-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
+import { buildAccreditation } from '#domain/organisations/accreditation-test-helpers.js'
 
 describe('REPROCESSED_LOADS', () => {
   const schema = REPROCESSED_LOADS
@@ -59,7 +60,7 @@ describe('REPROCESSED_LOADS', () => {
       it('rejects ROW_ID below minimum', () => {
         const { error } = validationSchema.validate({ ROW_ID: 2999 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 3000')
+        expect(error?.details[0].message).toBe('must be at least 3000')
       })
 
       it('rejects non-integer ROW_ID', () => {
@@ -88,13 +89,13 @@ describe('REPROCESSED_LOADS', () => {
           it('rejects negative value', () => {
             const { error } = validationSchema.validate({ [field]: -1 })
             expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be at least 0')
+            expect(error?.details[0].message).toBe('must be at least 0')
           })
 
           it('rejects value above maximum (1000)', () => {
             const { error } = validationSchema.validate({ [field]: 1001 })
             expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be at most 1000')
+            expect(error?.details[0].message).toBe('must be at most 1000')
           })
 
           it('rejects non-number', () => {
@@ -102,7 +103,7 @@ describe('REPROCESSED_LOADS', () => {
               [field]: 'not-a-number'
             })
             expect(error).toBeDefined()
-            expect(error.details[0].message).toBe('must be a number')
+            expect(error?.details[0].message).toBe('must be a number')
           })
         })
       }
@@ -128,7 +129,7 @@ describe('REPROCESSED_LOADS', () => {
           DATE_LOAD_LEFT_SITE: 'not-a-date'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a valid date')
+        expect(error?.details[0].message).toBe('must be a valid date')
       })
 
       it('coerces Date object to YYYY-MM-DD string', () => {
@@ -167,7 +168,7 @@ describe('REPROCESSED_LOADS', () => {
           UK_PACKAGING_WEIGHT_PERCENTAGE: -0.1
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 0')
+        expect(error?.details[0].message).toBe('must be at least 0')
       })
 
       it('rejects value above 1', () => {
@@ -175,7 +176,7 @@ describe('REPROCESSED_LOADS', () => {
           UK_PACKAGING_WEIGHT_PERCENTAGE: 1.1
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 1')
+        expect(error?.details[0].message).toBe('must be at most 1')
       })
 
       it('rejects non-number', () => {
@@ -183,7 +184,7 @@ describe('REPROCESSED_LOADS', () => {
           UK_PACKAGING_WEIGHT_PERCENTAGE: 'fifty percent'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
+        expect(error?.details[0].message).toBe('must be a number')
       })
     })
 
@@ -241,7 +242,7 @@ describe('REPROCESSED_LOADS', () => {
           PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 400 // Should be 375
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE'
         )
       })
@@ -253,7 +254,7 @@ describe('REPROCESSED_LOADS', () => {
           PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 375.001 // Off by 0.001
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(error?.details[0].message).toBe(
           'must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE'
         )
       })
@@ -316,7 +317,7 @@ describe('REPROCESSED_LOADS', () => {
           ADD_PRODUCT_WEIGHT: value
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
+        expect(error?.details[0].message).toBe('must be Yes or No')
       })
 
       it('rejects non-string values', () => {
@@ -332,7 +333,7 @@ describe('REPROCESSED_LOADS', () => {
           PRODUCT_TONNAGE: 1001
         })
         expect(error).toBeDefined()
-        expect(error.details.length).toBe(2)
+        expect(error?.details.length).toBe(2)
       })
 
       it('reports errors for multiple new fields when invalid', () => {
@@ -342,21 +343,22 @@ describe('REPROCESSED_LOADS', () => {
           DATE_LOAD_LEFT_SITE: 'invalid-date'
         })
         expect(error).toBeDefined()
-        expect(error.details.length).toBe(3)
+        expect(error?.details.length).toBe(3)
       })
     })
   })
 
   describe('classifyForWasteBalance', () => {
-    const accreditation = {
+    const accreditation = buildAccreditation({
       validFrom: '2024-01-01',
       validTo: '2024-12-31',
       statusHistory: [
         { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
         { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
       ]
-    }
+    })
 
+    /** @type {Record<string, any>} */
     const completeRow = {
       PRODUCT_TONNAGE: 500,
       DATE_LOAD_LEFT_SITE: new Date('2024-06-15'),
@@ -370,7 +372,10 @@ describe('REPROCESSED_LOADS', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation
         })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        if (result.outcome !== ROW_OUTCOME.INCLUDED) {
+          throw new Error(`expected INCLUDED outcome, got ${result.outcome}`)
+        }
+
         expect(result.reasons).toEqual([])
         expect(result.transactionAmount).toBe(375)
       })
@@ -381,6 +386,10 @@ describe('REPROCESSED_LOADS', () => {
           PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 375.555
         }
         const result = schema.classifyForWasteBalance(row, { accreditation })
+        if (result.outcome !== ROW_OUTCOME.INCLUDED) {
+          throw new Error(`expected INCLUDED outcome, got ${result.outcome}`)
+        }
+
         expect(result.transactionAmount).toBe(375.56)
       })
     })
@@ -447,7 +456,7 @@ describe('REPROCESSED_LOADS', () => {
     describe('INCLUDED outcome - undefined or null accreditation', () => {
       it('returns INCLUDED when accreditation is undefined (accreditation check passes)', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: undefined
+          accreditation: null
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -463,11 +472,11 @@ describe('REPROCESSED_LOADS', () => {
 
       it('returns INCLUDED when accreditation has empty statusHistory', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: {
+          accreditation: buildAccreditation({
             validFrom: '2024-01-01',
             validTo: '2024-12-31',
             statusHistory: []
-          }
+          })
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -476,7 +485,7 @@ describe('REPROCESSED_LOADS', () => {
 
     describe('IGNORED outcome - suspended accreditation', () => {
       it('returns IGNORED when accreditation was suspended before the row date', () => {
-        const suspendedAccreditation = {
+        const suspendedAccreditation = buildAccreditation({
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
           statusHistory: [
@@ -484,7 +493,7 @@ describe('REPROCESSED_LOADS', () => {
             { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
             { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' }
           ]
-        }
+        })
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: suspendedAccreditation
         })
@@ -495,7 +504,7 @@ describe('REPROCESSED_LOADS', () => {
       })
 
       it('returns INCLUDED when accreditation was suspended then re-approved before the row date', () => {
-        const reapprovedAccreditation = {
+        const reapprovedAccreditation = buildAccreditation({
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
           statusHistory: [
@@ -504,7 +513,7 @@ describe('REPROCESSED_LOADS', () => {
             { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' },
             { status: 'approved', updatedAt: '2024-04-01T00:00:00.000Z' }
           ]
-        }
+        })
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: reapprovedAccreditation
         })

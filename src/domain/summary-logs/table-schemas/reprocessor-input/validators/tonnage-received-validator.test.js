@@ -43,6 +43,10 @@ describe('extractTonnageReceivedFields', () => {
 
       const result = extractTonnageReceivedFields(row)
 
+      if (result === null) {
+        throw new Error('expected tonnage fields to be extracted')
+      }
+
       expect(Object.keys(result)).toEqual([
         'netWeight',
         'weightOfNonTargetMaterials',
@@ -292,8 +296,8 @@ describe('validateTonnageReceived', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
-      expect(error.details[0].message).toBe(
+      expect(error?.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(error?.details[0].message).toBe(
         'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
       )
     })
@@ -309,7 +313,7 @@ describe('validateTonnageReceived', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(error?.details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
   })
 
@@ -363,7 +367,7 @@ describe('validateTonnageReceived', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(error?.details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
 
     it('rejects calculation with incorrect bailing wire factor', () => {
@@ -378,7 +382,7 @@ describe('validateTonnageReceived', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(error?.details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
   })
 

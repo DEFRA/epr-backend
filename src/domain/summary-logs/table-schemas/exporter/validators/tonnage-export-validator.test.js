@@ -43,6 +43,10 @@ describe('extractTonnageExportFields', () => {
 
       const result = extractTonnageExportFields(row)
 
+      if (result === null) {
+        throw new Error('expected tonnage fields to be extracted')
+      }
+
       expect(Object.keys(result)).toEqual([
         'netWeight',
         'weightOfNonTargetMaterials',
@@ -259,8 +263,8 @@ describe('validateTonnageExport', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
-      expect(error.details[0].message).toBe(
+      expect(error?.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(error?.details[0].message).toBe(
         'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
       )
     })
@@ -276,7 +280,7 @@ describe('validateTonnageExport', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(error?.details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
   })
 
@@ -334,7 +338,7 @@ describe('validateTonnageExport', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(error?.details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
   })
 
