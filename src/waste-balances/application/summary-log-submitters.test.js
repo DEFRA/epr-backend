@@ -180,14 +180,14 @@ describe('toLedgerActor', () => {
   })
 
   it('rejects an actor that carries no id', () => {
-    expect(toLedgerActor({ name: 'Alice', email: 'alice@example.com' })).toBe(
-      null
-    )
+    expect(
+      toLedgerActor({ name: 'Alice', email: 'alice@example.com' })
+    ).toBeNull()
   })
 
   it('rejects an absent actor', () => {
-    expect(toLedgerActor(undefined)).toBe(null)
-    expect(toLedgerActor(null)).toBe(null)
+    expect(toLedgerActor(undefined)).toBeNull()
+    expect(toLedgerActor(null)).toBeNull()
   })
 })
 
