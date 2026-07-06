@@ -80,7 +80,7 @@ export const classifyWasteRecord = (record, accreditation, overseasSites) => ({
 /**
  * Per-record waste-balance contribution: the tonnage a classified row adds to
  * its accreditation's balance, or zero when the row is not INCLUDED. Consumed
- * when building the stream events for a summary-log submission.
+ * when building the ledger events for a summary-log submission.
  *
  * @param {RowClassification} classification
  * @returns {number}

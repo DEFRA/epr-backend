@@ -1149,7 +1149,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const env = await setupLedgerEnv()
       const {
         packagingRecyclingNotesRepository,
-        streamRepository,
+        ledgerRepository,
         registrationId
       } = env
 
@@ -1173,7 +1173,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBe(250) // 300 - 50 ringfenced
 
       // The document watermark is the event the raise appended, not just any number.
-      const latest = await streamRepository.findLatestByPartition(
+      const latest = await ledgerRepository.findLatestInLedger(
         registrationId,
         'ACC-123'
       )

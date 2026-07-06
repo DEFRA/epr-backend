@@ -10,7 +10,7 @@ import { safeAudit } from '#root/auditing/helpers.js'
  * @param {string} params.accreditationId
  * @param {number} params.amount
  * @param {number} params.availableAmount
- * @param {Array<Object>} params.newTransactions
+ * @param {Array<Object>} params.events
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  */
 export const recordWasteBalanceUpdateAudit = async ({
@@ -18,7 +18,7 @@ export const recordWasteBalanceUpdateAudit = async ({
   accreditationId,
   amount,
   availableAmount,
-  newTransactions,
+  events,
   user
 }) => {
   const payload = {
@@ -31,7 +31,7 @@ export const recordWasteBalanceUpdateAudit = async ({
       accreditationId,
       amount,
       availableAmount,
-      newTransactions
+      events
     },
     user
   }

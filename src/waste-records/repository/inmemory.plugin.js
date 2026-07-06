@@ -1,15 +1,15 @@
-import { createInMemoryRowStateRepository } from './inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from './inmemory.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 
-export function createInMemoryWasteRecordStatesRepositoryPlugin() {
-  const repository = createInMemoryRowStateRepository()()
+export function createInMemorySummaryLogRowStatesRepositoryPlugin() {
+  const repository = createInMemorySummaryLogRowStateRepository()()
 
   return {
-    name: 'wasteRecordStatesRepository',
+    name: 'summaryLogRowStatesRepository',
     register: (server) => {
       registerDependency(
         server,
-        'wasteRecordStatesRepository',
+        'summaryLogRowStatesRepository',
         () => repository
       )
     }

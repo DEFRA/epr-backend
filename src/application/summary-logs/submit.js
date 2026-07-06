@@ -21,7 +21,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} summaryLogsRepository
  * @property {object} organisationsRepository
  * @property {object} wasteRecordsRepository
- * @property {import('#waste-records/repository/port.js').RowStateRepository} wasteRecordStatesRepository
+ * @property {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} summaryLogRowStatesRepository
  * @property {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} wasteBalanceService
  * @property {import('#feature-flags/feature-flags.port.js').FeatureFlags} featureFlags
  * @property {import('#reports/application/report-service.js').ReportsService} reportsService
@@ -77,7 +77,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
-    wasteRecordStatesRepository,
+    summaryLogRowStatesRepository,
     wasteBalanceService,
     featureFlags,
     summaryLogExtractor,
@@ -109,7 +109,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
-    rowStateRepository: wasteRecordStatesRepository,
+    summaryLogRowStateRepository: summaryLogRowStatesRepository,
     featureFlags,
     logger
   })

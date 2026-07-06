@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
   getProjectedPrnById,
   getProjectedPrnByNumber
@@ -11,7 +11,7 @@ import {
 
 /**
  * @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
- * @import { StreamEvent, StreamEventKind } from '#waste-balances/repository/stream-schema.js'
+ * @import { LedgerEvent, LedgerEventKind } from '#waste-balances/repository/ledger-schema.js'
  */
 
 const REG_ID = 'reg-789'
@@ -69,10 +69,10 @@ const buildPrn = (overrides = {}) => ({
 })
 
 /**
- * @param {StreamEventKind} kind
+ * @param {LedgerEventKind} kind
  * @param {number} number
  * @param {string} createdAt
- * @returns {StreamEvent}
+ * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number, createdAt) => ({
   id: `event-${number}`,
@@ -95,20 +95,20 @@ const buildEvent = (kind, number, createdAt) => ({
  *
  * @param {object} params
  * @param {PackagingRecyclingNote | null} [params.prn]
- * @param {StreamEvent[]} [params.events]
+ * @param {LedgerEvent[]} [params.events]
  */
 const buildRepositories = ({ prn = null, events = [] }) => {
   const packagingRecyclingNotesRepository =
     createInMemoryPackagingRecyclingNotesRepository(prn ? [prn] : [])(
       noopLogger()
     )
-  const streamRepository = createInMemoryStreamRepository(events)()
-  return { packagingRecyclingNotesRepository, streamRepository }
+  const ledgerRepository = createInMemoryLedgerRepository(events)()
+  return { packagingRecyclingNotesRepository, ledgerRepository }
 }
 
 describe('getProjectedPrnById', () => {
   it('folds tail events past the watermark onto the PRN', async () => {
-    const { packagingRecyclingNotesRepository, streamRepository } =
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({
         prn: buildPrn({
           status: {
@@ -119,7 +119,7 @@ describe('getProjectedPrnById', () => {
         }),
         events: [
           buildEvent(
-            STREAM_EVENT_KIND.PRN_ISSUED,
+            LEDGER_EVENT_KIND.PRN_ISSUED,
             1,
             '2026-02-02T12:00:00.000Z'
           )
@@ -128,7 +128,7 @@ describe('getProjectedPrnById', () => {
 
     const result = await getProjectedPrnById({
       packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       prnId: PRN_ID
     })
 
@@ -137,17 +137,17 @@ describe('getProjectedPrnById', () => {
   })
 
   it('ignores events at or before the watermark', async () => {
-    const { packagingRecyclingNotesRepository, streamRepository } =
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({
         prn: buildPrn({ version: 1, lastAppliedEventNumber: 1 }),
         events: [
           buildEvent(
-            STREAM_EVENT_KIND.PRN_ISSUED,
+            LEDGER_EVENT_KIND.PRN_ISSUED,
             1,
             '2026-02-01T12:00:00.000Z'
           ),
           buildEvent(
-            STREAM_EVENT_KIND.PRN_ACCEPTED,
+            LEDGER_EVENT_KIND.PRN_ACCEPTED,
             2,
             '2026-02-02T12:00:00.000Z'
           )
@@ -156,7 +156,7 @@ describe('getProjectedPrnById', () => {
 
     const result = await getProjectedPrnById({
       packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       prnId: PRN_ID
     })
 
@@ -169,12 +169,12 @@ describe('getProjectedPrnById', () => {
 
   it('returns the PRN unchanged when the ledger stream has no later events', async () => {
     const prn = buildPrn({ lastAppliedEventNumber: 3 })
-    const { packagingRecyclingNotesRepository, streamRepository } =
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({ prn })
 
     const result = await getProjectedPrnById({
       packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       prnId: PRN_ID
     })
 
@@ -183,12 +183,12 @@ describe('getProjectedPrnById', () => {
   })
 
   it('returns null when the PRN does not exist', async () => {
-    const { packagingRecyclingNotesRepository, streamRepository } =
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({ prn: null })
 
     const result = await getProjectedPrnById({
       packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       prnId: PRN_ID
     })
 
@@ -196,7 +196,7 @@ describe('getProjectedPrnById', () => {
   })
 
   it('returns a soft-deleted PRN as-is without folding', async () => {
-    const { packagingRecyclingNotesRepository, streamRepository } =
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({
         prn: buildPrn({
           status: {
@@ -207,7 +207,7 @@ describe('getProjectedPrnById', () => {
         }),
         events: [
           buildEvent(
-            STREAM_EVENT_KIND.PRN_ISSUED,
+            LEDGER_EVENT_KIND.PRN_ISSUED,
             1,
             '2026-02-02T12:00:00.000Z'
           )
@@ -216,7 +216,7 @@ describe('getProjectedPrnById', () => {
 
     const result = await getProjectedPrnById({
       packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       prnId: PRN_ID
     })
 
@@ -227,12 +227,12 @@ describe('getProjectedPrnById', () => {
 
 describe('getProjectedPrnByNumber', () => {
   it('folds the stream tail onto the PRN found by number', async () => {
-    const { packagingRecyclingNotesRepository, streamRepository } =
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({
         prn: buildPrn(),
         events: [
           buildEvent(
-            STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+            LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
             1,
             '2026-02-02T12:00:00.000Z'
           )
@@ -241,7 +241,7 @@ describe('getProjectedPrnByNumber', () => {
 
     const result = await getProjectedPrnByNumber({
       packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       prnNumber: PRN_NUMBER
     })
 
@@ -249,12 +249,12 @@ describe('getProjectedPrnByNumber', () => {
   })
 
   it('returns null when no PRN matches the number', async () => {
-    const { packagingRecyclingNotesRepository, streamRepository } =
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({ prn: null })
 
     const result = await getProjectedPrnByNumber({
       packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       prnNumber: 'NONEXISTENT'
     })
 

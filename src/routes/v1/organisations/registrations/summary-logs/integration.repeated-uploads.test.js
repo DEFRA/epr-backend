@@ -14,8 +14,8 @@ import { buildReadOrganisation } from '#repositories/organisations/contract/test
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
@@ -256,9 +256,10 @@ describe('Repeated uploads of identical data', () => {
         extractor: summaryLogExtractor,
         wasteRecordRepository: wasteRecordsRepository,
         wasteBalanceService: createWasteBalanceService(
-          createInMemoryStreamRepository()()
+          createInMemoryLedgerRepository()()
         ),
-        rowStateRepository: createInMemoryRowStateRepository()(),
+        summaryLogRowStateRepository:
+          createInMemorySummaryLogRowStateRepository()(),
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])

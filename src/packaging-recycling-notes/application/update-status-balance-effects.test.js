@@ -5,10 +5,10 @@ import {
   prnCommandFor
 } from './update-status-balance-effects.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 const REGISTRATION_ID = 'reg-1'
 const ACCREDITATION_ID = 'acc-1'
@@ -43,7 +43,7 @@ const buildLogger = () => ({
 const serviceWithBalance = (closingBalance) => {
   const events = closingBalance
     ? [
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: REGISTRATION_ID,
           accreditationId: ACCREDITATION_ID,
           organisationId: ORGANISATION_ID,
@@ -52,7 +52,7 @@ const serviceWithBalance = (closingBalance) => {
         })
       ]
     : []
-  return createWasteBalanceService(createInMemoryStreamRepository(events)())
+  return createWasteBalanceService(createInMemoryLedgerRepository(events)())
 }
 
 const applyTransition = (service, logger, currentStatus, newStatus) =>
@@ -132,7 +132,7 @@ describe('applyPrnBalanceCommand on commit', () => {
     )
 
     expect(events).toHaveLength(1)
-    expect(events[0]?.kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+    expect(events[0]?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
     expect(events[0]?.number).toBe(APPENDED_NUMBER)
   })
 

@@ -7,8 +7,8 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
@@ -73,7 +73,7 @@ const receivedRecord = (organisationId, registrationId, rowId, versions) => ({
 })
 
 const inMemoryDeps = ({ organisations, wasteRecords }) => {
-  const streamRepository = createInMemoryStreamRepository()()
+  const ledgerRepository = createInMemoryLedgerRepository()()
   return {
     organisationsRepository:
       createInMemoryOrganisationsRepository(organisations)(),
@@ -82,8 +82,8 @@ const inMemoryDeps = ({ organisations, wasteRecords }) => {
     summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
     overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
     systemLogsRepository: createSystemLogsRepository()(logger),
-    streamRepository,
-    wasteBalanceService: createWasteBalanceService(streamRepository)
+    ledgerRepository,
+    wasteBalanceService: createWasteBalanceService(ledgerRepository)
   }
 }
 
@@ -128,13 +128,13 @@ describe('backfillRegisteredOnlySubmittedEvents', () => {
 
     const summary = await backfillRegisteredOnlySubmittedEvents(deps)
 
-    const submittedEvents = await deps.streamRepository.findAllByPartition(
+    const submittedEvents = await deps.ledgerRepository.findAllInLedger(
       'reg-ro',
       null
     )
     expect(submittedEvents.map((event) => event.kind)).toEqual([
-      STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-      STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+      LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+      LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
     ])
     expect(
       submittedEvents.map(
@@ -179,7 +179,7 @@ describe('backfillRegisteredOnlySubmittedEvents', () => {
 
     await backfillRegisteredOnlySubmittedEvents(deps)
 
-    const submittedEvents = await deps.streamRepository.findAllByPartition(
+    const submittedEvents = await deps.ledgerRepository.findAllInLedger(
       'reg-ro',
       null
     )
@@ -254,9 +254,9 @@ describe('backfillRegisteredOnlySubmittedEvents', () => {
       writeSubmittedEvents: false
     })
 
-    expect(
-      await deps.streamRepository.findAllByPartition('reg-ro', null)
-    ).toEqual([])
+    expect(await deps.ledgerRepository.findAllInLedger('reg-ro', null)).toEqual(
+      []
+    )
     expect(summary.submittedEventWrites).toBe(1)
     expect(summary.registeredOnlyPlan).toEqual([
       {
@@ -297,7 +297,7 @@ describe('backfillRegisteredOnlySubmittedEvents', () => {
     const summary = await backfillRegisteredOnlySubmittedEvents(deps)
 
     expect(
-      await deps.streamRepository.findAllByPartition('reg-acc', 'acc-1')
+      await deps.ledgerRepository.findAllInLedger('reg-acc', 'acc-1')
     ).toEqual([])
     expect(summary.registrationsScanned).toBe(0)
     expect(summary.submittedEventWrites).toBe(0)
@@ -325,7 +325,7 @@ describe('backfillRegisteredOnlySubmittedEvents', () => {
     const summary = await backfillRegisteredOnlySubmittedEvents(deps)
 
     expect(
-      await deps.streamRepository.findAllByPartition('reg-ro', null)
+      await deps.ledgerRepository.findAllInLedger('reg-ro', null)
     ).toHaveLength(1)
     expect(summary.submittedEventWrites).toBe(0)
     expect(summary.registeredOnlyPlan).toEqual([])
@@ -366,7 +366,7 @@ describe('backfillRegisteredOnlySubmittedEvents', () => {
     const summary = await backfillRegisteredOnlySubmittedEvents(deps)
 
     expect(
-      (await deps.streamRepository.findAllByPartition('reg-ro', null)).map(
+      (await deps.ledgerRepository.findAllInLedger('reg-ro', null)).map(
         (event) => /** @type {any} */ (event.payload).summaryLogId
       )
     ).toEqual([fileId('sl-1')])

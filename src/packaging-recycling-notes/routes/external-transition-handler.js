@@ -51,7 +51,7 @@ export function createExternalTransitionHandler({
       )
       const {
         packagingRecyclingNotesRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository,
         params,
         payload,
@@ -62,7 +62,7 @@ export function createExternalTransitionHandler({
       try {
         const prn = await getProjectedPrnByNumber({
           packagingRecyclingNotesRepository,
-          streamRepository,
+          ledgerRepository,
           prnNumber
         })
 
@@ -83,7 +83,7 @@ export function createExternalTransitionHandler({
 
         const updatedPrn = await updatePrnStatus({
           prnRepository: packagingRecyclingNotesRepository,
-          streamRepository,
+          ledgerRepository,
           organisationsRepository,
           logger,
           id: prn.id,

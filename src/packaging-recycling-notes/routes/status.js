@@ -90,7 +90,7 @@ export const packagingRecyclingNotesUpdateStatus = {
   handler: async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
-      streamRepository,
+      ledgerRepository,
       organisationsRepository,
       params,
       payload,
@@ -120,7 +120,7 @@ export const packagingRecyclingNotesUpdateStatus = {
 
       const updatedPrn = await updatePrnStatus({
         prnRepository: packagingRecyclingNotesRepository,
-        streamRepository,
+        ledgerRepository,
         organisationsRepository,
         logger,
         id,

@@ -1,25 +1,25 @@
 import { describe, it as base, expect } from 'vitest'
 
-import { createInMemoryRowStateRepository } from './inmemory.js'
-import { testRowStateRepositoryContract } from './port.contract.js'
+import { createInMemorySummaryLogRowStateRepository } from './inmemory.js'
+import { testSummaryLogRowStateRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
-  rowStateRepository: async ({}, use) => {
-    await use(createInMemoryRowStateRepository())
+  summaryLogRowStateRepository: async ({}, use) => {
+    await use(createInMemorySummaryLogRowStateRepository())
   }
 })
 
-describe('waste record states repository - in-memory implementation', () => {
+describe('summary-log row states repository - in-memory implementation', () => {
   it('exposes the row-state port surface', () => {
-    const repository = createInMemoryRowStateRepository()()
-    expect(repository.upsertRowStates).toBeTypeOf('function')
+    const repository = createInMemorySummaryLogRowStateRepository()()
+    expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
     expect(repository.findBySummaryLogId).toBeTypeOf('function')
     expect(repository.findRowHistory).toBeTypeOf('function')
   })
 
   it('seeds storage from the provided initial state documents', async () => {
-    const repository = createInMemoryRowStateRepository([
+    const repository = createInMemorySummaryLogRowStateRepository([
       {
         id: 'seed-1',
         organisationId: 'org-1',
@@ -42,5 +42,5 @@ describe('waste record states repository - in-memory implementation', () => {
     expect(committed[0].id).toBe('seed-1')
   })
 
-  testRowStateRepositoryContract(it)
+  testSummaryLogRowStateRepositoryContract(it)
 })

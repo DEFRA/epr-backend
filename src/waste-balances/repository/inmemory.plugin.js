@@ -2,20 +2,20 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
- * Builds the waste balance service over the shared in-memory stream from
- * `server.app.streamRepository`, so `createInMemoryStreamRepositoryPlugin` must
+ * Builds the waste balance service over the shared in-memory ledger from
+ * `server.app.ledgerRepository`, so `createInMemoryLedgerRepositoryPlugin` must
  * register before this plugin.
  */
 export function createInMemoryWasteBalanceServicePlugin() {
   return {
     name: 'wasteBalanceService',
     register: (server) => {
-      const streamRepository =
-        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
-          server.app.streamRepository
+      const ledgerRepository =
+        /** @type {import('./ledger-port.js').WasteBalanceLedgerRepository} */ (
+          server.app.ledgerRepository
         )
       registerDependency(server, 'wasteBalanceService', () =>
-        createWasteBalanceService(streamRepository)
+        createWasteBalanceService(ledgerRepository)
       )
     }
   }

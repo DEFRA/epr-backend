@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { STREAM_EVENT_KIND, ZERO_BALANCE } from '../repository/stream-schema.js'
+import { LEDGER_EVENT_KIND, ZERO_BALANCE } from '../repository/ledger-schema.js'
 import {
   submitSummaryLog,
   createPrn,
@@ -19,7 +19,7 @@ describe('submitSummaryLog', () => {
       submitSummaryLog(null, { summaryLogId: 'log-1', creditTotal: 150 })
     ).toEqual([
       {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
         payload: { summaryLogId: 'log-1', creditTotal: 150 },
         openingBalance: ZERO_BALANCE,
         closingBalance: { amount: 150, availableAmount: 150 }
@@ -37,7 +37,7 @@ describe('submitSummaryLog', () => {
       submitSummaryLog(state, { summaryLogId: 'log-2', creditTotal: 200 })
     ).toEqual([
       {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
         payload: { summaryLogId: 'log-2', creditTotal: 200 },
         openingBalance: { amount: 150, availableAmount: 120 },
         closingBalance: { amount: 200, availableAmount: 170 }
@@ -55,7 +55,7 @@ describe('submitSummaryLog', () => {
       submitSummaryLog(state, { summaryLogId: 'log-3', creditTotal: 150 })
     ).toEqual([
       {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
         payload: { summaryLogId: 'log-3', creditTotal: 150 },
         openingBalance: { amount: 200, availableAmount: 170 },
         closingBalance: { amount: 150, availableAmount: 120 }
@@ -78,7 +78,7 @@ describe('createPrn', () => {
       status: PRN_COMMAND_STATUS.COMMITTED,
       events: [
         {
-          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          kind: LEDGER_EVENT_KIND.PRN_CREATED,
           payload: { prnId: 'prn-1', amount: 100 },
           openingBalance: { amount: 1000, availableAmount: 1000 },
           closingBalance: { amount: 1000, availableAmount: 900 }
@@ -100,7 +100,7 @@ describe('createPrn', () => {
       status: PRN_COMMAND_STATUS.COMMITTED,
       events: [
         {
-          kind: STREAM_EVENT_KIND.PRN_CREATED,
+          kind: LEDGER_EVENT_KIND.PRN_CREATED,
           payload: { prnId: 'prn-1', amount: 100 },
           openingBalance: { amount: 500, availableAmount: 100 },
           closingBalance: { amount: 500, availableAmount: 0 }
@@ -139,7 +139,7 @@ describe('issuePrn', () => {
       status: PRN_COMMAND_STATUS.COMMITTED,
       events: [
         {
-          kind: STREAM_EVENT_KIND.PRN_ISSUED,
+          kind: LEDGER_EVENT_KIND.PRN_ISSUED,
           payload: { prnId: 'prn-1', amount: 75 },
           openingBalance: { amount: 1000, availableAmount: 900 },
           closingBalance: { amount: 925, availableAmount: 900 }
@@ -178,7 +178,7 @@ describe('cancelPrnCreation', () => {
       status: PRN_COMMAND_STATUS.COMMITTED,
       events: [
         {
-          kind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+          kind: LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
           payload: { prnId: 'prn-1', amount: 75 },
           openingBalance: { amount: 1000, availableAmount: 925 },
           closingBalance: { amount: 1000, availableAmount: 1000 }
@@ -202,7 +202,7 @@ describe('cancelIssuedPrn', () => {
       status: PRN_COMMAND_STATUS.COMMITTED,
       events: [
         {
-          kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+          kind: LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
           payload: { prnId: 'prn-1', amount: 60 },
           openingBalance: { amount: 440, availableAmount: 940 },
           closingBalance: { amount: 500, availableAmount: 1000 }
@@ -226,7 +226,7 @@ describe('acceptPrn', () => {
       status: PRN_COMMAND_STATUS.COMMITTED,
       events: [
         {
-          kind: STREAM_EVENT_KIND.PRN_ACCEPTED,
+          kind: LEDGER_EVENT_KIND.PRN_ACCEPTED,
           payload: { prnId: 'prn-1', amount: 50 },
           openingBalance: { amount: 500, availableAmount: 400 },
           closingBalance: { amount: 500, availableAmount: 400 }
@@ -250,7 +250,7 @@ describe('rejectPrn', () => {
       status: PRN_COMMAND_STATUS.COMMITTED,
       events: [
         {
-          kind: STREAM_EVENT_KIND.PRN_REJECTED,
+          kind: LEDGER_EVENT_KIND.PRN_REJECTED,
           payload: { prnId: 'prn-1', amount: 50 },
           openingBalance: { amount: 500, availableAmount: 400 },
           closingBalance: { amount: 500, availableAmount: 400 }

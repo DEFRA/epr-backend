@@ -12,11 +12,11 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isFixDuplicateAccreditationLinksEnabled() {
     return flags.fixDuplicateAccreditationLinks ?? false
   },
-  isWasteRecordStatesEnabled() {
-    return flags.wasteRecordStates ?? false
+  isSummaryLogRowStatesEnabled() {
+    return flags.summaryLogRowStates ?? false
   },
-  isWasteRecordStatesBackfillEnabled() {
-    return flags.wasteRecordStatesBackfill ?? false
+  isSummaryLogRowStatesBackfillEnabled() {
+    return flags.summaryLogRowStatesBackfill ?? false
   },
   isRegisteredOnlySubmittedEventsEnabled() {
     return flags.registeredOnlySubmittedEvents ?? false

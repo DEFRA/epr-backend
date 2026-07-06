@@ -40,7 +40,7 @@ const createRegistration = (
   ...(accreditationId && { accreditationId })
 })
 
-const createStreamEvent = (
+const createLedgerEvent = (
   registrationId,
   accreditationId,
   number,
@@ -87,7 +87,7 @@ describe('aggregateAvailableBalance - Integration', () => {
 
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertOne(createStreamEvent(regId1, accId1, 1, 100))
+      .insertOne(createLedgerEvent(regId1, accId1, 1, 100))
 
     const result = await aggregateAvailableBalance(db)
 
@@ -113,7 +113,7 @@ describe('aggregateAvailableBalance - Integration', () => {
 
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertOne(createStreamEvent(regId1, accId1, 1, 200))
+      .insertOne(createLedgerEvent(regId1, accId1, 1, 200))
 
     const result = await aggregateAvailableBalance(db)
 
@@ -140,7 +140,7 @@ describe('aggregateAvailableBalance - Integration', () => {
 
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertOne(createStreamEvent(regId1, accId1, 1, 150))
+      .insertOne(createLedgerEvent(regId1, accId1, 1, 150))
 
     const result = await aggregateAvailableBalance(db)
 
@@ -177,8 +177,8 @@ describe('aggregateAvailableBalance - Integration', () => {
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
       .insertMany([
-        createStreamEvent(regId1, accId1, 1, 100),
-        createStreamEvent(regId4, accId4, 1, 75)
+        createLedgerEvent(regId1, accId1, 1, 100),
+        createLedgerEvent(regId4, accId4, 1, 75)
       ])
 
     const result = await aggregateAvailableBalance(db)
@@ -215,9 +215,9 @@ describe('aggregateAvailableBalance - Integration', () => {
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
       .insertMany([
-        createStreamEvent(regId1, accId1, 1, 100),
-        createStreamEvent(regId2, accId2, 1, 50),
-        createStreamEvent(regId3, accId3, 1, 200)
+        createLedgerEvent(regId1, accId1, 1, 100),
+        createLedgerEvent(regId2, accId2, 1, 50),
+        createLedgerEvent(regId3, accId3, 1, 200)
       ])
 
     const result = await aggregateAvailableBalance(db)
@@ -245,8 +245,8 @@ describe('aggregateAvailableBalance - Integration', () => {
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
       .insertMany([
-        createStreamEvent(regId1, accId1, 1, 100),
-        createStreamEvent('REG-NO-REG', 'ACC-NO-REG', 1, 999)
+        createLedgerEvent(regId1, accId1, 1, 100),
+        createLedgerEvent('REG-NO-REG', 'ACC-NO-REG', 1, 999)
       ])
 
     const result = await aggregateAvailableBalance(db)
@@ -270,7 +270,7 @@ describe('aggregateAvailableBalance - Integration', () => {
 
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertOne(createStreamEvent(regId1, accId1, 1, 100))
+      .insertOne(createLedgerEvent(regId1, accId1, 1, 100))
 
     const result = await aggregateAvailableBalance(db)
 
@@ -326,8 +326,8 @@ describe('aggregateAvailableBalance - Integration', () => {
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
       .insertMany([
-        createStreamEvent(testRegId, testAccId, 1, 500),
-        createStreamEvent(regId1, accId1, 1, 100)
+        createLedgerEvent(testRegId, testAccId, 1, 500),
+        createLedgerEvent(regId1, accId1, 1, 100)
       ])
 
     const result = await aggregateAvailableBalance(db)
@@ -351,8 +351,8 @@ describe('aggregateAvailableBalance - Integration', () => {
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
       .insertMany([
-        createStreamEvent(regId1, accId1, 1, 250),
-        createStreamEvent(regId1, accId1, 2, 175)
+        createLedgerEvent(regId1, accId1, 1, 250),
+        createLedgerEvent(regId1, accId1, 2, 175)
       ])
 
     const result = await aggregateAvailableBalance(db)
