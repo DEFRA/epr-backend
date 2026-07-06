@@ -1,7 +1,7 @@
 import { latestCommittedSummaryLogId } from '#waste-balances/application/latest-committed-summary-log-id.js'
 
 /**
- * @typedef {import('#waste-records/repository/schema.js').RowState} RowState
+ * @typedef {import('#waste-records/repository/schema.js').SummaryLogRowState} SummaryLogRowState
  */
 
 /**
@@ -21,7 +21,7 @@ import { latestCommittedSummaryLogId } from '#waste-balances/application/latest-
  * Project a stored row state onto its domain content — the storage↔domain
  * seam where membership, storage id and ledger identity are dropped.
  *
- * @param {RowState} rowState
+ * @param {SummaryLogRowState} summaryLogRowState
  * @returns {WasteRecordState}
  */
 const toWasteRecordState = ({
@@ -40,12 +40,15 @@ const toWasteRecordState = ({
  * Membership query for a resolved committed head: every row whose committed
  * state belongs to that submission, or nothing when there is no head.
  *
- * @param {import('#waste-records/repository/port.js').RowStateRepository} rowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} summaryLogRowStateRepository
  * @param {string | null} head
- * @returns {Promise<RowState[]>}
+ * @returns {Promise<SummaryLogRowState[]>}
  */
-const rowStatesForHead = async (rowStateRepository, head) =>
-  head === null ? [] : rowStateRepository.findBySummaryLogId(head)
+const summaryLogRowStatesForHead = async (
+  summaryLogRowStateRepository,
+  head
+) =>
+  head === null ? [] : summaryLogRowStateRepository.findBySummaryLogId(head)
 
 /**
  * Waste record states of a registration at its current head submission. The
@@ -55,16 +58,16 @@ const rowStatesForHead = async (rowStateRepository, head) =>
  *
  * @param {{
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
- *   rowStateRepository: import('#waste-records/repository/port.js').RowStateRepository,
+ *   summaryLogRowStateRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository,
  *   organisationId: string,
  *   registrationId: string,
  *   accreditationId: string | null
  * }} context
  * @returns {Promise<WasteRecordState[]>}
  */
-export const wasteRecordStatesForRegistration = async ({
+export const summaryLogRowStatesForRegistration = async ({
   ledgerRepository,
-  rowStateRepository,
+  summaryLogRowStateRepository,
   registrationId,
   accreditationId
 }) => {
@@ -73,6 +76,9 @@ export const wasteRecordStatesForRegistration = async ({
     accreditationId
   })
 
-  const rowStates = await rowStatesForHead(rowStateRepository, head)
-  return rowStates.map(toWasteRecordState)
+  const summaryLogRowStates = await summaryLogRowStatesForHead(
+    summaryLogRowStateRepository,
+    head
+  )
+  return summaryLogRowStates.map(toWasteRecordState)
 }

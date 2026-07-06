@@ -6,7 +6,7 @@ import {
 } from '#domain/waste-records/model.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildVersionData,
@@ -1538,12 +1538,13 @@ describe('syncFromSummaryLog', () => {
     expect(sentOn.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
   })
 
-  describe('committed waste record states (forward path)', () => {
-    let rowStateRepository
-    const flagOn = createInMemoryFeatureFlags({ wasteRecordStates: true })
+  describe('committed summary-log row states (forward path)', () => {
+    let summaryLogRowStateRepository
+    const flagOn = createInMemoryFeatureFlags({ summaryLogRowStates: true })
 
     beforeEach(() => {
-      rowStateRepository = createInMemoryRowStateRepository()()
+      summaryLogRowStateRepository =
+        createInMemorySummaryLogRowStateRepository()()
     })
 
     const syncWith = (extractor, featureFlags = flagOn) =>
@@ -1553,7 +1554,7 @@ describe('syncFromSummaryLog', () => {
         wasteBalanceService,
         organisationsRepository,
         overseasSitesRepository,
-        rowStateRepository,
+        summaryLogRowStateRepository,
         featureFlags
       })
 
@@ -1590,7 +1591,8 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor)(summaryLog, TEST_USER)
 
-      const committed = await rowStateRepository.findBySummaryLogId(fileId)
+      const committed =
+        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
       expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1000', '5000'])
       expect(committed.every((doc) => doc.accreditationId === null)).toBe(true)
       const received = committed.find((doc) => doc.rowId === '1000')
@@ -1646,7 +1648,8 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor)(summaryLog, TEST_USER)
 
-      const committed = await rowStateRepository.findBySummaryLogId(fileId)
+      const committed =
+        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
       expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1000', '2000'])
       expect(committed.every((doc) => doc.accreditationId === null)).toBe(true)
     })
@@ -1684,7 +1687,8 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor)(summaryLog, TEST_USER)
 
-      const committed = await rowStateRepository.findBySummaryLogId(fileId)
+      const committed =
+        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
       expect(committed).toHaveLength(1)
       expect(committed[0]).toMatchObject({
         rowId: 'row-123',
@@ -1736,7 +1740,8 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor)(summaryLog, TEST_USER)
 
-      const committed = await rowStateRepository.findBySummaryLogId(fileId)
+      const committed =
+        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
       expect(committed).toHaveLength(1)
       expect(committed[0]).toMatchObject({
         rowId: 'row-123',
@@ -1760,12 +1765,12 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(
         extractor,
-        createInMemoryFeatureFlags({ wasteRecordStates: false })
+        createInMemoryFeatureFlags({ summaryLogRowStates: false })
       )(summaryLog, TEST_USER)
 
-      expect(await rowStateRepository.findBySummaryLogId(fileId)).toHaveLength(
-        0
-      )
+      expect(
+        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
+      ).toHaveLength(0)
       const savedRecords = await wasteRecordRepository.findByRegistration(
         'org-1',
         'reg-1'
@@ -1806,7 +1811,8 @@ describe('syncFromSummaryLog', () => {
         wasteBalanceService,
         organisationsRepository,
         overseasSitesRepository,
-        rowStateRepository: createInMemoryRowStateRepository()(),
+        summaryLogRowStateRepository:
+          createInMemorySummaryLogRowStateRepository()(),
         featureFlags
       })
 

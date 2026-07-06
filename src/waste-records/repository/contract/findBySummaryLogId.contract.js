@@ -1,13 +1,16 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildRowStateEntry, DEFAULT_LEDGER_ID } from '../test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  DEFAULT_LEDGER_ID
+} from '../test-data.js'
 
 export const testFindBySummaryLogIdBehaviour = (it) => {
   describe('findBySummaryLogId', () => {
     let repository
 
-    beforeEach((/** @type {*} */ { rowStateRepository }) => {
-      repository = rowStateRepository()
+    beforeEach((/** @type {*} */ { summaryLogRowStateRepository }) => {
+      repository = summaryLogRowStateRepository()
     })
 
     it('returns an empty list for a submission with no committed rows', async () => {
@@ -15,17 +18,22 @@ export const testFindBySummaryLogIdBehaviour = (it) => {
     })
 
     it('returns only documents whose membership contains the id', async () => {
-      await repository.upsertRowStates(
+      await repository.upsertSummaryLogRowStates(
         DEFAULT_LEDGER_ID,
         [
-          buildRowStateEntry({ rowId: 'row-1' }),
-          buildRowStateEntry({ rowId: 'row-2' })
+          buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
+          buildSummaryLogRowStateEntry({ rowId: 'row-2' })
         ],
         'log-1'
       )
-      await repository.upsertRowStates(
+      await repository.upsertSummaryLogRowStates(
         DEFAULT_LEDGER_ID,
-        [buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } })],
+        [
+          buildSummaryLogRowStateEntry({
+            rowId: 'row-1',
+            data: { tonnage: 99 }
+          })
+        ],
         'log-2'
       )
 
@@ -36,12 +44,12 @@ export const testFindBySummaryLogIdBehaviour = (it) => {
     })
 
     it('returns the full committed state of a submission', async () => {
-      await repository.upsertRowStates(
+      await repository.upsertSummaryLogRowStates(
         DEFAULT_LEDGER_ID,
         [
-          buildRowStateEntry({ rowId: 'row-1' }),
-          buildRowStateEntry({ rowId: 'row-2' }),
-          buildRowStateEntry({ rowId: 'row-3' })
+          buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
+          buildSummaryLogRowStateEntry({ rowId: 'row-2' }),
+          buildSummaryLogRowStateEntry({ rowId: 'row-3' })
         ],
         'log-1'
       )
@@ -55,11 +63,23 @@ export const testFindBySummaryLogIdBehaviour = (it) => {
     })
 
     it('returns the full membership verbatim on each document', async () => {
-      const entry = buildRowStateEntry()
+      const entry = buildSummaryLogRowStateEntry()
 
-      await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-1')
-      await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-2')
-      await repository.upsertRowStates(DEFAULT_LEDGER_ID, [entry], 'log-3')
+      await repository.upsertSummaryLogRowStates(
+        DEFAULT_LEDGER_ID,
+        [entry],
+        'log-1'
+      )
+      await repository.upsertSummaryLogRowStates(
+        DEFAULT_LEDGER_ID,
+        [entry],
+        'log-2'
+      )
+      await repository.upsertSummaryLogRowStates(
+        DEFAULT_LEDGER_ID,
+        [entry],
+        'log-3'
+      )
 
       const [doc] = await repository.findBySummaryLogId('log-2')
       expect(doc.summaryLogIds).toEqual(['log-1', 'log-2', 'log-3'])

@@ -3,9 +3,9 @@ import { describe, it, expect } from 'vitest'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 
-import { backfillRegistrationRowStates } from './backfill-registration-rowstates.js'
+import { backfillRegistrationSummaryLogRowStates } from './backfill-registration-summary-log-row-states.js'
 
 const ledgerId = {
   organisationId: 'org-1',
@@ -34,7 +34,7 @@ const receivedRecord = (rowId, versions) => ({
 const rowHistory = (repository, rowId) =>
   repository.findRowHistory('org-1', 'reg-1', rowId, WASTE_RECORD_TYPE.RECEIVED)
 
-describe('backfillRegistrationRowStates', () => {
+describe('backfillRegistrationSummaryLogRowStates', () => {
   it('commits each submission membership so it is queryable by summaryLogId', async () => {
     const summaryLogs = [
       submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
@@ -45,22 +45,27 @@ describe('backfillRegistrationRowStates', () => {
         { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
       ])
     ]
-    const rowStateRepository = createInMemoryRowStateRepository()()
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
 
-    await backfillRegistrationRowStates({
+    await backfillRegistrationSummaryLogRowStates({
       ledgerId,
       wasteRecords,
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      summaryLogRowStateRepository
     })
 
     expect(
-      (await rowStateRepository.findBySummaryLogId('sl-1')).map((d) => d.rowId)
+      (await summaryLogRowStateRepository.findBySummaryLogId('sl-1')).map(
+        (d) => d.rowId
+      )
     ).toEqual(['row-1'])
     expect(
-      (await rowStateRepository.findBySummaryLogId('sl-2')).map((d) => d.rowId)
+      (await summaryLogRowStateRepository.findBySummaryLogId('sl-2')).map(
+        (d) => d.rowId
+      )
     ).toEqual(['row-1'])
   })
 
@@ -74,18 +79,19 @@ describe('backfillRegistrationRowStates', () => {
         { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
       ])
     ]
-    const rowStateRepository = createInMemoryRowStateRepository()()
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
 
-    await backfillRegistrationRowStates({
+    await backfillRegistrationSummaryLogRowStates({
       ledgerId,
       wasteRecords,
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      summaryLogRowStateRepository
     })
 
-    const history = await rowHistory(rowStateRepository, 'row-1')
+    const history = await rowHistory(summaryLogRowStateRepository, 'row-1')
     expect(history).toHaveLength(1)
     expect(history[0].summaryLogIds).toEqual(['sl-1', 'sl-2'])
   })
@@ -104,18 +110,19 @@ describe('backfillRegistrationRowStates', () => {
         { summaryLog: { id: 'sl-2' }, data: { tonnage: 20 } }
       ])
     ]
-    const rowStateRepository = createInMemoryRowStateRepository()()
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
 
-    await backfillRegistrationRowStates({
+    await backfillRegistrationSummaryLogRowStates({
       ledgerId,
       wasteRecords,
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      summaryLogRowStateRepository
     })
 
-    const history = await rowHistory(rowStateRepository, 'row-1')
+    const history = await rowHistory(summaryLogRowStateRepository, 'row-1')
     expect(history).toHaveLength(2)
     expect(history.map((d) => d.summaryLogIds)).toEqual([['sl-1'], ['sl-2']])
   })
@@ -130,21 +137,22 @@ describe('backfillRegistrationRowStates', () => {
         { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
       ])
     ]
-    const rowStateRepository = createInMemoryRowStateRepository()()
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
     const run = () =>
-      backfillRegistrationRowStates({
+      backfillRegistrationSummaryLogRowStates({
         ledgerId,
         wasteRecords,
         summaryLogs,
         accreditation,
         overseasSites,
-        rowStateRepository
+        summaryLogRowStateRepository
       })
 
     await run()
-    const afterFirst = await rowHistory(rowStateRepository, 'row-1')
+    const afterFirst = await rowHistory(summaryLogRowStateRepository, 'row-1')
     await run()
-    const afterSecond = await rowHistory(rowStateRepository, 'row-1')
+    const afterSecond = await rowHistory(summaryLogRowStateRepository, 'row-1')
 
     expect(afterSecond).toEqual(afterFirst)
   })
@@ -162,17 +170,21 @@ describe('backfillRegistrationRowStates', () => {
         { summaryLog: { id: 'sl-2' }, data: { supplierName: 'Beta' } }
       ])
     ]
-    const rowStateRepository = createInMemoryRowStateRepository()()
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
 
-    const summary = await backfillRegistrationRowStates({
+    const summary = await backfillRegistrationSummaryLogRowStates({
       ledgerId,
       wasteRecords,
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      summaryLogRowStateRepository
     })
 
-    expect(summary).toEqual({ submissionCount: 2, rowStateWriteCount: 3 })
+    expect(summary).toEqual({
+      submissionCount: 2,
+      summaryLogRowStateWriteCount: 3
+    })
   })
 })

@@ -1,25 +1,25 @@
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
-import { validateRowStateInsert } from './validation.js'
+import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
- * In-memory adapter for waste record states.
+ * In-memory adapter for summary-log row states.
  *
  * Backed by a single array — fine for tests, fixtures, and contract
  * verification. Not durable, not concurrent-safe across processes.
  */
 
 /**
- * @typedef {import('./schema.js').RowState} RowState
+ * @typedef {import('./schema.js').SummaryLogRowState} SummaryLogRowState
  */
 
 /**
- * @typedef {import('./schema.js').RowStateInsert} RowStateInsert
+ * @typedef {import('./schema.js').SummaryLogRowStateInsert} SummaryLogRowStateInsert
  */
 
 /**
- * @typedef {import('./schema.js').RowStateEntry} RowStateEntry
+ * @typedef {import('./schema.js').SummaryLogRowStateEntry} SummaryLogRowStateEntry
  */
 
 /**
@@ -27,8 +27,8 @@ import { validateRowStateInsert } from './validation.js'
  */
 
 /**
- * @param {RowState} doc
- * @param {RowStateInsert} candidate
+ * @param {SummaryLogRowState} doc
+ * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesRowIdentity = (doc, candidate) =>
   doc.organisationId === candidate.organisationId &&
@@ -38,8 +38,8 @@ const matchesRowIdentity = (doc, candidate) =>
   doc.wasteRecordType === candidate.wasteRecordType
 
 /**
- * @param {RowState} doc
- * @param {RowStateInsert} candidate
+ * @param {SummaryLogRowState} doc
+ * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesCommittedState = (doc, candidate) =>
   matchesRowIdentity(doc, candidate) &&
@@ -47,14 +47,14 @@ const matchesCommittedState = (doc, candidate) =>
   isDeepStrictEqual(doc.classification, candidate.classification)
 
 /**
- * @param {RowState[]} storage
+ * @param {SummaryLogRowState[]} storage
  * @param {WasteBalanceLedgerId} ledgerId
- * @param {RowStateEntry} entry
+ * @param {SummaryLogRowStateEntry} entry
  * @param {string} summaryLogId
- * @returns {RowState}
+ * @returns {SummaryLogRowState}
  */
 const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
-  const candidate = validateRowStateInsert({
+  const candidate = validateSummaryLogRowStateInsert({
     organisationId: ledgerId.organisationId,
     registrationId: ledgerId.registrationId,
     accreditationId: ledgerId.accreditationId,
@@ -80,20 +80,26 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
 }
 
 /**
- * @param {RowState[]} [initialRowStates]
- * @returns {import('./port.js').RowStateRepositoryFactory}
+ * @param {SummaryLogRowState[]} [initialSummaryLogRowStates]
+ * @returns {import('./port.js').SummaryLogRowStateRepositoryFactory}
  */
-export const createInMemoryRowStateRepository = (initialRowStates = []) => {
-  const storage = initialRowStates
+export const createInMemorySummaryLogRowStateRepository = (
+  initialSummaryLogRowStates = []
+) => {
+  const storage = initialSummaryLogRowStates
 
   return () => ({
     /**
      * @param {WasteBalanceLedgerId} ledgerId
-     * @param {RowStateEntry[]} rowStates
+     * @param {SummaryLogRowStateEntry[]} summaryLogRowStates
      * @param {string} summaryLogId
      */
-    upsertRowStates: async (ledgerId, rowStates, summaryLogId) =>
-      rowStates.map((entry) =>
+    upsertSummaryLogRowStates: async (
+      ledgerId,
+      summaryLogRowStates,
+      summaryLogId
+    ) =>
+      summaryLogRowStates.map((entry) =>
         upsertOne(storage, ledgerId, entry, summaryLogId)
       ),
 

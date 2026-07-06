@@ -1,5 +1,5 @@
 import { markExcludedRecords } from '#waste-balances/application/mark-excluded-records.js'
-import { projectRowState } from './project-row-state.js'
+import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 
 /**
  * @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -12,7 +12,7 @@ import { projectRowState } from './project-row-state.js'
  * processing type or accreditation: the ledger's `accreditationId` is null
  * for registered-only and no-accreditation registrations, and rows whose schema
  * has no waste balance classify as EXCLUDED with no contribution. The write is
- * gated by the waste-record-states feature flag; with it off this is a no-op,
+ * gated by the summary-log-row-states feature flag; with it off this is a no-op,
  * so the row-state repository is never reached.
  *
  * Records are first marked excluded-or-included exactly as the balance path
@@ -21,7 +21,7 @@ import { projectRowState } from './project-row-state.js'
  * arrives here or, previously, through the balance path.
  *
  * @param {Object} params
- * @param {import('#waste-records/repository/port.js').RowStateRepository} params.rowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {{ id: string, validFrom?: string, validTo?: string } | null} params.accreditation
@@ -30,8 +30,8 @@ import { projectRowState } from './project-row-state.js'
  * @param {string} params.summaryLogId
  * @returns {Promise<void>}
  */
-export const writeWasteRecordStates = async ({
-  rowStateRepository,
+export const writeSummaryLogRowStates = async ({
+  summaryLogRowStateRepository,
   featureFlags,
   wasteRecords,
   accreditation,
@@ -39,15 +39,15 @@ export const writeWasteRecordStates = async ({
   overseasSites,
   summaryLogId
 }) => {
-  if (!featureFlags?.isWasteRecordStatesEnabled()) {
+  if (!featureFlags?.isSummaryLogRowStatesEnabled()) {
     return
   }
 
   const classifiedRows = markExcludedRecords(wasteRecords).map((record) =>
-    projectRowState(record, accreditation, overseasSites)
+    projectSummaryLogRowState(record, accreditation, overseasSites)
   )
 
-  await rowStateRepository.upsertRowStates(
+  await summaryLogRowStateRepository.upsertSummaryLogRowStates(
     ledgerId,
     classifiedRows,
     summaryLogId

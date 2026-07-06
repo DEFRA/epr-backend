@@ -36,7 +36,7 @@ import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-l
 import { createInMemoryWasteBalanceServicePlugin } from '#waste-balances/repository/inmemory.plugin.js'
 import { createInMemoryStreamRepositoryPlugin } from '#waste-balances/repository/ledger-inmemory.plugin.js'
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
-import { createInMemoryWasteRecordStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
+import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
@@ -106,8 +106,8 @@ const repositoryConfigs = [
     createDefault: createInMemoryWasteRecordsRepositoryPlugin
   },
   {
-    name: 'wasteRecordStatesRepository',
-    createDefault: createInMemoryWasteRecordStatesRepositoryPlugin
+    name: 'summaryLogRowStatesRepository',
+    createDefault: createInMemorySummaryLogRowStatesRepositoryPlugin
   },
   {
     name: 'ledgerRepository',

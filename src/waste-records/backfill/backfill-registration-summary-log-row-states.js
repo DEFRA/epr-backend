@@ -1,10 +1,10 @@
-import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstates.js'
+import { reconstructSubmissionSummaryLogRowStates } from './reconstruct-submission-summary-log-row-states.js'
 
 /**
  * @import { WasteBalanceLedgerId } from '#waste-records/repository/schema.js'
- * @import { RowStateRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
  * @import { WasteRecord } from '#domain/waste-records/model.js'
- * @import { OrderedSummaryLog } from './reconstruct-submission-rowstates.js'
+ * @import { OrderedSummaryLog } from './reconstruct-submission-summary-log-row-states.js'
  */
 
 /**
@@ -12,13 +12,13 @@ import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstat
  *
  * @typedef {Object} RegistrationBackfillSummary
  * @property {number} submissionCount - Submitted summary logs replayed
- * @property {number} rowStateWriteCount - Row-state entries upserted across them
+ * @property {number} summaryLogRowStateWriteCount - Row-state entries upserted across them
  */
 
 /**
- * Backfill one registration's waste record states from its sparse version
+ * Backfill one registration's summary-log row states from its sparse version
  * history. Reconstructs each historical submission's membership in stream order
- * and upserts it through the guarded `upsertRowStates`, so a row unchanged
+ * and upserts it through the guarded `upsertSummaryLogRowStates`, so a row unchanged
  * across submissions dedups to one document whose membership grows. Re-runnable:
  * the upsert is idempotent, so a second pass writes nothing new.
  *
@@ -32,29 +32,33 @@ import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstat
  * @param {OrderedSummaryLog[]} params.summaryLogs
  * @param {Object} params.accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
- * @param {RowStateRepository} params.rowStateRepository
+ * @param {SummaryLogRowStateRepository} params.summaryLogRowStateRepository
  * @returns {Promise<RegistrationBackfillSummary>}
  */
-export const backfillRegistrationRowStates = async ({
+export const backfillRegistrationSummaryLogRowStates = async ({
   ledgerId,
   wasteRecords,
   summaryLogs,
   accreditation,
   overseasSites,
-  rowStateRepository
+  summaryLogRowStateRepository
 }) => {
-  const submissions = reconstructSubmissionRowStates({
+  const submissions = reconstructSubmissionSummaryLogRowStates({
     wasteRecords,
     summaryLogs,
     accreditation,
     overseasSites
   })
 
-  let rowStateWriteCount = 0
+  let summaryLogRowStateWriteCount = 0
   for (const { summaryLogId, entries } of submissions) {
-    await rowStateRepository.upsertRowStates(ledgerId, entries, summaryLogId)
-    rowStateWriteCount += entries.length
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+      ledgerId,
+      entries,
+      summaryLogId
+    )
+    summaryLogRowStateWriteCount += entries.length
   }
 
-  return { submissionCount: submissions.length, rowStateWriteCount }
+  return { submissionCount: submissions.length, summaryLogRowStateWriteCount }
 }

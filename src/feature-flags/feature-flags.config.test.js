@@ -23,19 +23,19 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.copyFormFilesToS3')
   })
 
-  it('returns true when wasteRecordStates flag is enabled', () => {
+  it('returns true when summaryLogRowStates flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
-    expect(flags.isWasteRecordStatesEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.wasteRecordStates')
+    expect(flags.isSummaryLogRowStatesEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.summaryLogRowStates')
   })
 
-  it('returns true when wasteRecordStatesBackfill flag is enabled', () => {
+  it('returns true when summaryLogRowStatesBackfill flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
-    expect(flags.isWasteRecordStatesBackfillEnabled()).toBe(true)
+    expect(flags.isSummaryLogRowStatesBackfillEnabled()).toBe(true)
     expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.wasteRecordStatesBackfill'
+      'featureFlags.summaryLogRowStatesBackfill'
     )
   })
 

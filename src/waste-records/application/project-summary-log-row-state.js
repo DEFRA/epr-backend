@@ -19,7 +19,11 @@ import { coerceStoredTonnages } from './stored-tonnage-coercion.js'
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  * @returns {ClassifiedRow}
  */
-export const projectRowState = (record, accreditation, overseasSites) => {
+export const projectSummaryLogRowState = (
+  record,
+  accreditation,
+  overseasSites
+) => {
   const classified = classifyWasteRecord(record, accreditation, overseasSites)
   return { ...classified, data: coerceStoredTonnages(classified.data) }
 }

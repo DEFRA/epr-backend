@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest'
 
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
-  buildRowStateEntry,
+  buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
 import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { wasteRecordStatesForRegistration } from './read-waste-record-states.js'
+import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
 
 const submissionEvent = (number, summaryLogId) =>
   buildStreamEvent({
@@ -23,11 +23,12 @@ const registration = {
   accreditationId: DEFAULT_LEDGER_ID.accreditationId
 }
 
-describe('wasteRecordStatesForRegistration', () => {
+describe('summaryLogRowStatesForRegistration', () => {
   it('returns an empty array when the stream has no submission', async () => {
-    const states = await wasteRecordStatesForRegistration({
+    const states = await summaryLogRowStatesForRegistration({
       ledgerRepository: createInMemoryLedgerRepository()(),
-      rowStateRepository: createInMemoryRowStateRepository()(),
+      summaryLogRowStateRepository:
+        createInMemorySummaryLogRowStateRepository()(),
       ...registration
     })
 
@@ -35,20 +36,21 @@ describe('wasteRecordStatesForRegistration', () => {
   })
 
   it('returns the full committed snapshot at the head submission', async () => {
-    const rowStateRepository = createInMemoryRowStateRepository()()
-    await rowStateRepository.upsertRowStates(
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
       DEFAULT_LEDGER_ID,
       [
-        buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } }),
-        buildRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })
+        buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } }),
+        buildSummaryLogRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })
       ],
       'log-1'
     )
-    await rowStateRepository.upsertRowStates(
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
       DEFAULT_LEDGER_ID,
       [
-        buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } }),
-        buildRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })
+        buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } }),
+        buildSummaryLogRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })
       ],
       'log-2'
     )
@@ -58,9 +60,9 @@ describe('wasteRecordStatesForRegistration', () => {
       submissionEvent(2, 'log-2')
     ])()
 
-    const states = await wasteRecordStatesForRegistration({
+    const states = await summaryLogRowStatesForRegistration({
       ledgerRepository,
-      rowStateRepository,
+      summaryLogRowStateRepository,
       ...registration
     })
 
@@ -74,19 +76,20 @@ describe('wasteRecordStatesForRegistration', () => {
   })
 
   it('projects to domain content, dropping storage id, membership and ledger identity', async () => {
-    const rowStateRepository = createInMemoryRowStateRepository()()
-    await rowStateRepository.upsertRowStates(
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
       DEFAULT_LEDGER_ID,
-      [buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
+      [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
       'log-1'
     )
     const ledgerRepository = createInMemoryLedgerRepository([
       submissionEvent(1, 'log-1')
     ])()
 
-    const [state] = await wasteRecordStatesForRegistration({
+    const [state] = await summaryLogRowStatesForRegistration({
       ledgerRepository,
-      rowStateRepository,
+      summaryLogRowStateRepository,
       ...registration
     })
 

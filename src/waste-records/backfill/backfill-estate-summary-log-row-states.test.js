@@ -8,7 +8,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import {
   buildAccreditation,
   buildOrganisation,
@@ -16,7 +16,7 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 
-import { backfillEstateRowStates } from './backfill-estate-rowstates.js'
+import { backfillEstateSummaryLogRowStates } from './backfill-estate-summary-log-row-states.js'
 
 // The summary-log document id and the workbook's file.id are distinct values
 // (the doc id is a URL path param; file.id is the uploader's id). Membership and
@@ -66,10 +66,10 @@ const inMemoryDeps = ({ organisations, wasteRecords }) => ({
   wasteRecordsRepository: createInMemoryWasteRecordsRepository(wasteRecords)(),
   summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
   overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-  rowStateRepository: createInMemoryRowStateRepository()()
+  summaryLogRowStateRepository: createInMemorySummaryLogRowStateRepository()()
 })
 
-describe('backfillEstateRowStates', () => {
+describe('backfillEstateSummaryLogRowStates', () => {
   it('backfills every submission of an accredited registration, keyed by file id, and reports the sweep', async () => {
     const registration = reprocessorRegistration({
       id: 'reg-1',
@@ -96,20 +96,26 @@ describe('backfillEstateRowStates', () => {
       submittedAt: '2025-02-01T00:00:00.000Z'
     })
 
-    const summary = await backfillEstateRowStates(deps)
+    const summary = await backfillEstateSummaryLogRowStates(deps)
 
     expect(
-      (await deps.rowStateRepository.findBySummaryLogId(fileId('sl-1'))).map(
-        (d) => d.rowId
-      )
+      (
+        await deps.summaryLogRowStateRepository.findBySummaryLogId(
+          fileId('sl-1')
+        )
+      ).map((d) => d.rowId)
     ).toEqual(['row-1'])
     expect(
-      (await deps.rowStateRepository.findBySummaryLogId(fileId('sl-2'))).map(
-        (d) => d.rowId
-      )
+      (
+        await deps.summaryLogRowStateRepository.findBySummaryLogId(
+          fileId('sl-2')
+        )
+      ).map((d) => d.rowId)
     ).toEqual(['row-1'])
-    expect(await deps.rowStateRepository.findBySummaryLogId('sl-1')).toEqual([])
-    const [doc] = await deps.rowStateRepository.findBySummaryLogId(
+    expect(
+      await deps.summaryLogRowStateRepository.findBySummaryLogId('sl-1')
+    ).toEqual([])
+    const [doc] = await deps.summaryLogRowStateRepository.findBySummaryLogId(
       fileId('sl-1')
     )
     expect(doc.accreditationId).toBe('acc-1')
@@ -117,7 +123,7 @@ describe('backfillEstateRowStates', () => {
       organisationsScanned: 1,
       ledgersBackfilled: 1,
       submissionsBackfilled: 2,
-      rowStateWrites: 2,
+      summaryLogRowStateWrites: 2,
       orphanedAccreditations: []
     })
   })
@@ -141,9 +147,9 @@ describe('backfillEstateRowStates', () => {
       submittedAt: '2025-01-01T00:00:00.000Z'
     })
 
-    const summary = await backfillEstateRowStates(deps)
+    const summary = await backfillEstateSummaryLogRowStates(deps)
 
-    const docs = await deps.rowStateRepository.findBySummaryLogId(
+    const docs = await deps.summaryLogRowStateRepository.findBySummaryLogId(
       fileId('sl-1')
     )
     expect(docs.map((d) => d.rowId)).toEqual(['row-1'])
@@ -178,9 +184,9 @@ describe('backfillEstateRowStates', () => {
       submittedAt: '2025-01-01T00:00:00.000Z'
     })
 
-    const summary = await backfillEstateRowStates(deps)
+    const summary = await backfillEstateSummaryLogRowStates(deps)
 
-    const docs = await deps.rowStateRepository.findBySummaryLogId(
+    const docs = await deps.summaryLogRowStateRepository.findBySummaryLogId(
       fileId('sl-1')
     )
     expect(docs.map((d) => d.rowId)).toEqual(['row-1'])
@@ -229,18 +235,24 @@ describe('backfillEstateRowStates', () => {
       status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED
     })
 
-    const summary = await backfillEstateRowStates(deps)
+    const summary = await backfillEstateSummaryLogRowStates(deps)
 
     expect(
-      (await deps.rowStateRepository.findBySummaryLogId(fileId('sl-a'))).map(
-        (d) => d.rowId
-      )
+      (
+        await deps.summaryLogRowStateRepository.findBySummaryLogId(
+          fileId('sl-a')
+        )
+      ).map((d) => d.rowId)
     ).toEqual(['row-1'])
     expect(
-      await deps.rowStateRepository.findBySummaryLogId(fileId('sl-a-bad'))
+      await deps.summaryLogRowStateRepository.findBySummaryLogId(
+        fileId('sl-a-bad')
+      )
     ).toEqual([])
     expect(
-      await deps.rowStateRepository.findBySummaryLogId(fileId('sl-b-bad'))
+      await deps.summaryLogRowStateRepository.findBySummaryLogId(
+        fileId('sl-b-bad')
+      )
     ).toEqual([])
     expect(summary.ledgersBackfilled).toBe(1)
     expect(summary.submissionsBackfilled).toBe(1)
@@ -267,7 +279,7 @@ describe('backfillEstateRowStates', () => {
       submittedAt: '2025-01-01T00:00:00.000Z'
     })
 
-    const summary = await backfillEstateRowStates(deps)
+    const summary = await backfillEstateSummaryLogRowStates(deps)
 
     expect(summary.orphanedAccreditations).toEqual([
       {
@@ -277,7 +289,7 @@ describe('backfillEstateRowStates', () => {
       }
     ])
     expect(
-      await deps.rowStateRepository.findBySummaryLogId(fileId('sl-1'))
+      await deps.summaryLogRowStateRepository.findBySummaryLogId(fileId('sl-1'))
     ).toEqual([])
     expect(summary.ledgersBackfilled).toBe(0)
   })
@@ -305,7 +317,7 @@ describe('backfillEstateRowStates', () => {
     deps.organisationsRepository.findAccreditationById = () =>
       Promise.reject(new Error('transient database failure'))
 
-    await expect(backfillEstateRowStates(deps)).rejects.toThrow(
+    await expect(backfillEstateSummaryLogRowStates(deps)).rejects.toThrow(
       'transient database failure'
     )
   })

@@ -3,8 +3,8 @@
  * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isCopyFormFilesToS3Enabled
  * @property {() => boolean} isFixDuplicateAccreditationLinksEnabled
- * @property {() => boolean} isWasteRecordStatesEnabled
- * @property {() => boolean} isWasteRecordStatesBackfillEnabled
+ * @property {() => boolean} isSummaryLogRowStatesEnabled
+ * @property {() => boolean} isSummaryLogRowStatesBackfillEnabled
  * @property {() => boolean} isRegisteredOnlySubmittedEventsEnabled
  */
 
@@ -13,8 +13,8 @@
  * @property {boolean} [devEndpoints]
  * @property {boolean} [copyFormFilesToS3]
  * @property {boolean} [fixDuplicateAccreditationLinks]
- * @property {boolean} [wasteRecordStates]
- * @property {boolean} [wasteRecordStatesBackfill]
+ * @property {boolean} [summaryLogRowStates]
+ * @property {boolean} [summaryLogRowStatesBackfill]
  * @property {boolean} [registeredOnlySubmittedEvents]
  */
 

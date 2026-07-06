@@ -1,9 +1,9 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { backfillEstateRowStates } from '#waste-records/backfill/backfill-estate-rowstates.js'
+import { backfillEstateSummaryLogRowStates } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js'
 
-/** @import { OrphanedAccreditation } from '#waste-records/backfill/backfill-estate-rowstates.js' */
+/** @import { OrphanedAccreditation } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js' */
 
-const LOCK_NAME = 'waste-record-states-backfill'
+const LOCK_NAME = 'summary-log-row-states-backfill'
 
 /**
  * @param {OrphanedAccreditation} orphan
@@ -15,12 +15,12 @@ const formatOrphan = (orphan) =>
  * @param {Object} server - Hapi server instance
  */
 const runBackfill = async (server) => {
-  const summary = await backfillEstateRowStates({
+  const summary = await backfillEstateSummaryLogRowStates({
     organisationsRepository: server.app.organisationsRepository,
     wasteRecordsRepository: server.app.wasteRecordsRepository,
     summaryLogsRepository: server.app.summaryLogsRepository,
     overseasSitesRepository: server.app.overseasSitesRepository,
-    rowStateRepository: server.app.wasteRecordStatesRepository
+    summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository
   })
 
   for (const orphan of summary.orphanedAccreditations) {
@@ -28,14 +28,14 @@ const runBackfill = async (server) => {
   }
 
   logger.info({
-    message: `Waste-record-state backfill complete: organisationsScanned=${summary.organisationsScanned} ledgersBackfilled=${summary.ledgersBackfilled} submissionsBackfilled=${summary.submissionsBackfilled} rowStateWrites=${summary.rowStateWrites} orphanedAccreditations=${summary.orphanedAccreditations.length}`
+    message: `Waste-record-state backfill complete: organisationsScanned=${summary.organisationsScanned} ledgersBackfilled=${summary.ledgersBackfilled} submissionsBackfilled=${summary.submissionsBackfilled} summaryLogRowStateWrites=${summary.summaryLogRowStateWrites} orphanedAccreditations=${summary.orphanedAccreditations.length}`
   })
 }
 
 /**
- * Reconstructs the historical waste-record-state estate by replaying every
+ * Reconstructs the historical summary-log-row-state estate by replaying every
  * registration's submitted summary logs through the guarded, content-addressed
- * upsert. The whole mechanism is gated by the waste-record-states-backfill
+ * upsert. The whole mechanism is gated by the summary-log-row-states-backfill
  * feature flag: with it off this returns before touching the locker or any
  * repository, so the mongodb row-state adapter is never invoked at rest and the
  * write-gate invariant holds. The deliberate run is authorised by flipping the
@@ -48,8 +48,8 @@ const runBackfill = async (server) => {
  *
  * @param {Object} server - Hapi server instance
  */
-export const runBackfillWasteRecordStates = async (server) => {
-  if (!server.featureFlags.isWasteRecordStatesBackfillEnabled()) {
+export const runBackfillSummaryLogRowStates = async (server) => {
+  if (!server.featureFlags.isSummaryLogRowStatesBackfillEnabled()) {
     return
   }
 
@@ -57,7 +57,8 @@ export const runBackfillWasteRecordStates = async (server) => {
     const lock = await server.locker.lock(LOCK_NAME)
     if (!lock) {
       logger.info({
-        message: 'Unable to obtain lock, skipping waste-record-state backfill'
+        message:
+          'Unable to obtain lock, skipping summary-log-row-state backfill'
       })
       return
     }
@@ -69,7 +70,7 @@ export const runBackfillWasteRecordStates = async (server) => {
   } catch (error) {
     logger.error({
       err: error,
-      message: 'Failed to run waste-record-state backfill'
+      message: 'Failed to run summary-log-row-state backfill'
     })
   }
 }

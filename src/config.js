@@ -370,14 +370,14 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_FIX_DUPLICATE_ACCREDITATION_LINKS'
     },
-    wasteRecordStates: {
-      doc: 'Feature Flag: Persist waste record states on summary-log submission (ADR-0037)',
+    summaryLogRowStates: {
+      doc: 'Feature Flag: Persist summary-log row states on summary-log submission (ADR-0037)',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES'
     },
-    wasteRecordStatesBackfill: {
-      doc: 'Feature Flag: Run the estate-wide waste-record-state reconstruction backfill on startup (ADR-0037)',
+    summaryLogRowStatesBackfill: {
+      doc: 'Feature Flag: Run the estate-wide summary-log-row-state reconstruction backfill on startup (ADR-0037)',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL'

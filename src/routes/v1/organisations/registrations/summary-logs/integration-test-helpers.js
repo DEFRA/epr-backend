@@ -14,7 +14,7 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -541,7 +541,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
   const ledgerRepository = createInMemoryLedgerRepository()()
-  const rowStateRepository = createInMemoryRowStateRepository()()
+  const summaryLogRowStateRepository =
+    createInMemorySummaryLogRowStateRepository()()
 
   const systemLogsForBalanceAudit = {
     insert: vi.fn().mockResolvedValue(undefined),
@@ -611,7 +612,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
-    rowStateRepository,
+    summaryLogRowStateRepository,
     featureFlags,
     logger: mockLogger
   })
@@ -655,7 +656,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     accreditationId,
     fileDataMap,
     ledgerRepository,
-    rowStateRepository,
+    summaryLogRowStateRepository,
     systemLogsForBalanceAudit,
     reportsRepository
   }

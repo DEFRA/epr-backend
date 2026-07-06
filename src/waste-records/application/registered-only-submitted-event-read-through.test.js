@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
 
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { buildRowStateEntry } from '#waste-records/repository/test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 
-import { wasteRecordStatesForRegistration } from './read-waste-record-states.js'
+import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
 
 /**
  * The reg-only summary-log submitted event migration closes the gap where
@@ -22,10 +22,10 @@ const registeredOnlyLedgerId = {
 }
 const createdBy = { id: 'system', name: 'backfill' }
 
-const seedMembership = async (rowStateRepository, summaryLogId) =>
-  rowStateRepository.upsertRowStates(
+const seedMembership = async (summaryLogRowStateRepository, summaryLogId) =>
+  summaryLogRowStateRepository.upsertSummaryLogRowStates(
     registeredOnlyLedgerId,
-    [buildRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
+    [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
     summaryLogId
   )
 
@@ -38,12 +38,13 @@ const emitRegOnlyEvent = (ledgerRepository, summaryLogId) =>
 
 describe('registered-only summary-log submitted event — read-through', () => {
   it('returns nothing for the registered-only ledger before an event exists (the gap)', async () => {
-    const rowStateRepository = createInMemoryRowStateRepository()()
-    await seedMembership(rowStateRepository, 'log-1')
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await seedMembership(summaryLogRowStateRepository, 'log-1')
 
-    const states = await wasteRecordStatesForRegistration({
+    const states = await summaryLogRowStatesForRegistration({
       ledgerRepository: createInMemoryLedgerRepository()(),
-      rowStateRepository,
+      summaryLogRowStateRepository,
       ...registeredOnlyLedgerId
     })
 
@@ -51,15 +52,16 @@ describe('registered-only summary-log submitted event — read-through', () => {
   })
 
   it('returns the membership once the reg-only event is emitted (gap closed)', async () => {
-    const rowStateRepository = createInMemoryRowStateRepository()()
-    await seedMembership(rowStateRepository, 'log-1')
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await seedMembership(summaryLogRowStateRepository, 'log-1')
     const ledgerRepository = createInMemoryLedgerRepository()()
 
     await emitRegOnlyEvent(ledgerRepository, 'log-1')
 
-    const states = await wasteRecordStatesForRegistration({
+    const states = await summaryLogRowStatesForRegistration({
       ledgerRepository,
-      rowStateRepository,
+      summaryLogRowStateRepository,
       ...registeredOnlyLedgerId
     })
 

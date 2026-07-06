@@ -35,7 +35,7 @@ const bootServer = async () => {
   return /** @type {*} */ (server)
 }
 
-describe('waste-record-states repository registration', () => {
+describe('summary-log-row-states repository registration', () => {
   setupAuthContext()
 
   beforeAll(async () => {
@@ -61,7 +61,7 @@ describe('waste-record-states repository registration', () => {
     })
 
     it('constructs no row-state repository', () => {
-      expect(server.app.wasteRecordStatesRepository).toBeUndefined()
+      expect(server.app.summaryLogRowStatesRepository).toBeUndefined()
     })
 
     it('creates no row-state collection or indexes', async () => {
@@ -89,7 +89,7 @@ describe('waste-record-states repository registration', () => {
     })
 
     it('constructs the row-state repository', () => {
-      expect(server.app.wasteRecordStatesRepository).toBeDefined()
+      expect(server.app.summaryLogRowStatesRepository).toBeDefined()
     })
 
     it('creates the empty collection with its three indexes', async () => {

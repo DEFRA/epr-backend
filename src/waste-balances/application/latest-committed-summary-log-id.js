@@ -2,7 +2,7 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
 
 /**
  * Resolve the `summaryLogId` of the most recent committed submission for a
- * ledger — the committed head the waste-record-state reads pivot on. Returns
+ * ledger — the committed head the summary-log-row-state reads pivot on. Returns
  * `null` when the ledger has no summary-log submission yet.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository

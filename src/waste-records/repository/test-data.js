@@ -2,11 +2,11 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
- * Build a waste record state document (insert shape — no `id`).
+ * Build a summary-log row state document (insert shape — no `id`).
  * Defaults to an INCLUDED received-waste row in one submission's membership.
  * @param {object} [overrides]
  */
-export const buildRowState = (overrides = {}) => ({
+export const buildSummaryLogRowState = (overrides = {}) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1',
@@ -24,10 +24,10 @@ export const buildRowState = (overrides = {}) => ({
 
 /**
  * Build a per-row entry as produced by the 1.1 classification list — the
- * shape `upsertRowStates` consumes (no ledger-identity fields, no membership).
+ * shape `upsertSummaryLogRowStates` consumes (no ledger-identity fields, no membership).
  * @param {object} [overrides]
  */
-export const buildRowStateEntry = (overrides = {}) => ({
+export const buildSummaryLogRowStateEntry = (overrides = {}) => ({
   rowId: 'row-1',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   data: { supplierName: 'Acme', tonnage: 10 },

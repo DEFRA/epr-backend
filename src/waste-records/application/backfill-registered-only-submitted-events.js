@@ -5,11 +5,11 @@ import {
   BACKFILL_ACTOR,
   LEDGER_EVENT_KIND
 } from '#waste-balances/repository/ledger-schema.js'
-import { reconstructSubmissionRowStates } from '#waste-records/backfill/reconstruct-submission-rowstates.js'
+import { reconstructSubmissionSummaryLogRowStates } from '#waste-records/backfill/reconstruct-submission-summary-log-row-states.js'
 
 /**
  * @import { SummaryLogWithId } from '#repositories/summary-logs/port.js'
- * @import { OrderedSummaryLog } from '#waste-records/backfill/reconstruct-submission-rowstates.js'
+ * @import { OrderedSummaryLog } from '#waste-records/backfill/reconstruct-submission-summary-log-row-states.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  */
 
@@ -187,7 +187,7 @@ const backfillRegistrationSubmittedEvents = async ({
     registration.id
   )
 
-  const submissions = reconstructSubmissionRowStates({
+  const submissions = reconstructSubmissionSummaryLogRowStates({
     wasteRecords,
     summaryLogs,
     accreditation: null,

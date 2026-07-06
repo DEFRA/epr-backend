@@ -4,12 +4,12 @@ import { StatusCodes } from 'http-status-codes'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
-import { backfillRegistrationRowStates } from './backfill-registration-rowstates.js'
+import { backfillRegistrationSummaryLogRowStates } from './backfill-registration-summary-log-row-states.js'
 
 /**
- * @import { RowStateRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
  * @import { SummaryLogWithId } from '#repositories/summary-logs/port.js'
- * @import { OrderedSummaryLog } from './reconstruct-submission-rowstates.js'
+ * @import { OrderedSummaryLog } from './reconstruct-submission-summary-log-row-states.js'
  */
 
 /**
@@ -30,7 +30,7 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  * @property {number} organisationsScanned
  * @property {number} ledgersBackfilled - Registration ledgers that received row states
  * @property {number} submissionsBackfilled
- * @property {number} rowStateWrites
+ * @property {number} summaryLogRowStateWrites
  * @property {OrphanedAccreditation[]} orphanedAccreditations
  */
 
@@ -41,7 +41,7 @@ import { backfillRegistrationRowStates } from './backfill-registration-rowstates
  *
  * @typedef {Object} LedgerBackfilled
  * @property {number} submissionCount
- * @property {number} rowStateWriteCount
+ * @property {number} summaryLogRowStateWriteCount
  *
  * @typedef {Object} LedgerOrphaned
  * @property {OrphanedAccreditation} orphanedAccreditation
@@ -80,7 +80,7 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
  * @param {import('#repositories/waste-records/port.js').WasteRecordsRepository} args.wasteRecordsRepository
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
- * @param {RowStateRepository} args.rowStateRepository
+ * @param {SummaryLogRowStateRepository} args.summaryLogRowStateRepository
  * @returns {Promise<LedgerBackfilled | LedgerOrphaned | null>}
  */
 const backfillRegistrationStream = async ({
@@ -90,7 +90,7 @@ const backfillRegistrationStream = async ({
   wasteRecordsRepository,
   summaryLogsRepository,
   overseasSitesRepository,
-  rowStateRepository
+  summaryLogRowStateRepository
 }) => {
   const { accreditationId } = registration
 
@@ -140,8 +140,8 @@ const backfillRegistrationStream = async ({
     registration.id
   )
 
-  const { submissionCount, rowStateWriteCount } =
-    await backfillRegistrationRowStates({
+  const { submissionCount, summaryLogRowStateWriteCount } =
+    await backfillRegistrationSummaryLogRowStates({
       ledgerId: {
         organisationId: organisation.id,
         registrationId: registration.id,
@@ -151,14 +151,14 @@ const backfillRegistrationStream = async ({
       summaryLogs,
       accreditation,
       overseasSites,
-      rowStateRepository
+      summaryLogRowStateRepository
     })
 
-  return { submissionCount, rowStateWriteCount }
+  return { submissionCount, summaryLogRowStateWriteCount }
 }
 
 /**
- * Reconstruct the waste record state collection for the whole historical estate
+ * Reconstruct the summary-log row state collection for the whole historical estate
  * from sparse version history, mirroring the live submission path's write scope:
  * every registration with submitted summary logs contributes — accredited and
  * registered-only alike — partitioned by accreditation existence
@@ -175,21 +175,21 @@ const backfillRegistrationStream = async ({
  * @param {import('#repositories/waste-records/port.js').WasteRecordsRepository} deps.wasteRecordsRepository
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} deps.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} deps.overseasSitesRepository
- * @param {RowStateRepository} deps.rowStateRepository
+ * @param {SummaryLogRowStateRepository} deps.summaryLogRowStateRepository
  * @returns {Promise<EstateBackfillSummary>}
  */
-export const backfillEstateRowStates = async ({
+export const backfillEstateSummaryLogRowStates = async ({
   organisationsRepository,
   wasteRecordsRepository,
   summaryLogsRepository,
   overseasSitesRepository,
-  rowStateRepository
+  summaryLogRowStateRepository
 }) => {
   const organisations = await organisationsRepository.findAll()
 
   let ledgersBackfilled = 0
   let submissionsBackfilled = 0
-  let rowStateWrites = 0
+  let summaryLogRowStateWrites = 0
   const orphanedAccreditations = []
 
   for (const organisation of organisations) {
@@ -201,7 +201,7 @@ export const backfillEstateRowStates = async ({
         wasteRecordsRepository,
         summaryLogsRepository,
         overseasSitesRepository,
-        rowStateRepository
+        summaryLogRowStateRepository
       })
       if (!result) {
         continue
@@ -211,7 +211,7 @@ export const backfillEstateRowStates = async ({
       } else {
         ledgersBackfilled += 1
         submissionsBackfilled += result.submissionCount
-        rowStateWrites += result.rowStateWriteCount
+        summaryLogRowStateWrites += result.summaryLogRowStateWriteCount
       }
     }
   }
@@ -220,7 +220,7 @@ export const backfillEstateRowStates = async ({
     organisationsScanned: organisations.length,
     ledgersBackfilled,
     submissionsBackfilled,
-    rowStateWrites,
+    summaryLogRowStateWrites,
     orphanedAccreditations
   }
 }

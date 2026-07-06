@@ -23,7 +23,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { createInMemoryRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -128,7 +128,8 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
-    wasteRecordStatesRepository: createInMemoryRowStateRepository()(),
+    summaryLogRowStatesRepository:
+      createInMemorySummaryLogRowStateRepository()(),
     wasteBalanceService: createWasteBalanceService(
       createInMemoryLedgerRepository()()
     ),

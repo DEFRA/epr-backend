@@ -1,4 +1,4 @@
-import { projectRowState } from '#waste-records/application/project-row-state.js'
+import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /**
@@ -8,12 +8,12 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /**
  * A submission's reconstructed row-state membership: the entries to upsert
- * against the waste record state collection for one historical submission,
+ * against the summary-log row state collection for one historical submission,
  * alongside the provenance the backfill stamps onto its replayed submitted
  * event — when it happened (`submittedAt`) and who submitted it (`submittedBy`,
  * absent when the submitter could not be recovered).
  *
- * @typedef {Object} SubmissionRowStates
+ * @typedef {Object} SubmissionSummaryLogRowStates
  * @property {string} summaryLogId
  * @property {ClassifiedRow[]} entries
  * @property {string} submittedAt - ISO8601 timestamp
@@ -61,12 +61,12 @@ const reconstructDataAtSubmission = (versions, seenSummaryLogIds) => {
 }
 
 /**
- * Reconstruct one waste record state membership per historical submission from
+ * Reconstruct one summary-log row state membership per historical submission from
  * the sparse per-row version history, in submission (stream) order. For each
  * submitted summary log, every waste record that exists as of that submission
  * contributes its as-of-submission data, classified exactly as the live write
  * path classifies it. The returned descriptors are upserted — each against its
- * summaryLogId — to rebuild the waste record state collection from the
+ * summaryLogId — to rebuild the summary-log row state collection from the
  * authoritative version history alone.
  *
  * @param {Object} params
@@ -74,9 +74,9 @@ const reconstructDataAtSubmission = (versions, seenSummaryLogIds) => {
  * @param {OrderedSummaryLog[]} params.summaryLogs
  * @param {Object} params.accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
- * @returns {SubmissionRowStates[]}
+ * @returns {SubmissionSummaryLogRowStates[]}
  */
-export const reconstructSubmissionRowStates = ({
+export const reconstructSubmissionSummaryLogRowStates = ({
   wasteRecords,
   summaryLogs,
   accreditation,
@@ -102,7 +102,11 @@ export const reconstructSubmissionRowStates = ({
         return []
       }
       return [
-        projectRowState({ ...record, data }, accreditation, overseasSites)
+        projectSummaryLogRowState(
+          { ...record, data },
+          accreditation,
+          overseasSites
+        )
       ]
     })
     return {

@@ -5,7 +5,7 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
-import { reconstructSubmissionRowStates } from './reconstruct-submission-rowstates.js'
+import { reconstructSubmissionSummaryLogRowStates } from './reconstruct-submission-summary-log-row-states.js'
 
 const accreditation = { id: 'acc-1' }
 /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} */
@@ -26,10 +26,10 @@ const receivedRecord = (rowId, versions) => ({
   versions
 })
 
-describe('reconstructSubmissionRowStates', () => {
+describe('reconstructSubmissionSummaryLogRowStates', () => {
   it('returns no upserts when there are no summary logs', () => {
     expect(
-      reconstructSubmissionRowStates({
+      reconstructSubmissionSummaryLogRowStates({
         wasteRecords: [],
         summaryLogs: [],
         accreditation,
@@ -49,7 +49,7 @@ describe('reconstructSubmissionRowStates', () => {
       ])
     ]
 
-    const upserts = reconstructSubmissionRowStates({
+    const upserts = reconstructSubmissionSummaryLogRowStates({
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -70,7 +70,7 @@ describe('reconstructSubmissionRowStates', () => {
       ])
     ]
 
-    const upserts = reconstructSubmissionRowStates({
+    const upserts = reconstructSubmissionSummaryLogRowStates({
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -93,7 +93,7 @@ describe('reconstructSubmissionRowStates', () => {
       ])
     ]
 
-    const upserts = reconstructSubmissionRowStates({
+    const upserts = reconstructSubmissionSummaryLogRowStates({
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -122,7 +122,7 @@ describe('reconstructSubmissionRowStates', () => {
       ])
     ]
 
-    const upserts = reconstructSubmissionRowStates({
+    const upserts = reconstructSubmissionSummaryLogRowStates({
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -164,7 +164,7 @@ describe('reconstructSubmissionRowStates', () => {
       ])
     ]
 
-    const upserts = reconstructSubmissionRowStates({
+    const upserts = reconstructSubmissionSummaryLogRowStates({
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -192,7 +192,7 @@ describe('reconstructSubmissionRowStates', () => {
       ])
     ]
 
-    const upserts = reconstructSubmissionRowStates({
+    const upserts = reconstructSubmissionSummaryLogRowStates({
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -205,7 +205,7 @@ describe('reconstructSubmissionRowStates', () => {
     expect(upserts[1].entries.map((e) => e.rowId)).toEqual(['row-1'])
   })
 
-  it('produces entries in the shape upsertRowStates consumes', () => {
+  it('produces entries in the shape upsertSummaryLogRowStates consumes', () => {
     const summaryLogs = [submittedLog('sl-1', '2025-01-01T00:00:00.000Z')]
     const wasteRecords = [
       receivedRecord('row-1', [
@@ -213,7 +213,7 @@ describe('reconstructSubmissionRowStates', () => {
       ])
     ]
 
-    const [{ entries }] = reconstructSubmissionRowStates({
+    const [{ entries }] = reconstructSubmissionSummaryLogRowStates({
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -248,7 +248,7 @@ describe('reconstructSubmissionRowStates', () => {
       ])
     ]
 
-    const [{ entries }] = reconstructSubmissionRowStates({
+    const [{ entries }] = reconstructSubmissionSummaryLogRowStates({
       wasteRecords,
       summaryLogs,
       accreditation,
@@ -278,7 +278,7 @@ describe('reconstructSubmissionRowStates', () => {
       ])
     ]
 
-    const upserts = reconstructSubmissionRowStates({
+    const upserts = reconstructSubmissionSummaryLogRowStates({
       wasteRecords,
       summaryLogs,
       accreditation,

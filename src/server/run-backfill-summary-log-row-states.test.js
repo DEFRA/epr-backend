@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
-import { backfillEstateRowStates } from '#waste-records/backfill/backfill-estate-rowstates.js'
+import { backfillEstateSummaryLogRowStates } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js'
 
-import { runBackfillWasteRecordStates } from './run-backfill-waste-record-states.js'
+import { runBackfillSummaryLogRowStates } from './run-backfill-summary-log-row-states.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -12,25 +12,28 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
     error: vi.fn()
   }
 }))
-vi.mock('#waste-records/backfill/backfill-estate-rowstates.js', () => ({
-  backfillEstateRowStates: vi.fn()
-}))
+vi.mock(
+  '#waste-records/backfill/backfill-estate-summary-log-row-states.js',
+  () => ({
+    backfillEstateSummaryLogRowStates: vi.fn()
+  })
+)
 
 /**
- * @param {Partial<import('#waste-records/backfill/backfill-estate-rowstates.js').EstateBackfillSummary>} [summary]
+ * @param {Partial<import('#waste-records/backfill/backfill-estate-summary-log-row-states.js').EstateBackfillSummary>} [summary]
  */
 const seedSummary = (summary = {}) => {
-  vi.mocked(backfillEstateRowStates).mockResolvedValue({
+  vi.mocked(backfillEstateSummaryLogRowStates).mockResolvedValue({
     organisationsScanned: 0,
     ledgersBackfilled: 0,
     submissionsBackfilled: 0,
-    rowStateWrites: 0,
+    summaryLogRowStateWrites: 0,
     orphanedAccreditations: [],
     ...summary
   })
 }
 
-describe('runBackfillWasteRecordStates', () => {
+describe('runBackfillSummaryLogRowStates', () => {
   let mockServer
   let mockLock
 
@@ -40,7 +43,7 @@ describe('runBackfillWasteRecordStates', () => {
     mockLock = { free: vi.fn().mockResolvedValue(undefined) }
     mockServer = {
       featureFlags: {
-        isWasteRecordStatesBackfillEnabled: () => true
+        isSummaryLogRowStatesBackfillEnabled: () => true
       },
       locker: {
         lock: vi.fn().mockResolvedValue(mockLock)
@@ -50,28 +53,28 @@ describe('runBackfillWasteRecordStates', () => {
         wasteRecordsRepository: { name: 'wasteRecords' },
         summaryLogsRepository: { name: 'summaryLogs' },
         overseasSitesRepository: { name: 'overseasSites' },
-        wasteRecordStatesRepository: { name: 'wasteRecordStates' }
+        summaryLogRowStatesRepository: { name: 'summaryLogRowStates' }
       }
     }
   })
 
   it('does nothing when the backfill flag is off — no lock, no adapter invocation', async () => {
-    mockServer.featureFlags.isWasteRecordStatesBackfillEnabled = () => false
+    mockServer.featureFlags.isSummaryLogRowStatesBackfillEnabled = () => false
 
-    await runBackfillWasteRecordStates(mockServer)
+    await runBackfillSummaryLogRowStates(mockServer)
 
     expect(mockServer.locker.lock).not.toHaveBeenCalled()
-    expect(backfillEstateRowStates).not.toHaveBeenCalled()
+    expect(backfillEstateSummaryLogRowStates).not.toHaveBeenCalled()
     expect(logger.info).not.toHaveBeenCalled()
   })
 
   it('acquires a lock scoped to the backfill and releases it afterwards', async () => {
     seedSummary()
 
-    await runBackfillWasteRecordStates(mockServer)
+    await runBackfillSummaryLogRowStates(mockServer)
 
     expect(mockServer.locker.lock).toHaveBeenCalledWith(
-      'waste-record-states-backfill'
+      'summary-log-row-states-backfill'
     )
     expect(mockLock.free).toHaveBeenCalled()
   })
@@ -79,25 +82,25 @@ describe('runBackfillWasteRecordStates', () => {
   it('runs the estate backfill wired to the registered mongodb adapters', async () => {
     seedSummary()
 
-    await runBackfillWasteRecordStates(mockServer)
+    await runBackfillSummaryLogRowStates(mockServer)
 
-    expect(backfillEstateRowStates).toHaveBeenCalledWith({
+    expect(backfillEstateSummaryLogRowStates).toHaveBeenCalledWith({
       organisationsRepository: mockServer.app.organisationsRepository,
       wasteRecordsRepository: mockServer.app.wasteRecordsRepository,
       summaryLogsRepository: mockServer.app.summaryLogsRepository,
       overseasSitesRepository: mockServer.app.overseasSitesRepository,
-      rowStateRepository: mockServer.app.wasteRecordStatesRepository
+      summaryLogRowStateRepository: mockServer.app.summaryLogRowStatesRepository
     })
   })
 
   it('skips the backfill when the lock is held by another instance', async () => {
     mockServer.locker.lock.mockResolvedValue(null)
 
-    await runBackfillWasteRecordStates(mockServer)
+    await runBackfillSummaryLogRowStates(mockServer)
 
-    expect(backfillEstateRowStates).not.toHaveBeenCalled()
+    expect(backfillEstateSummaryLogRowStates).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
-      message: 'Unable to obtain lock, skipping waste-record-state backfill'
+      message: 'Unable to obtain lock, skipping summary-log-row-state backfill'
     })
   })
 
@@ -106,15 +109,15 @@ describe('runBackfillWasteRecordStates', () => {
       organisationsScanned: 12,
       ledgersBackfilled: 8,
       submissionsBackfilled: 20,
-      rowStateWrites: 140
+      summaryLogRowStateWrites: 140
     })
 
-    await runBackfillWasteRecordStates(mockServer)
+    await runBackfillSummaryLogRowStates(mockServer)
 
     expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-record-state backfill complete: organisationsScanned=12 ledgersBackfilled=8 submissionsBackfilled=20 rowStateWrites=140 orphanedAccreditations=0'
+        'Waste-record-state backfill complete: organisationsScanned=12 ledgersBackfilled=8 submissionsBackfilled=20 summaryLogRowStateWrites=140 orphanedAccreditations=0'
     })
   })
 
@@ -130,7 +133,7 @@ describe('runBackfillWasteRecordStates', () => {
       ]
     })
 
-    await runBackfillWasteRecordStates(mockServer)
+    await runBackfillSummaryLogRowStates(mockServer)
 
     expect(logger.warn).toHaveBeenCalledWith({
       message:
@@ -138,19 +141,19 @@ describe('runBackfillWasteRecordStates', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-record-state backfill complete: organisationsScanned=1 ledgersBackfilled=0 submissionsBackfilled=0 rowStateWrites=0 orphanedAccreditations=1'
+        'Waste-record-state backfill complete: organisationsScanned=1 ledgersBackfilled=0 submissionsBackfilled=0 summaryLogRowStateWrites=0 orphanedAccreditations=1'
     })
   })
 
   it('releases the lock and logs an error when the backfill throws', async () => {
     const error = new Error('mongo unavailable')
-    vi.mocked(backfillEstateRowStates).mockRejectedValue(error)
+    vi.mocked(backfillEstateSummaryLogRowStates).mockRejectedValue(error)
 
-    await runBackfillWasteRecordStates(mockServer)
+    await runBackfillSummaryLogRowStates(mockServer)
 
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
-      message: 'Failed to run waste-record-state backfill'
+      message: 'Failed to run summary-log-row-state backfill'
     })
     expect(mockLock.free).toHaveBeenCalled()
   })
@@ -159,11 +162,11 @@ describe('runBackfillWasteRecordStates', () => {
     const error = new Error('locker unavailable')
     mockServer.locker.lock.mockRejectedValue(error)
 
-    await runBackfillWasteRecordStates(mockServer)
+    await runBackfillSummaryLogRowStates(mockServer)
 
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
-      message: 'Failed to run waste-record-state backfill'
+      message: 'Failed to run summary-log-row-state backfill'
     })
   })
 })

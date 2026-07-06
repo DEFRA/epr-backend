@@ -1,6 +1,6 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { resolveOverseasSites } from './resolve-overseas-sites.js'
-import { writeWasteRecordStates } from '#waste-records/application/write-waste-record-states.js'
+import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
 import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
@@ -256,7 +256,7 @@ const calculateMetrics = (wasteRecords) => {
  * @param {object} params.parsedData
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {object} params.organisationsRepository
- * @param {import('#waste-records/repository/port.js').RowStateRepository} params.rowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
  * @param {object} params.wasteBalanceService
  */
@@ -268,7 +268,7 @@ const commitStateAndBalance = async ({
   parsedData,
   user,
   organisationsRepository,
-  rowStateRepository,
+  summaryLogRowStateRepository,
   featureFlags,
   wasteBalanceService
 }) => {
@@ -280,8 +280,8 @@ const commitStateAndBalance = async ({
       )
     : null
 
-  await writeWasteRecordStates({
-    rowStateRepository,
+  await writeSummaryLogRowStates({
+    summaryLogRowStateRepository,
     featureFlags,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
     accreditation,
@@ -333,7 +333,7 @@ const commitStateAndBalance = async ({
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} dependencies.wasteBalanceService - The waste balance application service
  * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
- * @param {import('#waste-records/repository/port.js').RowStateRepository} dependencies.rowStateRepository - The waste record states repository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} dependencies.summaryLogRowStateRepository - The summary-log row states repository
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags] - Feature flags gating the row-state write
  * @param {TypedLogger} dependencies.logger - Logger forwarded to extractor for trace correlation
  * @returns {Function} A function that accepts a summary log and returns a Promise
@@ -345,7 +345,7 @@ export const syncFromSummaryLog = (dependencies) => {
     wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
-    rowStateRepository,
+    summaryLogRowStateRepository,
     featureFlags,
     logger
   } = dependencies
@@ -430,7 +430,7 @@ export const syncFromSummaryLog = (dependencies) => {
       parsedData,
       user,
       organisationsRepository,
-      rowStateRepository,
+      summaryLogRowStateRepository,
       featureFlags,
       wasteBalanceService
     })
