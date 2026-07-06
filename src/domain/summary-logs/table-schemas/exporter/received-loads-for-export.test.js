@@ -368,18 +368,12 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
       for (const field of weightFields) {
         describe(`${field} validation`, () => {
-          it('accepts zero', () => {
-            const { error } = validationSchema.validate({ [field]: 0 })
-            expect(error).toBeUndefined()
-          })
-
-          it('accepts maximum value (1000)', () => {
-            const { error } = validationSchema.validate({ [field]: 1000 })
-            expect(error).toBeUndefined()
-          })
-
-          it('accepts value within range', () => {
-            const { error } = validationSchema.validate({ [field]: 500.5 })
+          it.each([
+            { label: 'zero', value: 0 },
+            { label: 'maximum value (1000)', value: 1000 },
+            { label: 'value within range', value: 500.5 }
+          ])('accepts $label', ({ value }) => {
+            const { error } = validationSchema.validate({ [field]: value })
             expect(error).toBeUndefined()
           })
 
