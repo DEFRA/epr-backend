@@ -17,30 +17,34 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * Returns the waste balance inclusion status and any exclusion reasons for a record.
  * Mirrors the same logic as the waste-balances calculation path.
  *
+ * Returns `null` when inclusion cannot be computed for this record at all
+ * (no accreditation, or no classification schema for the processing type —
+ * which is also how registered-only templates are excluded, since their
+ * table schemas never define `classifyForWasteBalance`) — these are
+ * registration or template-level states, not a per-row classification
+ * outcome, so there is no meaningful reason code to report. The CSV export
+ * renders `null` as "NA".
+ *
  * @param {WasteRecord} record
  * @param {Accreditation | null} accreditation
  * @param {OverseasSitesContext} overseasSites
- * @returns {WasteBalanceClassification | null} null when waste balance is not applicable (no accreditation)
+ * @returns {WasteBalanceClassification | null}
  */
 export const getWasteBalanceClassification = (
   record,
   accreditation,
   overseasSites
 ) => {
-  if (accreditation === null) {
-    return null
-  }
-
-  if (record.excludedFromWasteBalance) {
-    return { included: false, reasons: [], tonnage: null }
-  }
-
   const schema = findSchemaForProcessingType(
     record.data?.processingType,
     record.type
   )
 
-  if (!schema?.classifyForWasteBalance) {
+  if (!accreditation || !schema?.classifyForWasteBalance) {
+    return null
+  }
+
+  if (record.excludedFromWasteBalance) {
     return { included: false, reasons: [], tonnage: null }
   }
 

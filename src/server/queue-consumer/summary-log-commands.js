@@ -20,8 +20,8 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 /** @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService */
 /** @typedef {import('#feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
-/** @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository */
 /** @typedef {import('#reports/domain/period-key.js').PeriodRef} PeriodRef */
+/** @typedef {import('#reports/application/report-service.js').ReportsService} ReportsService */
 
 /**
  * @typedef {object} SummaryLogHandlerDeps
@@ -32,7 +32,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {RowStateRepository} wasteRecordStatesRepository
  * @property {WasteBalanceService} wasteBalanceService
  * @property {FeatureFlags} featureFlags
- * @property {ReportsRepository} reportsRepository
+ * @property {ReportsService} reportsService
  * @property {SummaryLogExtractor} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {OnSummaryLogUploaded} onSummaryLogUploaded
@@ -72,7 +72,7 @@ export const summaryLogCommandHandlers = [
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        reportsRepository,
+        reportsService,
         overseasSitesRepository,
         summaryLogExtractor
       } = deps
@@ -82,7 +82,7 @@ export const summaryLogCommandHandlers = [
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        reportsRepository,
+        reportsService,
         overseasSitesRepository,
         summaryLogExtractor
       })

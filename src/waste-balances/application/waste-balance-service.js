@@ -32,7 +32,8 @@ import { validateAccreditationId } from '../repository/validation.js'
  * @typedef {(
  *   ledgerId: import('../repository/stream-schema.js').WasteBalanceLedgerId,
  *   submission: import('../repository/stream-schema.js').SummaryLogSubmittedPayload,
- *   createdBy: import('../repository/stream-schema.js').StreamUserSummary
+ *   createdBy: import('../repository/stream-schema.js').StreamUserSummary,
+ *   createdAt?: Date
  * ) => Promise<import('../repository/stream-port.js').StreamEvent[]>} SubmitSummaryLog
  */
 
@@ -70,16 +71,24 @@ const createLedgerCommands = (streamRepository) => {
 
   /**
    * Append the decided balance events to the ledger as one batch, stamping
-   * each with the ledger identity, its slot, and provenance.
+   * each with the ledger identity, its slot, and provenance. `createdAt`
+   * defaults to now for a live command; the historical backfill supplies the
+   * original submission time so replayed history is dated when it happened.
    *
    * @param {import('../repository/stream-schema.js').WasteBalanceLedgerId} ledgerId
    * @param {number} head
    * @param {import('../domain/commands.js').BalanceEvent[]} events
    * @param {import('../repository/stream-schema.js').StreamUserSummary} createdBy
+   * @param {Date} [createdAt]
    * @returns {Promise<import('../repository/stream-port.js').StreamEvent[]>}
    */
-  const append = (ledgerId, head, events, createdBy) => {
-    const createdAt = new Date()
+  const append = (
+    ledgerId,
+    head,
+    events,
+    createdBy,
+    createdAt = new Date()
+  ) => {
     return streamRepository.appendEvents(
       events.map((event, index) => ({
         ...ledgerId,
@@ -164,13 +173,19 @@ export const createWasteBalanceService = (
    *
    * @type {SubmitSummaryLog}
    */
-  const submitSummaryLog = async (ledgerId, submission, createdBy) => {
+  const submitSummaryLog = async (
+    ledgerId,
+    submission,
+    createdBy,
+    createdAt
+  ) => {
     const { state, head } = await fold(ledgerId)
     return append(
       ledgerId,
       head,
       decideSummaryLog(state, submission),
-      createdBy
+      createdBy,
+      createdAt
     )
   }
 

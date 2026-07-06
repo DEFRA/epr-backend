@@ -26,7 +26,7 @@ import {
 /** @typedef {import('./load-counts.js').Loads} Loads */
 /** @typedef {import('./period-status.js').LoadsByReportingPeriod} LoadsByReportingPeriod */
 /** @typedef {string} ProcessingType */
-/** @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository */
+/** @typedef {import('#reports/application/report-service.js').ReportsService} ReportsService */
 
 /**
  * Filters waste records to only those from tables that participate in waste balance.
@@ -127,17 +127,17 @@ export const classifyLoads = ({
  * @param {Registration} [params.registration]
  * @param {string} params.status
  * @param {SubmittedSummaryLog} params.summaryLog
- * @param {ReportsRepository} params.reportsRepository
+ * @param {ReportsService} params.reportsService
  * @returns {Promise<import('#reports/repository/port.js').PeriodicReport[]>}
  */
 export const fetchPeriodicReports = async ({
   registration,
   status,
   summaryLog,
-  reportsRepository
+  reportsService
 }) => {
   if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
-    return reportsRepository.findPeriodicReports({
+    return reportsService.findPeriodicReports({
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId
     })

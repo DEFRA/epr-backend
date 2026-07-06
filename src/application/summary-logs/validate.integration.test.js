@@ -126,7 +126,7 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
-      reportsRepository: /** @type {any} */ ({
+      reportsService: /** @type {any} */ ({
         findPeriodicReports: async () => []
       }),
       overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),

@@ -1,5 +1,5 @@
 import { markExcludedRecords } from '#waste-balances/application/mark-excluded-records.js'
-import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
+import { projectRowState } from './project-row-state.js'
 
 /**
  * @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -44,7 +44,7 @@ export const writeWasteRecordStates = async ({
   }
 
   const classifiedRows = markExcludedRecords(wasteRecords).map((record) =>
-    classifyWasteRecord(record, accreditation, overseasSites)
+    projectRowState(record, accreditation, overseasSites)
   )
 
   await rowStateRepository.upsertRowStates(

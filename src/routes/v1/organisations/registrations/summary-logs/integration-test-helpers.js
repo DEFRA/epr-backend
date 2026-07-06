@@ -18,6 +18,7 @@ import { createInMemoryRowStateRepository } from '#waste-records/repository/inme
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createReportsService } from '#reports/application/report-service.js'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -480,7 +481,7 @@ export const createTestInfrastructure = async (
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
-    reportsRepository: /** @type {any} */ ({
+    reportsService: /** @type {any} */ ({
       findPeriodicReports: async () => []
     }),
     overseasSitesRepository,
@@ -598,7 +599,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
-    reportsRepository,
+    reportsService: createReportsService(reportsRepository),
     overseasSitesRepository,
     summaryLogExtractor: dynamicExtractor,
     logger: mockLogger

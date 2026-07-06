@@ -44,6 +44,10 @@ describe('summaryLogCommandHandlers', () => {
       organisationsRepository: {},
       wasteRecordsRepository: {},
       wasteBalanceService: {},
+      reportsService: {
+        hasReportSubmittedSince: vi.fn(),
+        findPeriodicReports: vi.fn()
+      },
       summaryLogExtractor: {}
     }
   })
@@ -102,6 +106,7 @@ describe('summaryLogCommandHandlers', () => {
           summaryLogsRepository: deps.summaryLogsRepository,
           organisationsRepository: deps.organisationsRepository,
           wasteRecordsRepository: deps.wasteRecordsRepository,
+          reportsService: deps.reportsService,
           summaryLogExtractor: deps.summaryLogExtractor
         })
         expect(mockValidator).toHaveBeenCalledWith('log-123')

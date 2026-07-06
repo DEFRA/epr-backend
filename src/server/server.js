@@ -38,6 +38,7 @@ import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongo
 import { mongoStreamRepositoryPlugin } from '#waste-balances/repository/stream-mongodb.plugin.js'
 import { mongoWasteBalanceServicePlugin } from '#waste-balances/repository/mongodb.plugin.js'
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
+import { mongoWasteRecordStatesRepositoryPlugin } from '#waste-records/repository/mongodb.plugin.js'
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
@@ -45,6 +46,8 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
+import { runBackfillWasteRecordStates } from '#server/run-backfill-waste-record-states.js'
+import { runRegOnlySubmittedEventsBackfill } from '#server/run-reg-only-submitted-events-backfill.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -109,6 +112,10 @@ function getSwaggerPlugins() {
   ]
 }
 
+export const shouldRegisterWasteRecordStates = (config) =>
+  config.get('featureFlags.wasteRecordStates') ||
+  config.get('featureFlags.wasteRecordStatesBackfill')
+
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
@@ -134,6 +141,16 @@ function getProductionPlugins(config) {
     overseasSitesRepositoryPlugin,
     orsImportsRepositoryPlugin
   ]
+
+  // Defer row-state repository construction (and thus ensureRowStatesCollection
+  // creating the collection + indexes) until a row-state flag is on, so nothing
+  // is built ahead of the ADR-0037 switch-on. Register for either flag: the
+  // backfill sweep and the forward-write path both need the repository, and the
+  // flip choreography can leave the backfill flag off by the time forward writes
+  // begin.
+  if (shouldRegisterWasteRecordStates(config)) {
+    plugins.push(mongoWasteRecordStatesRepositoryPlugin)
+  }
 
   plugins.push(mongoReportsRepositoryPlugin)
 
@@ -223,6 +240,8 @@ async function createServer(options = {}) {
     copyFormFilesToS3(server)
     runOrganisationValidationSweep(server)
     runDuplicateAccreditationLinkMigration(server)
+    runBackfillWasteRecordStates(server)
+    runRegOnlySubmittedEventsBackfill(server)
   })
 
   return server
