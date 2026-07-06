@@ -772,6 +772,455 @@ describe(`GET ${reportsGetPath}`, () => {
       })
     })
 
+    describe('resubmission draft lifecycle', () => {
+      const changedBy = { id: 'user-1', name: 'Test', position: 'Officer' }
+
+      // 28th keeps a valid calendar day for every month; the calendar item's
+      // own dates come from the computed period, so only ISO validity matters.
+      const monthDates = (year, period) => ({
+        startDate: `${year}-${String(period).padStart(2, '0')}-01`,
+        endDate: `${year}-${String(period).padStart(2, '0')}-28`,
+        dueDate: `${year}-${String(period + 1).padStart(2, '0')}-20`
+      })
+
+      const buildCreatePayload = ({
+        organisationId,
+        registrationId,
+        year,
+        period,
+        submissionNumber
+      }) => ({
+        organisationId,
+        registrationId,
+        year,
+        cadence: 'monthly',
+        period,
+        ...monthDates(year, period),
+        changedBy,
+        submissionNumber,
+        material: 'plastic',
+        wasteProcessingType: 'exporter',
+        source: { summaryLogId: 'sl-1', lastUploadedAt: `${year}-01-15` },
+        prn: null,
+        recyclingActivity: {
+          suppliers: [],
+          totalTonnageReceived: 0,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
+        },
+        wasteSent: {
+          tonnageSentToReprocessor: 0,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0,
+          finalDestinations: []
+        }
+      })
+
+      const setup = async () => {
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          reportsRepositoryFactory,
+          'approved'
+        )
+        return {
+          server,
+          organisationId,
+          registrationId,
+          repo: reportsRepositoryFactory()
+        }
+      }
+
+      const periodItems = async (server, organisationId, registrationId, p) => {
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        return JSON.parse(response.payload).reportingPeriods.filter(
+          (item) => item.period === p
+        )
+      }
+
+      /**
+       * Submits submission 1 for the period (no resubmission flag).
+       * @returns {Promise<string>} the submitted report id
+       */
+      const seedSubmittedPeriod = async (
+        repo,
+        { organisationId, registrationId, year, period }
+      ) => {
+        const { id } = await repo.createReport(
+          buildCreatePayload({
+            organisationId,
+            registrationId,
+            year,
+            period,
+            submissionNumber: 1
+          })
+        )
+        await repo.updateReportStatus({
+          reportId: id,
+          version: 1,
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          slot: REPORT_STATUS_SLOT.READY,
+          changedBy
+        })
+        await repo.updateReportStatus({
+          reportId: id,
+          version: 2,
+          status: REPORT_STATUS.SUBMITTED,
+          slot: REPORT_STATUS_SLOT.SUBMITTED,
+          changedBy,
+          submissionDeclaredBy: 'Test User'
+        })
+        return id
+      }
+
+      /**
+       * Submits submission 1, then flags it as requiring resubmission (a later
+       * summary log restated the closed period).
+       * @returns {Promise<string>} the submitted report id
+       */
+      const seedFlaggedSubmittedPeriod = async (repo, args) => {
+        const id = await seedSubmittedPeriod(repo, args)
+        await repo.markSubmittedReportsRequiringResubmission({
+          organisationId: args.organisationId,
+          registrationId: args.registrationId,
+          summaryLogId: 'sl-2',
+          uploadedAt: `${args.year}-05-01T12:00:00.000Z`,
+          periods: [
+            { year: args.year, cadence: 'monthly', period: args.period }
+          ]
+        })
+        return id
+      }
+
+      /**
+       * Creates the resubmission (submission 2) draft for the period and,
+       * optionally, transitions it to a later status.
+       * @param {ReturnType<ReturnType<typeof createInMemoryReportsRepository>>} repo
+       * @param {{ organisationId: string, registrationId: string, year: number, period: number, toStatus?: string }} options
+       * @returns {Promise<string>} the resubmission draft report id
+       */
+      const seedResubmissionDraft = async (
+        repo,
+        { organisationId, registrationId, year, period, toStatus }
+      ) => {
+        const { id } = await repo.createReport(
+          buildCreatePayload({
+            organisationId,
+            registrationId,
+            year,
+            period,
+            submissionNumber: 2
+          })
+        )
+        if (
+          toStatus === REPORT_STATUS.READY_TO_SUBMIT ||
+          toStatus === REPORT_STATUS.SUBMITTED
+        ) {
+          await repo.updateReportStatus({
+            reportId: id,
+            version: 1,
+            status: REPORT_STATUS.READY_TO_SUBMIT,
+            slot: REPORT_STATUS_SLOT.READY,
+            changedBy
+          })
+        }
+        if (toStatus === REPORT_STATUS.SUBMITTED) {
+          await repo.updateReportStatus({
+            reportId: id,
+            version: 2,
+            status: REPORT_STATUS.SUBMITTED,
+            slot: REPORT_STATUS_SLOT.SUBMITTED,
+            changedBy,
+            submissionDeclaredBy: 'Test User'
+          })
+        }
+        return id
+      }
+
+      it('emits the submitted original and a requires_resubmission slot carrying the ready-to-submit draft', async () => {
+        const year = new Date().getUTCFullYear()
+        const { server, organisationId, registrationId, repo } = await setup()
+
+        const sub1 = await seedFlaggedSubmittedPeriod(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1
+        })
+        const sub2 = await seedResubmissionDraft(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1,
+          toStatus: REPORT_STATUS.READY_TO_SUBMIT
+        })
+
+        const january = await periodItems(
+          server,
+          organisationId,
+          registrationId,
+          1
+        )
+
+        expect(january).toHaveLength(2)
+        expect(january.map((p) => p.periodStatus).sort()).toStrictEqual([
+          'requires_resubmission',
+          'submitted'
+        ])
+
+        const resub = january.find(
+          (p) => p.periodStatus === 'requires_resubmission'
+        )
+        expect(resub.submissionNumber).toBe(2)
+        expect(resub.report).toMatchObject({
+          id: sub2,
+          status: 'ready_to_submit',
+          submissionNumber: 2
+        })
+
+        const original = january.find((p) => p.periodStatus === 'submitted')
+        expect(original.submissionNumber).toBe(1)
+        expect(original.report.id).toBe(sub1)
+      })
+
+      it('collapses to a single submitted item once the resubmission is itself submitted', async () => {
+        const year = new Date().getUTCFullYear()
+        const { server, organisationId, registrationId, repo } = await setup()
+
+        await seedFlaggedSubmittedPeriod(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1
+        })
+        const sub2 = await seedResubmissionDraft(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1,
+          toStatus: REPORT_STATUS.SUBMITTED
+        })
+
+        const january = await periodItems(
+          server,
+          organisationId,
+          registrationId,
+          1
+        )
+
+        expect(january).toHaveLength(1)
+        expect(january[0].periodStatus).toBe('submitted')
+        expect(january[0].submissionNumber).toBe(2)
+        expect(january[0].report.id).toBe(sub2)
+      })
+
+      it('keeps the resubmission slot at requires_resubmission while the draft is in progress', async () => {
+        const year = new Date().getUTCFullYear()
+        const { server, organisationId, registrationId, repo } = await setup()
+
+        await seedFlaggedSubmittedPeriod(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1
+        })
+        const draftId = await seedResubmissionDraft(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1
+        })
+
+        const january = await periodItems(
+          server,
+          organisationId,
+          registrationId,
+          1
+        )
+
+        expect(january).toHaveLength(2)
+        const resub = january.find(
+          (p) => p.periodStatus === 'requires_resubmission'
+        )
+        expect(resub.submissionNumber).toBe(2)
+        expect(resub.report).toMatchObject({
+          id: draftId,
+          status: 'in_progress',
+          submissionNumber: 2
+        })
+      })
+
+      it('curates the resubmission item report to the list shape', async () => {
+        const year = new Date().getUTCFullYear()
+        const { server, organisationId, registrationId, repo } = await setup()
+
+        await seedFlaggedSubmittedPeriod(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1
+        })
+        await seedResubmissionDraft(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1,
+          toStatus: REPORT_STATUS.READY_TO_SUBMIT
+        })
+
+        const january = await periodItems(
+          server,
+          organisationId,
+          registrationId,
+          1
+        )
+        const resub = january.find(
+          (p) => p.periodStatus === 'requires_resubmission'
+        )
+
+        expect(Object.keys(resub.report).sort()).toStrictEqual(
+          [
+            'id',
+            'status',
+            'submissionNumber',
+            'submittedAt',
+            'submittedBy'
+          ].sort()
+        )
+      })
+
+      it('reverts to the pre-draft skeleton after the resubmission draft is deleted', async () => {
+        const year = new Date().getUTCFullYear()
+        const { server, organisationId, registrationId, repo } = await setup()
+
+        const sub1 = await seedFlaggedSubmittedPeriod(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1
+        })
+        await seedResubmissionDraft(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1,
+          toStatus: REPORT_STATUS.READY_TO_SUBMIT
+        })
+        await repo.deleteReport({
+          organisationId,
+          registrationId,
+          year,
+          cadence: 'monthly',
+          period: 1,
+          submissionNumber: 2,
+          changedBy
+        })
+
+        const january = await periodItems(
+          server,
+          organisationId,
+          registrationId,
+          1
+        )
+
+        expect(january).toHaveLength(2)
+        const original = january.find((p) => p.periodStatus === 'submitted')
+        expect(original.report.id).toBe(sub1)
+        const skeleton = january.find(
+          (p) => p.periodStatus === 'requires_resubmission'
+        )
+        expect(skeleton).toMatchObject({ submissionNumber: 2, report: null })
+      })
+
+      it('emits an independent submitted and requires_resubmission pair for each flagged period', async () => {
+        const year = new Date().getUTCFullYear()
+        const { server, organisationId, registrationId, repo } = await setup()
+
+        for (const period of [1, 2]) {
+          await seedFlaggedSubmittedPeriod(repo, {
+            organisationId,
+            registrationId,
+            year,
+            period
+          })
+          await seedResubmissionDraft(repo, {
+            organisationId,
+            registrationId,
+            year,
+            period,
+            toStatus: REPORT_STATUS.READY_TO_SUBMIT
+          })
+        }
+
+        for (const period of [1, 2]) {
+          const items = await periodItems(
+            server,
+            organisationId,
+            registrationId,
+            period
+          )
+          expect(items.map((p) => p.periodStatus).sort()).toStrictEqual([
+            'requires_resubmission',
+            'submitted'
+          ])
+        }
+      })
+
+      it('emits a single item for a submitted period that was never flagged', async () => {
+        const year = new Date().getUTCFullYear()
+        const { server, organisationId, registrationId, repo } = await setup()
+
+        await seedSubmittedPeriod(repo, {
+          organisationId,
+          registrationId,
+          year,
+          period: 1
+        })
+
+        const january = await periodItems(
+          server,
+          organisationId,
+          registrationId,
+          1
+        )
+
+        expect(january).toHaveLength(1)
+        expect(january[0].periodStatus).toBe('submitted')
+      })
+
+      it('emits a single in-progress item for a period with only a first-submission draft', async () => {
+        const year = new Date().getUTCFullYear()
+        const { server, organisationId, registrationId, repo } = await setup()
+
+        await repo.createReport(
+          buildCreatePayload({
+            organisationId,
+            registrationId,
+            year,
+            period: 1,
+            submissionNumber: 1
+          })
+        )
+
+        const january = await periodItems(
+          server,
+          organisationId,
+          registrationId,
+          1
+        )
+
+        expect(january).toHaveLength(1)
+        expect(january[0].periodStatus).toBe('in_progress')
+      })
+    })
+
     describe('periodic reports under a different cadence', () => {
       it('ignores periodic reports stored under a mismatched cadence', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()

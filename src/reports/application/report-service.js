@@ -5,7 +5,9 @@ import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-iss
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
+import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 
 /**
  * @import { PeriodicReport } from '#reports/repository/port.js'
@@ -38,6 +40,39 @@ export const createReportsService = (reportsRepository) => ({
 })
 
 /**
+ * Finds the submission summary for a specific submission number within periodic
+ * reports, checking both the current slot and previous submissions.
+ * @param {PeriodicReport[]} periodicReports
+ * @param {number} year
+ * @param {Cadence} cadence
+ * @param {number} period
+ * @param {number} submissionNumber
+ * @returns {import('#reports/repository/port.js').ReportSummary | null}
+ */
+function findSubmissionByNumber(
+  periodicReports,
+  year,
+  cadence,
+  period,
+  submissionNumber
+) {
+  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
+    cadence
+  ]?.[period]
+  if (!slot) {
+    return null
+  }
+  if (slot.current?.submissionNumber === submissionNumber) {
+    return slot.current
+  }
+  return (
+    slot.previousSubmissions?.find(
+      (s) => s.submissionNumber === submissionNumber
+    ) ?? null
+  )
+}
+
+/**
  * Finds the report ID for a specific submission number within periodic reports,
  * checking both the current slot and previous submissions.
  * @param {PeriodicReport[]} periodicReports
@@ -54,19 +89,15 @@ function findReportIdBySubmissionNumber(
   period,
   submissionNumber
 ) {
-  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
-    cadence
-  ]?.[period]
-  if (!slot) {
-    return null
-  }
-  if (slot.current?.submissionNumber === submissionNumber) {
-    return slot.current.id
-  }
-  const previous = slot.previousSubmissions?.find(
-    (s) => s.submissionNumber === submissionNumber
+  return (
+    findSubmissionByNumber(
+      periodicReports,
+      year,
+      cadence,
+      period,
+      submissionNumber
+    )?.id ?? null
   )
-  return previous?.id ?? null
 }
 
 /**
@@ -227,6 +258,64 @@ const assertNoExistingReport = (
         payload: { existingReport: { id, cadence, period, year } }
       }
     )
+  }
+}
+
+/**
+ * Throws a 409 Boom when creating a resubmission (submissionNumber > 1) is not
+ * allowed. A resubmission requires the closed-period-adjustments feature flag
+ * to be on and the previous submission to be a submitted report flagged as
+ * requiring resubmission. The flag is checked first, then the block rule; each
+ * failure carries a distinct `reason` so the frontend can tell them apart from
+ * the duplicate-period conflict.
+ *
+ * @param {PeriodicReport[]} periodicReports
+ * @param {number} year
+ * @param {Cadence} cadence
+ * @param {number} period
+ * @param {number} submissionNumber
+ * @returns {void}
+ */
+const assertResubmissionAllowed = (
+  periodicReports,
+  year,
+  cadence,
+  period,
+  submissionNumber
+) => {
+  if (submissionNumber <= 1) {
+    return
+  }
+
+  const reject = (reason) =>
+    conflict(
+      `Resubmission ${submissionNumber} not permitted for ${cadence} period ${period} of ${year}`,
+      reason,
+      {
+        event: {
+          action: 'create_report',
+          reason: `cadence=${cadence} period=${period} year=${year} submissionNumber=${submissionNumber} rejected=${reason}`
+        },
+        payload: { reason }
+      }
+    )
+
+  if (!isClosedPeriodAdjustmentsEnabled()) {
+    throw reject(errorCodes.resubmissionFeatureDisabled)
+  }
+
+  const previous = findSubmissionByNumber(
+    periodicReports,
+    year,
+    cadence,
+    period,
+    submissionNumber - 1
+  )
+  const permitted =
+    previous?.status === REPORT_STATUS.SUBMITTED &&
+    Boolean(previous?.resubmissionRequired)
+  if (!permitted) {
+    throw reject(errorCodes.resubmissionNotPermitted)
   }
 }
 
@@ -417,7 +506,18 @@ export async function createReportForPeriod({
     registrationId
   })
 
+  // Existence is the more fundamental precondition: a duplicate submission is
+  // reported as such regardless of whether a fresh create would have been
+  // permitted, so the duplicate check runs before the resubmission gate.
   assertNoExistingReport(
+    periodicReports,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  )
+
+  assertResubmissionAllowed(
     periodicReports,
     year,
     cadence,
