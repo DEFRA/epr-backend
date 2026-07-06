@@ -176,7 +176,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         expect(history).toHaveLength(2)
       })
 
-      it('keeps partitions isolated when deduping identical content', async () => {
+      it('keeps ledgers isolated when deduping identical content', async () => {
         const entry = buildSummaryLogRowStateEntry()
 
         await repository.upsertSummaryLogRowStates(

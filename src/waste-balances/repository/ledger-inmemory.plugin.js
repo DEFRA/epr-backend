@@ -1,7 +1,7 @@
 import { createInMemoryLedgerRepository } from './ledger-inmemory.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 
-export function createInMemoryStreamRepositoryPlugin() {
+export function createInMemoryLedgerRepositoryPlugin() {
   return {
     name: 'ledgerRepository',
     register: (server) => {

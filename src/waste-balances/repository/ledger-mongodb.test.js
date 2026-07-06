@@ -4,10 +4,10 @@ import { MongoClient } from 'mongodb'
 
 import {
   createMongoLedgerRepository,
-  ensureStreamCollection,
+  ensureLedgerCollection,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from './ledger-mongodb.js'
-import { buildStreamEvent } from './ledger-test-data.js'
+import { buildLedgerEvent } from './ledger-test-data.js'
 import { testLedgerRepositoryContract } from './ledger-port.contract.js'
 
 const DATABASE_NAME = 'epr-backend'
@@ -19,9 +19,9 @@ const it = mongoIt.extend({
     await client.close()
   },
 
-  streamCollection: async (/** @type {*} */ { mongoClient }, use) => {
+  ledgerCollection: async (/** @type {*} */ { mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
-    await ensureStreamCollection(database)
+    await ensureLedgerCollection(database)
     await use(database.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME))
   },
 
@@ -41,7 +41,7 @@ const indexKeyFor = (indexes, name) =>
 const indexOptionFor = (indexes, name, option) =>
   indexes.find((idx) => idx.name === name)?.[option]
 
-describe('ensureStreamCollection', () => {
+describe('ensureLedgerCollection', () => {
   beforeEach(async (/** @type {*} */ { mongoClient }) => {
     await mongoClient
       .db(DATABASE_NAME)
@@ -51,9 +51,9 @@ describe('ensureStreamCollection', () => {
 
   describe('indexes', () => {
     it('creates the partition_number compound unique index', async (/** @type {*} */ {
-      streamCollection
+      ledgerCollection
     }) => {
-      const indexes = await streamCollection.indexes()
+      const indexes = await ledgerCollection.indexes()
       expect(indexKeyFor(indexes, 'partition_number')).toEqual({
         registrationId: 1,
         accreditationId: 1,
@@ -63,9 +63,9 @@ describe('ensureStreamCollection', () => {
     })
 
     it('creates the partition_kind_latest index for findLatestInLedgerByKind', async (/** @type {*} */ {
-      streamCollection
+      ledgerCollection
     }) => {
-      const indexes = await streamCollection.indexes()
+      const indexes = await ledgerCollection.indexes()
       expect(indexKeyFor(indexes, 'partition_kind_latest')).toEqual({
         registrationId: 1,
         accreditationId: 1,
@@ -75,9 +75,9 @@ describe('ensureStreamCollection', () => {
     })
 
     it('creates the prn_watermark_catchup index for findEventsByPrnIdAfter', async (/** @type {*} */ {
-      streamCollection
+      ledgerCollection
     }) => {
-      const indexes = await streamCollection.indexes()
+      const indexes = await ledgerCollection.indexes()
       expect(indexKeyFor(indexes, 'prn_watermark_catchup')).toEqual({
         registrationId: 1,
         accreditationId: 1,
@@ -92,8 +92,8 @@ describe('ensureStreamCollection', () => {
       mongoClient
     }) => {
       const database = mongoClient.db(DATABASE_NAME)
-      await ensureStreamCollection(database)
-      await expect(ensureStreamCollection(database)).resolves.toBeDefined()
+      await ensureLedgerCollection(database)
+      await expect(ensureLedgerCollection(database)).resolves.toBeDefined()
     })
   })
 })
@@ -130,7 +130,7 @@ describe('MongoDB ledger repository', () => {
       )()
 
       await expect(
-        repository.appendEvents([buildStreamEvent({ number: 1 })])
+        repository.appendEvents([buildLedgerEvent({ number: 1 })])
       ).rejects.toBe(upstream)
     })
 
@@ -151,7 +151,7 @@ describe('MongoDB ledger repository', () => {
       )()
 
       await expect(
-        repository.appendEvents([buildStreamEvent({ number: 1 })])
+        repository.appendEvents([buildLedgerEvent({ number: 1 })])
       ).rejects.toBe(mongoError)
     })
 
@@ -171,7 +171,7 @@ describe('MongoDB ledger repository', () => {
       )()
 
       await expect(
-        repository.appendEvents([buildStreamEvent({ number: 1 })])
+        repository.appendEvents([buildLedgerEvent({ number: 1 })])
       ).rejects.toMatchObject({
         name: 'LedgerSlotConflictError'
       })

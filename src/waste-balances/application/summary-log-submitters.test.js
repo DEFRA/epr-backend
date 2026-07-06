@@ -8,7 +8,7 @@ import {
   emptyAttributionCounts,
   formatAttributionMatrix,
   mergeAttributionMatrices,
-  toStreamActor
+  toLedgerActor
 } from './summary-log-submitters.js'
 
 const summaryLogDoc = (docId, fileId) => ({
@@ -147,10 +147,10 @@ describe('buildSystemLogSubmitters', () => {
   })
 })
 
-describe('toStreamActor', () => {
+describe('toLedgerActor', () => {
   it('carries a name and an email distinctly when the audit holds both', () => {
     expect(
-      toStreamActor({
+      toLedgerActor({
         id: 'user-1',
         name: 'Alice Submitter',
         email: 'alice@example.com'
@@ -163,31 +163,31 @@ describe('toStreamActor', () => {
   })
 
   it('carries only the name when the audit holds no email', () => {
-    expect(toStreamActor({ id: 'machine-1', name: 'worker' })).toEqual({
+    expect(toLedgerActor({ id: 'machine-1', name: 'worker' })).toEqual({
       id: 'machine-1',
       name: 'worker'
     })
   })
 
   it('carries only the email when the audit holds no name', () => {
-    expect(toStreamActor({ id: 'user-1', email: 'alice@example.com' })).toEqual(
+    expect(toLedgerActor({ id: 'user-1', email: 'alice@example.com' })).toEqual(
       { id: 'user-1', email: 'alice@example.com' }
     )
   })
 
   it('carries an id-only actor as a real, attributable actor', () => {
-    expect(toStreamActor({ id: 'user-1' })).toEqual({ id: 'user-1' })
+    expect(toLedgerActor({ id: 'user-1' })).toEqual({ id: 'user-1' })
   })
 
   it('rejects an actor that carries no id', () => {
-    expect(toStreamActor({ name: 'Alice', email: 'alice@example.com' })).toBe(
+    expect(toLedgerActor({ name: 'Alice', email: 'alice@example.com' })).toBe(
       null
     )
   })
 
   it('rejects an absent actor', () => {
-    expect(toStreamActor(undefined)).toBe(null)
-    expect(toStreamActor(null)).toBe(null)
+    expect(toLedgerActor(undefined)).toBe(null)
+    expect(toLedgerActor(null)).toBe(null)
   })
 })
 

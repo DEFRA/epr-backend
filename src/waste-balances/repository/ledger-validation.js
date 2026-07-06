@@ -8,7 +8,7 @@ import {
 /**
  * @returns {import('./ledger-schema.js').LedgerEventInsert}
  */
-export const validateStreamEventInsert = (data) => {
+export const validateLedgerEventInsert = (data) => {
   const { error, value } = ledgerEventInsertSchema.validate(data, {
     abortEarly: false,
     stripUnknown: true
@@ -25,7 +25,7 @@ export const validateStreamEventInsert = (data) => {
 /**
  * @returns {import('./ledger-schema.js').LedgerEvent}
  */
-export const validateStreamEventRead = (data) => {
+export const validateLedgerEventRead = (data) => {
   const { error, value } = ledgerEventReadSchema.validate(data, {
     abortEarly: false,
     stripUnknown: true

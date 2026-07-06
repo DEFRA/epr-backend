@@ -14,7 +14,7 @@
  * @param {SubmitAuditActor} [createdBy]
  * @returns {import('../repository/ledger-schema.js').LedgerUserSummary | null}
  */
-export const toStreamActor = (createdBy) => {
+export const toLedgerActor = (createdBy) => {
   if (createdBy?.id === undefined) {
     return null
   }
@@ -192,7 +192,7 @@ export const formatAttributionMatrix = (matrix) =>
  * keys on the summary-log document id (`context.summaryLogId`); the ledger keys
  * on `summaryLog.file.id`, a different namespace, so the summary-log documents
  * bridge document id → file id. Each actor is reduced to the ledger's
- * `{ id, name?, email? }` summary by `toStreamActor`, which rejects only an
+ * `{ id, name?, email? }` summary by `toLedgerActor`, which rejects only an
  * actor with no id at all, keeping genuinely actor-less submissions visible
  * downstream.
  *
@@ -221,7 +221,7 @@ export const buildSystemLogSubmitters = ({ submitActors, summaryLogDocs }) => {
 
   const submitters = new Map()
   for (const { summaryLogId, createdBy } of submitActors) {
-    const actor = toStreamActor(createdBy)
+    const actor = toLedgerActor(createdBy)
     if (actor === null) {
       continue
     }

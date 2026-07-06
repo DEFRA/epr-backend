@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
-import { validateStreamEventInsert } from './ledger-validation.js'
+import { validateLedgerEventInsert } from './ledger-validation.js'
 
 /**
  * In-memory adapter for the waste balance event ledger.
@@ -98,7 +98,7 @@ const doAppendEvents = (storage, events) => {
   }
 
   return events.map((event) => {
-    const validated = validateStreamEventInsert(event)
+    const validated = validateLedgerEventInsert(event)
     const persisted = { id: randomUUID(), ...validated }
     storage.push(persisted)
     return structuredClone(persisted)

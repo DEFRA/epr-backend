@@ -3,7 +3,7 @@ import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
  * Builds the waste balance service over the shared ledger from
- * `server.app.ledgerRepository`, so `mongoStreamRepositoryPlugin` must register
+ * `server.app.ledgerRepository`, so `mongoLedgerRepositoryPlugin` must register
  * before this plugin.
  */
 export const mongoWasteBalanceServicePlugin = {

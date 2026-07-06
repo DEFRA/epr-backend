@@ -30,7 +30,7 @@ const buildAccreditedRegistrationStages = () => [
   }
 ]
 
-const buildLatestStreamEventLookupStage = () => ({
+const buildLatestLedgerEventLookupStage = () => ({
   $lookup: {
     from: WASTE_BALANCE_EVENTS_COLLECTION_NAME,
     let: { regId: '$registrationId', accId: ACCREDITATION_ID_FIELD },
@@ -51,18 +51,18 @@ const buildLatestStreamEventLookupStage = () => ({
         $project: { _id: 0, availableAmount: '$closingBalance.availableAmount' }
       }
     ],
-    as: 'latestStreamEvent'
+    as: 'latestLedgerEvent'
   }
 })
 
 // Mirrors currentWasteBalance
-// (waste-balances/application/current-waste-balance.js): the latest stream
-// closing balance is the source of truth, resolving to zero when the stream is
-// empty.
-const buildStreamAvailableAmountStage = () => ({
+// (waste-balances/application/current-waste-balance.js): the latest ledger
+// event's closing balance is the source of truth, resolving to zero when the
+// ledger is empty.
+const buildLedgerAvailableAmountStage = () => ({
   $addFields: {
     availableAmount: {
-      $ifNull: [{ $arrayElemAt: ['$latestStreamEvent.availableAmount', 0] }, 0]
+      $ifNull: [{ $arrayElemAt: ['$latestLedgerEvent.availableAmount', 0] }, 0]
     }
   }
 })
@@ -70,8 +70,8 @@ const buildStreamAvailableAmountStage = () => ({
 const buildAggregationPipeline = () => [
   ...buildAccreditedRegistrationStages(),
   ...buildEffectiveMaterialStages(),
-  buildLatestStreamEventLookupStage(),
-  buildStreamAvailableAmountStage(),
+  buildLatestLedgerEventLookupStage(),
+  buildLedgerAvailableAmountStage(),
   {
     $group: {
       _id: '$effectiveMaterial',

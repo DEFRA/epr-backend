@@ -72,7 +72,7 @@ const buildPrn = (overrides = {}) => ({
   ...overrides
 })
 
-const buildStreamEvent = (kind, number = APPENDED_WATERMARK) => ({
+const buildLedgerEvent = (kind, number = APPENDED_WATERMARK) => ({
   id: `event-${number}`,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
@@ -91,7 +91,7 @@ const buildStreamEvent = (kind, number = APPENDED_WATERMARK) => ({
  * non-zero balance with room to spare. The first PRN command then appends at
  * APPENDED_WATERMARK.
  */
-const buildSeededStreamRepository = () =>
+const buildSeededLedgerRepository = () =>
   createInMemoryLedgerRepository([
     {
       id: 'seed-1',
@@ -150,7 +150,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       createInMemoryPackagingRecyclingNotesRepository([storedPrn])(
         buildLogger()
       )
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
 
     await callUpdate({
       prnRepository: packagingRecyclingNotesRepository,
@@ -172,7 +172,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockImplementation(async ({ projection }) => projection)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
     const appendEvents = vi.spyOn(ledgerRepository, 'appendEvents')
 
     await callUpdate({
@@ -204,7 +204,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
   it('rejects issuance on a suspended accreditation before appending any event', async () => {
     const persistProjection = vi.fn()
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
     const appendEvents = vi.spyOn(ledgerRepository, 'appendEvents')
 
     await expect(
@@ -234,7 +234,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockImplementation(async ({ projection }) => projection)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
     const appendEvents = vi.spyOn(ledgerRepository, 'appendEvents')
 
     await callUpdate({
@@ -269,7 +269,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockRejectedValue(new Error('doc write failed'))
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
 
     await expect(
       callUpdate({
@@ -299,7 +299,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
       .mockImplementation(async ({ projection }) => projection)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
 
     await callUpdate({
       prnRepository,
@@ -325,7 +325,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockRejectedValue(new PrnNumberConflictError('ER2600001'))
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
 
     await expect(
       callUpdate({
@@ -347,7 +347,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
   it('throws Boom.badImplementation when persistProjection returns null on issuance', async () => {
     const persistProjection = vi.fn().mockResolvedValue(null)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
 
     await expect(
       callUpdate({
@@ -369,7 +369,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
   it('throws Boom.badImplementation when persistProjection returns null on a non-issuance ledger write', async () => {
     const persistProjection = vi.fn().mockResolvedValue(null)
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
 
     await expect(
       callUpdate({
@@ -393,7 +393,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockRejectedValue(new Error('doc write failed'))
     const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededStreamRepository()
+    const ledgerRepository = buildSeededLedgerRepository()
 
     await expect(
       callUpdate({
@@ -432,8 +432,8 @@ describe('updatePrnStatus composes the read fold with the real CAS-enforcing rep
     })
     const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildLedgerRepositories(storedPrn, [
-        buildStreamEvent(LEDGER_EVENT_KIND.PRN_CREATED, 1),
-        buildStreamEvent(LEDGER_EVENT_KIND.PRN_ISSUED, 2)
+        buildLedgerEvent(LEDGER_EVENT_KIND.PRN_CREATED, 1),
+        buildLedgerEvent(LEDGER_EVENT_KIND.PRN_ISSUED, 2)
       ])
 
     const projected = await getProjectedPrnByNumber({

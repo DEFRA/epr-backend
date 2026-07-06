@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 
 import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
@@ -84,7 +84,7 @@ describe('registered-only summary-log submitted event — balance neutrality', (
 
   it('does not touch an accredited balance in the same registration', async () => {
     const ledgerRepository = createInMemoryLedgerRepository([
-      buildStreamEvent({
+      buildLedgerEvent({
         registrationId: 'reg-1',
         accreditationId: 'acc-1',
         number: 1,

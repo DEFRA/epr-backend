@@ -7,7 +7,7 @@ import {
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -28,7 +28,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
    * Build an in-memory event ledger seeded with the given closing balances, so
    * the route's service folds them into the balances it returns.
    */
-  const buildStreamRepository = async (balances) => {
+  const buildLedgerRepository = async (balances) => {
     const ledgerRepository = createInMemoryLedgerRepository()()
     for (const {
       accreditationId,
@@ -38,7 +38,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       availableAmount
     } of balances) {
       await ledgerRepository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           accreditationId,
           organisationId: orgId,
           registrationId,
@@ -70,7 +70,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
   const buildServer = async ({ balances, organisations }) =>
     createTestServer({
       repositories: {
-        ledgerRepository: await buildStreamRepository(balances),
+        ledgerRepository: await buildLedgerRepository(balances),
         organisationsRepository: buildOrganisationsRepository(organisations)
       },
       featureFlags: createInMemoryFeatureFlags({})

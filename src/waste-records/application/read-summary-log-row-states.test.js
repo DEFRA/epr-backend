@@ -8,11 +8,11 @@ import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
 
 const submissionEvent = (number, summaryLogId) =>
-  buildStreamEvent({
+  buildLedgerEvent({
     number,
     payload: { summaryLogId, creditTotal: number * 10 }
   })

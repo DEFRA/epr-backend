@@ -3,7 +3,7 @@ import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
  * Builds the waste balance service over the shared in-memory ledger from
- * `server.app.ledgerRepository`, so `createInMemoryStreamRepositoryPlugin` must
+ * `server.app.ledgerRepository`, so `createInMemoryLedgerRepositoryPlugin` must
  * register before this plugin.
  */
 export function createInMemoryWasteBalanceServicePlugin() {

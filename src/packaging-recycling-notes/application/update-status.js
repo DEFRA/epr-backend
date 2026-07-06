@@ -124,7 +124,7 @@ async function performStreamWrite({
     assertAccreditationNotSuspended(accreditation)
   }
 
-  const streamEvents = await applyPrnBalanceCommand(service, logger, {
+  const ledgerEvents = await applyPrnBalanceCommand(service, logger, {
     currentStatus,
     newStatus,
     ledgerId: { organisationId, registrationId, accreditationId },
@@ -133,7 +133,7 @@ async function performStreamWrite({
     createdBy: user
   })
 
-  const projection = foldPrnFromTailEvents(prn, streamEvents)
+  const projection = foldPrnFromTailEvents(prn, ledgerEvents)
 
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     return persistProjectionWithIssuanceRetry({

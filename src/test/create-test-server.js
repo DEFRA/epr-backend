@@ -34,7 +34,7 @@ import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organ
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
 import { createInMemoryWasteBalanceServicePlugin } from '#waste-balances/repository/inmemory.plugin.js'
-import { createInMemoryStreamRepositoryPlugin } from '#waste-balances/repository/ledger-inmemory.plugin.js'
+import { createInMemoryLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-inmemory.plugin.js'
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
 
@@ -111,7 +111,7 @@ const repositoryConfigs = [
   },
   {
     name: 'ledgerRepository',
-    createDefault: createInMemoryStreamRepositoryPlugin
+    createDefault: createInMemoryLedgerRepositoryPlugin
   },
   {
     name: 'wasteBalanceService',

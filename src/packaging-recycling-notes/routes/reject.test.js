@@ -8,7 +8,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { config } from '#root/config.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -45,7 +45,7 @@ const authHeaders = {
  * while `findBalance` still resolves a balance for the status-only append.
  */
 const openingBalanceEvent = () =>
-  buildStreamEvent({
+  buildLedgerEvent({
     registrationId,
     accreditationId,
     organisationId,

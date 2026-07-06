@@ -5,12 +5,12 @@ import { testLedgerRepositoryContract } from './ledger-port.contract.js'
 
 const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern
-  streamStorage: async ({}, use) => {
+  ledgerStorage: async ({}, use) => {
     const storage = []
     await use(storage)
   },
-  ledgerRepository: async (/** @type {*} */ { streamStorage }, use) => {
-    const factory = createInMemoryLedgerRepository(streamStorage)
+  ledgerRepository: async (/** @type {*} */ { ledgerStorage }, use) => {
+    const factory = createInMemoryLedgerRepository(ledgerStorage)
     await use(factory)
   }
 })

@@ -300,7 +300,7 @@ describe('foldPrnFromTailEvents', () => {
       )
 
       expect(() => foldPrnFromTailEvents(prn, [event])).toThrow(
-        /unmappable stream event kind/i
+        /unmappable ledger event kind/i
       )
     })
   })

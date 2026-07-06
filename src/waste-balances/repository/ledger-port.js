@@ -29,7 +29,7 @@ export class LedgerSlotConflictError extends Error {
    */
   constructor(registrationId, accreditationId, slotNumber) {
     super(
-      `Stream slot already occupied for registration ${registrationId} accreditation ${accreditationId} number ${slotNumber}`
+      `Ledger slot already occupied for registration ${registrationId} accreditation ${accreditationId} number ${slotNumber}`
     )
     this.name = 'LedgerSlotConflictError'
     this.registrationId = registrationId
@@ -62,7 +62,7 @@ export class LedgerSequenceError extends Error {
    */
   constructor(registrationId, accreditationId, providedNumber, expectedNumber) {
     super(
-      `Stream sequence violation for registration ${registrationId} accreditation ${accreditationId}: expected number ${expectedNumber}, got ${providedNumber}`
+      `Ledger sequence violation for registration ${registrationId} accreditation ${accreditationId}: expected number ${expectedNumber}, got ${providedNumber}`
     )
     this.name = 'LedgerSequenceError'
     this.registrationId = registrationId

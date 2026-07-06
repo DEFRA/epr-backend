@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildStreamEvent } from '../ledger-test-data.js'
+import { buildLedgerEvent } from '../ledger-test-data.js'
 
 /**
  * @typedef {object} LedgerContractContext
@@ -20,14 +20,14 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
 
     it('deletes all events for the given ledgerId and returns the count', async () => {
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-del',
           accreditationId: 'acc-del',
           number: 1
         })
       ])
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-del',
           accreditationId: 'acc-del',
           number: 2,
@@ -49,16 +49,16 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
       expect(count).toBe(0)
     })
 
-    it('does not affect events in other partitions', async () => {
+    it('does not affect events in other ledgers', async () => {
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-keep',
           accreditationId: 'acc-keep',
           number: 1
         })
       ])
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-remove',
           accreditationId: 'acc-remove',
           number: 1
@@ -74,14 +74,14 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
 
     it("deletes one accreditation's ledgerId without touching the same registration's registered-only ledger", async () => {
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-shared',
           accreditationId: 'acc-1',
           number: 1
         })
       ])
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-shared',
           accreditationId: null,
           number: 1,
@@ -94,18 +94,18 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
 
       expect(count).toBe(1)
 
-      const accreditationStream = await repository.findLatestInLedger(
+      const accreditationLedger = await repository.findLatestInLedger(
         'reg-shared',
         'acc-1'
       )
-      expect(accreditationStream).toBeNull()
+      expect(accreditationLedger).toBeNull()
 
-      const registeredOnlyStream = await repository.findLatestInLedger(
+      const registeredOnlyLedger = await repository.findLatestInLedger(
         'reg-shared',
         null
       )
-      expect(registeredOnlyStream).not.toBeNull()
-      expect(registeredOnlyStream?.accreditationId).toBeNull()
+      expect(registeredOnlyLedger).not.toBeNull()
+      expect(registeredOnlyLedger?.accreditationId).toBeNull()
     })
   })
 }

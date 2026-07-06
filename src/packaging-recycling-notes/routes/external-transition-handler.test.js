@@ -13,7 +13,7 @@ import { config } from '#root/config.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
   setupAuthContext,
@@ -161,7 +161,7 @@ describe('external PRN transition read-side fold', () => {
     await startServer({
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       events: [
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: REG_ID,
           accreditationId: ACC_ID,
           organisationId: ORG_ID,

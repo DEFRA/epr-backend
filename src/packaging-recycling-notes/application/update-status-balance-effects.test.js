@@ -8,7 +8,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 const REGISTRATION_ID = 'reg-1'
 const ACCREDITATION_ID = 'acc-1'
@@ -43,7 +43,7 @@ const buildLogger = () => ({
 const serviceWithBalance = (closingBalance) => {
   const events = closingBalance
     ? [
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: REGISTRATION_ID,
           accreditationId: ACCREDITATION_ID,
           organisationId: ORGANISATION_ID,

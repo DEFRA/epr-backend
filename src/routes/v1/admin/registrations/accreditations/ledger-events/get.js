@@ -1,12 +1,12 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
-export const streamEventsGetPath =
+export const ledgerEventsGetPath =
   '/v1/admin/registrations/{registrationId}/accreditations/{accreditationId}/waste-balance-events'
 
-export const streamEventsGet = {
+export const ledgerEventsGet = {
   method: 'GET',
-  path: streamEventsGetPath,
+  path: ledgerEventsGetPath,
   options: {
     auth: {
       scope: [SCOPES.adminRead]

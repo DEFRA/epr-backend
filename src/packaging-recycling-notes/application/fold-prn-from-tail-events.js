@@ -2,7 +2,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 /**
- * Stream-event-kind → PRN currentStatus the event projects to.
+ * Ledger-event-kind → PRN currentStatus the event projects to.
  *
  * @type {Record<string, import('#packaging-recycling-notes/domain/model.js').PrnStatus>}
  */
@@ -16,7 +16,7 @@ const LEDGER_EVENT_KIND_TO_PRN_STATUS = Object.freeze({
 })
 
 /**
- * Stream-event-kind → PRN status slot the event timestamps. Slot names follow
+ * Ledger-event-kind → PRN status slot the event timestamps. Slot names follow
  * the business operation that occurred (rejected/deleted/cancelled), not the
  * resulting status — `prn-rejected` records on `status.rejected` even though
  * the currentStatus moves to `awaiting_cancellation`.
@@ -39,7 +39,7 @@ const LEDGER_EVENT_KIND_TO_STATUS_SLOT = Object.freeze({
 const applyEvent = (prn, event) => {
   const newStatus = LEDGER_EVENT_KIND_TO_PRN_STATUS[event.kind]
   if (!newStatus) {
-    throw new Error(`Unmappable stream event kind: ${event.kind}`)
+    throw new Error(`Unmappable ledger event kind: ${event.kind}`)
   }
   const slot = LEDGER_EVENT_KIND_TO_STATUS_SLOT[event.kind]
   // PRN actors record id and name only; the event's createdBy may also carry an

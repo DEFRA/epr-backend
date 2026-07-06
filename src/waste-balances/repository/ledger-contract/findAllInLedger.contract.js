@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildStreamEvent } from '../ledger-test-data.js'
+import { buildLedgerEvent } from '../ledger-test-data.js'
 
 export const testFindAllInLedgerBehaviour = (it) => {
   describe('findAllInLedger', () => {
@@ -23,7 +23,7 @@ export const testFindAllInLedgerBehaviour = (it) => {
 
     it('returns all events ordered by number ascending', async () => {
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-all',
           accreditationId: 'acc-all',
           number: 1,
@@ -31,7 +31,7 @@ export const testFindAllInLedgerBehaviour = (it) => {
         })
       ])
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-all',
           accreditationId: 'acc-all',
           number: 2,
@@ -39,7 +39,7 @@ export const testFindAllInLedgerBehaviour = (it) => {
         })
       ])
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-all',
           accreditationId: 'acc-all',
           number: 3,
@@ -57,14 +57,14 @@ export const testFindAllInLedgerBehaviour = (it) => {
 
     it('does not return events from a different ledgerId', async () => {
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-a',
           accreditationId: 'acc-a',
           number: 1
         })
       ])
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-b',
           accreditationId: 'acc-b',
           number: 1

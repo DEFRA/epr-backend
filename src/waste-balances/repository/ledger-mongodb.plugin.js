@@ -1,7 +1,7 @@
 import { createMongoLedgerRepository } from './ledger-mongodb.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 
-export const mongoStreamRepositoryPlugin = {
+export const mongoLedgerRepositoryPlugin = {
   name: 'ledgerRepository',
   version: '1.0.0',
   dependencies: ['mongodb'],

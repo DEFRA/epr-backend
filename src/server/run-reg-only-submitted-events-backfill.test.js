@@ -55,7 +55,7 @@ describe('runRegOnlySubmittedEventsBackfill', () => {
         summaryLogsRepository: { name: 'summaryLogs' },
         overseasSitesRepository: { name: 'overseasSites' },
         systemLogsRepository: { name: 'systemLogs' },
-        ledgerRepository: { name: 'stream' },
+        ledgerRepository: { name: 'ledger' },
         wasteBalanceService: { name: 'wasteBalanceService' }
       }
     }

@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '../ledger-schema.js'
-import { buildStreamEvent, buildPrnCreatedEvent } from '../ledger-test-data.js'
+import { buildLedgerEvent, buildPrnCreatedEvent } from '../ledger-test-data.js'
 
 export const testFindLatestInLedgerByKindBehaviour = (it) => {
   describe('findLatestInLedgerByKind', () => {
@@ -37,7 +37,7 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
 
     it('returns the highest-numbered event of the specified kind', async () => {
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-filter',
           accreditationId: 'acc-filter',
           number: 1,
@@ -53,7 +53,7 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
         })
       ])
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-filter',
           accreditationId: 'acc-filter',
           number: 3,
@@ -73,7 +73,7 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
 
     it('isolates results by ledgerId', async () => {
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-a',
           accreditationId: 'acc-a',
           number: 1,
@@ -81,7 +81,7 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
         })
       ])
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-b',
           accreditationId: 'acc-b',
           number: 1,
@@ -108,7 +108,7 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
 
     it('treats null and non-null accreditationId as separate ledgers', async () => {
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-null',
           accreditationId: null,
           number: 1,
@@ -117,7 +117,7 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
         })
       ])
       await repository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           registrationId: 'reg-null',
           accreditationId: 'acc-present',
           number: 1,

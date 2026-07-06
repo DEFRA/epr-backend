@@ -7,7 +7,7 @@ import {
   createMongoLedgerRepository,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from '#waste-balances/repository/ledger-mongodb.js'
-import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildOrganisation,
   buildRegistration
@@ -88,7 +88,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
 
       const ledgerRepository = (await createMongoLedgerRepository(database))()
       await ledgerRepository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           accreditationId: accreditationId1,
           organisationId,
           registrationId: registrationId1,
@@ -97,7 +97,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
         })
       ])
       await ledgerRepository.appendEvents([
-        buildStreamEvent({
+        buildLedgerEvent({
           accreditationId: accreditationId2,
           organisationId,
           registrationId: registrationId2,

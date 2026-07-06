@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { createInMemoryLedgerRepository } from '../repository/ledger-inmemory.js'
 import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
-import { buildStreamEvent } from '../repository/ledger-test-data.js'
+import { buildLedgerEvent } from '../repository/ledger-test-data.js'
 import { currentWasteBalance } from './current-waste-balance.js'
 
 const ledgerId = {
@@ -12,7 +12,7 @@ const ledgerId = {
 }
 
 const submissionEvent = (number, creditTotal) =>
-  buildStreamEvent({
+  buildLedgerEvent({
     number,
     kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
     payload: { summaryLogId: `log-${number}`, creditTotal },
@@ -20,7 +20,7 @@ const submissionEvent = (number, creditTotal) =>
   })
 
 const prnCreatedEvent = (number, amount, closingBalance) =>
-  buildStreamEvent({
+  buildLedgerEvent({
     number,
     kind: LEDGER_EVENT_KIND.PRN_CREATED,
     payload: { prnId: 'prn-1', amount },
@@ -85,7 +85,7 @@ describe('currentWasteBalance', () => {
   it('reports a zero credit total for a ledgerId with no submission event', async () => {
     const repository = createInMemoryLedgerRepository()()
     await repository.appendEvents([
-      buildStreamEvent({
+      buildLedgerEvent({
         registrationId: 'reg-1',
         accreditationId: 'acc-1',
         number: 1,

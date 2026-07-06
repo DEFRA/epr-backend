@@ -12,7 +12,7 @@ import {
   buildAwaitingAcceptancePrn,
   buildDraftPrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -97,7 +97,7 @@ const setupRepositories = async ({ prnSeed, balanceSeed }) => {
 
   const ledgerRepository = createInMemoryLedgerRepository()()
   await ledgerRepository.appendEvents([
-    buildStreamEvent({
+    buildLedgerEvent({
       registrationId: REG_ID,
       accreditationId: ACC_ID,
       organisationId: ORG_ID,

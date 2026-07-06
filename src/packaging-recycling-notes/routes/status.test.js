@@ -23,7 +23,7 @@ import {
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { buildStreamEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
 
@@ -46,7 +46,7 @@ const seedStream = (closingBalance = SEED_BALANCE) =>
   createInMemoryLedgerRepository(
     closingBalance
       ? [
-          buildStreamEvent({
+          buildLedgerEvent({
             registrationId,
             accreditationId,
             organisationId,

@@ -238,7 +238,7 @@ const calculateMetrics = (wasteRecords) => {
 
 /**
  * Resolves the accreditation (when one exists, any status) and commits the
- * per-row state for every submission (flag-gated, partitioned by accreditation
+ * per-row state for every submission (flag-gated, keyed by accreditation
  * existence).
  *
  * Every submission records a summary-log-submitted event marking that the

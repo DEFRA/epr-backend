@@ -1576,7 +1576,7 @@ describe('syncFromSummaryLog', () => {
       }
     }
 
-    it('writes committed row states for a registered-only submission, partitioned null', async () => {
+    it('writes committed row states for a registered-only submission, on the registered-only ledger', async () => {
       const fileId = 'file-reg-only-states'
       const summaryLog = {
         file: { id: fileId, uri: 's3://bucket/reg-only' },
@@ -1650,7 +1650,7 @@ describe('syncFromSummaryLog', () => {
       expect(committed.every((doc) => doc.accreditationId === null)).toBe(true)
     })
 
-    it('writes committed row states for a no-accreditation balance-type submission, partitioned null and balance skipped', async () => {
+    it('writes committed row states for a no-accreditation balance-type submission, on the registered-only ledger and balance skipped', async () => {
       const fileId = 'file-no-accred-states'
       const summaryLog = {
         file: { id: fileId, uri: 's3://bucket/no-accred' },

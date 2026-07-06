@@ -10,8 +10,8 @@
 
 import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
 import {
-  validateStreamEventInsert,
-  validateStreamEventRead
+  validateLedgerEventInsert,
+  validateLedgerEventRead
 } from './ledger-validation.js'
 
 export const WASTE_BALANCE_EVENTS_COLLECTION_NAME = 'waste-balance-events'
@@ -30,7 +30,7 @@ const INDEX_NAME_SLOT = 'partition_number'
  * @param {Db} db
  * @returns {Promise<Collection>}
  */
-export async function ensureStreamCollection(db) {
+export async function ensureLedgerCollection(db) {
   const collection = db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
 
   await collection.createIndex(
@@ -56,9 +56,9 @@ export async function ensureStreamCollection(db) {
   return collection
 }
 
-const toStreamEvent = (doc) => {
+const toLedgerEvent = (doc) => {
   const { _id, ...rest } = doc
-  return validateStreamEventRead({
+  return validateLedgerEventRead({
     id: _id.toString(),
     ...rest
   })
@@ -130,7 +130,7 @@ const performFindLatestInLedger =
       { registrationId, accreditationId },
       { sort: { number: -1 } }
     )
-    return doc ? toStreamEvent(doc) : null
+    return doc ? toLedgerEvent(doc) : null
   }
 
 /**
@@ -143,7 +143,7 @@ const performFindLatestInLedgerByKind =
       { registrationId, accreditationId, kind },
       { sort: { number: -1 } }
     )
-    return doc ? toStreamEvent(doc) : null
+    return doc ? toLedgerEvent(doc) : null
   }
 
 /**
@@ -163,7 +163,7 @@ const performFindEventsByPrnIdAfter =
       .sort({ number: 1 })
       .toArray()
 
-    return docs.map(toStreamEvent)
+    return docs.map(toLedgerEvent)
   }
 
 /**
@@ -177,7 +177,7 @@ const performFindAllInLedger =
       .sort({ number: 1 })
       .toArray()
 
-    return docs.map(toStreamEvent)
+    return docs.map(toLedgerEvent)
   }
 
 /**
@@ -212,7 +212,7 @@ const performAppendEvents = (collection) => async (events) => {
     return []
   }
 
-  const validated = events.map(validateStreamEventInsert)
+  const validated = events.map(validateLedgerEventInsert)
 
   const first = validated[0]
 
@@ -257,7 +257,7 @@ const performAppendEvents = (collection) => async (events) => {
   try {
     const result = await collection.insertMany(validated)
     return validated.map((event, i) =>
-      toStreamEvent({ _id: result.insertedIds[i], ...event })
+      toLedgerEvent({ _id: result.insertedIds[i], ...event })
     )
   } catch (error) {
     const classified = classifyDuplicateKeyError(error, first)
@@ -275,7 +275,7 @@ const performAppendEvents = (collection) => async (events) => {
  * @returns {Promise<import('./ledger-port.js').WasteBalanceLedgerRepositoryFactory>}
  */
 export const createMongoLedgerRepository = async (db) => {
-  const collection = await ensureStreamCollection(db)
+  const collection = await ensureLedgerCollection(db)
 
   return () => ({
     findLatestInLedger: performFindLatestInLedger(collection),

@@ -66,7 +66,7 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
 /**
  * Backfill one registration's ledger, mirroring the live write scope: every
  * registration with at least one submitted summary log is reconstructed,
- * partitioned by accreditation existence (`accreditationId ?? null`) and
+ * keyed by accreditation existence (`accreditationId ?? null`) and
  * classified against today's accreditation (or null for a registered-only
  * registration) and overseas-site state. A skip yields null only when there are
  * no submitted summary logs. When a registration references an accreditation that
@@ -83,7 +83,7 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
  * @param {SummaryLogRowStateRepository} args.summaryLogRowStateRepository
  * @returns {Promise<LedgerBackfilled | LedgerOrphaned | null>}
  */
-const backfillRegistrationStream = async ({
+const backfillRegistrationLedger = async ({
   organisation,
   registration,
   organisationsRepository,
@@ -161,7 +161,7 @@ const backfillRegistrationStream = async ({
  * Reconstruct the summary-log row state collection for the whole historical estate
  * from sparse version history, mirroring the live submission path's write scope:
  * every registration with submitted summary logs contributes — accredited and
- * registered-only alike — partitioned by accreditation existence
+ * registered-only alike — keyed by accreditation existence
  * (`accreditationId ?? null`), and only submitted summary logs are replayed.
  * Accreditation validity and overseas-site approval are read at today's
  * state, so a backfilled row's classification reflects current factors — the
@@ -194,7 +194,7 @@ export const backfillEstateSummaryLogRowStates = async ({
 
   for (const organisation of organisations) {
     for (const registration of organisation.registrations) {
-      const result = await backfillRegistrationStream({
+      const result = await backfillRegistrationLedger({
         organisation,
         registration,
         organisationsRepository,
