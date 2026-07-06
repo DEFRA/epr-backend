@@ -254,15 +254,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
       })
     })
 
-    describe('INCLUDED outcome - undefined or null accreditation', () => {
-      it('returns INCLUDED when accreditation is undefined (accreditation check passes)', () => {
-        const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: null
-        })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
-        expect(result.reasons).toEqual([])
-      })
-
+    describe('INCLUDED outcome - null accreditation', () => {
       it('returns INCLUDED when accreditation is null (accreditation check passes)', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: null
