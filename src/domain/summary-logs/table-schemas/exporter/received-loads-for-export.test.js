@@ -115,85 +115,45 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       })
     })
 
-    describe('DATE_RECEIVED_FOR_EXPORT validation', () => {
-      it('accepts valid Date object', () => {
+    describe('Date field validations', () => {
+      const dateFields = [
+        'DATE_RECEIVED_FOR_EXPORT',
+        'DATE_OF_EXPORT',
+        'DATE_RECEIVED_BY_OSR'
+      ]
+
+      it.each(dateFields)('%s accepts valid Date object', (field) => {
         const { error } = validationSchema.validate({
-          DATE_RECEIVED_FOR_EXPORT: new Date('2024-01-15')
+          [field]: new Date('2024-01-15')
         })
         expect(error).toBeUndefined()
       })
 
-      it('accepts date string that can be parsed', () => {
+      it.each(dateFields)('%s rejects invalid date string', (field) => {
+        const { error } = validationSchema.validate({ [field]: 'not-a-date' })
+        expect(error).toBeDefined()
+        expect(error?.details[0].message).toBe('must be a valid date')
+      })
+
+      it('accepts date string that can be parsed for DATE_RECEIVED_FOR_EXPORT', () => {
         const { error } = validationSchema.validate({
           DATE_RECEIVED_FOR_EXPORT: '2024-01-15'
         })
         expect(error).toBeUndefined()
       })
-
-      it('rejects invalid date string', () => {
-        const { error } = validationSchema.validate({
-          DATE_RECEIVED_FOR_EXPORT: 'not-a-date'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a valid date')
-      })
-    })
-
-    describe('DATE_OF_EXPORT validation', () => {
-      it('accepts valid Date object', () => {
-        const { error } = validationSchema.validate({
-          DATE_OF_EXPORT: new Date('2024-01-20')
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects invalid date string', () => {
-        const { error } = validationSchema.validate({
-          DATE_OF_EXPORT: 'not-a-date'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a valid date')
-      })
-    })
-
-    describe('DATE_RECEIVED_BY_OSR validation', () => {
-      it('accepts valid Date object', () => {
-        const { error } = validationSchema.validate({
-          DATE_RECEIVED_BY_OSR: new Date('2024-01-25')
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects invalid date string', () => {
-        const { error } = validationSchema.validate({
-          DATE_RECEIVED_BY_OSR: 'not-a-date'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a valid date')
-      })
     })
 
     describe('EWC_CODE validation', () => {
-      it('accepts valid EWC code from allowed list', () => {
-        const { error } = validationSchema.validate({ EWC_CODE: '03 03 08' })
+      it.each([
+        ['03 03 08', 'from allowed list'],
+        ['01 03 04*', 'with asterisk suffix from allowed list']
+      ])('accepts valid EWC code %s (%s)', (code) => {
+        const { error } = validationSchema.validate({ EWC_CODE: code })
         expect(error).toBeUndefined()
       })
 
-      it('accepts valid EWC code with asterisk suffix from allowed list', () => {
-        const { error } = validationSchema.validate({ EWC_CODE: '01 03 04*' })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects invalid EWC code format', () => {
-        const { error } = validationSchema.validate({ EWC_CODE: '030308' })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
-          'must be a valid EWC code from the allowed list'
-        )
-      })
-
-      it('rejects EWC code not in allowed list', () => {
-        const { error } = validationSchema.validate({ EWC_CODE: '99 99 99' })
+      it.each(['030308', '99 99 99'])('rejects invalid EWC code %s', (code) => {
+        const { error } = validationSchema.validate({ EWC_CODE: code })
         expect(error).toBeDefined()
         expect(error?.details[0].message).toBe(
           'must be a valid EWC code from the allowed list'
@@ -202,17 +162,12 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('DESCRIPTION_WASTE validation', () => {
-      it('accepts valid waste description from allowed list', () => {
+      it.each([
+        'Aluminium - other',
+        'Aluminium - AAIG aluminium cans and associated packaging (97.5%)'
+      ])('accepts valid waste description %s', (value) => {
         const { error } = validationSchema.validate({
-          DESCRIPTION_WASTE: 'Aluminium - other'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts waste description with percentage value', () => {
-        const { error } = validationSchema.validate({
-          DESCRIPTION_WASTE:
-            'Aluminium - AAIG aluminium cans and associated packaging (97.5%)'
+          DESCRIPTION_WASTE: value
         })
         expect(error).toBeUndefined()
       })
@@ -229,145 +184,67 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('BASEL_EXPORT_CODE validation', () => {
-      it('accepts valid Basel code B1010', () => {
-        const { error } = validationSchema.validate({
-          BASEL_EXPORT_CODE: 'B1010'
-        })
-        expect(error).toBeUndefined()
-      })
+      it.each(['B1010', 'GB040', 'A1010', 'Y46'])(
+        'accepts valid Basel code %s',
+        (code) => {
+          const { error } = validationSchema.validate({
+            BASEL_EXPORT_CODE: code
+          })
+          expect(error).toBeUndefined()
+        }
+      )
 
-      it('accepts valid Basel code GB040', () => {
-        const { error } = validationSchema.validate({
-          BASEL_EXPORT_CODE: 'GB040'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts valid Basel code A1010', () => {
-        const { error } = validationSchema.validate({
-          BASEL_EXPORT_CODE: 'A1010'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts valid Basel code Y46', () => {
-        const { error } = validationSchema.validate({
-          BASEL_EXPORT_CODE: 'Y46'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects invalid Basel code', () => {
-        const { error } = validationSchema.validate({
-          BASEL_EXPORT_CODE: 'INVALID'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
-          'must be a valid Basel export code from the allowed list'
-        )
-      })
-
-      it('rejects Basel code not in allowed list', () => {
-        const { error } = validationSchema.validate({
-          BASEL_EXPORT_CODE: 'Z9999'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
-          'must be a valid Basel export code from the allowed list'
-        )
-      })
+      it.each(['INVALID', 'Z9999'])(
+        'rejects Basel code %s not in allowed list',
+        (code) => {
+          const { error } = validationSchema.validate({
+            BASEL_EXPORT_CODE: code
+          })
+          expect(error).toBeDefined()
+          expect(error?.details[0].message).toBe(
+            'must be a valid Basel export code from the allowed list'
+          )
+        }
+      )
     })
 
     describe('EXPORT_CONTROLS validation', () => {
-      it('accepts "Article 18 (Green list)"', () => {
+      it.each([
+        'Article 18 (Green list)',
+        'Prior informed consent (notification controls)'
+      ])('accepts "%s"', (value) => {
         const { error } = validationSchema.validate({
-          EXPORT_CONTROLS: 'Article 18 (Green list)'
+          EXPORT_CONTROLS: value
         })
         expect(error).toBeUndefined()
       })
 
-      it('accepts "Prior informed consent (notification controls)"', () => {
-        const { error } = validationSchema.validate({
-          EXPORT_CONTROLS: 'Prior informed consent (notification controls)'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects invalid export control value', () => {
-        const { error } = validationSchema.validate({
-          EXPORT_CONTROLS: 'Some other control'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
-          'must be a valid export control type from the allowed list'
-        )
-      })
-
-      it('rejects case variations', () => {
-        const { error } = validationSchema.validate({
-          EXPORT_CONTROLS: 'article 18 (green list)'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
-          'must be a valid export control type from the allowed list'
-        )
-      })
+      it.each(['Some other control', 'article 18 (green list)'])(
+        'rejects invalid export control value %s',
+        (value) => {
+          const { error } = validationSchema.validate({
+            EXPORT_CONTROLS: value
+          })
+          expect(error).toBeDefined()
+          expect(error?.details[0].message).toBe(
+            'must be a valid export control type from the allowed list'
+          )
+        }
+      )
     })
 
     describe('CUSTOMS_CODES validation (free text)', () => {
-      it('accepts valid alphanumeric code', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: 'ABCD012345679'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts numeric only code', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: '1234567890'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts alpha only code', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: 'ABCDEFGH'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts code with spaces and hyphens', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: 'ABC-123 DEF'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts code with common punctuation', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: 'HS:8501.10/20'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts code with smart quotes and dashes', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: '\u2018code\u2019 \u2013 ref'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts code with pound and euro signs', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: '\u00A3100 \u20AC200'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts code at maximum length (100 chars)', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: 'A'.repeat(100)
-        })
+      it.each([
+        ['ABCD012345679', 'alphanumeric code'],
+        ['1234567890', 'numeric only code'],
+        ['ABCDEFGH', 'alpha only code'],
+        ['ABC-123 DEF', 'code with spaces and hyphens'],
+        ['HS:8501.10/20', 'code with common punctuation'],
+        ['\u2018code\u2019 \u2013 ref', 'code with smart quotes and dashes'],
+        ['\u00A3100 \u20AC200', 'code with pound and euro signs'],
+        ['A'.repeat(100), 'code at maximum length (100 chars)']
+      ])('accepts %s (%s)', (code) => {
+        const { error } = validationSchema.validate({ CUSTOMS_CODES: code })
         expect(error).toBeUndefined()
       })
 
@@ -379,52 +256,27 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(error?.details[0].message).toBe('must be at most 100 characters')
       })
 
-      it('rejects code with accented characters', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: 'caf\u00E9'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
-          'must contain only permitted characters'
-        )
-      })
-
-      it('rejects code with control characters', () => {
-        const { error } = validationSchema.validate({
-          CUSTOMS_CODES: 'code\x00ref'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
-          'must contain only permitted characters'
-        )
-      })
+      it.each(['caf\u00E9', 'code\x00ref'])(
+        'rejects code with disallowed characters %s',
+        (code) => {
+          const { error } = validationSchema.validate({ CUSTOMS_CODES: code })
+          expect(error).toBeDefined()
+          expect(error?.details[0].message).toBe(
+            'must contain only permitted characters'
+          )
+        }
+      )
     })
 
     describe('CONTAINER_NUMBER validation (free text - PAE-1124)', () => {
-      it('accepts valid alphanumeric container number', () => {
+      it.each([
+        'ABCD1234567',
+        'ABCD-1234567 / TRLR-001',
+        '\u2018CONT\u2019 \u2013 123',
+        'A'.repeat(100)
+      ])('accepts container number %s', (value) => {
         const { error } = validationSchema.validate({
-          CONTAINER_NUMBER: 'ABCD1234567'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts container number with hyphens and spaces', () => {
-        const { error } = validationSchema.validate({
-          CONTAINER_NUMBER: 'ABCD-1234567 / TRLR-001'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts container number with smart quotes and dashes', () => {
-        const { error } = validationSchema.validate({
-          CONTAINER_NUMBER: '\u2018CONT\u2019 \u2013 123'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts container number at maximum length (100 chars)', () => {
-        const { error } = validationSchema.validate({
-          CONTAINER_NUMBER: 'A'.repeat(100)
+          CONTAINER_NUMBER: value
         })
         expect(error).toBeUndefined()
       })
@@ -437,86 +289,51 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(error?.details[0].message).toBe('must be at most 100 characters')
       })
 
-      it('rejects container number with accented characters', () => {
-        const { error } = validationSchema.validate({
-          CONTAINER_NUMBER: 'caf\u00E9-container'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
-          'must contain only permitted characters'
-        )
-      })
-
-      it('rejects container number with control characters', () => {
-        const { error } = validationSchema.validate({
-          CONTAINER_NUMBER: 'CONT\x00123'
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
-          'must contain only permitted characters'
-        )
-      })
+      it.each(['caf\u00E9-container', 'CONT\x00123'])(
+        'rejects container number with disallowed characters %s',
+        (value) => {
+          const { error } = validationSchema.validate({
+            CONTAINER_NUMBER: value
+          })
+          expect(error).toBeDefined()
+          expect(error?.details[0].message).toBe(
+            'must contain only permitted characters'
+          )
+        }
+      )
     })
 
     describe('OSR_ID validation (zero-padded 3-digit string)', () => {
-      it('accepts minimum value (1)', () => {
-        const { error } = validationSchema.validate({ OSR_ID: 1 })
+      it.each([1, 999, 500])('accepts value %i within range', (value) => {
+        const { error } = validationSchema.validate({ OSR_ID: value })
         expect(error).toBeUndefined()
       })
 
-      it('accepts maximum value (999)', () => {
-        const { error } = validationSchema.validate({ OSR_ID: 999 })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts value in middle of range', () => {
-        const { error } = validationSchema.validate({ OSR_ID: 500 })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects value below minimum (0)', () => {
-        const { error } = validationSchema.validate({ OSR_ID: 0 })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
-      })
-
-      it('rejects value above maximum (1000)', () => {
-        const { error } = validationSchema.validate({ OSR_ID: 1000 })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
-      })
+      it.each([0, 1000, 'ABC'])(
+        'rejects value %s (out of range or non-numeric)',
+        (value) => {
+          const { error } = validationSchema.validate({ OSR_ID: value })
+          expect(error).toBeDefined()
+          expect(error?.details[0].message).toBe(
+            'must be a 3-digit ID (001-999)'
+          )
+        }
+      )
 
       it('rejects non-integer', () => {
         const { error } = validationSchema.validate({ OSR_ID: 100.5 })
         expect(error).toBeDefined()
       })
-
-      it('rejects non-numeric string', () => {
-        const { error } = validationSchema.validate({ OSR_ID: 'ABC' })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
-      })
     })
 
     describe('INTERIM_SITE_ID validation (zero-padded 3-digit string)', () => {
-      it('accepts minimum value (1)', () => {
-        const { error } = validationSchema.validate({ INTERIM_SITE_ID: 1 })
+      it.each([1, 999])('accepts value %i within range', (value) => {
+        const { error } = validationSchema.validate({ INTERIM_SITE_ID: value })
         expect(error).toBeUndefined()
       })
 
-      it('accepts maximum value (999)', () => {
-        const { error } = validationSchema.validate({ INTERIM_SITE_ID: 999 })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects value below minimum (0)', () => {
-        const { error } = validationSchema.validate({ INTERIM_SITE_ID: 0 })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
-      })
-
-      it('rejects value above maximum (1000)', () => {
-        const { error } = validationSchema.validate({ INTERIM_SITE_ID: 1000 })
+      it.each([0, 1000])('rejects value %i outside range', (value) => {
+        const { error } = validationSchema.validate({ INTERIM_SITE_ID: value })
         expect(error).toBeDefined()
         expect(error?.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
@@ -573,41 +390,22 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('RECYCLABLE_PROPORTION_PERCENTAGE validation', () => {
-      it('accepts zero', () => {
+      it.each([0, 1, 0.5])('accepts value %f within range', (value) => {
         const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 0
+          RECYCLABLE_PROPORTION_PERCENTAGE: value
         })
         expect(error).toBeUndefined()
       })
 
-      it('accepts one (100%)', () => {
+      it.each([
+        [-0.1, 'must be at least 0'],
+        [1.1, 'must be at most 1']
+      ])('rejects value %f with message "%s"', (value, message) => {
         const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 1
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts value within range (0.5)', () => {
-        const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 0.5
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects negative value', () => {
-        const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: -0.1
+          RECYCLABLE_PROPORTION_PERCENTAGE: value
         })
         expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be at least 0')
-      })
-
-      it('rejects value above 1', () => {
-        const { error } = validationSchema.validate({
-          RECYCLABLE_PROPORTION_PERCENTAGE: 1.1
-        })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be at most 1')
+        expect(error?.details[0].message).toBe(message)
       })
     })
 
@@ -646,40 +444,15 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION validation', () => {
-      it('accepts "AAIG percentage"', () => {
+      it.each([
+        'AAIG percentage',
+        'Actual weight (100%)',
+        'National protocol percentage',
+        'S&I plan agreed methodology',
+        'S&I plan agreed site-specific protocol percentage'
+      ])('accepts "%s"', (value) => {
         const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'AAIG percentage'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts "Actual weight (100%)"', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts "National protocol percentage"', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION:
-            'National protocol percentage'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts "S&I plan agreed methodology"', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION:
-            'S&I plan agreed methodology'
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts "S&I plan agreed site-specific protocol percentage"', () => {
-        const { error } = validationSchema.validate({
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION:
-            'S&I plan agreed site-specific protocol percentage'
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: value
         })
         expect(error).toBeUndefined()
       })

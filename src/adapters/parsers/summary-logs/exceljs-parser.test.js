@@ -2521,45 +2521,40 @@ describe('shouldWrapAsSpreadsheetError', () => {
     expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
   })
 
-  it('should wrap yauzl central-directory errors', () => {
-    const error = new Error(
-      "Can't find end of central directory : is this a zip file ?"
-    )
+  it.each([
+    {
+      description: 'yauzl central-directory errors',
+      message: "Can't find end of central directory : is this a zip file ?"
+    },
+    {
+      description: 'yauzl invalid-signature errors',
+      message: 'invalid signature: 0x00000000'
+    },
+    {
+      description: 'yauzl size-mismatch errors',
+      message: 'compressed/uncompressed size mismatch'
+    },
+    {
+      description: 'truncated-zip errors from the jszip path',
+      message:
+        'End of data reached (data length = 0, asked index = 4). Corrupted zip ?'
+    },
+    {
+      description: 'unzipper FILE_ENDED errors from non-zip buffers',
+      message: 'FILE_ENDED'
+    },
+    {
+      description: 'unzipper missing-password errors from encrypted xlsx',
+      message: 'MISSING_PASSWORD'
+    },
+    {
+      description: 'unzipper bad-password errors from encrypted xlsx',
+      message: 'BAD_PASSWORD'
+    }
+  ])('should wrap $description', ({ message }) => {
+    const error = new Error(message)
 
     expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
-  })
-
-  it('should wrap yauzl invalid-signature errors', () => {
-    const error = new Error('invalid signature: 0x00000000')
-
-    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
-  })
-
-  it('should wrap yauzl size-mismatch errors', () => {
-    const error = new Error('compressed/uncompressed size mismatch')
-
-    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
-  })
-
-  it('should wrap truncated-zip errors from the jszip path', () => {
-    const error = new Error(
-      'End of data reached (data length = 0, asked index = 4). Corrupted zip ?'
-    )
-
-    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
-  })
-
-  it('should wrap unzipper FILE_ENDED errors from non-zip buffers', () => {
-    const error = new Error('FILE_ENDED')
-
-    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
-  })
-
-  it('should wrap unzipper password-required errors from encrypted xlsx', () => {
-    expect(shouldWrapAsSpreadsheetError(new Error('MISSING_PASSWORD'))).toBe(
-      true
-    )
-    expect(shouldWrapAsSpreadsheetError(new Error('BAD_PASSWORD'))).toBe(true)
   })
 
   it('should wrap SaxesError by name', () => {

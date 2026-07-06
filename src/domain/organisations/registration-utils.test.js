@@ -165,71 +165,60 @@ describe('isRegistrationAccredited', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolveAccreditationNumber', () => {
-  it('returns accreditationNumber for an approved accreditation', () => {
-    const org = buildOrg({
-      accreditations: [
-        { id: 'acc-1', status: 'approved', accreditationNumber: 'ACC-001' }
-      ]
-    })
-    const reg = buildReg({ accreditationId: 'acc-1' })
+  it.each([
+    {
+      name: 'returns accreditationNumber for an approved accreditation',
+      status: 'approved',
+      accreditationNumber: 'ACC-001',
+      regAccreditationId: 'acc-1',
+      expected: 'ACC-001'
+    },
+    {
+      name: 'returns accreditationNumber for a suspended accreditation',
+      status: 'suspended',
+      accreditationNumber: 'ACC-999',
+      regAccreditationId: 'acc-1',
+      expected: 'ACC-999'
+    },
+    {
+      name: 'returns empty string when registration has no accreditationId',
+      status: 'approved',
+      accreditationNumber: 'ACC-001',
+      regAccreditationId: null,
+      expected: ''
+    },
+    {
+      name: 'returns empty string when accreditation status is created',
+      status: 'created',
+      accreditationNumber: 'ACC-001',
+      regAccreditationId: 'acc-1',
+      expected: ''
+    },
+    {
+      name: 'returns empty string when accreditation status is rejected',
+      status: 'rejected',
+      accreditationNumber: 'ACC-001',
+      regAccreditationId: 'acc-1',
+      expected: ''
+    },
+    {
+      name: 'returns empty string when accreditation has null accreditationNumber',
+      status: 'approved',
+      accreditationNumber: null,
+      regAccreditationId: 'acc-1',
+      expected: ''
+    }
+  ])(
+    '$name',
+    ({ status, accreditationNumber, regAccreditationId, expected }) => {
+      const org = buildOrg({
+        accreditations: [{ id: 'acc-1', status, accreditationNumber }]
+      })
+      const reg = buildReg({ accreditationId: regAccreditationId })
 
-    expect(resolveAccreditationNumber(reg, org)).toBe('ACC-001')
-  })
-
-  it('returns accreditationNumber for a suspended accreditation', () => {
-    const org = buildOrg({
-      accreditations: [
-        { id: 'acc-1', status: 'suspended', accreditationNumber: 'ACC-999' }
-      ]
-    })
-    const reg = buildReg({ accreditationId: 'acc-1' })
-
-    expect(resolveAccreditationNumber(reg, org)).toBe('ACC-999')
-  })
-
-  it('returns empty string when registration has no accreditationId', () => {
-    const org = buildOrg({
-      accreditations: [
-        { id: 'acc-1', status: 'approved', accreditationNumber: 'ACC-001' }
-      ]
-    })
-    const reg = buildReg({ accreditationId: null })
-
-    expect(resolveAccreditationNumber(reg, org)).toBe('')
-  })
-
-  it('returns empty string when accreditation status is created', () => {
-    const org = buildOrg({
-      accreditations: [
-        { id: 'acc-1', status: 'created', accreditationNumber: 'ACC-001' }
-      ]
-    })
-    const reg = buildReg({ accreditationId: 'acc-1' })
-
-    expect(resolveAccreditationNumber(reg, org)).toBe('')
-  })
-
-  it('returns empty string when accreditation status is rejected', () => {
-    const org = buildOrg({
-      accreditations: [
-        { id: 'acc-1', status: 'rejected', accreditationNumber: 'ACC-001' }
-      ]
-    })
-    const reg = buildReg({ accreditationId: 'acc-1' })
-
-    expect(resolveAccreditationNumber(reg, org)).toBe('')
-  })
-
-  it('returns empty string when accreditation has null accreditationNumber', () => {
-    const org = buildOrg({
-      accreditations: [
-        { id: 'acc-1', status: 'approved', accreditationNumber: null }
-      ]
-    })
-    const reg = buildReg({ accreditationId: 'acc-1' })
-
-    expect(resolveAccreditationNumber(reg, org)).toBe('')
-  })
+      expect(resolveAccreditationNumber(reg, org)).toBe(expected)
+    }
+  )
 })
 
 // ---------------------------------------------------------------------------

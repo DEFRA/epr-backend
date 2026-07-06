@@ -92,102 +92,64 @@ describe('field-schemas', () => {
   })
 
   describe('createDateFieldSchema', () => {
-    it('keeps YYYY-MM-DD string as-is', () => {
+    it.each([
+      {
+        description: 'YYYY-MM-DD string as-is',
+        input: '2024-01-01',
+        expected: '2024-01-01'
+      },
+      {
+        description: 'minimum boundary date',
+        input: '2000-01-01',
+        expected: '2000-01-01'
+      },
+      {
+        description: 'maximum boundary date',
+        input: '2100-01-01',
+        expected: '2100-01-01'
+      },
+      {
+        description: 'a Date object, coerced to YYYY-MM-DD string',
+        input: new Date('2024-06-15'),
+        expected: '2024-06-15'
+      },
+      {
+        description: 'an ISO timestamp string, extracting the date',
+        input: '2024-06-15T00:00:00.000Z',
+        expected: '2024-06-15'
+      },
+      {
+        description: 'numeric epoch milliseconds, coerced to YYYY-MM-DD string',
+        // 1704067200000 = 2024-01-01T00:00:00.000Z
+        input: 1704067200000,
+        expected: '2024-01-01'
+      }
+    ])('accepts $description', ({ input, expected }) => {
       const schema = createDateFieldSchema()
-      const { error, value } = schema.validate('2024-01-01')
+      const { error, value } = schema.validate(input)
       expect(error).toBeUndefined()
-      expect(value).toBe('2024-01-01')
+      expect(value).toBe(expected)
     })
 
-    it('accepts minimum boundary date', () => {
+    it.each([
+      {
+        description: 'numeric epoch seconds (outside valid range as millis)',
+        // 1704067200 seconds = 1970-01-20 when interpreted as millis
+        input: 1704067200
+      },
+      { description: 'NaN numeric value', input: NaN },
+      { description: 'boolean value', input: true },
+      {
+        description: 'date that rolls over (e.g. Feb 30)',
+        input: '2024-02-30'
+      },
+      { description: 'invalid date string', input: 'not-a-date' },
+      { description: 'date before 2000', input: '1999-12-31' },
+      { description: 'date after 2100', input: '2100-01-02' },
+      { description: 'invalid year', input: '20256-01-02' }
+    ])('rejects $description', ({ input }) => {
       const schema = createDateFieldSchema()
-      const { error, value } = schema.validate('2000-01-01')
-      expect(error).toBeUndefined()
-      expect(value).toBe('2000-01-01')
-    })
-
-    it('accepts maximum boundary date', () => {
-      const schema = createDateFieldSchema()
-      const { error, value } = schema.validate('2100-01-01')
-      expect(error).toBeUndefined()
-      expect(value).toBe('2100-01-01')
-    })
-
-    it('coerces Date object to YYYY-MM-DD string', () => {
-      const schema = createDateFieldSchema()
-      const { error, value } = schema.validate(new Date('2024-06-15'))
-      expect(error).toBeUndefined()
-      expect(value).toBe('2024-06-15')
-    })
-
-    it('extracts date from ISO timestamp string', () => {
-      const schema = createDateFieldSchema()
-      const { error, value } = schema.validate('2024-06-15T00:00:00.000Z')
-      expect(error).toBeUndefined()
-      expect(value).toBe('2024-06-15')
-    })
-
-    it('coerces numeric epoch milliseconds to YYYY-MM-DD string', () => {
-      const schema = createDateFieldSchema()
-      // 1704067200000 = 2024-01-01T00:00:00.000Z
-      const { error, value } = schema.validate(1704067200000)
-      expect(error).toBeUndefined()
-      expect(value).toBe('2024-01-01')
-    })
-
-    it('rejects numeric epoch seconds (outside valid range as millis)', () => {
-      const schema = createDateFieldSchema()
-      // 1704067200 seconds = 1970-01-20 when interpreted as millis
-      const { error } = schema.validate(1704067200)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a valid date')
-    })
-
-    it('rejects NaN numeric value', () => {
-      const schema = createDateFieldSchema()
-      const { error } = schema.validate(NaN)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a valid date')
-    })
-
-    it('rejects boolean value', () => {
-      const schema = createDateFieldSchema()
-      const { error } = schema.validate(true)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a valid date')
-    })
-
-    it('rejects date that rolls over (e.g. Feb 30)', () => {
-      const schema = createDateFieldSchema()
-      const { error } = schema.validate('2024-02-30')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a valid date')
-    })
-
-    it('rejects invalid date string', () => {
-      const schema = createDateFieldSchema()
-      const { error } = schema.validate('not-a-date')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a valid date')
-    })
-
-    it('rejects date before 2000', () => {
-      const schema = createDateFieldSchema()
-      const { error } = schema.validate('1999-12-31')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a valid date')
-    })
-
-    it('rejects date after 2100', () => {
-      const schema = createDateFieldSchema()
-      const { error } = schema.validate('2100-01-02')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a valid date')
-    })
-
-    it('rejects invalid year', () => {
-      const schema = createDateFieldSchema()
-      const { error } = schema.validate('20256-01-02')
+      const { error } = schema.validate(input)
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe('must be a valid date')
     })
@@ -199,72 +161,44 @@ describe('field-schemas', () => {
   })
 
   describe('createThreeDigitIdSchema', () => {
-    it('zero-pads numeric 1 to "001"', () => {
+    it.each([
+      {
+        description: 'zero-pads numeric 1 to "001"',
+        input: 1,
+        expected: '001'
+      },
+      { description: 'keeps 999 as "999"', input: 999, expected: '999' },
+      {
+        description: 'zero-pads numeric 99 to "099"',
+        input: 99,
+        expected: '099'
+      },
+      {
+        description: 'preserves string "099" as "099"',
+        input: '099',
+        expected: '099'
+      },
+      {
+        description: 'zero-pads string "5" to "005"',
+        input: '5',
+        expected: '005'
+      }
+    ])('$description', ({ input, expected }) => {
       const schema = createThreeDigitIdSchema()
-      const { error, value } = schema.validate(1)
+      const { error, value } = schema.validate(input)
       expect(error).toBeUndefined()
-      expect(value).toBe('001')
+      expect(value).toBe(expected)
     })
 
-    it('keeps 999 as "999"', () => {
+    it.each([
+      { description: '0 (too low)', input: 0 },
+      { description: 'negative numbers', input: -1 },
+      { description: '1000 (too high)', input: 1000 },
+      { description: 'non-integer', input: 100.5 },
+      { description: 'non-numeric string', input: 'ABC' }
+    ])('rejects $description', ({ input }) => {
       const schema = createThreeDigitIdSchema()
-      const { error, value } = schema.validate(999)
-      expect(error).toBeUndefined()
-      expect(value).toBe('999')
-    })
-
-    it('zero-pads numeric 99 to "099"', () => {
-      const schema = createThreeDigitIdSchema()
-      const { error, value } = schema.validate(99)
-      expect(error).toBeUndefined()
-      expect(value).toBe('099')
-    })
-
-    it('preserves string "099" as "099"', () => {
-      const schema = createThreeDigitIdSchema()
-      const { error, value } = schema.validate('099')
-      expect(error).toBeUndefined()
-      expect(value).toBe('099')
-    })
-
-    it('zero-pads string "5" to "005"', () => {
-      const schema = createThreeDigitIdSchema()
-      const { error, value } = schema.validate('5')
-      expect(error).toBeUndefined()
-      expect(value).toBe('005')
-    })
-
-    it('rejects 0 (too low)', () => {
-      const schema = createThreeDigitIdSchema()
-      const { error } = schema.validate(0)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
-    })
-
-    it('rejects negative numbers', () => {
-      const schema = createThreeDigitIdSchema()
-      const { error } = schema.validate(-1)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
-    })
-
-    it('rejects 1000 (too high)', () => {
-      const schema = createThreeDigitIdSchema()
-      const { error } = schema.validate(1000)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
-    })
-
-    it('rejects non-integer', () => {
-      const schema = createThreeDigitIdSchema()
-      const { error } = schema.validate(100.5)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
-    })
-
-    it('rejects non-numeric string', () => {
-      const schema = createThreeDigitIdSchema()
-      const { error } = schema.validate('ABC')
+      const { error } = schema.validate(input)
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
     })
@@ -276,19 +210,9 @@ describe('field-schemas', () => {
   })
 
   describe('createPercentageFieldSchema', () => {
-    it('accepts 0', () => {
+    it.each([0, 1, 0.5])('accepts %s', (input) => {
       const schema = createPercentageFieldSchema()
-      expect(schema.validate(0).error).toBeUndefined()
-    })
-
-    it('accepts 1', () => {
-      const schema = createPercentageFieldSchema()
-      expect(schema.validate(1).error).toBeUndefined()
-    })
-
-    it('accepts 0.5', () => {
-      const schema = createPercentageFieldSchema()
-      expect(schema.validate(0.5).error).toBeUndefined()
+      expect(schema.validate(input).error).toBeUndefined()
     })
 
     it('rejects negative', () => {
@@ -312,27 +236,60 @@ describe('field-schemas', () => {
   })
 
   describe('createFreeTextFieldSchema', () => {
-    it('accepts standard alphanumeric string', () => {
+    it.each([
+      { description: 'standard alphanumeric string', input: 'ABC123' },
+      { description: 'string with spaces', input: 'ABC 123' },
+      {
+        description: 'string with hyphens and common punctuation',
+        input: 'ABC-123/456'
+      },
+      {
+        description: 'string with all printable ASCII characters',
+        // Space (0x20) through tilde (0x7E) covers all printable ASCII
+        input: 'Hello, World! @#$%^&*()_+-=[]{}|;:\'",.<>?/~`'
+      },
+      {
+        // \u2018 = left single quote, \u2019 = right single quote
+        description: 'string with smart single quotes',
+        input: '\u2018quoted\u2019'
+      },
+      {
+        // \u201C = left double quote, \u201D = right double quote
+        description: 'string with smart double quotes',
+        input: '\u201Cquoted\u201D'
+      },
+      {
+        // \u2026 = ellipsis
+        description: 'string with ellipsis character',
+        input: 'and so on\u2026'
+      },
+      {
+        // \u00AD = soft hyphen, invisible word-break hint from Word copy-paste
+        description: 'string with soft hyphens',
+        input: 'ABC\u00AD123'
+      },
+      {
+        description: 'string with en-dash', // \u2013 = en-dash
+        input: 'range\u2013value'
+      },
+      {
+        description: 'string with em-dash', // \u2014 = em-dash
+        input: 'pause\u2014here'
+      },
+      { description: 'string with pound sign', input: '\u00A3100' },
+      { description: 'string with euro sign', input: '\u20AC200' },
+      {
+        // \u00A0 = non-breaking space, commonly inserted by Excel/Word
+        description: 'string with a non-breaking space mid-word',
+        input: 'ABC123\u00A0/ DEF456'
+      },
+      {
+        description: 'string with repeated non-breaking spaces',
+        input: 'AB\u00A0 \u00A0/CD123'
+      }
+    ])('accepts $description', ({ input }) => {
       const schema = createFreeTextFieldSchema()
-      expect(schema.validate('ABC123').error).toBeUndefined()
-    })
-
-    it('accepts string with spaces', () => {
-      const schema = createFreeTextFieldSchema()
-      expect(schema.validate('ABC 123').error).toBeUndefined()
-    })
-
-    it('accepts string with hyphens and common punctuation', () => {
-      const schema = createFreeTextFieldSchema()
-      expect(schema.validate('ABC-123/456').error).toBeUndefined()
-    })
-
-    it('accepts string with all printable ASCII characters', () => {
-      const schema = createFreeTextFieldSchema()
-      // Space (0x20) through tilde (0x7E) covers all printable ASCII
-      expect(
-        schema.validate('Hello, World! @#$%^&*()_+-=[]{}|;:\'",.<>?/~`').error
-      ).toBeUndefined()
+      expect(schema.validate(input).error).toBeUndefined()
     })
 
     it('accepts string with newline characters', () => {
@@ -342,81 +299,21 @@ describe('field-schemas', () => {
       expect(schema.validate('Line 1\r\nLine 2').error).toBeUndefined()
     })
 
-    it('accepts string with smart single quotes', () => {
+    it.each([
+      { description: 'string with accented characters', input: 'caf\u00E9' },
+      {
+        description: 'string with non-English characters',
+        input: 'ni\u00F1o'
+      },
+      {
+        // \x00 = null, \x07 = bell
+        description: 'string with control characters',
+        input: 'hello\x00world'
+      },
+      { description: 'string with tab character', input: 'hello\tworld' }
+    ])('rejects $description', ({ input }) => {
       const schema = createFreeTextFieldSchema()
-      // \u2018 = left single quote, \u2019 = right single quote
-      expect(schema.validate('\u2018quoted\u2019').error).toBeUndefined()
-    })
-
-    it('accepts string with smart double quotes', () => {
-      const schema = createFreeTextFieldSchema()
-      // \u201C = left double quote, \u201D = right double quote
-      expect(schema.validate('\u201Cquoted\u201D').error).toBeUndefined()
-    })
-
-    it('accepts string with en-dash and em-dash', () => {
-      const schema = createFreeTextFieldSchema()
-      // \u2013 = en-dash, \u2014 = em-dash
-      expect(schema.validate('range\u2013value').error).toBeUndefined()
-      expect(schema.validate('pause\u2014here').error).toBeUndefined()
-    })
-
-    it('accepts string with ellipsis character', () => {
-      const schema = createFreeTextFieldSchema()
-      // \u2026 = ellipsis
-      expect(schema.validate('and so on\u2026').error).toBeUndefined()
-    })
-
-    it('accepts string with pound and euro signs', () => {
-      const schema = createFreeTextFieldSchema()
-      expect(schema.validate('\u00A3100').error).toBeUndefined()
-      expect(schema.validate('\u20AC200').error).toBeUndefined()
-    })
-
-    it('accepts string with non-breaking spaces', () => {
-      const schema = createFreeTextFieldSchema()
-      // \u00A0 = non-breaking space, commonly inserted by Excel/Word
-      expect(schema.validate('ABC123\u00A0/ DEF456').error).toBeUndefined()
-      expect(schema.validate('AB\u00A0 \u00A0/CD123').error).toBeUndefined()
-    })
-
-    it('accepts string with soft hyphens', () => {
-      const schema = createFreeTextFieldSchema()
-      // \u00AD = soft hyphen, invisible word-break hint from Word copy-paste
-      expect(schema.validate('ABC\u00AD123').error).toBeUndefined()
-    })
-
-    it('rejects string with accented characters', () => {
-      const schema = createFreeTextFieldSchema()
-      const { error } = schema.validate('caf\u00E9')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe(
-        'must contain only permitted characters'
-      )
-    })
-
-    it('rejects string with non-English characters', () => {
-      const schema = createFreeTextFieldSchema()
-      const { error } = schema.validate('ni\u00F1o')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe(
-        'must contain only permitted characters'
-      )
-    })
-
-    it('rejects string with control characters', () => {
-      const schema = createFreeTextFieldSchema()
-      // \x00 = null, \x07 = bell
-      const { error } = schema.validate('hello\x00world')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe(
-        'must contain only permitted characters'
-      )
-    })
-
-    it('rejects string with tab character', () => {
-      const schema = createFreeTextFieldSchema()
-      const { error } = schema.validate('hello\tworld')
+      const { error } = schema.validate(input)
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe(
         'must contain only permitted characters'
@@ -486,25 +383,27 @@ describe('field-schemas', () => {
       expect(schema.validate(undefined).error).toBeUndefined()
     })
 
-    it('accepts value with leading whitespace by trimming', () => {
+    it.each([
+      {
+        description: 'leading whitespace',
+        input: ' Option A',
+        expected: 'Option A'
+      },
+      {
+        description: 'trailing whitespace',
+        input: 'Option B ',
+        expected: 'Option B'
+      },
+      {
+        description: 'leading and trailing whitespace',
+        input: '  Option C  ',
+        expected: 'Option C'
+      }
+    ])('accepts value with $description by trimming', ({ input, expected }) => {
       const schema = createEnumFieldSchema(validValues, invalidMessage)
-      const { error, value } = schema.validate(' Option A')
+      const { error, value } = schema.validate(input)
       expect(error).toBeUndefined()
-      expect(value).toBe('Option A')
-    })
-
-    it('accepts value with trailing whitespace by trimming', () => {
-      const schema = createEnumFieldSchema(validValues, invalidMessage)
-      const { error, value } = schema.validate('Option B ')
-      expect(error).toBeUndefined()
-      expect(value).toBe('Option B')
-    })
-
-    it('accepts value with leading and trailing whitespace by trimming', () => {
-      const schema = createEnumFieldSchema(validValues, invalidMessage)
-      const { error, value } = schema.validate('  Option C  ')
-      expect(error).toBeUndefined()
-      expect(value).toBe('Option C')
+      expect(value).toBe(expected)
     })
 
     it('coerces numeric value to string when enum values look like numbers', () => {

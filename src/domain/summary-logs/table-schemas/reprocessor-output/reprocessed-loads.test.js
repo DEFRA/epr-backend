@@ -76,18 +76,12 @@ describe('REPROCESSED_LOADS', () => {
 
       for (const field of weightFields) {
         describe(`${field} validation`, () => {
-          it('accepts zero', () => {
-            const { error } = validationSchema.validate({ [field]: 0 })
-            expect(error).toBeUndefined()
-          })
-
-          it('accepts maximum value (1000)', () => {
-            const { error } = validationSchema.validate({ [field]: 1000 })
-            expect(error).toBeUndefined()
-          })
-
-          it('accepts value within range', () => {
-            const { error } = validationSchema.validate({ [field]: 500.5 })
+          it.each([
+            ['zero', 0],
+            ['maximum value (1000)', 1000],
+            ['value within range', 500.5]
+          ])('accepts %s', (_label, value) => {
+            const { error } = validationSchema.validate({ [field]: value })
             expect(error).toBeUndefined()
           })
 
@@ -155,37 +149,15 @@ describe('REPROCESSED_LOADS', () => {
     })
 
     describe('UK_PACKAGING_WEIGHT_PERCENTAGE validation', () => {
-      it('accepts zero', () => {
+      it.each([
+        ['zero', 0],
+        ['one (100%)', 1],
+        ['value within range (0.5)', 0.5],
+        ['small percentage (0.01 = 1%)', 0.01],
+        ['high percentage (0.99 = 99%)', 0.99]
+      ])('accepts %s', (_label, value) => {
         const { error } = validationSchema.validate({
-          UK_PACKAGING_WEIGHT_PERCENTAGE: 0
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts one (100%)', () => {
-        const { error } = validationSchema.validate({
-          UK_PACKAGING_WEIGHT_PERCENTAGE: 1
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts value within range (0.5)', () => {
-        const { error } = validationSchema.validate({
-          UK_PACKAGING_WEIGHT_PERCENTAGE: 0.5
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts small percentage (0.01 = 1%)', () => {
-        const { error } = validationSchema.validate({
-          UK_PACKAGING_WEIGHT_PERCENTAGE: 0.01
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts high percentage (0.99 = 99%)', () => {
-        const { error } = validationSchema.validate({
-          UK_PACKAGING_WEIGHT_PERCENTAGE: 0.99
+          UK_PACKAGING_WEIGHT_PERCENTAGE: value
         })
         expect(error).toBeUndefined()
       })
@@ -334,33 +306,14 @@ describe('REPROCESSED_LOADS', () => {
         expect(error).toBeUndefined()
       })
 
-      it('rejects lowercase "yes"', () => {
+      it.each([
+        ['lowercase "yes"', 'yes'],
+        ['lowercase "no"', 'no'],
+        ['uppercase "YES"', 'YES'],
+        ['other strings', 'Maybe']
+      ])('rejects %s', (_label, value) => {
         const { error } = validationSchema.validate({
-          ADD_PRODUCT_WEIGHT: 'yes'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
-      })
-
-      it('rejects lowercase "no"', () => {
-        const { error } = validationSchema.validate({
-          ADD_PRODUCT_WEIGHT: 'no'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
-      })
-
-      it('rejects uppercase "YES"', () => {
-        const { error } = validationSchema.validate({
-          ADD_PRODUCT_WEIGHT: 'YES'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
-      })
-
-      it('rejects other strings', () => {
-        const { error } = validationSchema.validate({
-          ADD_PRODUCT_WEIGHT: 'Maybe'
+          ADD_PRODUCT_WEIGHT: value
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe('must be Yes or No')
