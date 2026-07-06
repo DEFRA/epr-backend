@@ -11,6 +11,7 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
+import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 
 const { validToken: serviceMaintainerToken } = entraIdMockAuthTokens
 const mockCdpAuditing = vi.fn()
@@ -177,7 +178,11 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         expect(auditPayload.user).toEqual({
           id: newUser.contactId,
           email: newUser.email,
-          scope: ['inquirer', 'standard_user'],
+          scope: [
+            SCOPES.organisationLinkedRead,
+            SCOPES.organisationLinkedWrite,
+            ROLES.standardUser
+          ],
           role: null
         })
 
@@ -231,7 +236,11 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         expect(log.createdBy).toEqual({
           id: newUser.contactId,
           email: newUser.email,
-          scope: ['inquirer', 'standard_user'],
+          scope: [
+            SCOPES.organisationLinkedRead,
+            SCOPES.organisationLinkedWrite,
+            ROLES.standardUser
+          ],
           role: null
         })
 
@@ -290,7 +299,11 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         expect(auditPayload.user).toEqual({
           id: updatedUser().contactId,
           email: updatedUser().email,
-          scope: ['inquirer', 'standard_user'],
+          scope: [
+            SCOPES.organisationLinkedRead,
+            SCOPES.organisationLinkedWrite,
+            ROLES.standardUser
+          ],
           role: null
         })
 
@@ -352,7 +365,11 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         expect(log.createdBy).toEqual({
           id: updatedUser().contactId,
           email: updatedUser().email,
-          scope: ['inquirer', 'standard_user'],
+          scope: [
+            SCOPES.organisationLinkedRead,
+            SCOPES.organisationLinkedWrite,
+            ROLES.standardUser
+          ],
           role: null
         })
 

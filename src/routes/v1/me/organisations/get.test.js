@@ -3,6 +3,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { asUnscopedAdminUser } from '#test/inject-auth.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
@@ -25,6 +26,23 @@ describe('GET /v1/me/organisations', () => {
     token = generateValidTokenWith({
       email
     })
+  })
+
+  it('returns 403 when credentials lack organisationLinkedRead scope', async () => {
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: createInMemoryOrganisationsRepository([])
+      },
+      featureFlags: createInMemoryFeatureFlags()
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      ...asUnscopedAdminUser()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
   })
 
   it('should return current, linked, and unlinked organisations for the user', async () => {

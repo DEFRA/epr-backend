@@ -4,8 +4,7 @@
  * @typedef {typeof ROLES[keyof typeof ROLES]} Roles
  */
 export const ROLES = {
-  standardUser: 'standard_user',
-  inquirer: 'inquirer'
+  standardUser: 'standard_user'
 }
 
 /**
@@ -15,7 +14,9 @@ export const SCOPES = {
   adminRead: 'admin.read',
   adminWrite: 'admin.write',
   adminDlqPurge: 'admin.dlq.purge',
-  organisationRead: 'organisation.read'
+  organisationRead: 'organisation.read',
+  organisationLinkedRead: 'organisation.linked.read',
+  organisationLinkedWrite: 'organisation.linked.write'
 }
 
 /**

@@ -1,4 +1,4 @@
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
@@ -25,14 +25,18 @@ export async function getDefraUserRoles(tokenPayload, request) {
     organisationsRepository
   )
 
-  const roles =
+  const isStandardUserForThisOrg =
     linkedEprOrg &&
     requestIsForSameOrganisation(request, linkedEprOrg) &&
     organisationIsActive(linkedEprOrg)
-      ? [ROLES.inquirer, ROLES.standardUser]
-      : [ROLES.inquirer]
 
-  return { role: null, scopes: roles } // this highlights how this code has mixed up roles/scopes - needs fixing!
+  const scopes = [
+    SCOPES.organisationLinkedRead,
+    SCOPES.organisationLinkedWrite,
+    ...(isStandardUserForThisOrg ? [ROLES.standardUser] : []) // this highlights how this code (still) has mixed up roles/scopes - needs fixing!
+  ]
+
+  return { role: null, scopes }
 }
 
 /**

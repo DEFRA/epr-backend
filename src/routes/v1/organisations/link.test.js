@@ -22,6 +22,7 @@ import {
   asServiceMaintainer,
   asServiceMaintainerWrite
 } from '#test/inject-auth.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 
 const mockCdpAuditing = vi.fn()
 const mockOrganisationLinkedMetric = vi.fn()
@@ -464,7 +465,10 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(systemLogPayload.createdBy).toEqual({
             id: defraIdContactId,
             email: userEmail,
-            scope: ['inquirer'],
+            scope: [
+              SCOPES.organisationLinkedRead,
+              SCOPES.organisationLinkedWrite
+            ],
             role: null
           })
 
@@ -497,7 +501,10 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(auditPayload.user).toEqual({
             id: defraIdContactId,
             email: userEmail,
-            scope: ['inquirer'],
+            scope: [
+              SCOPES.organisationLinkedRead,
+              SCOPES.organisationLinkedWrite
+            ],
             role: null
           })
 

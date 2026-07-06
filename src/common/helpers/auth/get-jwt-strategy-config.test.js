@@ -9,7 +9,7 @@ import {
 } from '#vite/helpers/mock-entra-oidc.js'
 import Boom from '@hapi/boom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { ROLES, SCOPES, ADMIN_ROLES } from './constants.js'
+import { SCOPES, ADMIN_ROLES } from './constants.js'
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
 
 const maintainerCredential = {
@@ -544,7 +544,10 @@ describe('#getJwtStrategyConfig', () => {
 
         const result = await config.validate(artifacts, stubRequest())
 
-        expect(result.credentials.scope).toEqual([ROLES.inquirer])
+        expect(result.credentials.scope).toEqual([
+          SCOPES.organisationLinkedRead,
+          SCOPES.organisationLinkedWrite
+        ])
       })
 
       test('Defra ID credential carries a null role', async () => {
@@ -809,7 +812,10 @@ describe('#getJwtStrategyConfig', () => {
         expect(entraResult.credentials.id).toBe('entra-contact')
         expect(entraResult.credentials.scope).toEqual(expectedMaintainerScope)
         expect(defraResult.credentials.id).toBe('defra-contact')
-        expect(defraResult.credentials.scope).toEqual([ROLES.inquirer])
+        expect(defraResult.credentials.scope).toEqual([
+          SCOPES.organisationLinkedRead,
+          SCOPES.organisationLinkedWrite
+        ])
       })
     })
 

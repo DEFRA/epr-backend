@@ -33,7 +33,7 @@ describe('auditOrganisationsDiscovery', () => {
         credentials: {
           id: 'contact-123',
           email: 'user@example.com',
-          scope: ['inquirer']
+          scope: ['some-scope']
         }
       }
     })
@@ -79,7 +79,8 @@ describe('auditOrganisationsDiscovery', () => {
   }
 
   it('records a linked org with full context in the system log', async () => {
-    await auditOrganisationsDiscovery(createMockRequest(), baseParams)
+    const request = createMockRequest()
+    await auditOrganisationsDiscovery(request, baseParams)
 
     const storedLog = await findStoredLog()
     expect(storedLog.event).toEqual(expectedEvent)
@@ -87,7 +88,7 @@ describe('auditOrganisationsDiscovery', () => {
     expect(storedLog.createdBy).toEqual({
       id: 'contact-123',
       email: 'user@example.com',
-      scope: ['inquirer']
+      scope: request.auth.credentials.scope
     })
     expect(storedLog.context).toEqual({
       organisationId: 'epr-org-1',
@@ -178,7 +179,9 @@ describe('auditOrganisationsDiscovery', () => {
       }))
     }
 
-    await auditOrganisationsDiscovery(createMockRequest(), oversizedParams)
+    const request = createMockRequest()
+
+    await auditOrganisationsDiscovery(request, oversizedParams)
 
     // CDP audit receives stripped payload (event + user only)
     expect(mockAudit).toHaveBeenCalledWith({
@@ -186,7 +189,7 @@ describe('auditOrganisationsDiscovery', () => {
       user: {
         id: 'contact-123',
         email: 'user@example.com',
-        scope: ['inquirer']
+        scope: request.auth.credentials.scope
       }
     })
 
