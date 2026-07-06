@@ -5,16 +5,16 @@ import {
   buildStreamEvent,
   buildPrnCreatedEvent
 } from '../repository/ledger-test-data.js'
-import { latestCommittedSummaryLogId } from './latest-committed-summary-log-id.js'
+import { latestSubmittedSummaryLogId } from './latest-submitted-summary-log-id.js'
 
 const LEDGER_ID = { registrationId: 'reg-1', accreditationId: 'acc-1' }
 
-describe('latestCommittedSummaryLogId', () => {
+describe('latestSubmittedSummaryLogId', () => {
   it('returns null when the ledger has no events', async () => {
     const ledgerRepository = createInMemoryLedgerRepository()()
 
     expect(
-      await latestCommittedSummaryLogId(ledgerRepository, LEDGER_ID)
+      await latestSubmittedSummaryLogId(ledgerRepository, LEDGER_ID)
     ).toBeNull()
   })
 
@@ -24,7 +24,7 @@ describe('latestCommittedSummaryLogId', () => {
     ])()
 
     expect(
-      await latestCommittedSummaryLogId(ledgerRepository, LEDGER_ID)
+      await latestSubmittedSummaryLogId(ledgerRepository, LEDGER_ID)
     ).toBeNull()
   })
 
@@ -36,7 +36,7 @@ describe('latestCommittedSummaryLogId', () => {
       })
     ])()
 
-    expect(await latestCommittedSummaryLogId(ledgerRepository, LEDGER_ID)).toBe(
+    expect(await latestSubmittedSummaryLogId(ledgerRepository, LEDGER_ID)).toBe(
       'log-1'
     )
   })
@@ -54,12 +54,12 @@ describe('latestCommittedSummaryLogId', () => {
       buildPrnCreatedEvent({ number: 3 })
     ])()
 
-    expect(await latestCommittedSummaryLogId(ledgerRepository, LEDGER_ID)).toBe(
+    expect(await latestSubmittedSummaryLogId(ledgerRepository, LEDGER_ID)).toBe(
       'log-2'
     )
   })
 
-  it('resolves the committed head for a registered-only ledger', async () => {
+  it('resolves the head for a registered-only ledger', async () => {
     const ledgerRepository = createInMemoryLedgerRepository([
       buildStreamEvent({
         number: 1,
@@ -69,7 +69,7 @@ describe('latestCommittedSummaryLogId', () => {
     ])()
 
     expect(
-      await latestCommittedSummaryLogId(ledgerRepository, {
+      await latestSubmittedSummaryLogId(ledgerRepository, {
         registrationId: 'reg-1',
         accreditationId: null
       })

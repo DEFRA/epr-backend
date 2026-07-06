@@ -1,4 +1,4 @@
-import { latestCommittedSummaryLogId } from '#waste-balances/application/latest-committed-summary-log-id.js'
+import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-submitted-summary-log-id.js'
 
 /**
  * @typedef {import('#waste-records/repository/schema.js').SummaryLogRowState} SummaryLogRowState
@@ -37,7 +37,7 @@ const toWasteRecordState = ({
 })
 
 /**
- * Membership query for a resolved committed head: every row whose committed
+ * Membership query for a resolved head: every row whose committed
  * state belongs to that submission, or nothing when there is no head.
  *
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} summaryLogRowStateRepository
@@ -71,7 +71,7 @@ export const summaryLogRowStatesForRegistration = async ({
   registrationId,
   accreditationId
 }) => {
-  const head = await latestCommittedSummaryLogId(ledgerRepository, {
+  const head = await latestSubmittedSummaryLogId(ledgerRepository, {
     registrationId,
     accreditationId
   })
