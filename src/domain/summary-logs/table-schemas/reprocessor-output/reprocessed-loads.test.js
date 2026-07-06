@@ -4,6 +4,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
+import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 
 describe('REPROCESSED_LOADS', () => {
   const schema = REPROCESSED_LOADS
@@ -58,9 +59,10 @@ describe('REPROCESSED_LOADS', () => {
       })
 
       it('rejects ROW_ID below minimum', () => {
-        const { error } = validationSchema.validate({ ROW_ID: 2999 })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be at least 3000')
+        const details = expectValidationError(validationSchema, {
+          ROW_ID: 2999
+        })
+        expect(details[0].message).toBe('must be at least 3000')
       })
 
       it('rejects non-integer ROW_ID', () => {
@@ -87,23 +89,24 @@ describe('REPROCESSED_LOADS', () => {
           })
 
           it('rejects negative value', () => {
-            const { error } = validationSchema.validate({ [field]: -1 })
-            expect(error).toBeDefined()
-            expect(error?.details[0].message).toBe('must be at least 0')
+            const details = expectValidationError(validationSchema, {
+              [field]: -1
+            })
+            expect(details[0].message).toBe('must be at least 0')
           })
 
           it('rejects value above maximum (1000)', () => {
-            const { error } = validationSchema.validate({ [field]: 1001 })
-            expect(error).toBeDefined()
-            expect(error?.details[0].message).toBe('must be at most 1000')
+            const details = expectValidationError(validationSchema, {
+              [field]: 1001
+            })
+            expect(details[0].message).toBe('must be at most 1000')
           })
 
           it('rejects non-number', () => {
-            const { error } = validationSchema.validate({
+            const details = expectValidationError(validationSchema, {
               [field]: 'not-a-number'
             })
-            expect(error).toBeDefined()
-            expect(error?.details[0].message).toBe('must be a number')
+            expect(details[0].message).toBe('must be a number')
           })
         })
       }
@@ -125,11 +128,10 @@ describe('REPROCESSED_LOADS', () => {
       })
 
       it('rejects invalid date string', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           DATE_LOAD_LEFT_SITE: 'not-a-date'
         })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a valid date')
+        expect(details[0].message).toBe('must be a valid date')
       })
 
       it('coerces Date object to YYYY-MM-DD string', () => {
@@ -164,27 +166,24 @@ describe('REPROCESSED_LOADS', () => {
       })
 
       it('rejects negative value', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           UK_PACKAGING_WEIGHT_PERCENTAGE: -0.1
         })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be at least 0')
+        expect(details[0].message).toBe('must be at least 0')
       })
 
       it('rejects value above 1', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           UK_PACKAGING_WEIGHT_PERCENTAGE: 1.1
         })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be at most 1')
+        expect(details[0].message).toBe('must be at most 1')
       })
 
       it('rejects non-number', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           UK_PACKAGING_WEIGHT_PERCENTAGE: 'fifty percent'
         })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a number')
+        expect(details[0].message).toBe('must be a number')
       })
     })
 
@@ -236,25 +235,23 @@ describe('REPROCESSED_LOADS', () => {
       })
 
       it('rejects incorrect calculation', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           PRODUCT_TONNAGE: 500,
           UK_PACKAGING_WEIGHT_PERCENTAGE: 0.75,
           PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 400 // Should be 375
         })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
+        expect(details[0].message).toBe(
           'must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE'
         )
       })
 
       it('rejects calculation that is close but outside tolerance', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           PRODUCT_TONNAGE: 500,
           UK_PACKAGING_WEIGHT_PERCENTAGE: 0.75,
           PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 375.001 // Off by 0.001
         })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(
+        expect(details[0].message).toBe(
           'must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE'
         )
       })
@@ -313,11 +310,10 @@ describe('REPROCESSED_LOADS', () => {
         ['uppercase "YES"', 'YES'],
         ['other strings', 'Maybe']
       ])('rejects %s', (_label, value) => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           ADD_PRODUCT_WEIGHT: value
         })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be Yes or No')
+        expect(details[0].message).toBe('must be Yes or No')
       })
 
       it('rejects non-string values', () => {
@@ -328,22 +324,20 @@ describe('REPROCESSED_LOADS', () => {
 
     describe('multiple field validation', () => {
       it('reports all errors when multiple fields invalid', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           ROW_ID: 2999,
           PRODUCT_TONNAGE: 1001
         })
-        expect(error).toBeDefined()
-        expect(error?.details.length).toBe(2)
+        expect(details.length).toBe(2)
       })
 
       it('reports errors for multiple new fields when invalid', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           ADD_PRODUCT_WEIGHT: 'maybe',
           UK_PACKAGING_WEIGHT_PERCENTAGE: 1.5,
           DATE_LOAD_LEFT_SITE: 'invalid-date'
         })
-        expect(error).toBeDefined()
-        expect(error?.details.length).toBe(3)
+        expect(details.length).toBe(3)
       })
     })
   })

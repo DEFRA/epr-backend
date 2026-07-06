@@ -4,6 +4,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
+import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 
 describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
   const schema = SENT_ON_LOADS
@@ -85,9 +86,10 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
       })
 
       it('rejects ROW_ID below minimum', () => {
-        const { error } = validationSchema.validate({ ROW_ID: 4999 })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be at least 5000')
+        const details = expectValidationError(validationSchema, {
+          ROW_ID: 4999
+        })
+        expect(details[0].message).toBe('must be at least 5000')
       })
 
       it('rejects non-integer ROW_ID', () => {
@@ -112,11 +114,10 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
       })
 
       it('rejects invalid date string', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           DATE_LOAD_LEFT_SITE: 'not-a-date'
         })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe('must be a valid date')
+        expect(details[0].message).toBe('must be a valid date')
       })
     })
 
@@ -146,23 +147,21 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
           message: 'must be a number'
         }
       ])('rejects $label', ({ value, message }) => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: value
         })
-        expect(error).toBeDefined()
-        expect(error?.details[0].message).toBe(message)
+        expect(details[0].message).toBe(message)
       })
     })
 
     describe('multiple field validation', () => {
       it('reports all errors when multiple fields invalid', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           ROW_ID: 4999,
           DATE_LOAD_LEFT_SITE: 'not-a-date',
           TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: -1
         })
-        expect(error).toBeDefined()
-        expect(error?.details.length).toBe(3)
+        expect(details.length).toBe(3)
       })
     })
   })

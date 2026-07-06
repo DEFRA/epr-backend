@@ -8,6 +8,7 @@ import {
   validateSummaryLogRowStateRead
 } from './validation.js'
 import { buildSummaryLogRowState } from './test-data.js'
+import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 
 const validate = (data) =>
   summaryLogRowStateInsertSchema.validate(data, { abortEarly: false })
@@ -79,9 +80,14 @@ describe('row state insert schema', () => {
   })
 
   it('rejects missing required top-level fields', () => {
-    const { error } = validate({})
-    expect(error).toBeDefined()
-    const missing = error?.details.map((d) => d.path[0])
+    const details = expectValidationError(
+      summaryLogRowStateInsertSchema,
+      {},
+      {
+        abortEarly: false
+      }
+    )
+    const missing = details.map((d) => d.path[0])
     expect(missing).toContain('organisationId')
     expect(missing).toContain('registrationId')
     expect(missing).toContain('rowId')
