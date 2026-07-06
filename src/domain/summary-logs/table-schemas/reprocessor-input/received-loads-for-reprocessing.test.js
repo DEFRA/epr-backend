@@ -3,7 +3,7 @@ import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessi
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
-import { buildAccreditation } from '#domain/organisations/accreditation-test-helpers.js'
+import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
   const schema = RECEIVED_LOADS_FOR_REPROCESSING

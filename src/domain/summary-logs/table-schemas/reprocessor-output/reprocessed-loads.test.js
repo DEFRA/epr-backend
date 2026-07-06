@@ -3,7 +3,7 @@ import { REPROCESSED_LOADS } from './reprocessed-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
-import { buildAccreditation } from '#domain/organisations/accreditation-test-helpers.js'
+import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 describe('REPROCESSED_LOADS', () => {
   const schema = REPROCESSED_LOADS
