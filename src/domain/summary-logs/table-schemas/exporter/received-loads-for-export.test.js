@@ -6,6 +6,7 @@ import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {OverseasSitesContext} from '../validation-pipeline.js' */
 
 describe('RECEIVED_LOADS_FOR_EXPORT', () => {
   const schema = RECEIVED_LOADS_FOR_EXPORT
@@ -818,24 +819,28 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('EXCLUDED outcome - ORS not approved (VAL014)', () => {
-      const approvedOverseasSites = {
-        '001': { validFrom: new Date('2024-01-01') }
-      }
-
-      it('returns INCLUDED when ORS is approved and validFrom is before DATE_OF_EXPORT', () => {
-        const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation,
-          overseasSites: approvedOverseasSites
-        })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
-      })
-
-      it('returns INCLUDED when ORS validFrom equals DATE_OF_EXPORT', () => {
-        const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation,
-          overseasSites: {
-            '001': { validFrom: new Date('2024-06-15') }
+      it.each(
+        /** @type {{ description: string, overseasSites: OverseasSitesContext }[]} */ ([
+          {
+            description:
+              'ORS is approved and validFrom is before DATE_OF_EXPORT',
+            overseasSites: {
+              '001': { validFrom: new Date('2024-01-01') }
+            }
+          },
+          {
+            description: 'ORS validFrom equals DATE_OF_EXPORT',
+            overseasSites: { '001': { validFrom: new Date('2024-06-15') } }
+          },
+          {
+            description: 'ORS validation is disabled',
+            overseasSites: ORS_VALIDATION_DISABLED
           }
+        ])
+      )('returns INCLUDED when $description', ({ overseasSites }) => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation,
+          overseasSites
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
@@ -864,14 +869,6 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(result.reasons).toContainEqual({
           code: CLASSIFICATION_REASON.ORS_NOT_APPROVED
         })
-      })
-
-      it('skips ORS check when ORS validation is disabled', () => {
-        const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation,
-          overseasSites: ORS_VALIDATION_DISABLED
-        })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
     })
 
