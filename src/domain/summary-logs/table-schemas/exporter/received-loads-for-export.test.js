@@ -5,6 +5,7 @@ import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
 import { expectValidationError } from '#common/validation/validation-test-helpers.js'
+import { assertIncluded } from '../shared/classify-test-helpers.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '../validation-pipeline.js' */
@@ -666,16 +667,14 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
     describe('INCLUDED outcome - direct export (no interim site)', () => {
       it('returns INCLUDED with TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED', () => {
-        const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation,
-          overseasSites: ORS_VALIDATION_DISABLED
-        })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        const result = assertIncluded(
+          schema.classifyForWasteBalance(completeRow, {
+            accreditation,
+            overseasSites: ORS_VALIDATION_DISABLED
+          })
+        )
         expect(result.reasons).toEqual([])
-        expect(
-          /** @type {{ transactionAmount: number }} */ (result)
-            .transactionAmount
-        ).toBe(60.5)
+        expect(result.transactionAmount).toBe(60.5)
       })
 
       it('rounds transaction amount to two decimal places', () => {
@@ -683,14 +682,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ...completeRow,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 60.555
         }
-        const result = schema.classifyForWasteBalance(row, {
-          accreditation,
-          overseasSites: ORS_VALIDATION_DISABLED
-        })
-        expect(
-          /** @type {{ transactionAmount: number }} */ (result)
-            .transactionAmount
-        ).toBe(60.56)
+        const result = assertIncluded(
+          schema.classifyForWasteBalance(row, {
+            accreditation,
+            overseasSites: ORS_VALIDATION_DISABLED
+          })
+        )
+        expect(result.transactionAmount).toBe(60.56)
       })
     })
 
@@ -701,15 +699,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'Yes',
           TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR: 45.75
         }
-        const result = schema.classifyForWasteBalance(row, {
-          accreditation,
-          overseasSites: ORS_VALIDATION_DISABLED
-        })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
-        expect(
-          /** @type {{ transactionAmount: number }} */ (result)
-            .transactionAmount
-        ).toBe(45.75)
+        const result = assertIncluded(
+          schema.classifyForWasteBalance(row, {
+            accreditation,
+            overseasSites: ORS_VALIDATION_DISABLED
+          })
+        )
+        expect(result.transactionAmount).toBe(45.75)
       })
     })
 
