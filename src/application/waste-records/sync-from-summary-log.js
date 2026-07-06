@@ -176,7 +176,7 @@ const updateWasteBalances = async ({
     processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT
 
   if (shouldCalculateWasteBalance) {
-    await wasteBalanceService.updateWasteBalanceTransactions(
+    await wasteBalanceService.submitSummaryLog(
       wasteRecords.map((r) => r.record),
       { user, accreditation, overseasSites, summaryLogId }
     )
@@ -305,7 +305,7 @@ const commitStateAndBalance = async ({
       summaryLogId: summaryLog.file.id
     })
   } else if (featureFlags?.isRegisteredOnlySubmittedEventsEnabled()) {
-    await wasteBalanceService.submitSummaryLog(
+    await wasteBalanceService.commitSummaryLogSubmittedEvent(
       {
         registrationId: summaryLog.registrationId,
         accreditationId: null,

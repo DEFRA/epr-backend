@@ -90,15 +90,15 @@ const buildExporterRecord = ({
 describe('performUpdateViaLedger', () => {
   let ledgerRepository
   let systemLogsRepository
-  let submitSummaryLog
+  let commitSummaryLogSubmittedEvent
 
   beforeEach(async () => {
     ledgerRepository = createInMemoryLedgerRepository()()
     systemLogsRepository = createSystemLogsRepository()(logger)
-    submitSummaryLog = createWasteBalanceService(
+    commitSummaryLogSubmittedEvent = createWasteBalanceService(
       ledgerRepository,
       systemLogsRepository
-    ).submitSummaryLog
+    ).commitSummaryLogSubmittedEvent
     const { findSchemaForProcessingType } =
       await import('#domain/summary-logs/table-schemas/index.js')
     vi.mocked(findSchemaForProcessingType).mockReturnValue(includingSchema)
@@ -114,7 +114,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -146,7 +146,7 @@ describe('performUpdateViaLedger', () => {
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -160,7 +160,7 @@ describe('performUpdateViaLedger', () => {
           buildExporterRecord({ rowId: '3', tonnage: 20 })
         ],
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -196,7 +196,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -227,7 +227,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -251,7 +251,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [],
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -272,7 +272,7 @@ describe('performUpdateViaLedger', () => {
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -298,7 +298,7 @@ describe('performUpdateViaLedger', () => {
         accreditationId,
         amount: 150,
         availableAmount: 150,
-        newTransactions: [latest]
+        events: [latest]
       })
     })
   })
@@ -306,12 +306,14 @@ describe('performUpdateViaLedger', () => {
   describe('without a system-logs repository', () => {
     it('appends the ledger event but emits no back-office audit', async () => {
       const auditlessSubmit =
-        createWasteBalanceService(ledgerRepository).submitSummaryLog
+        createWasteBalanceService(
+          ledgerRepository
+        ).commitSummaryLogSubmittedEvent
 
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
-        submitSummaryLog: auditlessSubmit,
+        commitSummaryLogSubmittedEvent: auditlessSubmit,
         dependencies: {},
         user,
         overseasSites,
@@ -346,7 +348,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -366,7 +368,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -388,7 +390,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user: {
           id: 'user-2',
@@ -417,7 +419,7 @@ describe('performUpdateViaLedger', () => {
         performUpdateViaLedger({
           wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
           accreditation,
-          submitSummaryLog,
+          commitSummaryLogSubmittedEvent,
           dependencies: { systemLogsRepository },
           user,
           overseasSites,

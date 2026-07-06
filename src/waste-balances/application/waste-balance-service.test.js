@@ -34,9 +34,9 @@ describe('createWasteBalanceService', () => {
     service = createWasteBalanceService(ledgerRepository)
   })
 
-  describe('submitSummaryLog', () => {
+  describe('commitSummaryLogSubmittedEvent', () => {
     it('opens the ledger from zero on the first submission', async () => {
-      const [event] = await service.submitSummaryLog(
+      const [event] = await service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'log-A', creditTotal: 150 },
         createdBy
@@ -58,13 +58,13 @@ describe('createWasteBalanceService', () => {
     })
 
     it('appends at the next head, moving the balance by the credit-total delta', async () => {
-      await service.submitSummaryLog(
+      await service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'log-A', creditTotal: 150 },
         createdBy
       )
 
-      const [event] = await service.submitSummaryLog(
+      const [event] = await service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'log-B', creditTotal: 200 },
         createdBy
@@ -83,12 +83,12 @@ describe('createWasteBalanceService', () => {
 
     it('lets one of two concurrent submissions win and surfaces the loser as a slot conflict', async () => {
       const results = await Promise.allSettled([
-        service.submitSummaryLog(
+        service.commitSummaryLogSubmittedEvent(
           ledgerId,
           { summaryLogId: 'log-A', creditTotal: 150 },
           createdBy
         ),
-        service.submitSummaryLog(
+        service.commitSummaryLogSubmittedEvent(
           ledgerId,
           { summaryLogId: 'log-B', creditTotal: 200 },
           createdBy
@@ -108,7 +108,7 @@ describe('createWasteBalanceService', () => {
 
   describe('PRN commands', () => {
     const seedLedger = (creditTotal = 1000) =>
-      service.submitSummaryLog(
+      service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'seed', creditTotal },
         createdBy
@@ -362,9 +362,9 @@ describe('createWasteBalanceService', () => {
     })
   })
 
-  describe('updateWasteBalanceTransactions', () => {
+  describe('submitSummaryLog', () => {
     it('does not touch the ledger when there are no waste records to credit', async () => {
-      await service.updateWasteBalanceTransactions([], {
+      await service.submitSummaryLog([], {
         user: createdBy,
         accreditation: { id: 'acc-1' },
         overseasSites: /** @type {*} */ (new Map()),
@@ -382,7 +382,7 @@ describe('createWasteBalanceService', () => {
     })
 
     it('folds the ledger into its current balance', async () => {
-      await service.submitSummaryLog(
+      await service.commitSummaryLogSubmittedEvent(
         ledgerId,
         { summaryLogId: 'log-A', creditTotal: 150 },
         createdBy

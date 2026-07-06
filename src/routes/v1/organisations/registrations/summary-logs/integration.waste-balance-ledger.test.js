@@ -252,7 +252,7 @@ describe('Waste balance stream (Exporter)', () => {
     })
     expect(entry.context.amount).toBe(50)
     expect(entry.context.availableAmount).toBe(50)
-    expect(entry.context.newTransactions).toHaveLength(1)
+    expect(entry.context.events).toHaveLength(1)
     expect(entry.createdBy).toBeDefined()
   })
 })

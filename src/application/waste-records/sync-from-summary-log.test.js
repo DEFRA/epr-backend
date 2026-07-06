@@ -36,8 +36,8 @@ describe('syncFromSummaryLog', () => {
   beforeEach(() => {
     wasteRecordRepository = createInMemoryWasteRecordsRepository()()
     wasteBalanceService = {
-      updateWasteBalanceTransactions: vi.fn(),
-      submitSummaryLog: vi.fn()
+      submitSummaryLog: vi.fn(),
+      commitSummaryLogSubmittedEvent: vi.fn()
     }
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
@@ -187,14 +187,15 @@ describe('syncFromSummaryLog', () => {
       'reg-1'
     )
 
-    expect(
-      wasteBalanceService.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), {
-      user: TEST_USER,
-      accreditation,
-      overseasSites: ORS_VALIDATION_DISABLED,
-      summaryLogId: expect.any(String)
-    })
+    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
+      expect.any(Array),
+      {
+        user: TEST_USER,
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED,
+        summaryLogId: expect.any(String)
+      }
+    )
   })
 
   it('updates existing waste records when rowId already exists', async () => {
@@ -892,9 +893,7 @@ describe('syncFromSummaryLog', () => {
 
     await sync(summaryLog, TEST_USER)
 
-    expect(
-      wasteBalanceService.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(
+    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
           rowId: 'row-123',
@@ -975,18 +974,19 @@ describe('syncFromSummaryLog', () => {
 
     await sync(summaryLog, TEST_USER)
 
-    expect(
-      wasteBalanceService.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), {
-      user: TEST_USER,
-      accreditation: {
-        id: 'acc-default',
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31'
-      },
-      overseasSites: { '001': { validFrom } },
-      summaryLogId: expect.any(String)
-    })
+    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
+      expect.any(Array),
+      {
+        user: TEST_USER,
+        accreditation: {
+          id: 'acc-default',
+          validFrom: '2023-01-01',
+          validTo: '2023-12-31'
+        },
+        overseasSites: { '001': { validFrom } },
+        summaryLogId: expect.any(String)
+      }
+    )
   })
 
   it('skips waste balance update for registered-only processing types', async () => {
@@ -1024,9 +1024,7 @@ describe('syncFromSummaryLog', () => {
 
     await sync(summaryLog)
 
-    expect(
-      wasteBalanceService.updateWasteBalanceTransactions
-    ).not.toHaveBeenCalled()
+    expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
   })
 
   it('throws when accreditationId exists but accreditation is not found', async () => {
@@ -1607,9 +1605,7 @@ describe('syncFromSummaryLog', () => {
         },
         summaryLogIds: [fileId]
       })
-      expect(
-        wasteBalanceService.updateWasteBalanceTransactions
-      ).not.toHaveBeenCalled()
+      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
     })
 
     it('writes committed row states for an exporter registered-only submission', async () => {
@@ -1695,9 +1691,7 @@ describe('syncFromSummaryLog', () => {
         accreditationId: null,
         summaryLogIds: [fileId]
       })
-      expect(
-        wasteBalanceService.updateWasteBalanceTransactions
-      ).not.toHaveBeenCalled()
+      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
     })
 
     it('writes committed row states for an accredited submission and still updates the balance', async () => {
@@ -1747,9 +1741,7 @@ describe('syncFromSummaryLog', () => {
         rowId: 'row-123',
         accreditationId: 'acc-1'
       })
-      expect(
-        wasteBalanceService.updateWasteBalanceTransactions
-      ).toHaveBeenCalled()
+      expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalled()
     })
 
     it('writes no row states when the feature flag is off', async () => {
@@ -1829,7 +1821,9 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor, submittedEventsFlagOn)(summaryLog, TEST_USER)
 
-      expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
+      expect(
+        wasteBalanceService.commitSummaryLogSubmittedEvent
+      ).toHaveBeenCalledWith(
         {
           registrationId: 'reg-1',
           accreditationId: null,
@@ -1838,9 +1832,7 @@ describe('syncFromSummaryLog', () => {
         { summaryLogId: fileId, creditTotal: 0 },
         { id: TEST_USER.id, email: TEST_USER.email }
       )
-      expect(
-        wasteBalanceService.updateWasteBalanceTransactions
-      ).not.toHaveBeenCalled()
+      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
     })
 
     it('includes the user name in createdBy when the user has one', async () => {
@@ -1857,7 +1849,9 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor, submittedEventsFlagOn)(summaryLog, namedUser)
 
-      expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
+      expect(
+        wasteBalanceService.commitSummaryLogSubmittedEvent
+      ).toHaveBeenCalledWith(
         {
           registrationId: 'reg-1',
           accreditationId: null,
@@ -1884,7 +1878,9 @@ describe('syncFromSummaryLog', () => {
         createInMemoryFeatureFlags({ registeredOnlySubmittedEvents: false })
       )(summaryLog, TEST_USER)
 
-      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
+      expect(
+        wasteBalanceService.commitSummaryLogSubmittedEvent
+      ).not.toHaveBeenCalled()
     })
 
     it('does not emit a reg-only event for an accredited submission', async () => {
@@ -1926,7 +1922,9 @@ describe('syncFromSummaryLog', () => {
 
       await syncWith(extractor, submittedEventsFlagOn)(summaryLog, TEST_USER)
 
-      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
+      expect(
+        wasteBalanceService.commitSummaryLogSubmittedEvent
+      ).not.toHaveBeenCalled()
     })
   })
 })

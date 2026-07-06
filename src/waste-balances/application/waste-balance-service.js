@@ -26,7 +26,7 @@ import { validateAccreditationId } from '../repository/validation.js'
  */
 
 /**
- * Records a summary-log submission against a ledger, returning the appended
+ * Commits a summary-log-submitted event to a ledger, returning the appended
  * event(s).
  *
  * @typedef {(
@@ -34,7 +34,7 @@ import { validateAccreditationId } from '../repository/validation.js'
  *   submission: import('../repository/ledger-schema.js').SummaryLogSubmittedPayload,
  *   createdBy: import('../repository/ledger-schema.js').LedgerUserSummary,
  *   createdAt?: Date
- * ) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} SubmitSummaryLog
+ * ) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} CommitSummaryLogSubmittedEvent
  */
 
 /**
@@ -169,11 +169,11 @@ export const createWasteBalanceService = (
   const { fold, append, runPrnCommand } = createLedgerCommands(ledgerRepository)
 
   /**
-   * Record a summary-log submission against the ledger.
+   * Commit a summary-log-submitted event to the ledger.
    *
-   * @type {SubmitSummaryLog}
+   * @type {CommitSummaryLogSubmittedEvent}
    */
-  const submitSummaryLog = async (
+  const commitSummaryLogSubmittedEvent = async (
     ledgerId,
     submission,
     createdBy,
@@ -201,7 +201,7 @@ export const createWasteBalanceService = (
     currentBalance: (ledgerId) =>
       currentWasteBalance(ledgerRepository, ledgerId),
 
-    submitSummaryLog,
+    commitSummaryLogSubmittedEvent,
 
     /**
      * Credit the ledger from a summary log's waste records: mark each row's
@@ -216,7 +216,7 @@ export const createWasteBalanceService = (
      * @param {string} options.summaryLogId
      * @returns {Promise<void>}
      */
-    updateWasteBalanceTransactions: async (
+    submitSummaryLog: async (
       wasteRecords,
       { user, accreditation, overseasSites, summaryLogId }
     ) => {
@@ -232,7 +232,7 @@ export const createWasteBalanceService = (
           ...accreditation,
           id: validateAccreditationId(accreditation.id)
         },
-        submitSummaryLog,
+        commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,

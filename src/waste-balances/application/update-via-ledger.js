@@ -9,8 +9,9 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * Apply a summary-log submission to the event-sourced ledger.
  *
  * Computes the aggregate `creditTotal` (sum of all row-level target amounts)
- * and submits it through the injected `submitSummaryLog`, which folds the
- * ledger, decides the submission event, and appends it. A competing write that
+ * and commits it through the injected `commitSummaryLogSubmittedEvent`, which
+ * folds the ledger, decides the submission event, and appends it. A competing
+ * write that
  * advanced the head since the fold surfaces as a slot conflict and propagates to
  * the caller (ADR-0036): the caller is the summary-log worker job, so the
  * conflict fails the job and the queue redelivers, recomputing against fresh
@@ -19,7 +20,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {Object} params
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
  * @param {{ id: string, validFrom?: string, validTo?: string }} params.accreditation
- * @param {import('./waste-balance-service.js').SubmitSummaryLog} params.submitSummaryLog
+ * @param {import('./waste-balance-service.js').CommitSummaryLogSubmittedEvent} params.commitSummaryLogSubmittedEvent
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
@@ -29,7 +30,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 export const performUpdateViaLedger = async ({
   wasteRecords,
   accreditation,
-  submitSummaryLog,
+  commitSummaryLogSubmittedEvent,
   dependencies = {},
   user,
   overseasSites,
@@ -51,7 +52,7 @@ export const performUpdateViaLedger = async ({
     creditTotal = toNumber(add(creditTotal, getTargetAmount(classification)))
   }
 
-  const [event] = await submitSummaryLog(
+  const [event] = await commitSummaryLogSubmittedEvent(
     { registrationId, accreditationId: accreditation.id, organisationId },
     { summaryLogId, creditTotal },
     {
@@ -66,7 +67,7 @@ export const performUpdateViaLedger = async ({
     accreditationId: accreditation.id,
     amount: event.closingBalance.amount,
     availableAmount: event.closingBalance.availableAmount,
-    newTransactions: [event],
+    events: [event],
     user
   })
 }

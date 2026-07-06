@@ -30,7 +30,7 @@ const seedMembership = async (summaryLogRowStateRepository, summaryLogId) =>
   )
 
 const emitRegOnlyEvent = (ledgerRepository, summaryLogId) =>
-  createWasteBalanceService(ledgerRepository).submitSummaryLog(
+  createWasteBalanceService(ledgerRepository).commitSummaryLogSubmittedEvent(
     registeredOnlyLedgerId,
     { summaryLogId, creditTotal: 0 },
     createdBy

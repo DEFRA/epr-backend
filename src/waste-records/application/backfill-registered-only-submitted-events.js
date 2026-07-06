@@ -211,7 +211,7 @@ const backfillRegistrationSubmittedEvents = async ({
       continue
     }
     if (writeSubmittedEvents) {
-      await wasteBalanceService.submitSummaryLog(
+      await wasteBalanceService.commitSummaryLogSubmittedEvent(
         {
           registrationId: registration.id,
           accreditationId: null,
