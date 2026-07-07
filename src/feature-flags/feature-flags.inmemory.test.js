@@ -103,4 +103,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isRegisteredOnlySubmittedEventsEnabled()).toBe(false)
   })
+
+  it('returns true when summaryLogRowStatesDiscrepancyReport flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      summaryLogRowStatesDiscrepancyReport: true
+    })
+    expect(flags.isSummaryLogRowStatesDiscrepancyReportEnabled()).toBe(true)
+  })
+
+  it('returns false when summaryLogRowStatesDiscrepancyReport flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      summaryLogRowStatesDiscrepancyReport: false
+    })
+    expect(flags.isSummaryLogRowStatesDiscrepancyReportEnabled()).toBe(false)
+  })
+
+  it('returns false when summaryLogRowStatesDiscrepancyReport flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isSummaryLogRowStatesDiscrepancyReportEnabled()).toBe(false)
+  })
 })

@@ -94,9 +94,18 @@ const runReport = async (server) => {
  * cross-instance lock so a single pod per deploy executes and logs it.
  * Read-only, safe under live traffic.
  *
+ * Gated by the summary-log-row-states-discrepancy-report feature flag: with it
+ * off this returns before touching the locker or any repository. The walk is
+ * superseded by the watermark migration and persisted-state inspection, so it
+ * stays off by default until that replacement lands.
+ *
  * @param {Object} server - Hapi server instance
  */
 export const runWasteRecordStateDiscrepancyReport = async (server) => {
+  if (!server.featureFlags.isSummaryLogRowStatesDiscrepancyReportEnabled()) {
+    return
+  }
+
   try {
     const lock = await server.locker.lock(LOCK_NAME)
     if (!lock) {
