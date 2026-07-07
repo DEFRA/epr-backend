@@ -65,6 +65,25 @@ describe('projectSummaryLogRowState', () => {
     )
   })
 
+  it('coerces a numeric rowId to a string', () => {
+    const record = {
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: 1000,
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      versions: [],
+      data: { processingType: 'REPROCESSOR_REGISTERED_ONLY' }
+    }
+
+    const projected = projectSummaryLogRowState(
+      /** @type {any} */ (record),
+      null,
+      overseasSites
+    )
+
+    expect(projected.rowId).toBe('1000')
+  })
+
   it('coerces a copy, leaving the source record data at full precision', () => {
     const record = {
       organisationId: 'org-1',
