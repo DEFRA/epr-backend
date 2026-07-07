@@ -15,6 +15,19 @@ const ledger = {
   accreditationId: 'acc-1'
 }
 
+/**
+ * Reconcile with the committed summary-log id set defaulting to just the head —
+ * the single-submission case, where the carry-forward baseline coincides with a
+ * changed-at-head baseline. Tests exercising restated-unchanged rows across
+ * earlier submissions pass an explicit `committedSummaryLogIds`.
+ */
+const reconcile = (input) =>
+  reconcileRegistration({
+    ...ledger,
+    committedSummaryLogIds: new Set(input.head === null ? [] : [input.head]),
+    ...input
+  })
+
 const includedWasteRecordState = (rowId, transactionAmount, reasons = []) => ({
   rowId,
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
@@ -64,8 +77,7 @@ const committedRecord = (rowId, head) => ({
 
 describe('reconcileRegistration', () => {
   it('treats a ledger with no committed submission as clean and uncovered', () => {
-    const result = reconcileRegistration({
-      ...ledger,
+    const result = reconcile({
       head: null,
       eventCreditTotal: null,
       wasteRecordStates: [],
@@ -88,8 +100,7 @@ describe('reconcileRegistration', () => {
   })
 
   it('reconciles a covered head whose waste record states match the committed rows and event total', () => {
-    const result = reconcileRegistration({
-      ...ledger,
+    const result = reconcile({
       head: 'log-2',
       eventCreditTotal: 0,
       wasteRecordStates: [
@@ -119,8 +130,7 @@ describe('reconcileRegistration', () => {
   })
 
   it('flags a committed head with no waste record state data as an uncovered backfill gap', () => {
-    const result = reconcileRegistration({
-      ...ledger,
+    const result = reconcile({
       head: 'log-1',
       eventCreditTotal: 10,
       wasteRecordStates: [],
@@ -135,8 +145,7 @@ describe('reconcileRegistration', () => {
   })
 
   it('reports a committed-at-head row absent from the waste record states as missing', () => {
-    const result = reconcileRegistration({
-      ...ledger,
+    const result = reconcile({
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [includedWasteRecordState('row-1', 10)],
@@ -155,8 +164,7 @@ describe('reconcileRegistration', () => {
   })
 
   it('reports a waste record state not committed at the head in legacy as extra', () => {
-    const result = reconcileRegistration({
-      ...ledger,
+    const result = reconcile({
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [
@@ -174,9 +182,71 @@ describe('reconcileRegistration', () => {
     expect(result.isClean).toBe(false)
   })
 
+  it('treats a row committed at an earlier submission and restated unchanged at the head as committed, not extra', () => {
+    const result = reconcile({
+      head: 'log-2',
+      committedSummaryLogIds: new Set(['log-1', 'log-2']),
+      eventCreditTotal: 10,
+      wasteRecordStates: [includedWasteRecordState('row-1', 10)],
+      wasteRecords: [committedRecord('row-1', 'log-1')],
+      accreditation: null,
+      overseasSites: {}
+    })
+
+    expect(result.committedRowCount).toBe(1)
+    expect(result.missingRows).toEqual([])
+    expect(result.extraRows).toEqual([])
+    expect(result.creditTotal).toEqual({
+      wasteRecordStates: 10,
+      event: 10,
+      drift: 0
+    })
+    expect(result.isClean).toBe(true)
+  })
+
+  it('counts every row carried forward on the stream as committed while a stream row absent from the states is missing', () => {
+    const result = reconcile({
+      head: 'log-2',
+      committedSummaryLogIds: new Set(['log-1', 'log-2']),
+      eventCreditTotal: 10,
+      wasteRecordStates: [includedWasteRecordState('row-1', 10)],
+      wasteRecords: [
+        committedRecord('row-1', 'log-1'),
+        committedRecord('row-2', 'log-1')
+      ],
+      accreditation: null,
+      overseasSites: {}
+    })
+
+    expect(result.committedRowCount).toBe(2)
+    expect(result.extraRows).toEqual([])
+    expect(result.missingRows).toEqual([
+      { rowId: 'row-2', wasteRecordType: WASTE_RECORD_TYPE.RECEIVED }
+    ])
+  })
+
+  it('excludes a legacy record whose only version was never committed to the stream from both committed and missing rows', () => {
+    const result = reconcile({
+      head: 'log-2',
+      committedSummaryLogIds: new Set(['log-1', 'log-2']),
+      eventCreditTotal: 10,
+      wasteRecordStates: [includedWasteRecordState('row-1', 10)],
+      wasteRecords: [
+        committedRecord('row-1', 'log-1'),
+        committedRecord('orphan', 'log-uncommitted')
+      ],
+      accreditation: null,
+      overseasSites: {}
+    })
+
+    expect(result.committedRowCount).toBe(1)
+    expect(result.missingRows).toEqual([])
+    expect(result.extraRows).toEqual([])
+    expect(result.isClean).toBe(true)
+  })
+
   it('reports creditTotal drift when the waste record states do not sum to the event total', () => {
-    const result = reconcileRegistration({
-      ...ledger,
+    const result = reconcile({
       head: 'log-2',
       eventCreditTotal: 30,
       wasteRecordStates: [
@@ -200,8 +270,7 @@ describe('reconcileRegistration', () => {
   })
 
   it('reports a row whose waste record state outcome disagrees with the legacy reader as a classification divergence, carrying its reasons', () => {
-    const result = reconcileRegistration({
-      ...ledger,
+    const result = reconcile({
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [
@@ -224,8 +293,7 @@ describe('reconcileRegistration', () => {
   })
 
   it('keeps classification divergence out of the cleanliness verdict (context-sensitive signal)', () => {
-    const result = reconcileRegistration({
-      ...ledger,
+    const result = reconcile({
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [includedWasteRecordState('row-1', 10)],
@@ -239,8 +307,7 @@ describe('reconcileRegistration', () => {
   })
 
   it('excludes non-included waste record states from the waste record state credit total', () => {
-    const result = reconcileRegistration({
-      ...ledger,
+    const result = reconcile({
       head: 'log-2',
       eventCreditTotal: 10,
       wasteRecordStates: [
