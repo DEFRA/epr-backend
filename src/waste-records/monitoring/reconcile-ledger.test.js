@@ -99,4 +99,53 @@ describe('reconcileLedger', () => {
       isClean: false
     })
   })
+
+  it('reconciles a row committed at an earlier submission and restated unchanged at the head', async () => {
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+      DEFAULT_LEDGER_ID,
+      [
+        buildSummaryLogRowStateEntry({
+          rowId: 'row-1',
+          classification: {
+            outcome: 'INCLUDED',
+            reasons: [],
+            transactionAmount: 10
+          }
+        })
+      ],
+      'log-2'
+    )
+
+    const ledgerRepository = createInMemoryLedgerRepository([
+      buildLedgerEvent({
+        number: 1,
+        payload: { summaryLogId: 'log-1', creditTotal: 10 }
+      }),
+      buildLedgerEvent({
+        number: 2,
+        payload: { summaryLogId: 'log-2', creditTotal: 10 }
+      })
+    ])()
+
+    const wasteRecordsRepository = createInMemoryWasteRecordsRepository([
+      legacyRecord('row-1', 'log-1')
+    ])()
+
+    const result = await reconcile({
+      ledgerRepository,
+      summaryLogRowStateRepository,
+      wasteRecordsRepository
+    })
+
+    expect(result).toMatchObject({
+      head: 'log-2',
+      committedRowCount: 1,
+      missingRows: [],
+      extraRows: [],
+      creditTotal: { wasteRecordStates: 10, event: 10, drift: 0 },
+      isClean: true
+    })
+  })
 })
