@@ -12,7 +12,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 import {
-  asStandardUser,
+  asOperator,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -91,7 +91,7 @@ describe('Waste balance arithmetic integration tests', () => {
     return server.inject({
       method: 'GET',
       url: buildGetUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
   }
 
@@ -101,7 +101,7 @@ describe('Waste balance arithmetic integration tests', () => {
     await server.inject({
       method: 'POST',
       url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     let attempts = 0
@@ -114,7 +114,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const checkResponse = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       status = JSON.parse(checkResponse.payload).status
@@ -140,7 +140,7 @@ describe('Waste balance arithmetic integration tests', () => {
     const response = await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-      ...asStandardUser({ linkedOrgId: organisationId }),
+      ...asOperator(),
       payload: {
         issuedToOrganisation: {
           id: 'producer-org-123',
@@ -160,7 +160,7 @@ describe('Waste balance arithmetic integration tests', () => {
     const response = await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-      ...asStandardUser({ linkedOrgId: organisationId }),
+      ...asOperator(),
       payload: { status }
     })
 

@@ -11,7 +11,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const SITE_ONE_ID = new ObjectId().toString()
@@ -287,7 +287,7 @@ describe('GET accreditation overseas-sites', () => {
         registrationId: registration.id,
         accreditationId: accreditation.id
       }),
-      ...asStandardUser({ linkedOrgId: organisation.id })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)

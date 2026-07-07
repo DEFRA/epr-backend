@@ -12,7 +12,7 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { overseasSitesCreatePath } from './post.js'
 
@@ -240,7 +240,7 @@ describe(`${overseasSitesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: '/v1/overseas-sites',
-          ...asStandardUser({ linkedOrgId: 'org-123' }),
+          ...asOperator(),
           payload: validPayload
         })
 

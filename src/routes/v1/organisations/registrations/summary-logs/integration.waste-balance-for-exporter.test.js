@@ -7,7 +7,7 @@ import {
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  asStandardUser,
+  asOperator,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -84,7 +84,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
       return server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
     }
 
@@ -94,7 +94,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
       await server.inject({
         method: 'POST',
         url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       let attempts = 0
@@ -110,7 +110,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         const checkResponse = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         status = JSON.parse(checkResponse.payload).status

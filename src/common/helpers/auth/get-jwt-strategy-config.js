@@ -3,10 +3,6 @@ import Boom from '@hapi/boom'
 import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
 
-/** @typedef {import('./types.js').TokenPayload} TokenPayload */
-/** @typedef {import('./types.js').EntraIdTokenPayload} EntraIdTokenPayload */
-/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
-
 /**
  * Configures JWT authentication strategy for both Entra ID and Defra ID
  * @param {Object} oidcConfigs - OIDC configuration for both identity providers
@@ -35,6 +31,12 @@ export function getJwtStrategyConfig(oidcConfigs) {
       maxAgeSec: 3600, // 60 minutes
       timeSkewSec: 15
     },
+    /**
+     * Validates the JWT token and returns the authenticated user's credentials
+     * @param {*} artifacts
+     * @param {*} request
+     * @returns {Promise<{ isValid: boolean, credentials: import('#common/hapi-types.js').HumanCredentials }>} Validated credentials for the authenticated user
+     */
     validate: async (artifacts, request) => {
       const tokenPayload = artifacts.decoded.payload
       const { iss: issuer, aud: audience } = tokenPayload
@@ -83,8 +85,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
             name,
             issuer,
             role,
-            scope: scopes,
-            currentRelationshipId: tokenPayload?.currentRelationshipId
+            scope: scopes
           }
         }
       }

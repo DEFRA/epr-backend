@@ -12,26 +12,30 @@ const ACCESS_TOKEN_STRATEGY = 'access-token'
 
 /**
  * Creates auth injection options for a standard user.
- * Requires linkedOrgId because a standard user is always linked to an
- * organisation via their Defra ID relationships.
- * @param {object} options - Options object
- * @param {string} options.linkedOrgId - The organisation ID the user is linked to
- * @param {object} [options.overrides] - Additional credential overrides
- * @returns {object} Auth options for server.inject()
+ * @param {{
+ *  id?: string,
+ *  issuer?: string,
+ *  email?: string,
+ *  name?: string
+ * }?} credentialsOverrides
+ * @returns {{
+ *   auth: {
+ *     strategy: string
+ *     credentials: import('#common/hapi-types.js').HumanCredentials
+ *   }
+ * }} Auth options for server.inject()
  */
-export const asStandardUser = ({ linkedOrgId, ...overrides }) => {
-  if (!linkedOrgId) {
-    throw new Error('linkedOrgId is required for asStandardUser')
-  }
+export const asOperator = (credentialsOverrides = {}) => {
   return {
     auth: {
       strategy: ACCESS_TOKEN_STRATEGY,
       credentials: {
         scope: [SCOPES.organisationRead, SCOPES.organisationWrite],
-        id: 'test-user-id',
-        email: 'test@example.com',
-        linkedOrgId,
-        ...overrides
+        id: credentialsOverrides?.id || 'test-user-id',
+        issuer: credentialsOverrides?.issuer || 'test-issuer',
+        email: credentialsOverrides?.email || 'test@example.com',
+        ...(credentialsOverrides?.name && { name: credentialsOverrides.name }),
+        role: null
       }
     }
   }

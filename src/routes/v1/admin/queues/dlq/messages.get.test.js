@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const DLQ_MESSAGES_PATH = '/v1/admin/queues/dlq/messages'
@@ -49,7 +49,7 @@ describe('GET /v1/admin/queues/dlq/messages', () => {
     const response = await server.inject({
       method: 'GET',
       url: DLQ_MESSAGES_PATH,
-      ...asStandardUser({ linkedOrgId: 'org-123' })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

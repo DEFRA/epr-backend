@@ -10,7 +10,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 
@@ -40,7 +40,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
   describe('when summary log does not exist', () => {

@@ -61,12 +61,6 @@
  */
 
 /**
- * Union type representing any valid token payload from either identity provider
- *
- * @typedef {EntraIdTokenPayload | DefraIdTokenPayload} TokenPayload
- */
-
-/**
  * Parsed organization data extracted from Defra ID token relationships
  *
  * @typedef {{

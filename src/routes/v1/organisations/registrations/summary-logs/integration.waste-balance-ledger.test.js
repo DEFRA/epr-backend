@@ -9,7 +9,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 import {
-  asStandardUser,
+  asOperator,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -60,7 +60,7 @@ describe('Waste balance stream (Exporter)', () => {
         fileId,
         `${fileId}.xlsx`
       ),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     await pollForValidation(
@@ -77,7 +77,7 @@ describe('Waste balance stream (Exporter)', () => {
     await server.inject({
       method: 'POST',
       url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     let attempts = 0
@@ -87,7 +87,7 @@ describe('Waste balance stream (Exporter)', () => {
       const checkResponse = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
       status = JSON.parse(checkResponse.payload).status
       attempts++

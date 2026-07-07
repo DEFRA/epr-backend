@@ -15,7 +15,7 @@ import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repo
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { orsImportCreatePath } from './post-import.js'
 
@@ -217,7 +217,7 @@ describe(`${orsImportCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: '/v1/overseas-sites/imports',
-          ...asStandardUser({ linkedOrgId: 'org-123' }),
+          ...asOperator(),
           payload: {
             redirectUrl: 'https://admin.test/redirect'
           }

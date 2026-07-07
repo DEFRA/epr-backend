@@ -7,7 +7,7 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { summaryLogsCreatePath } from './post.js'
 
@@ -52,7 +52,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
+        ...asOperator(),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -71,7 +71,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
+        ...asOperator(),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -87,7 +87,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
+        ...asOperator(),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -110,13 +110,13 @@ describe(`${summaryLogsCreatePath} route`, () => {
         server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { redirectUrl: 'https://frontend.test/redirect' }
         }),
         server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { redirectUrl: 'https://frontend.test/redirect' }
         })
       ])
@@ -162,7 +162,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
+        ...asOperator(),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -180,7 +180,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
+        ...asOperator(),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -214,7 +214,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
+        ...asOperator(),
         payload: {}
       })
 
@@ -225,7 +225,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
+        ...asOperator(),
         payload: {
           redirectUrl:
             '/organisations/org-123/registrations/reg-456/summary-logs/sl-789'

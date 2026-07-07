@@ -13,7 +13,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { orsImportStatusPath } from './get-import-status.js'
 
@@ -186,7 +186,7 @@ describe(`${orsImportStatusPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: '/v1/overseas-sites/imports/any-id',
-          ...asStandardUser({ linkedOrgId: 'org-123' })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

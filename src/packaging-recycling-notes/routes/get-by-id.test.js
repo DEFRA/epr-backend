@@ -12,7 +12,7 @@ import {
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -131,7 +131,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -211,7 +211,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -258,7 +258,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -293,7 +293,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/non-existent`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -305,7 +305,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${differentOrgId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`,
-          ...asStandardUser({ linkedOrgId: differentOrgId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -317,7 +317,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${differentAccId}/packaging-recycling-notes/${prnId}`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -335,7 +335,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -363,7 +363,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
@@ -377,7 +377,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -427,7 +427,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -465,7 +465,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)

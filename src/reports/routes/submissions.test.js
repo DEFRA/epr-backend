@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -122,7 +122,7 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: getReportSubmissionsPath,
-      ...asStandardUser({ linkedOrgId: org.id })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

@@ -6,7 +6,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import {
   asServiceMaintainerRead,
   asServiceMaintainerWrite,
-  asStandardUser,
+  asOperator,
   asSupport,
   asUnscopedAdminUser
 } from '#test/inject-auth.js'
@@ -51,7 +51,7 @@ describe('GET /v1/admin/me', () => {
       const response = await server.inject({
         method: 'GET',
         url: ADMIN_ME_PATH,
-        ...asStandardUser({ linkedOrgId: 'org-123' })
+        ...asOperator()
       })
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
