@@ -21,9 +21,7 @@
  *   scope: string[],
  *   role: string | null,
  *   issuer: string,
- *   name?: string,
- *   currentRelationshipId?: string,
- *   linkedOrgId?: string
+ *   name?: string
  * }} HumanCredentials
  */
 

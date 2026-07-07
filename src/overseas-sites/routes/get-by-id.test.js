@@ -13,7 +13,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { overseasSiteByIdPath } from './get-by-id.js'
 
@@ -90,7 +90,7 @@ describe(`${overseasSiteByIdPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
-          ...asStandardUser({ linkedOrgId: 'org-123' })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

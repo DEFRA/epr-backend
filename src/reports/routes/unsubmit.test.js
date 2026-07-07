@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
@@ -235,7 +235,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         const response = await server.inject({
           method: 'POST',
           url: makeUrl(organisationId, registrationId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

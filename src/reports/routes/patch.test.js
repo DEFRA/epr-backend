@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -74,7 +74,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       method: 'PATCH',
       url: makeUrl(orgId, regId, 2025, 'quarterly', period),
       payload,
-      ...asStandardUser({ linkedOrgId: orgId })
+      ...asOperator()
     })
 
   describe('updating supporting information', () => {
@@ -886,7 +886,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         method: 'PATCH',
         url: makeUrl(organisationId, registrationId, 2025, 'biweekly', 1),
         payload: { supportingInformation: 'notes' },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)

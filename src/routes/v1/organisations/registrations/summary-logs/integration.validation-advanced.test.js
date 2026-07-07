@@ -18,7 +18,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { ObjectId } from 'mongodb'
 
 import {
-  asStandardUser,
+  asOperator,
   createUploadPayload,
   buildGetUrl,
   buildPostUrl,
@@ -123,7 +123,7 @@ describe('Advanced validation scenarios', () => {
             response = await server.inject({
               method: 'GET',
               url: buildGetUrl(organisationId, registrationId, summaryLogId),
-              ...asStandardUser({ linkedOrgId: organisationId })
+              ...asOperator()
             })
           })
 
@@ -234,7 +234,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
       })
 
@@ -438,7 +438,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
       })
 
@@ -624,7 +624,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
       })
 
@@ -742,7 +742,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
       })
 
@@ -815,7 +815,7 @@ describe('Advanced validation scenarios', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       expect(response.statusCode).toBe(200)

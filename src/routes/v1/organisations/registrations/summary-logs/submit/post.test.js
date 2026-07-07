@@ -21,7 +21,7 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { summaryLogsSubmitPath } from './post.js'
@@ -129,7 +129,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: submitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -161,7 +161,8 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       expect.objectContaining({
         auth: expect.objectContaining({
           credentials: expect.objectContaining({
-            linkedOrgId: organisationId
+            id: 'test-user-id',
+            email: 'test@example.com'
           })
         })
       }),
@@ -204,7 +205,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: submitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -225,7 +226,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: submitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -247,7 +248,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: submitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -279,7 +280,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: submitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -321,7 +322,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: submitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -364,7 +365,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: submitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     consoleErrorSpy.mockRestore()

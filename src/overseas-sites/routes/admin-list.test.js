@@ -18,7 +18,7 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
 
@@ -352,7 +352,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
     const response = await getServer().inject({
       method: 'GET',
       url: adminOverseasSitesListPath,
-      ...asStandardUser({ linkedOrgId: 'org-123' })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

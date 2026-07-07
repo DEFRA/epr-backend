@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -164,7 +164,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         method: 'POST',
         url: makeUrl(orgId, regId, year, cadence, period),
         payload,
-        ...asStandardUser({ linkedOrgId: orgId })
+        ...asOperator()
       })
 
     describe('successful transitions', () => {
@@ -678,7 +678,7 @@ describe(`POST ${reportsStatusPath}`, () => {
           method: 'POST',
           url: makeUrl(organisationId, registrationId, 2025, 'biweekly', 1),
           payload: { status: 'ready_to_submit', version: 1 },
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -727,7 +727,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         method: 'POST',
         url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1),
         payload: { status: 'ready_to_submit', version: 1 },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)

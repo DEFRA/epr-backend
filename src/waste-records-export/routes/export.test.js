@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
@@ -270,7 +270,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       const response = await server.inject({
         method: 'GET',
         url: getWasteRecordsExportPath,
-        ...asStandardUser({ linkedOrgId: 'org-123' })
+        ...asOperator()
       })
 
       await server.stop()

@@ -23,7 +23,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  asStandardUser,
+  asOperator,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -324,7 +324,7 @@ describe('Repeated uploads of identical data', () => {
       await server.inject({
         method: 'POST',
         url: buildSubmitUrl(organisationId, registrationId, firstSummaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       await pollWhileStatus(
@@ -364,7 +364,7 @@ describe('Repeated uploads of identical data', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, secondSummaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       expect(response.statusCode).toBe(200)
@@ -406,7 +406,7 @@ describe('Repeated uploads of identical data', () => {
             registrationId,
             secondSummaryLogId
           ),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         await pollWhileStatus(
