@@ -5,6 +5,7 @@ import {
   extractTonnageExportFields,
   TONNAGE_EXPORT_MESSAGES
 } from './tonnage-export-validator.js'
+import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 
 describe('extractTonnageExportFields', () => {
   describe('when all fields are present and valid', () => {
@@ -42,6 +43,10 @@ describe('extractTonnageExportFields', () => {
       }
 
       const result = extractTonnageExportFields(row)
+
+      if (result === null) {
+        throw new Error('expected tonnage fields to be extracted')
+      }
 
       expect(Object.keys(result)).toEqual([
         'netWeight',
@@ -250,7 +255,7 @@ describe('validateTonnageExport', () => {
 
     it('rejects incorrect calculation', () => {
       const schema = createTestSchema()
-      const { error } = schema.validate({
+      const details = expectValidationError(schema, {
         NET_WEIGHT: 100,
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
@@ -258,16 +263,15 @@ describe('validateTonnageExport', () => {
         TONNAGE_RECEIVED_FOR_EXPORT: 80 // Should be 72
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
-      expect(error.details[0].message).toBe(
+      expect(details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(details[0].message).toBe(
         'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
       )
     })
 
     it('rejects calculation outside tolerance (off by 0.01)', () => {
       const schema = createTestSchema()
-      const { error } = schema.validate({
+      const details = expectValidationError(schema, {
         NET_WEIGHT: 100,
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
@@ -275,8 +279,7 @@ describe('validateTonnageExport', () => {
         TONNAGE_RECEIVED_FOR_EXPORT: 72.01
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
   })
 
@@ -325,7 +328,7 @@ describe('validateTonnageExport', () => {
 
     it('rejects calculation without bailing wire deduction when protocol is Yes', () => {
       const schema = createTestSchema()
-      const { error } = schema.validate({
+      const details = expectValidationError(schema, {
         NET_WEIGHT: 100,
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'Yes',
@@ -333,8 +336,7 @@ describe('validateTonnageExport', () => {
         TONNAGE_RECEIVED_FOR_EXPORT: 72 // Wrong - should be 71.892 with deduction
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
   })
 

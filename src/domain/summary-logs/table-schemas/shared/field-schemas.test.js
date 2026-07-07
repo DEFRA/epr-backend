@@ -8,6 +8,7 @@ import {
   createFreeTextFieldSchema,
   createEnumFieldSchema
 } from './field-schemas.js'
+import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 
 describe('field-schemas', () => {
   describe('createWeightFieldSchema', () => {
@@ -20,23 +21,20 @@ describe('field-schemas', () => {
 
     it('rejects weight below 0', () => {
       const schema = createWeightFieldSchema()
-      const { error } = schema.validate(-1)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be at least 0')
+      const details = expectValidationError(schema, -1)
+      expect(details[0].message).toBe('must be at least 0')
     })
 
     it('rejects weight above 1000', () => {
       const schema = createWeightFieldSchema()
-      const { error } = schema.validate(1001)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be at most 1000')
+      const details = expectValidationError(schema, 1001)
+      expect(details[0].message).toBe('must be at most 1000')
     })
 
     it('rejects non-number', () => {
       const schema = createWeightFieldSchema()
-      const { error } = schema.validate('abc')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a number')
+      const details = expectValidationError(schema, 'abc')
+      expect(details[0].message).toBe('must be a number')
     })
 
     it('accepts custom max value', () => {
@@ -48,9 +46,8 @@ describe('field-schemas', () => {
     it('uses custom max message when provided', () => {
       const customMessage = 'must be at most 500'
       const schema = createWeightFieldSchema(500, customMessage)
-      const { error } = schema.validate(501)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe(customMessage)
+      const details = expectValidationError(schema, 501)
+      expect(details[0].message).toBe(customMessage)
     })
 
     it('is optional', () => {
@@ -72,17 +69,15 @@ describe('field-schemas', () => {
 
     it('rejects other values', () => {
       const schema = createYesNoFieldSchema()
-      const { error } = schema.validate('Maybe')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be Yes or No')
+      const details = expectValidationError(schema, 'Maybe')
+      expect(details[0].message).toBe('must be Yes or No')
     })
 
     it('rejects non-string', () => {
       const schema = createYesNoFieldSchema()
-      const { error } = schema.validate(123)
-      expect(error).toBeDefined()
+      const details = expectValidationError(schema, 123)
       // Joi returns any.only for non-strings since .valid() check runs first
-      expect(error.details[0].message).toBe('must be Yes or No')
+      expect(details[0].message).toBe('must be Yes or No')
     })
 
     it('is optional', () => {
@@ -149,9 +144,8 @@ describe('field-schemas', () => {
       { description: 'invalid year', input: '20256-01-02' }
     ])('rejects $description', ({ input }) => {
       const schema = createDateFieldSchema()
-      const { error } = schema.validate(input)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a valid date')
+      const details = expectValidationError(schema, input)
+      expect(details[0].message).toBe('must be a valid date')
     })
 
     it('is optional', () => {
@@ -198,9 +192,8 @@ describe('field-schemas', () => {
       { description: 'non-numeric string', input: 'ABC' }
     ])('rejects $description', ({ input }) => {
       const schema = createThreeDigitIdSchema()
-      const { error } = schema.validate(input)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
+      const details = expectValidationError(schema, input)
+      expect(details[0].message).toBe('must be a 3-digit ID (001-999)')
     })
 
     it('is optional', () => {
@@ -217,16 +210,14 @@ describe('field-schemas', () => {
 
     it('rejects negative', () => {
       const schema = createPercentageFieldSchema()
-      const { error } = schema.validate(-0.1)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be at least 0')
+      const details = expectValidationError(schema, -0.1)
+      expect(details[0].message).toBe('must be at least 0')
     })
 
     it('rejects above 1', () => {
       const schema = createPercentageFieldSchema()
-      const { error } = schema.validate(1.1)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be at most 1')
+      const details = expectValidationError(schema, 1.1)
+      expect(details[0].message).toBe('must be at most 1')
     })
 
     it('is optional', () => {
@@ -313,18 +304,14 @@ describe('field-schemas', () => {
       { description: 'string with tab character', input: 'hello\tworld' }
     ])('rejects $description', ({ input }) => {
       const schema = createFreeTextFieldSchema()
-      const { error } = schema.validate(input)
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe(
-        'must contain only permitted characters'
-      )
+      const details = expectValidationError(schema, input)
+      expect(details[0].message).toBe('must contain only permitted characters')
     })
 
     it('rejects string exceeding custom max length', () => {
       const schema = createFreeTextFieldSchema(10)
-      const { error } = schema.validate('ABCDEFGHIJK')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be at most 10 characters')
+      const details = expectValidationError(schema, 'ABCDEFGHIJK')
+      expect(details[0].message).toBe('must be at most 10 characters')
     })
 
     it('accepts string at default max length (100 chars)', () => {
@@ -334,9 +321,8 @@ describe('field-schemas', () => {
 
     it('rejects string exceeding default max length (101 chars)', () => {
       const schema = createFreeTextFieldSchema()
-      const { error } = schema.validate('A'.repeat(101))
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be at most 100 characters')
+      const details = expectValidationError(schema, 'A'.repeat(101))
+      expect(details[0].message).toBe('must be at most 100 characters')
     })
 
     it('is optional', () => {
@@ -365,17 +351,15 @@ describe('field-schemas', () => {
 
     it('rejects invalid enum value', () => {
       const schema = createEnumFieldSchema(validValues, invalidMessage)
-      const { error } = schema.validate('Option D')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a valid option')
+      const details = expectValidationError(schema, 'Option D')
+      expect(details[0].message).toBe('must be a valid option')
     })
 
     it('rejects non-string', () => {
       const schema = createEnumFieldSchema(validValues, invalidMessage)
-      const { error } = schema.validate(123)
-      expect(error).toBeDefined()
+      const details = expectValidationError(schema, 123)
       // Joi returns any.only for non-strings since .valid() check runs first
-      expect(error.details[0].message).toBe('must be a valid option')
+      expect(details[0].message).toBe('must be a valid option')
     })
 
     it('is optional', () => {

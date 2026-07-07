@@ -4,6 +4,8 @@ import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.
 import { createInitialStatusHistory } from '../helpers.js'
 import { getCurrentStatus } from '../status.js'
 
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+
 const ORG_ID_START = 500000
 export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
 
@@ -71,6 +73,10 @@ export const buildRegistration = (overrides = {}) => {
   return registration
 }
 
+/**
+ * @param {Partial<Accreditation>} [overrides]
+ * @returns {Accreditation}
+ */
 export const buildAccreditation = (overrides = {}) => {
   const baseAccreditation = org1.accreditations[0]
 
@@ -83,6 +89,7 @@ export const buildAccreditation = (overrides = {}) => {
   if (accreditation.wasteProcessingType === 'exporter') {
     delete accreditation.site
   }
+  // @ts-expect-error JSON fixture has widened types (string vs union literals)
   return accreditation
 }
 
@@ -174,7 +181,7 @@ export const buildReadOrganisation = (overrides = {}) => {
  * the statusHistory with the default 'created' entry.
  *
  * @param {object} registration - From buildRegistration
- * @param {string} [accreditationStatus] - If set, links a matching accreditation
+ * @param {'created'|'approved'|'suspended'} [accreditationStatus] - If set, links a matching accreditation
  * @returns {object}
  */
 export const buildOrganisationWithRegistration = (
@@ -188,8 +195,8 @@ export const buildOrganisationWithRegistration = (
       id: registration.accreditationId,
       wasteProcessingType: registration.wasteProcessingType,
       statusHistory: [
-        { status: 'created', updatedAt: new Date('2024-01-01') },
-        { status: accreditationStatus, updatedAt: new Date('2024-02-01') }
+        { status: 'created', updatedAt: '2024-01-01' },
+        { status: accreditationStatus, updatedAt: '2024-02-01' }
       ]
     })
     orgOptions.accreditations = [accreditation]

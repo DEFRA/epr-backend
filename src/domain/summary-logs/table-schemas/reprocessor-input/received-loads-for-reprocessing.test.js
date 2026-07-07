@@ -3,6 +3,9 @@ import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessi
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
+import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
+import { expectValidationError } from '#common/validation/validation-test-helpers.js'
+import { assertIncluded } from '../shared/classify-test-helpers.js'
 
 describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
   const schema = RECEIVED_LOADS_FOR_REPROCESSING
@@ -109,9 +112,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
 
       it('rejects ROW_ID below minimum', () => {
-        const { error } = validationSchema.validate({ ROW_ID: 999 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 1000')
+        const details = expectValidationError(validationSchema, {
+          ROW_ID: 999
+        })
+        expect(details[0].message).toBe('must be at least 1000')
       })
 
       it('rejects non-integer ROW_ID', () => {
@@ -136,11 +140,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
 
       it('rejects invalid date string', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           DATE_RECEIVED_FOR_REPROCESSING: 'not-a-date'
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a valid date')
+        expect(details[0].message).toBe('must be a valid date')
       })
     })
 
@@ -165,26 +168,29 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
 
       it('rejects invalid EWC code format', () => {
-        const { error } = validationSchema.validate({ EWC_CODE: '030308' })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        const details = expectValidationError(validationSchema, {
+          EWC_CODE: '030308'
+        })
+        expect(details[0].message).toBe(
           'must be a valid EWC code from the allowed list'
         )
       })
 
       it('rejects EWC code not in allowed list', () => {
         // Valid format but not in the allowed EWC codes list
-        const { error } = validationSchema.validate({ EWC_CODE: '99 99 99' })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        const details = expectValidationError(validationSchema, {
+          EWC_CODE: '99 99 99'
+        })
+        expect(details[0].message).toBe(
           'must be a valid EWC code from the allowed list'
         )
       })
 
       it('rejects non-string EWC code', () => {
-        const { error } = validationSchema.validate({ EWC_CODE: 123456 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        const details = expectValidationError(validationSchema, {
+          EWC_CODE: 123456
+        })
+        expect(details[0].message).toBe(
           'must be a valid EWC code from the allowed list'
         )
       })
@@ -236,11 +242,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         },
         { label: 'non-string waste description', value: 12345 }
       ])('rejects $label', ({ value }) => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           DESCRIPTION_WASTE: value
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(details[0].message).toBe(
           'must be a valid waste description from the allowed list'
         )
       })
@@ -284,9 +289,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
               message: 'must be a number'
             }
           ])('rejects $label', ({ value, message }) => {
-            const { error } = validationSchema.validate({ [field]: value })
-            expect(error).toBeDefined()
-            expect(error.details[0].message).toBe(message)
+            const details = expectValidationError(validationSchema, {
+              [field]: value
+            })
+            expect(details[0].message).toBe(message)
           })
         })
       }
@@ -315,11 +321,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
           message: 'must be a number'
         }
       ])('rejects $label', ({ value, message }) => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           RECYCLABLE_PROPORTION_PERCENTAGE: value
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(message)
+        expect(details[0].message).toBe(message)
       })
     })
 
@@ -344,11 +349,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         { label: 'uppercase "YES"', value: 'YES' },
         { label: 'other strings', value: 'Maybe' }
       ])('rejects $label', ({ value }) => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           BAILING_WIRE_PROTOCOL: value
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
+        expect(details[0].message).toBe('must be Yes or No')
       })
     })
 
@@ -371,11 +375,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         { label: 'case variations', value: 'aaig percentage' },
         { label: 'non-string', value: 123 }
       ])('rejects $label', ({ value }) => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: value
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(details[0].message).toBe(
           'must be a valid recyclable proportion calculation method'
         )
       })
@@ -401,11 +404,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         { label: 'lowercase "no"', value: 'no' },
         { label: 'other strings', value: 'N/A' }
       ])('rejects $label', ({ value }) => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: value
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be Yes or No')
+        expect(details[0].message).toBe('must be Yes or No')
       })
     })
 
@@ -451,29 +453,23 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
 
       it('rejects incorrect calculation', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           GROSS_WEIGHT: 100,
           TARE_WEIGHT: 5,
           PALLET_WEIGHT: 5,
           NET_WEIGHT: 100
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].type).toBe(
-          'custom.netWeightCalculationMismatch'
-        )
+        expect(details[0].type).toBe('custom.netWeightCalculationMismatch')
       })
 
       it('rejects calculation that is close but outside tolerance', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           GROSS_WEIGHT: 100,
           TARE_WEIGHT: 5,
           PALLET_WEIGHT: 5,
           NET_WEIGHT: 90.001
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].type).toBe(
-          'custom.netWeightCalculationMismatch'
-        )
+        expect(details[0].type).toBe('custom.netWeightCalculationMismatch')
       })
 
       it('skips calculation check when NET_WEIGHT is missing', () => {
@@ -556,29 +552,27 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
 
       it('rejects incorrect calculation', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           NET_WEIGHT: 100,
           WEIGHT_OF_NON_TARGET_MATERIALS: 10,
           BAILING_WIRE_PROTOCOL: 'No',
           RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
           TONNAGE_RECEIVED_FOR_RECYCLING: 80 // Should be 72
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(details[0].message).toBe(
           'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
         )
       })
 
       it('rejects calculation without bailing wire deduction when protocol is Yes', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           NET_WEIGHT: 100,
           WEIGHT_OF_NON_TARGET_MATERIALS: 10,
           BAILING_WIRE_PROTOCOL: 'Yes',
           RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
           TONNAGE_RECEIVED_FOR_RECYCLING: 72 // Wrong - should be 71.892
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
+        expect(details[0].message).toBe(
           'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
         )
       })
@@ -616,46 +610,44 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
     describe('multiple field validation', () => {
       it('reports all errors when multiple fields invalid', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           ROW_ID: 999,
           GROSS_WEIGHT: -1,
           RECYCLABLE_PROPORTION_PERCENTAGE: 1.5
         })
-        expect(error).toBeDefined()
-        expect(error.details.length).toBe(3)
+        expect(details).toHaveLength(3)
       })
 
       it('reports errors for multiple weight fields when invalid', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           GROSS_WEIGHT: 1001,
           TARE_WEIGHT: -1,
           PALLET_WEIGHT: 1001
         })
-        expect(error).toBeDefined()
-        expect(error.details.length).toBe(3)
+        expect(details).toHaveLength(3)
       })
 
       it('reports errors for Yes/No fields when invalid', () => {
-        const { error } = validationSchema.validate({
+        const details = expectValidationError(validationSchema, {
           BAILING_WIRE_PROTOCOL: 'maybe',
           WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'unknown'
         })
-        expect(error).toBeDefined()
-        expect(error.details.length).toBe(2)
+        expect(details).toHaveLength(2)
       })
     })
   })
 
   describe('classifyForWasteBalance', () => {
-    const accreditation = {
+    const accreditation = buildAccreditation({
       validFrom: '2024-01-01',
       validTo: '2024-12-31',
       statusHistory: [
         { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
         { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
       ]
-    }
+    })
 
+    /** @type {Record<string, any>} */
     const completeRow = {
       ROW_ID: 1000,
       DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-06-15'),
@@ -675,18 +667,20 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
     describe('INCLUDED outcome', () => {
       it('returns INCLUDED with transaction amount when all fields filled, date in range, and no PRN', () => {
-        const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation
-        })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        const result = assertIncluded(
+          schema.classifyForWasteBalance(completeRow, { accreditation })
+        )
+
         expect(result.reasons).toEqual([])
         expect(result.transactionAmount).toBe(50.5)
       })
 
       it('rounds transaction amount to two decimal places', () => {
         const row = { ...completeRow, TONNAGE_RECEIVED_FOR_RECYCLING: 50.555 }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        const result = assertIncluded(
+          schema.classifyForWasteBalance(row, { accreditation })
+        )
+
         expect(result.transactionAmount).toBe(50.56)
       })
     })
@@ -786,15 +780,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
     })
 
-    describe('INCLUDED outcome - undefined or null accreditation', () => {
-      it('returns INCLUDED when accreditation is undefined (accreditation check passes)', () => {
-        const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: undefined
-        })
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
-        expect(result.reasons).toEqual([])
-      })
-
+    describe('INCLUDED outcome - null accreditation', () => {
       it('returns INCLUDED when accreditation is null (accreditation check passes)', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: null
@@ -805,11 +791,11 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
       it('returns INCLUDED when accreditation has empty statusHistory', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: {
+          accreditation: buildAccreditation({
             validFrom: '2024-01-01',
             validTo: '2024-12-31',
             statusHistory: []
-          }
+          })
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -818,7 +804,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
     describe('IGNORED outcome - suspended accreditation', () => {
       it('returns IGNORED when accreditation was suspended before the row date', () => {
-        const suspendedAccreditation = {
+        const suspendedAccreditation = buildAccreditation({
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
           statusHistory: [
@@ -826,7 +812,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
             { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
             { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' }
           ]
-        }
+        })
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: suspendedAccreditation
         })
@@ -837,7 +823,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
 
       it('returns INCLUDED when accreditation was suspended then re-approved before the row date', () => {
-        const reapprovedAccreditation = {
+        const reapprovedAccreditation = buildAccreditation({
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
           statusHistory: [
@@ -846,7 +832,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
             { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' },
             { status: 'approved', updatedAt: '2024-04-01T00:00:00.000Z' }
           ]
-        }
+        })
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: reapprovedAccreditation
         })
