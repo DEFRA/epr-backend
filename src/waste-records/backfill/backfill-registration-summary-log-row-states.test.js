@@ -41,6 +41,13 @@ const buildDeps = () => ({
     createInMemorySummaryLogRowStatesBackfillWatermarkRepository()()
 })
 
+/**
+ * @param {Object} params
+ * @param {import('./reconstruct-submission-summary-log-row-states.js').OrderedSummaryLog[]} params.summaryLogs
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
+ * @param {ReturnType<typeof buildDeps>} params.deps
+ * @param {import('./watermark/port.js').BackfillWatermark | null} [params.watermark]
+ */
 const backfill = ({ summaryLogs, wasteRecords, watermark = null, deps }) =>
   backfillRegistrationSummaryLogRowStates({
     ledgerId,
