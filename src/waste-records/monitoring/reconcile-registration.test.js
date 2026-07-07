@@ -204,6 +204,47 @@ describe('reconcileRegistration', () => {
     expect(result.isClean).toBe(true)
   })
 
+  it('counts every row carried forward on the stream as committed while a stream row absent from the states is missing', () => {
+    const result = reconcile({
+      head: 'log-2',
+      committedSummaryLogIds: new Set(['log-1', 'log-2']),
+      eventCreditTotal: 10,
+      wasteRecordStates: [includedWasteRecordState('row-1', 10)],
+      wasteRecords: [
+        committedRecord('row-1', 'log-1'),
+        committedRecord('row-2', 'log-1')
+      ],
+      accreditation: null,
+      overseasSites: {}
+    })
+
+    expect(result.committedRowCount).toBe(2)
+    expect(result.extraRows).toEqual([])
+    expect(result.missingRows).toEqual([
+      { rowId: 'row-2', wasteRecordType: WASTE_RECORD_TYPE.RECEIVED }
+    ])
+  })
+
+  it('excludes a legacy record whose only version was never committed to the stream from both committed and missing rows', () => {
+    const result = reconcile({
+      head: 'log-2',
+      committedSummaryLogIds: new Set(['log-1', 'log-2']),
+      eventCreditTotal: 10,
+      wasteRecordStates: [includedWasteRecordState('row-1', 10)],
+      wasteRecords: [
+        committedRecord('row-1', 'log-1'),
+        committedRecord('orphan', 'log-uncommitted')
+      ],
+      accreditation: null,
+      overseasSites: {}
+    })
+
+    expect(result.committedRowCount).toBe(1)
+    expect(result.missingRows).toEqual([])
+    expect(result.extraRows).toEqual([])
+    expect(result.isClean).toBe(true)
+  })
+
   it('reports creditTotal drift when the waste record states do not sum to the event total', () => {
     const result = reconcile({
       head: 'log-2',
