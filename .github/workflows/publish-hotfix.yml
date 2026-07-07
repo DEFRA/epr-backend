@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0 # Depth 0 is required for branch-based versioning
 
       - name: Test and Scan
-        uses: ./.github/actions/test-and-scan
+        uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           sonar-token: ${{ secrets.SONAR_TOKEN }}
