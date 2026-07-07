@@ -14,6 +14,7 @@ import {
   validateLedgerEventInsert,
   validateLedgerEventRead
 } from './ledger-validation.js'
+import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 
 const validate = (data) =>
   ledgerEventInsertSchema.validate(data, {
@@ -88,9 +89,15 @@ describe('ledger event insert schema', () => {
   })
 
   it('rejects missing required top-level fields', () => {
-    const { error } = validate({})
-    expect(error).toBeDefined()
-    const missingFields = error?.details.map((d) => d.path[0])
+    const details = expectValidationError(
+      ledgerEventInsertSchema,
+      {},
+      {
+        abortEarly: false,
+        stripUnknown: true
+      }
+    )
+    const missingFields = details.map((d) => d.path[0])
     expect(missingFields).toContain('registrationId')
     expect(missingFields).toContain('number')
     expect(missingFields).toContain('kind')

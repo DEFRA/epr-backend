@@ -220,7 +220,7 @@ describe('validateMetaSyntax', () => {
     const result = validateMetaSyntax({ parsed })
 
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals[0].context.actual).toBe(0)
+    expect(fatals[0]?.context?.actual).toBe(0)
   })
 
   it('handles missing parsed.meta gracefully', () => {
@@ -252,7 +252,7 @@ describe('validateMetaSyntax', () => {
 
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
-    expect(fatals[0].context.location).toEqual({
+    expect(fatals[0]?.context?.location).toEqual({
       field: 'TEMPLATE_VERSION'
     })
   })
@@ -294,7 +294,7 @@ describe('validateMetaSyntax', () => {
 
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
-    expect(fatals[0].context.location).toEqual({
+    expect(fatals[0]?.context?.location).toEqual({
       row: 2,
       column: 'E',
       field: 'TEMPLATE_VERSION'

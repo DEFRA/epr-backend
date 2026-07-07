@@ -275,6 +275,7 @@ describe('addOrUpdateOrganisationUser', () => {
       await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
+        // @ts-expect-error intentionally testing an organisation with no users property
         mockOrganisation
       )
 
@@ -306,6 +307,7 @@ describe('addOrUpdateOrganisationUser', () => {
       await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
+        // @ts-expect-error intentionally testing an organisation whose users property is null
         mockOrganisation
       )
 

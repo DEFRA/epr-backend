@@ -37,6 +37,7 @@ const orgFixture = {
 /** @type {Registration} */
 const regFixture = {
   id: 'reg-1',
+  statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }],
   accreditation: null,
   applicationContactDetails: userFixture,
   approvedPersons: [],
