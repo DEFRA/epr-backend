@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
-import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
@@ -41,7 +41,7 @@ export const reportsGet = {
   method: 'GET',
   path: reportsGetPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser, SCOPES.adminRead]),
+    auth: getAuthConfig([SCOPES.organisationRead, SCOPES.adminRead]),
     tags: ['api'],
     validate: {
       params: Joi.object({

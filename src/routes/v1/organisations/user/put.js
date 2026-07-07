@@ -2,7 +2,7 @@ import {
   addOrUpdateOrganisationUser,
   ORGANISATION_USER_RESULTS
 } from './add-or-update-organisation-user.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditOrganisationUserAdded } from './audit-organisation-user.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -10,7 +10,7 @@ export const organisationsUserPut = {
   method: 'PUT',
   path: '/v1/organisations/{organisationId}/user',
   options: {
-    auth: { scope: [ROLES.standardUser] },
+    auth: { scope: [SCOPES.organisationWrite] },
     tags: ['api']
   },
 

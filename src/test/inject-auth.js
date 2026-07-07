@@ -6,8 +6,7 @@
  * use the full auth stack with setupAuthContext() and real tokens.
  */
 
-import { ADMIN_ROLES, ROLES } from '#common/helpers/auth/constants.js'
-// ROLES is imported only for the operator-side `asStandardUser` helper below.
+import { ADMIN_ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 
 const ACCESS_TOKEN_STRATEGY = 'access-token'
 
@@ -28,7 +27,7 @@ export const asStandardUser = ({ linkedOrgId, ...overrides }) => {
     auth: {
       strategy: ACCESS_TOKEN_STRATEGY,
       credentials: {
-        scope: [ROLES.standardUser],
+        scope: [SCOPES.organisationRead, SCOPES.organisationWrite],
         id: 'test-user-id',
         email: 'test@example.com',
         linkedOrgId,

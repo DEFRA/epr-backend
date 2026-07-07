@@ -278,7 +278,7 @@ describe('classifyActorAttribution', () => {
       classifyActorAttribution({
         id: 'user-1',
         email: 'alice@example.com',
-        scope: ['standard_user']
+        scope: ['some-scope']
       })
     ).toEqual({
       nameAndEmail: 0,
