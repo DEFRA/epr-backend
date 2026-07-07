@@ -26,6 +26,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -526,7 +527,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           auth: {
             strategy: 'access-token',
             credentials: {
-              scope: ['standard_user'],
+              scope: [SCOPES.organisationWrite],
               id: userId,
               name: userName,
               email: 'test@example.com',
@@ -557,7 +558,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           auth: {
             strategy: 'access-token',
             credentials: {
-              scope: ['standard_user'],
+              scope: [SCOPES.organisationWrite],
               linkedOrgId: organisationId
             }
           },

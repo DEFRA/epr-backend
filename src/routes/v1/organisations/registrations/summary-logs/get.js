@@ -12,7 +12,7 @@ import { extractResponseMetaFields } from '#domain/summary-logs/extract-response
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { transformValidationResponse } from './transform-validation-response.js'
 import { summaryLogResponseSchema } from './response.schema.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
@@ -24,7 +24,7 @@ export const summaryLogsGet = {
   method: 'GET',
   path: summaryLogsGetPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser]),
+    auth: getAuthConfig([SCOPES.organisationRead]),
     tags: ['api'],
     response: {
       schema: summaryLogResponseSchema

@@ -11,7 +11,7 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
-import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 
 const { validToken: serviceMaintainerToken } = entraIdMockAuthTokens
 const mockCdpAuditing = vi.fn()
@@ -181,7 +181,8 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
           scope: [
             SCOPES.organisationLinkedRead,
             SCOPES.organisationLinkedWrite,
-            ROLES.standardUser
+            SCOPES.organisationRead,
+            SCOPES.organisationWrite
           ],
           role: null
         })
@@ -239,7 +240,8 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
           scope: [
             SCOPES.organisationLinkedRead,
             SCOPES.organisationLinkedWrite,
-            ROLES.standardUser
+            SCOPES.organisationRead,
+            SCOPES.organisationWrite
           ],
           role: null
         })
@@ -302,7 +304,8 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
           scope: [
             SCOPES.organisationLinkedRead,
             SCOPES.organisationLinkedWrite,
-            ROLES.standardUser
+            SCOPES.organisationRead,
+            SCOPES.organisationWrite
           ],
           role: null
         })
@@ -368,7 +371,8 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
           scope: [
             SCOPES.organisationLinkedRead,
             SCOPES.organisationLinkedWrite,
-            ROLES.standardUser
+            SCOPES.organisationRead,
+            SCOPES.organisationWrite
           ],
           role: null
         })

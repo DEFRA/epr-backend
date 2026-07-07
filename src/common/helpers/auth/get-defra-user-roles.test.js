@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { getDefraUserRoles } from './get-defra-user-roles.js'
-import { ROLES, SCOPES } from './constants.js'
+import { SCOPES } from './constants.js'
 
 const mockGetOrgMatchingUsersToken = vi.fn()
 const mockGetDefraTokenSummary = vi.fn()
@@ -131,7 +131,8 @@ describe('#getDefraUserRoles', () => {
       expect(result.scopes).toEqual([
         SCOPES.organisationLinkedRead,
         SCOPES.organisationLinkedWrite,
-        ROLES.standardUser
+        SCOPES.organisationRead,
+        SCOPES.organisationWrite
       ])
     })
 

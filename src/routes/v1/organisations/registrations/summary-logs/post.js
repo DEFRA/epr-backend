@@ -8,7 +8,7 @@ import {
 } from '#common/enums/index.js'
 import { config } from '#root/config.js'
 import { summaryLogsCreatePayloadSchema } from './post.schema.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
@@ -24,7 +24,7 @@ export const summaryLogsCreate = {
   method: 'POST',
   path: summaryLogsCreatePath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser]),
+    auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
     validate: {
       payload: summaryLogsCreatePayloadSchema

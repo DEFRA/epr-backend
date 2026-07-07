@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
 import { periodParamsSchema, withRegistrationDetails } from './shared.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
@@ -22,7 +22,7 @@ export const reportsGetDetail = {
   method: 'GET',
   path: reportsGetDetailPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser, SCOPES.adminRead]),
+    auth: getAuthConfig([SCOPES.organisationRead, SCOPES.adminRead]),
     tags: ['api'],
     validate: {
       params: periodParamsSchema

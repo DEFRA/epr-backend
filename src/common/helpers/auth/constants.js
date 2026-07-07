@@ -1,13 +1,4 @@
 /**
- * Per-request operator-side gates (issued by `getDefraUserRoles` from the
- * request context). Distinct from the durable admin scopes in `SCOPES` below.
- * @typedef {typeof ROLES[keyof typeof ROLES]} Roles
- */
-export const ROLES = {
-  standardUser: 'standard_user'
-}
-
-/**
  * @typedef {typeof SCOPES[keyof typeof SCOPES]} Scopes
  */
 export const SCOPES = {
@@ -15,6 +6,7 @@ export const SCOPES = {
   adminWrite: 'admin.write',
   adminDlqPurge: 'admin.dlq.purge',
   organisationRead: 'organisation.read',
+  organisationWrite: 'organisation.write',
   organisationLinkedRead: 'organisation.linked.read',
   organisationLinkedWrite: 'organisation.linked.write'
 }

@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -13,7 +13,7 @@ export const organisationsGetById = {
   options: {
     auth: {
       strategies: ['access-token', BASIC_AUTH],
-      scope: [ROLES.standardUser, SCOPES.adminRead, SCOPES.organisationRead]
+      scope: [SCOPES.organisationRead, SCOPES.adminRead]
     },
     tags: ['api', 'admin']
   },
