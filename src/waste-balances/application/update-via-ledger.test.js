@@ -59,7 +59,7 @@ const user = {
   id: 'user-1',
   name: 'Test User',
   email: 'user@example.test',
-  scope: ['standard_user'],
+  scope: ['some-scope'],
   role: 'standard_user'
 }
 

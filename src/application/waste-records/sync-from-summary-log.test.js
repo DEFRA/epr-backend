@@ -24,7 +24,7 @@ const TEST_WEIGHT_250_5 = 250.5
 const TEST_USER = {
   id: 'test-user',
   email: 'test@example.com',
-  scope: ['standard_user']
+  scope: ['some-scope']
 }
 
 describe('syncFromSummaryLog', () => {

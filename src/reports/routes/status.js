@@ -9,11 +9,9 @@ import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS, STATUS_TO_SLOT } from '#reports/domain/report-status.js'
 import { assertNotStale } from '#reports/domain/stale.js'
 import { isValidReportTransition } from '#reports/domain/report-transitions.js'
-import {
-  periodParamsSchema,
-  standardUserAuth,
-  extractChangedBy
-} from './shared.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { periodParamsSchema, extractChangedBy } from './shared.js'
 
 export const reportsStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/status'
@@ -46,7 +44,7 @@ export const reportsStatus = {
   method: 'POST',
   path: reportsStatusPath,
   options: {
-    auth: standardUserAuth,
+    auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
     validate: {
       params: periodParamsSchema,

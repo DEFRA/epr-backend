@@ -10,11 +10,9 @@ import { fetchReportBySubmissionNumber } from '#reports/application/report-servi
 import { maxTwoDecimalPlaces } from '#reports/repository/schema.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
-import {
-  periodParamsSchema,
-  standardUserAuth,
-  extractChangedBy
-} from './shared.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { periodParamsSchema, extractChangedBy } from './shared.js'
 
 export const reportsPatchPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
@@ -139,7 +137,7 @@ export const reportsPatch = {
   method: 'PATCH',
   path: reportsPatchPath,
   options: {
-    auth: standardUserAuth,
+    auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
     validate: {
       params: periodParamsSchema,

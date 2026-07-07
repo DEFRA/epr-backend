@@ -17,6 +17,8 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesCreatePath } from './post.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -41,7 +43,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
     beforeAll(async () => {
       packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
+        createInMemoryPackagingRecyclingNotesRepository()(createMockLogger())
       vi.spyOn(packagingRecyclingNotesRepository, 'create')
 
       organisationsRepository = {
@@ -160,7 +162,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           auth: {
             strategy: 'access-token',
             credentials: {
-              scope: ['standard_user'],
+              scope: [SCOPES.organisationWrite],
               id: userId,
               name: userName,
               email: 'test@example.com',
@@ -192,7 +194,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           auth: {
             strategy: 'access-token',
             credentials: {
-              scope: ['standard_user'],
+              scope: [SCOPES.organisationWrite],
               linkedOrgId: organisationId
             }
           },

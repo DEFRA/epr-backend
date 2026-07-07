@@ -12,7 +12,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { summaryLogResponseSchema } from '../response.schema.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
@@ -74,7 +74,7 @@ export const summaryLogsSubmit = {
   method: 'POST',
   path: summaryLogsSubmitPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser]),
+    auth: getAuthConfig([SCOPES.organisationWrite]),
     response: {
       schema: summaryLogResponseSchema
     },
