@@ -11,7 +11,7 @@ import {
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -135,7 +135,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -183,7 +183,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -214,7 +214,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -228,7 +228,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)

@@ -11,7 +11,7 @@ import {
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -91,7 +91,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -117,7 +117,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -135,7 +135,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -159,16 +159,11 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          auth: {
-            strategy: 'access-token',
-            credentials: {
-              scope: [SCOPES.organisationWrite],
-              id: userId,
-              name: userName,
-              email: 'test@example.com',
-              linkedOrgId: organisationId
-            }
-          },
+          ...asOperator({
+            id: userId,
+            name: userName,
+            email: 'test@example.com'
+          }),
           payload: validPayload
         })
 
@@ -194,8 +189,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           auth: {
             strategy: 'access-token',
             credentials: {
-              scope: [SCOPES.organisationWrite],
-              linkedOrgId: organisationId
+              scope: [SCOPES.organisationWrite]
             }
           },
           payload: validPayload
@@ -212,7 +206,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -236,7 +230,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -264,7 +258,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -283,7 +277,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -306,7 +300,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -317,7 +311,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: {
             ...validPayload,
             issuedToOrganisation: {
@@ -340,7 +334,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: {
             ...validPayload,
             issuedToOrganisation: {
@@ -362,7 +356,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -377,7 +371,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: {
             ...validPayload,
             notes
@@ -396,7 +390,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: payloadWithoutTonnage
         })
 
@@ -407,7 +401,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: {
             ...validPayload,
             tonnage: 0
@@ -421,7 +415,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: {
             ...validPayload,
             tonnage: -1
@@ -435,7 +429,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: {
             ...validPayload,
             tonnage: 10.5
@@ -449,7 +443,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: {
             ...validPayload,
             notes: 'a'.repeat(201)
@@ -482,7 +476,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 
@@ -497,7 +491,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: validPayload
         })
 

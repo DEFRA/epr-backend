@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 
 import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const DLQ_PURGE_PATH = '/v1/admin/queues/dlq/purge'
@@ -38,7 +38,7 @@ describe('POST /v1/admin/queues/dlq/purge', () => {
     const response = await server.inject({
       method: 'POST',
       url: DLQ_PURGE_PATH,
-      ...asStandardUser({ linkedOrgId: 'org-123' })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

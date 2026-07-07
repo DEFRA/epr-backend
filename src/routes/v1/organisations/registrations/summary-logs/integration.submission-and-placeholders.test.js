@@ -36,7 +36,7 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { StatusCodes } from 'http-status-codes'
 
 import {
-  asStandardUser,
+  asOperator,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -437,7 +437,7 @@ describe('Submission and placeholder tests', () => {
       submitResponse = await server.inject({
         method: 'POST',
         url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       let attempts = 0
@@ -453,7 +453,7 @@ describe('Submission and placeholder tests', () => {
         const checkResponse = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
 
         status = JSON.parse(checkResponse.payload).status
@@ -480,7 +480,7 @@ describe('Submission and placeholder tests', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       expect(response.statusCode).toBe(200)
@@ -492,7 +492,7 @@ describe('Submission and placeholder tests', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       expect(response.statusCode).toBe(200)
@@ -533,7 +533,7 @@ describe('Submission and placeholder tests', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, secondSummaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       const payload = JSON.parse(response.payload)
@@ -882,7 +882,7 @@ describe('Submission and placeholder tests', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
       })
 

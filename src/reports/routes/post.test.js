@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -92,7 +92,7 @@ describe(`POST ${reportsPostPath}`, () => {
     server.inject({
       method: 'POST',
       url: makeUrl(orgId, regId, year, cadence, period, submissionNumber),
-      ...asStandardUser({ linkedOrgId: orgId })
+      ...asOperator()
     })
 
   it('returns 201 with created report including data sections', async () => {
@@ -169,7 +169,7 @@ describe(`POST ${reportsPostPath}`, () => {
     const deleted = await server.inject({
       method: 'DELETE',
       url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1, 1),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
     expect(deleted.statusCode).toBe(StatusCodes.NO_CONTENT)
 
@@ -482,7 +482,7 @@ describe(`POST ${reportsPostPath}`, () => {
     const response = await server.inject({
       method: 'POST',
       url: makeUrl(organisationId, registrationId, 2025, 'biweekly', 1, 1),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -648,7 +648,7 @@ describe(`POST ${reportsPostPath}`, () => {
     const response = await server.inject({
       method: 'POST',
       url: makeUrl(org.id, registration.id, 2025, 'monthly', 1, 1),
-      ...asStandardUser({ linkedOrgId: org.id })
+      ...asOperator()
     })
 
     expect(response.statusCode).toBe(StatusCodes.CREATED)

@@ -15,7 +15,7 @@ import { createAndSubmitReport } from '#reports/repository/contract/test-data.js
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  asStandardUser,
+  asOperator,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -95,7 +95,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     return JSON.parse(response.payload).loadsByReportingPeriod
@@ -118,7 +118,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     await server.inject({
       method: 'POST',
       url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     await pollWhileStatus(
@@ -756,7 +756,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(organisationId, registrationId, 'sl-submitted-period'),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
     const body = JSON.parse(response.payload)
 

@@ -12,7 +12,7 @@ import {
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
@@ -163,7 +163,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -195,7 +195,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -227,7 +227,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
 
@@ -266,7 +266,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
 
@@ -307,7 +307,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
 
@@ -343,7 +343,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
 
@@ -377,7 +377,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
 
@@ -422,7 +422,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
 
@@ -463,7 +463,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
 
@@ -501,7 +501,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
 
@@ -524,16 +524,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          auth: {
-            strategy: 'access-token',
-            credentials: {
-              scope: [SCOPES.organisationWrite],
-              id: userId,
-              name: userName,
-              email: 'test@example.com',
-              linkedOrgId: organisationId
-            }
-          },
+          ...asOperator({
+            id: userId,
+            name: userName,
+            email: 'test@example.com'
+          }),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -558,8 +553,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           auth: {
             strategy: 'access-token',
             credentials: {
-              scope: [SCOPES.organisationWrite],
-              linkedOrgId: organisationId
+              scope: [SCOPES.organisationWrite]
             }
           },
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -584,7 +578,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${nonExistentId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -612,7 +606,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -626,7 +620,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${differentOrgId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: differentOrgId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -657,7 +651,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${createdPrnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.DRAFT }
         })
 
@@ -688,7 +682,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${unknownStatusPrnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -702,7 +696,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${invalidId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -713,7 +707,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: 'invalid_status' }
         })
 
@@ -748,7 +742,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${awaitingAuthPrnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
 
@@ -770,7 +764,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -789,7 +783,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -805,7 +799,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
@@ -836,7 +830,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.ACCEPTED }
         })
 
@@ -865,7 +859,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
+          ...asOperator(),
           payload: { status: PRN_STATUS.ACCEPTED }
         })
 

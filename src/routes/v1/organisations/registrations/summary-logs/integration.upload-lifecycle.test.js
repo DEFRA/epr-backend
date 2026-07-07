@@ -12,7 +12,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { ObjectId } from 'mongodb'
 
 import {
-  asStandardUser,
+  asOperator,
   createUploadPayload,
   buildGetUrl,
   buildPostUrl,
@@ -56,7 +56,7 @@ describe('Summary logs upload lifecycle', () => {
       response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
     })
 
@@ -122,7 +122,7 @@ describe('Summary logs upload lifecycle', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
       })
 
@@ -241,7 +241,7 @@ describe('Summary logs upload lifecycle', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
+          ...asOperator()
         })
       })
 

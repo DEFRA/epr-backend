@@ -9,8 +9,7 @@ const defraIdStandardUser = {
   email: 'ada@example.com',
   name: 'Ada Lovelace',
   issuer: 'defra-id',
-  scope: ['some-scope'],
-  currentRelationshipId: 'rel-1'
+  scope: ['some-scope']
 }
 
 const entraAdminUser = {

@@ -23,11 +23,11 @@ import { createReportsService } from '#reports/application/report-service.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
-import { asStandardUser } from '#test/inject-auth.js'
+import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
 
-export { asStandardUser } from '#test/inject-auth.js'
+export { asOperator } from '#test/inject-auth.js'
 
 /**
  * Reads an accreditation's waste balance from the environment's service and
@@ -382,7 +382,7 @@ export const pollWhileStatus = async (
     const checkResponse = await server.inject({
       method: 'GET',
       url: buildGetUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     status = JSON.parse(checkResponse.payload).status

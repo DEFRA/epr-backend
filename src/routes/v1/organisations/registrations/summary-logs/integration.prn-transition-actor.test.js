@@ -13,7 +13,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 import {
-  asStandardUser,
+  asOperator,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -93,7 +93,7 @@ const submitCredit = async (env, tonnage) => {
   await server.inject({
     method: 'POST',
     url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-    ...asStandardUser({ linkedOrgId: organisationId })
+    ...asOperator()
   })
 
   let attempts = 0
@@ -107,7 +107,7 @@ const submitCredit = async (env, tonnage) => {
     const checkResponse = await server.inject({
       method: 'GET',
       url: buildGetUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     status = JSON.parse(checkResponse.payload).status
@@ -123,7 +123,7 @@ const createPrn = async (env, tonnage) => {
   const response = await server.inject({
     method: 'POST',
     url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-    ...asStandardUser({ linkedOrgId: organisationId }),
+    ...asOperator(),
     payload: {
       issuedToOrganisation: {
         id: 'producer-org-123',
@@ -148,7 +148,7 @@ const raiseAs = async (env, prnId, credentials) => {
   return server.inject({
     method: 'POST',
     url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-    ...asStandardUser({ linkedOrgId: organisationId, ...credentials }),
+    ...asOperator(credentials),
     payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
   })
 }

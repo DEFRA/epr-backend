@@ -7,7 +7,7 @@ import {
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  asStandardUser,
+  asOperator,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -72,7 +72,7 @@ describe('ORS waste balance validation (VAL014)', () => {
     await server.inject({
       method: 'POST',
       url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...asOperator()
     })
 
     let attempts = 0
@@ -84,7 +84,7 @@ describe('ORS waste balance validation (VAL014)', () => {
       const checkResponse = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...asOperator()
       })
 
       status = JSON.parse(checkResponse.payload).status
