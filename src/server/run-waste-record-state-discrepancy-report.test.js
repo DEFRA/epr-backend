@@ -83,12 +83,14 @@ const buildServer = (
   app,
   {
     lock = { free: vi.fn().mockResolvedValue(undefined) },
-    backfillEnabled = true
+    backfillEnabled = true,
+    reportEnabled = true
   } = {}
 ) => ({
   app,
   featureFlags: {
-    isSummaryLogRowStatesBackfillEnabled: () => backfillEnabled
+    isSummaryLogRowStatesBackfillEnabled: () => backfillEnabled,
+    isSummaryLogRowStatesDiscrepancyReportEnabled: () => reportEnabled
   },
   locker: { lock: vi.fn().mockResolvedValue(lock) }
 })
@@ -249,6 +251,23 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
     vi.clearAllMocks()
   })
 
+  it('does not run and touches nothing when the discrepancy-report flag is off', async () => {
+    const organisationsRepository = {
+      findAll: vi.fn().mockResolvedValue([])
+    }
+    const server = buildServer(
+      { ...emptyEstate(), organisationsRepository },
+      { reportEnabled: false }
+    )
+
+    await runWasteRecordStateDiscrepancyReport(server)
+
+    expect(server.locker.lock).not.toHaveBeenCalled()
+    expect(organisationsRepository.findAll).not.toHaveBeenCalled()
+    expect(logger.info).not.toHaveBeenCalled()
+    expect(logger.error).not.toHaveBeenCalled()
+  })
+
   it('acquires a lock scoped to the report and releases it afterwards', async () => {
     const lock = { free: vi.fn().mockResolvedValue(undefined) }
     const server = buildServer(emptyEstate(), { lock })
@@ -267,6 +286,9 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
     }
     const server = {
       app: { ...emptyEstate(), organisationsRepository },
+      featureFlags: {
+        isSummaryLogRowStatesDiscrepancyReportEnabled: () => true
+      },
       locker: { lock: vi.fn().mockResolvedValue(null) }
     }
 
@@ -343,6 +365,9 @@ describe('runWasteRecordStateDiscrepancyReport', () => {
     const error = new Error('locker unavailable')
     const server = {
       app: emptyEstate(),
+      featureFlags: {
+        isSummaryLogRowStatesDiscrepancyReportEnabled: () => true
+      },
       locker: { lock: vi.fn().mockRejectedValue(error) }
     }
 

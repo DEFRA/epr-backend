@@ -382,6 +382,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL'
     },
+    summaryLogRowStatesDiscrepancyReport: {
+      doc: 'Feature Flag: Run the estate-wide summary-log-row-state reconciliation discrepancy diagnostic on startup (ADR-0037)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_DISCREPANCY_REPORT'
+    },
     registeredOnlySubmittedEvents: {
       doc: 'Feature Flag: Emit zero-delta summary-log-submitted events for registered-only (null-accreditation) streams (ADR-0031)',
       format: Boolean,
