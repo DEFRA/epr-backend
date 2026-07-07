@@ -1,6 +1,6 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { backfillRegistrationLedger } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js'
-import { createInMemorySummaryLogRowStatesBackfillWatermarkRepository } from '#waste-records/backfill/watermark/inmemory.js'
+import { createInMemorySummaryLogRowStatesBackfillWatermarkRepository } from '#waste-records/backfill/watermark/in-memory-store.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/in-memory-store.js'
 import { runReconciliation } from '#waste-records/monitoring/run-reconciliation.js'
 import {
