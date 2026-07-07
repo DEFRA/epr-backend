@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -69,7 +69,7 @@ export const packagingRecyclingNotesUpdateStatus = {
   method: 'POST',
   path: packagingRecyclingNotesUpdateStatusPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser]),
+    auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
     validate: {
       params: Joi.object({

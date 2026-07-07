@@ -1,18 +1,17 @@
 import { describe, it, expect } from 'vitest'
 
 import { getAuthConfig } from './get-auth-config.js'
-import { ROLES, SCOPES } from './constants.js'
 
 describe('getAuthConfig', () => {
   it('returns auth config with scopes', () => {
-    expect(getAuthConfig([ROLES.standardUser])).toEqual({
-      scope: [ROLES.standardUser]
+    expect(getAuthConfig(['scope-1'])).toEqual({
+      scope: ['scope-1']
     })
   })
 
   it('passes through multiple scopes', () => {
-    expect(getAuthConfig([ROLES.standardUser, SCOPES.adminRead])).toEqual({
-      scope: [ROLES.standardUser, SCOPES.adminRead]
+    expect(getAuthConfig(['scope-1', 'scope-2'])).toEqual({
+      scope: ['scope-1', 'scope-2']
     })
   })
 })

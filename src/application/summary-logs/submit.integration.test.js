@@ -54,7 +54,7 @@ const RECEIVED_DATA = {
 const SUBMIT_USER = {
   id: 'user-123',
   email: 'operator@example.com',
-  scope: ['standard_user'],
+  scope: ['some-scope'],
   role: null
 }
 

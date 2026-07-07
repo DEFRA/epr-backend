@@ -1,7 +1,5 @@
 import Joi from 'joi'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
-import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { cadenceSchema, periodSchema } from '#reports/repository/schema.js'
 
 const MIN_YEAR = 2024
@@ -29,8 +27,6 @@ export const periodParamsSchema = Joi.object({
  *
  * @typedef {PeriodPathParams & { submissionNumber: number }} PeriodWithSubmissionPathParams
  */
-
-export const standardUserAuth = getAuthConfig([ROLES.standardUser])
 
 /**
  * Wraps a report (stored or computed) with registration details.

@@ -1,4 +1,4 @@
-import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
@@ -20,20 +20,20 @@ export async function getDefraUserRoles(tokenPayload, request) {
 
   const { organisationsRepository } = request
 
-  const linkedEprOrg = await getOrgMatchingUsersToken(
+  const usersLinkedOrg = await getOrgMatchingUsersToken(
     tokenPayload,
     organisationsRepository
   )
 
-  const isStandardUserForThisOrg =
-    linkedEprOrg &&
-    requestIsForSameOrganisation(request, linkedEprOrg) &&
-    organisationIsActive(linkedEprOrg)
+  const isRequestForUsersLinkedOrg =
+    usersLinkedOrg && requestIsForSameOrganisation(request, usersLinkedOrg)
 
   const scopes = [
     SCOPES.organisationLinkedRead,
     SCOPES.organisationLinkedWrite,
-    ...(isStandardUserForThisOrg ? [ROLES.standardUser] : []) // this highlights how this code (still) has mixed up roles/scopes - needs fixing!
+    ...(isRequestForUsersLinkedOrg && organisationIsActive(usersLinkedOrg)
+      ? [SCOPES.organisationRead, SCOPES.organisationWrite]
+      : [])
   ]
 
   return { role: null, scopes }
@@ -41,12 +41,12 @@ export async function getDefraUserRoles(tokenPayload, request) {
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest} request
- * @param {import('#domain/organisations/model.js').Organisation} linkedEprOrg
+ * @param {import('#domain/organisations/model.js').Organisation} usersLinkedOrg
  */
-const requestIsForSameOrganisation = (request, linkedEprOrg) => {
+const requestIsForSameOrganisation = (request, usersLinkedOrg) => {
   const { organisationId } = request.params
 
-  return !!organisationId && organisationId === linkedEprOrg.id
+  return !!organisationId && organisationId === usersLinkedOrg.id
 }
 
 /**

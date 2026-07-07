@@ -4,11 +4,9 @@ import Boom from '@hapi/boom'
 import { auditReportDelete } from '#reports/application/audit.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import {
-  periodParamsSchema,
-  standardUserAuth,
-  extractChangedBy
-} from './shared.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { periodParamsSchema, extractChangedBy } from './shared.js'
 
 export const reportsDeletePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
@@ -17,7 +15,7 @@ export const reportsDelete = {
   method: 'DELETE',
   path: reportsDeletePath,
   options: {
-    auth: standardUserAuth,
+    auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
     validate: {
       params: periodParamsSchema
