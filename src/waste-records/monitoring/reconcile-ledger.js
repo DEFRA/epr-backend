@@ -6,10 +6,11 @@ import { reconcileRegistration } from './reconcile-registration.js'
 /**
  * Read the summary-log row state and legacy waste-record views for one
  * registration ledger and reconcile them. Read-only: resolves the committed
- * head from the ledger, the summary-log row states at that head, and the legacy
- * waste-records for the registration, then compares. The ledger and summary-log
- * row state reads reuse the production `summaryLogRowStatesForRegistration`
- * read model.
+ * head and the committed summary-log id set (the stream) from the ledger, the
+ * summary-log row states at that head, and the legacy waste-records for the
+ * registration, then compares. The committed id set anchors the carry-forward
+ * baseline in `reconcileRegistration`. The ledger and summary-log row state
+ * reads reuse the production `summaryLogRowStatesForRegistration` read model.
  *
  * @param {Object} input
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} input.ledgerRepository
@@ -31,17 +32,24 @@ export const reconcileLedger = async ({
   accreditation,
   overseasSites
 }) => {
-  const latestEvent = await ledgerRepository.findLatestInLedgerByKind(
+  const events = await ledgerRepository.findAllInLedger(
     registrationId,
-    accreditationId,
-    LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+    accreditationId
   )
-  const payload =
-    /** @type {import('#waste-balances/repository/ledger-schema.js').SummaryLogSubmittedPayload | undefined} */ (
-      latestEvent?.payload
+  const submittedPayloads =
+    /** @type {import('#waste-balances/repository/ledger-schema.js').SummaryLogSubmittedPayload[]} */ (
+      events
+        .filter(
+          (event) => event.kind === LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+        )
+        .map((event) => event.payload)
     )
-  const head = payload?.summaryLogId ?? null
-  const eventCreditTotal = payload?.creditTotal ?? null
+  const committedSummaryLogIds = new Set(
+    submittedPayloads.map((payload) => payload.summaryLogId)
+  )
+  const latestPayload = submittedPayloads.at(-1)
+  const head = latestPayload?.summaryLogId ?? null
+  const eventCreditTotal = latestPayload?.creditTotal ?? null
 
   const wasteRecordStates = await summaryLogRowStatesForRegistration({
     ledgerRepository,
@@ -59,6 +67,7 @@ export const reconcileLedger = async ({
     registrationId,
     accreditationId,
     head,
+    committedSummaryLogIds,
     eventCreditTotal,
     wasteRecordStates,
     wasteRecords,

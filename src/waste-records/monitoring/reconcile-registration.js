@@ -93,10 +93,19 @@ const classificationDivergencesBetween = ({
  * waste-records committed baseline for a single registration ledger.
  * Read-only: every input is already loaded; this function only compares.
  *
+ * The committed baseline is the carry-forward membership ADR-0037 defines: a
+ * legacy row belongs to the committed state at the head when any of its versions
+ * was committed — tagged with a summary-log id on the stream
+ * (`committedSummaryLogIds`) — since row monotonicity keeps every submitted row
+ * present through the latest head. Restated-unchanged rows carry no version at
+ * the head, so a changed-at-head-only predicate would wrongly flag them as
+ * extras; membership in the committed id set is what makes them reconcile.
+ *
  * @param {Object} input
  * @param {string} input.registrationId
  * @param {string | null} input.accreditationId
  * @param {string | null} input.head
+ * @param {Set<string>} input.committedSummaryLogIds
  * @param {number | null} input.eventCreditTotal
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} input.wasteRecordStates
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} input.wasteRecords
@@ -107,6 +116,7 @@ export const reconcileRegistration = ({
   registrationId,
   accreditationId,
   head,
+  committedSummaryLogIds,
   eventCreditTotal,
   wasteRecordStates,
   wasteRecords,
@@ -116,7 +126,9 @@ export const reconcileRegistration = ({
   const hasCommittedSubmission = head !== null
   const hasWasteRecordStateData = wasteRecordStates.length > 0
   const committedRows = wasteRecords.filter((record) =>
-    record.versions.some((version) => version.summaryLog.id === head)
+    record.versions.some((version) =>
+      committedSummaryLogIds.has(version.summaryLog.id)
+    )
   )
 
   const wasteRecordStatesTotal = wasteRecordStateCreditTotal(wasteRecordStates)
