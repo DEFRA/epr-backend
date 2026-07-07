@@ -121,15 +121,17 @@ export const backfillRegistrationLedger = async ({
     organisation.id,
     registration.id
   )
-  const lastSubmission = summaryLogs.reduce((latest, log) =>
-    compareSubmissionOrder(
-      log.submittedAt,
-      log.id,
-      latest.submittedAt,
-      latest.id
-    ) > 0
-      ? log
-      : latest
+  const lastSubmission = summaryLogs.reduce(
+    (latest, log) =>
+      compareSubmissionOrder(
+        log.submittedAt,
+        log.id,
+        latest.submittedAt,
+        latest.id
+      ) > 0
+        ? log
+        : latest,
+    summaryLogs[0]
   )
   if (
     isCoveredByWatermark(
