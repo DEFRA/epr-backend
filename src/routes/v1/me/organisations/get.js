@@ -1,4 +1,4 @@
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
 import {
   auditOrganisationsDiscovery,
@@ -111,7 +111,7 @@ export const organisationsLinkedGetAll = {
   path: '/v1/me/organisations',
   options: {
     auth: {
-      scope: [ROLES.inquirer]
+      scope: [SCOPES.organisationLinkedRead]
     },
     tags: ['api']
   },
