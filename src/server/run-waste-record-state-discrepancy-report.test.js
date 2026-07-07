@@ -436,8 +436,8 @@ const approvedReprocessorAccreditation = (id) =>
     id,
     wasteProcessingType: 'reprocessor',
     statusHistory: [
-      { status: 'created', updatedAt: new Date('2024-01-01') },
-      { status: 'approved', updatedAt: new Date('2024-02-01') }
+      { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+      { status: 'approved', updatedAt: '2024-02-01T00:00:00.000Z' }
     ]
   })
 
