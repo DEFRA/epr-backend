@@ -137,7 +137,7 @@ describe('extractUserDetails', () => {
           credentials: {
             id: 'contact-456',
             email: 'operator@example.com',
-            scope: ['inquirer'],
+            scope: ['some-scope'],
             role: null
           }
         }
@@ -146,7 +146,7 @@ describe('extractUserDetails', () => {
     expect(extractUserDetails(request)).toEqual({
       id: 'contact-456',
       email: 'operator@example.com',
-      scope: ['inquirer'],
+      scope: ['some-scope'],
       role: null
     })
   })

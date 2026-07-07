@@ -1,4 +1,4 @@
-import { ROLES } from '#auth/constants.js'
+import { SCOPES } from '#auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
@@ -30,7 +30,7 @@ export const organisationsLink = {
   path: '/v1/organisations/{organisationId}/link',
   options: {
     auth: {
-      scope: [ROLES.inquirer]
+      scope: [SCOPES.organisationLinkedWrite]
     },
     tags: ['api', 'admin']
   },

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { getDefraUserRoles } from './get-defra-user-roles.js'
-import { ROLES } from './constants.js'
+import { ROLES, SCOPES } from './constants.js'
 
 const mockGetOrgMatchingUsersToken = vi.fn()
 const mockGetDefraTokenSummary = vi.fn()
@@ -128,7 +128,11 @@ describe('#getDefraUserRoles', () => {
 
       const result = await getDefraUserRoles(tokenPayload, requestForOrg)
 
-      expect(result.scopes).toEqual([ROLES.inquirer, ROLES.standardUser])
+      expect(result.scopes).toEqual([
+        SCOPES.organisationLinkedRead,
+        SCOPES.organisationLinkedWrite,
+        ROLES.standardUser
+      ])
     })
 
     test('does not assign standard user scope when user token is not linked to an organisation', async () => {
@@ -136,7 +140,10 @@ describe('#getDefraUserRoles', () => {
 
       const result = await getDefraUserRoles(tokenPayload, requestForOrg)
 
-      expect(result.scopes).toEqual([ROLES.inquirer])
+      expect(result.scopes).toEqual([
+        SCOPES.organisationLinkedRead,
+        SCOPES.organisationLinkedWrite
+      ])
     })
 
     test('does not assign standard user scope when user is linked to a different organisation than the one being requested', async () => {
@@ -147,7 +154,10 @@ describe('#getDefraUserRoles', () => {
 
       const result = await getDefraUserRoles(tokenPayload, requestForOrg)
 
-      expect(result.scopes).toEqual([ROLES.inquirer])
+      expect(result.scopes).toEqual([
+        SCOPES.organisationLinkedRead,
+        SCOPES.organisationLinkedWrite
+      ])
     })
 
     test('does not assign standard user scope when user is linked to organisation specified in request, and organisation is not active', async () => {
@@ -158,7 +168,10 @@ describe('#getDefraUserRoles', () => {
 
       const result = await getDefraUserRoles(tokenPayload, requestForOrg)
 
-      expect(result.scopes).toEqual([ROLES.inquirer])
+      expect(result.scopes).toEqual([
+        SCOPES.organisationLinkedRead,
+        SCOPES.organisationLinkedWrite
+      ])
     })
 
     test('does not assign standard user scope when user is linked to an active organisation, but request does not specify an organisation', async () => {
@@ -169,7 +182,10 @@ describe('#getDefraUserRoles', () => {
         params: {}
       })
 
-      expect(result.scopes).toEqual([ROLES.inquirer])
+      expect(result.scopes).toEqual([
+        SCOPES.organisationLinkedRead,
+        SCOPES.organisationLinkedWrite
+      ])
     })
   })
 
