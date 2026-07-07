@@ -23,6 +23,9 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   }
 
+  const toBuffer = async (workbook) =>
+    Buffer.from(await workbook.xlsx.writeBuffer())
+
   const parseWorkbook = async (worksheets, options = {}) => {
     const workbook = new ExcelJS.Workbook()
 
@@ -31,7 +34,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       populateWorksheet(worksheet, rows)
     }
 
-    const buffer = await workbook.xlsx.writeBuffer()
+    const buffer = await toBuffer(workbook)
     return parse(buffer, options)
   }
 
@@ -91,7 +94,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       workbook.addWorksheet('NotCover')
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
 
       await expect(
         parse(buffer, { requiredWorksheet: 'Cover' })
@@ -106,7 +109,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       workbook.addWorksheet('Cover')
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
 
       await expect(
         parse(buffer, { requiredWorksheet: 'Cover' })
@@ -120,7 +123,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       workbook.addWorksheet('AnySheet')
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
 
       await expect(parse(buffer, { requiredWorksheet: null })).resolves.toEqual(
         {
@@ -137,7 +140,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         workbook.addWorksheet(`Sheet${i}`)
       }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
 
       await expect(parse(buffer, { maxWorksheets: 3 })).rejects.toThrow(
         SpreadsheetValidationError
@@ -155,7 +158,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       // Set a cell far down to simulate large rowCount
       worksheet.getCell('A101').value = 'data'
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
 
       await expect(parse(buffer, { maxRowsPerSheet: 100 })).rejects.toThrow(
         SpreadsheetValidationError
@@ -173,7 +176,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       // Set a cell far to the right to simulate large columnCount
       worksheet.getCell(1, 51).value = 'data'
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
 
       await expect(parse(buffer, { maxColumnsPerSheet: 50 })).rejects.toThrow(
         SpreadsheetValidationError
@@ -193,7 +196,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('A10').value = 'last row' // exactly at row limit
       worksheet.getCell(1, 5).value = 'last column' // exactly at column limit
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
 
       await expect(
         parse(buffer, {
@@ -211,7 +214,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       workbook.addWorksheet('Test')
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
 
       // Should not throw with defaults (20 worksheets, 50k rows, 1k columns)
       await expect(parse(buffer)).resolves.toEqual({
@@ -826,7 +829,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('A1').value = '__EPR_META_CALCULATION'
       worksheet.getCell('B1').value = { formula: '=10+20', result: 30 }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.CALCULATION).toEqual({
@@ -849,7 +852,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('B3').value = 7
       worksheet.getCell('C3').value = { formula: '=B3*2', result: 14 }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.data.CALCULATIONS).toEqual({
@@ -869,7 +872,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('A1').value = '__EPR_META_UNCACHED'
       worksheet.getCell('B1').value = { formula: '=SUM(1,2,3)' }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.UNCACHED).toEqual({
@@ -889,7 +892,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         richText: [{ text: 'Hello' }, { font: { bold: true }, text: ' World' }]
       }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.TITLE).toEqual({
@@ -911,7 +914,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         richText: [{ text: 'First ' }, { text: 'item' }]
       }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.data.TEST_TABLE.rows).toEqual([
@@ -1208,7 +1211,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         worksheet.getCell('B4').value = 1002
         worksheet.getCell('C4').value = '2025-05-26'
 
-        const buffer = await workbook.xlsx.writeBuffer()
+        const buffer = await toBuffer(workbook)
         const result = await parse(buffer)
 
         expect(result.data.TEST_TABLE.rows).toEqual([
@@ -1295,7 +1298,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('A1').value = '__EPR_META_SUBMISSION_DATE'
       worksheet.getCell('B1').value = testDate
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.SUBMISSION_DATE).toEqual({
@@ -1321,7 +1324,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('B3').value = 98765432100
       worksheet.getCell('C3').value = date2
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.data.WASTE_RECEIVED).toEqual({
@@ -1349,7 +1352,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('C2').value = date
       worksheet.getCell('D2').value = 42
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.data.MIXED_TYPES).toEqual({
@@ -1373,7 +1376,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('A1').value = '__EPR_META_IS_ACTIVE'
       worksheet.getCell('B1').value = true
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.IS_ACTIVE).toEqual({
@@ -1389,7 +1392,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('A1').value = '__EPR_META_IS_ACTIVE'
       worksheet.getCell('B1').value = false
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.IS_ACTIVE).toEqual({
@@ -1412,7 +1415,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('B3').value = 1002
       worksheet.getCell('C3').value = false
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.data.FLAGS.rows).toEqual([
@@ -1434,7 +1437,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         result: { error: '#DIV/0!' }
       }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.CALCULATION).toEqual({
@@ -1465,7 +1468,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         result: { error: '#N/A' }
       }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.data.CALCULATIONS.rows).toEqual([
@@ -1482,7 +1485,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       // Direct error value (no formula)
       worksheet.getCell('B1').value = { error: '#VALUE!' }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.ERROR).toEqual({
@@ -1503,7 +1506,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         hyperlink: 'https://example.com'
       }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.WEBSITE).toEqual({
@@ -1533,7 +1536,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         tooltip: 'Email our support team'
       }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.data.CONTACTS.rows).toEqual([
@@ -1552,7 +1555,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         hyperlink: "#'Summary'!A1"
       }
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.meta.LINK).toEqual({
@@ -2077,7 +2080,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getRow(107).values = ['__EPR_DATA_SECOND', 'HEADER_B']
       worksheet.getRow(108).values = [null, 'phantom_data']
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       // Data before the phantom gap should be parsed
@@ -2114,7 +2117,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getRow(6).values = [null, 'after-2a', 'after-2b']
       worksheet.getRow(7).values = [null, ''] // real terminator
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       expect(result.data.SECTION.rows).toEqual([
@@ -2195,7 +2198,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       // Row 3: empty row to terminate section
       worksheet.getRow(3).values = [null, '']
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       // Data within the threshold should be parsed
@@ -2223,7 +2226,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       row1.getCell(104).value = '__EPR_META_PHANTOM'
       row1.getCell(105).value = 'PHANTOM_VALUE'
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       // Metadata before phantom columns should be parsed
@@ -2259,7 +2262,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       row1.getCell(105).value = '__EPR_META_THIRD'
       row1.getCell(106).value = 'value_c'
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = await toBuffer(workbook)
       const result = await parse(buffer)
 
       // All metadata should be parsed since gaps are less than 100

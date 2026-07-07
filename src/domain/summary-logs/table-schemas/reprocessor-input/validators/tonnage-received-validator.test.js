@@ -5,6 +5,7 @@ import {
   extractTonnageReceivedFields,
   TONNAGE_RECEIVED_MESSAGES
 } from './tonnage-received-validator.js'
+import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 
 describe('extractTonnageReceivedFields', () => {
   describe('when all fields are present and valid', () => {
@@ -42,6 +43,10 @@ describe('extractTonnageReceivedFields', () => {
       }
 
       const result = extractTonnageReceivedFields(row)
+
+      if (result === null) {
+        throw new Error('expected tonnage fields to be extracted')
+      }
 
       expect(Object.keys(result)).toEqual([
         'netWeight',
@@ -283,7 +288,7 @@ describe('validateTonnageReceived', () => {
 
     it('rejects incorrect calculation', () => {
       const schema = createTestSchema()
-      const { error } = schema.validate({
+      const details = expectValidationError(schema, {
         NET_WEIGHT: 100,
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
@@ -291,16 +296,15 @@ describe('validateTonnageReceived', () => {
         TONNAGE_RECEIVED_FOR_RECYCLING: 80 // Should be 72
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
-      expect(error.details[0].message).toBe(
+      expect(details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(details[0].message).toBe(
         'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
       )
     })
 
     it('rejects calculation outside tolerance (off by 0.01)', () => {
       const schema = createTestSchema()
-      const { error } = schema.validate({
+      const details = expectValidationError(schema, {
         NET_WEIGHT: 100,
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
@@ -308,8 +312,7 @@ describe('validateTonnageReceived', () => {
         TONNAGE_RECEIVED_FOR_RECYCLING: 72.01
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
   })
 
@@ -354,7 +357,7 @@ describe('validateTonnageReceived', () => {
 
     it('rejects calculation without bailing wire deduction when protocol is Yes', () => {
       const schema = createTestSchema()
-      const { error } = schema.validate({
+      const details = expectValidationError(schema, {
         NET_WEIGHT: 100,
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'Yes',
@@ -362,14 +365,13 @@ describe('validateTonnageReceived', () => {
         TONNAGE_RECEIVED_FOR_RECYCLING: 72 // Wrong - should be 71.892 with deduction
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
 
     it('rejects calculation with incorrect bailing wire factor', () => {
       const schema = createTestSchema()
       // Using wrong factor: 90 * 0.99 * 0.8 = 71.28 (instead of 71.892)
-      const { error } = schema.validate({
+      const details = expectValidationError(schema, {
         NET_WEIGHT: 100,
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'Yes',
@@ -377,8 +379,7 @@ describe('validateTonnageReceived', () => {
         TONNAGE_RECEIVED_FOR_RECYCLING: 71.28
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
+      expect(details[0].type).toBe('custom.tonnageCalculationMismatch')
     })
   })
 
