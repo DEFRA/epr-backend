@@ -47,4 +47,13 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.registeredOnlySubmittedEvents'
     )
   })
+
+  it('returns true when summaryLogRowStatesDiscrepancyReport flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isSummaryLogRowStatesDiscrepancyReportEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.summaryLogRowStatesDiscrepancyReport'
+    )
+  })
 })

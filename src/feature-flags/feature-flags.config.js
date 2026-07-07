@@ -17,6 +17,9 @@ export const createConfigFeatureFlags = (config) => ({
   isSummaryLogRowStatesBackfillEnabled() {
     return config.get('featureFlags.summaryLogRowStatesBackfill')
   },
+  isSummaryLogRowStatesDiscrepancyReportEnabled() {
+    return config.get('featureFlags.summaryLogRowStatesDiscrepancyReport')
+  },
   isRegisteredOnlySubmittedEventsEnabled() {
     return config.get('featureFlags.registeredOnlySubmittedEvents')
   }
