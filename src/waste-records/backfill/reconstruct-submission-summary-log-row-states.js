@@ -1,6 +1,8 @@
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
+import { compareSubmissionOrder } from './submission-order.js'
+
 /**
  * @import { ClassifiedRow } from '#waste-balances/application/target-amount.js'
  * @import { WasteRecord } from '#domain/waste-records/model.js'
@@ -84,10 +86,8 @@ export const reconstructSubmissionSummaryLogRowStates = ({
 }) => {
   const submitted = summaryLogs
     .filter((log) => log.status === SUMMARY_LOG_STATUS.SUBMITTED)
-    .sort(
-      (a, b) =>
-        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime() ||
-        a.id.localeCompare(b.id)
+    .sort((a, b) =>
+      compareSubmissionOrder(a.submittedAt, a.id, b.submittedAt, b.id)
     )
 
   const seenSummaryLogIds = new Set()

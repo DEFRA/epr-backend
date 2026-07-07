@@ -39,6 +39,7 @@ import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-m
 import { mongoWasteBalanceServicePlugin } from '#waste-balances/repository/mongodb.plugin.js'
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
 import { mongoSummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/mongodb.plugin.js'
+import { mongoSummaryLogRowStatesBackfillWatermarkRepositoryPlugin } from '#waste-records/backfill/watermark/mongodb.plugin.js'
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
@@ -149,7 +150,10 @@ function getProductionPlugins(config) {
   // flip choreography can leave the backfill flag off by the time forward writes
   // begin.
   if (shouldRegisterSummaryLogRowStates(config)) {
-    plugins.push(mongoSummaryLogRowStatesRepositoryPlugin)
+    plugins.push(
+      mongoSummaryLogRowStatesRepositoryPlugin,
+      mongoSummaryLogRowStatesBackfillWatermarkRepositoryPlugin
+    )
   }
 
   plugins.push(mongoReportsRepositoryPlugin)
