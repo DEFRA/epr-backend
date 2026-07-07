@@ -53,7 +53,7 @@ jobs:
           fetch-depth: 0
 
       - name: Test and Scan
-        uses: ./.github/actions/test-and-scan
+        uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@PAE-1709-sonarqube-previous-version
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           sonar-token: ${{ secrets.SONAR_TOKEN }}
