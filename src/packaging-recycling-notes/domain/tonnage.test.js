@@ -84,7 +84,7 @@ describe('aggregateIssuedTonnage', () => {
   describe('cancelled PRNs', () => {
     const cancelledParams = params
 
-    it('includes PRN created before the period, issued within it, cancelled after it', () => {
+    it('excludes PRN created before the period, issued within it, cancelled after it', () => {
       const prn = buildPrn('prn-1', 75, {
         currentStatus: PRN_STATUS.CANCELLED,
         currentStatusAt: APR,
@@ -94,10 +94,10 @@ describe('aggregateIssuedTonnage', () => {
         cancelled: { at: APR, by: ACTOR }
       })
 
-      expect(aggregateIssuedTonnage([prn], cancelledParams)).toBe(75)
+      expect(aggregateIssuedTonnage([prn], cancelledParams)).toBe(0)
     })
 
-    it('includes PRN created and issued within the period but cancelled after it', () => {
+    it('excludes PRN created and issued within the period but cancelled after it', () => {
       const prn = buildPrn('prn-1', 75, {
         currentStatus: PRN_STATUS.CANCELLED,
         currentStatusAt: APR,
@@ -107,7 +107,32 @@ describe('aggregateIssuedTonnage', () => {
         cancelled: { at: APR, by: ACTOR }
       })
 
-      expect(aggregateIssuedTonnage([prn], cancelledParams)).toBe(75)
+      expect(aggregateIssuedTonnage([prn], cancelledParams)).toBe(0)
+    })
+
+    it('excludes PRN currently awaiting cancellation, even though issued within the period', () => {
+      const prn = buildPrn('prn-1', 75, {
+        currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+        currentStatusAt: APR,
+        created: { at: MAR, by: ACTOR },
+        issued: { at: MAR, by: ACTOR },
+        accepted: { at: MAR, by: ACTOR }
+      })
+
+      expect(aggregateIssuedTonnage([prn], cancelledParams)).toBe(0)
+    })
+
+    it('excludes a cancelled PRN whose issued.at also falls outside the period', () => {
+      const prn = buildPrn('prn-1', 75, {
+        currentStatus: PRN_STATUS.CANCELLED,
+        currentStatusAt: APR,
+        created: { at: FEB, by: ACTOR },
+        issued: { at: FEB, by: ACTOR },
+        rejected: { at: APR, by: ACTOR },
+        cancelled: { at: APR, by: ACTOR }
+      })
+
+      expect(aggregateIssuedTonnage([prn], cancelledParams)).toBe(0)
     })
   })
 
@@ -133,7 +158,7 @@ describe('aggregateIssuedTonnage', () => {
     expect(aggregateIssuedTonnage([prn], params)).toBe(0)
   })
 
-  it('sums tonnage across multiple qualifying PRNs', () => {
+  it('sums tonnage across multiple qualifying PRNs, excluding a cancelled one', () => {
     const prns = [
       buildPrn('prn-1', 30, {
         currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
@@ -147,6 +172,14 @@ describe('aggregateIssuedTonnage', () => {
         created: { at: MAR, by: ACTOR },
         issued: { at: MAR, by: ACTOR },
         accepted: { at: APR, by: ACTOR }
+      }),
+      buildPrn('prn-3', 75, {
+        currentStatus: PRN_STATUS.CANCELLED,
+        currentStatusAt: APR,
+        created: { at: MAR, by: ACTOR },
+        issued: { at: MAR, by: ACTOR },
+        rejected: { at: APR, by: ACTOR },
+        cancelled: { at: APR, by: ACTOR }
       })
     ]
 

@@ -3,6 +3,7 @@ import { PRN_STATUS } from '../domain/model.js'
 import { getIssuedTonnage } from './get-issued-tonnage.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '../repository/inmemory.plugin.js'
 import { buildPrn } from '../repository/contract/test-data.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 const PERIOD_START = '2025-01-01'
 const PERIOD_END = '2025-12-31'
@@ -18,7 +19,7 @@ const defaultParams = {
 }
 
 function createRepo() {
-  return createInMemoryPackagingRecyclingNotesRepository()()
+  return createInMemoryPackagingRecyclingNotesRepository()(createMockLogger())
 }
 
 /**
@@ -69,6 +70,42 @@ async function acceptPrn(repo, id, { acceptedAt = IN_PERIOD } = {}) {
     updatedAt: acceptedAt,
     updatedBy: ACTOR,
     operation: { slot: 'accepted', at: acceptedAt, by: ACTOR }
+  })
+}
+
+/**
+ * Transitions an issued PRN to awaiting_cancellation.
+ *
+ * @param {object} repo
+ * @param {string} id
+ */
+async function requestCancelPrn(repo, id) {
+  const current = await repo.findById(id)
+  return repo.updateStatus({
+    id,
+    version: current.version,
+    status: PRN_STATUS.AWAITING_CANCELLATION,
+    updatedAt: IN_PERIOD,
+    updatedBy: ACTOR
+  })
+}
+
+/**
+ * Transitions a PRN awaiting cancellation to cancelled, populating the
+ * cancelled slot.
+ *
+ * @param {object} repo
+ * @param {string} id
+ */
+async function cancelPrn(repo, id) {
+  const current = await repo.findById(id)
+  return repo.updateStatus({
+    id,
+    version: current.version,
+    status: PRN_STATUS.CANCELLED,
+    updatedAt: IN_PERIOD,
+    updatedBy: ACTOR,
+    operation: { slot: 'cancelled', at: IN_PERIOD, by: ACTOR }
   })
 }
 
@@ -148,5 +185,21 @@ describe('getIssuedTonnage', () => {
     const result = await getIssuedTonnage(repo, defaultParams)
 
     expect(result).toEqual({ issuedTonnage: 40 })
+  })
+
+  it('excludes cancelled and awaiting-cancellation PRNs, but keeps accepted and in-flight ones, all issued within the period', async () => {
+    const repo = createRepo()
+    await issuePrn(repo, { tonnage: 30 })
+    const accepted = await issuePrn(repo, { tonnage: 20 })
+    await acceptPrn(repo, accepted.id)
+    const awaitingCancellation = await issuePrn(repo, { tonnage: 75 })
+    await requestCancelPrn(repo, awaitingCancellation.id)
+    const cancelled = await issuePrn(repo, { tonnage: 75 })
+    await requestCancelPrn(repo, cancelled.id)
+    await cancelPrn(repo, cancelled.id)
+
+    const result = await getIssuedTonnage(repo, defaultParams)
+
+    expect(result).toEqual({ issuedTonnage: 50 })
   })
 })

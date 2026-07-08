@@ -1,4 +1,5 @@
 import { isNil } from '#common/helpers/is-nil.js'
+import { CANCELLED_PRN_STATUSES } from './model.js'
 
 /**
  * @typedef {Object} AggregateTonnageParams
@@ -10,7 +11,9 @@ import { isNil } from '#common/helpers/is-nil.js'
  * Aggregates tonnage from PRNs where issued.at falls within the period.
  *
  * The reporting period is always determined by when the PRN was issued
- * (status.issued.at), regardless of when it was accepted or cancelled.
+ * (status.issued.at), regardless of when it was accepted. PRNs whose current
+ * status is Cancelled or Awaiting Cancellation are excluded, even if they
+ * were issued within the period.
  *
  * @param {import('./model.js').PackagingRecyclingNote[]} prns
  * @param {AggregateTonnageParams} params
@@ -19,7 +22,13 @@ import { isNil } from '#common/helpers/is-nil.js'
 export function aggregateIssuedTonnage(prns, { startDate, endDate }) {
   const isInPeriod = (at) => !isNil(at) && at >= startDate && at <= endDate
 
+  const isIssuedInPeriod = (prn) => isInPeriod(prn.status.issued?.at)
+
+  const isNotCancelled = (prn) =>
+    !CANCELLED_PRN_STATUSES.has(prn.status.currentStatus)
+
   return prns
-    .filter((prn) => isInPeriod(prn.status.issued?.at))
+    .filter(isIssuedInPeriod)
+    .filter(isNotCancelled)
     .reduce((total, prn) => total + prn.tonnage, 0)
 }
