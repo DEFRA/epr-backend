@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 import { summaryLogRowStateInsertSchema } from './schema.js'
 import {
@@ -25,6 +26,19 @@ describe('row state insert schema', () => {
         classification: {
           outcome: ROW_OUTCOME.EXCLUDED,
           reasons: [{ code: 'MISSING_REQUIRED_FIELD', field: 'tonnage' }],
+          transactionAmount: 0
+        }
+      })
+    )
+    expect(error).toBeUndefined()
+  })
+
+  it('accepts a NOT_APPLICABLE row state carrying no reasons', () => {
+    const { error } = validate(
+      buildSummaryLogRowState({
+        classification: {
+          outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+          reasons: [],
           transactionAmount: 0
         }
       })

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 const overseasSites = /** @type {any} */ (new Map())
 
@@ -29,7 +29,7 @@ describe('projectSummaryLogRowState', () => {
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
       processingType: 'REPROCESSOR_REGISTERED_ONLY',
       classification: {
-        outcome: ROW_OUTCOME.EXCLUDED,
+        outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
         reasons: [],
         transactionAmount: 0
       },

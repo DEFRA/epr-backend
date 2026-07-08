@@ -46,13 +46,17 @@ vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
   findSchemaForProcessingType: vi.fn()
 }))
 
+/** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
+
 const accreditationId = 'acc-1'
 
-const accreditation = {
-  id: accreditationId,
-  validFrom: '2023-01-01',
-  validTo: '2030-12-31'
-}
+const accreditation = /** @type {Accreditation} */ (
+  /** @type {unknown} */ ({
+    id: accreditationId,
+    validFrom: '2023-01-01',
+    validTo: '2030-12-31'
+  })
+)
 
 const overseasSites = /** @type {*} */ (new Map())
 const user = {

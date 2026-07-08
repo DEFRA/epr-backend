@@ -1,5 +1,5 @@
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { getWasteBalanceClassification } from '#waste-records-export/domain/is-included-in-waste-balance.js'
 
 /**
@@ -39,7 +39,7 @@ const toRowRef = (row) => ({ rowId: row.rowId, wasteRecordType: typeOf(row) })
 const wasteRecordStateCreditTotal = (wasteRecordStates) =>
   wasteRecordStates.reduce(
     (total, { classification }) =>
-      classification.outcome === ROW_OUTCOME.INCLUDED
+      classification.outcome === WASTE_BALANCE_OUTCOME.INCLUDED
         ? toNumber(add(total, classification.transactionAmount))
         : total,
     0
@@ -68,7 +68,7 @@ const classificationDivergencesBetween = ({
       return []
     }
     const wasteRecordStateIncluded =
-      wasteRecordState.classification.outcome === ROW_OUTCOME.INCLUDED
+      wasteRecordState.classification.outcome === WASTE_BALANCE_OUTCOME.INCLUDED
     const legacyClassification = getWasteBalanceClassification(
       record,
       accreditation,

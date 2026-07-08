@@ -13,7 +13,7 @@ import {
   toWasteRecordVersions
 } from '#repositories/waste-records/contract/test-data.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -1599,7 +1599,7 @@ describe('syncFromSummaryLog', () => {
         registrationId: 'reg-1',
         wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
         classification: {
-          outcome: ROW_OUTCOME.EXCLUDED,
+          outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
           reasons: [],
           transactionAmount: 0
         },

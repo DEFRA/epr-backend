@@ -12,7 +12,7 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
-/** @import {WasteBalanceClassification} from './is-included-in-waste-balance.js' */
+/** @import {CsvWasteBalanceClassification} from './is-included-in-waste-balance.js' */
 
 const FORMULA_INJECTION_PREFIX = /^[=+\-@]/
 
@@ -163,7 +163,7 @@ const buildWasteBalanceCells = (classification) =>
  * @property {Accreditation | null} accreditation
  * @property {WasteRecord} record
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
- * @property {WasteBalanceClassification | null} wasteBalanceClassification
+ * @property {CsvWasteBalanceClassification | null} wasteBalanceClassification
  * @property {Record<string, import('./overseas-sites-context.js').OverseasSiteContextEntry>} [overseasSites]
  * @property {string[]} dataFieldColumns
  */

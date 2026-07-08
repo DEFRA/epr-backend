@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -225,7 +225,7 @@ describe('reconstructSubmissionSummaryLogRowStates', () => {
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
       data: { supplierName: 'Acme' },
       classification: {
-        outcome: ROW_OUTCOME.EXCLUDED,
+        outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
         reasons: [],
         transactionAmount: 0
       }

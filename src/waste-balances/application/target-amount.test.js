@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
@@ -8,7 +9,10 @@ vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
   findSchemaForProcessingType: vi.fn()
 }))
 
-const accreditation = { id: 'acc-1' }
+const accreditation =
+  /** @type {import('#domain/organisations/accreditation.js').Accreditation} */ (
+    /** @type {unknown} */ ({ id: 'acc-1' })
+  )
 const overseasSites = /** @type {*} */ (new Map())
 
 const buildRecord = (overrides = {}) =>
@@ -57,40 +61,7 @@ describe('classifyWasteRecord', () => {
     })
   })
 
-  it('classifies an excluded-from-waste-balance record as EXCLUDED with no amount', async () => {
-    const record = buildRecord({ excludedFromWasteBalance: true })
-
-    const { classification } = classifyWasteRecord(
-      record,
-      accreditation,
-      overseasSites
-    )
-
-    expect(classification).toEqual({
-      outcome: ROW_OUTCOME.EXCLUDED,
-      reasons: [],
-      transactionAmount: 0
-    })
-  })
-
-  it('classifies a record with no matching schema as EXCLUDED with no amount', async () => {
-    await setSchema(null)
-    const record = buildRecord()
-
-    const { classification } = classifyWasteRecord(
-      record,
-      accreditation,
-      overseasSites
-    )
-
-    expect(classification).toEqual({
-      outcome: ROW_OUTCOME.EXCLUDED,
-      reasons: [],
-      transactionAmount: 0
-    })
-  })
-
-  it('surfaces the included outcome, reasons and amount from the schema classifier', async () => {
+  it('delegates classification to the waste-balance classifier', async () => {
     await setSchema({
       classifyForWasteBalance: () => ({
         outcome: ROW_OUTCOME.INCLUDED,
@@ -98,40 +69,17 @@ describe('classifyWasteRecord', () => {
         transactionAmount: 100
       })
     })
-    const record = buildRecord()
 
     const { classification } = classifyWasteRecord(
-      record,
+      buildRecord(),
       accreditation,
       overseasSites
     )
 
     expect(classification).toEqual({
-      outcome: ROW_OUTCOME.INCLUDED,
+      outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
       reasons: [{ code: 'WITHIN_ACCREDITATION_PERIOD' }],
       transactionAmount: 100
-    })
-  })
-
-  it('surfaces an excluded classifier outcome and reasons, contributing no amount', async () => {
-    await setSchema({
-      classifyForWasteBalance: () => ({
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: 'PRN_ISSUED' }]
-      })
-    })
-    const record = buildRecord()
-
-    const { classification } = classifyWasteRecord(
-      record,
-      accreditation,
-      overseasSites
-    )
-
-    expect(classification).toEqual({
-      outcome: ROW_OUTCOME.IGNORED,
-      reasons: [{ code: 'PRN_ISSUED' }],
-      transactionAmount: 0
     })
   })
 })
@@ -140,7 +88,7 @@ describe('getTargetAmount', () => {
   it('returns the transaction amount for an included classification', () => {
     expect(
       getTargetAmount({
-        outcome: ROW_OUTCOME.INCLUDED,
+        outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
         reasons: [],
         transactionAmount: 75
       })
@@ -150,7 +98,7 @@ describe('getTargetAmount', () => {
   it('returns zero for a non-included classification', () => {
     expect(
       getTargetAmount({
-        outcome: ROW_OUTCOME.EXCLUDED,
+        outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
         reasons: [],
         transactionAmount: 0
       })
