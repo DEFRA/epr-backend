@@ -93,6 +93,29 @@ describe('buildAllSubmissionPeriods', () => {
     expect(result[1].report).toBeNull()
   })
 
+  it('takes a historical item periodStatus from its own report status, not a blanket submitted', () => {
+    // Defends the invariant: were a non-submitted report ever to sit below the
+    // current submission number, its periodStatus must match its report rather
+    // than being mislabelled 'submitted'.
+    const superseded = submittedReport({
+      id: 'report-1',
+      status: 'in_progress',
+      submissionNumber: 1,
+      submittedAt: null,
+      submittedBy: null
+    })
+    const current = submittedReport({ id: 'report-2', submissionNumber: 2 })
+    const merged = period(current, {
+      submissionNumber: 2,
+      previousSubmissions: [superseded]
+    })
+
+    const result = buildAllSubmissionPeriods([merged])
+
+    expect(result[0].submissionNumber).toBe(1)
+    expect(result[0].periodStatus).toBe('in_progress')
+  })
+
   it('emits a single item for a period with only a current submission', () => {
     const merged = period(submittedReport(), { previousSubmissions: [] })
 

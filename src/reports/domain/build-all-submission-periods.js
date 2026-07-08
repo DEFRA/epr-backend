@@ -1,5 +1,4 @@
 import { buildCalendarPeriods } from './build-calendar-periods.js'
-import { PERIOD_STATUS } from './period-status.js'
 
 /**
  * @import { MergedPeriod } from './merge-reporting-periods.js'
@@ -16,9 +15,10 @@ import { PERIOD_STATUS } from './period-status.js'
  * report plus, when a resubmission is pending, the requires_resubmission
  * skeleton) then adds any previous submissions not already surfaced, deduped on
  * submissionNumber so the flagged submitted report the skeleton derives from is
- * not emitted twice. Historical submissions carry periodStatus 'submitted' (each
- * was submitted once); no new status value is introduced. Items within a period
- * are ordered by submissionNumber ascending.
+ * not emitted twice. Each historical item takes its own report status as its
+ * periodStatus (in practice always 'submitted', since only submitted reports are
+ * ever superseded); no new status value is introduced. Items within a period are
+ * ordered by submissionNumber ascending.
  *
  * @param {MergedPeriod[]} mergedPeriods
  * @returns {CalendarPeriod[]}
@@ -36,7 +36,10 @@ export const buildAllSubmissionPeriods = (mergedPeriods) =>
       .map((submission) => ({
         ...period,
         submissionNumber: submission.submissionNumber,
-        periodStatus: PERIOD_STATUS.SUBMITTED,
+        // Derived from the report rather than blanket-stamped 'submitted' so
+        // periodStatus and report.status can never disagree, even if a
+        // non-submitted report ever ends up below the current submission.
+        periodStatus: submission.status,
         report: submission
       }))
 

@@ -82,7 +82,7 @@ export function toReportListItem(report) {
  * @param {(mergedPeriods: MergedPeriod[]) => CalendarPeriod[]} buildPeriods
  * @returns {Promise<{ cadence: string, reportingPeriods: object[] }>}
  */
-export async function buildReportingCalendar(request, buildPeriods) {
+export async function buildReportingPeriodsResponse(request, buildPeriods) {
   const { organisationsRepository, reportsRepository, params } = request
   const { organisationId, registrationId } = params
 

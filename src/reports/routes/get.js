@@ -4,7 +4,7 @@ import Joi from 'joi'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
-import { buildReportingCalendar } from './shared.js'
+import { buildReportingPeriodsResponse } from './shared.js'
 import { reportsCalendarResponseSchema } from './response.schema.js'
 
 /**
@@ -40,7 +40,10 @@ export const reportsGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const body = await buildReportingCalendar(request, buildCalendarPeriods)
+    const body = await buildReportingPeriodsResponse(
+      request,
+      buildCalendarPeriods
+    )
     return h.response(body).code(StatusCodes.OK)
   }
 }
