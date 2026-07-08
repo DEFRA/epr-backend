@@ -1,7 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { backfillEstateSummaryLogRowStates } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js'
 
-/** @import { OrphanedAccreditation } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js' */
+/** @import { OrphanedAccreditation, EstateBackfillProgress } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js' */
 
 const LOCK_NAME = 'summary-log-row-states-backfill'
 
@@ -10,6 +10,19 @@ const LOCK_NAME = 'summary-log-row-states-backfill'
  */
 const formatOrphan = (orphan) =>
   `Waste-record-state backfill orphaned accreditation: organisationId=${orphan.organisationId} registrationId=${orphan.registrationId} accreditationId=${orphan.accreditationId}`
+
+/**
+ * Log a running progress line for each registration as the estate sweep
+ * advances, so a long backfill is observable in-flight. The estate holds only a
+ * few hundred registrations, so one line each is cheap.
+ *
+ * @param {EstateBackfillProgress} progress
+ */
+const logProgress = (progress) => {
+  logger.info({
+    message: `Waste-record-state backfill progress: registrationsProcessed=${progress.registrationsProcessed} organisationId=${progress.organisationId} registrationId=${progress.registrationId} ledgersBackfilled=${progress.ledgersBackfilled} ledgersSkippedComplete=${progress.ledgersSkippedComplete} submissionsBackfilled=${progress.submissionsBackfilled} summaryLogRowStateWrites=${progress.summaryLogRowStateWrites} orphanedAccreditations=${progress.orphanedAccreditations}`
+  })
+}
 
 /**
  * @param {Object} server - Hapi server instance
@@ -22,7 +35,8 @@ const runBackfill = async (server) => {
     overseasSitesRepository: server.app.overseasSitesRepository,
     summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository,
     summaryLogRowStatesBackfillWatermarkRepository:
-      server.app.summaryLogRowStatesBackfillWatermarkRepository
+      server.app.summaryLogRowStatesBackfillWatermarkRepository,
+    onProgress: logProgress
   })
 
   for (const orphan of summary.orphanedAccreditations) {
