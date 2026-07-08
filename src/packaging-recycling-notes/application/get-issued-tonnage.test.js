@@ -3,6 +3,7 @@ import { PRN_STATUS } from '../domain/model.js'
 import { getIssuedTonnage } from './get-issued-tonnage.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '../repository/inmemory.plugin.js'
 import { buildPrn } from '../repository/contract/test-data.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 const PERIOD_START = '2025-01-01'
 const PERIOD_END = '2025-12-31'
@@ -18,7 +19,7 @@ const defaultParams = {
 }
 
 function createRepo() {
-  return createInMemoryPackagingRecyclingNotesRepository()()
+  return createInMemoryPackagingRecyclingNotesRepository()(createMockLogger())
 }
 
 /**

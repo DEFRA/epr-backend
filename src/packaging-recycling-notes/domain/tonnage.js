@@ -22,8 +22,13 @@ import { CANCELLED_PRN_STATUSES } from './model.js'
 export function aggregateIssuedTonnage(prns, { startDate, endDate }) {
   const isInPeriod = (at) => !isNil(at) && at >= startDate && at <= endDate
 
+  const isIssuedInPeriod = (prn) => isInPeriod(prn.status.issued?.at)
+
+  const isNotCancelled = (prn) =>
+    !CANCELLED_PRN_STATUSES.has(prn.status.currentStatus)
+
   return prns
-    .filter((prn) => isInPeriod(prn.status.issued?.at))
-    .filter((prn) => !CANCELLED_PRN_STATUSES.has(prn.status.currentStatus))
+    .filter(isIssuedInPeriod)
+    .filter(isNotCancelled)
     .reduce((total, prn) => total + prn.tonnage, 0)
 }
