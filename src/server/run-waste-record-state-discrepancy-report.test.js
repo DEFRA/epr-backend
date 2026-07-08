@@ -131,9 +131,12 @@ const receivedRecord = (organisationId, rowId, versionFileTag) => ({
   registrationId: 'reg-1',
   rowId,
   type: WASTE_RECORD_TYPE.RECEIVED,
-  data: { supplierName: 'Acme' },
+  data: { processingType: 'REPROCESSOR_INPUT', supplierName: 'Acme' },
   versions: [
-    { summaryLog: { id: versionFileTag }, data: { supplierName: 'Acme' } }
+    {
+      summaryLog: { id: versionFileTag },
+      data: { processingType: 'REPROCESSOR_INPUT', supplierName: 'Acme' }
+    }
   ]
 })
 
@@ -452,8 +455,13 @@ const receivedRecordFor = (
   registrationId,
   rowId,
   type: WASTE_RECORD_TYPE.RECEIVED,
-  data: { supplierName: 'Acme' },
-  versions: [{ summaryLog: { id: versionTag }, data: { supplierName: 'Acme' } }]
+  data: { processingType: 'REPROCESSOR_INPUT', supplierName: 'Acme' },
+  versions: [
+    {
+      summaryLog: { id: versionTag },
+      data: { processingType: 'REPROCESSOR_INPUT', supplierName: 'Acme' }
+    }
+  ]
 })
 
 const approvedReprocessorAccreditation = (id) =>

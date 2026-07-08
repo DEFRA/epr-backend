@@ -35,6 +35,8 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
       expect(state.registrationId).toBe(DEFAULT_LEDGER_ID.registrationId)
       expect(state.accreditationId).toBe(DEFAULT_LEDGER_ID.accreditationId)
       expect(state.rowId).toBe('row-1')
+      expect(state.processingType).toBe('REPROCESSOR_INPUT')
+      expect(state.data).not.toHaveProperty('processingType')
       expect(state.summaryLogIds).toEqual(['log-1'])
     })
 
@@ -116,6 +118,36 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           ['log-1'],
           ['log-2']
         ])
+      })
+
+      it('inserts a new document when only the processingType changes', async () => {
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [
+            buildSummaryLogRowStateEntry({
+              processingType: 'REPROCESSOR_INPUT'
+            })
+          ],
+          'log-1'
+        )
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [
+            buildSummaryLogRowStateEntry({
+              processingType: 'REPROCESSOR_OUTPUT'
+            })
+          ],
+          'log-2'
+        )
+
+        expect(
+          await repository.findRowHistory(
+            'org-1',
+            'reg-1',
+            'row-1',
+            WASTE_RECORD_TYPE.RECEIVED
+          )
+        ).toHaveLength(2)
       })
 
       it('inserts a new document when only the classification changes', async () => {

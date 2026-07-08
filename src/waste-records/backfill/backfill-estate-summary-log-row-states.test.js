@@ -52,14 +52,23 @@ const insertLog = (
     submittedAt
   })
 
-const receivedRecord = (organisationId, registrationId, rowId, versions) => ({
-  organisationId,
-  registrationId,
-  rowId,
-  type: WASTE_RECORD_TYPE.RECEIVED,
-  data: versions.at(-1).data,
-  versions
-})
+const receivedRecord = (organisationId, registrationId, rowId, versions) => {
+  const stamped = versions.map((version) => ({
+    ...version,
+    data: {
+      processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
+      ...version.data
+    }
+  }))
+  return {
+    organisationId,
+    registrationId,
+    rowId,
+    type: WASTE_RECORD_TYPE.RECEIVED,
+    data: stamped.at(-1).data,
+    versions: stamped
+  }
+}
 
 const inMemoryDeps = ({ organisations, wasteRecords }) => ({
   organisationsRepository:

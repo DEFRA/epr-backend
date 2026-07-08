@@ -27,18 +27,57 @@ describe('projectSummaryLogRowState', () => {
     expect(projected).toMatchObject({
       rowId: '1',
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+      processingType: 'REPROCESSOR_REGISTERED_ONLY',
       classification: {
         outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
         reasons: [],
         transactionAmount: 0
       },
       data: {
-        processingType: 'REPROCESSOR_REGISTERED_ONLY',
         TONNAGE_RECEIVED_FOR_RECYCLING: 1.01,
         NET_WEIGHT: 7.54,
         supplierName: 'Acme'
       }
     })
+  })
+
+  it('hoists processingType to a top-level field, leaving it out of the stored data', () => {
+    const record = {
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: '1',
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      versions: [],
+      data: {
+        processingType: 'REPROCESSOR_REGISTERED_ONLY',
+        supplierName: 'Acme'
+      }
+    }
+
+    const projected = projectSummaryLogRowState(record, null, overseasSites)
+
+    expect(projected.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
+    expect(projected.data).not.toHaveProperty('processingType')
+  })
+
+  it('drops the redundant ROW_ID key from the stored data', () => {
+    const record = {
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: '1011',
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      versions: [],
+      data: {
+        processingType: 'REPROCESSOR_REGISTERED_ONLY',
+        ROW_ID: 1011,
+        supplierName: 'Acme'
+      }
+    }
+
+    const projected = projectSummaryLogRowState(record, null, overseasSites)
+
+    expect(projected.data).not.toHaveProperty('ROW_ID')
+    expect(projected.rowId).toBe('1011')
   })
 
   it('stores a row state that reconciles by construction — NET equals GROSS minus TARE minus PALLET at 2dp', () => {

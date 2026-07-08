@@ -23,14 +23,20 @@ const submittedLog = (id, submittedAt) => ({
   submittedAt
 })
 
-const receivedRecord = (rowId, versions) => ({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  rowId,
-  type: WASTE_RECORD_TYPE.RECEIVED,
-  data: versions.at(-1).data,
-  versions
-})
+const receivedRecord = (rowId, versions) => {
+  const stamped = versions.map((version) => ({
+    ...version,
+    data: { processingType: 'REPROCESSOR_INPUT', ...version.data }
+  }))
+  return {
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    rowId,
+    type: WASTE_RECORD_TYPE.RECEIVED,
+    data: stamped.at(-1).data,
+    versions: stamped
+  }
+}
 
 const rowHistory = (repository, rowId) =>
   repository.findRowHistory('org-1', 'reg-1', rowId, WASTE_RECORD_TYPE.RECEIVED)

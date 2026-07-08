@@ -41,6 +41,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @typedef {Object} SummaryLogRowStateEntry
  * @property {string} rowId
  * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
+ * @property {string} processingType
  * @property {Record<string, any>} data
  * @property {RowClassification} classification
  */
@@ -56,6 +57,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @property {string | null} accreditationId
  * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
  * @property {string} rowId
+ * @property {string} processingType
  * @property {Record<string, any>} data
  * @property {RowClassification} classification
  * @property {string[]} summaryLogIds
@@ -90,6 +92,7 @@ export const summaryLogRowStateInsertSchema = Joi.object({
     .valid(...Object.values(WASTE_RECORD_TYPE))
     .required(),
   rowId: Joi.string().required(),
+  processingType: Joi.string().required(),
   data: Joi.object().required(),
   classification: classificationSchema.required(),
   summaryLogIds: Joi.array().items(Joi.string().required()).min(1).required()

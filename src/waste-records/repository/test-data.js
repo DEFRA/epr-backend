@@ -12,6 +12,7 @@ export const buildSummaryLogRowState = (overrides = {}) => ({
   accreditationId: 'acc-1',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   rowId: 'row-1',
+  processingType: 'REPROCESSOR_INPUT',
   data: { supplierName: 'Acme', tonnage: 10 },
   classification: {
     outcome: ROW_OUTCOME.INCLUDED,
@@ -30,6 +31,7 @@ export const buildSummaryLogRowState = (overrides = {}) => ({
 export const buildSummaryLogRowStateEntry = (overrides = {}) => ({
   rowId: 'row-1',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  processingType: 'REPROCESSOR_INPUT',
   data: { supplierName: 'Acme', tonnage: 10 },
   classification: {
     outcome: ROW_OUTCOME.INCLUDED,
