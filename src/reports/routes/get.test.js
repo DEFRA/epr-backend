@@ -1538,6 +1538,24 @@ describe(`GET ${reportsGetPath}`, () => {
         return { sub1, sub2 }
       }
 
+      // Creates a report left in progress (a draft), i.e. not submitted.
+      const seedDraft = async (
+        repo,
+        organisationId,
+        registrationId,
+        submissionNumber
+      ) => {
+        const { id } = await repo.createReport(
+          buildCreatePayload(
+            organisationId,
+            registrationId,
+            1,
+            submissionNumber
+          )
+        )
+        return id
+      }
+
       const createExporterServer = async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
         const ctx = await createServer(
@@ -1550,6 +1568,13 @@ describe(`GET ${reportsGetPath}`, () => {
         )
         return { ...ctx, repo: reportsRepositoryFactory() }
       }
+
+      const expandRequest = (server, organisationId, registrationId) =>
+        server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?expand=submissions`,
+          ...asOperator()
+        })
 
       const januaryItems = (response) =>
         JSON.parse(response.payload).reportingPeriods.filter(
@@ -1565,11 +1590,11 @@ describe(`GET ${reportsGetPath}`, () => {
           registrationId
         )
 
-        const response = await server.inject({
-          method: 'GET',
-          url: `${makeUrl(organisationId, registrationId)}?expand=submissions`,
-          ...asOperator()
-        })
+        const response = await expandRequest(
+          server,
+          organisationId,
+          registrationId
+        )
         const january = januaryItems(response)
 
         expect(january.map((p) => p.submissionNumber)).toEqual([1, 2])
@@ -1579,6 +1604,64 @@ describe(`GET ${reportsGetPath}`, () => {
         ])
         expect(january[0].report.id).toBe(sub1)
         expect(january[1].report.id).toBe(sub2)
+      })
+
+      it('surfaces a requires_resubmission skeleton with no draft yet', async () => {
+        const { server, organisationId, registrationId, repo } =
+          await createExporterServer()
+        const sub1 = await seedSubmitted(
+          repo,
+          organisationId,
+          registrationId,
+          1,
+          1
+        )
+        await flagForResubmission(repo, organisationId, registrationId)
+
+        const response = await expandRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const january = januaryItems(response)
+
+        expect(january.map((p) => p.submissionNumber)).toEqual([1, 2])
+        expect(january.map((p) => p.periodStatus)).toEqual([
+          'submitted',
+          'requires_resubmission'
+        ])
+        expect(january[0].report.id).toBe(sub1)
+        expect(january[1].report).toBeNull()
+      })
+
+      it('shows the flagged submission once with the in-flight resubmission draft', async () => {
+        const { server, organisationId, registrationId, repo } =
+          await createExporterServer()
+        const sub1 = await seedSubmitted(
+          repo,
+          organisationId,
+          registrationId,
+          1,
+          1
+        )
+        await flagForResubmission(repo, organisationId, registrationId)
+        const draft = await seedDraft(repo, organisationId, registrationId, 2)
+
+        const response = await expandRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const january = januaryItems(response)
+
+        expect(january.map((p) => p.submissionNumber)).toEqual([1, 2])
+        expect(january.map((p) => p.periodStatus)).toEqual([
+          'submitted',
+          'requires_resubmission'
+        ])
+        expect(january[0].report.id).toBe(sub1)
+        expect(january[1].report.id).toBe(draft)
+        expect(january.filter((p) => p.report?.id === sub1)).toHaveLength(1)
       })
 
       it('collapses superseded submissions when the arg is absent', async () => {
