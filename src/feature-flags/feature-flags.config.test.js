@@ -56,4 +56,13 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.summaryLogRowStatesDiscrepancyReport'
     )
   })
+
+  it('returns true when staleIssuedTonnageReport flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.staleIssuedTonnageReport'
+    )
+  })
 })

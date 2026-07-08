@@ -49,6 +49,7 @@ import { runOrganisationValidationSweep } from '#server/run-organisation-validat
 import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
 import { runBackfillSummaryLogRowStates } from '#server/run-backfill-summary-log-row-states.js'
 import { runWasteRecordStateDiscrepancyReport } from '#server/run-waste-record-state-discrepancy-report.js'
+import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -246,6 +247,7 @@ async function createServer(options = {}) {
     runDuplicateAccreditationLinkMigration(server)
     runBackfillSummaryLogRowStates(server)
     runWasteRecordStateDiscrepancyReport(server)
+    runStaleIssuedTonnageReport(server)
   })
 
   return server
