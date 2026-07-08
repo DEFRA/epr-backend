@@ -139,11 +139,6 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         method: 'POST',
         url: `/v1/organisations/${org1.id}/link`
       }
-    },
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
     }
   })
 

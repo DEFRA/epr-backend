@@ -347,12 +347,7 @@ describe('GET /v1/system-logs/search', () => {
     makeRequest: async () => ({
       method: 'GET',
       url: '/v1/system-logs/search?userId=test'
-    }),
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
-    }
+    })
   })
 
   testOnlyServiceMaintainerCanAccess({

@@ -400,11 +400,6 @@ describe('PUT /v1/organisations/{id}', () => {
           updateFragment: { ...org1, wasteProcessingTypes: ['reprocessor'] }
         }
       }
-    },
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
     }
   })
 

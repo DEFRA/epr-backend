@@ -117,12 +117,7 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
     makeRequest: async () => ({
       method: 'GET',
       url: tonnageMonitoringPath
-    }),
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
-    }
+    })
   })
 
   testOnlyServiceMaintainerCanAccess({

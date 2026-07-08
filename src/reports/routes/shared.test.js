@@ -4,7 +4,7 @@ import { userSummarySchema } from '#reports/repository/schema.js'
 
 import { extractChangedBy } from './shared.js'
 
-const defraIdStandardUser = {
+const defraIdOperatorUser = {
   id: 'contact-1',
   email: 'ada@example.com',
   name: 'Ada Lovelace',
@@ -21,7 +21,7 @@ const entraAdminUser = {
 
 describe('extractChangedBy', () => {
   it('carries name and email distinctly for a Defra ID standard user', () => {
-    expect(extractChangedBy(defraIdStandardUser)).toEqual({
+    expect(extractChangedBy(defraIdOperatorUser)).toEqual({
       id: 'contact-1',
       name: 'Ada Lovelace',
       email: 'ada@example.com',
@@ -43,7 +43,7 @@ describe('extractChangedBy', () => {
 
   it('produces a value userSummarySchema accepts and preserves email for both providers', () => {
     const defraId = userSummarySchema.validate(
-      extractChangedBy(defraIdStandardUser)
+      extractChangedBy(defraIdOperatorUser)
     )
     expect(defraId.error).toBeUndefined()
     expect(defraId.value.email).toBe('ada@example.com')

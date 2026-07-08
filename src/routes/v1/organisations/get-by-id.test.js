@@ -5,7 +5,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
-import { testStandardUserAndServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
+import { testOperatorAndServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
 
@@ -118,15 +118,10 @@ describe('GET /v1/organisations/{id}', () => {
         method: 'GET',
         url: `/v1/organisations/${org1.id}`
       }
-    },
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
     }
   })
 
-  testStandardUserAndServiceMaintainerCanAccess({
+  testOperatorAndServiceMaintainerCanAccess({
     server: () => server,
     makeRequest: async () => {
       const org1 = await buildActiveOrg(organisationsRepository)

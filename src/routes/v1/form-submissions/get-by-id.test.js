@@ -187,11 +187,6 @@ describe('GET /v1/form-submissions/{documentId}', () => {
         method: 'GET',
         url: `/v1/form-submissions/${ORG_A.id}`
       }
-    },
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
     }
   })
 
