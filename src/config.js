@@ -364,12 +364,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    fixDuplicateAccreditationLinks: {
-      doc: 'Feature Flag: Fix duplicate accreditation links in existing organisation data on startup',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_FIX_DUPLICATE_ACCREDITATION_LINKS'
-    },
     summaryLogRowStates: {
       doc: 'Feature Flag: Persist summary-log row states on summary-log submission (ADR-0037)',
       format: Boolean,

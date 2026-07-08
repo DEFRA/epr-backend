@@ -8,9 +8,6 @@ export const createConfigFeatureFlags = (config) => ({
   isCopyFormFilesToS3Enabled() {
     return config.get('featureFlags.copyFormFilesToS3')
   },
-  isFixDuplicateAccreditationLinksEnabled() {
-    return config.get('featureFlags.fixDuplicateAccreditationLinks')
-  },
   isSummaryLogRowStatesEnabled() {
     return config.get('featureFlags.summaryLogRowStates')
   },
