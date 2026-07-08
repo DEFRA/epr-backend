@@ -59,6 +59,16 @@ import {
  */
 
 /**
+ * The running counts the estate sweep folds each ledger result into.
+ *
+ * @typedef {Object} EstateBackfillTotals
+ * @property {number} ledgersBackfilled
+ * @property {number} ledgersSkippedComplete
+ * @property {number} submissionsBackfilled
+ * @property {number} summaryLogRowStateWrites
+ */
+
+/**
  * What backfilling a single registration ledger contributed: an orphaned
  * accreditation to surface, the submission and write counts it committed, or a
  * skip because the ledger is already complete at its watermark. `null` means
@@ -296,6 +306,30 @@ export const backfillRegistrationLedger = async ({
 }
 
 /**
+ * Fold one ledger's backfill result into the running estate totals, surfacing an
+ * orphaned accreditation onto the provided list. A null result — a registration
+ * with no submitted summary logs — leaves the totals unchanged.
+ *
+ * @param {LedgerBackfilled | LedgerOrphaned | LedgerSkippedComplete | null} result
+ * @param {EstateBackfillTotals} totals
+ * @param {OrphanedAccreditation[]} orphanedAccreditations
+ */
+const accumulateLedgerResult = (result, totals, orphanedAccreditations) => {
+  if (!result) {
+    return
+  }
+  if ('orphanedAccreditation' in result) {
+    orphanedAccreditations.push(result.orphanedAccreditation)
+  } else if ('skippedComplete' in result) {
+    totals.ledgersSkippedComplete += 1
+  } else {
+    totals.ledgersBackfilled += 1
+    totals.submissionsBackfilled += result.submissionsCommitted
+    totals.summaryLogRowStateWrites += result.summaryLogRowStateWriteCount
+  }
+}
+
+/**
  * Reconstruct the summary-log row state collection for the whole historical estate
  * from sparse version history, mirroring the live submission path's write scope:
  * every registration with submitted summary logs contributes — accredited and
@@ -330,10 +364,12 @@ export const backfillEstateSummaryLogRowStates = async ({
   const organisations = await organisationsRepository.findAll()
 
   let registrationsProcessed = 0
-  let ledgersBackfilled = 0
-  let ledgersSkippedComplete = 0
-  let submissionsBackfilled = 0
-  let summaryLogRowStateWrites = 0
+  const totals = {
+    ledgersBackfilled: 0,
+    ledgersSkippedComplete: 0,
+    submissionsBackfilled: 0,
+    summaryLogRowStateWrites: 0
+  }
   const orphanedAccreditations = []
 
   for (const organisation of organisations) {
@@ -348,26 +384,13 @@ export const backfillEstateSummaryLogRowStates = async ({
         summaryLogRowStateRepository,
         summaryLogRowStatesBackfillWatermarkRepository
       })
-      if (result) {
-        if ('orphanedAccreditation' in result) {
-          orphanedAccreditations.push(result.orphanedAccreditation)
-        } else if ('skippedComplete' in result) {
-          ledgersSkippedComplete += 1
-        } else {
-          ledgersBackfilled += 1
-          submissionsBackfilled += result.submissionsCommitted
-          summaryLogRowStateWrites += result.summaryLogRowStateWriteCount
-        }
-      }
+      accumulateLedgerResult(result, totals, orphanedAccreditations)
       registrationsProcessed += 1
       onProgress({
         registrationsProcessed,
         organisationId: organisation.id,
         registrationId: registration.id,
-        ledgersBackfilled,
-        ledgersSkippedComplete,
-        submissionsBackfilled,
-        summaryLogRowStateWrites,
+        ...totals,
         orphanedAccreditations: orphanedAccreditations.length
       })
     }
@@ -375,10 +398,7 @@ export const backfillEstateSummaryLogRowStates = async ({
 
   return {
     organisationsScanned: organisations.length,
-    ledgersBackfilled,
-    ledgersSkippedComplete,
-    submissionsBackfilled,
-    summaryLogRowStateWrites,
+    ...totals,
     orphanedAccreditations
   }
 }
