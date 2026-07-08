@@ -5,11 +5,16 @@ import { resolveOverseasSites } from '#application/waste-records/resolve-oversea
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 import { backfillRegistrationSummaryLogRowStates } from './backfill-registration-summary-log-row-states.js'
+import {
+  compareSubmissionOrder,
+  isCoveredByWatermark
+} from './submission-order.js'
 
 /**
  * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
  * @import { SummaryLogWithId } from '#repositories/summary-logs/port.js'
  * @import { OrderedSummaryLog } from './reconstruct-submission-summary-log-row-states.js'
+ * @import { SummaryLogRowStatesBackfillWatermarkRepository } from './watermark/port.js'
  */
 
 /**
@@ -28,23 +33,28 @@ import { backfillRegistrationSummaryLogRowStates } from './backfill-registration
  *
  * @typedef {Object} EstateBackfillSummary
  * @property {number} organisationsScanned
- * @property {number} ledgersBackfilled - Registration ledgers that received row states
- * @property {number} submissionsBackfilled
+ * @property {number} ledgersBackfilled - Registration ledgers that committed new row states this run
+ * @property {number} ledgersSkippedComplete - Ledgers already fully backfilled at their watermark, skipped without reconstruction
+ * @property {number} submissionsBackfilled - Submissions newly committed this run
  * @property {number} summaryLogRowStateWrites
  * @property {OrphanedAccreditation[]} orphanedAccreditations
  */
 
 /**
- * What backfilling a single registration ledger contributed: either an orphaned
- * accreditation to surface, or the submission and write counts it committed.
- * `null` means the ledger was skipped (no submitted summary logs).
+ * What backfilling a single registration ledger contributed: an orphaned
+ * accreditation to surface, the submission and write counts it committed, or a
+ * skip because the ledger is already complete at its watermark. `null` means
+ * the ledger was skipped for having no submitted summary logs.
  *
  * @typedef {Object} LedgerBackfilled
- * @property {number} submissionCount
+ * @property {number} submissionsCommitted
  * @property {number} summaryLogRowStateWriteCount
  *
  * @typedef {Object} LedgerOrphaned
  * @property {OrphanedAccreditation} orphanedAccreditation
+ *
+ * @typedef {Object} LedgerSkippedComplete
+ * @property {true} skippedComplete
  */
 
 /**
@@ -64,71 +74,108 @@ const toOrderedSummaryLog = ({ summaryLog }) => ({
 })
 
 /**
- * Backfill one registration's ledger, mirroring the live write scope: every
- * registration with at least one submitted summary log is reconstructed,
- * keyed by accreditation existence (`accreditationId ?? null`) and
- * classified against today's accreditation (or null for a registered-only
- * registration) and overseas-site state. A skip yields null only when there are
- * no submitted summary logs. When a registration references an accreditation that
- * is missing from the organisation, that is surfaced as orphaned rather than
- * fatal.
+ * Whether the ledger is already fully backfilled: its last submission in replay
+ * order sits at or before the persisted watermark. The empty case is handled by
+ * the caller, so the reduce is seeded from the first submission.
+ *
+ * @param {OrderedSummaryLog[]} summaryLogs
+ * @param {import('./watermark/port.js').BackfillWatermark | null} watermark
+ * @returns {boolean}
+ */
+const isLedgerCompleteAtWatermark = (summaryLogs, watermark) => {
+  const lastSubmission = summaryLogs.reduce(
+    (latest, log) =>
+      compareSubmissionOrder(
+        log.submittedAt,
+        log.id,
+        latest.submittedAt,
+        latest.id
+      ) > 0
+        ? log
+        : latest,
+    summaryLogs[0]
+  )
+  return isCoveredByWatermark(
+    {
+      submittedAt: lastSubmission.submittedAt,
+      summaryLogId: lastSubmission.id
+    },
+    watermark
+  )
+}
+
+/**
+ * Resolve the registration's accreditation at today's state. A registered-only
+ * registration (no accreditationId) resolves to a null accreditation. When the
+ * referenced accreditation is missing from the organisation it is surfaced as
+ * orphaned rather than fatal; any other lookup failure propagates.
+ *
+ * @param {Object} args
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} args.organisationsRepository
+ * @param {import('#domain/organisations/model.js').Organisation} args.organisation
+ * @param {import('#domain/organisations/registration.js').Registration} args.registration
+ * @returns {Promise<{ accreditation: import('#domain/organisations/accreditation.js').Accreditation | null } | LedgerOrphaned>}
+ */
+const resolveAccreditationOrOrphan = async ({
+  organisationsRepository,
+  organisation,
+  registration
+}) => {
+  const { accreditationId } = registration
+  if (!accreditationId) {
+    return { accreditation: null }
+  }
+  try {
+    const accreditation = await organisationsRepository.findAccreditationById(
+      organisation.id,
+      accreditationId
+    )
+    return { accreditation }
+  } catch (error) {
+    const statusCode = Boom.isBoom(error) ? error.output.statusCode : undefined
+    if (statusCode !== StatusCodes.NOT_FOUND) {
+      throw error
+    }
+    return {
+      orphanedAccreditation: {
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId
+      }
+    }
+  }
+}
+
+/**
+ * Reconstruct and commit the ledger's row states from today's waste records and
+ * overseas-site state, keyed by accreditation existence (`accreditationId ??
+ * null`), and advance the watermark. Returns the submission and write counts.
  *
  * @param {Object} args
  * @param {import('#domain/organisations/model.js').Organisation} args.organisation
  * @param {import('#domain/organisations/registration.js').Registration} args.registration
+ * @param {import('#domain/organisations/accreditation.js').Accreditation | null} args.accreditation
+ * @param {import('./watermark/port.js').BackfillWatermark | null} args.watermark
+ * @param {OrderedSummaryLog[]} args.summaryLogs
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} args.organisationsRepository
  * @param {import('#repositories/waste-records/port.js').WasteRecordsRepository} args.wasteRecordsRepository
- * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
  * @param {SummaryLogRowStateRepository} args.summaryLogRowStateRepository
- * @returns {Promise<LedgerBackfilled | LedgerOrphaned | null>}
+ * @param {SummaryLogRowStatesBackfillWatermarkRepository} args.summaryLogRowStatesBackfillWatermarkRepository
+ * @returns {Promise<LedgerBackfilled>}
  */
-export const backfillRegistrationLedger = async ({
+const commitLedgerBackfill = async ({
   organisation,
   registration,
+  accreditation,
+  watermark,
+  summaryLogs,
   organisationsRepository,
   wasteRecordsRepository,
-  summaryLogsRepository,
   overseasSitesRepository,
-  summaryLogRowStateRepository
+  summaryLogRowStateRepository,
+  summaryLogRowStatesBackfillWatermarkRepository
 }) => {
-  const { accreditationId } = registration
-
-  const logs = await summaryLogsRepository.findAllByOrgReg(
-    organisation.id,
-    registration.id
-  )
-  const summaryLogs = logs
-    .filter((log) => log.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED)
-    .map(toOrderedSummaryLog)
-  if (summaryLogs.length === 0) {
-    return null
-  }
-
-  let accreditation = null
-  if (accreditationId) {
-    try {
-      accreditation = await organisationsRepository.findAccreditationById(
-        organisation.id,
-        accreditationId
-      )
-    } catch (error) {
-      const statusCode = Boom.isBoom(error)
-        ? error.output.statusCode
-        : undefined
-      if (statusCode !== StatusCodes.NOT_FOUND) {
-        throw error
-      }
-      return {
-        orphanedAccreditation: {
-          organisationId: organisation.id,
-          registrationId: registration.id,
-          accreditationId
-        }
-      }
-    }
-  }
-
   const wasteRecords = await wasteRecordsRepository.findByRegistration(
     organisation.id,
     registration.id
@@ -140,21 +187,94 @@ export const backfillRegistrationLedger = async ({
     registration.id
   )
 
-  const { submissionCount, summaryLogRowStateWriteCount } =
-    await backfillRegistrationSummaryLogRowStates({
-      ledgerId: {
-        organisationId: organisation.id,
-        registrationId: registration.id,
-        accreditationId: accreditationId ?? null
-      },
-      wasteRecords,
-      summaryLogs,
-      accreditation,
-      overseasSites,
-      summaryLogRowStateRepository
-    })
+  return backfillRegistrationSummaryLogRowStates({
+    ledgerId: {
+      organisationId: organisation.id,
+      registrationId: registration.id,
+      accreditationId: registration.accreditationId ?? null
+    },
+    wasteRecords,
+    summaryLogs,
+    accreditation,
+    overseasSites,
+    summaryLogRowStateRepository,
+    summaryLogRowStatesBackfillWatermarkRepository,
+    watermark
+  })
+}
 
-  return { submissionCount, summaryLogRowStateWriteCount }
+/**
+ * Backfill one registration's ledger, mirroring the live write scope: every
+ * registration with at least one submitted summary log is reconstructed,
+ * keyed by accreditation existence (`accreditationId ?? null`) and
+ * classified against today's accreditation (or null for a registered-only
+ * registration) and overseas-site state. A skip yields null only when there are
+ * no submitted summary logs, or `skippedComplete` when the ledger is already
+ * backfilled to its watermark. When a registration references an accreditation
+ * that is missing from the organisation, that is surfaced as orphaned rather
+ * than fatal.
+ *
+ * @param {Object} args
+ * @param {import('#domain/organisations/model.js').Organisation} args.organisation
+ * @param {import('#domain/organisations/registration.js').Registration} args.registration
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} args.organisationsRepository
+ * @param {import('#repositories/waste-records/port.js').WasteRecordsRepository} args.wasteRecordsRepository
+ * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} args.summaryLogsRepository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} args.overseasSitesRepository
+ * @param {SummaryLogRowStateRepository} args.summaryLogRowStateRepository
+ * @param {SummaryLogRowStatesBackfillWatermarkRepository} args.summaryLogRowStatesBackfillWatermarkRepository
+ * @returns {Promise<LedgerBackfilled | LedgerOrphaned | LedgerSkippedComplete | null>}
+ */
+export const backfillRegistrationLedger = async ({
+  organisation,
+  registration,
+  organisationsRepository,
+  wasteRecordsRepository,
+  summaryLogsRepository,
+  overseasSitesRepository,
+  summaryLogRowStateRepository,
+  summaryLogRowStatesBackfillWatermarkRepository
+}) => {
+  const logs = await summaryLogsRepository.findAllByOrgReg(
+    organisation.id,
+    registration.id
+  )
+  const summaryLogs = logs
+    .filter((log) => log.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED)
+    .map(toOrderedSummaryLog)
+  if (summaryLogs.length === 0) {
+    return null
+  }
+
+  const watermark = await summaryLogRowStatesBackfillWatermarkRepository.read(
+    organisation.id,
+    registration.id
+  )
+  if (isLedgerCompleteAtWatermark(summaryLogs, watermark)) {
+    return { skippedComplete: true }
+  }
+
+  const resolved = await resolveAccreditationOrOrphan({
+    organisationsRepository,
+    organisation,
+    registration
+  })
+  if ('orphanedAccreditation' in resolved) {
+    return resolved
+  }
+
+  return commitLedgerBackfill({
+    organisation,
+    registration,
+    accreditation: resolved.accreditation,
+    watermark,
+    summaryLogs,
+    organisationsRepository,
+    wasteRecordsRepository,
+    overseasSitesRepository,
+    summaryLogRowStateRepository,
+    summaryLogRowStatesBackfillWatermarkRepository
+  })
 }
 
 /**
@@ -176,6 +296,7 @@ export const backfillRegistrationLedger = async ({
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} deps.summaryLogsRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} deps.overseasSitesRepository
  * @param {SummaryLogRowStateRepository} deps.summaryLogRowStateRepository
+ * @param {SummaryLogRowStatesBackfillWatermarkRepository} deps.summaryLogRowStatesBackfillWatermarkRepository
  * @returns {Promise<EstateBackfillSummary>}
  */
 export const backfillEstateSummaryLogRowStates = async ({
@@ -183,11 +304,13 @@ export const backfillEstateSummaryLogRowStates = async ({
   wasteRecordsRepository,
   summaryLogsRepository,
   overseasSitesRepository,
-  summaryLogRowStateRepository
+  summaryLogRowStateRepository,
+  summaryLogRowStatesBackfillWatermarkRepository
 }) => {
   const organisations = await organisationsRepository.findAll()
 
   let ledgersBackfilled = 0
+  let ledgersSkippedComplete = 0
   let submissionsBackfilled = 0
   let summaryLogRowStateWrites = 0
   const orphanedAccreditations = []
@@ -201,16 +324,19 @@ export const backfillEstateSummaryLogRowStates = async ({
         wasteRecordsRepository,
         summaryLogsRepository,
         overseasSitesRepository,
-        summaryLogRowStateRepository
+        summaryLogRowStateRepository,
+        summaryLogRowStatesBackfillWatermarkRepository
       })
       if (!result) {
         continue
       }
       if ('orphanedAccreditation' in result) {
         orphanedAccreditations.push(result.orphanedAccreditation)
+      } else if ('skippedComplete' in result) {
+        ledgersSkippedComplete += 1
       } else {
         ledgersBackfilled += 1
-        submissionsBackfilled += result.submissionCount
+        submissionsBackfilled += result.submissionsCommitted
         summaryLogRowStateWrites += result.summaryLogRowStateWriteCount
       }
     }
@@ -219,6 +345,7 @@ export const backfillEstateSummaryLogRowStates = async ({
   return {
     organisationsScanned: organisations.length,
     ledgersBackfilled,
+    ledgersSkippedComplete,
     submissionsBackfilled,
     summaryLogRowStateWrites,
     orphanedAccreditations

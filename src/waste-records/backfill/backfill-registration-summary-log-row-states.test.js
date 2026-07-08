@@ -6,6 +6,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 
 import { backfillRegistrationSummaryLogRowStates } from './backfill-registration-summary-log-row-states.js'
+import { createInMemorySummaryLogRowStatesBackfillWatermarkRepository } from './watermark/inmemory.js'
 
 const ledgerId = {
   organisationId: 'org-1',
@@ -34,6 +35,30 @@ const receivedRecord = (rowId, versions) => ({
 const rowHistory = (repository, rowId) =>
   repository.findRowHistory('org-1', 'reg-1', rowId, WASTE_RECORD_TYPE.RECEIVED)
 
+const buildDeps = () => ({
+  summaryLogRowStateRepository: createInMemorySummaryLogRowStateRepository()(),
+  summaryLogRowStatesBackfillWatermarkRepository:
+    createInMemorySummaryLogRowStatesBackfillWatermarkRepository()()
+})
+
+/**
+ * @param {Object} params
+ * @param {import('./reconstruct-submission-summary-log-row-states.js').OrderedSummaryLog[]} params.summaryLogs
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
+ * @param {ReturnType<typeof buildDeps>} params.deps
+ * @param {import('./watermark/port.js').BackfillWatermark | null} [params.watermark]
+ */
+const backfill = ({ summaryLogs, wasteRecords, watermark = null, deps }) =>
+  backfillRegistrationSummaryLogRowStates({
+    ledgerId,
+    wasteRecords,
+    summaryLogs,
+    accreditation,
+    overseasSites,
+    watermark,
+    ...deps
+  })
+
 describe('backfillRegistrationSummaryLogRowStates', () => {
   it('commits each submission membership so it is queryable by summaryLogId', async () => {
     const summaryLogs = [
@@ -45,25 +70,17 @@ describe('backfillRegistrationSummaryLogRowStates', () => {
         { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
       ])
     ]
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
+    const deps = buildDeps()
 
-    await backfillRegistrationSummaryLogRowStates({
-      ledgerId,
-      wasteRecords,
-      summaryLogs,
-      accreditation,
-      overseasSites,
-      summaryLogRowStateRepository
-    })
+    await backfill({ summaryLogs, wasteRecords, deps })
 
     expect(
-      (await summaryLogRowStateRepository.findBySummaryLogId('sl-1')).map(
+      (await deps.summaryLogRowStateRepository.findBySummaryLogId('sl-1')).map(
         (d) => d.rowId
       )
     ).toEqual(['row-1'])
     expect(
-      (await summaryLogRowStateRepository.findBySummaryLogId('sl-2')).map(
+      (await deps.summaryLogRowStateRepository.findBySummaryLogId('sl-2')).map(
         (d) => d.rowId
       )
     ).toEqual(['row-1'])
@@ -79,19 +96,11 @@ describe('backfillRegistrationSummaryLogRowStates', () => {
         { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
       ])
     ]
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
+    const deps = buildDeps()
 
-    await backfillRegistrationSummaryLogRowStates({
-      ledgerId,
-      wasteRecords,
-      summaryLogs,
-      accreditation,
-      overseasSites,
-      summaryLogRowStateRepository
-    })
+    await backfill({ summaryLogs, wasteRecords, deps })
 
-    const history = await rowHistory(summaryLogRowStateRepository, 'row-1')
+    const history = await rowHistory(deps.summaryLogRowStateRepository, 'row-1')
     expect(history).toHaveLength(1)
     expect(history[0].summaryLogIds).toEqual(['sl-1', 'sl-2'])
   })
@@ -110,19 +119,11 @@ describe('backfillRegistrationSummaryLogRowStates', () => {
         { summaryLog: { id: 'sl-2' }, data: { tonnage: 20 } }
       ])
     ]
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
+    const deps = buildDeps()
 
-    await backfillRegistrationSummaryLogRowStates({
-      ledgerId,
-      wasteRecords,
-      summaryLogs,
-      accreditation,
-      overseasSites,
-      summaryLogRowStateRepository
-    })
+    await backfill({ summaryLogs, wasteRecords, deps })
 
-    const history = await rowHistory(summaryLogRowStateRepository, 'row-1')
+    const history = await rowHistory(deps.summaryLogRowStateRepository, 'row-1')
     expect(history).toHaveLength(2)
     expect(history.map((d) => d.summaryLogIds)).toEqual([['sl-1'], ['sl-2']])
   })
@@ -137,22 +138,18 @@ describe('backfillRegistrationSummaryLogRowStates', () => {
         { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
       ])
     ]
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
-    const run = () =>
-      backfillRegistrationSummaryLogRowStates({
-        ledgerId,
-        wasteRecords,
-        summaryLogs,
-        accreditation,
-        overseasSites,
-        summaryLogRowStateRepository
-      })
+    const deps = buildDeps()
 
-    await run()
-    const afterFirst = await rowHistory(summaryLogRowStateRepository, 'row-1')
-    await run()
-    const afterSecond = await rowHistory(summaryLogRowStateRepository, 'row-1')
+    await backfill({ summaryLogs, wasteRecords, deps })
+    const afterFirst = await rowHistory(
+      deps.summaryLogRowStateRepository,
+      'row-1'
+    )
+    await backfill({ summaryLogs, wasteRecords, deps })
+    const afterSecond = await rowHistory(
+      deps.summaryLogRowStateRepository,
+      'row-1'
+    )
 
     expect(afterSecond).toEqual(afterFirst)
   })
@@ -170,21 +167,108 @@ describe('backfillRegistrationSummaryLogRowStates', () => {
         { summaryLog: { id: 'sl-2' }, data: { supplierName: 'Beta' } }
       ])
     ]
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
+    const deps = buildDeps()
 
-    const summary = await backfillRegistrationSummaryLogRowStates({
-      ledgerId,
-      wasteRecords,
+    const summary = await backfill({ summaryLogs, wasteRecords, deps })
+
+    expect(summary).toEqual({
+      submissionsCommitted: 2,
+      summaryLogRowStateWriteCount: 3
+    })
+  })
+
+  it('advances the watermark to the last committed submission', async () => {
+    const summaryLogs = [
+      submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
+      submittedLog('sl-2', '2025-02-01T00:00:00.000Z')
+    ]
+    const wasteRecords = [
+      receivedRecord('row-1', [
+        { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+      ])
+    ]
+    const deps = buildDeps()
+
+    await backfill({ summaryLogs, wasteRecords, deps })
+
+    expect(
+      await deps.summaryLogRowStatesBackfillWatermarkRepository.read(
+        'org-1',
+        'reg-1'
+      )
+    ).toEqual({ submittedAt: '2025-02-01T00:00:00.000Z', summaryLogId: 'sl-2' })
+  })
+
+  it('resumes from the watermark, committing only submissions after it', async () => {
+    const summaryLogs = [
+      submittedLog('sl-1', '2025-01-01T00:00:00.000Z'),
+      submittedLog('sl-2', '2025-02-01T00:00:00.000Z'),
+      submittedLog('sl-3', '2025-03-01T00:00:00.000Z')
+    ]
+    const wasteRecords = [
+      receivedRecord('row-1', [
+        { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } },
+        { summaryLog: { id: 'sl-2' }, data: { tonnage: 20 } },
+        { summaryLog: { id: 'sl-3' }, data: { tonnage: 30 } }
+      ])
+    ]
+    const deps = buildDeps()
+
+    const summary = await backfill({
       summaryLogs,
-      accreditation,
-      overseasSites,
-      summaryLogRowStateRepository
+      wasteRecords,
+      watermark: {
+        submittedAt: '2025-02-01T00:00:00.000Z',
+        summaryLogId: 'sl-2'
+      },
+      deps
+    })
+
+    expect(summary.submissionsCommitted).toBe(1)
+    expect(
+      await deps.summaryLogRowStateRepository.findBySummaryLogId('sl-1')
+    ).toEqual([])
+    expect(
+      await deps.summaryLogRowStateRepository.findBySummaryLogId('sl-2')
+    ).toEqual([])
+    expect(
+      (await deps.summaryLogRowStateRepository.findBySummaryLogId('sl-3')).map(
+        (d) => d.rowId
+      )
+    ).toEqual(['row-1'])
+    expect(
+      await deps.summaryLogRowStatesBackfillWatermarkRepository.read(
+        'org-1',
+        'reg-1'
+      )
+    ).toEqual({ submittedAt: '2025-03-01T00:00:00.000Z', summaryLogId: 'sl-3' })
+  })
+
+  it('commits nothing and leaves the watermark when every submission is already covered', async () => {
+    const summaryLogs = [submittedLog('sl-1', '2025-01-01T00:00:00.000Z')]
+    const wasteRecords = [
+      receivedRecord('row-1', [
+        { summaryLog: { id: 'sl-1' }, data: { supplierName: 'Acme' } }
+      ])
+    ]
+    const deps = buildDeps()
+
+    const summary = await backfill({
+      summaryLogs,
+      wasteRecords,
+      watermark: {
+        submittedAt: '2025-01-01T00:00:00.000Z',
+        summaryLogId: 'sl-1'
+      },
+      deps
     })
 
     expect(summary).toEqual({
-      submissionCount: 2,
-      summaryLogRowStateWriteCount: 3
+      submissionsCommitted: 0,
+      summaryLogRowStateWriteCount: 0
     })
+    expect(
+      await deps.summaryLogRowStateRepository.findBySummaryLogId('sl-1')
+    ).toEqual([])
   })
 })

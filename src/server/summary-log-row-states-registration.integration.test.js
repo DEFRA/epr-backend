@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
+import { SUMMARY_LOG_ROW_STATES_BACKFILL_WATERMARKS_COLLECTION_NAME } from '#waste-records/backfill/watermark/mongodb.js'
 
 vi.mock(
   '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
@@ -64,9 +65,25 @@ describe('summary-log-row-states repository registration', () => {
       expect(server.app.summaryLogRowStatesRepository).toBeUndefined()
     })
 
+    it('constructs no backfill watermark repository', () => {
+      expect(
+        server.app.summaryLogRowStatesBackfillWatermarkRepository
+      ).toBeUndefined()
+    })
+
     it('creates no row-state collection or indexes', async () => {
       const collections = await server.db
         .listCollections({ name: SUMMARY_LOG_ROW_STATES_COLLECTION_NAME })
+        .toArray()
+
+      expect(collections).toHaveLength(0)
+    })
+
+    it('creates no backfill watermark collection', async () => {
+      const collections = await server.db
+        .listCollections({
+          name: SUMMARY_LOG_ROW_STATES_BACKFILL_WATERMARKS_COLLECTION_NAME
+        })
         .toArray()
 
       expect(collections).toHaveLength(0)
@@ -90,6 +107,24 @@ describe('summary-log-row-states repository registration', () => {
 
     it('constructs the row-state repository', () => {
       expect(server.app.summaryLogRowStatesRepository).toBeDefined()
+    })
+
+    it('constructs the backfill watermark repository', () => {
+      expect(
+        server.app.summaryLogRowStatesBackfillWatermarkRepository
+      ).toBeDefined()
+    })
+
+    it('creates the backfill watermark collection with its unique registration index', async () => {
+      const indexes = await server.db
+        .collection(SUMMARY_LOG_ROW_STATES_BACKFILL_WATERMARKS_COLLECTION_NAME)
+        .listIndexes()
+        .toArray()
+
+      const registrationIdentity = indexes.find(
+        (index) => index.name === 'registration_identity'
+      )
+      expect(registrationIdentity.unique).toBe(true)
     })
 
     it('creates the empty collection with its three indexes', async () => {

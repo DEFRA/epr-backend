@@ -17,6 +17,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 
 import { backfillEstateSummaryLogRowStates } from './backfill-estate-summary-log-row-states.js'
+import { createInMemorySummaryLogRowStatesBackfillWatermarkRepository } from './watermark/inmemory.js'
 
 // The summary-log document id and the workbook's file.id are distinct values
 // (the doc id is a URL path param; file.id is the uploader's id). Membership and
@@ -66,7 +67,9 @@ const inMemoryDeps = ({ organisations, wasteRecords }) => ({
   wasteRecordsRepository: createInMemoryWasteRecordsRepository(wasteRecords)(),
   summaryLogsRepository: createInMemorySummaryLogsRepository()(logger),
   overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-  summaryLogRowStateRepository: createInMemorySummaryLogRowStateRepository()()
+  summaryLogRowStateRepository: createInMemorySummaryLogRowStateRepository()(),
+  summaryLogRowStatesBackfillWatermarkRepository:
+    createInMemorySummaryLogRowStatesBackfillWatermarkRepository()()
 })
 
 describe('backfillEstateSummaryLogRowStates', () => {
@@ -122,6 +125,7 @@ describe('backfillEstateSummaryLogRowStates', () => {
     expect(summary).toEqual({
       organisationsScanned: 1,
       ledgersBackfilled: 1,
+      ledgersSkippedComplete: 0,
       submissionsBackfilled: 2,
       summaryLogRowStateWrites: 2,
       orphanedAccreditations: []
@@ -320,5 +324,174 @@ describe('backfillEstateSummaryLogRowStates', () => {
     await expect(backfillEstateSummaryLogRowStates(deps)).rejects.toThrow(
       'transient database failure'
     )
+  })
+
+  it('skips every complete ledger on a second run and commits nothing', async () => {
+    const registration = reprocessorRegistration({
+      id: 'reg-1',
+      accreditationId: 'acc-1'
+    })
+    const organisation = buildOrganisationWithRegistration(
+      registration,
+      'approved'
+    )
+    const wasteRecords = [
+      receivedRecord(organisation.id, 'reg-1', 'row-1', [
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } }
+      ])
+    ]
+    const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
+    await insertLog(deps.summaryLogsRepository, 'sl-1', {
+      organisationId: organisation.id,
+      registrationId: 'reg-1',
+      submittedAt: '2025-01-01T00:00:00.000Z'
+    })
+
+    await backfillEstateSummaryLogRowStates(deps)
+    const secondRun = await backfillEstateSummaryLogRowStates(deps)
+
+    expect(secondRun).toEqual({
+      organisationsScanned: 1,
+      ledgersBackfilled: 0,
+      ledgersSkippedComplete: 1,
+      submissionsBackfilled: 0,
+      summaryLogRowStateWrites: 0,
+      orphanedAccreditations: []
+    })
+  })
+
+  it('does not re-read waste records for a ledger already complete at the watermark', async () => {
+    const registration = reprocessorRegistration({
+      id: 'reg-1',
+      accreditationId: 'acc-1'
+    })
+    const organisation = buildOrganisationWithRegistration(
+      registration,
+      'approved'
+    )
+    const wasteRecords = [
+      receivedRecord(organisation.id, 'reg-1', 'row-1', [
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } }
+      ])
+    ]
+    const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
+    await insertLog(deps.summaryLogsRepository, 'sl-1', {
+      organisationId: organisation.id,
+      registrationId: 'reg-1',
+      submittedAt: '2025-01-01T00:00:00.000Z'
+    })
+
+    await backfillEstateSummaryLogRowStates(deps)
+
+    let reReadCount = 0
+    const findByRegistration =
+      deps.wasteRecordsRepository.findByRegistration.bind(
+        deps.wasteRecordsRepository
+      )
+    deps.wasteRecordsRepository.findByRegistration = (...args) => {
+      reReadCount += 1
+      return findByRegistration(...args)
+    }
+
+    await backfillEstateSummaryLogRowStates(deps)
+
+    expect(reReadCount).toBe(0)
+  })
+
+  it('resumes a partially-backfilled ledger from its watermark', async () => {
+    const registration = reprocessorRegistration({ id: 'reg-1' })
+    delete registration.accreditationId
+    const organisation = buildOrganisation({
+      registrations: [registration],
+      accreditations: []
+    })
+    const wasteRecords = [
+      receivedRecord(organisation.id, 'reg-1', 'row-1', [
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } },
+        { summaryLog: { id: fileId('sl-2') }, data: { tonnage: 20 } }
+      ])
+    ]
+    const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
+    await insertLog(deps.summaryLogsRepository, 'sl-1', {
+      organisationId: organisation.id,
+      registrationId: 'reg-1',
+      submittedAt: '2025-01-01T00:00:00.000Z'
+    })
+    await insertLog(deps.summaryLogsRepository, 'sl-2', {
+      organisationId: organisation.id,
+      registrationId: 'reg-1',
+      submittedAt: '2025-02-01T00:00:00.000Z'
+    })
+    await deps.summaryLogRowStatesBackfillWatermarkRepository.advance(
+      organisation.id,
+      'reg-1',
+      { submittedAt: '2025-01-01T00:00:00.000Z', summaryLogId: fileId('sl-1') }
+    )
+
+    const summary = await backfillEstateSummaryLogRowStates(deps)
+
+    expect(summary.ledgersBackfilled).toBe(1)
+    expect(summary.submissionsBackfilled).toBe(1)
+    expect(
+      await deps.summaryLogRowStateRepository.findBySummaryLogId(fileId('sl-1'))
+    ).toEqual([])
+    expect(
+      (
+        await deps.summaryLogRowStateRepository.findBySummaryLogId(
+          fileId('sl-2')
+        )
+      ).map((d) => d.rowId)
+    ).toEqual(['row-1'])
+  })
+
+  it('resolves the ledger watermark by summary-log id when two submissions share a submittedAt', async () => {
+    const registration = reprocessorRegistration({ id: 'reg-1' })
+    delete registration.accreditationId
+    const organisation = buildOrganisation({
+      registrations: [registration],
+      accreditations: []
+    })
+    const sharedSubmittedAt = '2025-01-01T00:00:00.000Z'
+    const wasteRecords = [
+      receivedRecord(organisation.id, 'reg-1', 'row-1', [
+        { summaryLog: { id: fileId('sl-1') }, data: { supplierName: 'Acme' } },
+        { summaryLog: { id: fileId('sl-2') }, data: { tonnage: 20 } }
+      ])
+    ]
+    const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
+    await insertLog(deps.summaryLogsRepository, 'sl-1', {
+      organisationId: organisation.id,
+      registrationId: 'reg-1',
+      submittedAt: sharedSubmittedAt
+    })
+    await insertLog(deps.summaryLogsRepository, 'sl-2', {
+      organisationId: organisation.id,
+      registrationId: 'reg-1',
+      submittedAt: sharedSubmittedAt
+    })
+    // The watermark sits at the id-lesser submission; the id-greater one (sl-2)
+    // shares its submittedAt and is still outstanding, so the last submission
+    // resolves by id tiebreak and the ledger must not be treated as complete.
+    await deps.summaryLogRowStatesBackfillWatermarkRepository.advance(
+      organisation.id,
+      'reg-1',
+      { submittedAt: sharedSubmittedAt, summaryLogId: fileId('sl-1') }
+    )
+
+    const summary = await backfillEstateSummaryLogRowStates(deps)
+
+    expect(summary.ledgersSkippedComplete).toBe(0)
+    expect(summary.ledgersBackfilled).toBe(1)
+    expect(summary.submissionsBackfilled).toBe(1)
+    expect(
+      await deps.summaryLogRowStateRepository.findBySummaryLogId(fileId('sl-1'))
+    ).toEqual([])
+    expect(
+      (
+        await deps.summaryLogRowStateRepository.findBySummaryLogId(
+          fileId('sl-2')
+        )
+      ).map((d) => d.rowId)
+    ).toEqual(['row-1'])
   })
 })

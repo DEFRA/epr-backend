@@ -20,7 +20,9 @@ const runBackfill = async (server) => {
     wasteRecordsRepository: server.app.wasteRecordsRepository,
     summaryLogsRepository: server.app.summaryLogsRepository,
     overseasSitesRepository: server.app.overseasSitesRepository,
-    summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository
+    summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository,
+    summaryLogRowStatesBackfillWatermarkRepository:
+      server.app.summaryLogRowStatesBackfillWatermarkRepository
   })
 
   for (const orphan of summary.orphanedAccreditations) {
@@ -28,7 +30,7 @@ const runBackfill = async (server) => {
   }
 
   logger.info({
-    message: `Waste-record-state backfill complete: organisationsScanned=${summary.organisationsScanned} ledgersBackfilled=${summary.ledgersBackfilled} submissionsBackfilled=${summary.submissionsBackfilled} summaryLogRowStateWrites=${summary.summaryLogRowStateWrites} orphanedAccreditations=${summary.orphanedAccreditations.length}`
+    message: `Waste-record-state backfill complete: organisationsScanned=${summary.organisationsScanned} ledgersBackfilled=${summary.ledgersBackfilled} ledgersSkippedComplete=${summary.ledgersSkippedComplete} submissionsBackfilled=${summary.submissionsBackfilled} summaryLogRowStateWrites=${summary.summaryLogRowStateWrites} orphanedAccreditations=${summary.orphanedAccreditations.length}`
   })
 }
 

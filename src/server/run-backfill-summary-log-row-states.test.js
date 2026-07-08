@@ -26,6 +26,7 @@ const seedSummary = (summary = {}) => {
   vi.mocked(backfillEstateSummaryLogRowStates).mockResolvedValue({
     organisationsScanned: 0,
     ledgersBackfilled: 0,
+    ledgersSkippedComplete: 0,
     submissionsBackfilled: 0,
     summaryLogRowStateWrites: 0,
     orphanedAccreditations: [],
@@ -53,7 +54,10 @@ describe('runBackfillSummaryLogRowStates', () => {
         wasteRecordsRepository: { name: 'wasteRecords' },
         summaryLogsRepository: { name: 'summaryLogs' },
         overseasSitesRepository: { name: 'overseasSites' },
-        summaryLogRowStatesRepository: { name: 'summaryLogRowStates' }
+        summaryLogRowStatesRepository: { name: 'summaryLogRowStates' },
+        summaryLogRowStatesBackfillWatermarkRepository: {
+          name: 'summaryLogRowStatesBackfillWatermark'
+        }
       }
     }
   })
@@ -89,7 +93,10 @@ describe('runBackfillSummaryLogRowStates', () => {
       wasteRecordsRepository: mockServer.app.wasteRecordsRepository,
       summaryLogsRepository: mockServer.app.summaryLogsRepository,
       overseasSitesRepository: mockServer.app.overseasSitesRepository,
-      summaryLogRowStateRepository: mockServer.app.summaryLogRowStatesRepository
+      summaryLogRowStateRepository:
+        mockServer.app.summaryLogRowStatesRepository,
+      summaryLogRowStatesBackfillWatermarkRepository:
+        mockServer.app.summaryLogRowStatesBackfillWatermarkRepository
     })
   })
 
@@ -108,6 +115,7 @@ describe('runBackfillSummaryLogRowStates', () => {
     seedSummary({
       organisationsScanned: 12,
       ledgersBackfilled: 8,
+      ledgersSkippedComplete: 3,
       submissionsBackfilled: 20,
       summaryLogRowStateWrites: 140
     })
@@ -117,7 +125,7 @@ describe('runBackfillSummaryLogRowStates', () => {
     expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-record-state backfill complete: organisationsScanned=12 ledgersBackfilled=8 submissionsBackfilled=20 summaryLogRowStateWrites=140 orphanedAccreditations=0'
+        'Waste-record-state backfill complete: organisationsScanned=12 ledgersBackfilled=8 ledgersSkippedComplete=3 submissionsBackfilled=20 summaryLogRowStateWrites=140 orphanedAccreditations=0'
     })
   })
 
@@ -141,7 +149,7 @@ describe('runBackfillSummaryLogRowStates', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-record-state backfill complete: organisationsScanned=1 ledgersBackfilled=0 submissionsBackfilled=0 summaryLogRowStateWrites=0 orphanedAccreditations=1'
+        'Waste-record-state backfill complete: organisationsScanned=1 ledgersBackfilled=0 ledgersSkippedComplete=0 submissionsBackfilled=0 summaryLogRowStateWrites=0 orphanedAccreditations=1'
     })
   })
 
