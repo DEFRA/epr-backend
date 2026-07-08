@@ -3,10 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { logger } from '#common/helpers/logging/logger.js'
 import { backfillEstateSummaryLogRowStates } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js'
 
-import {
-  runBackfillSummaryLogRowStates,
-  PROGRESS_LOG_INTERVAL
-} from './run-backfill-summary-log-row-states.js'
+import { runBackfillSummaryLogRowStates } from './run-backfill-summary-log-row-states.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -171,12 +168,11 @@ describe('runBackfillSummaryLogRowStates', () => {
     orphanedAccreditations: 1
   })
 
-  it('logs a throttled progress line each time the interval boundary is crossed', async () => {
+  it('logs a progress line for every registration the estate sweep reaches', async () => {
     vi.mocked(backfillEstateSummaryLogRowStates).mockImplementation(
       async ({ onProgress }) => {
-        onProgress(progressAt(PROGRESS_LOG_INTERVAL - 1))
-        onProgress(progressAt(PROGRESS_LOG_INTERVAL))
-        onProgress(progressAt(PROGRESS_LOG_INTERVAL * 2))
+        onProgress(progressAt(1))
+        onProgress(progressAt(2))
         return {
           organisationsScanned: 0,
           ledgersBackfilled: 0,
@@ -191,15 +187,12 @@ describe('runBackfillSummaryLogRowStates', () => {
     await runBackfillSummaryLogRowStates(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Waste-record-state backfill progress: registrationsProcessed=${PROGRESS_LOG_INTERVAL} organisationId=org-1 registrationId=reg-${PROGRESS_LOG_INTERVAL} ledgersBackfilled=5 ledgersSkippedComplete=2 submissionsBackfilled=12 summaryLogRowStateWrites=80 orphanedAccreditations=1`
+      message:
+        'Waste-record-state backfill progress: registrationsProcessed=1 organisationId=org-1 registrationId=reg-1 ledgersBackfilled=5 ledgersSkippedComplete=2 submissionsBackfilled=12 summaryLogRowStateWrites=80 orphanedAccreditations=1'
     })
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Waste-record-state backfill progress: registrationsProcessed=${PROGRESS_LOG_INTERVAL * 2} organisationId=org-1 registrationId=reg-${PROGRESS_LOG_INTERVAL * 2} ledgersBackfilled=5 ledgersSkippedComplete=2 submissionsBackfilled=12 summaryLogRowStateWrites=80 orphanedAccreditations=1`
-    })
-    expect(logger.info).not.toHaveBeenCalledWith({
-      message: expect.stringContaining(
-        `registrationsProcessed=${PROGRESS_LOG_INTERVAL - 1} `
-      )
+      message:
+        'Waste-record-state backfill progress: registrationsProcessed=2 organisationId=org-1 registrationId=reg-2 ledgersBackfilled=5 ledgersSkippedComplete=2 submissionsBackfilled=12 summaryLogRowStateWrites=80 orphanedAccreditations=1'
     })
   })
 

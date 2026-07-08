@@ -78,7 +78,8 @@ const inMemoryDeps = ({ organisations, wasteRecords }) => ({
   overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
   summaryLogRowStateRepository: createInMemorySummaryLogRowStateRepository()(),
   summaryLogRowStatesBackfillWatermarkRepository:
-    createInMemorySummaryLogRowStatesBackfillWatermarkRepository()()
+    createInMemorySummaryLogRowStatesBackfillWatermarkRepository()(),
+  onProgress: () => {}
 })
 
 describe('backfillEstateSummaryLogRowStates', () => {

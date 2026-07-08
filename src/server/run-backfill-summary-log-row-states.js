@@ -5,8 +5,6 @@ import { backfillEstateSummaryLogRowStates } from '#waste-records/backfill/backf
 
 const LOCK_NAME = 'summary-log-row-states-backfill'
 
-export const PROGRESS_LOG_INTERVAL = 100
-
 /**
  * @param {OrphanedAccreditation} orphan
  */
@@ -14,21 +12,16 @@ const formatOrphan = (orphan) =>
   `Waste-record-state backfill orphaned accreditation: organisationId=${orphan.organisationId} registrationId=${orphan.registrationId} accreditationId=${orphan.accreditationId}`
 
 /**
- * @param {EstateBackfillProgress} progress
- */
-const formatProgress = (progress) =>
-  `Waste-record-state backfill progress: registrationsProcessed=${progress.registrationsProcessed} organisationId=${progress.organisationId} registrationId=${progress.registrationId} ledgersBackfilled=${progress.ledgersBackfilled} ledgersSkippedComplete=${progress.ledgersSkippedComplete} submissionsBackfilled=${progress.submissionsBackfilled} summaryLogRowStateWrites=${progress.summaryLogRowStateWrites} orphanedAccreditations=${progress.orphanedAccreditations}`
-
-/**
- * Log a running progress line at every interval boundary, so a long estate sweep
- * is observable without one line per registration.
+ * Log a running progress line for each registration as the estate sweep
+ * advances, so a long backfill is observable in-flight. The estate holds only a
+ * few hundred registrations, so one line each is cheap.
  *
  * @param {EstateBackfillProgress} progress
  */
 const logProgress = (progress) => {
-  if (progress.registrationsProcessed % PROGRESS_LOG_INTERVAL === 0) {
-    logger.info({ message: formatProgress(progress) })
-  }
+  logger.info({
+    message: `Waste-record-state backfill progress: registrationsProcessed=${progress.registrationsProcessed} organisationId=${progress.organisationId} registrationId=${progress.registrationId} ledgersBackfilled=${progress.ledgersBackfilled} ledgersSkippedComplete=${progress.ledgersSkippedComplete} submissionsBackfilled=${progress.submissionsBackfilled} summaryLogRowStateWrites=${progress.summaryLogRowStateWrites} orphanedAccreditations=${progress.orphanedAccreditations}`
+  })
 }
 
 /**

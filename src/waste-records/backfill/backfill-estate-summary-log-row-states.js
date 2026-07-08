@@ -315,7 +315,7 @@ export const backfillRegistrationLedger = async ({
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} deps.overseasSitesRepository
  * @param {SummaryLogRowStateRepository} deps.summaryLogRowStateRepository
  * @param {SummaryLogRowStatesBackfillWatermarkRepository} deps.summaryLogRowStatesBackfillWatermarkRepository
- * @param {(progress: EstateBackfillProgress) => void} [deps.onProgress] - Invoked once per registration with a running snapshot; defaults to a no-op
+ * @param {(progress: EstateBackfillProgress) => void} deps.onProgress - Invoked once per registration with a running snapshot
  * @returns {Promise<EstateBackfillSummary>}
  */
 export const backfillEstateSummaryLogRowStates = async ({
@@ -325,7 +325,7 @@ export const backfillEstateSummaryLogRowStates = async ({
   overseasSitesRepository,
   summaryLogRowStateRepository,
   summaryLogRowStatesBackfillWatermarkRepository,
-  onProgress = () => {}
+  onProgress
 }) => {
   const organisations = await organisationsRepository.findAll()
 
