@@ -6,13 +6,8 @@ import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens
  * @param {Object} params
  * @param {() => import('#test/create-test-server.js').TestServer} params.server
  * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
- * @param {((response: any) => void)=} params.additionalExpectations - Optional additional expectations
  */
-export function testInvalidTokenScenarios({
-  server,
-  makeRequest,
-  additionalExpectations
-}) {
+export function testInvalidTokenScenarios({ server, makeRequest }) {
   describe('Invalid tokens', () => {
     describe('user has an Entra token with the wrong credentials', () => {
       const { wrongSignatureToken, wrongIssuerToken, wrongAudienceToken } =
@@ -50,9 +45,9 @@ export function testInvalidTokenScenarios({
 
           expect(response.statusCode).toBe(expectedStatus)
 
-          if (additionalExpectations) {
-            additionalExpectations(response)
-          }
+          expect(response.headers['cache-control']).toBe(
+            'no-cache, no-store, must-revalidate'
+          )
         }
       )
 
@@ -62,9 +57,9 @@ export function testInvalidTokenScenarios({
 
         expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
 
-        if (additionalExpectations) {
-          additionalExpectations(response)
-        }
+        expect(response.headers['cache-control']).toBe(
+          'no-cache, no-store, must-revalidate'
+        )
       })
     })
 
@@ -113,9 +108,9 @@ export function testInvalidTokenScenarios({
 
           expect(response.statusCode).toBe(expectedStatus)
 
-          if (additionalExpectations) {
-            additionalExpectations(response)
-          }
+          expect(response.headers['cache-control']).toBe(
+            'no-cache, no-store, must-revalidate'
+          )
         }
       )
 
@@ -125,9 +120,9 @@ export function testInvalidTokenScenarios({
 
         expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
 
-        if (additionalExpectations) {
-          additionalExpectations(response)
-        }
+        expect(response.headers['cache-control']).toBe(
+          'no-cache, no-store, must-revalidate'
+        )
       })
     })
   })

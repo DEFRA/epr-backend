@@ -132,11 +132,6 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
         method: 'POST',
         url: publicRegisterGeneratePath
       }
-    },
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
     }
   })
 

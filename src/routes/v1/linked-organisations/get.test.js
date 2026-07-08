@@ -270,12 +270,7 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
     makeRequest: async () => ({
       method: 'GET',
       url: linkedOrganisationsGetAllPath
-    }),
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
-    }
+    })
   })
 
   testOnlyServiceMaintainerCanAccess({

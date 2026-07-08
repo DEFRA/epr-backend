@@ -104,12 +104,7 @@ describe(`GET ${wasteBalanceAvailabilityPath}`, () => {
     makeRequest: async () => ({
       method: 'GET',
       url: wasteBalanceAvailabilityPath
-    }),
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
-    }
+    })
   })
 
   testOnlyServiceMaintainerCanAccess({

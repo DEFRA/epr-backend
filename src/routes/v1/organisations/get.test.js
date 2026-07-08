@@ -282,11 +282,6 @@ describe('GET /v1/organisations', () => {
         method: 'GET',
         url: `/v1/organisations/${org1.id}`
       }
-    },
-    additionalExpectations: (response) => {
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
     }
   })
 
