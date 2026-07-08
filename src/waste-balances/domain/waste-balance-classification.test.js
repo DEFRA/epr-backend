@@ -101,6 +101,19 @@ describe('classifyRecordForWasteBalance', () => {
     })
   })
 
+  it('is NOT_APPLICABLE for a manually excluded record whose schema has no classifier', async () => {
+    await setSchema(null)
+    const record = buildRecord({ excludedFromWasteBalance: true })
+
+    expect(
+      classifyRecordForWasteBalance(record, accreditation, overseasSites)
+    ).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+      reasons: [],
+      transactionAmount: 0
+    })
+  })
+
   it('is EXCLUDED for a manually excluded record with an accreditation and schema', async () => {
     await setSchema({
       classifyForWasteBalance: () => ({

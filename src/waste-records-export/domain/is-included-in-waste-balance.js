@@ -9,7 +9,7 @@ import {
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
- * @typedef {Object} WasteBalanceClassification
+ * @typedef {Object} CsvWasteBalanceClassification
  * @property {boolean} included - Whether the record is included in the waste balance
  * @property {WasteBalanceClassificationReason[]} reasons - Exclusion reasons; empty when included
  * @property {number | null} tonnage - Rounded waste balance tonnage; null when excluded
@@ -31,7 +31,7 @@ import {
  * @param {WasteRecord} record
  * @param {Accreditation | null} accreditation
  * @param {OverseasSitesContext} overseasSites
- * @returns {WasteBalanceClassification | null}
+ * @returns {CsvWasteBalanceClassification | null}
  */
 export const getWasteBalanceClassification = (
   record,

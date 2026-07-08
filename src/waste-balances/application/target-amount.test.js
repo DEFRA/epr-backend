@@ -82,28 +82,6 @@ describe('classifyWasteRecord', () => {
       transactionAmount: 100
     })
   })
-
-  it('stamps a no-accreditation record NOT_APPLICABLE', async () => {
-    await setSchema({
-      classifyForWasteBalance: () => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: 100
-      })
-    })
-
-    const { classification } = classifyWasteRecord(
-      buildRecord(),
-      null,
-      overseasSites
-    )
-
-    expect(classification).toEqual({
-      outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
-      reasons: [],
-      transactionAmount: 0
-    })
-  })
 })
 
 describe('getTargetAmount', () => {
