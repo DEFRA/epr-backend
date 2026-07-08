@@ -5,6 +5,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
+import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
@@ -13,11 +14,17 @@ import { reportsCalendarResponseSchema } from './response.schema.js'
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
+ * @import { CalendarPeriod } from '#reports/domain/build-calendar-periods.js'
  * @import {
  *   ReportsRepository,
  *   ReportSummary,
  *   ReportListItem
  * } from '#reports/repository/port.js'
+ */
+
+/**
+ * @typedef {(mergedPeriods: MergedPeriod[]) => CalendarPeriod[]} PeriodBuilder
  */
 
 export const reportsGetPath =
@@ -37,6 +44,19 @@ const toReportListItem = (current) => {
   return { id, status, submissionNumber, submittedAt, submittedBy }
 }
 
+/**
+ * Chooses the period builder for this request. The opt-in ?expand=submissions
+ * view surfaces the previous submissions the default calendar collapses; the
+ * same history is already available on the report-detail view, so it needs no
+ * further gating. Every other request keeps today's collapsing behaviour.
+ * @param {HapiRequest} request
+ * @returns {PeriodBuilder}
+ */
+const selectPeriodBuilder = (request) =>
+  /** @type {{ expand?: string }} */ (request.query).expand === 'submissions'
+    ? buildAllSubmissionPeriods
+    : buildCalendarPeriods
+
 export const reportsGet = {
   method: 'GET',
   path: reportsGetPath,
@@ -47,6 +67,9 @@ export const reportsGet = {
       params: Joi.object({
         organisationId: Joi.string().required(),
         registrationId: Joi.string().required()
+      }),
+      query: Joi.object({
+        expand: Joi.string().valid('submissions')
       })
     },
     response: {
@@ -93,7 +116,8 @@ export const reportsGet = {
     )
 
     // Calendar periods are ended or carry a report, so periodStatus is non-null.
-    const reportingPeriods = buildCalendarPeriods(merged).map((period) => ({
+    const buildPeriods = selectPeriodBuilder(request)
+    const reportingPeriods = buildPeriods(merged).map((period) => ({
       ...period,
       report: toReportListItem(period.report)
     }))
