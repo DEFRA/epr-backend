@@ -79,6 +79,21 @@ describe('row state insert schema', () => {
     expect(error).toBeDefined()
   })
 
+  it('accepts a top-level processingType', () => {
+    const { error, value } = validate(
+      buildSummaryLogRowState({ processingType: 'REPROCESSOR_OUTPUT' })
+    )
+    expect(error).toBeUndefined()
+    expect(value.processingType).toBe('REPROCESSOR_OUTPUT')
+  })
+
+  it('rejects a missing processingType', () => {
+    const { processingType: _processingType, ...withoutProcessingType } =
+      buildSummaryLogRowState()
+    const { error } = validate(withoutProcessingType)
+    expect(error).toBeDefined()
+  })
+
   it('rejects missing required top-level fields', () => {
     const details = expectValidationError(
       summaryLogRowStateInsertSchema,
@@ -95,6 +110,7 @@ describe('row state insert schema', () => {
     expect(missing).toContain('data')
     expect(missing).toContain('classification')
     expect(missing).toContain('summaryLogIds')
+    expect(missing).toContain('processingType')
   })
 })
 

@@ -27,6 +27,7 @@ describe('summary-log row states repository - in-memory implementation', () => {
         accreditationId: 'acc-1',
         wasteRecordType: 'received',
         rowId: 'row-1',
+        processingType: 'REPROCESSOR_INPUT',
         data: { tonnage: 10 },
         classification: {
           outcome: 'INCLUDED',

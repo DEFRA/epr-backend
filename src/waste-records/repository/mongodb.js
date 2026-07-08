@@ -110,6 +110,7 @@ const hashSummaryLogRowState = (candidate) =>
     .update(
       JSON.stringify(
         canonicalise({
+          processingType: candidate.processingType,
           data: candidate.data,
           classification: candidate.classification
         })
@@ -162,6 +163,7 @@ const upsertOne = async (collection, ledgerId, entry, summaryLogId) => {
     accreditationId: ledgerId.accreditationId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
+    processingType: entry.processingType,
     data: entry.data,
     classification: entry.classification,
     summaryLogIds: [summaryLogId]

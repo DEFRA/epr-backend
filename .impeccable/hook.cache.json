@@ -1,1 +1,14 @@
-{ "version": 1, "sessions": {} }
+{
+  "version": 1,
+  "sessions": {
+    "4a97df54-cdcd-4245-a591-b5490981c156": {
+      "updatedAt": 1783508825938,
+      "files": {
+        "/home/graeme/Development/Defra/epr-backend/PAE-1590-rowstate-doc-shape/src/server/run-waste-record-state-discrepancy-report.test.js": {
+          "editCount": 2,
+          "findings": []
+        }
+      }
+    }
+  }
+}
