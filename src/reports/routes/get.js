@@ -5,6 +5,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
+import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
@@ -37,6 +38,28 @@ const toReportListItem = (current) => {
   return { id, status, submissionNumber, submittedAt, submittedBy }
 }
 
+/**
+ * Chooses the period builder for this request. The expanded (all-submissions)
+ * view surfaces superseded submissions the calendar normally collapses, so it is
+ * opt-in via ?expand=submissions AND gated on admin.read: operators only ever
+ * see today's collapsed calendar (ADR-0038). An operator passing the arg is
+ * ignored rather than refused, keeping the shared route's behaviour unchanged
+ * for every non-admin consumer.
+ * @param {HapiRequest} request
+ * @returns {typeof buildCalendarPeriods}
+ */
+const selectPeriodBuilder = (request) => {
+  const expandRequested =
+    /** @type {{ expand?: string }} */ (request.query).expand === 'submissions'
+  const { scope = [] } = /** @type {{ scope?: string[] }} */ (
+    /** @type {unknown} */ (request.auth.credentials)
+  )
+  const isAdmin = scope.includes(SCOPES.adminRead)
+  return expandRequested && isAdmin
+    ? buildAllSubmissionPeriods
+    : buildCalendarPeriods
+}
+
 export const reportsGet = {
   method: 'GET',
   path: reportsGetPath,
@@ -47,6 +70,9 @@ export const reportsGet = {
       params: Joi.object({
         organisationId: Joi.string().required(),
         registrationId: Joi.string().required()
+      }),
+      query: Joi.object({
+        expand: Joi.string().valid('submissions')
       })
     },
     response: {
@@ -93,7 +119,8 @@ export const reportsGet = {
     )
 
     // Calendar periods are ended or carry a report, so periodStatus is non-null.
-    const reportingPeriods = buildCalendarPeriods(merged).map((period) => ({
+    const buildPeriods = selectPeriodBuilder(request)
+    const reportingPeriods = buildPeriods(merged).map((period) => ({
       ...period,
       report: toReportListItem(period.report)
     }))

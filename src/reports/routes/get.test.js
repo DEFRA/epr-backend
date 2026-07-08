@@ -1424,6 +1424,209 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
       })
     })
+
+    describe('expanded submissions view (?expand=submissions)', () => {
+      const changedBy = { id: 'user-1', name: 'Test', position: 'Officer' }
+      const year = new Date().getUTCFullYear()
+
+      const monthDates = (period) => ({
+        startDate: `${year}-${String(period).padStart(2, '0')}-01`,
+        endDate: `${year}-${String(period).padStart(2, '0')}-28`,
+        dueDate: `${year}-${String(period + 1).padStart(2, '0')}-20`
+      })
+
+      const buildCreatePayload = (
+        organisationId,
+        registrationId,
+        period,
+        submissionNumber
+      ) => ({
+        organisationId,
+        registrationId,
+        year,
+        cadence: 'monthly',
+        period,
+        ...monthDates(period),
+        changedBy,
+        submissionNumber,
+        material: 'plastic',
+        wasteProcessingType: 'exporter',
+        source: { summaryLogId: 'sl-1', lastUploadedAt: `${year}-01-15` },
+        prn: null,
+        recyclingActivity: {
+          suppliers: [],
+          totalTonnageReceived: 0,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
+        },
+        wasteSent: {
+          tonnageSentToReprocessor: 0,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0,
+          finalDestinations: []
+        }
+      })
+
+      const submit = async (repo, id) => {
+        await repo.updateReportStatus({
+          reportId: id,
+          version: 1,
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          slot: REPORT_STATUS_SLOT.READY,
+          changedBy
+        })
+        await repo.updateReportStatus({
+          reportId: id,
+          version: 2,
+          status: REPORT_STATUS.SUBMITTED,
+          slot: REPORT_STATUS_SLOT.SUBMITTED,
+          changedBy,
+          submissionDeclaredBy: 'Test User'
+        })
+      }
+
+      const seedSubmitted = async (
+        repo,
+        organisationId,
+        registrationId,
+        period,
+        submissionNumber
+      ) => {
+        const { id } = await repo.createReport(
+          buildCreatePayload(
+            organisationId,
+            registrationId,
+            period,
+            submissionNumber
+          )
+        )
+        await submit(repo, id)
+        return id
+      }
+
+      const flagForResubmission = (repo, organisationId, registrationId) =>
+        repo.markSubmittedReportsRequiringResubmission({
+          organisationId,
+          registrationId,
+          summaryLogId: 'sl-2',
+          uploadedAt: `${year}-05-01T12:00:00.000Z`,
+          periods: [{ year, cadence: 'monthly', period: 1 }]
+        })
+
+      // A period submitted, flagged, then resubmitted: submission 1 is now
+      // superseded (hidden by the collapsed calendar), submission 2 is current.
+      const seedResubmittedPeriod = async (
+        repo,
+        organisationId,
+        registrationId
+      ) => {
+        const sub1 = await seedSubmitted(
+          repo,
+          organisationId,
+          registrationId,
+          1,
+          1
+        )
+        await flagForResubmission(repo, organisationId, registrationId)
+        const sub2 = await seedSubmitted(
+          repo,
+          organisationId,
+          registrationId,
+          1,
+          2
+        )
+        return { sub1, sub2 }
+      }
+
+      const createExporterServer = async () => {
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const ctx = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          reportsRepositoryFactory,
+          'approved'
+        )
+        return { ...ctx, repo: reportsRepositoryFactory() }
+      }
+
+      const januaryItems = (response) =>
+        JSON.parse(response.payload).reportingPeriods.filter(
+          (p) => p.period === 1
+        )
+
+      it('lists every submission per period for an admin caller', async () => {
+        const { server, organisationId, registrationId, repo } =
+          await createExporterServer()
+        const { sub1, sub2 } = await seedResubmittedPeriod(
+          repo,
+          organisationId,
+          registrationId
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?expand=submissions`,
+          ...asServiceMaintainer()
+        })
+        const january = januaryItems(response)
+
+        expect(january.map((p) => p.submissionNumber)).toEqual([1, 2])
+        expect(january.map((p) => p.periodStatus)).toEqual([
+          'submitted',
+          'submitted'
+        ])
+        expect(january[0].report.id).toBe(sub1)
+        expect(january[1].report.id).toBe(sub2)
+      })
+
+      it('collapses superseded submissions for an admin caller when the arg is absent', async () => {
+        const { server, organisationId, registrationId, repo } =
+          await createExporterServer()
+        await seedResubmittedPeriod(repo, organisationId, registrationId)
+
+        const response = await server.inject({
+          method: 'GET',
+          url: makeUrl(organisationId, registrationId),
+          ...asServiceMaintainer()
+        })
+
+        expect(januaryItems(response).map((p) => p.submissionNumber)).toEqual([
+          2
+        ])
+      })
+
+      it('ignores the arg for a non-admin operator, keeping the collapsed calendar', async () => {
+        const { server, organisationId, registrationId, repo } =
+          await createExporterServer()
+        await seedResubmittedPeriod(repo, organisationId, registrationId)
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?expand=submissions`,
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(januaryItems(response).map((p) => p.submissionNumber)).toEqual([
+          2
+        ])
+      })
+
+      it('rejects an unknown expand value', async () => {
+        const { server, organisationId, registrationId } =
+          await createExporterServer()
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?expand=everything`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+    })
   })
 
   describe('when feature flag is disabled', () => {
