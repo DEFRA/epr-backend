@@ -1,6 +1,17 @@
 import Joi from 'joi'
 
 import { cadenceSchema, periodSchema } from '#reports/repository/schema.js'
+import { CADENCE } from '#reports/domain/cadence.js'
+import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
+import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
+import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+
+/**
+ * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
+ * @import { CalendarPeriod } from '#reports/domain/build-calendar-periods.js'
+ * @import { ReportSummary, ReportListItem } from '#reports/repository/port.js'
+ */
 
 const MIN_YEAR = 2024
 const MAX_YEAR = 2100
@@ -42,6 +53,74 @@ export function withRegistrationDetails(report, registration) {
       site: registration.site
     }
   }
+}
+
+/**
+ * Curates a full report summary down to the calendar list-response shape so
+ * calendar-style endpoints don't leak heavy activity payloads.
+ * @param {ReportSummary | null} report
+ * @returns {ReportListItem | null}
+ */
+export function toReportListItem(report) {
+  if (!report) {
+    return null
+  }
+  const { id, status, submissionNumber, submittedAt, submittedBy } = report
+  return { id, status, submissionNumber, submittedAt, submittedBy }
+}
+
+/**
+ * Shared read model for the calendar-shaped reporting endpoints. Resolves the
+ * cadence from the registration, computes the current-year periods, merges the
+ * persisted reports, expands them via the supplied builder, then curates each
+ * item's report to the list shape. The builder decides whether superseded
+ * submissions are collapsed (calendar) or all surfaced (admin history).
+ * @param {HapiRequest & {
+ *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
+ * }} request
+ * @param {(mergedPeriods: MergedPeriod[]) => CalendarPeriod[]} buildPeriods
+ * @returns {Promise<{ cadence: string, reportingPeriods: object[] }>}
+ */
+export async function buildReportingCalendar(request, buildPeriods) {
+  const { organisationsRepository, reportsRepository, params } = request
+  const { organisationId, registrationId } = params
+
+  const registration = await organisationsRepository.findRegistrationById(
+    organisationId,
+    registrationId
+  )
+
+  const cadence = isRegistrationAccredited(registration)
+    ? CADENCE.monthly
+    : CADENCE.quarterly
+
+  /**
+   * We simply return for the current year for now for both Registered-Only
+   * and Accredited Operators. Registered-only operators will need multi-year
+   * support once outstanding historical reports are submitted.
+   */
+  const currentYear = new Date().getUTCFullYear()
+  const computedPeriods = generateReportingPeriods(cadence, currentYear)
+
+  const periodicReports = await reportsRepository.findPeriodicReports({
+    organisationId,
+    registrationId
+  })
+
+  const merged = mergeReportingPeriods(
+    computedPeriods,
+    periodicReports,
+    cadence
+  )
+
+  // Calendar periods are ended or carry a report, so periodStatus is non-null.
+  const reportingPeriods = buildPeriods(merged).map((period) => ({
+    ...period,
+    report: toReportListItem(period.report)
+  }))
+
+  return { cadence, reportingPeriods }
 }
 
 /**

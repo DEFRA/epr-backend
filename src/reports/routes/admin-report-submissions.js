@@ -3,7 +3,7 @@ import Joi from 'joi'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
+import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { buildReportingCalendar } from './shared.js'
 import { reportsCalendarResponseSchema } from './response.schema.js'
 
@@ -13,15 +13,15 @@ import { reportsCalendarResponseSchema } from './response.schema.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  */
 
-export const reportsGetPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/calendar'
+export const adminReportSubmissionsGetPath =
+  '/v1/admin/organisations/{organisationId}/registrations/{registrationId}/report-submissions'
 
-export const reportsGet = {
+export const adminReportSubmissionsGet = {
   method: 'GET',
-  path: reportsGetPath,
+  path: adminReportSubmissionsGetPath,
   options: {
-    auth: getAuthConfig([SCOPES.organisationRead, SCOPES.adminRead]),
-    tags: ['api'],
+    auth: getAuthConfig([SCOPES.adminRead]),
+    tags: ['api', 'admin'],
     validate: {
       params: Joi.object({
         organisationId: Joi.string().required(),
@@ -40,7 +40,10 @@ export const reportsGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const body = await buildReportingCalendar(request, buildCalendarPeriods)
+    const body = await buildReportingCalendar(
+      request,
+      buildAllSubmissionPeriods
+    )
     return h.response(body).code(StatusCodes.OK)
   }
 }

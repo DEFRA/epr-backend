@@ -1,3 +1,4 @@
+export { adminReportSubmissionsGet } from './admin-report-submissions.js'
 export { reportsDelete } from './delete.js'
 export { reportsGet } from './get.js'
 export { reportsGetDetail } from './get-detail.js'
