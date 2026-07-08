@@ -16,6 +16,15 @@ export const PRN_STATUS = Object.freeze({
 })
 
 /**
+ * Cancelled PRN statuses.
+ * @type {Set<PrnStatus>}
+ */
+export const CANCELLED_PRN_STATUSES = new Set([
+  PRN_STATUS.AWAITING_CANCELLATION,
+  PRN_STATUS.CANCELLED
+])
+
+/**
  * Actor types that can trigger PRN status transitions
  * @typedef {typeof PRN_ACTOR[keyof typeof PRN_ACTOR]} PrnActor
  */
