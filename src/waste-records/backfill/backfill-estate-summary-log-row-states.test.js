@@ -453,6 +453,104 @@ describe('backfillEstateSummaryLogRowStates', () => {
     ).toEqual(['row-1'])
   })
 
+  it('emits a running progress snapshot for every registration processed', async () => {
+    const regA = reprocessorRegistration({
+      id: 'reg-a',
+      accreditationId: 'acc-a'
+    })
+    const regB = reprocessorRegistration({
+      id: 'reg-b',
+      accreditationId: 'acc-b'
+    })
+    const organisation = buildOrganisation({
+      registrations: [regA, regB],
+      accreditations: [
+        buildAccreditation({ id: 'acc-a', wasteProcessingType: 'reprocessor' }),
+        buildAccreditation({ id: 'acc-b', wasteProcessingType: 'reprocessor' })
+      ]
+    })
+    const wasteRecords = [
+      receivedRecord(organisation.id, 'reg-a', 'row-1', [
+        { summaryLog: { id: fileId('sl-a') }, data: { supplierName: 'Acme' } }
+      ]),
+      receivedRecord(organisation.id, 'reg-b', 'row-1', [
+        { summaryLog: { id: fileId('sl-b') }, data: { supplierName: 'Acme' } }
+      ])
+    ]
+    const deps = inMemoryDeps({ organisations: [organisation], wasteRecords })
+    await insertLog(deps.summaryLogsRepository, 'sl-a', {
+      organisationId: organisation.id,
+      registrationId: 'reg-a',
+      submittedAt: '2025-01-01T00:00:00.000Z'
+    })
+    await insertLog(deps.summaryLogsRepository, 'sl-b', {
+      organisationId: organisation.id,
+      registrationId: 'reg-b',
+      submittedAt: '2025-01-01T00:00:00.000Z'
+    })
+
+    const progress = []
+    await backfillEstateSummaryLogRowStates({
+      ...deps,
+      onProgress: (snapshot) => progress.push(snapshot)
+    })
+
+    expect(progress).toEqual([
+      {
+        registrationsProcessed: 1,
+        organisationId: organisation.id,
+        registrationId: 'reg-a',
+        ledgersBackfilled: 1,
+        ledgersSkippedComplete: 0,
+        submissionsBackfilled: 1,
+        summaryLogRowStateWrites: 1,
+        orphanedAccreditations: 0
+      },
+      {
+        registrationsProcessed: 2,
+        organisationId: organisation.id,
+        registrationId: 'reg-b',
+        ledgersBackfilled: 2,
+        ledgersSkippedComplete: 0,
+        submissionsBackfilled: 2,
+        summaryLogRowStateWrites: 2,
+        orphanedAccreditations: 0
+      }
+    ])
+  })
+
+  it('emits progress for a registration with no submitted logs without advancing the counts', async () => {
+    const registration = reprocessorRegistration({ id: 'reg-empty' })
+    delete registration.accreditationId
+    const organisation = buildOrganisation({
+      registrations: [registration],
+      accreditations: []
+    })
+    const deps = inMemoryDeps({
+      organisations: [organisation],
+      wasteRecords: []
+    })
+
+    const progress = []
+    await backfillEstateSummaryLogRowStates({
+      ...deps,
+      onProgress: (snapshot) => progress.push(snapshot)
+    })
+
+    expect(progress).toEqual([
+      {
+        registrationsProcessed: 1,
+        organisationId: organisation.id,
+        registrationId: 'reg-empty',
+        ledgersBackfilled: 0,
+        ledgersSkippedComplete: 0,
+        submissionsBackfilled: 0,
+        summaryLogRowStateWrites: 0,
+        orphanedAccreditations: 0
+      }
+    ])
+  })
+
   it('resolves the ledger watermark by summary-log id when two submissions share a submittedAt', async () => {
     const registration = reprocessorRegistration({ id: 'reg-1' })
     delete registration.accreditationId

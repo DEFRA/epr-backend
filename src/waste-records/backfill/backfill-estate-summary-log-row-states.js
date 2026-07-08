@@ -41,6 +41,24 @@ import {
  */
 
 /**
+ * A running snapshot of the estate sweep, emitted once per registration as the
+ * loop advances so a long backfill is observable in-flight. The counters mirror
+ * the terminal EstateBackfillSummary; organisationId and registrationId name the
+ * ledger the sweep has just reached. The server layer decides how often to log
+ * these.
+ *
+ * @typedef {Object} EstateBackfillProgress
+ * @property {number} registrationsProcessed - Registrations iterated so far, across all organisations
+ * @property {string} organisationId - Organisation whose registration was just processed
+ * @property {string} registrationId - Registration just processed
+ * @property {number} ledgersBackfilled
+ * @property {number} ledgersSkippedComplete
+ * @property {number} submissionsBackfilled
+ * @property {number} summaryLogRowStateWrites
+ * @property {number} orphanedAccreditations - Count surfaced so far
+ */
+
+/**
  * What backfilling a single registration ledger contributed: an orphaned
  * accreditation to surface, the submission and write counts it committed, or a
  * skip because the ledger is already complete at its watermark. `null` means
@@ -297,6 +315,7 @@ export const backfillRegistrationLedger = async ({
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} deps.overseasSitesRepository
  * @param {SummaryLogRowStateRepository} deps.summaryLogRowStateRepository
  * @param {SummaryLogRowStatesBackfillWatermarkRepository} deps.summaryLogRowStatesBackfillWatermarkRepository
+ * @param {(progress: EstateBackfillProgress) => void} [deps.onProgress] - Invoked once per registration with a running snapshot; defaults to a no-op
  * @returns {Promise<EstateBackfillSummary>}
  */
 export const backfillEstateSummaryLogRowStates = async ({
@@ -305,10 +324,12 @@ export const backfillEstateSummaryLogRowStates = async ({
   summaryLogsRepository,
   overseasSitesRepository,
   summaryLogRowStateRepository,
-  summaryLogRowStatesBackfillWatermarkRepository
+  summaryLogRowStatesBackfillWatermarkRepository,
+  onProgress = () => {}
 }) => {
   const organisations = await organisationsRepository.findAll()
 
+  let registrationsProcessed = 0
   let ledgersBackfilled = 0
   let ledgersSkippedComplete = 0
   let submissionsBackfilled = 0
@@ -327,18 +348,28 @@ export const backfillEstateSummaryLogRowStates = async ({
         summaryLogRowStateRepository,
         summaryLogRowStatesBackfillWatermarkRepository
       })
-      if (!result) {
-        continue
+      if (result) {
+        if ('orphanedAccreditation' in result) {
+          orphanedAccreditations.push(result.orphanedAccreditation)
+        } else if ('skippedComplete' in result) {
+          ledgersSkippedComplete += 1
+        } else {
+          ledgersBackfilled += 1
+          submissionsBackfilled += result.submissionsCommitted
+          summaryLogRowStateWrites += result.summaryLogRowStateWriteCount
+        }
       }
-      if ('orphanedAccreditation' in result) {
-        orphanedAccreditations.push(result.orphanedAccreditation)
-      } else if ('skippedComplete' in result) {
-        ledgersSkippedComplete += 1
-      } else {
-        ledgersBackfilled += 1
-        submissionsBackfilled += result.submissionsCommitted
-        summaryLogRowStateWrites += result.summaryLogRowStateWriteCount
-      }
+      registrationsProcessed += 1
+      onProgress({
+        registrationsProcessed,
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        ledgersBackfilled,
+        ledgersSkippedComplete,
+        submissionsBackfilled,
+        summaryLogRowStateWrites,
+        orphanedAccreditations: orphanedAccreditations.length
+      })
     }
   }
 

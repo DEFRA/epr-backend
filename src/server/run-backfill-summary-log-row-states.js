@@ -1,15 +1,35 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { backfillEstateSummaryLogRowStates } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js'
 
-/** @import { OrphanedAccreditation } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js' */
+/** @import { OrphanedAccreditation, EstateBackfillProgress } from '#waste-records/backfill/backfill-estate-summary-log-row-states.js' */
 
 const LOCK_NAME = 'summary-log-row-states-backfill'
+
+export const PROGRESS_LOG_INTERVAL = 100
 
 /**
  * @param {OrphanedAccreditation} orphan
  */
 const formatOrphan = (orphan) =>
   `Waste-record-state backfill orphaned accreditation: organisationId=${orphan.organisationId} registrationId=${orphan.registrationId} accreditationId=${orphan.accreditationId}`
+
+/**
+ * @param {EstateBackfillProgress} progress
+ */
+const formatProgress = (progress) =>
+  `Waste-record-state backfill progress: registrationsProcessed=${progress.registrationsProcessed} organisationId=${progress.organisationId} registrationId=${progress.registrationId} ledgersBackfilled=${progress.ledgersBackfilled} ledgersSkippedComplete=${progress.ledgersSkippedComplete} submissionsBackfilled=${progress.submissionsBackfilled} summaryLogRowStateWrites=${progress.summaryLogRowStateWrites} orphanedAccreditations=${progress.orphanedAccreditations}`
+
+/**
+ * Log a running progress line at every interval boundary, so a long estate sweep
+ * is observable without one line per registration.
+ *
+ * @param {EstateBackfillProgress} progress
+ */
+const logProgress = (progress) => {
+  if (progress.registrationsProcessed % PROGRESS_LOG_INTERVAL === 0) {
+    logger.info({ message: formatProgress(progress) })
+  }
+}
 
 /**
  * @param {Object} server - Hapi server instance
@@ -22,7 +42,8 @@ const runBackfill = async (server) => {
     overseasSitesRepository: server.app.overseasSitesRepository,
     summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository,
     summaryLogRowStatesBackfillWatermarkRepository:
-      server.app.summaryLogRowStatesBackfillWatermarkRepository
+      server.app.summaryLogRowStatesBackfillWatermarkRepository,
+    onProgress: logProgress
   })
 
   for (const orphan of summary.orphanedAccreditations) {
