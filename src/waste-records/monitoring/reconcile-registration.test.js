@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
@@ -33,7 +33,7 @@ const includedWasteRecordState = (rowId, transactionAmount, reasons = []) => ({
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   data: { ROW_ID: rowId },
   classification: {
-    outcome: ROW_OUTCOME.INCLUDED,
+    outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
     reasons,
     transactionAmount
   }
@@ -44,7 +44,18 @@ const excludedWasteRecordState = (rowId) => ({
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   data: { ROW_ID: rowId },
   classification: {
-    outcome: ROW_OUTCOME.EXCLUDED,
+    outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
+    reasons: [],
+    transactionAmount: 0
+  }
+})
+
+const notApplicableWasteRecordState = (rowId) => ({
+  rowId,
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  data: { ROW_ID: rowId },
+  classification: {
+    outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
     reasons: [],
     transactionAmount: 0
   }
@@ -303,6 +314,25 @@ describe('reconcileRegistration', () => {
     })
 
     expect(result.classificationDivergences).toHaveLength(1)
+    expect(result.isClean).toBe(true)
+  })
+
+  it('reconciles a not-applicable waste record state against a not-included legacy row without drift or divergence', () => {
+    const result = reconcile({
+      head: 'log-2',
+      eventCreditTotal: 0,
+      wasteRecordStates: [notApplicableWasteRecordState('row-1')],
+      wasteRecords: [committedRecord('row-1', 'log-2')],
+      accreditation: null,
+      overseasSites: {}
+    })
+
+    expect(result.creditTotal).toEqual({
+      wasteRecordStates: 0,
+      event: 0,
+      drift: 0
+    })
+    expect(result.classificationDivergences).toEqual([])
     expect(result.isClean).toBe(true)
   })
 

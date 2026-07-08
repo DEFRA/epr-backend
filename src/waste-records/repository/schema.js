@@ -1,20 +1,22 @@
 import Joi from 'joi'
 
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
- * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} RowOutcome
+ * @typedef {import('#waste-balances/domain/waste-balance-classification.js').WasteBalanceOutcome} WasteBalanceOutcome
  */
 
 /**
  * Stamped classification for a summary-log row state. `outcome` and
  * `transactionAmount` are the row's contribution to the waste balance at the
  * time it committed; `reasons` carry the codes explaining a non-included row.
+ * A NOT_APPLICABLE outcome stamps a row whose registration or template cannot
+ * contribute a per-row waste-balance decision at all.
  *
  * @typedef {Object} RowClassification
- * @property {RowOutcome} outcome
+ * @property {WasteBalanceOutcome} outcome
  * @property {Array<{ code: string, field?: string }>} reasons
  * @property {number} transactionAmount
  */
@@ -74,7 +76,7 @@ const classificationReasonSchema = Joi.object({
 
 const classificationSchema = Joi.object({
   outcome: Joi.string()
-    .valid(...Object.values(ROW_OUTCOME))
+    .valid(...Object.values(WASTE_BALANCE_OUTCOME))
     .required(),
   reasons: Joi.array().items(classificationReasonSchema).required(),
   transactionAmount: Joi.number().required()

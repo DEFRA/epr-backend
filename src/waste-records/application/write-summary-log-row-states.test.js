@@ -4,7 +4,7 @@ import { writeSummaryLogRowStates } from './write-summary-log-row-states.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 const buildRegisteredOnlyRecord = ({ rowId, tonnage }) => ({
   organisationId: 'org-1',
@@ -117,7 +117,7 @@ describe('writeSummaryLogRowStates', () => {
       accreditationId: null,
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
       classification: {
-        outcome: ROW_OUTCOME.EXCLUDED,
+        outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
         reasons: [],
         transactionAmount: 0
       },

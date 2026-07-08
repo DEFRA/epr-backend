@@ -1,0 +1,157 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+import {
+  WASTE_BALANCE_OUTCOME,
+  classifyRecordForWasteBalance
+} from './waste-balance-classification.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+
+vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
+  findSchemaForProcessingType: vi.fn()
+}))
+
+const accreditation =
+  /** @type {import('#domain/organisations/accreditation.js').Accreditation} */ (
+    /** @type {unknown} */ ({ id: 'acc-1' })
+  )
+const overseasSites = /** @type {*} */ (new Map())
+
+const buildRecord = (overrides = {}) =>
+  /** @type {*} */ ({
+    rowId: 'row-1',
+    type: 'EXPORTED',
+    data: { processingType: PROCESSING_TYPES.EXPORTER, tonnage: 100 },
+    excludedFromWasteBalance: false,
+    ...overrides
+  })
+
+const setSchema = async (schema) => {
+  const { findSchemaForProcessingType } =
+    await import('#domain/summary-logs/table-schemas/index.js')
+  vi.mocked(findSchemaForProcessingType).mockReturnValue(
+    /** @type {*} */ (schema)
+  )
+}
+
+describe('WASTE_BALANCE_OUTCOME', () => {
+  it('keeps INCLUDED, EXCLUDED and IGNORED string-identical to the shared validation outcomes', () => {
+    expect(WASTE_BALANCE_OUTCOME.INCLUDED).toBe(ROW_OUTCOME.INCLUDED)
+    expect(WASTE_BALANCE_OUTCOME.EXCLUDED).toBe(ROW_OUTCOME.EXCLUDED)
+    expect(WASTE_BALANCE_OUTCOME.IGNORED).toBe(ROW_OUTCOME.IGNORED)
+  })
+
+  it('adds a NOT_APPLICABLE outcome absent from the shared validation outcomes', () => {
+    expect(WASTE_BALANCE_OUTCOME.NOT_APPLICABLE).toBe('NOT_APPLICABLE')
+    expect(Object.values(ROW_OUTCOME)).not.toContain(
+      WASTE_BALANCE_OUTCOME.NOT_APPLICABLE
+    )
+  })
+})
+
+describe('classifyRecordForWasteBalance', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('is NOT_APPLICABLE when there is no accreditation', async () => {
+    await setSchema({
+      classifyForWasteBalance: () => ({
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: 100
+      })
+    })
+
+    expect(
+      classifyRecordForWasteBalance(buildRecord(), null, overseasSites)
+    ).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+      reasons: [],
+      transactionAmount: 0
+    })
+  })
+
+  it('is NOT_APPLICABLE when the schema has no waste-balance classifier', async () => {
+    await setSchema(null)
+
+    expect(
+      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+    ).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+      reasons: [],
+      transactionAmount: 0
+    })
+  })
+
+  it('treats NOT_APPLICABLE as taking precedence over a manual exclusion', async () => {
+    await setSchema({
+      classifyForWasteBalance: () => ({
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: 100
+      })
+    })
+    const record = buildRecord({ excludedFromWasteBalance: true })
+
+    expect(classifyRecordForWasteBalance(record, null, overseasSites)).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+      reasons: [],
+      transactionAmount: 0
+    })
+  })
+
+  it('is EXCLUDED for a manually excluded record with an accreditation and schema', async () => {
+    await setSchema({
+      classifyForWasteBalance: () => ({
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: 100
+      })
+    })
+    const record = buildRecord({ excludedFromWasteBalance: true })
+
+    expect(
+      classifyRecordForWasteBalance(record, accreditation, overseasSites)
+    ).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
+      reasons: [],
+      transactionAmount: 0
+    })
+  })
+
+  it('surfaces the included outcome, reasons and amount from the schema classifier', async () => {
+    await setSchema({
+      classifyForWasteBalance: () => ({
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [{ code: 'WITHIN_ACCREDITATION_PERIOD' }],
+        transactionAmount: 100
+      })
+    })
+
+    expect(
+      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+    ).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+      reasons: [{ code: 'WITHIN_ACCREDITATION_PERIOD' }],
+      transactionAmount: 100
+    })
+  })
+
+  it('surfaces an ignored classifier outcome and reasons, contributing no amount', async () => {
+    await setSchema({
+      classifyForWasteBalance: () => ({
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: 'PRN_ISSUED' }]
+      })
+    })
+
+    expect(
+      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+    ).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.IGNORED,
+      reasons: [{ code: 'PRN_ISSUED' }],
+      transactionAmount: 0
+    })
+  })
+})
