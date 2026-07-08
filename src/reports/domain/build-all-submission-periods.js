@@ -1,5 +1,6 @@
 import { buildCalendarPeriods } from './build-calendar-periods.js'
 import { PERIOD_STATUS } from './period-status.js'
+import { REPORT_STATUS } from './report-status.js'
 
 /**
  * @import { MergedPeriod } from './merge-reporting-periods.js'
@@ -8,17 +9,26 @@ import { PERIOD_STATUS } from './period-status.js'
 
 /**
  * Expands merged reporting periods into one calendar item per submission, for
- * the admin (all-submissions) view. Superseded submissions are deliberately
- * hidden from the collapsed calendar (ADR-0038); the regulator's overview needs
- * the full audit trail instead.
+ * the opt-in all-submissions view. Superseded submissions are collapsed out of
+ * the default calendar (ADR-0038); this view surfaces them for the full history,
+ * the same history already available on the report-detail view.
  *
  * Reuses buildCalendarPeriods for each period's current-state items (the current
- * report plus, when a resubmission is pending, the requires_resubmission
- * skeleton) then adds any previous submissions not already surfaced, deduped on
- * submissionNumber so the flagged submitted report the skeleton derives from is
- * not emitted twice. Historical submissions carry periodStatus 'submitted' (each
- * was submitted once); no new status value is introduced. Items within a period
- * are ordered by submissionNumber ascending.
+ * report, plus a requires_resubmission skeleton when a resubmission is pending),
+ * then adds the period's previous submissions those items do not already
+ * surface. Deduping is keyed on the surfaced reports' ids, not submission
+ * numbers, so the synthetic skeleton slot (which carries no real report) can
+ * never mask a genuine submission.
+ *
+ * Only submitted previous submissions are emitted, each carrying periodStatus
+ * 'submitted'. A new submission number is only allocated once the prior
+ * submission is submitted, so every entry below the current one is a completed
+ * submission (see groupAsPeriodicReports). Filtering on submitted status
+ * enforces that invariant rather than trusting it, so a non-submitted report can
+ * never surface mislabelled as 'submitted'.
+ *
+ * Items within a period are ordered by submissionNumber ascending, including the
+ * synthetic skeleton slot.
  *
  * @param {MergedPeriod[]} mergedPeriods
  * @returns {CalendarPeriod[]}
@@ -27,12 +37,16 @@ export const buildAllSubmissionPeriods = (mergedPeriods) =>
   mergedPeriods.flatMap((mergedPeriod) => {
     const { previousSubmissions = [], ...period } = mergedPeriod
     const currentStateItems = buildCalendarPeriods([mergedPeriod])
-    const surfaced = new Set(
-      currentStateItems.map((item) => item.submissionNumber)
+    const surfacedReportIds = new Set(
+      currentStateItems.flatMap((item) => (item.report ? [item.report.id] : []))
     )
 
     const historicalItems = previousSubmissions
-      .filter((submission) => !surfaced.has(submission.submissionNumber))
+      .filter(
+        (submission) =>
+          submission.status === REPORT_STATUS.SUBMITTED &&
+          !surfacedReportIds.has(submission.id)
+      )
       .map((submission) => ({
         ...period,
         submissionNumber: submission.submissionNumber,

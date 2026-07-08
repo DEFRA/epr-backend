@@ -1556,7 +1556,7 @@ describe(`GET ${reportsGetPath}`, () => {
           (p) => p.period === 1
         )
 
-      it('lists every submission per period for an admin caller', async () => {
+      it('lists every submission per period when expand=submissions', async () => {
         const { server, organisationId, registrationId, repo } =
           await createExporterServer()
         const { sub1, sub2 } = await seedResubmittedPeriod(
@@ -1568,7 +1568,7 @@ describe(`GET ${reportsGetPath}`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `${makeUrl(organisationId, registrationId)}?expand=submissions`,
-          ...asServiceMaintainer()
+          ...asOperator()
         })
         const january = januaryItems(response)
 
@@ -1581,7 +1581,7 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(january[1].report.id).toBe(sub2)
       })
 
-      it('collapses superseded submissions for an admin caller when the arg is absent', async () => {
+      it('collapses superseded submissions when the arg is absent', async () => {
         const { server, organisationId, registrationId, repo } =
           await createExporterServer()
         await seedResubmittedPeriod(repo, organisationId, registrationId)
@@ -1589,26 +1589,9 @@ describe(`GET ${reportsGetPath}`, () => {
         const response = await server.inject({
           method: 'GET',
           url: makeUrl(organisationId, registrationId),
-          ...asServiceMaintainer()
-        })
-
-        expect(januaryItems(response).map((p) => p.submissionNumber)).toEqual([
-          2
-        ])
-      })
-
-      it('ignores the arg for a non-admin operator, keeping the collapsed calendar', async () => {
-        const { server, organisationId, registrationId, repo } =
-          await createExporterServer()
-        await seedResubmittedPeriod(repo, organisationId, registrationId)
-
-        const response = await server.inject({
-          method: 'GET',
-          url: `${makeUrl(organisationId, registrationId)}?expand=submissions`,
           ...asOperator()
         })
 
-        expect(response.statusCode).toBe(StatusCodes.OK)
         expect(januaryItems(response).map((p) => p.submissionNumber)).toEqual([
           2
         ])
@@ -1621,7 +1604,7 @@ describe(`GET ${reportsGetPath}`, () => {
         const response = await server.inject({
           method: 'GET',
           url: `${makeUrl(organisationId, registrationId)}?expand=everything`,
-          ...asServiceMaintainer()
+          ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)

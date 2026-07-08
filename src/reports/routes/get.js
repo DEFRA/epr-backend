@@ -14,11 +14,17 @@ import { reportsCalendarResponseSchema } from './response.schema.js'
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
+ * @import { CalendarPeriod } from '#reports/domain/build-calendar-periods.js'
  * @import {
  *   ReportsRepository,
  *   ReportSummary,
  *   ReportListItem
  * } from '#reports/repository/port.js'
+ */
+
+/**
+ * @typedef {(mergedPeriods: MergedPeriod[]) => CalendarPeriod[]} PeriodBuilder
  */
 
 export const reportsGetPath =
@@ -39,26 +45,17 @@ const toReportListItem = (current) => {
 }
 
 /**
- * Chooses the period builder for this request. The expanded (all-submissions)
- * view surfaces superseded submissions the calendar normally collapses, so it is
- * opt-in via ?expand=submissions AND gated on admin.read: operators only ever
- * see today's collapsed calendar (ADR-0038). An operator passing the arg is
- * ignored rather than refused, keeping the shared route's behaviour unchanged
- * for every non-admin consumer.
+ * Chooses the period builder for this request. The opt-in ?expand=submissions
+ * view surfaces the previous submissions the default calendar collapses; the
+ * same history is already available on the report-detail view, so it needs no
+ * further gating. Every other request keeps today's collapsing behaviour.
  * @param {HapiRequest} request
- * @returns {typeof buildCalendarPeriods}
+ * @returns {PeriodBuilder}
  */
-const selectPeriodBuilder = (request) => {
-  const expandRequested =
-    /** @type {{ expand?: string }} */ (request.query).expand === 'submissions'
-  const { scope = [] } = /** @type {{ scope?: string[] }} */ (
-    /** @type {unknown} */ (request.auth.credentials)
-  )
-  const isAdmin = scope.includes(SCOPES.adminRead)
-  return expandRequested && isAdmin
+const selectPeriodBuilder = (request) =>
+  /** @type {{ expand?: string }} */ (request.query).expand === 'submissions'
     ? buildAllSubmissionPeriods
     : buildCalendarPeriods
-}
 
 export const reportsGet = {
   method: 'GET',

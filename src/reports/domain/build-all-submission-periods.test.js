@@ -93,6 +93,62 @@ describe('buildAllSubmissionPeriods', () => {
     expect(result[1].report).toBeNull()
   })
 
+  it('surfaces the flagged submitted report exactly once when it is a previous submission', () => {
+    // Draft in flight: the flagged report has dropped to previousSubmissions and
+    // is also surfaced as the submitted item by buildCalendarPeriods. Deduping
+    // on the report id keeps it to a single item.
+    const draft = submittedReport({
+      id: 'report-3',
+      status: 'in_progress',
+      submissionNumber: 3,
+      submittedAt: null,
+      submittedBy: null
+    })
+    const flagged = submittedReport({
+      id: 'report-2',
+      submissionNumber: 2,
+      resubmissionRequired: resubmissionFlag
+    })
+    const merged = period(draft, {
+      submissionNumber: 3,
+      previousSubmissions: [flagged]
+    })
+
+    const result = buildAllSubmissionPeriods([merged])
+
+    expect(result.map((item) => item.submissionNumber)).toEqual([2, 3])
+    expect(
+      result.filter((item) => item.report?.id === 'report-2')
+    ).toHaveLength(1)
+  })
+
+  it('excludes a non-submitted report from the submissions view', () => {
+    // The invariant: submission numbers are only allocated on submit, so a
+    // previous submission is always submitted. If a non-submitted report ever
+    // reaches previousSubmissions it must not surface mislabelled as submitted.
+    const current = submittedReport({ id: 'report-3', submissionNumber: 3 })
+    const abandonedDraft = submittedReport({
+      id: 'report-2',
+      status: 'in_progress',
+      submissionNumber: 2,
+      submittedAt: null,
+      submittedBy: null
+    })
+    const submitted = submittedReport({ id: 'report-1', submissionNumber: 1 })
+    const merged = period(current, {
+      submissionNumber: 3,
+      previousSubmissions: [abandonedDraft, submitted]
+    })
+
+    const result = buildAllSubmissionPeriods([merged])
+
+    expect(result.map((item) => item.submissionNumber)).toEqual([1, 3])
+    expect(result.map((item) => item.report?.id)).toEqual([
+      'report-1',
+      'report-3'
+    ])
+  })
+
   it('emits a single item for a period with only a current submission', () => {
     const merged = period(submittedReport(), { previousSubmissions: [] })
 
