@@ -4,7 +4,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { compareSubmissionOrder } from './submission-order.js'
 
 /**
- * @import { ClassifiedRow } from '#waste-balances/application/target-amount.js'
+ * @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js'
  * @import { WasteRecord } from '#domain/waste-records/model.js'
  */
 
@@ -17,7 +17,7 @@ import { compareSubmissionOrder } from './submission-order.js'
  *
  * @typedef {Object} SubmissionSummaryLogRowStates
  * @property {string} summaryLogId
- * @property {ClassifiedRow[]} entries
+ * @property {SummaryLogRowStateEntry[]} entries
  * @property {string} submittedAt - ISO8601 timestamp
  * @property {import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary} [submittedBy]
  */

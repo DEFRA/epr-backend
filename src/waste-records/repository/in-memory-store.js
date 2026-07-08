@@ -53,6 +53,7 @@ const matchesRowIdentity = (doc, candidate) =>
  */
 const matchesCommittedState = (doc, candidate) =>
   matchesRowIdentity(doc, candidate) &&
+  doc.processingType === candidate.processingType &&
   isDeepStrictEqual(doc.data, candidate.data) &&
   isDeepStrictEqual(doc.classification, candidate.classification)
 
@@ -70,6 +71,7 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
     accreditationId: ledgerId.accreditationId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
+    processingType: entry.processingType,
     data: entry.data,
     classification: entry.classification,
     summaryLogIds: [summaryLogId]
