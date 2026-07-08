@@ -21,11 +21,15 @@ import { REPORT_STATUS } from './report-status.js'
  * never mask a genuine submission.
  *
  * Only submitted previous submissions are emitted, each carrying periodStatus
- * 'submitted'. A new submission number is only allocated once the prior
- * submission is submitted, so every entry below the current one is a completed
- * submission (see groupAsPeriodicReports). Filtering on submitted status
- * enforces that invariant rather than trusting it, so a non-submitted report can
- * never surface mislabelled as 'submitted'.
+ * 'submitted'. Submission numbers are allocated when a draft is created, but a
+ * submission number N > 1 can only be created once submission N-1 has been
+ * submitted and flagged for resubmission (assertResubmissionAllowed in
+ * report-service.js). So a report only drops below the current slot after it has
+ * been submitted: every previous submission is a completed one, and the in-flight
+ * resubmission draft is always the current slot (surfaced as the
+ * requires_resubmission skeleton), never a previous submission. Filtering on
+ * submitted status enforces that invariant defensively rather than trusting it,
+ * so a non-submitted report can never surface mislabelled as 'submitted'.
  *
  * Items within a period are ordered by submissionNumber ascending, including the
  * synthetic skeleton slot.

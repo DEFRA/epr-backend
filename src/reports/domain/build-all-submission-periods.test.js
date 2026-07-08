@@ -44,9 +44,12 @@ describe('buildAllSubmissionPeriods', () => {
   })
 
   it('excludes a non-submitted report from the submissions view', () => {
-    // The invariant: submission numbers are only allocated on submit, so a
-    // previous submission is always submitted. If a non-submitted report ever
-    // reaches previousSubmissions it must not surface mislabelled as submitted.
+    // The invariant: submission number N > 1 is only created once N-1 is
+    // submitted and flagged (assertResubmissionAllowed), so a report only drops
+    // below the current slot after it has been submitted, i.e. a previous
+    // submission is always submitted. This guards the defensive filter against a
+    // future change to that precondition: a non-submitted report reaching
+    // previousSubmissions must not surface mislabelled as submitted.
     const current = submittedReport({ id: 'report-3', submissionNumber: 3 })
     const abandonedDraft = submittedReport({
       id: 'report-2',
