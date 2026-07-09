@@ -1,18 +1,30 @@
 import { it as dbTest } from './mongo.js'
 
-export const it = dbTest.extend({
-  server: [
-    async ({ db }, use) => {
-      // db parameter triggers MongoDB setup (unused directly)
-      const _dbUri = db
-      const { createServer } = await import('#server/server.js')
-      const server = await createServer()
-      await server.initialize()
+/**
+ * vitest cannot infer scoped-fixture (tuple-form) value types in JSDoc/tsc, so
+ * the fixture shape is asserted here, at the boundary, and flows to every
+ * consumer typed.
+ */
+export const it =
+  /**
+   * @type {import('vitest').TestAPI<{
+   *   db: string
+   *   server: import('#common/hapi-types.js').HapiServer
+   * }>}
+   */ (
+    dbTest.extend({
+      server: [
+        // destructuring db triggers MongoDB setup even though it is unused here
+        async ({ db: _db }, use) => {
+          const { createServer } = await import('#server/server.js')
+          const server = await createServer()
+          await server.initialize()
 
-      await use(server)
+          await use(server)
 
-      await server.stop()
-    },
-    { scope: 'file' }
-  ]
-})
+          await server.stop()
+        },
+        { scope: 'file' }
+      ]
+    })
+  )
