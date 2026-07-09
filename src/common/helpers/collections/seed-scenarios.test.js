@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import assert from 'node:assert'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   ORGANISATION_STATUS,
@@ -52,7 +53,7 @@ describe('seed-scenarios', () => {
       await createEprOrganisationScenarios(mockDb, repository)
 
       const orgs = await repository.findAll()
-      const orgIds = Object.values(SCENARIO_ORG_IDS)
+      const orgIds = /** @type {number[]} */ (Object.values(SCENARIO_ORG_IDS))
       const scenarioOrgs = orgs.filter((org) => orgIds.includes(org.orgId))
 
       expect(scenarioOrgs).toHaveLength(3)
@@ -73,7 +74,7 @@ describe('seed-scenarios', () => {
       // Verify all scenarios were created successfully
       await waitForCacheSync()
       const orgs = await repository.findAll()
-      const orgIds = Object.values(SCENARIO_ORG_IDS)
+      const orgIds = /** @type {number[]} */ (Object.values(SCENARIO_ORG_IDS))
       const scenarioOrgs = orgs.filter((org) => orgIds.includes(org.orgId))
 
       expect(scenarioOrgs).toHaveLength(3)
@@ -98,6 +99,7 @@ describe('seed-scenarios', () => {
       const approvedOrg = orgs.find(
         (org) => org.orgId === SCENARIO_ORG_IDS.APPROVED
       )
+      assert(approvedOrg)
 
       expect(approvedOrg).toBeDefined()
       expect(approvedOrg.status).toBe(ORGANISATION_STATUS.APPROVED)
@@ -127,6 +129,7 @@ describe('seed-scenarios', () => {
       const activeOrg = orgs.find(
         (org) => org.orgId === SCENARIO_ORG_IDS.ACTIVE
       )
+      assert(activeOrg)
 
       expect(activeOrg).toBeDefined()
       expect(activeOrg.status).toBe(ORGANISATION_STATUS.ACTIVE)
@@ -153,6 +156,7 @@ describe('seed-scenarios', () => {
         (org) =>
           org.orgId === SCENARIO_ORG_IDS.ACTIVE_WITH_SUSPENDED_ACCREDITATION
       )
+      assert(mixedOrg)
 
       expect(mixedOrg).toBeDefined()
       expect(mixedOrg.status).toBe(ORGANISATION_STATUS.ACTIVE)
@@ -178,6 +182,7 @@ describe('seed-scenarios', () => {
         const activeOrg = orgs.find(
           (org) => org.orgId === SCENARIO_ORG_IDS.ACTIVE
         )
+        assert(activeOrg)
 
         expect(
           activeOrg.users.some((u) => u.email === 'custom-tester@example.com')
@@ -204,6 +209,7 @@ describe('seed-scenarios', () => {
         const approvedOrg = orgs.find(
           (org) => org.orgId === SCENARIO_ORG_IDS.APPROVED
         )
+        assert(approvedOrg)
 
         expect(
           approvedOrg.users.some(
