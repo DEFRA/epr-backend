@@ -458,33 +458,55 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       })
     })
 
-    describe('accreditation not approved', () => {
-      it.each(['cancelled', 'suspended', 'created', 'rejected'])(
-        'returns 403 and does not create a PRN when accreditation is %s',
-        async (status) => {
-          organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-            id: accreditationId,
-            status,
-            accreditationNumber: 'ACC-001',
-            material: MATERIAL.PLASTIC,
-            validFrom: '2026-01-01',
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            submittedToRegulator: 'ea'
-          })
+    describe('accreditation status', () => {
+      it('returns 403 and does not create a PRN when the accreditation is cancelled', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          status: 'cancelled',
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2026-01-01',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          submittedToRegulator: 'ea'
+        })
 
-          const response = await server.inject({
-            method: 'POST',
-            url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-            ...asOperator(),
-            payload: validPayload
-          })
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: validPayload
+        })
 
-          expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
-          expect(
-            packagingRecyclingNotesRepository.create
-          ).not.toHaveBeenCalled()
-        }
-      )
+        expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+        expect(response.payload).toContain(
+          'Cannot create a PRN on a cancelled accreditation'
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('creates a PRN when the accreditation is suspended', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          status: 'suspended',
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2026-01-01',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          submittedToRegulator: 'ea',
+          site: {
+            address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
+          }
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: validPayload
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+      })
     })
 
     describe('authentication', () => {

@@ -1,3 +1,5 @@
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+
 export const PRN_NUMBER_MAX_LENGTH = 20
 
 /**
@@ -112,26 +114,30 @@ export class UnauthorisedTransitionError extends Error {
  * @throws {StatusConflictError} when no transition from currentStatus to newStatus exists
  * @throws {UnauthorisedTransitionError} when the transition exists but the actor is not permitted
  */
-export class AccreditationNotApprovedError extends Error {
-  /** @param {string} [status] the accreditation's current status, if known */
-  constructor(status) {
-    super(
-      status
-        ? `PRN actions require an approved accreditation (current status: ${status})`
-        : 'PRN actions require an approved accreditation'
-    )
+export class AccreditationStatusError extends Error {
+  /**
+   * @param {'create'|'issue'} action - the PRN action being attempted
+   * @param {string} [status] - the accreditation's current status
+   */
+  constructor(action, status) {
+    super(`Cannot ${action} a PRN on a ${status} accreditation`)
   }
 }
 
 /**
- * Asserts that an accreditation is currently approved. A suspended, cancelled,
- * created or rejected accreditation is not permitted to issue or draft PRNs.
+ * Asserts that an accreditation permits issuing a PRN. Issuing is blocked while
+ * the accreditation is suspended (temporary) or cancelled (terminal). A PRN can
+ * still be created (drafted) while suspended.
  * @param {{ status?: string } | null | undefined} accreditation
- * @throws {AccreditationNotApprovedError} when the accreditation is not approved
+ * @throws {AccreditationStatusError} when the accreditation is suspended or cancelled
  */
-export function assertAccreditationApproved(accreditation) {
-  if (accreditation?.status !== 'approved') {
-    throw new AccreditationNotApprovedError(accreditation?.status)
+export function assertAccreditationCanIssue(accreditation) {
+  const status = accreditation?.status
+  if (
+    status === REG_ACC_STATUS.SUSPENDED ||
+    status === REG_ACC_STATUS.CANCELLED
+  ) {
+    throw new AccreditationStatusError('issue', status)
   }
 }
 

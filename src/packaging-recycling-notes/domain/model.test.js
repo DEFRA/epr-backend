@@ -6,8 +6,8 @@ import {
   PRN_ACTOR,
   isValidTransition,
   validateTransition,
-  assertAccreditationApproved,
-  AccreditationNotApprovedError,
+  assertAccreditationCanIssue,
+  AccreditationStatusError,
   StatusConflictError,
   UnauthorisedTransitionError
 } from './model.js'
@@ -156,31 +156,30 @@ describe('validateTransition', () => {
   })
 })
 
-describe('assertAccreditationApproved', () => {
-  it('does not throw when accreditation is approved', () => {
-    expect(() =>
-      assertAccreditationApproved({ status: 'approved' })
-    ).not.toThrow()
-  })
-
-  it.each(['suspended', 'cancelled', 'created', 'rejected'])(
-    'throws AccreditationNotApprovedError when accreditation is %s',
+describe('assertAccreditationCanIssue', () => {
+  it.each(['approved', 'created', 'rejected'])(
+    'does not throw when accreditation is %s',
     (status) => {
-      expect(() => assertAccreditationApproved({ status })).toThrow(
-        AccreditationNotApprovedError
+      expect(() => assertAccreditationCanIssue({ status })).not.toThrow()
+    }
+  )
+
+  it.each(['suspended', 'cancelled'])(
+    'throws AccreditationStatusError when accreditation is %s',
+    (status) => {
+      expect(() => assertAccreditationCanIssue({ status })).toThrow(
+        AccreditationStatusError
       )
     }
   )
 
-  it('throws AccreditationNotApprovedError when accreditation is missing', () => {
-    expect(() => assertAccreditationApproved(null)).toThrow(
-      AccreditationNotApprovedError
-    )
+  it('does not throw when accreditation is missing', () => {
+    expect(() => assertAccreditationCanIssue(null)).not.toThrow()
   })
 
-  it('includes the current status in the error message', () => {
-    expect(() => assertAccreditationApproved({ status: 'cancelled' })).toThrow(
-      'PRN actions require an approved accreditation (current status: cancelled)'
+  it('describes the action and status in the error message', () => {
+    expect(() => assertAccreditationCanIssue({ status: 'suspended' })).toThrow(
+      'Cannot issue a PRN on a suspended accreditation'
     )
   })
 })

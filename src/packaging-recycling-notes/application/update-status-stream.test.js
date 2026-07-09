@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   PRN_STATUS,
   PRN_ACTOR,
-  AccreditationNotApprovedError
+  AccreditationStatusError
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
@@ -224,7 +224,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
           actor: PRN_ACTOR.SIGNATORY
         })
-      ).rejects.toThrow(AccreditationNotApprovedError)
+      ).rejects.toThrow(AccreditationStatusError)
 
       expect(appendEvents).not.toHaveBeenCalled()
       expect(persistProjection).not.toHaveBeenCalled()

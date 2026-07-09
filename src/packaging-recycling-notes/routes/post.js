@@ -7,13 +7,12 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import {
-  PRN_STATUS,
-  assertAccreditationApproved,
-  AccreditationNotApprovedError
-} from '#packaging-recycling-notes/domain/model.js'
+  WASTE_PROCESSING_TYPE,
+  REG_ACC_STATUS
+} from '#domain/organisations/model.js'
+import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
@@ -143,10 +142,6 @@ const throwCreatePrnError = (error, logger) => {
     throw error
   }
 
-  if (error instanceof AccreditationNotApprovedError) {
-    throw Boom.forbidden(error.message)
-  }
-
   logger.error({
     err: error,
     message: `Failure on ${packagingRecyclingNotesCreatePath}`,
@@ -205,7 +200,9 @@ export const packagingRecyclingNotesCreate = {
         organisationsRepository.findById(organisationId)
       ])
 
-      assertAccreditationApproved(accreditation)
+      if (accreditation.status === REG_ACC_STATUS.CANCELLED) {
+        throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
+      }
 
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER

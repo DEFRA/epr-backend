@@ -752,7 +752,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
           expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
           expect(response.payload).toContain(
-            `PRN actions require an approved accreditation (current status: ${status})`
+            `Cannot issue a PRN on a ${status} accreditation`
           )
         }
       )
