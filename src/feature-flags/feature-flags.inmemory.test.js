@@ -51,25 +51,6 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isSummaryLogRowStatesEnabled()).toBe(false)
   })
 
-  it('returns true when summaryLogRowStatesBackfill flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      summaryLogRowStatesBackfill: true
-    })
-    expect(flags.isSummaryLogRowStatesBackfillEnabled()).toBe(true)
-  })
-
-  it('returns false when summaryLogRowStatesBackfill flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      summaryLogRowStatesBackfill: false
-    })
-    expect(flags.isSummaryLogRowStatesBackfillEnabled()).toBe(false)
-  })
-
-  it('returns false when summaryLogRowStatesBackfill flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isSummaryLogRowStatesBackfillEnabled()).toBe(false)
-  })
-
   it('returns true when registeredOnlySubmittedEvents flag is enabled', () => {
     const flags = createInMemoryFeatureFlags({
       registeredOnlySubmittedEvents: true
@@ -87,25 +68,6 @@ describe('createInMemoryFeatureFlags', () => {
   it('returns false when registeredOnlySubmittedEvents flag is not provided', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isRegisteredOnlySubmittedEventsEnabled()).toBe(false)
-  })
-
-  it('returns true when summaryLogRowStatesDiscrepancyReport flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      summaryLogRowStatesDiscrepancyReport: true
-    })
-    expect(flags.isSummaryLogRowStatesDiscrepancyReportEnabled()).toBe(true)
-  })
-
-  it('returns false when summaryLogRowStatesDiscrepancyReport flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      summaryLogRowStatesDiscrepancyReport: false
-    })
-    expect(flags.isSummaryLogRowStatesDiscrepancyReportEnabled()).toBe(false)
-  })
-
-  it('returns false when summaryLogRowStatesDiscrepancyReport flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isSummaryLogRowStatesDiscrepancyReportEnabled()).toBe(false)
   })
 
   it('returns true when staleIssuedTonnageReport flag is enabled', () => {
