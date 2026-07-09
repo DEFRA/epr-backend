@@ -27,11 +27,11 @@ export function isDateInRange(value, startDate, endDate) {
 }
 
 /**
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecords
  * @param {string | undefined} dateField
  * @param {string} startDate
  * @param {string} endDate
- * @returns {import('#domain/waste-records/model.js').WasteRecord[]}
+ * @returns {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]}
  */
 export function filterRecordsByDateField(
   wasteRecords,

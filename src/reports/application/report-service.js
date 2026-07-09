@@ -2,6 +2,8 @@ import { badRequest, conflict } from '#common/helpers/logging/cdp-boom.js'
 import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
+import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
+import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
@@ -360,7 +362,8 @@ function buildReportData(aggregated, registration) {
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {object} params.wasteRecordsRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
  * @param {object} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
@@ -374,7 +377,8 @@ function buildReportData(aggregated, registration) {
  */
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
-  wasteRecordsRepository,
+  ledgerRepository,
+  summaryLogRowStateRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   organisationId,
@@ -400,17 +404,16 @@ export async function fetchOrGenerateReportForPeriod({
   }
 
   const operatorCategory = getOperatorCategory(registration)
-  const wasteRecords = await wasteRecordsRepository.findByRegistration(
-    organisationId,
-    registrationId
-  )
 
   return getAggregatedReportDetail({
+    ledgerRepository,
+    summaryLogRowStateRepository,
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
-    wasteRecords,
     operatorCategory,
     registration,
+    organisationId,
+    registrationId,
     year,
     cadence,
     period
@@ -418,38 +421,80 @@ export async function fetchOrGenerateReportForPeriod({
 }
 
 /**
- * Aggregates waste records into a report and appends issued PRN tonnage.
+ * Resolves the report source — which submission produced the current state, and
+ * when it was submitted — from the latest submitted summary log. A stream with
+ * no submission yet has a null source.
+ *
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
+ * @param {{ registrationId: string, accreditationId: string | null }} ledgerId
+ * @returns {Promise<{ summaryLogId: string|null, lastUploadedAt: string|null }>}
+ */
+async function resolveSource(ledgerRepository, ledgerId) {
+  const latest = await latestSubmittedSummaryLog(ledgerRepository, ledgerId)
+  return latest === null
+    ? { summaryLogId: null, lastUploadedAt: null }
+    : {
+        summaryLogId: latest.summaryLogId,
+        lastUploadedAt: latest.submittedAt.toISOString()
+      }
+}
+
+/**
+ * Aggregates a registration's waste-record states at its latest submitted
+ * summary log into a report and appends issued PRN tonnage.
  * @param {object} params
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
  * @param {object} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {string} params.operatorCategory
  * @param {object} params.registration
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
  * @param {number} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | null }>}
  */
 async function getAggregatedReportDetail({
+  ledgerRepository,
+  summaryLogRowStateRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
-  wasteRecords,
   operatorCategory,
   registration,
+  organisationId,
+  registrationId,
   year,
   cadence,
   period
 }) {
+  const accreditationId = registration.accreditationId ?? null
+
+  const wasteRecordStates = await summaryLogRowStatesForRegistration({
+    ledgerRepository,
+    summaryLogRowStateRepository,
+    organisationId,
+    registrationId,
+    accreditationId
+  })
+
+  const source = await resolveSource(ledgerRepository, {
+    registrationId,
+    accreditationId
+  })
+
   const orsDetailsMap = await getOrsDetailsMap(
     overseasSitesRepository,
     registration.overseasSites
   )
 
-  const aggregatedReportDetail = aggregateReportDetail(wasteRecords, {
+  const aggregatedReportDetail = aggregateReportDetail(wasteRecordStates, {
     operatorCategory,
     cadence,
     year,
     period,
+    source,
     orsDetailsMap
   })
 
@@ -468,7 +513,8 @@ async function getAggregatedReportDetail({
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {object} params.wasteRecordsRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
  * @param {object} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
@@ -483,7 +529,8 @@ async function getAggregatedReportDetail({
  */
 export async function createReportForPeriod({
   reportsRepository,
-  wasteRecordsRepository,
+  ledgerRepository,
+  summaryLogRowStateRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   organisationId,
@@ -526,17 +573,16 @@ export async function createReportForPeriod({
   )
 
   const operatorCategory = getOperatorCategory(registration)
-  const wasteRecords = await wasteRecordsRepository.findByRegistration(
-    organisationId,
-    registrationId
-  )
 
   const aggregatedReportData = await getAggregatedReportDetail({
+    ledgerRepository,
+    summaryLogRowStateRepository,
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
-    wasteRecords,
     operatorCategory,
     registration,
+    organisationId,
+    registrationId,
     year,
     cadence,
     period

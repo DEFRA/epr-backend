@@ -20,14 +20,19 @@ const WASTE_RECEIVED_TYPES = new Set([
 const isWasteReceivedType = (type) => WASTE_RECEIVED_TYPES.has(type)
 
 /**
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteReceivedRecords
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteReceivedRecords
  * @param {string} tonnageField
  */
 export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
-  const validEntries = wasteReceivedRecords.filter(({ type, data }) => {
-    const tonnage = toNumber(data[tonnageField])
-    return isWasteReceivedType(type) && isTonnageGreaterThanZero(tonnage)
-  })
+  const validEntries = wasteReceivedRecords.filter(
+    ({ wasteRecordType, data }) => {
+      const tonnage = toNumber(data[tonnageField])
+      return (
+        isWasteReceivedType(wasteRecordType) &&
+        isTonnageGreaterThanZero(tonnage)
+      )
+    }
+  )
 
   const totalTonnageDecimal = validEntries.reduce(
     (acc, { data }) =>

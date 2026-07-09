@@ -4,7 +4,10 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
@@ -16,6 +19,9 @@ import {
   createReportsService
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+
+const SUMMARY_LOG_ID = 'sl-1'
+const SUBMITTED_AT = new Date('2024-01-15T00:00:00.000Z')
 
 const buildRegistration = (overrides = {}) => {
   const hasAccreditationIdOverride = 'accreditationId' in overrides
@@ -45,35 +51,60 @@ const buildRegistration = (overrides = {}) => {
   }
 }
 
-const buildWasteRecord = ({
-  data = {},
-  createdAt = '2024-01-15T00:00:00Z',
-  summaryLogId = 'sl-1'
-} = {}) => ({
-  id: new ObjectId().toString(),
-  type: WASTE_RECORD_TYPE.RECEIVED,
-  data: {
-    SUPPLIER_NAME: 'Supplier A',
-    ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Reprocessor',
-    TONNAGE_RECEIVED_FOR_RECYCLING: '100',
-    DATE_RECEIVED_FOR_REPROCESSING: '2024-01-10',
-    FINAL_DESTINATION_NAME: 'Dest A',
-    FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
-    TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: '50',
-    DATE_LOAD_LEFT_SITE: '2024-01-12',
-    ...data
-  },
-  versions: [{ createdAt, summaryLog: { id: summaryLogId } }]
-})
-
-const buildWasteRecordsRepository = (params) =>
-  createInMemoryWasteRecordsRepository([
-    {
-      ...buildWasteRecord(),
-      organisationId: params.organisationId,
-      registrationId: params.registrationId
+const buildReceivedEntry = (overrides = {}) =>
+  buildSummaryLogRowStateEntry({
+    rowId: 'row-1',
+    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+    data: {
+      SUPPLIER_NAME: 'Supplier A',
+      ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Reprocessor',
+      TONNAGE_RECEIVED_FOR_RECYCLING: '100',
+      DATE_RECEIVED_FOR_REPROCESSING: '2024-01-10',
+      FINAL_DESTINATION_NAME: 'Dest A',
+      FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
+      TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: '50',
+      DATE_LOAD_LEFT_SITE: '2024-01-12',
+      ...overrides
     }
-  ])()
+  })
+
+/**
+ * Seeds the summary-log row states and the waste balance ledger so that the
+ * report service resolves `entries` as the state at the latest submitted
+ * summary log. An empty `entries` leaves the ledger without a submission.
+ */
+const seedState = async ({ organisationId, registration }, entries) => {
+  const accreditationId = registration.accreditationId ?? null
+  const ledgerId = {
+    organisationId,
+    registrationId: registration.id,
+    accreditationId
+  }
+  const summaryLogRowStateRepository =
+    createInMemorySummaryLogRowStateRepository()()
+  const ledgerEvents = []
+  if (entries.length > 0) {
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+      ledgerId,
+      entries,
+      SUMMARY_LOG_ID
+    )
+    ledgerEvents.push(
+      buildLedgerEvent({
+        organisationId,
+        registrationId: registration.id,
+        accreditationId,
+        number: 1,
+        createdAt: SUBMITTED_AT,
+        payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
+      })
+    )
+  }
+  return {
+    ledgerRepository: createInMemoryLedgerRepository(ledgerEvents)(),
+    summaryLogRowStateRepository
+  }
+}
 
 const createPrnRepo = (initialData = []) =>
   createInMemoryPackagingRecyclingNotesRepository(initialData)(
@@ -101,13 +132,15 @@ describe('report-service', () => {
   describe('fetchOrGenerateReportForPeriod', () => {
     it('returns computed report when no stored report exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
       const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
+      const { ledgerRepository, summaryLogRowStateRepository } =
+        await seedState(params, [])
 
       const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
-        wasteRecordsRepository,
+        ledgerRepository,
+        summaryLogRowStateRepository,
         packagingRecyclingNotesRepository,
         ...params
       })
@@ -119,9 +152,10 @@ describe('report-service', () => {
 
     it('returns stored report when one exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
       const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
+      const { ledgerRepository, summaryLogRowStateRepository } =
+        await seedState(params, [])
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       await reportsRepository.createReport({
@@ -158,7 +192,8 @@ describe('report-service', () => {
 
       const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
-        wasteRecordsRepository,
+        ledgerRepository,
+        summaryLogRowStateRepository,
         packagingRecyclingNotesRepository,
         ...params
       })
@@ -171,9 +206,10 @@ describe('report-service', () => {
 
     it('returns stored report when submissionNumber matches a previous submission', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
       const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
+      const { ledgerRepository, summaryLogRowStateRepository } =
+        await seedState(params, [])
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const baseReport = {
@@ -223,7 +259,8 @@ describe('report-service', () => {
 
       const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
-        wasteRecordsRepository,
+        ledgerRepository,
+        summaryLogRowStateRepository,
         packagingRecyclingNotesRepository,
         ...params,
         submissionNumber: 1
@@ -236,20 +273,15 @@ describe('report-service', () => {
 
     it('returns computed report with aggregated waste data', async () => {
       const params = defaultParams()
-      const record = buildWasteRecord()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([
-        {
-          organisationId: params.organisationId,
-          registrationId: params.registrationId,
-          ...record
-        }
-      ])()
+      const { ledgerRepository, summaryLogRowStateRepository } =
+        await seedState(params, [buildReceivedEntry()])
       const reportsRepository = createInMemoryReportsRepository()()
       const packagingRecyclingNotesRepository = createPrnRepo()
 
       const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
-        wasteRecordsRepository,
+        ledgerRepository,
+        summaryLogRowStateRepository,
         packagingRecyclingNotesRepository,
         ...params
       })
@@ -318,13 +350,15 @@ describe('report-service', () => {
     it('creates a report and returns the full object', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()
-      const wasteRecordsRepository = buildWasteRecordsRepository(params)
+      const { ledgerRepository, summaryLogRowStateRepository } =
+        await seedState(params, [buildReceivedEntry()])
       const packagingRecyclingNotesRepository = createPrnRepo()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
         reportsRepository,
-        wasteRecordsRepository,
+        ledgerRepository,
+        summaryLogRowStateRepository,
         packagingRecyclingNotesRepository,
         ...params,
         changedBy
@@ -340,13 +374,15 @@ describe('report-service', () => {
     it('throws conflict when report already exists for period', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()
-      const wasteRecordsRepository = buildWasteRecordsRepository(params)
+      const { ledgerRepository, summaryLogRowStateRepository } =
+        await seedState(params, [buildReceivedEntry()])
       const packagingRecyclingNotesRepository = createPrnRepo()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       await createReportForPeriod({
         reportsRepository,
-        wasteRecordsRepository,
+        ledgerRepository,
+        summaryLogRowStateRepository,
         packagingRecyclingNotesRepository,
         ...params,
         changedBy
@@ -355,7 +391,8 @@ describe('report-service', () => {
       await expect(
         createReportForPeriod({
           reportsRepository,
-          wasteRecordsRepository,
+          ledgerRepository,
+          summaryLogRowStateRepository,
           packagingRecyclingNotesRepository,
           ...params,
           changedBy
@@ -365,16 +402,18 @@ describe('report-service', () => {
 
     it('throws badRequest for period that has not yet ended', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
       const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
       params.year = 2099
+      const { ledgerRepository, summaryLogRowStateRepository } =
+        await seedState(params, [])
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       await expect(
         createReportForPeriod({
           reportsRepository,
-          wasteRecordsRepository,
+          ledgerRepository,
+          summaryLogRowStateRepository,
           packagingRecyclingNotesRepository,
           ...params,
           changedBy
@@ -389,13 +428,15 @@ describe('report-service', () => {
         material: 'glass',
         glassRecyclingProcess: ['glass_re_melt']
       })
-      const wasteRecordsRepository = buildWasteRecordsRepository(params)
+      const { ledgerRepository, summaryLogRowStateRepository } =
+        await seedState(params, [buildReceivedEntry()])
       const packagingRecyclingNotesRepository = createPrnRepo()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
         reportsRepository,
-        wasteRecordsRepository,
+        ledgerRepository,
+        summaryLogRowStateRepository,
         packagingRecyclingNotesRepository,
         ...params,
         changedBy
@@ -407,13 +448,15 @@ describe('report-service', () => {
     it('formats site address into single-line string', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()
-      const wasteRecordsRepository = buildWasteRecordsRepository(params)
+      const { ledgerRepository, summaryLogRowStateRepository } =
+        await seedState(params, [buildReceivedEntry()])
       const packagingRecyclingNotesRepository = createPrnRepo()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
         reportsRepository,
-        wasteRecordsRepository,
+        ledgerRepository,
+        summaryLogRowStateRepository,
         packagingRecyclingNotesRepository,
         ...params,
         changedBy
@@ -455,12 +498,14 @@ describe('report-service', () => {
         const reportsRepository = createInMemoryReportsRepository()()
         const params = defaultParams()
         params.registration = buildRegistration({ accreditationId: undefined })
-        const wasteRecordsRepository = buildWasteRecordsRepository(params)
+        const { ledgerRepository, summaryLogRowStateRepository } =
+          await seedState(params, [buildReceivedEntry()])
         const prnRepo = createPrnRepo()
 
         const report = await createReportForPeriod({
           reportsRepository,
-          wasteRecordsRepository,
+          ledgerRepository,
+          summaryLogRowStateRepository,
           packagingRecyclingNotesRepository: prnRepo,
           ...params,
           changedBy
@@ -472,12 +517,14 @@ describe('report-service', () => {
       it('persists prn with issuedTonnage 0 when accredited and no PRNs exist', async () => {
         const reportsRepository = createInMemoryReportsRepository()()
         const params = defaultParams()
-        const wasteRecordsRepository = buildWasteRecordsRepository(params)
+        const { ledgerRepository, summaryLogRowStateRepository } =
+          await seedState(params, [buildReceivedEntry()])
         const prnRepo = createPrnRepo()
 
         const report = await createReportForPeriod({
           reportsRepository,
-          wasteRecordsRepository,
+          ledgerRepository,
+          summaryLogRowStateRepository,
           packagingRecyclingNotesRepository: prnRepo,
           ...params,
           changedBy
@@ -489,7 +536,8 @@ describe('report-service', () => {
       it('persists prn with summed issuedTonnage from PRNs in period', async () => {
         const reportsRepository = createInMemoryReportsRepository()()
         const params = defaultParams()
-        const wasteRecordsRepository = buildWasteRecordsRepository(params)
+        const { ledgerRepository, summaryLogRowStateRepository } =
+          await seedState(params, [buildReceivedEntry()])
         const prnRepo = createPrnRepo()
 
         await prnRepo.create(
@@ -501,7 +549,8 @@ describe('report-service', () => {
 
         const report = await createReportForPeriod({
           reportsRepository,
-          wasteRecordsRepository,
+          ledgerRepository,
+          summaryLogRowStateRepository,
           packagingRecyclingNotesRepository: prnRepo,
           ...params,
           changedBy

@@ -1,49 +1,46 @@
 import { describe, expect, it } from 'vitest'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 import { aggregateReportDetail } from './aggregate-report-detail.js'
 
-const buildReceivedRecord = (overrides = {}) => ({
-  type: WASTE_RECORD_TYPE.RECEIVED,
-  data: {
-    MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
-    TONNAGE_RECEIVED_FOR_RECYCLING: 50,
-    SUPPLIER_NAME: 'Grantham Waste',
-    ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler',
-    ...overrides
-  },
-  versions: [
-    {
-      createdAt: '2026-02-10T09:00:00.000Z',
-      summaryLog: { id: 'sl-1' }
-    }
-  ]
-})
+const DEFAULT_SOURCE = {
+  summaryLogId: 'sl-1',
+  lastUploadedAt: '2026-02-10T09:00:00.000Z'
+}
 
-const buildSentOnRecord = (overrides = {}) => ({
-  type: WASTE_RECORD_TYPE.SENT_ON,
-  data: {
-    DATE_LOAD_LEFT_SITE: '2026-02-15',
-    TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 10,
-    FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
-    FINAL_DESTINATION_NAME: 'Lincoln recycling',
-    ...overrides
-  },
-  versions: [
-    {
-      createdAt: '2026-02-10T09:00:00.000Z',
-      summaryLog: { id: 'sl-1' }
+const buildReceivedRecord = (overrides = {}) =>
+  buildSummaryLogRowStateEntry({
+    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+    data: {
+      MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
+      TONNAGE_RECEIVED_FOR_RECYCLING: 50,
+      SUPPLIER_NAME: 'Grantham Waste',
+      ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler',
+      ...overrides
     }
-  ]
-})
+  })
+
+const buildSentOnRecord = (overrides = {}) =>
+  buildSummaryLogRowStateEntry({
+    wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+    data: {
+      DATE_LOAD_LEFT_SITE: '2026-02-15',
+      TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 10,
+      FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
+      FINAL_DESTINATION_NAME: 'Lincoln recycling',
+      ...overrides
+    }
+  })
 
 describe('#aggregateReportDetail', () => {
   const defaultArgs = {
     operatorCategory: OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY,
     cadence: 'quarterly',
     year: 2026,
-    period: 1
+    period: 1,
+    source: DEFAULT_SOURCE
   }
 
   describe('period metadata', () => {
@@ -79,55 +76,29 @@ describe('#aggregateReportDetail', () => {
     })
   })
 
-  describe('lastUploadedAt and source', () => {
-    it('returns null when no waste records match', () => {
-      const result = aggregateReportDetail([], defaultArgs)
+  describe('source', () => {
+    it('passes the caller-resolved source through unchanged', () => {
+      const source = {
+        summaryLogId: 'sl-7',
+        lastUploadedAt: '2026-02-15T15:09:00.000Z'
+      }
+
+      const result = aggregateReportDetail([buildReceivedRecord()], {
+        ...defaultArgs,
+        source
+      })
+
+      expect(result.source).toStrictEqual(source)
+    })
+
+    it('carries a null source through for a stream with no committed head', () => {
+      const result = aggregateReportDetail([], {
+        ...defaultArgs,
+        source: { summaryLogId: null, lastUploadedAt: null }
+      })
 
       expect(result.source.summaryLogId).toBeNull()
       expect(result.source.lastUploadedAt).toBeNull()
-    })
-
-    it('uses the latest waste record version timestamp when multiple records exist', () => {
-      const records = [
-        buildReceivedRecord(),
-        {
-          ...buildReceivedRecord({
-            MONTH_RECEIVED_FOR_REPROCESSING: '2026-02',
-            TONNAGE_RECEIVED_FOR_RECYCLING: 30
-          }),
-          versions: [
-            {
-              createdAt: '2026-02-15T15:09:00.000Z',
-              summaryLog: { id: 'sl-2' }
-            }
-          ]
-        }
-      ]
-
-      const result = aggregateReportDetail(records, defaultArgs)
-
-      expect(result.source.lastUploadedAt).toBe('2026-02-15T15:09:00.000Z')
-      expect(result.source.summaryLogId).toBe('sl-2')
-    })
-
-    it('uses the latest waste record version timestamp across received and sentOn records', () => {
-      const records = [
-        buildReceivedRecord(),
-        {
-          ...buildSentOnRecord(),
-          versions: [
-            {
-              createdAt: '2026-03-01T12:00:00.000Z',
-              summaryLog: { id: 'sl-3' }
-            }
-          ]
-        }
-      ]
-
-      const result = aggregateReportDetail(records, defaultArgs)
-
-      expect(result.source.lastUploadedAt).toBe('2026-03-01T12:00:00.000Z')
-      expect(result.source.summaryLogId).toBe('sl-3')
     })
   })
 
@@ -406,42 +377,33 @@ describe('#aggregateReportDetail', () => {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY,
       cadence: 'quarterly',
       year: 2026,
-      period: 1
+      period: 1,
+      source: DEFAULT_SOURCE
     }
 
-    const buildExporterReceivedRecord = (overrides = {}) => ({
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      data: {
-        MONTH_RECEIVED_FOR_EXPORT: '2026-01',
-        TONNAGE_RECEIVED_FOR_EXPORT: 50,
-        SUPPLIER_NAME: 'Grantham Waste',
-        ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler',
-        ...overrides
-      },
-      versions: [
-        {
-          createdAt: '2026-02-10T09:00:00.000Z',
-          summaryLog: { id: 'sl-1' }
+    const buildExporterReceivedRecord = (overrides = {}) =>
+      buildSummaryLogRowStateEntry({
+        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          MONTH_RECEIVED_FOR_EXPORT: '2026-01',
+          TONNAGE_RECEIVED_FOR_EXPORT: 50,
+          SUPPLIER_NAME: 'Grantham Waste',
+          ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler',
+          ...overrides
         }
-      ]
-    })
+      })
 
-    const buildExportedRecord = (overrides = {}) => ({
-      type: WASTE_RECORD_TYPE.EXPORTED,
-      data: {
-        DATE_OF_EXPORT: '2026-01-15',
-        TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5,
-        OSR_NAME: 'EuroPlast Recycling GmbH',
-        OSR_ID: '001',
-        ...overrides
-      },
-      versions: [
-        {
-          createdAt: '2026-02-10T09:00:00.000Z',
-          summaryLog: { id: 'sl-1' }
+    const buildExportedRecord = (overrides = {}) =>
+      buildSummaryLogRowStateEntry({
+        wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          DATE_OF_EXPORT: '2026-01-15',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5,
+          OSR_NAME: 'EuroPlast Recycling GmbH',
+          OSR_ID: '001',
+          ...overrides
         }
-      ]
-    })
+      })
 
     it('uses TONNAGE_RECEIVED_FOR_EXPORT for waste received', () => {
       const records = [
@@ -942,26 +904,22 @@ describe('#aggregateReportDetail', () => {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER,
       cadence: 'monthly',
       year: 2026,
-      period: 2
+      period: 2,
+      source: DEFAULT_SOURCE
     }
 
-    const buildAccreditedExportedRecord = (overrides = {}) => ({
-      type: WASTE_RECORD_TYPE.EXPORTED,
-      data: {
-        DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-        DATE_OF_EXPORT: '2026-02-20',
-        TONNAGE_RECEIVED_FOR_EXPORT: 50,
-        TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 48,
-        OSR_ID: '001',
-        ...overrides
-      },
-      versions: [
-        {
-          createdAt: '2026-02-10T09:00:00.000Z',
-          summaryLog: { id: 'sl-1' }
+    const buildAccreditedExportedRecord = (overrides = {}) =>
+      buildSummaryLogRowStateEntry({
+        wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+          DATE_OF_EXPORT: '2026-02-20',
+          TONNAGE_RECEIVED_FOR_EXPORT: 50,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 48,
+          OSR_ID: '001',
+          ...overrides
         }
-      ]
-    })
+      })
 
     it('aggregates waste received from exported records using DATE_RECEIVED_FOR_EXPORT', () => {
       const records = [
@@ -1190,20 +1148,14 @@ describe('#aggregateReportDetail', () => {
 
     it('excludes records with missing date fields from all periods', () => {
       const records = [
-        {
-          type: WASTE_RECORD_TYPE.RECEIVED,
+        buildSummaryLogRowStateEntry({
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
           data: {
             TONNAGE_RECEIVED_FOR_RECYCLING: 100,
             SUPPLIER_NAME: 'Test',
             ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
-          },
-          versions: [
-            {
-              createdAt: '2026-01-01T00:00:00.000Z',
-              summaryLog: { id: 'sl-1' }
-            }
-          ]
-        }
+          }
+        })
       ]
 
       const result = aggregateReportDetail(records, defaultArgs)
@@ -1226,7 +1178,8 @@ describe('#aggregateReportDetail', () => {
         operatorCategory: OPERATOR_CATEGORY.REPROCESSOR,
         cadence: 'monthly',
         year: 2026,
-        period: 1
+        period: 1,
+        source: DEFAULT_SOURCE
       })
 
       // The record has MONTH_RECEIVED_FOR_REPROCESSING but the accredited
@@ -1239,27 +1192,22 @@ describe('#aggregateReportDetail', () => {
     })
 
     it('silently excludes registered-only records when aggregating as accredited exporter', () => {
-      const registeredOnlyRecord = {
-        type: WASTE_RECORD_TYPE.RECEIVED,
+      const registeredOnlyRecord = buildSummaryLogRowStateEntry({
+        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
         data: {
           MONTH_RECEIVED_FOR_EXPORT: '2026-02-01',
           TONNAGE_RECEIVED_FOR_EXPORT: 40,
           SUPPLIER_NAME: 'Coastline Waste',
           ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
-        },
-        versions: [
-          {
-            createdAt: '2026-03-01T10:00:00.000Z',
-            summaryLog: { id: 'sl-1' }
-          }
-        ]
-      }
+        }
+      })
 
       const result = aggregateReportDetail([registeredOnlyRecord], {
         operatorCategory: OPERATOR_CATEGORY.EXPORTER,
         cadence: 'monthly',
         year: 2026,
-        period: 2
+        period: 2,
+        source: DEFAULT_SOURCE
       })
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(0)
