@@ -2,7 +2,7 @@
 
 /**
  * @typedef {{
- *  status: 'created'|'approved'|'suspended';
+ *  status: RegAccStatus;
  *  updatedAt: string;
  * }} StatusHistoryEntry
  */
