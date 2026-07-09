@@ -61,11 +61,9 @@ describe('mock-repositories', () => {
         'findAllAccreditations',
         'findAccreditationById',
         'findAccreditationsBySystemReference',
-        'findAccreditationsCreatedAfter',
         'findAllRegistrations',
         'findRegistrationById',
         'findRegistrationsBySystemReference',
-        'findRegistrationsCreatedAfter',
         'findAllOrganisations',
         'findOrganisationById',
         'findAllFormSubmissionIds'
