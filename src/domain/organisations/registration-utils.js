@@ -77,10 +77,7 @@ export function isRegistrationAccredited(registration) {
  * when the accreditation is absent or not live. Used to bound an accredited
  * operator's monthly report obligations to the date their accreditation began.
  *
- * The status check narrows the accreditation to its approved/suspended variant,
- * on which `validFrom` is a required field.
- *
- * @param {Accreditation | null | undefined} accreditation
+ * @param {{ status: RegAccStatus, validFrom?: string | null } | null | undefined} accreditation
  * @returns {string | null}
  */
 export function activeAccreditationValidFrom(accreditation) {
@@ -89,7 +86,7 @@ export function activeAccreditationValidFrom(accreditation) {
     (accreditation.status === REG_ACC_STATUS.APPROVED ||
       accreditation.status === REG_ACC_STATUS.SUSPENDED)
   ) {
-    return accreditation.validFrom
+    return accreditation.validFrom ?? null
   }
   return null
 }

@@ -299,10 +299,12 @@ describe(`GET ${reportsGetPath}`, () => {
         vi.useRealTimers()
       })
 
-      const buildAccreditedServer = async ({
-        validFrom,
-        status = 'approved'
-      }) => {
+      const buildAccreditedServer = async (
+        /** @type {{ validFrom: string, status?: 'approved' | 'suspended' }} */ {
+          validFrom,
+          status = 'approved'
+        }
+      ) => {
         const registration = buildRegistration({
           wasteProcessingType: 'exporter',
           accreditationId: new ObjectId().toString()
