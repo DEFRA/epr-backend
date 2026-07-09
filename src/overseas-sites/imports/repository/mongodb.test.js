@@ -1,26 +1,36 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
+import assert from 'node:assert'
 import { afterEach, describe, expect, vi } from 'vitest'
 import { createOrsImportsRepository } from './mongodb.js'
 import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
 
+/**
+ * @import { TestAPI } from 'vitest'
+ * @import { OrsImportsRepository } from './port.js'
+ *
+ * @typedef {{ mongoClient: MongoClient, repository: OrsImportsRepository }} MongoFixtures
+ */
+
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'ors-imports'
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  },
+const it = /** @type {TestAPI<MongoFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
 
-  repository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    await database.collection(COLLECTION_NAME).deleteMany({})
-    const factory = await createOrsImportsRepository(database)
-    await use(factory())
-  }
-})
+    repository: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      await database.collection(COLLECTION_NAME).deleteMany({})
+      const factory = await createOrsImportsRepository(database)
+      await use(factory())
+    }
+  })
+)
 
 describe('MongoDB ORS imports repository', () => {
   afterEach(() => {
@@ -39,6 +49,8 @@ describe('MongoDB ORS imports repository', () => {
     expect(created.updatedAt).toBeDefined()
 
     const found = await repository.findById('import-test-1')
+    assert(found)
+
     expect(found._id).toBe('import-test-1')
     expect(found.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
     expect(found.files).toHaveLength(1)
@@ -63,6 +75,8 @@ describe('MongoDB ORS imports repository', () => {
 
     expect(result).toBe(true)
     const found = await repository.findById('import-test-2')
+    assert(found)
+
     expect(found.status).toBe(ORS_IMPORT_STATUS.PROCESSING)
   })
 
@@ -92,6 +106,8 @@ describe('MongoDB ORS imports repository', () => {
     await repository.addFiles('import-test-add', files)
 
     const found = await repository.findById('import-test-add')
+    assert(found)
+
     expect(found.files).toHaveLength(2)
     expect(found.files[0]).toEqual(files[0])
     expect(found.files[1]).toEqual(files[1])
@@ -148,6 +164,8 @@ describe('MongoDB ORS imports repository', () => {
     await repository.updateStatus('import-ttl-2', ORS_IMPORT_STATUS.PROCESSING)
 
     const found = await repository.findById('import-ttl-2')
+    assert(found?.expiresAt)
+
     expect(found.expiresAt).toBeInstanceOf(Date)
     expect(found.expiresAt.getTime()).toBeGreaterThan(
       new Date('2026-01-15T13:00:00.000Z').getTime()
@@ -166,6 +184,8 @@ describe('MongoDB ORS imports repository', () => {
     await repository.updateStatus('import-ttl-3', ORS_IMPORT_STATUS.COMPLETED)
 
     const found = await repository.findById('import-ttl-3')
+    assert(found)
+
     expect(found.expiresAt).toBeNull()
   })
 
@@ -185,6 +205,8 @@ describe('MongoDB ORS imports repository', () => {
 
     expect(result).toBe(false)
     const found = await repository.findById('import-forward-1')
+    assert(found)
+
     expect(found.status).toBe(ORS_IMPORT_STATUS.COMPLETED)
   })
 
@@ -204,6 +226,8 @@ describe('MongoDB ORS imports repository', () => {
 
     expect(result).toBe(false)
     const found = await repository.findById('import-forward-2')
+    assert(found)
+
     expect(found.status).toBe(ORS_IMPORT_STATUS.FAILED)
   })
 
@@ -228,6 +252,8 @@ describe('MongoDB ORS imports repository', () => {
     await repository.recordFileResult('import-test-3', 1, result)
 
     const found = await repository.findById('import-test-3')
+    assert(found)
+
     expect(found.files[0].result).toBeUndefined()
     expect(found.files[1].result).toEqual(result)
   })
