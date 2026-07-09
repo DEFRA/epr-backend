@@ -12,7 +12,7 @@ import {
   PRN_STATUS,
   PRN_ACTOR,
   StatusConflictError,
-  SuspendedAccreditationError,
+  AccreditationStatusError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
@@ -146,7 +146,7 @@ export const packagingRecyclingNotesUpdateStatus = {
 
       return h.response(buildResponse(updatedPrn)).code(StatusCodes.OK)
     } catch (error) {
-      if (error instanceof SuspendedAccreditationError) {
+      if (error instanceof AccreditationStatusError) {
         throw Boom.forbidden(error.message)
       }
 

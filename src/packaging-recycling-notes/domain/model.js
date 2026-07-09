@@ -1,3 +1,5 @@
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+
 export const PRN_NUMBER_MAX_LENGTH = 20
 
 /**
@@ -112,20 +114,30 @@ export class UnauthorisedTransitionError extends Error {
  * @throws {StatusConflictError} when no transition from currentStatus to newStatus exists
  * @throws {UnauthorisedTransitionError} when the transition exists but the actor is not permitted
  */
-export class SuspendedAccreditationError extends Error {
-  constructor() {
-    super('Cannot issue a PRN on a suspended accreditation')
+export class AccreditationStatusError extends Error {
+  /**
+   * @param {'create'|'issue'} action - the PRN action being attempted
+   * @param {string} [status] - the accreditation's current status
+   */
+  constructor(action, status) {
+    super(`Cannot ${action} a PRN on a ${status} accreditation`)
   }
 }
 
 /**
- * Asserts that an accreditation is not suspended.
- * @param {{ status: string }} accreditation
- * @throws {SuspendedAccreditationError} when the accreditation is suspended
+ * Asserts that an accreditation permits issuing a PRN. Issuing is blocked while
+ * the accreditation is suspended (temporary) or cancelled (terminal). A PRN can
+ * still be created (drafted) while suspended.
+ * @param {{ status?: string } | null | undefined} accreditation
+ * @throws {AccreditationStatusError} when the accreditation is suspended or cancelled
  */
-export function assertAccreditationNotSuspended(accreditation) {
-  if (accreditation?.status === 'suspended') {
-    throw new SuspendedAccreditationError()
+export function assertAccreditationCanIssue(accreditation) {
+  const status = accreditation?.status
+  if (
+    status === REG_ACC_STATUS.SUSPENDED ||
+    status === REG_ACC_STATUS.CANCELLED
+  ) {
+    throw new AccreditationStatusError('issue', status)
   }
 }
 
