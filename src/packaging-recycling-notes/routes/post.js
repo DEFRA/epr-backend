@@ -132,6 +132,40 @@ const buildResponse = (prn, { wasteProcessingType }) => ({
   wasteProcessingType
 })
 
+/**
+ * Maps an error thrown while creating a PRN to the appropriate Boom response.
+ * @param {{ isBoom?: boolean, message?: string }} error
+ * @param {{ error: (details: object) => void }} logger
+ * @returns {never}
+ */
+const throwCreatePrnError = (error, logger) => {
+  if (error.isBoom) {
+    throw error
+  }
+
+  if (error instanceof AccreditationNotApprovedError) {
+    throw Boom.forbidden(error.message)
+  }
+
+  logger.error({
+    err: error,
+    message: `Failure on ${packagingRecyclingNotesCreatePath}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+    },
+    http: {
+      response: {
+        status_code: StatusCodes.INTERNAL_SERVER_ERROR
+      }
+    }
+  })
+
+  throw Boom.badImplementation(
+    `Failure on ${packagingRecyclingNotesCreatePath}`
+  )
+}
+
 export const packagingRecyclingNotesCreate = {
   method: 'POST',
   path: packagingRecyclingNotesCreatePath,
@@ -208,31 +242,7 @@ export const packagingRecyclingNotesCreate = {
         .response(buildResponse(prn, accreditation))
         .code(StatusCodes.CREATED)
     } catch (error) {
-      if (error.isBoom) {
-        throw error
-      }
-
-      if (error instanceof AccreditationNotApprovedError) {
-        throw Boom.forbidden(error.message)
-      }
-
-      logger.error({
-        err: error,
-        message: `Failure on ${packagingRecyclingNotesCreatePath}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-        },
-        http: {
-          response: {
-            status_code: StatusCodes.INTERNAL_SERVER_ERROR
-          }
-        }
-      })
-
-      throw Boom.badImplementation(
-        `Failure on ${packagingRecyclingNotesCreatePath}`
-      )
+      throwCreatePrnError(error, logger)
     }
   }
 }
