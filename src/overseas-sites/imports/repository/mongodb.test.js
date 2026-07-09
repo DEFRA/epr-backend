@@ -6,6 +6,7 @@ import { createOrsImportsRepository } from './mongodb.js'
 import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
 
 /**
+ * @import { TestAPI } from 'vitest'
  * @import { OrsImportsRepository } from './port.js'
  * @typedef {{ mongoClient: MongoClient, repository: OrsImportsRepository }} MongoFixtures
  */
@@ -13,7 +14,7 @@ import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'ors-imports'
 
-const it = /** @type {import('vitest').TestAPI<MongoFixtures>} */ (
+const it = /** @type {TestAPI<MongoFixtures>} */ (
   mongoIt.extend({
     mongoClient: async ({ db }, use) => {
       const client = await MongoClient.connect(db)

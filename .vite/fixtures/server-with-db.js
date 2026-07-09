@@ -1,15 +1,20 @@
 import { it as dbTest } from './mongo.js'
 
 /**
+ * @import { TestAPI } from 'vitest'
+ * @import { HapiServer } from '#common/hapi-types.js'
+ */
+
+/**
  * vitest cannot infer scoped-fixture (tuple-form) value types in JSDoc/tsc, so
  * the fixture shape is asserted here, at the boundary, and flows to every
  * consumer typed.
  */
 export const it =
   /**
-   * @type {import('vitest').TestAPI<{
+   * @type {TestAPI<{
    *   db: string
-   *   server: import('#common/hapi-types.js').HapiServer
+   *   server: HapiServer
    * }>}
    */ (
     dbTest.extend({

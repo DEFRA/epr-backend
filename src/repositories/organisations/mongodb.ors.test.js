@@ -5,18 +5,20 @@ import { describe, expect } from 'vitest'
 import { createOrganisationsRepository } from './mongodb.js'
 
 /**
+ * @import { Db } from 'mongodb'
+ * @import { TestAPI } from 'vitest'
  * @import { OrganisationsRepository } from './port.js'
  * @typedef {{
  *   mongoClient: MongoClient
  *   repository: OrganisationsRepository
- *   database: import('mongodb').Db
+ *   database: Db
  * }} MongoFixtures
  */
 
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'epr-organisations'
 
-const it = /** @type {import('vitest').TestAPI<MongoFixtures>} */ (
+const it = /** @type {TestAPI<MongoFixtures>} */ (
   mongoIt.extend({
     mongoClient: async ({ db }, use) => {
       const client = await MongoClient.connect(db)

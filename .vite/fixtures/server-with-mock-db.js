@@ -2,12 +2,17 @@ import { test, vi } from 'vitest'
 import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
 
 /**
+ * @import { TestAPI, Mock } from 'vitest'
+ * @import { HapiServer } from '#common/hapi-types.js'
+ */
+
+/**
  * The `db` decoration is replaced with the spyable mock this fixture installs,
  * so tests can `vi.spyOn(server.db, 'collection')` without fighting the real
  * `Db` type.
  *
- * @typedef {Omit<import('#common/hapi-types.js').HapiServer, 'db'> & {
- *   db: { collection: import('vitest').Mock }
+ * @typedef {Omit<HapiServer, 'db'> & {
+ *   db: { collection: Mock }
  *   loggerMocks: {
  *     info: ReturnType<typeof vi.fn>
  *     error: ReturnType<typeof vi.fn>
@@ -32,7 +37,7 @@ import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
  */
 export const it =
   /**
-   * @type {import('vitest').TestAPI<{
+   * @type {TestAPI<{
    *   mockOidcServer: ReturnType<typeof createMockOidcServers>
    *   server: TestServer
    * }>}
