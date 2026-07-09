@@ -8,8 +8,9 @@ import { config } from '#root/config.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { Mock } from 'vitest'
  *
- * @typedef {HapiRequest & { logger: { warn: import('vitest').Mock } }} MockRequest
+ * @typedef {HapiRequest & { logger: { warn: Mock } }} MockRequest
  * @typedef {Error & { isJoi: boolean, details: object[] }} JoiLikeError
  */
 
