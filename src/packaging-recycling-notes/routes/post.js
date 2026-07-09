@@ -9,7 +9,11 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_STATUS,
+  assertAccreditationApproved,
+  AccreditationNotApprovedError
+} from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
@@ -167,6 +171,8 @@ export const packagingRecyclingNotesCreate = {
         organisationsRepository.findById(organisationId)
       ])
 
+      assertAccreditationApproved(accreditation)
+
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
@@ -204,6 +210,10 @@ export const packagingRecyclingNotesCreate = {
     } catch (error) {
       if (error.isBoom) {
         throw error
+      }
+
+      if (error instanceof AccreditationNotApprovedError) {
+        throw Boom.forbidden(error.message)
       }
 
       logger.error({

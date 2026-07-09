@@ -118,6 +118,7 @@ const buildOrganisationsRepository = () =>
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
     /** @type {unknown} */ ({
       findAccreditationById: vi.fn().mockResolvedValue({
+        status: 'approved',
         submittedToRegulator: REGULATOR.EA
       })
     })

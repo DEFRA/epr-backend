@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   PRN_STATUS,
   PRN_ACTOR,
-  SuspendedAccreditationError
+  AccreditationNotApprovedError
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
@@ -110,6 +110,7 @@ const buildSeededLedgerRepository = () =>
 
 const buildOrganisationsRepository = (accreditation = {}) => ({
   findAccreditationById: vi.fn().mockResolvedValue({
+    status: 'approved',
     submittedToRegulator: REGULATOR.EA,
     ...accreditation
   })
@@ -201,33 +202,34 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     )
   })
 
-  it('rejects issuance on a suspended accreditation before appending any event', async () => {
-    const persistProjection = vi.fn()
-    const prnRepository = { findById: vi.fn(), persistProjection }
-    const ledgerRepository = buildSeededLedgerRepository()
-    const appendEvents = vi.spyOn(ledgerRepository, 'appendEvents')
+  it.each(['suspended', 'cancelled'])(
+    'rejects issuance on a %s accreditation before appending any event',
+    async (status) => {
+      const persistProjection = vi.fn()
+      const prnRepository = { findById: vi.fn(), persistProjection }
+      const ledgerRepository = buildSeededLedgerRepository()
+      const appendEvents = vi.spyOn(ledgerRepository, 'appendEvents')
 
-    await expect(
-      callUpdate({
-        prnRepository,
-        ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository({
-          status: 'suspended'
-        }),
-        providedPrn: buildPrn({
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-            history: []
-          }
-        }),
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY
-      })
-    ).rejects.toThrow(SuspendedAccreditationError)
+      await expect(
+        callUpdate({
+          prnRepository,
+          ledgerRepository,
+          organisationsRepository: buildOrganisationsRepository({ status }),
+          providedPrn: buildPrn({
+            status: {
+              currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+              history: []
+            }
+          }),
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toThrow(AccreditationNotApprovedError)
 
-    expect(appendEvents).not.toHaveBeenCalled()
-    expect(persistProjection).not.toHaveBeenCalled()
-  })
+      expect(appendEvents).not.toHaveBeenCalled()
+      expect(persistProjection).not.toHaveBeenCalled()
+    }
+  )
 
   it('appends the credit event before persisting the projection when cancelling an issued PRN', async () => {
     const persistProjection = vi

@@ -8,7 +8,7 @@ import {
 import {
   PRN_STATUS,
   validateTransition,
-  assertAccreditationNotSuspended
+  assertAccreditationApproved
 } from '#packaging-recycling-notes/domain/model.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
@@ -112,16 +112,16 @@ async function performStreamWrite({
   id,
   user
 }) {
-  // The suspension check is hoisted ahead of the stream append so a suspended
-  // accreditation is never debited. The fetched accreditation is reused to
-  // stamp the PRN number on the issuance path.
+  // The approval check is hoisted ahead of the stream append so a non-approved
+  // (e.g. suspended or cancelled) accreditation is never debited. The fetched
+  // accreditation is reused to stamp the PRN number on the issuance path.
   let accreditation
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     accreditation = await organisationsRepository.findAccreditationById(
       organisationId,
       accreditationId
     )
-    assertAccreditationNotSuspended(accreditation)
+    assertAccreditationApproved(accreditation)
   }
 
   const ledgerEvents = await applyPrnBalanceCommand(service, logger, {

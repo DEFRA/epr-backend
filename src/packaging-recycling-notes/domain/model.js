@@ -112,20 +112,26 @@ export class UnauthorisedTransitionError extends Error {
  * @throws {StatusConflictError} when no transition from currentStatus to newStatus exists
  * @throws {UnauthorisedTransitionError} when the transition exists but the actor is not permitted
  */
-export class SuspendedAccreditationError extends Error {
-  constructor() {
-    super('Cannot issue a PRN on a suspended accreditation')
+export class AccreditationNotApprovedError extends Error {
+  /** @param {string} [status] the accreditation's current status, if known */
+  constructor(status) {
+    super(
+      status
+        ? `PRN actions require an approved accreditation (current status: ${status})`
+        : 'PRN actions require an approved accreditation'
+    )
   }
 }
 
 /**
- * Asserts that an accreditation is not suspended.
- * @param {{ status: string }} accreditation
- * @throws {SuspendedAccreditationError} when the accreditation is suspended
+ * Asserts that an accreditation is currently approved. A suspended, cancelled,
+ * created or rejected accreditation is not permitted to issue or draft PRNs.
+ * @param {{ status?: string } | null | undefined} accreditation
+ * @throws {AccreditationNotApprovedError} when the accreditation is not approved
  */
-export function assertAccreditationNotSuspended(accreditation) {
-  if (accreditation?.status === 'suspended') {
-    throw new SuspendedAccreditationError()
+export function assertAccreditationApproved(accreditation) {
+  if (accreditation?.status !== 'approved') {
+    throw new AccreditationNotApprovedError(accreditation?.status)
   }
 }
 
