@@ -1,3 +1,4 @@
+import { endOfDay, startOfDay } from '#common/helpers/date-formatter.js'
 import { isNil } from '#common/helpers/is-nil.js'
 import { CANCELLED_PRN_STATUSES } from '#packaging-recycling-notes/domain/model.js'
 import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnage.js'
@@ -10,31 +11,6 @@ const REVIEWABLE_REPORT_STATUSES = new Set([
   REPORT_STATUS.IN_PROGRESS,
   REPORT_STATUS.READY_TO_SUBMIT
 ])
-
-/**
- * Extracts the YYYY-MM-DD calendar date from a report's stored startDate/
- * endDate, which may be a bare date string (createReportForPeriod, via
- * formatDateISO) or a full ISO datetime string (summary-log-triggered report
- * creation), depending on which code path created the report.
- *
- * @param {string} dateString
- * @returns {string}
- */
-const calendarDate = (dateString) => dateString.slice(0, 10)
-
-/**
- * @param {string} dateString
- * @returns {Date}
- */
-const startOfDay = (dateString) =>
-  new Date(`${calendarDate(dateString)}T00:00:00.000Z`)
-
-/**
- * @param {string} dateString
- * @returns {Date}
- */
-const endOfDay = (dateString) =>
-  new Date(`${calendarDate(dateString)}T23:59:59.999Z`)
 
 /**
  * Sum of tonnage for PRNs issued within the period but currently cancelled or

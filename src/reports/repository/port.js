@@ -153,9 +153,9 @@
  * @property {number} year
  * @property {string} cadence
  * @property {number} period
- * @property {string} startDate
- * @property {string} endDate
- * @property {string} dueDate
+ * @property {string} startDate - Bare calendar date (YYYY-MM-DD)
+ * @property {string} endDate - Bare calendar date (YYYY-MM-DD)
+ * @property {string} dueDate - Bare calendar date (YYYY-MM-DD)
  * @property {ReportStatusObject} status
  * @property {string} [material]
  * @property {string} [wasteProcessingType]
@@ -194,9 +194,11 @@
 
 /**
  * @typedef {Object} ReportPerPeriod
- * @property {string} startDate - ISO date string
- * @property {string} endDate - ISO date string
- * @property {string} dueDate - ISO date string
+ * @property {string} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
+ *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive
+ *   a concrete instant.
+ * @property {string} endDate - Bare calendar date (YYYY-MM-DD), no timezone.
+ * @property {string} dueDate - Bare calendar date (YYYY-MM-DD), no timezone.
  * @property {ReportSummary|null} current
  * @property {ReportSummary[]} previousSubmissions
  */
@@ -229,9 +231,11 @@
  * @property {number} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
- * @property {string} startDate - ISO date string
- * @property {string} endDate - ISO date string
- * @property {string} dueDate - ISO date string
+ * @property {string} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
+ *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive
+ *   a concrete instant.
+ * @property {string} endDate - Bare calendar date (YYYY-MM-DD), no timezone.
+ * @property {string} dueDate - Bare calendar date (YYYY-MM-DD), no timezone.
  * @property {UserSummary} changedBy
  * @property {number} submissionNumber
  * @property {string} [material]

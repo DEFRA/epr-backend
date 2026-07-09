@@ -1,8 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
+  calendarDate,
+  endOfDay,
   formatDate,
   formatDateISO,
   formatDateTimeDots,
+  startOfDay,
   toISOString,
   getMonthNames,
   getMonthRange
@@ -50,6 +53,60 @@ describe('formatDateISO', () => {
 
   it('handles month overflow into next year', () => {
     expect(formatDateISO(2026, 12, 1)).toBe('2027-01-01')
+  })
+})
+
+describe('calendarDate', () => {
+  it('returns a bare date string unchanged', () => {
+    expect(calendarDate('2025-01-31')).toBe('2025-01-31')
+  })
+
+  it('extracts the calendar date from a full ISO datetime with start-of-day time', () => {
+    expect(calendarDate('2025-01-31T00:00:00.000Z')).toBe('2025-01-31')
+  })
+
+  it('extracts the calendar date from a full ISO datetime with end-of-day time', () => {
+    expect(calendarDate('2025-01-31T23:59:59.999Z')).toBe('2025-01-31')
+  })
+})
+
+describe('startOfDay', () => {
+  it('expands a bare date string to UTC start-of-day', () => {
+    expect(startOfDay('2025-01-31').toISOString()).toBe(
+      '2025-01-31T00:00:00.000Z'
+    )
+  })
+
+  it('expands an already-coerced full-datetime start-of-day string to the same instant', () => {
+    expect(startOfDay('2025-01-31T00:00:00.000Z').toISOString()).toBe(
+      '2025-01-31T00:00:00.000Z'
+    )
+  })
+
+  it('normalises a full-datetime end-of-day string back to start-of-day for the same calendar date', () => {
+    expect(startOfDay('2025-01-31T23:59:59.999Z').toISOString()).toBe(
+      '2025-01-31T00:00:00.000Z'
+    )
+  })
+})
+
+describe('endOfDay', () => {
+  it('expands a bare date string to UTC end-of-day', () => {
+    expect(endOfDay('2025-01-31').toISOString()).toBe(
+      '2025-01-31T23:59:59.999Z'
+    )
+  })
+
+  it('normalises an already-coerced full-datetime start-of-day string to end-of-day for the same calendar date', () => {
+    expect(endOfDay('2025-01-31T00:00:00.000Z').toISOString()).toBe(
+      '2025-01-31T23:59:59.999Z'
+    )
+  })
+
+  it('expands a full-datetime end-of-day string to the same instant', () => {
+    expect(endOfDay('2025-01-31T23:59:59.999Z').toISOString()).toBe(
+      '2025-01-31T23:59:59.999Z'
+    )
   })
 })
 
