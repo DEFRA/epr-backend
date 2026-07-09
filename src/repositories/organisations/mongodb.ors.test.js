@@ -8,6 +8,7 @@ import { createOrganisationsRepository } from './mongodb.js'
  * @import { Db } from 'mongodb'
  * @import { TestAPI } from 'vitest'
  * @import { OrganisationsRepository } from './port.js'
+ *
  * @typedef {{
  *   mongoClient: MongoClient
  *   repository: OrganisationsRepository
