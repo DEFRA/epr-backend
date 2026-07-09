@@ -21,6 +21,13 @@ const it = mongoIt.extend({
     await client.close()
   },
 
+  monitoredClient: async (/** @type {*} */ { db }, use) => {
+    const client = new MongoClient(db, { monitorCommands: true })
+    await client.connect()
+    await use(client)
+    await client.close()
+  },
+
   summaryLogRowStatesCollection: async (
     /** @type {*} */ { mongoClient },
     use
@@ -186,12 +193,12 @@ describe('summary-log row states repository - mongodb implementation', () => {
       expect(committed[0].rowId).toBe('row-1')
     })
 
-    it('rethrows a failed insert that is not a summary-log-row-state collision', async () => {
+    it('rethrows a failed write that is not a summary-log-row-state collision', async () => {
       const upstream = new Error('connection lost')
       const stubCollection = {
         createIndex: () => Promise.resolve(),
-        findOne: () => Promise.resolve(null),
-        insertOne: () => Promise.reject(upstream)
+        bulkWrite: () => Promise.reject(upstream),
+        find: () => ({ toArray: () => Promise.resolve([]) })
       }
       const stubDb = { collection: () => stubCollection }
       const repository = (
@@ -206,5 +213,50 @@ describe('summary-log row states repository - mongodb implementation', () => {
         )
       ).rejects.toBe(upstream)
     })
+  })
+})
+
+describe('write round-trip count', () => {
+  const countCommands = async (monitoredClient, run) => {
+    let commands = 0
+    const onCommand = () => {
+      commands += 1
+    }
+    monitoredClient.on('commandStarted', onCommand)
+    await run()
+    monitoredClient.off('commandStarted', onCommand)
+    return commands
+  }
+
+  it('issues a row-count-independent number of write round trips', async (/** @type {*} */ {
+    monitoredClient
+  }) => {
+    const database = monitoredClient.db(DATABASE_NAME)
+    await ensureSummaryLogRowStatesCollection(database)
+    const collection = database.collection(
+      SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
+    )
+    const repository = (
+      await createMongoSummaryLogRowStateRepository(database)
+    )()
+
+    const roundTripsFor = async (rowCount, summaryLogId) => {
+      await collection.deleteMany({})
+      const entries = Array.from({ length: rowCount }, (_, i) =>
+        buildSummaryLogRowStateEntry({ rowId: `row-${i}` })
+      )
+      return countCommands(monitoredClient, () =>
+        repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          entries,
+          summaryLogId
+        )
+      )
+    }
+
+    const forOneRow = await roundTripsFor(1, 'log-1')
+    const forFiftyRows = await roundTripsFor(50, 'log-50')
+
+    expect(forFiftyRows).toBe(forOneRow)
   })
 })
