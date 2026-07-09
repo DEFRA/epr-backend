@@ -23,5 +23,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isRegisteredOnlySubmittedEventsEnabled() {
     return flags.registeredOnlySubmittedEvents ?? false
+  },
+  isStaleIssuedTonnageReportEnabled() {
+    return flags.staleIssuedTonnageReport ?? false
   }
 })

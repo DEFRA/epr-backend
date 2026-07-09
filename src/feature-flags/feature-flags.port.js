@@ -7,6 +7,7 @@
  * @property {() => boolean} isSummaryLogRowStatesBackfillEnabled
  * @property {() => boolean} isSummaryLogRowStatesDiscrepancyReportEnabled
  * @property {() => boolean} isRegisteredOnlySubmittedEventsEnabled
+ * @property {() => boolean} isStaleIssuedTonnageReportEnabled
  */
 
 /**
@@ -18,6 +19,7 @@
  * @property {boolean} [summaryLogRowStatesBackfill]
  * @property {boolean} [summaryLogRowStatesDiscrepancyReport]
  * @property {boolean} [registeredOnlySubmittedEvents]
+ * @property {boolean} [staleIssuedTonnageReport]
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
