@@ -16,30 +16,12 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.summaryLogRowStates')
   })
 
-  it('returns true when summaryLogRowStatesBackfill flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isSummaryLogRowStatesBackfillEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.summaryLogRowStatesBackfill'
-    )
-  })
-
   it('returns true when registeredOnlySubmittedEvents flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
     expect(flags.isRegisteredOnlySubmittedEventsEnabled()).toBe(true)
     expect(config.get).toHaveBeenCalledWith(
       'featureFlags.registeredOnlySubmittedEvents'
-    )
-  })
-
-  it('returns true when summaryLogRowStatesDiscrepancyReport flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isSummaryLogRowStatesDiscrepancyReportEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.summaryLogRowStatesDiscrepancyReport'
     )
   })
 

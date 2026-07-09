@@ -5,11 +5,10 @@ import { getConfig } from '#root/config.js'
 import { shouldRegisterSummaryLogRowStates } from './server.js'
 
 describe('shouldRegisterSummaryLogRowStates', () => {
-  it('defers registration while both row-state flags are off', () => {
+  it('defers registration while the row-state flag is off', () => {
     const config = getConfig({
       featureFlags: {
-        summaryLogRowStates: false,
-        summaryLogRowStatesBackfill: false
+        summaryLogRowStates: false
       }
     })
 
@@ -19,19 +18,7 @@ describe('shouldRegisterSummaryLogRowStates', () => {
   it('registers once the write flag is on', () => {
     const config = getConfig({
       featureFlags: {
-        summaryLogRowStates: true,
-        summaryLogRowStatesBackfill: false
-      }
-    })
-
-    expect(shouldRegisterSummaryLogRowStates(config)).toBe(true)
-  })
-
-  it('registers once the backfill flag is on', () => {
-    const config = getConfig({
-      featureFlags: {
-        summaryLogRowStates: false,
-        summaryLogRowStatesBackfill: true
+        summaryLogRowStates: true
       }
     })
 
