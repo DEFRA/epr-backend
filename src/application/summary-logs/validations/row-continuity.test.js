@@ -8,6 +8,13 @@ import {
   WASTE_RECORD_TYPE
 } from '#domain/waste-records/model.js'
 
+/**
+ * @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js'
+ * @import {WasteRecord} from '#domain/waste-records/model.js'
+ *
+ * @typedef {{ id: string, submittedAt: string }} PreviousSummaryLogRef
+ */
+
 describe('validateRowContinuity', () => {
   /**
    * Creates a transformed record for testing
@@ -15,14 +22,57 @@ describe('validateRowContinuity', () => {
    * @param {string} options.rowId - The row ID
    * @param {string} [options.type] - The waste record type
    * @param {Array} [options.issues] - Validation issues
-   * @returns {{ record: Object, issues: Array }}
+   * @returns {ValidatedWasteRecord}
    */
   const createValidatedWasteRecord = ({
     rowId,
     type = WASTE_RECORD_TYPE.RECEIVED,
     issues = []
-  }) => ({
-    record: {
+  }) =>
+    /** @type {ValidatedWasteRecord} */ ({
+      record: {
+        organisationId: 'org-456',
+        registrationId: 'reg-789',
+        accreditationId: 'acc-111',
+        rowId,
+        type,
+        data: {
+          ROW_ID: rowId,
+          DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
+          GROSS_WEIGHT: 100
+        },
+        versions: [
+          {
+            createdAt: new Date().toISOString(),
+            status: VERSION_STATUS.CREATED,
+            summaryLog: {
+              id: 'current-summary-log-id',
+              uri: 's3://bucket/current-file.xlsx'
+            },
+            data: {
+              ROW_ID: rowId,
+              DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
+              GROSS_WEIGHT: 100
+            }
+          }
+        ]
+      },
+      issues
+    })
+
+  /**
+   * Creates an existing waste record for testing
+   * @param {string} rowId - The row ID
+   * @param {string} [type] - The waste record type
+   * @param {Object} [overrides] - Property overrides
+   * @returns {WasteRecord} Waste record
+   */
+  const createWasteRecord = (
+    rowId,
+    type = WASTE_RECORD_TYPE.RECEIVED,
+    overrides = {}
+  ) =>
+    /** @type {WasteRecord} */ ({
       organisationId: 'org-456',
       registrationId: 'reg-789',
       accreditationId: 'acc-111',
@@ -35,11 +85,11 @@ describe('validateRowContinuity', () => {
       },
       versions: [
         {
-          createdAt: new Date().toISOString(),
+          createdAt: '2024-01-15T10:00:00.000Z',
           status: VERSION_STATUS.CREATED,
           summaryLog: {
-            id: 'current-summary-log-id',
-            uri: 's3://bucket/current-file.xlsx'
+            id: 'previous-summary-log-id',
+            uri: 's3://bucket/previous-file.xlsx'
           },
           data: {
             ROW_ID: rowId,
@@ -47,50 +97,9 @@ describe('validateRowContinuity', () => {
             GROSS_WEIGHT: 100
           }
         }
-      ]
-    },
-    issues
-  })
-
-  /**
-   * Creates an existing waste record for testing
-   * @param {string} rowId - The row ID
-   * @param {string} [type] - The waste record type
-   * @param {Object} [overrides] - Property overrides
-   * @returns {Object} Waste record
-   */
-  const createWasteRecord = (
-    rowId,
-    type = WASTE_RECORD_TYPE.RECEIVED,
-    overrides = {}
-  ) => ({
-    organisationId: 'org-456',
-    registrationId: 'reg-789',
-    accreditationId: 'acc-111',
-    rowId,
-    type,
-    data: {
-      ROW_ID: rowId,
-      DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
-      GROSS_WEIGHT: 100
-    },
-    versions: [
-      {
-        createdAt: '2024-01-15T10:00:00.000Z',
-        status: VERSION_STATUS.CREATED,
-        summaryLog: {
-          id: 'previous-summary-log-id',
-          uri: 's3://bucket/previous-file.xlsx'
-        },
-        data: {
-          ROW_ID: rowId,
-          DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
-          GROSS_WEIGHT: 100
-        }
-      }
-    ],
-    ...overrides
-  })
+      ],
+      ...overrides
+    })
 
   describe('first-time uploads (no existing records)', () => {
     it('returns valid result when no existing records exist', () => {
@@ -109,7 +118,9 @@ describe('validateRowContinuity', () => {
 
     it('returns valid result when existingWasteRecords is null', () => {
       const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
-      const existingWasteRecords = null
+      const existingWasteRecords = /** @type {WasteRecord[]} */ (
+        /** @type {unknown} */ (null)
+      )
 
       const result = validateRowContinuity({
         wasteRecords,
@@ -122,7 +133,9 @@ describe('validateRowContinuity', () => {
 
     it('returns valid result when existingWasteRecords is undefined', () => {
       const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
-      const existingWasteRecords = undefined
+      const existingWasteRecords = /** @type {WasteRecord[]} */ (
+        /** @type {unknown} */ (undefined)
+      )
 
       const result = validateRowContinuity({
         wasteRecords,
@@ -230,15 +243,17 @@ describe('validateRowContinuity', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-      expect(fatals[0].code).toBe('SEQUENTIAL_ROW_REMOVED')
-      expect(fatals[0].message).toContain('row-1')
-      expect(fatals[0].message).toContain('cannot be removed')
-      expect(fatals[0].context.location.rowId).toBe('row-1')
-      expect(fatals[0].context.location.sheet).toBe('Received')
-      expect(fatals[0].context.previousSummaryLog.id).toBe(
-        'previous-summary-log-id'
-      )
+      expect(fatals[0]?.category).toBe(VALIDATION_CATEGORY.BUSINESS)
+      expect(fatals[0]?.code).toBe('SEQUENTIAL_ROW_REMOVED')
+      expect(fatals[0]?.message).toContain('row-1')
+      expect(fatals[0]?.message).toContain('cannot be removed')
+      expect(fatals[0]?.context?.location?.rowId).toBe('row-1')
+      expect(fatals[0]?.context?.location?.sheet).toBe('Received')
+      expect(
+        /** @type {PreviousSummaryLogRef} */ (
+          fatals[0]?.context?.previousSummaryLog
+        ).id
+      ).toBe('previous-summary-log-id')
     })
 
     it('returns fatal errors for multiple missing rows', () => {
@@ -261,10 +276,10 @@ describe('validateRowContinuity', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(2)
-      expect(fatals[0].code).toBe('SEQUENTIAL_ROW_REMOVED')
-      expect(fatals[1].code).toBe('SEQUENTIAL_ROW_REMOVED')
+      expect(fatals[0]?.code).toBe('SEQUENTIAL_ROW_REMOVED')
+      expect(fatals[1]?.code).toBe('SEQUENTIAL_ROW_REMOVED')
 
-      const missingRowIds = fatals.map((f) => f.context.location.rowId).sort()
+      const missingRowIds = fatals.map((f) => f.context?.location?.rowId).sort()
       expect(missingRowIds).toEqual(['row-1', 'row-3'])
     })
 
@@ -351,10 +366,16 @@ describe('validateRowContinuity', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(fatals[0].context.previousSummaryLog.id).toBe(previousSummaryLogId)
-      expect(fatals[0].context.previousSummaryLog.submittedAt).toBe(
-        previousSubmitTime
-      )
+      expect(
+        /** @type {PreviousSummaryLogRef} */ (
+          fatals[0]?.context?.previousSummaryLog
+        ).id
+      ).toBe(previousSummaryLogId)
+      expect(
+        /** @type {PreviousSummaryLogRef} */ (
+          fatals[0]?.context?.previousSummaryLog
+        ).submittedAt
+      ).toBe(previousSubmitTime)
     })
   })
 
@@ -380,8 +401,8 @@ describe('validateRowContinuity', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(fatals[0].context.location.rowId).toBe('row-3')
-      expect(fatals[0].context.location.sheet).toBe('Received')
+      expect(fatals[0]?.context?.location?.rowId).toBe('row-3')
+      expect(fatals[0]?.context?.location?.sheet).toBe('Received')
     })
 
     it('correctly maps different waste record types to sheets and tables from schema registry', () => {
@@ -418,8 +439,8 @@ describe('validateRowContinuity', () => {
         })
 
         const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-        expect(fatals[0].context.location.sheet).toBe(expectedSheet)
-        expect(fatals[0].context.location.table).toBe(expectedTable)
+        expect(fatals[0]?.context?.location?.sheet).toBe(expectedSheet)
+        expect(fatals[0]?.context?.location?.table).toBe(expectedTable)
       }
     })
   })
@@ -461,8 +482,8 @@ describe('validateRowContinuity', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(fatals[0].context.location.sheet).toBe('Unknown')
-      expect(fatals[0].context.location.table).toBe('Unknown')
+      expect(fatals[0]?.context?.location?.sheet).toBe('Unknown')
+      expect(fatals[0]?.context?.location?.table).toBe('Unknown')
     })
   })
 })
