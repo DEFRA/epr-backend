@@ -6,6 +6,8 @@ import {
 } from './classify-helpers.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+
 describe('classify-helpers', () => {
   describe('CLASSIFICATION_REASON', () => {
     it('exports MISSING_REQUIRED_FIELD', () => {
@@ -126,6 +128,17 @@ describe('classify-helpers', () => {
       ]
     }
 
+    const cancelledAccreditation = /** @type {Accreditation} */ ({
+      validFrom: '2024-01-01T00:00:00.000Z',
+      validTo: '2024-12-31T23:59:59.999Z',
+      statusHistory: [
+        { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
+        { status: 'suspended', updatedAt: '2024-06-01T00:00:00.000Z' },
+        { status: 'cancelled', updatedAt: '2024-08-01T00:00:00.000Z' }
+      ]
+    })
+
     it('returns IGNORED when date is outside accreditation period', () => {
       const classify = createDateOnlyClassifier('MY_DATE')
       const data = { MY_DATE: new Date('2023-06-15') }
@@ -212,6 +225,33 @@ describe('classify-helpers', () => {
         outcome: ROW_OUTCOME.IGNORED,
         reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
       })
+    })
+
+    it('returns IGNORED when accreditation was cancelled before the row date', () => {
+      const classify = createDateOnlyClassifier('MY_DATE')
+      const data = { MY_DATE: new Date('2024-09-15') }
+
+      const result = classify(data, {
+        accreditation: cancelledAccreditation,
+        overseasSites: {}
+      })
+
+      expect(result).toEqual({
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      })
+    })
+
+    it('returns EXCLUDED for a date before cancellation within the accreditation period', () => {
+      const classify = createDateOnlyClassifier('MY_DATE')
+      const data = { MY_DATE: new Date('2024-05-15') }
+
+      const result = classify(data, {
+        accreditation: cancelledAccreditation,
+        overseasSites: {}
+      })
+
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
 
     it('returns EXCLUDED when accreditation was suspended then re-approved before the row date', () => {
