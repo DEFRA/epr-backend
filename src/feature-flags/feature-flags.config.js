@@ -22,5 +22,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isRegisteredOnlySubmittedEventsEnabled() {
     return config.get('featureFlags.registeredOnlySubmittedEvents')
+  },
+  isStaleIssuedTonnageReportEnabled() {
+    return config.get('featureFlags.staleIssuedTonnageReport')
   }
 })

@@ -122,4 +122,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isSummaryLogRowStatesDiscrepancyReportEnabled()).toBe(false)
   })
+
+  it('returns true when staleIssuedTonnageReport flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      staleIssuedTonnageReport: true
+    })
+    expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(true)
+  })
+
+  it('returns false when staleIssuedTonnageReport flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      staleIssuedTonnageReport: false
+    })
+    expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(false)
+  })
+
+  it('returns false when staleIssuedTonnageReport flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(false)
+  })
 })

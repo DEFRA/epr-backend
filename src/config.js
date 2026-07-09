@@ -393,6 +393,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_REGISTERED_ONLY_SUBMITTED_EVENTS'
+    },
+    staleIssuedTonnageReport: {
+      doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
     }
   },
   formSubmissionOverrides: {
