@@ -352,12 +352,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_CLOSED_PERIOD_ADJUSTMENTS'
     },
-    copyFormFilesToS3: {
-      doc: 'Feature Flag: Copy form files to S3 on startup',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
-    },
     devEndpoints: {
       doc: 'Feature Flag: Enable development endpoints',
       format: Boolean,
@@ -505,12 +499,6 @@ const baseConfig = {
       default:
         'https://forms-submission-api.auth.eu-west-2.amazoncognito.com/oauth2/token',
       env: 'FORMS_SUBMISSION_EXTERNAL_API_COGNITO_TOKEN_URL'
-    },
-    copyFilesUploadedFromDate: {
-      doc: 'Only copy form files uploaded after this date (ISO 8601 format)',
-      format: String,
-      default: '2025-11-19T00:00:00.000Z',
-      env: 'COPY_FILES_UPLOADED_FROM_DATE'
     }
   },
   summaryLogReport: {
