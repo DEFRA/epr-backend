@@ -84,7 +84,7 @@ describe('runStaleIssuedTonnageReport', () => {
     expect(logger.error).not.toHaveBeenCalled()
   })
 
-  it('logs a summary line and no warnings when nothing is stale', async () => {
+  it('logs a summary line and no findings when nothing is stale', async () => {
     const server = buildServer(emptyEstateApp())
 
     await runStaleIssuedTonnageReport(server)
@@ -97,7 +97,7 @@ describe('runStaleIssuedTonnageReport', () => {
     })
   })
 
-  it('logs a warning finding for each stale report', async () => {
+  it('logs an info finding for each stale report', async () => {
     const app = {
       reportsRepository: {
         findAllPeriodicReports: vi.fn().mockResolvedValue([
@@ -136,18 +136,19 @@ describe('runStaleIssuedTonnageReport', () => {
 
     await runStaleIssuedTonnageReport(server)
 
-    expect(logger.warn).toHaveBeenCalledWith({
+    expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringContaining(
         'org org-1 / registration reg-1, report report-1'
       )
     })
-    expect(logger.warn).toHaveBeenCalledWith({
+    expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringContaining('stored 50, recalculated 0')
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Stale issued tonnage report: scanned 1, discrepancies 1, affected organisations 1'
     })
+    expect(logger.warn).not.toHaveBeenCalled()
   })
 
   it('counts distinct affected organisations, not discrepancy count, when one org has multiple stale reports', async () => {
