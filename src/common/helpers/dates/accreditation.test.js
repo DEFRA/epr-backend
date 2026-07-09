@@ -10,10 +10,11 @@ import {
 
 describe('accreditation date helpers', () => {
   describe('isWithinAccreditationDateRange', () => {
-    const accreditation = /** @type {Accreditation} */ ({
-      validFrom: '2025-01-01T00:00:00.000Z',
-      validTo: '2025-12-31T23:59:59.999Z'
-    })
+    const accreditation =
+      /** @type {{ validFrom: string; validTo: string }} */ ({
+        validFrom: '2025-01-01T00:00:00.000Z',
+        validTo: '2025-12-31T23:59:59.999Z'
+      })
 
     it.each([
       {
@@ -370,6 +371,7 @@ describe('accreditation date helpers', () => {
       expect(
         isAccreditedAtDates(['2025-06-15T00:00:00.000Z'], {
           ...accreditation,
+          status: 'created',
           validFrom: undefined,
           validTo: undefined
         })
