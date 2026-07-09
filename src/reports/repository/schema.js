@@ -1,4 +1,5 @@
 import { toDecimal } from '#common/helpers/decimal-utils.js'
+import { wholeTonnage } from '#common/validation/tonnage-schema.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
@@ -49,7 +50,7 @@ export const maxTwoDecimalPlaces = (value, helpers) => {
 // manual-entry fields are populated by the user via the reporting journey.
 export const prnManualFields = {
   totalRevenue: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
-  freeTonnage: Joi.number().integer().min(0).allow(null)
+  freeTonnage: wholeTonnage().allow(null)
 }
 
 export const recyclingManualFields = {
@@ -65,7 +66,7 @@ export const exportManualFields = {
 }
 
 export const prnSchema = Joi.object({
-  issuedTonnage: Joi.number().min(0).required(),
+  issuedTonnage: wholeTonnage().required(),
   averagePricePerTonne: Joi.number().min(0).allow(null),
   ...prnManualFields
 }).optional()
