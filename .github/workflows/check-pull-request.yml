@@ -137,7 +137,7 @@ jobs:
 
       - name: Write journey test summary
         if: always()
-        uses: DEFRA/epr-re-ex-service/.github/actions/journey-test-summary@PAE-1305-journey-tests-action
+        uses: DEFRA/epr-re-ex-service/.github/actions/journey-test-summary@main
         with:
           build-start: ${{ steps.build-timer.outputs.start }}
           test-start: ${{ steps.test-timer.outputs.start }}
