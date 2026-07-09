@@ -11,9 +11,6 @@ export const createConfigFeatureFlags = (config) => ({
   isSummaryLogRowStatesEnabled() {
     return config.get('featureFlags.summaryLogRowStates')
   },
-  isRegisteredOnlySubmittedEventsEnabled() {
-    return config.get('featureFlags.registeredOnlySubmittedEvents')
-  },
   isStaleIssuedTonnageReportEnabled() {
     return config.get('featureFlags.staleIssuedTonnageReport')
   }
