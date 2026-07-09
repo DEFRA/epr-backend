@@ -304,7 +304,7 @@ const commitStateAndBalance = async ({
       overseasSites,
       summaryLogId: summaryLog.file.id
     })
-  } else if (featureFlags?.isRegisteredOnlySubmittedEventsEnabled()) {
+  } else {
     await wasteBalanceService.commitSummaryLogSubmittedEvent(
       {
         registrationId: summaryLog.registrationId,
@@ -318,9 +318,6 @@ const commitStateAndBalance = async ({
         email: user.email
       }
     )
-  } else {
-    // Registered-only submission with the flag off: its summary-log-submitted
-    // event is not recorded yet.
   }
 }
 
