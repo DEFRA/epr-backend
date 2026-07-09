@@ -112,6 +112,10 @@ const buildOrgWithAccreditation = ({
             id: ACC_ID,
             accreditationYear: 2026,
             submittedToRegulator: REGULATOR.EA,
+            statusHistory: [
+              { status: 'created', updatedAt: '2024-01-01' },
+              { status: 'approved', updatedAt: '2024-02-01' }
+            ],
             ...accreditation
           })
         ]

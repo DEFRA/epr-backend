@@ -6,11 +6,13 @@ import {
   PRN_ACTOR,
   isValidTransition,
   validateTransition,
-  assertAccreditationNotSuspended,
-  SuspendedAccreditationError,
+  assertAccreditationCanIssue,
+  AccreditationStatusError,
   StatusConflictError,
   UnauthorisedTransitionError
 } from './model.js'
+
+/** @import {PrnStatus} from './model.js' */
 
 describe('PRN_STATUS_TRANSITIONS', () => {
   it('has empty array for terminal states', () => {
@@ -73,7 +75,7 @@ describe('PRN_STATUS_TRANSITIONS', () => {
     ],
     [PRN_STATUS.DRAFT, PRN_STATUS.ACCEPTED, PRN_ACTOR.PRODUCER],
     [PRN_STATUS.ACCEPTED, PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER],
-    ['unknown', PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER]
+    [/** @type {PrnStatus} */ ('unknown'), PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER]
   ])('rejects %s -> %s for %s', (from, to, actor) => {
     expect(isValidTransition(from, to, actor)).toBe(false)
   })
@@ -154,22 +156,30 @@ describe('validateTransition', () => {
   })
 })
 
-describe('assertAccreditationNotSuspended', () => {
-  it('throws SuspendedAccreditationError when accreditation is suspended', () => {
-    expect(() =>
-      assertAccreditationNotSuspended({ status: 'suspended' })
-    ).toThrow(SuspendedAccreditationError)
+describe('assertAccreditationCanIssue', () => {
+  it.each(['approved', 'created', 'rejected'])(
+    'does not throw when accreditation is %s',
+    (status) => {
+      expect(() => assertAccreditationCanIssue({ status })).not.toThrow()
+    }
+  )
+
+  it.each(['suspended', 'cancelled'])(
+    'throws AccreditationStatusError when accreditation is %s',
+    (status) => {
+      expect(() => assertAccreditationCanIssue({ status })).toThrow(
+        AccreditationStatusError
+      )
+    }
+  )
+
+  it('does not throw when accreditation is missing', () => {
+    expect(() => assertAccreditationCanIssue(null)).not.toThrow()
   })
 
-  it('throws SuspendedAccreditationError with descriptive message', () => {
-    expect(() =>
-      assertAccreditationNotSuspended({ status: 'suspended' })
-    ).toThrow('Cannot issue a PRN on a suspended accreditation')
-  })
-
-  it('does not throw when accreditation is approved', () => {
-    expect(() =>
-      assertAccreditationNotSuspended({ status: 'approved' })
-    ).not.toThrow()
+  it('describes the action and status in the error message', () => {
+    expect(() => assertAccreditationCanIssue({ status: 'suspended' })).toThrow(
+      'Cannot issue a PRN on a suspended accreditation'
+    )
   })
 })
