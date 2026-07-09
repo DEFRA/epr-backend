@@ -42,7 +42,11 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
     it('returns an empty list when the submission has no rows', async () => {
       expect(
-        await repository.upsertSummaryLogRowStates(DEFAULT_LEDGER_ID, [], 'log-1')
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [],
+          'log-1'
+        )
       ).toEqual([])
     })
 
