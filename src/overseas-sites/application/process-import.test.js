@@ -92,7 +92,7 @@ describe('processOrsImport', () => {
       registrationNumber: 'EPR/AB1234CD/R1',
       errors: []
     }
-    processImportFile.mockResolvedValue(successResult)
+    vi.mocked(processImportFile).mockResolvedValue(successResult)
 
     await processOrsImport('import-123', deps())
 
@@ -145,7 +145,7 @@ describe('processOrsImport', () => {
       registrationNumber: 'EPR/AB1234CD/R1',
       errors: []
     }
-    processImportFile.mockResolvedValue(successResult)
+    vi.mocked(processImportFile).mockResolvedValue(successResult)
 
     await processOrsImport('import-123', deps())
 
@@ -172,7 +172,7 @@ describe('processOrsImport', () => {
       .mockResolvedValueOnce(Buffer.from('file1'))
       .mockResolvedValueOnce(Buffer.from('file2'))
 
-    processImportFile
+    vi.mocked(processImportFile)
       .mockResolvedValueOnce({
         status: ORS_FILE_RESULT_STATUS.SUCCESS,
         sitesCreated: 5,
@@ -210,7 +210,7 @@ describe('processOrsImport', () => {
     }
     orsImportsRepository.findById.mockResolvedValue(importDoc)
     uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('file1'))
-    processImportFile.mockResolvedValue({
+    vi.mocked(processImportFile).mockResolvedValue({
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
@@ -247,7 +247,7 @@ describe('processOrsImport', () => {
   it('deletes files from S3 after successful processing', async () => {
     const importDoc = {
       _id: 'import-123',
-      status: ORS_IMPORT_STATUS.PENDING,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: [
         { fileId: 'f1', fileName: 'sites1.xlsx', s3Uri: 's3://bucket/f1' },
         { fileId: 'f2', fileName: 'sites2.xlsx', s3Uri: 's3://bucket/f2' }
@@ -255,7 +255,7 @@ describe('processOrsImport', () => {
     }
     orsImportsRepository.findById.mockResolvedValue(importDoc)
     uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
-    processImportFile.mockResolvedValue({
+    vi.mocked(processImportFile).mockResolvedValue({
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
@@ -276,7 +276,7 @@ describe('processOrsImport', () => {
   it('does not delete file from S3 when file could not be retrieved', async () => {
     const importDoc = {
       _id: 'import-123',
-      status: ORS_IMPORT_STATUS.PENDING,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: [
         { fileId: 'f1', fileName: 'missing.xlsx', s3Uri: 's3://bucket/f1' }
       ]
@@ -292,7 +292,7 @@ describe('processOrsImport', () => {
   it('still records result when S3 deletion fails', async () => {
     const importDoc = {
       _id: 'import-123',
-      status: ORS_IMPORT_STATUS.PENDING,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: [{ fileId: 'f1', fileName: 'sites.xlsx', s3Uri: 's3://bucket/f1' }]
     }
     orsImportsRepository.findById.mockResolvedValue(importDoc)
@@ -300,7 +300,7 @@ describe('processOrsImport', () => {
     uploadsRepository.deleteByLocation.mockRejectedValue(
       new Error('S3 access denied')
     )
-    processImportFile.mockResolvedValue({
+    vi.mocked(processImportFile).mockResolvedValue({
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
@@ -364,7 +364,7 @@ describe('processOrsImport', () => {
       registrationNumber: 'EPR/AB1234CD/R1',
       errors: []
     }
-    processImportFile
+    vi.mocked(processImportFile)
       .mockResolvedValueOnce(failResult)
       .mockResolvedValueOnce(successResult)
 
@@ -442,7 +442,9 @@ describe('processOrsImport', () => {
     orsImportsRepository.findById.mockResolvedValue(importDoc)
     uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
 
-    processImportFile.mockRejectedValue(new Error('Unexpected DB error'))
+    vi.mocked(processImportFile).mockRejectedValue(
+      new Error('Unexpected DB error')
+    )
 
     await processOrsImport('import-123', deps())
 
@@ -486,7 +488,7 @@ describe('processOrsImport', () => {
     orsImportsRepository.findById.mockResolvedValue(importDoc)
     uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
 
-    processImportFile.mockRejectedValue(
+    vi.mocked(processImportFile).mockRejectedValue(
       Boom.badData(
         'Invalid overseas site data: "validFrom" must be a valid date'
       )
@@ -533,7 +535,7 @@ describe('processOrsImport', () => {
     }
     orsImportsRepository.findById.mockResolvedValue(importDoc)
     uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
-    processImportFile.mockResolvedValue({
+    vi.mocked(processImportFile).mockResolvedValue({
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
@@ -560,7 +562,7 @@ describe('processOrsImport', () => {
     }
     orsImportsRepository.findById.mockResolvedValue(importDoc)
     uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
-    processImportFile.mockResolvedValue({
+    vi.mocked(processImportFile).mockResolvedValue({
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
@@ -642,7 +644,7 @@ describe('processOrsImport', () => {
       registrationNumber: null,
       errors: [{ field: 'file', message: 'Invalid format' }]
     }
-    processImportFile.mockResolvedValue(failResult)
+    vi.mocked(processImportFile).mockResolvedValue(failResult)
 
     await processOrsImport('import-123', deps())
 
