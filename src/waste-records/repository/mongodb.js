@@ -119,44 +119,62 @@ const hashSummaryLogRowState = (candidate) =>
     .digest('hex')
 
 /**
- * @param {Collection} collection
+ * Builds the content-addressed identity filter for a row state — exactly the
+ * fields of the unique `summary_log_row_state_identity` index. Using the unique
+ * key as the upsert filter is what makes concurrent writers converge on a
+ * single document: MongoDB retries the upsert against the winning insert
+ * instead of surfacing a duplicate-key error.
+ *
  * @param {SummaryLogRowStateInsert} candidate
  * @param {string} contentHash
- * @returns {Promise<import('mongodb').WithId<import('mongodb').Document> | null>}
  */
-const findCommittedStateDoc = (collection, candidate, contentHash) =>
-  collection.findOne({
-    organisationId: candidate.organisationId,
-    registrationId: candidate.registrationId,
-    accreditationId: candidate.accreditationId,
-    rowId: candidate.rowId,
-    wasteRecordType: candidate.wasteRecordType,
-    contentHash
-  })
+const buildIdentityFilter = (candidate, contentHash) => ({
+  organisationId: candidate.organisationId,
+  registrationId: candidate.registrationId,
+  accreditationId: candidate.accreditationId,
+  rowId: candidate.rowId,
+  wasteRecordType: candidate.wasteRecordType,
+  contentHash
+})
+
+const identityKey = (fields) =>
+  JSON.stringify([
+    fields.organisationId,
+    fields.registrationId,
+    fields.accreditationId,
+    fields.rowId,
+    fields.wasteRecordType,
+    fields.contentHash
+  ])
 
 /**
- * @param {Collection} collection
- * @param {import('mongodb').ObjectId} _id
+ * @param {SummaryLogRowStateInsert} candidate
+ * @param {string} contentHash
  * @param {string} summaryLogId
- * @returns {Promise<SummaryLogRowState>}
  */
-const addMembership = async (collection, _id, summaryLogId) => {
-  await collection.updateOne(
-    { _id },
-    { $addToSet: { summaryLogIds: summaryLogId } }
-  )
-  const updated = await collection.findOne({ _id })
-  return toSummaryLogRowState(updated)
-}
+const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
+  updateOne: {
+    filter: buildIdentityFilter(candidate, contentHash),
+    // Identity fields materialise from the filter on insert, so they stay out
+    // of $setOnInsert to avoid the filter/setOnInsert path conflict.
+    update: {
+      $setOnInsert: {
+        processingType: candidate.processingType,
+        data: candidate.data,
+        classification: candidate.classification
+      },
+      $addToSet: { summaryLogIds: summaryLogId }
+    },
+    upsert: true
+  }
+})
 
 /**
- * @param {Collection} collection
  * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
  * @param {string} summaryLogId
- * @returns {Promise<SummaryLogRowState>}
  */
-const upsertOne = async (collection, ledgerId, entry, summaryLogId) => {
+const prepareRowState = (ledgerId, entry, summaryLogId) => {
   const candidate = validateSummaryLogRowStateInsert({
     organisationId: ledgerId.organisationId,
     registrationId: ledgerId.registrationId,
@@ -168,48 +186,51 @@ const upsertOne = async (collection, ledgerId, entry, summaryLogId) => {
     classification: entry.classification,
     summaryLogIds: [summaryLogId]
   })
-  const contentHash = hashSummaryLogRowState(candidate)
-
-  const existing = await findCommittedStateDoc(
-    collection,
-    candidate,
-    contentHash
-  )
-  if (existing) {
-    return addMembership(collection, existing._id, summaryLogId)
-  }
-
-  try {
-    const result = await collection.insertOne({ ...candidate, contentHash })
-    return toSummaryLogRowState({
-      _id: result.insertedId,
-      ...candidate,
-      contentHash
-    })
-  } catch (error) {
-    const winner = await findCommittedStateDoc(
-      collection,
-      candidate,
-      contentHash
-    )
-    if (!winner) {
-      throw error
-    }
-    return addMembership(collection, winner._id, summaryLogId)
-  }
+  return { candidate, contentHash: hashSummaryLogRowState(candidate) }
 }
 
 /**
+ * Commits a whole submission's row states in one round trip: a single
+ * `bulkWrite` of content-addressed upserts, then one `find` to read the
+ * committed documents back. Round-trip cost is independent of the row count,
+ * unlike the per-row upsert it replaces. Results are returned one per input
+ * entry, in input order — the `find` result is keyed back to the entries by
+ * their content-addressed identity.
+ *
  * @param {Collection} collection
  * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>}
  */
 const performUpsertSummaryLogRowStates =
   (collection) => async (ledgerId, summaryLogRowStates, summaryLogId) => {
-    const results = []
-    for (const entry of summaryLogRowStates) {
-      results.push(await upsertOne(collection, ledgerId, entry, summaryLogId))
+    if (summaryLogRowStates.length === 0) {
+      return []
     }
-    return results
+
+    const prepared = summaryLogRowStates.map((entry) =>
+      prepareRowState(ledgerId, entry, summaryLogId)
+    )
+
+    await collection.bulkWrite(
+      prepared.map(({ candidate, contentHash }) =>
+        buildUpsertOperation(candidate, contentHash, summaryLogId)
+      ),
+      { ordered: false }
+    )
+
+    const committed = await collection
+      .find({ summaryLogIds: summaryLogId })
+      .toArray()
+    const committedByIdentity = new Map(
+      committed.map((doc) => [identityKey(doc), doc])
+    )
+
+    return prepared.map(({ candidate, contentHash }) =>
+      toSummaryLogRowState(
+        committedByIdentity.get(
+          identityKey(buildIdentityFilter(candidate, contentHash))
+        )
+      )
+    )
   }
 
 /**

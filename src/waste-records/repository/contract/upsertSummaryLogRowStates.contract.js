@@ -40,6 +40,16 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
       expect(state.summaryLogIds).toEqual(['log-1'])
     })
 
+    it('returns an empty list when the submission has no rows', async () => {
+      expect(
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [],
+          'log-1'
+        )
+      ).toEqual([])
+    })
+
     it('returns one state document per entry, in input order', async () => {
       const states = await repository.upsertSummaryLogRowStates(
         DEFAULT_LEDGER_ID,
