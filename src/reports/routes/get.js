@@ -7,7 +7,11 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
 import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
+import { filterPeriodsFromDate } from '#reports/domain/filter-periods-from-date.js'
+import {
+  activeAccreditationValidFrom,
+  isRegistrationAccredited
+} from '#domain/organisations/registration-utils.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { reportsCalendarResponseSchema } from './response.schema.js'
 
@@ -102,7 +106,14 @@ export const reportsGet = {
      * support once outstanding historical reports are submitted.
      */
     const currentYear = new Date().getUTCFullYear()
-    const computedPeriods = generateReportingPeriods(cadence, currentYear)
+    const allPeriods = generateReportingPeriods(cadence, currentYear)
+
+    // An accredited operator owes monthly reports only from the date their
+    // accreditation began, so trim periods that ended before validFrom.
+    const validFrom = activeAccreditationValidFrom(registration.accreditation)
+    const computedPeriods = validFrom
+      ? filterPeriodsFromDate(allPeriods, validFrom)
+      : allPeriods
 
     const periodicReports = await reportsRepository.findPeriodicReports({
       organisationId,

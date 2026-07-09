@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  activeAccreditationValidFrom,
   getReportableRegistrations,
   isRegistrationAccredited,
   resolveAccreditationNumber,
@@ -158,6 +159,38 @@ describe('isRegistrationAccredited', () => {
 
   it('returns false when accreditation is null', () => {
     expect(isRegistrationAccredited({ accreditation: null })).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// activeAccreditationValidFrom
+// ---------------------------------------------------------------------------
+
+describe('activeAccreditationValidFrom', () => {
+  it.each(['approved', 'suspended'])(
+    'returns validFrom when accreditation status is %s',
+    (status) => {
+      expect(
+        activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })
+      ).toBe('2026-03-15')
+    }
+  )
+
+  it.each(['created', 'rejected', 'cancelled'])(
+    'returns null when accreditation status is %s',
+    (status) => {
+      expect(
+        activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })
+      ).toBeNull()
+    }
+  )
+
+  it('returns null when accreditation is null', () => {
+    expect(activeAccreditationValidFrom(null)).toBeNull()
+  })
+
+  it('returns null when accreditation is undefined', () => {
+    expect(activeAccreditationValidFrom(undefined)).toBeNull()
   })
 })
 
