@@ -23,7 +23,7 @@ const runReport = async (server) => {
   })
 
   for (const finding of findings) {
-    logger.warn({ message: formatStaleIssuedTonnageFinding(finding) })
+    logger.info({ message: formatStaleIssuedTonnageFinding(finding) })
   }
 
   const affectedOrganisations = new Set(
