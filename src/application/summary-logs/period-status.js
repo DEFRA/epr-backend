@@ -229,7 +229,7 @@ const closedPeriodRefsForRecord = (
  * @param {ClassificationContext} context
  * @returns {{ transactionAmount: number, exclusionReasons: string[] }}
  */
-const classifyRow = (schema, data, context) => {
+const classifyRowForWasteBalance = (schema, data, context) => {
   const classify = schema.classifyForWasteBalance
   if (!classify) {
     return {
@@ -418,13 +418,11 @@ const classifyAdjustedWasteRecord = ({
 
   // Reasons come from the current row, so both legs (including the old-period
   // reversal) reflect what the operator is uploading now.
-  const { transactionAmount: newAmount, exclusionReasons } = classifyRow(
-    schema,
-    record.data,
-    context
-  )
+  const { transactionAmount: newAmount, exclusionReasons } =
+    classifyRowForWasteBalance(schema, record.data, context)
   const oldAmount = existing
-    ? classifyRow(schema, existing.data, context).transactionAmount
+    ? classifyRowForWasteBalance(schema, existing.data, context)
+        .transactionAmount
     : 0
 
   return classifyAdjustedRecord({
@@ -503,11 +501,8 @@ export const classifyByPeriodStatus = ({
         cadence
       )
       if (period) {
-        const { transactionAmount, exclusionReasons } = classifyRow(
-          schema,
-          record.data,
-          classificationContext
-        )
+        const { transactionAmount, exclusionReasons } =
+          classifyRowForWasteBalance(schema, record.data, classificationContext)
         entries.push(
           ...classifyAddedRecord({
             period,
