@@ -220,9 +220,10 @@ const closedPeriodRefsForRecord = (
  *
  * A table with no classifyForWasteBalance never contributes to the balance by
  * design (eg Processed on a reprocessor input template, or Sent on for an
- * exporter). Such rows carry an explicit by-design code so the check page can
- * tell them apart from rows evaluated and excluded for a data reason, and from
- * included zero-tonnage rows which keep [].
+ * exporter). Such rows carry an explicit by-design code so their
+ * exclusionReasons stay unambiguous: separate from rows evaluated and excluded
+ * for a data reason (which carry that reason's code), and from included
+ * zero-tonnage rows (which keep []).
  *
  * @param {import('#domain/summary-logs/table-schemas/index.js').TableSchema} schema
  * @param {Record<string, any>} data
