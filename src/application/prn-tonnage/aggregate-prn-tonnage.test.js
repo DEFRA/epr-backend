@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import assert from 'node:assert'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { aggregatePrnTonnage } from './aggregate-prn-tonnage.js'
 
 describe('aggregatePrnTonnage', () => {
   const mockToArray = vi.fn()
-  const mockAggregate = vi.fn(() => ({
-    toArray: mockToArray
-  }))
+  const mockAggregate = vi.fn(
+    /** @param {Record<string, unknown>[]} _pipeline */ (_pipeline) => ({
+      toArray: mockToArray
+    })
+  )
   const mockCollection = vi.fn(() => ({
     aggregate: mockAggregate
   }))
@@ -41,7 +44,9 @@ describe('aggregatePrnTonnage', () => {
     expect(mockCollection).toHaveBeenCalledWith('packaging-recycling-notes')
     expect(mockAggregate).toHaveBeenCalledTimes(1)
 
-    const pipeline = mockAggregate.mock.calls[0][0]
+    const pipeline = mockAggregate.mock.calls[0]?.[0]
+    assert(pipeline)
+
     expect(Array.isArray(pipeline)).toBe(true)
     expect(pipeline[0]).toEqual({
       $match: {
@@ -51,13 +56,13 @@ describe('aggregatePrnTonnage', () => {
       }
     })
 
-    expect(pipeline[1].$group).toHaveProperty('awaitingAuthorisationTonnage')
-    expect(pipeline[1].$group).toHaveProperty('awaitingAcceptanceTonnage')
-    expect(pipeline[1].$group).toHaveProperty('awaitingCancellationTonnage')
-    expect(pipeline[1].$group).toHaveProperty('acceptedTonnage')
-    expect(pipeline[1].$group).toHaveProperty('cancelledTonnage')
-    expect(pipeline[1].$group).not.toHaveProperty('createdTonnage')
-    expect(pipeline[1].$group).not.toHaveProperty('issuedTonnage')
+    expect(pipeline[1]?.$group).toHaveProperty('awaitingAuthorisationTonnage')
+    expect(pipeline[1]?.$group).toHaveProperty('awaitingAcceptanceTonnage')
+    expect(pipeline[1]?.$group).toHaveProperty('awaitingCancellationTonnage')
+    expect(pipeline[1]?.$group).toHaveProperty('acceptedTonnage')
+    expect(pipeline[1]?.$group).toHaveProperty('cancelledTonnage')
+    expect(pipeline[1]?.$group).not.toHaveProperty('createdTonnage')
+    expect(pipeline[1]?.$group).not.toHaveProperty('issuedTonnage')
 
     expect(result.rows).toEqual(rows)
     expect(result.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
