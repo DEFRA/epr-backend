@@ -1,8 +1,23 @@
 import { describe, expect, it } from 'vitest'
+import assert from 'node:assert'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 import { aggregateReportDetail } from './aggregate-report-detail.js'
+
+/**
+ * @import { WasteRecord } from '#domain/waste-records/model.js'
+ */
+
+/**
+ * The builders below produce the minimal record shape the aggregator reads
+ * (type/data/versions); this casts them at the call boundary to the full
+ * WasteRecord[] the function is typed against.
+ *
+ * @param {unknown} records
+ * @returns {WasteRecord[]}
+ */
+const asWasteRecords = (records) => /** @type {WasteRecord[]} */ (records)
 
 const buildReceivedRecord = (overrides = {}) => ({
   type: WASTE_RECORD_TYPE.RECEIVED,
@@ -104,7 +119,7 @@ describe('#aggregateReportDetail', () => {
         }
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.source.lastUploadedAt).toBe('2026-02-15T15:09:00.000Z')
       expect(result.source.summaryLogId).toBe('sl-2')
@@ -124,7 +139,7 @@ describe('#aggregateReportDetail', () => {
         }
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.source.lastUploadedAt).toBe('2026-03-01T12:00:00.000Z')
       expect(result.source.summaryLogId).toBe('sl-3')
@@ -150,7 +165,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(80.25)
     })
@@ -166,7 +181,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(50)
     })
@@ -186,7 +201,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.recyclingActivity.suppliers).toStrictEqual([
         {
@@ -216,7 +231,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.recyclingActivity.suppliers[0].supplierPhone).toBe(
         '1234567890'
@@ -228,7 +243,7 @@ describe('#aggregateReportDetail', () => {
         buildReceivedRecord({ TONNAGE_RECEIVED_FOR_RECYCLING: 10 })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.recyclingActivity.suppliers[0].supplierPhone).toBeNull()
     })
@@ -239,7 +254,7 @@ describe('#aggregateReportDetail', () => {
         buildSentOnRecord({ TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 999 })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(50)
     })
@@ -266,7 +281,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.wasteSent.tonnageSentToReprocessor).toBe(10)
     })
@@ -282,7 +297,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.wasteSent.tonnageSentToReprocessor).toBe(10)
     })
@@ -305,7 +320,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.wasteSent.tonnageSentToReprocessor).toBe(5)
       expect(result.wasteSent.tonnageSentToExporter).toBe(3)
@@ -320,7 +335,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.wasteSent.tonnageSentToAnotherSite).toBe(7)
       expect(result.wasteSent.tonnageSentToReprocessor).toBe(0)
@@ -342,7 +357,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.wasteSent.finalDestinations).toStrictEqual([
         {
@@ -375,7 +390,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.wasteSent.finalDestinations).toStrictEqual([
         {
@@ -395,7 +410,7 @@ describe('#aggregateReportDetail', () => {
         buildReceivedRecord({ TONNAGE_RECEIVED_FOR_RECYCLING: 999 })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.wasteSent.tonnageSentToReprocessor).toBe(10)
     })
@@ -452,7 +467,10 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(80.25)
       expect(result.recyclingActivity.suppliers).toHaveLength(1)
@@ -473,9 +491,12 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.totalTonnageExported).toBe(11.47)
+      expect(result.exportActivity?.totalTonnageExported).toBe(11.47)
     })
 
     it('routes unresolved ORS IDs to unapprovedOverseasSites and keeps overseasSites empty', () => {
@@ -491,10 +512,13 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.overseasSites).toStrictEqual([])
-      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
+      expect(result.exportActivity?.overseasSites).toStrictEqual([])
+      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
         { orsId: '001', tonnageExported: 5 },
         { orsId: '096', tonnageExported: 5 }
       ])
@@ -529,12 +553,12 @@ describe('#aggregateReportDetail', () => {
         ['096', { siteName: null, country: null, validFrom: null }]
       ])
 
-      const result = aggregateReportDetail(records, {
+      const result = aggregateReportDetail(asWasteRecords(records), {
         ...exporterArgs,
         orsDetailsMap
       })
 
-      expect(result.exportActivity.overseasSites).toStrictEqual([
+      expect(result.exportActivity?.overseasSites).toStrictEqual([
         {
           orsId: '001',
           siteName: 'EuroPlast GmbH',
@@ -543,7 +567,7 @@ describe('#aggregateReportDetail', () => {
           approved: false
         }
       ])
-      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
+      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
         { orsId: '096', tonnageExported: 3 },
         { orsId: '200', tonnageExported: 7 }
       ])
@@ -567,9 +591,12 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
+      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
         { orsId: '500', tonnageExported: 7.75 }
       ])
     })
@@ -615,10 +642,11 @@ describe('#aggregateReportDetail', () => {
         ]
       ])
 
-      const result = aggregateReportDetail(records, {
+      const result = aggregateReportDetail(asWasteRecords(records), {
         ...exporterArgs,
         orsDetailsMap
       })
+      assert(result.exportActivity)
 
       const approvedTotal = result.exportActivity.overseasSites.reduce(
         (sum, s) => sum + s.tonnageExported,
@@ -669,12 +697,12 @@ describe('#aggregateReportDetail', () => {
         ]
       ])
 
-      const result = aggregateReportDetail(records, {
+      const result = aggregateReportDetail(asWasteRecords(records), {
         ...exporterArgs,
         orsDetailsMap
       })
 
-      expect(result.exportActivity.overseasSites).toStrictEqual([
+      expect(result.exportActivity?.overseasSites).toStrictEqual([
         {
           orsId: '001',
           siteName: 'EuroPlast GmbH',
@@ -723,12 +751,12 @@ describe('#aggregateReportDetail', () => {
         ]
       ])
 
-      const result = aggregateReportDetail(records, {
+      const result = aggregateReportDetail(asWasteRecords(records), {
         ...exporterArgs,
         orsDetailsMap
       })
 
-      expect(result.exportActivity.overseasSites).toStrictEqual([
+      expect(result.exportActivity?.overseasSites).toStrictEqual([
         {
           orsId: '124',
           siteName: 'EuroPlast GmbH',
@@ -782,25 +810,25 @@ describe('#aggregateReportDetail', () => {
         ]
       ])
 
-      const result = aggregateReportDetail(records, {
+      const result = aggregateReportDetail(asWasteRecords(records), {
         ...exporterArgs,
         orsDetailsMap
       })
 
-      expect(result.exportActivity.overseasSites).toHaveLength(2)
-      expect(result.exportActivity.unapprovedOverseasSites).toHaveLength(0)
+      expect(result.exportActivity?.overseasSites).toHaveLength(2)
+      expect(result.exportActivity?.unapprovedOverseasSites).toHaveLength(0)
     })
 
     it('returns empty wasteExported when no exported records match', () => {
       const result = aggregateReportDetail([], exporterArgs)
 
-      expect(result.exportActivity.totalTonnageExported).toBe(0)
-      expect(result.exportActivity.overseasSites).toStrictEqual([])
-      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([])
-      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(0)
-      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(0)
-      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(0)
-      expect(result.exportActivity.tonnageRepatriated).toBe(0)
+      expect(result.exportActivity?.totalTonnageExported).toBe(0)
+      expect(result.exportActivity?.overseasSites).toStrictEqual([])
+      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([])
+      expect(result.exportActivity?.tonnageRefusedAtDestination).toBe(0)
+      expect(result.exportActivity?.tonnageStoppedDuringExport).toBe(0)
+      expect(result.exportActivity?.totalTonnageRefusedOrStopped).toBe(0)
+      expect(result.exportActivity?.tonnageRepatriated).toBe(0)
     })
 
     it('sums tonnage refused at recipient destination', () => {
@@ -816,11 +844,14 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(5)
-      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(0)
-      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(5)
+      expect(result.exportActivity?.tonnageRefusedAtDestination).toBe(5)
+      expect(result.exportActivity?.tonnageStoppedDuringExport).toBe(0)
+      expect(result.exportActivity?.totalTonnageRefusedOrStopped).toBe(5)
     })
 
     it('sums tonnage stopped during export', () => {
@@ -836,11 +867,14 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(4)
-      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(0)
-      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(4)
+      expect(result.exportActivity?.tonnageStoppedDuringExport).toBe(4)
+      expect(result.exportActivity?.tonnageRefusedAtDestination).toBe(0)
+      expect(result.exportActivity?.totalTonnageRefusedOrStopped).toBe(4)
     })
 
     it('counts tonnage in both refused and stopped when both are Yes, but only once in total', () => {
@@ -852,11 +886,14 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(7)
-      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(7)
-      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(7)
+      expect(result.exportActivity?.tonnageRefusedAtDestination).toBe(7)
+      expect(result.exportActivity?.tonnageStoppedDuringExport).toBe(7)
+      expect(result.exportActivity?.totalTonnageRefusedOrStopped).toBe(7)
     })
 
     it('sums tonnage repatriated by DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED in period', () => {
@@ -873,9 +910,12 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.tonnageRepatriated).toBe(11)
+      expect(result.exportActivity?.tonnageRepatriated).toBe(11)
     })
 
     it('excludes tonnage repatriated when DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED is outside period', () => {
@@ -887,9 +927,12 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.tonnageRepatriated).toBe(0)
+      expect(result.exportActivity?.tonnageRepatriated).toBe(0)
     })
 
     it('returns zero for refused, stopped and repatriated when flags are absent', () => {
@@ -899,12 +942,15 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(0)
-      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(0)
-      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(0)
-      expect(result.exportActivity.tonnageRepatriated).toBe(0)
+      expect(result.exportActivity?.tonnageRefusedAtDestination).toBe(0)
+      expect(result.exportActivity?.tonnageStoppedDuringExport).toBe(0)
+      expect(result.exportActivity?.totalTonnageRefusedOrStopped).toBe(0)
+      expect(result.exportActivity?.tonnageRepatriated).toBe(0)
     })
 
     it('excludes exported records outside the period', () => {
@@ -919,9 +965,12 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, exporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        exporterArgs
+      )
 
-      expect(result.exportActivity.totalTonnageExported).toBe(5)
+      expect(result.exportActivity?.totalTonnageExported).toBe(5)
     })
 
     it('does not include wasteExported for reprocessor categories', () => {
@@ -933,7 +982,7 @@ describe('#aggregateReportDetail', () => {
     it('reports tonnageReceivedNotExported as null', () => {
       const result = aggregateReportDetail([], exporterArgs)
 
-      expect(result.exportActivity.tonnageReceivedNotExported).toBeNull()
+      expect(result.exportActivity?.tonnageReceivedNotExported).toBeNull()
     })
   })
 
@@ -975,7 +1024,10 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, accreditedExporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        accreditedExporterArgs
+      )
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(80.25)
     })
@@ -983,7 +1035,10 @@ describe('#aggregateReportDetail', () => {
     it('returns suppliers even when all fields are missing for wasteReceived', () => {
       const records = [buildAccreditedExportedRecord()]
 
-      const result = aggregateReportDetail(records, accreditedExporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        accreditedExporterArgs
+      )
 
       expect(result.recyclingActivity.suppliers).toStrictEqual([
         {
@@ -1009,9 +1064,12 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, accreditedExporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        accreditedExporterArgs
+      )
 
-      expect(result.exportActivity.totalTonnageExported).toBe(11.5)
+      expect(result.exportActivity?.totalTonnageExported).toBe(11.5)
     })
 
     it('filters wasteReceived and wasteExported by different date fields', () => {
@@ -1024,15 +1082,20 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const january = aggregateReportDetail(records, {
+      const january = aggregateReportDetail(asWasteRecords(records), {
         ...accreditedExporterArgs,
         period: 1
       })
+      assert(january.exportActivity)
 
       expect(january.recyclingActivity.totalTonnageReceived).toBe(42)
       expect(january.exportActivity.totalTonnageExported).toBe(0)
 
-      const february = aggregateReportDetail(records, accreditedExporterArgs)
+      const february = aggregateReportDetail(
+        asWasteRecords(records),
+        accreditedExporterArgs
+      )
+      assert(february.exportActivity)
 
       expect(february.recyclingActivity.totalTonnageReceived).toBe(0)
       expect(february.exportActivity.totalTonnageExported).toBe(40)
@@ -1047,10 +1110,13 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, accreditedExporterArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords(records),
+        accreditedExporterArgs
+      )
 
-      expect(result.exportActivity.overseasSites).toStrictEqual([])
-      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
+      expect(result.exportActivity?.overseasSites).toStrictEqual([])
+      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
         { orsId: '001', tonnageExported: 48 },
         { orsId: '096', tonnageExported: 48 }
       ])
@@ -1074,12 +1140,12 @@ describe('#aggregateReportDetail', () => {
         ]
       ])
 
-      const result = aggregateReportDetail(records, {
+      const result = aggregateReportDetail(asWasteRecords(records), {
         ...accreditedExporterArgs,
         orsDetailsMap
       })
 
-      expect(result.exportActivity.overseasSites).toStrictEqual([
+      expect(result.exportActivity?.overseasSites).toStrictEqual([
         {
           orsId: '001',
           siteName: 'EuroPlast GmbH',
@@ -1100,9 +1166,12 @@ describe('#aggregateReportDetail', () => {
           })
         ]
 
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
+        const result = aggregateReportDetail(
+          asWasteRecords(records),
+          accreditedExporterArgs
+        )
 
-        expect(result.exportActivity.tonnageReceivedNotExported).toBe(0)
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(0)
       })
 
       it('includes records whose DATE_OF_EXPORT is after the period', () => {
@@ -1114,9 +1183,12 @@ describe('#aggregateReportDetail', () => {
           })
         ]
 
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
+        const result = aggregateReportDetail(
+          asWasteRecords(records),
+          accreditedExporterArgs
+        )
 
-        expect(result.exportActivity.tonnageReceivedNotExported).toBe(37.5)
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(37.5)
       })
 
       it('includes records with no DATE_OF_EXPORT', () => {
@@ -1128,9 +1200,12 @@ describe('#aggregateReportDetail', () => {
           })
         ]
 
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
+        const result = aggregateReportDetail(
+          asWasteRecords(records),
+          accreditedExporterArgs
+        )
 
-        expect(result.exportActivity.tonnageReceivedNotExported).toBe(25)
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(25)
       })
 
       it('sums only records not exported within the period', () => {
@@ -1152,9 +1227,12 @@ describe('#aggregateReportDetail', () => {
           })
         ]
 
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
+        const result = aggregateReportDetail(
+          asWasteRecords(records),
+          accreditedExporterArgs
+        )
 
-        expect(result.exportActivity.tonnageReceivedNotExported).toBe(30)
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(30)
       })
     })
   })
@@ -1171,7 +1249,7 @@ describe('#aggregateReportDetail', () => {
         })
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(50)
     })
@@ -1179,7 +1257,7 @@ describe('#aggregateReportDetail', () => {
     it('returns empty section when operator category has no date fields for a record type', () => {
       const records = [buildReceivedRecord()]
 
-      const result = aggregateReportDetail(records, {
+      const result = aggregateReportDetail(asWasteRecords(records), {
         ...defaultArgs,
         operatorCategory: OPERATOR_CATEGORY.EXPORTER
       })
@@ -1206,7 +1284,7 @@ describe('#aggregateReportDetail', () => {
         }
       ]
 
-      const result = aggregateReportDetail(records, defaultArgs)
+      const result = aggregateReportDetail(asWasteRecords(records), defaultArgs)
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(0)
     })
@@ -1222,12 +1300,15 @@ describe('#aggregateReportDetail', () => {
         TONNAGE_RECEIVED_FOR_RECYCLING: 75
       })
 
-      const result = aggregateReportDetail([registeredOnlyRecord], {
-        operatorCategory: OPERATOR_CATEGORY.REPROCESSOR,
-        cadence: 'monthly',
-        year: 2026,
-        period: 1
-      })
+      const result = aggregateReportDetail(
+        asWasteRecords([registeredOnlyRecord]),
+        {
+          operatorCategory: OPERATOR_CATEGORY.REPROCESSOR,
+          cadence: 'monthly',
+          year: 2026,
+          period: 1
+        }
+      )
 
       // The record has MONTH_RECEIVED_FOR_REPROCESSING but the accredited
       // category looks up DATE_RECEIVED_FOR_REPROCESSING — the field is
@@ -1255,12 +1336,15 @@ describe('#aggregateReportDetail', () => {
         ]
       }
 
-      const result = aggregateReportDetail([registeredOnlyRecord], {
-        operatorCategory: OPERATOR_CATEGORY.EXPORTER,
-        cadence: 'monthly',
-        year: 2026,
-        period: 2
-      })
+      const result = aggregateReportDetail(
+        asWasteRecords([registeredOnlyRecord]),
+        {
+          operatorCategory: OPERATOR_CATEGORY.EXPORTER,
+          cadence: 'monthly',
+          year: 2026,
+          period: 2
+        }
+      )
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(0)
       expect(result.diagnostics.wasteReceivedRecordsExcluded).toBe(1)
@@ -1272,7 +1356,10 @@ describe('#aggregateReportDetail', () => {
         TONNAGE_RECEIVED_FOR_RECYCLING: 50
       })
 
-      const result = aggregateReportDetail([accreditedRecord], defaultArgs)
+      const result = aggregateReportDetail(
+        asWasteRecords([accreditedRecord]),
+        defaultArgs
+      )
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(50)
       expect(result.diagnostics.wasteReceivedRecordsExcluded).toBe(0)
