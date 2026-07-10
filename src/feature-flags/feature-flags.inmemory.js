@@ -12,9 +12,6 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isSummaryLogRowStatesEnabled() {
     return flags.summaryLogRowStates ?? false
   },
-  isRegisteredOnlySubmittedEventsEnabled() {
-    return flags.registeredOnlySubmittedEvents ?? false
-  },
   isStaleIssuedTonnageReportEnabled() {
     return flags.staleIssuedTonnageReport ?? false
   }

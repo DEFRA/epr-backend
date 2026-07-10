@@ -3,7 +3,6 @@
  * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isFixDuplicateAccreditationLinksEnabled
  * @property {() => boolean} isSummaryLogRowStatesEnabled
- * @property {() => boolean} isRegisteredOnlySubmittedEventsEnabled
  * @property {() => boolean} isStaleIssuedTonnageReportEnabled
  */
 
@@ -12,7 +11,6 @@
  * @property {boolean} [devEndpoints]
  * @property {boolean} [fixDuplicateAccreditationLinks]
  * @property {boolean} [summaryLogRowStates]
- * @property {boolean} [registeredOnlySubmittedEvents]
  * @property {boolean} [staleIssuedTonnageReport]
  */
 
