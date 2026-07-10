@@ -24,27 +24,30 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
 /**
  * The shared context handed to each write path. The ledger path and the
  * no-balance-effect discard write consume different subsets.
  *
- * @typedef {Object} PrnWriteContext
- * @property {PackagingRecyclingNotesRepository} prnRepository
- * @property {OrganisationsRepository} organisationsRepository
- * @property {WasteBalanceService} service
- * @property {import('#common/hapi-types.js').TypedLogger} logger
- * @property {PackagingRecyclingNote} prn
- * @property {import('#packaging-recycling-notes/repository/port.js').UpdateStatusParams} updateParams
- * @property {PrnStatus} newStatus
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string} accreditationId
- * @property {{ id: string; name: string; email?: string }} user
- * @property {PrnStatus} currentStatus
- * @property {Date} now
- * @property {string} id
+ * The identity is an accreditation's, not a registration's: this path runs only
+ * for accredited streams, so `accreditationId` is narrowed to non-null — the
+ * same intersection `applyPrnBalanceCommand` takes as its `ledgerId`.
+ *
+ * @typedef {WasteBalanceLedgerId & { accreditationId: string } & {
+ *   prnRepository: PackagingRecyclingNotesRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   service: WasteBalanceService,
+ *   logger: import('#common/hapi-types.js').TypedLogger,
+ *   prn: PackagingRecyclingNote,
+ *   updateParams: import('#packaging-recycling-notes/repository/port.js').UpdateStatusParams,
+ *   newStatus: PrnStatus,
+ *   user: { id: string, name: string, email?: string },
+ *   currentStatus: PrnStatus,
+ *   now: Date,
+ *   id: string
+ * }} PrnWriteContext
  */
 
 /**
