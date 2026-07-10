@@ -411,9 +411,9 @@ export async function fetchOrGenerateReportForPeriod({
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
     operatorCategory,
-    registration,
     organisationId,
     registrationId,
+    registration,
     year,
     cadence,
     period
@@ -448,9 +448,9 @@ async function resolveSource(ledgerRepository, ledgerId) {
  * @param {object} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.operatorCategory
- * @param {object} params.registration
  * @param {string} params.organisationId
  * @param {string} params.registrationId
+ * @param {object} params.registration
  * @param {number} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -462,28 +462,23 @@ async function getAggregatedReportDetail({
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   operatorCategory,
-  registration,
   organisationId,
   registrationId,
+  registration,
   year,
   cadence,
   period
 }) {
   const accreditationId = registration.accreditationId ?? null
+  const ledgerId = { organisationId, registrationId, accreditationId }
 
   const wasteRecordStates = await summaryLogRowStatesForRegistration({
     ledgerRepository,
     summaryLogRowStateRepository,
-    organisationId,
-    registrationId,
-    accreditationId
+    ...ledgerId
   })
 
-  const source = await resolveSource(ledgerRepository, {
-    organisationId,
-    registrationId,
-    accreditationId
-  })
+  const source = await resolveSource(ledgerRepository, ledgerId)
 
   const orsDetailsMap = await getOrsDetailsMap(
     overseasSitesRepository,
@@ -500,6 +495,8 @@ async function getAggregatedReportDetail({
   })
 
   const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
+    organisationId,
+    registrationId,
     accreditationId: registration.accreditationId,
     startDate: aggregatedReportDetail.startDate,
     endDate: aggregatedReportDetail.endDate
@@ -581,9 +578,9 @@ export async function createReportForPeriod({
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
     operatorCategory,
-    registration,
     organisationId,
     registrationId,
+    registration,
     year,
     cadence,
     period

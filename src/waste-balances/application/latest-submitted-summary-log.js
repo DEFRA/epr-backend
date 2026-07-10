@@ -9,13 +9,9 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
  * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
  * @returns {Promise<{ summaryLogId: string, submittedAt: Date } | null>}
  */
-export const latestSubmittedSummaryLog = async (
-  ledgerRepository,
-  { registrationId, accreditationId }
-) => {
+export const latestSubmittedSummaryLog = async (ledgerRepository, ledgerId) => {
   const latest = await ledgerRepository.findLatestInLedgerByKind(
-    registrationId,
-    accreditationId,
+    ledgerId,
     LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
   )
 

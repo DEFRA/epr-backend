@@ -619,8 +619,18 @@ describe(`POST ${reportsPostPath}`, () => {
     const accreditationId = new ObjectId().toString()
     const issuedAt = new Date('2025-01-15T00:00:00.000Z')
 
+    const registration = buildRegistration({
+      wasteProcessingType: 'reprocessor',
+      accreditationId
+    })
+    const org = buildOrganisationWithRegistration(registration, 'approved')
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([org])
+
     const prn = {
       ...buildAwaitingAcceptancePrn({
+        organisation: { id: org.id, name: 'Test Organisation' },
+        registrationId: registration.id,
         accreditation: {
           id: accreditationId,
           accreditationNumber: 'ACC-TEST-001',
@@ -644,13 +654,6 @@ describe(`POST ${reportsPostPath}`, () => {
       id: new ObjectId().toString()
     }
 
-    const registration = buildRegistration({
-      wasteProcessingType: 'reprocessor',
-      accreditationId
-    })
-    const org = buildOrganisationWithRegistration(registration, 'approved')
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository([org])
     const { ledgerRepository, summaryLogRowStatesRepository } =
       await seedRepositories(org, registration)
 

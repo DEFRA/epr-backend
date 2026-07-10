@@ -3,6 +3,20 @@ import { LEDGER_EVENT_KIND } from './ledger-schema.js'
 const DEFAULT_CREATED_AT = new Date('2026-01-15T10:00:00.000Z')
 
 /**
+ * Build the id of a waste balance ledger. Defaults match `buildLedgerEvent`, so
+ * a ledger id built with no overrides names the ledger that event belongs to.
+ *
+ * @param {Partial<import('./ledger-schema.js').WasteBalanceLedgerId>} [overrides]
+ * @returns {import('./ledger-schema.js').WasteBalanceLedgerId}
+ */
+export const buildLedgerId = (overrides = {}) => ({
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  accreditationId: 'acc-1',
+  ...overrides
+})
+
+/**
  * Build a valid ledger event (insert shape — no `id`).
  * Defaults to a summary-log-submitted event.
  * @param {object} [overrides]

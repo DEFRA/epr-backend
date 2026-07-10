@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildLedgerEvent } from '../ledger-test-data.js'
+import { buildLedgerEvent, buildLedgerId } from '../ledger-test-data.js'
 import { LedgerSequenceError, LedgerSlotConflictError } from '../ledger-port.js'
 
 export const testAppendEventsBehaviour = (it) => {
@@ -98,9 +98,10 @@ export const testAppendEventsBehaviour = (it) => {
       )
     })
 
-    it('LedgerSequenceError carries the provided and expected numbers', async () => {
+    it('LedgerSequenceError carries the full ledger identity and both numbers', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
+          organisationId: 'org-seq-err',
           registrationId: 'reg-seq-err',
           accreditationId: 'acc-seq-err',
           number: 1
@@ -110,6 +111,7 @@ export const testAppendEventsBehaviour = (it) => {
       await expect(
         repository.appendEvents([
           buildLedgerEvent({
+            organisationId: 'org-seq-err',
             registrationId: 'reg-seq-err',
             accreditationId: 'acc-seq-err',
             number: 5,
@@ -117,6 +119,7 @@ export const testAppendEventsBehaviour = (it) => {
           })
         ])
       ).rejects.toMatchObject({
+        organisationId: 'org-seq-err',
         registrationId: 'reg-seq-err',
         accreditationId: 'acc-seq-err',
         providedNumber: 5,
@@ -147,9 +150,10 @@ export const testAppendEventsBehaviour = (it) => {
       )
     })
 
-    it('LedgerSlotConflictError carries the ledger identity and slot number', async () => {
+    it('LedgerSlotConflictError carries the full ledger identity and slot number', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
+          organisationId: 'org-slot-err',
           registrationId: 'reg-slot-err',
           accreditationId: 'acc-slot-err',
           number: 1
@@ -159,6 +163,7 @@ export const testAppendEventsBehaviour = (it) => {
       await expect(
         repository.appendEvents([
           buildLedgerEvent({
+            organisationId: 'org-slot-err',
             registrationId: 'reg-slot-err',
             accreditationId: 'acc-slot-err',
             number: 1,
@@ -166,6 +171,7 @@ export const testAppendEventsBehaviour = (it) => {
           })
         ])
       ).rejects.toMatchObject({
+        organisationId: 'org-slot-err',
         registrationId: 'reg-slot-err',
         accreditationId: 'acc-slot-err',
         slotNumber: 1
@@ -235,7 +241,9 @@ export const testAppendEventsBehaviour = (it) => {
 
       await repository.appendEvents(events)
 
-      const latest = await repository.findLatestInLedger('reg-vis', 'acc-vis')
+      const latest = await repository.findLatestInLedger(
+        buildLedgerId({ registrationId: 'reg-vis', accreditationId: 'acc-vis' })
+      )
       expect(latest).not.toBeNull()
       expect(latest.number).toBe(2)
     })

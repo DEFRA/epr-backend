@@ -9,7 +9,10 @@ import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repos
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  buildAwaitingAcceptancePrn,
+  underAccreditation
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
@@ -469,16 +472,19 @@ describe('report-service', () => {
       const IN_PERIOD = new Date('2024-01-15T12:00:00.000Z')
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
-      const buildIssuedPrn = (accreditationId, tonnage) =>
+      const accreditationOf = ({
+        organisationId,
+        registrationId,
+        registration
+      }) => ({
+        organisationId,
+        registrationId,
+        accreditationId: registration.accreditationId
+      })
+
+      const buildIssuedPrn = (accreditation, tonnage) =>
         buildAwaitingAcceptancePrn({
-          accreditation: {
-            id: accreditationId,
-            accreditationNumber: 'ACC-001',
-            accreditationYear: 2024,
-            material: 'plastic',
-            submittedToRegulator: 'ea',
-            siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-          },
+          ...underAccreditation(accreditation),
           tonnage,
           status: {
             currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
@@ -540,12 +546,8 @@ describe('report-service', () => {
           await seedState(params, [buildReceivedEntry()])
         const prnRepo = createPrnRepo()
 
-        await prnRepo.create(
-          buildIssuedPrn(params.registration.accreditationId, 30)
-        )
-        await prnRepo.create(
-          buildIssuedPrn(params.registration.accreditationId, 20)
-        )
+        await prnRepo.create(buildIssuedPrn(accreditationOf(params), 30))
+        await prnRepo.create(buildIssuedPrn(accreditationOf(params), 20))
 
         const report = await createReportForPeriod({
           reportsRepository,

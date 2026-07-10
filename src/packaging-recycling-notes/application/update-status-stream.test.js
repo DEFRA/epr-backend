@@ -286,7 +286,11 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
     ).rejects.toThrow('doc write failed')
 
-    const all = await ledgerRepository.findAllInLedger(REG_ID, ACC_ID)
+    const all = await ledgerRepository.findAllInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
     expect(all).toHaveLength(2)
     expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
   })
@@ -413,7 +417,11 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
     ).rejects.toThrow('doc write failed')
 
-    const all = await ledgerRepository.findAllInLedger(REG_ID, ACC_ID)
+    const all = await ledgerRepository.findAllInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
     expect(all).toHaveLength(2)
     expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
   })
