@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
 export const ledgerEventsGetPath =
-  '/v1/admin/registrations/{registrationId}/accreditations/{accreditationId}/waste-balance-events'
+  '/v1/admin/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/waste-balance-events'
 
 export const ledgerEventsGet = {
   method: 'GET',
@@ -15,12 +15,13 @@ export const ledgerEventsGet = {
   },
   handler: async (request, h) => {
     const { ledgerRepository } = request
-    const { registrationId, accreditationId } = request.params
+    const { organisationId, registrationId, accreditationId } = request.params
 
-    const events = await ledgerRepository.findAllInLedger(
+    const events = await ledgerRepository.findAllInLedger({
+      organisationId,
       registrationId,
       accreditationId
-    )
+    })
 
     return h.response(events).code(StatusCodes.OK)
   }

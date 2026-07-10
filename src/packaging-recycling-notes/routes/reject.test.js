@@ -148,10 +148,11 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
     expect(stored?.updatedBy).toEqual(rpd)
     expect(stored?.status.rejected?.by).toEqual(rpd)
 
-    const latestEvent = await ledgerRepository.findLatestInLedger(
+    const latestEvent = await ledgerRepository.findLatestInLedger({
+      organisationId,
       registrationId,
       accreditationId
-    )
+    })
     expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_REJECTED)
     expect(latestEvent.createdBy).toEqual(rpd)
     // Rejection is balance-neutral: the closing balance matches the opening one.

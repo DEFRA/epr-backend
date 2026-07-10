@@ -167,7 +167,7 @@ describe('PRN transition actor on the waste-balance stream', () => {
 
   it('carries the requesting human id, name and email onto the appended stream event', async () => {
     const env = await setupLedgerEnv()
-    const { ledgerRepository, registrationId } = env
+    const { ledgerRepository, organisationId, registrationId } = env
 
     await submitCredit(env, 300)
 
@@ -179,10 +179,11 @@ describe('PRN transition actor on the waste-balance stream', () => {
     })
     expect(response.statusCode).toBe(200)
 
-    const latest = await ledgerRepository.findLatestInLedger(
+    const latest = await ledgerRepository.findLatestInLedger({
+      organisationId,
       registrationId,
-      LEDGER_ACCREDITATION_ID
-    )
+      accreditationId: LEDGER_ACCREDITATION_ID
+    })
     assert(latest)
     expect(latest.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
     expect(latest.payload).toEqual({ prnId: prn.id, amount: 50 })

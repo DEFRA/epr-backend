@@ -1150,6 +1150,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const {
         packagingRecyclingNotesRepository,
         ledgerRepository,
+        organisationId,
         registrationId
       } = env
 
@@ -1173,10 +1174,11 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBe(250) // 300 - 50 ringfenced
 
       // The document watermark is the event the raise appended, not just any number.
-      const latest = await ledgerRepository.findLatestInLedger(
+      const latest = await ledgerRepository.findLatestInLedger({
+        organisationId,
         registrationId,
-        'ACC-123'
-      )
+        accreditationId: 'ACC-123'
+      })
       const stored = await packagingRecyclingNotesRepository.findById(prn.id)
       assert(stored)
       expect(stored.lastAppliedEventNumber).toBe(latest?.number)

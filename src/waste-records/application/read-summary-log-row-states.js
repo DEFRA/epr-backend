@@ -56,22 +56,21 @@ const summaryLogRowStatesForHead = async (
  * row whose committed state belongs to that submission, projected to its
  * domain content.
  *
- * @param {{
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & {
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
- *   summaryLogRowStateRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository,
- *   organisationId: string,
- *   registrationId: string,
- *   accreditationId: string | null
+ *   summaryLogRowStateRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository
  * }} context
  * @returns {Promise<WasteRecordState[]>}
  */
 export const summaryLogRowStatesForRegistration = async ({
   ledgerRepository,
   summaryLogRowStateRepository,
+  organisationId,
   registrationId,
   accreditationId
 }) => {
   const head = await latestSubmittedSummaryLogId(ledgerRepository, {
+    organisationId,
     registrationId,
     accreditationId
   })
