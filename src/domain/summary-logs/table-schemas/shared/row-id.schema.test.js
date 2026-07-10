@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { assertPresent } from '#test/assert-present.js'
 import { createRowIdSchema } from './row-id.schema.js'
 
 describe('row-id.schema', () => {
@@ -22,13 +23,13 @@ describe('row-id.schema', () => {
 
       it('rejects ROW_ID below minimum', () => {
         const { error } = schema.validate(999)
-        expect(error).toBeDefined()
+        assertPresent(error)
         expect(error.details[0].message).toBe('must be at least 1000')
       })
 
       it('rejects non-integer ROW_ID', () => {
         const { error } = schema.validate(1000.5)
-        expect(error).toBeDefined()
+        assertPresent(error)
         expect(error.details[0].message).toBe('must be an integer')
       })
 
@@ -40,13 +41,13 @@ describe('row-id.schema', () => {
 
       it('rejects non-numeric string', () => {
         const { error } = schema.validate('abc')
-        expect(error).toBeDefined()
+        assertPresent(error)
         expect(error.details[0].message).toBe('must be a number')
       })
 
       it('rejects null ROW_ID', () => {
         const { error } = schema.validate(null)
-        expect(error).toBeDefined()
+        assertPresent(error)
         expect(error.details[0].message).toBe('must be a number')
       })
     })
@@ -61,7 +62,7 @@ describe('row-id.schema', () => {
 
       it('rejects ROW_ID below minimum', () => {
         const { error } = schema.validate(2999)
-        expect(error).toBeDefined()
+        assertPresent(error)
         expect(error.details[0].message).toBe('must be at least 3000')
       })
     })

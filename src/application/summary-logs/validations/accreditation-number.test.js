@@ -256,7 +256,7 @@ describe('validateAccreditationNumber', () => {
     })
 
     expect(issues.isFatal()).toBe(true)
-    expect(issues.getAllIssues()[0].context.actual).toBe('99999999')
+    expect(issues.getAllIssues()[0]?.context?.actual).toBe('99999999')
   })
 
   it('treats whitespace-only spreadsheet value as missing when registration has accreditation', () => {
@@ -437,7 +437,7 @@ describe('validateAccreditationNumber', () => {
 
     expect(issues.isFatal()).toBe(true)
     const allIssues = issues.getAllIssues()
-    expect(allIssues[0].context.location).toEqual({
+    expect(allIssues[0]?.context?.location).toEqual({
       field: 'ACCREDITATION_NUMBER' // Only field is set when location is missing
     })
   })
