@@ -1,6 +1,6 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 import { describe, expect } from 'vitest'
 import { createOrganisationsRepository } from './mongodb.js'
 

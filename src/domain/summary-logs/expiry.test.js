@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { invalidArg } from '#test/invalid-arg.js'
+import { invalidArg } from '#test/type-helpers.js'
 import { SUMMARY_LOG_STATUS, calculateExpiresAt } from './status.js'
 
 describe('calculateExpiresAt', () => {

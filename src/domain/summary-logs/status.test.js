@@ -8,7 +8,7 @@ import {
   transitionStatus,
   UPLOAD_STATUS
 } from './status.js'
-import { invalidArg } from '#test/invalid-arg.js'
+import { invalidArg } from '#test/type-helpers.js'
 
 const FIXED_NOW = new Date('2024-12-19T12:00:00.000Z')
 const TWENTY_MINUTES_LATER = new Date('2024-12-19T12:20:00.000Z')

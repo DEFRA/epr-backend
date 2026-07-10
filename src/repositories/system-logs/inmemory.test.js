@@ -1,7 +1,7 @@
 import { describe, expect, it as base } from 'vitest'
 import { createSystemLogsRepository } from './inmemory.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
-import { invalidArg } from '#test/invalid-arg.js'
+import { invalidArg } from '#test/type-helpers.js'
 
 /** @import {SystemLogsRepository} from './port.js' */
 /** @import {TestAPI} from 'vitest' */

@@ -1,7 +1,7 @@
 import { vi, describe, test, expect, afterEach } from 'vitest'
 
 import { fetchJson } from './fetch-json.js'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 
 const MOCK_TRACE_ID = 'mock-trace-id-1'
 

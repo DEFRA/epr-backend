@@ -1,4 +1,4 @@
-import { invalidArg } from '#test/invalid-arg.js'
+import { invalidArg } from '#test/type-helpers.js'
 import {
   generateExternalApiToken,
   generateExternalApiTokenWithoutClientId

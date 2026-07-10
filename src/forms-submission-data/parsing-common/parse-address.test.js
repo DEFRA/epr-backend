@@ -1,5 +1,5 @@
 import { parseUkAddress } from './parse-address.js'
-import { invalidArg } from '#test/invalid-arg.js'
+import { invalidArg } from '#test/type-helpers.js'
 import nonRegisteredUkSoleTrader from '#data/fixtures/ea/organisation/non-registered-uk-sole-trader.json' with { type: 'json' }
 import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-no-partnership.json' with { type: 'json' }
 import registeredLtdPartnership from '#data/fixtures/ea/organisation/registered-ltd-partnership.json' with { type: 'json' }

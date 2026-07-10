@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildOverseasSite, buildFullOverseasSite } from './test-data.js'
-import { invalidArg } from '#test/invalid-arg.js'
+import { invalidArg } from '#test/type-helpers.js'
 
 /** @import { OverseasSitesRepository } from '../port.js' */
 

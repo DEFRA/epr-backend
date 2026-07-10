@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { createUploadsRepository } from './cdp-uploader.js'
 

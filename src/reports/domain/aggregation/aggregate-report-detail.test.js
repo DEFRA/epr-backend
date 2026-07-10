@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'

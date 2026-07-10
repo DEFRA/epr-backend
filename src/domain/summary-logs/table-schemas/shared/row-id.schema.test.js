@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 import { createRowIdSchema } from './row-id.schema.js'
 
 describe('row-id.schema', () => {

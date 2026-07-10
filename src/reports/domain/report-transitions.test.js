@@ -1,5 +1,5 @@
 import { REPORT_STATUS } from './report-status.js'
-import { invalidArg } from '#test/invalid-arg.js'
+import { invalidArg } from '#test/type-helpers.js'
 import {
   REPORT_STATUS_TRANSITIONS,
   isValidReportTransition

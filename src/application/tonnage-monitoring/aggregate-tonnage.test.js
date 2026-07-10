@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 import { aggregateTonnageByMaterial } from './aggregate-tonnage.js'
 
 const createMockDb = (aggregateResults) => ({

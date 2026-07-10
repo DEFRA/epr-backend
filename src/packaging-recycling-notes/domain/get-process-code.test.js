@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { invalidArg } from '#test/invalid-arg.js'
+import { invalidArg } from '#test/type-helpers.js'
 import { getProcessCode } from './get-process-code.js'
 
 describe('getProcessCode', () => {

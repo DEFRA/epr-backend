@@ -5,7 +5,7 @@ import { createFormDataMigrator } from '#formsubmission/migration/migration-orch
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { partialMock } from '#test/partial-mock.js'
+import { partialMock } from '#test/type-helpers.js'
 
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
