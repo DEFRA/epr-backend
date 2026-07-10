@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createFormsFileUploadsRepository } from './forms-file-uploads.js'
 
+/** @import {S3Client} from '@aws-sdk/client-s3' */
+
 const mockGetCognitoToken = vi.fn()
 const mockFetchJson = vi.fn()
 const mockUploadDone = vi.fn()
@@ -33,7 +35,9 @@ describe('createFormsFileUploadsRepository', () => {
       send: vi.fn()
     }
 
-    repository = createFormsFileUploadsRepository({ s3Client: mockS3Client })
+    repository = createFormsFileUploadsRepository({
+      s3Client: /** @type {S3Client} */ (/** @type {unknown} */ (mockS3Client))
+    })
   })
 
   afterEach(() => {

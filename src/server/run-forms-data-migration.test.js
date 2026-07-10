@@ -5,6 +5,7 @@ import { createFormDataMigrator } from '#formsubmission/migration/migration-orch
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
+import { partialMock } from '#test/partial-mock.js'
 
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
@@ -32,21 +33,22 @@ vi.mock('#repositories/system-logs/mongodb.js', () => ({
 
 describe('runFormsDataMigration', () => {
   let mockServer
+  /** @type {FormSubmissionsRepository} */
   let mockFormSubmissionsRepository
+  /** @type {OrganisationsRepository} */
   let mockOrganisationsRepository
   let mockLock
   let mockFormsDataMigration
-  const mockSystemLogsRepository = /** @type {SystemLogsRepository} */ ({})
+  /** @type {SystemLogsRepository} */
+  const mockSystemLogsRepository = partialMock({})
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockFormSubmissionsRepository = /** @type {FormSubmissionsRepository} */ (
-      /** @type {unknown} */ ({ findAllOrganisations: vi.fn() })
-    )
-    mockOrganisationsRepository = /** @type {OrganisationsRepository} */ (
-      /** @type {unknown} */ ({ insert: vi.fn() })
-    )
+    mockFormSubmissionsRepository = partialMock({
+      findAllOrganisations: vi.fn()
+    })
+    mockOrganisationsRepository = partialMock({ insert: vi.fn() })
 
     mockFormsDataMigration = {
       migrate: vi.fn().mockResolvedValue(undefined)
