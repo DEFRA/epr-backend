@@ -65,6 +65,10 @@ async function buildRegisteredOnlyOrg(orgRepo) {
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 const SUBMITTED_DATE = '2026-04-17'
 
+// Accredited from the start of the reporting year, so every period of the year
+// is within the accreditation window (no validFrom trim).
+const FULL_YEAR_RANGE = { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
+
 // All ended reporting periods for the current year (2026) at FIXED_DATE 2026-04-17:
 // Jan, Feb, Mar, Q1 — Apr has not yet ended.
 const EXPECTED_PERIODS = [
@@ -131,7 +135,7 @@ describe('generateReportCompliance', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo)
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(orgRepo, reportsRepo)
@@ -155,7 +159,7 @@ describe('generateReportCompliance', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo)
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(orgRepo, reportsRepo)
@@ -180,7 +184,7 @@ describe('generateReportCompliance', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo)
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
@@ -248,7 +252,7 @@ describe('generateReportCompliance', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo)
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(orgRepo, reportsRepo)
@@ -272,8 +276,8 @@ describe('generateReportCompliance', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org1 = await buildApprovedOrg(orgRepo)
-    const org2 = await buildApprovedOrg(orgRepo)
+    const org1 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const org2 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
 
     const result = await generateReportCompliance(orgRepo, reportsRepo)
 
@@ -305,8 +309,12 @@ describe('generateReportCompliance', () => {
     const reportsRepo = createInMemoryReportsRepository()()
 
     // orgId 999999 is a test org (see parse-test-organisations config)
-    await buildApprovedOrg(orgRepo, { orgId: 999999 })
-    const normalOrg = await buildApprovedOrg(orgRepo)
+    await buildApprovedOrg(orgRepo, { orgId: 999999 }, FULL_YEAR_RANGE)
+    const normalOrg = await buildApprovedOrg(
+      orgRepo,
+      undefined,
+      FULL_YEAR_RANGE
+    )
     const normalReg = normalOrg.registrations[0]
 
     const result = await generateReportCompliance(orgRepo, reportsRepo)
@@ -330,7 +338,7 @@ describe('generateReportCompliance', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo)
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
@@ -360,5 +368,25 @@ describe('generateReportCompliance', () => {
         ]
       ])
     })
+  })
+
+  it('bounds monthly obligations to the accreditation validFrom (PAE-1737)', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    // Accredited from mid-February: January is before validFrom, so it is not
+    // an obligation and must not appear in submittedDates.
+    const org = await buildApprovedOrg(orgRepo, undefined, {
+      VALID_FROM: '2026-02-15',
+      VALID_TO: '2026-12-31'
+    })
+    const reg = org.registrations[0]
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
+    expect([...result.entries.get(reg.id).submittedDates.keys()]).toEqual([
+      '2026:monthly:2',
+      '2026:monthly:3'
+    ])
   })
 })

@@ -3,7 +3,6 @@
 
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import { filterPeriodsFromDate } from '#reports/domain/filter-periods-from-date.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
@@ -190,15 +189,17 @@ async function buildSubmissionRows(
     const accreditationNumber = resolveAccreditationNumber(registration, org)
     const cadence = accreditationNumber ? CADENCE.monthly : CADENCE.quarterly
 
-    const allPeriods = generateReportingPeriods(cadence, currentYear)
     // Match the operator calendar: an accredited operator owes monthly reports
     // only from the date their accreditation began.
     const validFrom = activeAccreditationValidFrom(
       resolveAccreditation(registration, org)
     )
-    const computedPeriods = validFrom
-      ? filterPeriodsFromDate(allPeriods, validFrom)
-      : allPeriods
+    const computedPeriods = generateReportingPeriods(
+      cadence,
+      currentYear,
+      undefined,
+      validFrom
+    )
     const periodicReports =
       reportsByKey.get(`${org.id}::${registration.id}`) ?? []
     const merged = mergeReportingPeriods(

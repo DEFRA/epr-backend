@@ -4,7 +4,9 @@ import { generateReportingPeriods } from '#reports/domain/generate-reporting-per
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
 import {
+  activeAccreditationValidFrom,
   getReportableRegistrations,
+  resolveAccreditation,
   resolveAccreditationNumber
 } from '#domain/organisations/registration-utils.js'
 
@@ -76,6 +78,13 @@ export async function generateReportCompliance(
     const accreditationNumber = resolveAccreditationNumber(registration, org)
     const cadence = accreditationNumber ? CADENCE.monthly : CADENCE.quarterly
 
+    // An accredited operator owes monthly reports only from the date their
+    // accreditation began, so bound obligations to validFrom (matches the
+    // operator calendar and the admin export).
+    const validFrom = activeAccreditationValidFrom(
+      resolveAccreditation(registration, org)
+    )
+
     const periodicReports =
       reportsByRegistration.get(`${org.id}::${registration.id}`) ?? []
 
@@ -83,7 +92,12 @@ export async function generateReportCompliance(
     const submittedDates = new Map()
 
     for (const year of years) {
-      const computedPeriods = generateReportingPeriods(cadence, year, now)
+      const computedPeriods = generateReportingPeriods(
+        cadence,
+        year,
+        now,
+        validFrom
+      )
       const merged = mergeReportingPeriods(
         computedPeriods,
         periodicReports,
