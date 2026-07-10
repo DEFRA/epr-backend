@@ -14,6 +14,8 @@ import { createEmptyLoadValidity } from './load-counts.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 
@@ -118,32 +120,6 @@ const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
   data
 })
 
-const buildExistingWasteRecord = (rowData, overrides = {}) => {
-  const dataWithProcessingType = {
-    ...rowData,
-    processingType: 'REPROCESSOR_INPUT'
-  }
-  return {
-    type: 'received',
-    rowId: String(rowData.ROW_ID),
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    data: dataWithProcessingType,
-    versions: [
-      {
-        createdAt: '2025-01-01T00:00:00.000Z',
-        status: 'created',
-        summaryLog: {
-          id: 'previous-summary-log',
-          uri: 's3://bucket/old-key'
-        },
-        data: dataWithProcessingType
-      }
-    ],
-    ...overrides
-  }
-}
-
 // ============================================================================
 
 const mockLoggerInfo = vi.fn()
@@ -186,6 +162,39 @@ describe('SummaryLogsValidator', () => {
   let validateSummaryLog
   let summaryLogId
   let summaryLog
+
+  /**
+   * Records a previously submitted summary log for the registration under test:
+   * its row states, and the ledger event that makes it the latest submitted one.
+   * The registration carries no accreditationId, so it submits on the
+   * registered-only stream.
+   */
+  const seedPreviousSubmission = async (
+    rowIds,
+    previousSummaryLogId = 'previous-summary-log'
+  ) => {
+    const ledgerId = {
+      organisationId: 'org-123',
+      registrationId: 'reg-123',
+      accreditationId: null
+    }
+
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+      ledgerId,
+      rowIds.map((rowId) =>
+        buildSummaryLogRowStateEntry({ rowId: String(rowId) })
+      ),
+      previousSummaryLogId
+    )
+
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        ...ledgerId,
+        number: 1,
+        payload: { summaryLogId: previousSummaryLogId, creditTotal: 100 }
+      })
+    ])
+  }
 
   beforeEach(async () => {
     ledgerRepository = createInMemoryLedgerRepository()()
@@ -2031,12 +2040,10 @@ describe('SummaryLogsValidator', () => {
         })
       )
 
-      // An existing waste record whose ROW_ID is NOT in the current upload
+      // A previously submitted row whose ROW_ID is NOT in the current upload
       // triggers a fatal SEQUENTIAL_ROW_REMOVED error during data-business
       // validation — appended AFTER the 130+ non-fatal data-syntax issues.
-      wasteRecordsRepository.findByRegistration.mockResolvedValue([
-        buildExistingWasteRecord(buildReceivedLoadRow({ ROW_ID: 99999 }))
-      ])
+      await seedPreviousSubmission([99999])
 
       await validateSummaryLog(summaryLogId)
 

@@ -17,7 +17,9 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 
 /** @import {DataSection, MetadataEntry, SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
 /** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
@@ -86,6 +88,57 @@ describe('SummaryLogsValidator integration', () => {
     })
 
   /**
+   * Replays the registration's earlier submissions onto the ledger and the
+   * summary log row states collection, in order, so the last one seeded becomes
+   * the latest submitted summary log. Re-seeding the same rowIds under a later
+   * summary log is a carried-forward-unchanged submission: the row states are
+   * deduplicated and simply gain the new summary log in their membership.
+   *
+   * @param {{
+   *   ledgerRepository: ReturnType<ReturnType<typeof createInMemoryLedgerRepository>>,
+   *   summaryLogRowStateRepository: ReturnType<ReturnType<typeof createInMemorySummaryLogRowStateRepository>>,
+   *   ledgerId: import('#waste-records/repository/schema.js').WasteBalanceLedgerId,
+   *   previousSubmissions: PreviousSubmissionFixture[]
+   * }} params
+   */
+  const seedPreviousSubmissions = async ({
+    ledgerRepository,
+    summaryLogRowStateRepository,
+    ledgerId,
+    previousSubmissions
+  }) => {
+    for (const [
+      index,
+      { summaryLogId, rowIds, submittedAt }
+    ] of previousSubmissions.entries()) {
+      await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+        ledgerId,
+        rowIds.map((rowId) =>
+          buildSummaryLogRowStateEntry({ rowId: String(rowId) })
+        ),
+        summaryLogId
+      )
+
+      await ledgerRepository.appendEvents([
+        buildLedgerEvent({
+          ...ledgerId,
+          number: index + 1,
+          payload: { summaryLogId, creditTotal: 100 },
+          createdAt: submittedAt
+        })
+      ])
+    }
+  }
+
+  /**
+   * @typedef {{
+   *   summaryLogId: string;
+   *   rowIds: Array<string | number>;
+   *   submittedAt: Date;
+   * }} PreviousSubmissionFixture
+   */
+
+  /**
    * @typedef {{
    *   registrationType: WasteProcessingTypeValue;
    *   registrationWRN: string;
@@ -94,6 +147,7 @@ describe('SummaryLogsValidator integration', () => {
    *   metadata?: Record<string, MetadataEntry>;
    *   data?: Record<string, DataSection>;
    *   summaryLogExtractor?: SummaryLogExtractor;
+   *   previousSubmissions?: PreviousSubmissionFixture[];
    * }} RunValidationParams
    * @param {RunValidationParams} params
    */
@@ -104,7 +158,8 @@ describe('SummaryLogsValidator integration', () => {
     reprocessingType = 'input',
     metadata,
     data,
-    summaryLogExtractor
+    summaryLogExtractor,
+    previousSubmissions = []
   }) => {
     const testOrg = createTestOrg(
       registrationType,
@@ -125,6 +180,17 @@ describe('SummaryLogsValidator integration', () => {
     const ledgerRepository = createInMemoryLedgerRepository()()
     const summaryLogRowStateRepository =
       createInMemorySummaryLogRowStateRepository()()
+
+    await seedPreviousSubmissions({
+      ledgerRepository,
+      summaryLogRowStateRepository,
+      ledgerId: {
+        organisationId: testOrg.id,
+        registrationId: testOrg.registrations[0].id,
+        accreditationId: testOrg.registrations[0].accreditationId ?? null
+      },
+      previousSubmissions
+    })
 
     const validateSummaryLog = createSummaryLogsValidator({
       logger,
@@ -668,6 +734,242 @@ describe('SummaryLogsValidator integration', () => {
         testOrg.registrations[0].id
       )
       expect(wasteRecords).toEqual([])
+    })
+  })
+
+  describe('sequential row continuity', () => {
+    const CARRIED_FORWARD_ROW_ID = 1000
+    const REMOVED_ROW_ID = 2000
+
+    /** An upload from a registered-only template, carrying forward only one row */
+    const registeredOnlyUploadDroppingOneRow = {
+      RECEIVED_LOADS_FOR_REPROCESSING: {
+        location: { sheet: 'Received', row: 7, column: 'A' },
+        headers: [
+          'ROW_ID',
+          'MONTH_RECEIVED_FOR_REPROCESSING',
+          'NET_WEIGHT',
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+          'RECYCLABLE_PROPORTION_PERCENTAGE',
+          'TONNAGE_RECEIVED_FOR_RECYCLING',
+          'SUPPLIER_NAME',
+          'SUPPLIER_ADDRESS',
+          'SUPPLIER_POSTCODE',
+          'SUPPLIER_EMAIL',
+          'SUPPLIER_PHONE_NUMBER',
+          'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
+        ],
+        rows: [
+          {
+            rowNumber: 8,
+            values: [
+              CARRIED_FORWARD_ROW_ID,
+              '2025-01-01',
+              10.5,
+              'Actual weight (100%)',
+              0.95,
+              9.975,
+              'Supplier Co',
+              '1 High St',
+              'SW1A 1AA',
+              'supplier@example.com',
+              '01234567',
+              'Sorting'
+            ]
+          }
+        ]
+      }
+    }
+
+    /** An upload from an accredited template, carrying forward only one row */
+    const accreditedUploadDroppingOneRow = {
+      RECEIVED_LOADS_FOR_REPROCESSING: {
+        location: { sheet: 'Received', row: 7, column: 'A' },
+        headers: [
+          'ROW_ID',
+          'DATE_RECEIVED_FOR_REPROCESSING',
+          'EWC_CODE',
+          'DESCRIPTION_WASTE',
+          'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+          'GROSS_WEIGHT',
+          'TARE_WEIGHT',
+          'PALLET_WEIGHT',
+          'NET_WEIGHT',
+          'BAILING_WIRE_PROTOCOL',
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+          'WEIGHT_OF_NON_TARGET_MATERIALS',
+          'RECYCLABLE_PROPORTION_PERCENTAGE',
+          'TONNAGE_RECEIVED_FOR_RECYCLING',
+          'SUPPLIER_NAME',
+          'SUPPLIER_ADDRESS',
+          'SUPPLIER_POSTCODE',
+          'SUPPLIER_EMAIL',
+          'SUPPLIER_PHONE_NUMBER',
+          'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+          'YOUR_REFERENCE',
+          'WEIGHBRIDGE_TICKET',
+          'CARRIER_NAME',
+          'CBD_REG_NUMBER',
+          'CARRIER_VEHICLE_REGISTRATION_NUMBER'
+        ],
+        rows: [
+          {
+            rowNumber: 8,
+            values: [
+              CARRIED_FORWARD_ROW_ID,
+              '2025-01-15',
+              '03 03 08',
+              'Paper - other',
+              'No',
+              1000,
+              100,
+              50,
+              850,
+              'Yes',
+              'Actual weight (100%)',
+              50,
+              0.85,
+              678.98,
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+              ''
+            ]
+          }
+        ]
+      }
+    }
+
+    const registeredOnlyMetadata = {
+      REGISTRATION_NUMBER: {
+        value: 'REG-CONT-1',
+        location: { sheet: 'Cover', row: 1, column: 'B' }
+      },
+      PROCESSING_TYPE: {
+        value: 'REPROCESSOR_REGISTERED_ONLY',
+        location: { sheet: 'Cover', row: 2, column: 'B' }
+      },
+      MATERIAL: {
+        value: 'Paper_and_board',
+        location: { sheet: 'Cover', row: 3, column: 'B' }
+      },
+      TEMPLATE_VERSION: {
+        value: 2.1,
+        location: { sheet: 'Cover', row: 4, column: 'B' }
+      }
+    }
+
+    const accreditedMetadata = {
+      REGISTRATION_NUMBER: {
+        value: 'REG-CONT-2',
+        location: { sheet: 'Cover', row: 1, column: 'B' }
+      },
+      PROCESSING_TYPE: {
+        value: 'REPROCESSOR_INPUT',
+        location: { sheet: 'Cover', row: 2, column: 'B' }
+      },
+      MATERIAL: {
+        value: 'Paper_and_board',
+        location: { sheet: 'Cover', row: 3, column: 'B' }
+      },
+      TEMPLATE_VERSION: {
+        value: 5,
+        location: { sheet: 'Cover', row: 4, column: 'B' }
+      },
+      ACCREDITATION_NUMBER: {
+        value: 'ACC-CONT-2',
+        location: { sheet: 'Cover', row: 5, column: 'B' }
+      }
+    }
+
+    const fatalRowRemovals = (updated) =>
+      updated.summaryLog.validation.issues.filter(
+        (issue) => issue.code === 'SEQUENTIAL_ROW_REMOVED'
+      )
+
+    it('rejects an upload that drops a row submitted by a registered-only registration', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-CONT-1',
+        metadata: registeredOnlyMetadata,
+        data: registeredOnlyUploadDroppingOneRow,
+        previousSubmissions: [
+          {
+            summaryLogId: 'registered-only-submission',
+            rowIds: [CARRIED_FORWARD_ROW_ID, REMOVED_ROW_ID],
+            submittedAt: new Date('2025-02-01T09:00:00.000Z')
+          }
+        ]
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+
+      const removals = fatalRowRemovals(updated)
+      expect(removals).toHaveLength(1)
+      expect(removals[0].severity).toBe('fatal')
+      expect(removals[0].context.location.rowId).toBe(String(REMOVED_ROW_ID))
+      expect(removals[0].context.previousSummaryLog).toEqual({
+        id: 'registered-only-submission',
+        submittedAt: '2025-02-01T09:00:00.000Z'
+      })
+    })
+
+    it('rejects an upload that drops a row submitted by an accredited registration', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-CONT-2',
+        accreditationNumber: 'ACC-CONT-2',
+        metadata: accreditedMetadata,
+        data: accreditedUploadDroppingOneRow,
+        previousSubmissions: [
+          {
+            summaryLogId: 'accredited-submission',
+            rowIds: [CARRIED_FORWARD_ROW_ID, REMOVED_ROW_ID],
+            submittedAt: new Date('2025-02-01T09:00:00.000Z')
+          }
+        ]
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+
+      const removals = fatalRowRemovals(updated)
+      expect(removals).toHaveLength(1)
+      expect(removals[0].context.location.rowId).toBe(String(REMOVED_ROW_ID))
+    })
+
+    it('names the latest submitted summary log, not the one that last wrote the removed row', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-CONT-1',
+        metadata: registeredOnlyMetadata,
+        data: registeredOnlyUploadDroppingOneRow,
+        previousSubmissions: [
+          {
+            summaryLogId: 'submission-that-created-the-row',
+            rowIds: [CARRIED_FORWARD_ROW_ID, REMOVED_ROW_ID],
+            submittedAt: new Date('2025-02-01T09:00:00.000Z')
+          },
+          {
+            summaryLogId: 'submission-that-carried-the-row-forward',
+            rowIds: [CARRIED_FORWARD_ROW_ID, REMOVED_ROW_ID],
+            submittedAt: new Date('2025-03-01T09:00:00.000Z')
+          }
+        ]
+      })
+
+      const removals = fatalRowRemovals(updated)
+      expect(removals).toHaveLength(1)
+      expect(removals[0].context.previousSummaryLog).toEqual({
+        id: 'submission-that-carried-the-row-forward',
+        submittedAt: '2025-03-01T09:00:00.000Z'
+      })
     })
   })
 
