@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { mergeReportingPeriods } from './merge-reporting-periods.js'
+import {
+  mergeReportingPeriods,
+  selectSubmittedReports
+} from './merge-reporting-periods.js'
 import { REPORT_STATUS } from './report-status.js'
+
+/**
+ * Derives a merged period's submitted reports the same way the report-submissions
+ * feed does, so these cases assert the projection the feed reads without the merge
+ * stamping it onto every period.
+ * @param {import('./merge-reporting-periods.js').MergedPeriod} period
+ */
+const submittedReportsFor = (period) =>
+  selectSubmittedReports({
+    current: period.report,
+    previousSubmissions: period.previousSubmissions
+  })
 
 /**
  * Builds a report summary with the identity fields these tests assert on (not a
@@ -116,7 +131,7 @@ describe('mergeReportingPeriods', () => {
     )
   })
 
-  it('leaves submittedReports empty when the period has no submitted report', () => {
+  it('derives no submitted reports when the period has no submitted report', () => {
     const periodicReports = [
       {
         organisationId: 'org-1',
@@ -144,8 +159,8 @@ describe('mergeReportingPeriods', () => {
 
     // period 1 has only an in-flight draft; period 2 has no slot at all, so no
     // report has been submitted and the fan-out list is empty for both
-    expect(result[0].submittedReports).toEqual([])
-    expect(result[1].submittedReports).toEqual([])
+    expect(submittedReportsFor(result[0])).toEqual([])
+    expect(submittedReportsFor(result[1])).toEqual([])
   })
 
   it('lists submitted reports ascending, excluding the in-flight draft', () => {
@@ -190,12 +205,12 @@ describe('mergeReportingPeriods', () => {
       'monthly'
     )
 
-    // report is the draft (current); submittedReports excludes it and lists the
-    // submitted reports ascending, so the feed can emit one row per submission
+    // report is the draft (current); the derived submitted reports exclude it and
+    // list the submissions ascending, so the feed can emit one row per submission
     expect(result[0].report).toEqual(
       reportSummary({ id: 'submission-3', submissionNumber: 3 })
     )
-    expect(result[0].submittedReports.map((r) => r.id)).toEqual([
+    expect(submittedReportsFor(result[0]).map((r) => r.id)).toEqual([
       'submission-1',
       'submission-2'
     ])
@@ -245,13 +260,13 @@ describe('mergeReportingPeriods', () => {
 
     // selection is by submissionNumber, not slot position, so the ascending
     // fan-out list is the same regardless of how previousSubmissions is arranged
-    expect(result[0].submittedReports.map((r) => r.id)).toEqual([
+    expect(submittedReportsFor(result[0]).map((r) => r.id)).toEqual([
       'submission-1',
       'submission-2'
     ])
   })
 
-  it('keeps an unsubmitted-but-previously-submitted report in submittedReports', () => {
+  it('keeps an unsubmitted-but-previously-submitted report in the derived submissions', () => {
     const periodicReports = [
       {
         organisationId: 'org-1',
@@ -286,7 +301,7 @@ describe('mergeReportingPeriods', () => {
 
     // The retained submission is still listed, so the feed keeps showing its
     // figures rather than blanking while it is a draft again
-    expect(result[0].submittedReports.map((r) => r.submittedAt)).toEqual([
+    expect(submittedReportsFor(result[0]).map((r) => r.submittedAt)).toEqual([
       '2026-02-10T00:00:00.000Z'
     ])
   })
@@ -452,5 +467,16 @@ describe('mergeReportingPeriods', () => {
     expect(result[0].period).toBe(12)
     expect(result[1].year).toBe(2026)
     expect(result[1].period).toBe(1)
+  })
+})
+
+describe('selectSubmittedReports', () => {
+  it('treats an omitted previousSubmissions as no history', () => {
+    const submitted = reportSummary({
+      id: 'submission-1',
+      status: REPORT_STATUS.SUBMITTED
+    })
+
+    expect(selectSubmittedReports({ current: submitted })).toEqual([submitted])
   })
 })

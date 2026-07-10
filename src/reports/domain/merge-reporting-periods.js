@@ -13,8 +13,11 @@ const hasBeenSubmitted = (report) => Boolean(report?.submittedAt)
 /**
  * Selects every report holding a submission for the period: those that have
  * been submitted at least once, identified by a retained `submittedAt`, ordered
- * by submissionNumber ascending. The feed emits one row per entry, so a
- * resubmitted period fans out into a row per submission (earliest to latest).
+ * by submissionNumber ascending. The report-submissions feed emits one row per
+ * entry, so a resubmitted period fans out into a row per submission (earliest to
+ * latest). Read this rather than a period's current `report` for anything a
+ * resubmission draft must not blank: `report` may be an unsubmitted in-flight
+ * draft and is not safe for public-facing or regulator output.
  *
  * Using `submittedAt` rather than the current status means a report that was
  * submitted and later unsubmitted (status back to ready_to_submit, submitted
@@ -28,11 +31,11 @@ const hasBeenSubmitted = (report) => Boolean(report?.submittedAt)
  * selects by current `status === submitted` for resubmission flagging: an
  * unsubmitted report is not currently submitted there, but is retained here.
  *
- * @param {{ current: ReportSummary | null, previousSubmissions: ReportSummary[] }} slot
+ * @param {{ current: ReportSummary | null, previousSubmissions?: ReportSummary[] }} slot
  * @returns {ReportSummary[]}
  */
-function selectSubmittedReports(slot) {
-  return [slot.current, ...slot.previousSubmissions]
+export function selectSubmittedReports(slot) {
+  return [slot.current, ...(slot.previousSubmissions ?? [])]
     .filter(hasBeenSubmitted)
     .sort((a, b) => a.submissionNumber - b.submissionNumber)
 }
@@ -74,14 +77,11 @@ function indexPersistedSlots(periodicReports, cadence) {
  *   submissionNumber: number;
  *   report: ReportSummary | null;
  *   previousSubmissions?: ReportSummary[];
- *   submittedReports: ReportSummary[];
  * }} MergedPeriod
  *
  * `report` is the current report and MAY be an unsubmitted in-flight draft. Do
- * not use it for public-facing or regulator output. `submittedReports` holds
- * every submitted report for the period, ascending by submissionNumber, so the
- * report-submissions feed can emit one row per submission; read it rather than
- * `report` for anything a resubmission draft must not blank.
+ * not use it for public-facing or regulator output; use `selectSubmittedReports`
+ * for anything a resubmission draft must not blank.
  */
 
 /**
@@ -89,8 +89,9 @@ function indexPersistedSlots(periodicReports, cadence) {
  *
  * For each period:
  * - `report` is the current report (highest submissionNumber), or null
- * - `submittedReports` are all submitted reports (ascending), so an in-flight
- *   resubmission draft in `report` never masks the submitted figures
+ * - `previousSubmissions` retains the period's earlier submissions, so the
+ *   report-submissions feed can derive its submitted reports via
+ *   `selectSubmittedReports` without an in-flight draft in `report` masking them
  * - Periods with active drafts that aren't in the computed set are appended
  *
  * @param {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string}>} computedPeriods
@@ -109,7 +110,6 @@ export function mergeReportingPeriods(
   for (const cp of computedPeriods) {
     const key = `${cp.year}:${cp.period}`
     const slot = persistedSlots.get(key)
-    const submittedReports = slot ? selectSubmittedReports(slot) : []
 
     merged.set(key, {
       year: cp.year,
@@ -119,8 +119,7 @@ export function mergeReportingPeriods(
       dueDate: cp.dueDate,
       submissionNumber: slot?.current?.submissionNumber ?? 1,
       report: slot?.current ?? null,
-      previousSubmissions: slot?.previousSubmissions ?? [],
-      submittedReports
+      previousSubmissions: slot?.previousSubmissions ?? []
     })
   }
 
@@ -129,7 +128,6 @@ export function mergeReportingPeriods(
       continue
     }
 
-    const submittedReports = selectSubmittedReports(slot)
     merged.set(key, {
       year: slot.year,
       period: slot.period,
@@ -138,8 +136,7 @@ export function mergeReportingPeriods(
       dueDate: slot.dueDate,
       submissionNumber: slot.current.submissionNumber,
       report: slot.current,
-      previousSubmissions: slot.previousSubmissions,
-      submittedReports
+      previousSubmissions: slot.previousSubmissions
     })
   }
 

@@ -568,11 +568,10 @@ describe(`GET ${reportsGetPath}`, () => {
         )
         expect(januaryItems).toHaveLength(2)
 
-        // submittedReports and previousSubmissions are feed-only projections: the
-        // merged period here carries a submitted report, but the calendar items
-        // must not leak either (the strict response schema would reject them).
+        // previousSubmissions is a feed-only projection: the merged period here
+        // carries previous submissions, but the calendar items must not leak it
+        // (the strict response schema would reject it).
         for (const item of januaryItems) {
-          expect(item).not.toHaveProperty('submittedReports')
           expect(item).not.toHaveProperty('previousSubmissions')
         }
 

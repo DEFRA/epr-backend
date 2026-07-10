@@ -3,7 +3,10 @@
 
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+import {
+  mergeReportingPeriods,
+  selectSubmittedReports
+} from '#reports/domain/merge-reporting-periods.js'
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
@@ -214,10 +217,14 @@ async function buildSubmissionRows(
     return merged.flatMap((mergedPeriod) => {
       // One row per submitted report, so a resubmitted period fans out. A period
       // with nothing submitted still gets a single blank row (`null`), keeping
-      // outstanding periods visible.
-      const reports = mergedPeriod.submittedReports.length
-        ? mergedPeriod.submittedReports
-        : [null]
+      // outstanding periods visible. The feed is the only consumer of this
+      // projection, so it derives it here rather than the merge stamping it onto
+      // every period for the calendar path to strip straight back off.
+      const submitted = selectSubmittedReports({
+        current: mergedPeriod.report,
+        previousSubmissions: mergedPeriod.previousSubmissions
+      })
+      const reports = submitted.length ? submitted : [null]
       return reports.map((report) =>
         buildRow(
           org,

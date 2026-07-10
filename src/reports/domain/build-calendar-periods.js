@@ -9,7 +9,7 @@ import { REPORT_STATUS } from './report-status.js'
  */
 
 /**
- * @typedef {Omit<MergedPeriod, 'previousSubmissions' | 'submittedReports'> & { periodStatus: PeriodStatus | null }} CalendarPeriod
+ * @typedef {Omit<MergedPeriod, 'previousSubmissions'> & { periodStatus: PeriodStatus | null }} CalendarPeriod
  */
 
 /**
@@ -50,46 +50,37 @@ const latestSubmitted = (current, previousSubmissions) =>
  * @returns {CalendarPeriod[]}
  */
 export const buildCalendarPeriods = (mergedPeriods) =>
-  // previousSubmissions and submittedReports are feed-only projections, not part
-  // of a calendar item, so they are dropped here rather than spread through.
-  mergedPeriods.flatMap(
-    ({
-      previousSubmissions = [],
-      submittedReports: _submittedReports,
-      ...period
-    }) => {
-      const flaggedSubmitted = latestSubmitted(
-        period.report,
-        previousSubmissions
-      )
+  // previousSubmissions is a feed-only projection, not part of a calendar item,
+  // so it is dropped here rather than spread through.
+  mergedPeriods.flatMap(({ previousSubmissions = [], ...period }) => {
+    const flaggedSubmitted = latestSubmitted(period.report, previousSubmissions)
 
-      if (!flaggedSubmitted?.resubmissionRequired) {
-        return [{ ...period, periodStatus: derivePeriodStatus(period) }]
-      }
-
-      // `current` is the highest-submissionNumber report for the period. When it
-      // is the flagged submitted report itself there is no resubmission draft yet
-      // (the pre-draft skeleton); once the operator starts one, `current` is that
-      // later draft and the flagged report drops to previousSubmissions.
-      const draft =
-        period.report &&
-        period.report.submissionNumber > flaggedSubmitted.submissionNumber
-          ? period.report
-          : null
-
-      return [
-        {
-          ...period,
-          submissionNumber: flaggedSubmitted.submissionNumber,
-          periodStatus: PERIOD_STATUS.SUBMITTED,
-          report: flaggedSubmitted
-        },
-        {
-          ...period,
-          submissionNumber: flaggedSubmitted.submissionNumber + 1,
-          periodStatus: PERIOD_STATUS.REQUIRES_RESUBMISSION,
-          report: draft
-        }
-      ]
+    if (!flaggedSubmitted?.resubmissionRequired) {
+      return [{ ...period, periodStatus: derivePeriodStatus(period) }]
     }
-  )
+
+    // `current` is the highest-submissionNumber report for the period. When it
+    // is the flagged submitted report itself there is no resubmission draft yet
+    // (the pre-draft skeleton); once the operator starts one, `current` is that
+    // later draft and the flagged report drops to previousSubmissions.
+    const draft =
+      period.report &&
+      period.report.submissionNumber > flaggedSubmitted.submissionNumber
+        ? period.report
+        : null
+
+    return [
+      {
+        ...period,
+        submissionNumber: flaggedSubmitted.submissionNumber,
+        periodStatus: PERIOD_STATUS.SUBMITTED,
+        report: flaggedSubmitted
+      },
+      {
+        ...period,
+        submissionNumber: flaggedSubmitted.submissionNumber + 1,
+        periodStatus: PERIOD_STATUS.REQUIRES_RESUBMISSION,
+        report: draft
+      }
+    ]
+  })

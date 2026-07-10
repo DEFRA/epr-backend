@@ -39,13 +39,9 @@ import { REPORT_STATUS } from './report-status.js'
  */
 export const buildAllSubmissionPeriods = (mergedPeriods) =>
   mergedPeriods.flatMap((mergedPeriod) => {
-    // previousSubmissions and submittedReports are feed-only projections, not
-    // part of a calendar item, so they are dropped rather than spread through.
-    const {
-      previousSubmissions = [],
-      submittedReports: _submittedReports,
-      ...period
-    } = mergedPeriod
+    // previousSubmissions is a feed-only projection, not part of a calendar
+    // item, so it is dropped rather than spread through.
+    const { previousSubmissions = [], ...period } = mergedPeriod
     const currentStateItems = buildCalendarPeriods([mergedPeriod])
     const surfacedReportIds = new Set(
       currentStateItems.flatMap((item) => (item.report ? [item.report.id] : []))
