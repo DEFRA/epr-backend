@@ -1,4 +1,5 @@
 import { REPORT_STATUS } from './report-status.js'
+import { invalidArg } from '#test/invalid-arg.js'
 import {
   REPORT_STATUS_TRANSITIONS,
   isValidReportTransition
@@ -42,9 +43,9 @@ describe('#isValidReportTransition', () => {
   })
 
   it('returns false for unknown current status', () => {
-    expect(isValidReportTransition('unknown', REPORT_STATUS.SUBMITTED)).toBe(
-      false
-    )
+    expect(
+      isValidReportTransition(invalidArg('unknown'), REPORT_STATUS.SUBMITTED)
+    ).toBe(false)
   })
 
   it('returns false for transition from terminal state', () => {

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { invalidArg } from '#test/invalid-arg.js'
 import { getProcessCode } from './get-process-code.js'
 
 describe('getProcessCode', () => {
@@ -39,11 +40,11 @@ describe('getProcessCode', () => {
     })
 
     it('returns null for null', () => {
-      expect(getProcessCode(null)).toBeNull()
+      expect(getProcessCode(invalidArg(null))).toBeNull()
     })
 
     it('returns null for undefined', () => {
-      expect(getProcessCode(undefined)).toBeNull()
+      expect(getProcessCode(invalidArg(undefined))).toBeNull()
     })
   })
 })
