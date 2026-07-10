@@ -1,6 +1,6 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import { afterEach, describe, expect, vi } from 'vitest'
 import { createOrsImportsRepository } from './mongodb.js'
 import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
@@ -49,7 +49,7 @@ describe('MongoDB ORS imports repository', () => {
     expect(created.updatedAt).toBeDefined()
 
     const found = await repository.findById('import-test-1')
-    assert(found)
+    assertPresent(found)
 
     expect(found._id).toBe('import-test-1')
     expect(found.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
@@ -75,7 +75,7 @@ describe('MongoDB ORS imports repository', () => {
 
     expect(result).toBe(true)
     const found = await repository.findById('import-test-2')
-    assert(found)
+    assertPresent(found)
 
     expect(found.status).toBe(ORS_IMPORT_STATUS.PROCESSING)
   })
@@ -106,7 +106,7 @@ describe('MongoDB ORS imports repository', () => {
     await repository.addFiles('import-test-add', files)
 
     const found = await repository.findById('import-test-add')
-    assert(found)
+    assertPresent(found)
 
     expect(found.files).toHaveLength(2)
     expect(found.files[0]).toEqual(files[0])
@@ -164,7 +164,7 @@ describe('MongoDB ORS imports repository', () => {
     await repository.updateStatus('import-ttl-2', ORS_IMPORT_STATUS.PROCESSING)
 
     const found = await repository.findById('import-ttl-2')
-    assert(found?.expiresAt)
+    assertPresent(found?.expiresAt)
 
     expect(found.expiresAt).toBeInstanceOf(Date)
     expect(found.expiresAt.getTime()).toBeGreaterThan(
@@ -184,7 +184,7 @@ describe('MongoDB ORS imports repository', () => {
     await repository.updateStatus('import-ttl-3', ORS_IMPORT_STATUS.COMPLETED)
 
     const found = await repository.findById('import-ttl-3')
-    assert(found)
+    assertPresent(found)
 
     expect(found.expiresAt).toBeNull()
   })
@@ -205,7 +205,7 @@ describe('MongoDB ORS imports repository', () => {
 
     expect(result).toBe(false)
     const found = await repository.findById('import-forward-1')
-    assert(found)
+    assertPresent(found)
 
     expect(found.status).toBe(ORS_IMPORT_STATUS.COMPLETED)
   })
@@ -226,7 +226,7 @@ describe('MongoDB ORS imports repository', () => {
 
     expect(result).toBe(false)
     const found = await repository.findById('import-forward-2')
-    assert(found)
+    assertPresent(found)
 
     expect(found.status).toBe(ORS_IMPORT_STATUS.FAILED)
   })
@@ -252,7 +252,7 @@ describe('MongoDB ORS imports repository', () => {
     await repository.recordFileResult('import-test-3', 1, result)
 
     const found = await repository.findById('import-test-3')
-    assert(found)
+    assertPresent(found)
 
     expect(found.files[0].result).toBeUndefined()
     expect(found.files[1].result).toEqual(result)
