@@ -13,9 +13,10 @@ import { invalidArg } from '#test/type-helpers.js'
 /** @import { Answer, Component } from './extract-answers.js' */
 
 vi.mock('#root/config.js', async (importOriginal) => {
-  const configImportOriginal = /** @type {typeof import('#root/config.js')} */ (
-    await importOriginal()
-  )
+  const configImportOriginal =
+    /** @type {Record<string, unknown> & { getConfig: typeof getConfig }} */ (
+      await importOriginal()
+    )
 
   return {
     ...configImportOriginal,
