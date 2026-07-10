@@ -7,8 +7,9 @@ import {
   buildDeletedPrn
 } from './test-data.js'
 
-/** @typedef {import('../port.js').PackagingRecyclingNotesRepository} PrnRepository */
-/** @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['status']} PrnStatusBlock */
+/** @import { PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
+/** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
+/** @typedef {PackagingRecyclingNote['status']} PrnStatusBlock */
 
 const compensator = { id: 'user-compensator', name: 'Compensator User' }
 

@@ -2,7 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 import { buildOverseasSite, buildFullOverseasSite } from './test-data.js'
 import { invalidArg } from '#test/invalid-arg.js'
 
-/** @typedef {import('../port.js').OverseasSitesRepository} OverseasSitesRepository */
+/** @import { OverseasSitesRepository } from '../port.js' */
 
 export const testCreateBehaviour = (it) => {
   describe('create', () => {

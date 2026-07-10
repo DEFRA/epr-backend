@@ -1,6 +1,7 @@
 import { vi, describe, test, expect, afterEach } from 'vitest'
 
 import { fetchJson } from './fetch-json.js'
+import { assertPresent } from '#test/assert-present.js'
 
 const MOCK_TRACE_ID = 'mock-trace-id-1'
 
@@ -90,9 +91,10 @@ describe('#fetchJson', () => {
         body
       }
 
-      await fetchJson(URL, options)
+      await fetchJson(url, options)
 
-      const [_, calledOptions] = global.fetch.mock.calls[0]
+      const [_, calledOptions] = vi.mocked(global.fetch).mock.calls[0]
+      assertPresent(calledOptions)
       expect(calledOptions.method).toBe('POST')
       expect(calledOptions.headers).toMatchObject({
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -265,8 +267,9 @@ describe('#fetchJson', () => {
     })
 
     test('attaches code external_fetch_failed and event encoding the cause classifier for indexed logging', async () => {
-      const networkError = new Error('Network request failed')
-      networkError.code = 'ENETUNREACH'
+      const networkError = Object.assign(new Error('Network request failed'), {
+        code: 'ENETUNREACH'
+      })
       global.fetch = vi.fn().mockRejectedValue(networkError)
 
       await expect(fetchJson(url)).rejects.toMatchObject({
@@ -279,8 +282,10 @@ describe('#fetchJson', () => {
     })
 
     test('encodes ECONNREFUSED into event.reason without leaking the original message', async () => {
-      const connRefused = new Error('connection refused — system detail')
-      connRefused.code = 'ECONNREFUSED'
+      const connRefused = Object.assign(
+        new Error('connection refused — system detail'),
+        { code: 'ECONNREFUSED' }
+      )
       global.fetch = vi.fn().mockRejectedValue(connRefused)
 
       await expect(fetchJson(url)).rejects.toMatchObject({

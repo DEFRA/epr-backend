@@ -6,8 +6,8 @@ import {
   buildDraftPrn
 } from './test-data.js'
 
-/** @typedef {import('../port.js').PackagingRecyclingNotesRepository} PrnRepository */
-/** @typedef {import('#packaging-recycling-notes/domain/model.js').AccreditationSnapshot} AccreditationSnapshot */
+/** @import { PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
+/** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
 
 export const testFindBehaviour = (it) => {
   describe('find', () => {
