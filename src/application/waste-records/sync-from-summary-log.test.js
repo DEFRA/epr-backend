@@ -1570,6 +1570,12 @@ describe('syncFromSummaryLog', () => {
         featureFlags
       })
 
+    const ledgerIdFor = (summaryLog) => ({
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      accreditationId: summaryLog.accreditationId ?? null
+    })
+
     const reprocessorRegisteredOnlyData = {
       meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' } },
       data: {
@@ -1604,7 +1610,10 @@ describe('syncFromSummaryLog', () => {
       await syncWith(extractor)(summaryLog, TEST_USER)
 
       const committed =
-        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
+        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+          ledgerIdFor(summaryLog),
+          fileId
+        )
       expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1000', '5000'])
       expect(committed.every((doc) => doc.accreditationId === null)).toBe(true)
       const received = committed.find((doc) => doc.rowId === '1000')
@@ -1659,7 +1668,10 @@ describe('syncFromSummaryLog', () => {
       await syncWith(extractor)(summaryLog, TEST_USER)
 
       const committed =
-        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
+        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+          ledgerIdFor(summaryLog),
+          fileId
+        )
       expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1000', '2000'])
       expect(committed.every((doc) => doc.accreditationId === null)).toBe(true)
     })
@@ -1698,7 +1710,10 @@ describe('syncFromSummaryLog', () => {
       await syncWith(extractor)(summaryLog, TEST_USER)
 
       const committed =
-        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
+        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+          ledgerIdFor(summaryLog),
+          fileId
+        )
       expect(committed).toHaveLength(1)
       expect(committed[0]).toMatchObject({
         rowId: 'row-123',
@@ -1749,7 +1764,10 @@ describe('syncFromSummaryLog', () => {
       await syncWith(extractor)(summaryLog, TEST_USER)
 
       const committed =
-        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
+        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+          ledgerIdFor(summaryLog),
+          fileId
+        )
       expect(committed).toHaveLength(1)
       expect(committed[0]).toMatchObject({
         rowId: 'row-123',
@@ -1775,7 +1793,10 @@ describe('syncFromSummaryLog', () => {
       )(summaryLog, TEST_USER)
 
       expect(
-        await summaryLogRowStateRepository.findBySummaryLogId(fileId)
+        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+          ledgerIdFor(summaryLog),
+          fileId
+        )
       ).toHaveLength(0)
       const savedRecords = await wasteRecordRepository.findByRegistration(
         'org-1',

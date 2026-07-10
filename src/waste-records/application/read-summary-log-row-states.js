@@ -37,24 +37,28 @@ const toWasteRecordState = ({
 })
 
 /**
- * Membership query for a resolved head: every row whose committed
- * state belongs to that submission, or nothing when there is no head.
+ * The ledger's row states at a resolved head submission, or nothing when the
+ * ledger has no submitted summary log yet.
  *
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} summaryLogRowStateRepository
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
  * @param {string | null} head
  * @returns {Promise<SummaryLogRowState[]>}
  */
 const summaryLogRowStatesForHead = async (
   summaryLogRowStateRepository,
+  ledgerId,
   head
 ) =>
-  head === null ? [] : summaryLogRowStateRepository.findBySummaryLogId(head)
+  head === null
+    ? []
+    : summaryLogRowStateRepository.findRowStatesForSummaryLog(ledgerId, head)
 
 /**
- * Waste record states of a registration at its current head submission. The
- * head resolves in one stream lookup; the membership query then returns every
- * row whose committed state belongs to that submission, projected to its
- * domain content.
+ * Waste record states of a registration at its latest submitted summary log.
+ * The head resolves in one stream lookup against the ledger; the row states
+ * are then read back for that same ledger at that submission, projected to
+ * their domain content.
  *
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & {
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
@@ -69,14 +73,13 @@ export const summaryLogRowStatesForRegistration = async ({
   registrationId,
   accreditationId
 }) => {
-  const head = await latestSubmittedSummaryLogId(ledgerRepository, {
-    organisationId,
-    registrationId,
-    accreditationId
-  })
+  const ledgerId = { organisationId, registrationId, accreditationId }
+
+  const head = await latestSubmittedSummaryLogId(ledgerRepository, ledgerId)
 
   const summaryLogRowStates = await summaryLogRowStatesForHead(
     summaryLogRowStateRepository,
+    ledgerId,
     head
   )
   return summaryLogRowStates.map(toWasteRecordState)
