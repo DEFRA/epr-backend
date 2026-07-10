@@ -3,6 +3,8 @@ import { StorageResolution, Unit } from 'aws-embedded-metrics'
 import { config } from '#root/config.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
+/** @import { MetricsLogger } from 'aws-embedded-metrics' */
+
 const mockPutMetric = vi.fn()
 const mockPutDimensions = vi.fn()
 const mockFlush = vi.fn()
@@ -13,11 +15,14 @@ vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
 
   return {
     ...original,
-    createMetricsLogger: () => ({
-      putMetric: mockPutMetric,
-      putDimensions: mockPutDimensions,
-      flush: mockFlush
-    })
+    createMetricsLogger: () =>
+      /** @type {MetricsLogger} */ (
+        /** @type {unknown} */ ({
+          putMetric: mockPutMetric,
+          putDimensions: mockPutDimensions,
+          flush: mockFlush
+        })
+      )
   }
 })
 
