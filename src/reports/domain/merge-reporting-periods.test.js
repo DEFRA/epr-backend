@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import assert from 'node:assert'
 import { mergeReportingPeriods } from './merge-reporting-periods.js'
+
+/**
+ * @import { PeriodicReport } from '../repository/port.js'
+ */
+
+/**
+ * @param {unknown} reports
+ * @returns {PeriodicReport[]}
+ */
+const asPeriodicReports = (reports) => /** @type {PeriodicReport[]} */ (reports)
 
 describe('mergeReportingPeriods', () => {
   const computedPeriods = [
@@ -55,7 +66,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -93,7 +104,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -128,7 +139,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -161,12 +172,13 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
     expect(result).toHaveLength(3)
     const period3 = result.find((p) => p.period === 3)
+    assert(period3)
     expect(period3.report).toEqual({
       id: 'report-uuid-3',
       status: 'in_progress',
@@ -197,7 +209,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -226,7 +238,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -256,7 +268,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
