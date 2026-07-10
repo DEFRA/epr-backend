@@ -39,15 +39,12 @@ import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-m
 import { mongoWasteBalanceServicePlugin } from '#waste-balances/repository/mongodb.plugin.js'
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
 import { mongoSummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/mongodb.plugin.js'
-import { mongoSummaryLogRowStatesBackfillWatermarkRepositoryPlugin } from '#waste-records/backfill/watermark/mongodb.plugin.js'
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
-import { runBackfillSummaryLogRowStates } from '#server/run-backfill-summary-log-row-states.js'
-import { runWasteRecordStateDiscrepancyReport } from '#server/run-waste-record-state-discrepancy-report.js'
 import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -114,8 +111,7 @@ function getSwaggerPlugins() {
 }
 
 export const shouldRegisterSummaryLogRowStates = (config) =>
-  config.get('featureFlags.summaryLogRowStates') ||
-  config.get('featureFlags.summaryLogRowStatesBackfill')
+  config.get('featureFlags.summaryLogRowStates')
 
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
@@ -144,16 +140,10 @@ function getProductionPlugins(config) {
   ]
 
   // Defer row-state repository construction (and thus ensureSummaryLogRowStatesCollection
-  // creating the collection + indexes) until a row-state flag is on, so nothing
-  // is built ahead of the ADR-0037 switch-on. Register for either flag: the
-  // backfill sweep and the forward-write path both need the repository, and the
-  // flip choreography can leave the backfill flag off by the time forward writes
-  // begin.
+  // creating the collection + indexes) until the row-state flag is on, so nothing
+  // is built ahead of the ADR-0037 switch-on.
   if (shouldRegisterSummaryLogRowStates(config)) {
-    plugins.push(
-      mongoSummaryLogRowStatesRepositoryPlugin,
-      mongoSummaryLogRowStatesBackfillWatermarkRepositoryPlugin
-    )
+    plugins.push(mongoSummaryLogRowStatesRepositoryPlugin)
   }
 
   plugins.push(mongoReportsRepositoryPlugin)
@@ -243,8 +233,6 @@ async function createServer(options = {}) {
     runFormsDataMigration(server)
     runOrganisationValidationSweep(server)
     runDuplicateAccreditationLinkMigration(server)
-    runBackfillSummaryLogRowStates(server)
-    runWasteRecordStateDiscrepancyReport(server)
     runStaleIssuedTonnageReport(server)
   })
 

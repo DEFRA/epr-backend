@@ -20,7 +20,8 @@ import {
  */
 export const validateCreateReport = (params) => {
   const { error, value } = createReportSchema.validate(params, {
-    abortEarly: false
+    abortEarly: false,
+    convert: false
   })
 
   if (error) {

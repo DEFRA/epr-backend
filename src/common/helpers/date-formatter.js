@@ -28,8 +28,8 @@ const britishDateTimeDotsFormatter = new Intl.DateTimeFormat('en-GB', {
 
 /**
  * Formats a Date object or date string to British format (DD/MM/YYYY)
- * @param {Date|string} date - Date object or ISO date string (YYYY-MM-DD) to format
- * @returns {string} - Formatted date string (e.g., '22/01/2026')
+ * @param {Date|string|null|undefined} date - Date object or ISO date string (YYYY-MM-DD) to format
+ * @returns {string} - Formatted date string (e.g., '22/01/2026'), or '' when date is null/undefined
  */
 export function formatDate(date) {
   if (!date) {
@@ -60,6 +60,41 @@ export function formatDateTimeDots(date) {
  */
 export function formatDateISO(year, month, day) {
   return new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10)
+}
+
+/**
+ * Extracts the YYYY-MM-DD calendar date from a date field, tolerant of either
+ * a bare date string or a full ISO datetime string — older persisted
+ * documents may carry the latter due to historical Joi coercion. Slicing to
+ * the first 10 characters means callers never need to know or care which
+ * shape a given stored value is in.
+ * @param {string} dateString
+ * @returns {string} YYYY-MM-DD
+ */
+export function calendarDate(dateString) {
+  return dateString.slice(0, 10)
+}
+
+/**
+ * Expands a calendar-date string (bare YYYY-MM-DD or a full ISO datetime,
+ * either accepted) into the Date representing UTC start-of-day
+ * (00:00:00.000) for that calendar date.
+ * @param {string} dateString
+ * @returns {Date}
+ */
+export function startOfDay(dateString) {
+  return new Date(`${calendarDate(dateString)}T00:00:00.000Z`)
+}
+
+/**
+ * Expands a calendar-date string (bare YYYY-MM-DD or a full ISO datetime,
+ * either accepted) into the Date representing UTC end-of-day (23:59:59.999)
+ * for that calendar date.
+ * @param {string} dateString
+ * @returns {Date}
+ */
+export function endOfDay(dateString) {
+  return new Date(`${calendarDate(dateString)}T23:59:59.999Z`)
 }
 
 /**
