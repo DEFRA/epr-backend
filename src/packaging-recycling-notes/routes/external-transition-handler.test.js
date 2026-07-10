@@ -178,7 +178,11 @@ describe('external PRN transition read-side fold', () => {
 
     expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-    const latest = await ledgerRepository.findLatestInLedger(REG_ID, ACC_ID)
+    const latest = await ledgerRepository.findLatestInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
     expect(latest.kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
     expect(latest.createdBy).toEqual({
       id: externalApiClientId,

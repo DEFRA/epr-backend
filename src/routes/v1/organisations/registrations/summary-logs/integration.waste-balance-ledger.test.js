@@ -112,7 +112,12 @@ describe('Waste balance stream (Exporter)', () => {
 
   it('appends a single stream event with aggregate creditTotal on first upload', async () => {
     const env = await setupStream()
-    const { ledgerRepository, registrationId, wasteBalanceService } = env
+    const {
+      ledgerRepository,
+      organisationId,
+      registrationId,
+      wasteBalanceService
+    } = env
 
     await performSubmission(
       env,
@@ -129,10 +134,11 @@ describe('Waste balance stream (Exporter)', () => {
       ])
     )
 
-    const latest = await ledgerRepository.findLatestInLedger(
+    const latest = await ledgerRepository.findLatestInLedger({
+      organisationId,
       registrationId,
-      'ACC-123'
-    )
+      accreditationId: 'ACC-123'
+    })
     expect(latest).not.toBeNull()
     if (!latest) throw new Error('latest stream event is null')
     expect(latest.number).toBe(1)
@@ -156,20 +162,22 @@ describe('Waste balance stream (Exporter)', () => {
 
   it('computes correct delta on re-upload with identical data', async () => {
     const env = await setupStream()
-    const { ledgerRepository, registrationId } = env
+    const { ledgerRepository, organisationId, registrationId } = env
     const data = createUploadData([{ rowId: 2001, exportTonnage: 50 }])
 
     await performSubmission(env, 'log-a', 'file-a', data)
-    const afterFirst = await ledgerRepository.findLatestInLedger(
+    const afterFirst = await ledgerRepository.findLatestInLedger({
+      organisationId,
       registrationId,
-      'ACC-123'
-    )
+      accreditationId: 'ACC-123'
+    })
 
     await performSubmission(env, 'log-b', 'file-b', data)
-    const afterSecond = await ledgerRepository.findLatestInLedger(
+    const afterSecond = await ledgerRepository.findLatestInLedger({
+      organisationId,
       registrationId,
-      'ACC-123'
-    )
+      accreditationId: 'ACC-123'
+    })
 
     if (!afterSecond) throw new Error('afterSecond stream event is null')
     if (!afterFirst) throw new Error('afterFirst stream event is null')
@@ -179,7 +187,7 @@ describe('Waste balance stream (Exporter)', () => {
 
   it('computes correct delta when a row is corrected on re-upload', async () => {
     const env = await setupStream()
-    const { ledgerRepository, registrationId } = env
+    const { ledgerRepository, organisationId, registrationId } = env
 
     await performSubmission(
       env,
@@ -215,10 +223,11 @@ describe('Waste balance stream (Exporter)', () => {
       ])
     )
 
-    const latest = await ledgerRepository.findLatestInLedger(
+    const latest = await ledgerRepository.findLatestInLedger({
+      organisationId,
       registrationId,
-      'ACC-123'
-    )
+      accreditationId: 'ACC-123'
+    })
     if (!latest) throw new Error('latest stream event is null')
     expect(latest.number).toBe(2)
     expect(

@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildLedgerEvent } from '../ledger-test-data.js'
+import { buildLedgerEvent, buildLedgerId } from '../ledger-test-data.js'
 
 export const testFindLatestInLedgerBehaviour = (it) => {
   describe('findLatestInLedger', () => {
@@ -18,8 +18,10 @@ export const testFindLatestInLedgerBehaviour = (it) => {
 
     it('returns null when no events exist for the ledger', async () => {
       const result = await repository.findLatestInLedger(
-        'reg-empty',
-        'acc-empty'
+        buildLedgerId({
+          registrationId: 'reg-empty',
+          accreditationId: 'acc-empty'
+        })
       )
       expect(result).toBeNull()
     })
@@ -35,8 +37,10 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       ])
 
       const result = await repository.findLatestInLedger(
-        'reg-single',
-        'acc-single'
+        buildLedgerId({
+          registrationId: 'reg-single',
+          accreditationId: 'acc-single'
+        })
       )
 
       expect(result).not.toBeNull()
@@ -74,7 +78,12 @@ export const testFindLatestInLedgerBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findLatestInLedger('reg-many', 'acc-many')
+      const result = await repository.findLatestInLedger(
+        buildLedgerId({
+          registrationId: 'reg-many',
+          accreditationId: 'acc-many'
+        })
+      )
 
       expect(result.number).toBe(3)
       expect(result.closingBalance).toEqual({ amount: 30, availableAmount: 25 })
@@ -97,13 +106,38 @@ export const testFindLatestInLedgerBehaviour = (it) => {
         })
       ])
 
-      const x = await repository.findLatestInLedger('reg-x', 'acc-x')
-      const y = await repository.findLatestInLedger('reg-y', 'acc-y')
+      const x = await repository.findLatestInLedger(
+        buildLedgerId({ registrationId: 'reg-x', accreditationId: 'acc-x' })
+      )
+      const y = await repository.findLatestInLedger(
+        buildLedgerId({ registrationId: 'reg-y', accreditationId: 'acc-y' })
+      )
 
       expect(x.number).toBe(1)
       expect(x.accreditationId).toBe('acc-x')
       expect(y.number).toBe(1)
       expect(y.accreditationId).toBe('acc-y')
+    })
+
+    it('does not read a ledger named under a different organisation', async () => {
+      await repository.appendEvents([
+        buildLedgerEvent({
+          organisationId: 'org-owner',
+          registrationId: 'reg-owned',
+          accreditationId: 'acc-owned',
+          number: 1
+        })
+      ])
+
+      const result = await repository.findLatestInLedger(
+        buildLedgerId({
+          organisationId: 'org-stranger',
+          registrationId: 'reg-owned',
+          accreditationId: 'acc-owned'
+        })
+      )
+
+      expect(result).toBeNull()
     })
 
     it('treats null and non-null accreditationId as separate ledgers', async () => {
@@ -125,12 +159,16 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       ])
 
       const nullLedger = await repository.findLatestInLedger(
-        'reg-null-test',
-        null
+        buildLedgerId({
+          registrationId: 'reg-null-test',
+          accreditationId: null
+        })
       )
       const nonNullLedger = await repository.findLatestInLedger(
-        'reg-null-test',
-        'acc-non-null'
+        buildLedgerId({
+          registrationId: 'reg-null-test',
+          accreditationId: 'acc-non-null'
+        })
       )
 
       expect(nullLedger.closingBalance).toEqual({
@@ -156,8 +194,10 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       ])
 
       const result = await repository.findLatestInLedger(
-        'reg-precision',
-        'acc-precision'
+        buildLedgerId({
+          registrationId: 'reg-precision',
+          accreditationId: 'acc-precision'
+        })
       )
 
       expect(result.closingBalance.amount).toBe(200.005)
