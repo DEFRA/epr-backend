@@ -1,3 +1,4 @@
+import { invalidArg } from '#test/invalid-arg.js'
 import { describe, expect, it } from 'vitest'
 import { OPERATOR_CATEGORY, getOperatorCategory } from './operator-category.js'
 
@@ -119,12 +120,12 @@ describe('getOperatorCategory', () => {
       expected: 'REPROCESSOR_REGISTERED_ONLY'
     }
   ])('returns $expected for $scenario', ({ registration, expected }) => {
-    expect(getOperatorCategory(registration)).toBe(expected)
+    expect(getOperatorCategory(invalidArg(registration))).toBe(expected)
   })
 
   it('throws for unknown wasteProcessingType', () => {
     expect(() => {
-      getOperatorCategory({ wasteProcessingType: 'unknown' })
+      getOperatorCategory(invalidArg({ wasteProcessingType: 'unknown' }))
     }).toThrow('Unknown wasteProcessingType: unknown')
   })
 })
