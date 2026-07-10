@@ -1,13 +1,22 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildOverseasSite, buildFullOverseasSite } from './test-data.js'
+import { invalidArg } from '#test/invalid-arg.js'
+
+/** @typedef {import('../port.js').OverseasSitesRepository} OverseasSitesRepository */
 
 export const testCreateBehaviour = (it) => {
   describe('create', () => {
     let repository
 
-    beforeEach(async ({ overseasSitesRepository }) => {
-      repository = overseasSitesRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ overseasSitesRepository: OverseasSitesRepository }} */ {
+          overseasSitesRepository
+        }
+      ) => {
+        repository = overseasSitesRepository
+      }
+    )
 
     it('creates a site and returns it with an id', async () => {
       const input = buildOverseasSite()
@@ -80,10 +89,10 @@ export const testCreateBehaviour = (it) => {
       const input = buildOverseasSite({
         address: {
           line1: '1 Test Street',
-          line2: null,
+          line2: invalidArg(null),
           townOrCity: 'TESTTOWN',
-          stateOrRegion: null,
-          postcode: null
+          stateOrRegion: invalidArg(null),
+          postcode: invalidArg(null)
         }
       })
 

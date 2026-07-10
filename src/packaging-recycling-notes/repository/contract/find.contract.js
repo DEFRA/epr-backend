@@ -6,13 +6,20 @@ import {
   buildDraftPrn
 } from './test-data.js'
 
+/** @typedef {import('../port.js').PackagingRecyclingNotesRepository} PrnRepository */
+/** @typedef {import('#packaging-recycling-notes/domain/model.js').AccreditationSnapshot} AccreditationSnapshot */
+
 export const testFindBehaviour = (it) => {
   describe('find', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: PrnRepository }} */ { prnRepository }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     describe('findById', () => {
       it('returns null when id not found', async () => {
@@ -236,6 +243,7 @@ export const testFindBehaviour = (it) => {
 
       it('does not return deleted PRNs (soft delete)', async () => {
         const accreditationId = `acc-deleted-${Date.now()}`
+        /** @type {AccreditationSnapshot} */
         const accreditation = {
           id: accreditationId,
           accreditationNumber: 'ACC-DEL',
