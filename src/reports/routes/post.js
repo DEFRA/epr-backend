@@ -15,6 +15,7 @@ import {
   periodParamsSchema,
   withRegistrationDetails
 } from './shared.js'
+import { reportDetailResponseSchema } from './response.schema.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
@@ -58,6 +59,10 @@ export const reportsPost = {
     tags: ['api'],
     validate: {
       params: periodParamsSchema
+    },
+    response: {
+      schema: reportDetailResponseSchema,
+      failAction: 'error'
     }
   },
   /**

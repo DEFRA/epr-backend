@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
 import { periodParamsSchema, withRegistrationDetails } from './shared.js'
+import { reportDetailResponseSchema } from './response.schema.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
@@ -27,6 +28,10 @@ export const reportsGetDetail = {
     tags: ['api'],
     validate: {
       params: periodParamsSchema
+    },
+    response: {
+      schema: reportDetailResponseSchema,
+      failAction: 'error'
     }
   },
   /**

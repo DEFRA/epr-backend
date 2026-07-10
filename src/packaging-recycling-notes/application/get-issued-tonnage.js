@@ -1,10 +1,13 @@
+import { endOfDay, startOfDay } from '#common/helpers/date-formatter.js'
 import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnage.js'
 
 /**
  * @typedef {Object} GetIssuedTonnageParams
  * @property {string | null | undefined} accreditationId
- * @property {string} startDate - ISO date string e.g. '2025-01-01'
- * @property {string} endDate - ISO date string e.g. '2025-01-31'
+ * @property {string} startDate - Calendar-date string e.g. '2025-01-01', bare
+ *   or a full ISO datetime — startOfDay()/endOfDay() tolerate either shape.
+ * @property {string} endDate - Calendar-date string e.g. '2025-01-31', bare
+ *   or a full ISO datetime — startOfDay()/endOfDay() tolerate either shape.
  */
 
 /**
@@ -21,8 +24,8 @@ export async function getIssuedTonnage(prnRepository, params) {
   if (!accreditationId) {
     return null
   }
-  const start = new Date(startDate + 'T00:00:00.000Z')
-  const end = new Date(endDate + 'T23:59:59.999Z')
+  const start = startOfDay(startDate)
+  const end = endOfDay(endDate)
   // PRN volumes per accreditation are in the hundreds, so in-memory filtering is negligible.
   // Period filtering stays in the domain layer while the "issued in period" rules are still fluid.
   // Once stable, it could move to the repository with an index on status.issued.at.
