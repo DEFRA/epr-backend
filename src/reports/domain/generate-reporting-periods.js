@@ -64,7 +64,7 @@ export function generateReportingPeriods(
   cadence,
   year,
   now = new Date(),
-  fromDate
+  fromDate = null
 ) {
   const ended = generateAllPeriodsForYear(cadence, year).filter((p) => {
     const dayAfterEnd = new Date(p.endDate)
