@@ -101,7 +101,6 @@ describe('seed-scenarios', () => {
       )
       assertPresent(approvedOrg)
 
-      expect(approvedOrg).toBeDefined()
       expect(approvedOrg.status).toBe(ORGANISATION_STATUS.APPROVED)
       expect(
         approvedOrg.registrations.some(
@@ -131,7 +130,6 @@ describe('seed-scenarios', () => {
       )
       assertPresent(activeOrg)
 
-      expect(activeOrg).toBeDefined()
       expect(activeOrg.status).toBe(ORGANISATION_STATUS.ACTIVE)
       expect(activeOrg.linkedDefraOrganisation).toBeDefined()
       expect(activeOrg.users.length).toBeGreaterThan(0)
@@ -158,7 +156,6 @@ describe('seed-scenarios', () => {
       )
       assertPresent(mixedOrg)
 
-      expect(mixedOrg).toBeDefined()
       expect(mixedOrg.status).toBe(ORGANISATION_STATUS.ACTIVE)
       expect(
         mixedOrg.registrations.some((r) => r.status === REG_ACC_STATUS.APPROVED)
