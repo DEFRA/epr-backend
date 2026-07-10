@@ -68,10 +68,12 @@ const summaryLogRowStatesForHead = async (
 export const summaryLogRowStatesForRegistration = async ({
   ledgerRepository,
   summaryLogRowStateRepository,
+  organisationId,
   registrationId,
   accreditationId
 }) => {
   const head = await latestSubmittedSummaryLogId(ledgerRepository, {
+    organisationId,
     registrationId,
     accreditationId
   })

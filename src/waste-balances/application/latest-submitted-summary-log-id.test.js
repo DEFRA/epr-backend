@@ -3,11 +3,12 @@ import { describe, it, expect } from 'vitest'
 import { createInMemoryLedgerRepository } from '../repository/ledger-inmemory.js'
 import {
   buildLedgerEvent,
+  buildLedgerId,
   buildPrnCreatedEvent
 } from '../repository/ledger-test-data.js'
 import { latestSubmittedSummaryLogId } from './latest-submitted-summary-log-id.js'
 
-const LEDGER_ID = { registrationId: 'reg-1', accreditationId: 'acc-1' }
+const LEDGER_ID = buildLedgerId()
 
 describe('latestSubmittedSummaryLogId', () => {
   it('returns null when the ledger has no events', async () => {
@@ -69,10 +70,10 @@ describe('latestSubmittedSummaryLogId', () => {
     ])()
 
     expect(
-      await latestSubmittedSummaryLogId(ledgerRepository, {
-        registrationId: 'reg-1',
-        accreditationId: null
-      })
+      await latestSubmittedSummaryLogId(
+        ledgerRepository,
+        buildLedgerId({ accreditationId: null })
+      )
     ).toBe('log-1')
   })
 })
