@@ -9,9 +9,9 @@ import {
 
 export const DEFAULT_ORG_ID = new ObjectId().toString()
 export const DEFAULT_REG_ID = new ObjectId().toString()
-export const DEFAULT_REPORT_START_DATE = '2024-01-01T00:00:00.000Z'
-export const DEFAULT_REPORT_END_DATE = '2024-01-31T00:00:00.000Z'
-export const DEFAULT_REPORT_DUE_DATE = '2024-02-15T00:00:00.000Z'
+export const DEFAULT_REPORT_START_DATE = '2024-01-01'
+export const DEFAULT_REPORT_END_DATE = '2024-01-31'
+export const DEFAULT_REPORT_DUE_DATE = '2024-02-15'
 export const DEFAULT_REPORT_YEAR = 2024
 export const DEFAULT_REPORT_PERIOD = MONTHLY_PERIODS.January
 

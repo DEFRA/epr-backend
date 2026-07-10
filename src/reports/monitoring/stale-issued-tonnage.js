@@ -1,3 +1,4 @@
+import { endOfDay, startOfDay } from '#common/helpers/date-formatter.js'
 import { isNil } from '#common/helpers/is-nil.js'
 import { CANCELLED_PRN_STATUSES } from '#packaging-recycling-notes/domain/model.js'
 import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnage.js'
@@ -7,7 +8,8 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 /** @type {Set<import('#reports/domain/report-status.js').ReportStatus>} */
 const REVIEWABLE_REPORT_STATUSES = new Set([
   REPORT_STATUS.SUBMITTED,
-  REPORT_STATUS.IN_PROGRESS
+  REPORT_STATUS.IN_PROGRESS,
+  REPORT_STATUS.READY_TO_SUBMIT
 ])
 
 /**
@@ -29,8 +31,9 @@ const issuedButLaterCancelledTonnage = (prns, { startDate, endDate }) => {
 }
 
 /**
- * Submitted or in-progress monthly report rows extracted from the estate-wide
- * periodic report groupings, flattened to the fields this diagnostic needs.
+ * Submitted, in-progress, or ready-to-submit monthly report rows extracted
+ * from the estate-wide periodic report groupings, flattened to the fields
+ * this diagnostic needs.
  *
  * @param {import('#reports/repository/port.js').PeriodicReport[]} periodicReports
  * @returns {Array<{
@@ -91,8 +94,8 @@ export const findReviewableMonthlyReportRows = (periodicReports) =>
  */
 export const diagnoseReportRow = (row, prns) => {
   const period = {
-    startDate: new Date(row.startDate),
-    endDate: new Date(row.endDate)
+    startDate: startOfDay(row.startDate),
+    endDate: endOfDay(row.endDate)
   }
   const recalculatedTonnage = aggregateIssuedTonnage(prns, period)
 
@@ -125,9 +128,9 @@ export const formatStaleIssuedTonnageFinding = (finding) =>
   `issued-but-later-cancelled ${finding.issuedButLaterCancelledTonnage}`
 
 /**
- * Scans every submitted or in-progress monthly report across the estate,
- * recalculates issuedTonnage from the current PRN state, and returns the
- * reports whose stored value no longer matches. Read-only.
+ * Scans every submitted, in-progress, or ready-to-submit monthly report
+ * across the estate, recalculates issuedTonnage from the current PRN state,
+ * and returns the reports whose stored value no longer matches. Read-only.
  *
  * @param {Object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
