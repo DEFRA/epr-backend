@@ -10,10 +10,14 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { RegistrationOther } from '#domain/organisations/registration.js' */
+
 /**
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {OrganisationsRepository} organisationsRepository
  * @param {object} [overrides]
- * @returns {Promise<import('#repositories/organisations/port.js').Organisation>}
+ * @returns {Promise<Organisation>}
  */
 export async function buildApprovedOrg(organisationsRepository, overrides) {
   const org = buildOrganisation(overrides)
@@ -39,7 +43,9 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
   const approvedRegistrations = [
     Object.assign({}, org.registrations[0], {
       status: REG_ACC_STATUS.APPROVED,
-      cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
+      cbduNumber:
+        /** @type {RegistrationOther} */ (org.registrations[0]).cbduNumber ||
+        'CBDU123456',
       registrationNumber: 'REG1',
       reprocessingType: REPROCESSING_TYPE.INPUT,
       validFrom: VALID_FROM,
