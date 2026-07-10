@@ -118,9 +118,7 @@ describe('validateRowContinuity', () => {
 
     it('returns valid result when existingWasteRecords is null', () => {
       const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
-      const existingWasteRecords = /** @type {WasteRecord[]} */ (
-        /** @type {unknown} */ (null)
-      )
+      const existingWasteRecords = null
 
       const result = validateRowContinuity({
         wasteRecords,
@@ -133,9 +131,7 @@ describe('validateRowContinuity', () => {
 
     it('returns valid result when existingWasteRecords is undefined', () => {
       const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
-      const existingWasteRecords = /** @type {WasteRecord[]} */ (
-        /** @type {unknown} */ (undefined)
-      )
+      const existingWasteRecords = undefined
 
       const result = validateRowContinuity({
         wasteRecords,
@@ -249,11 +245,11 @@ describe('validateRowContinuity', () => {
       expect(fatals[0]?.message).toContain('cannot be removed')
       expect(fatals[0]?.context?.location?.rowId).toBe('row-1')
       expect(fatals[0]?.context?.location?.sheet).toBe('Received')
-      expect(
-        /** @type {PreviousSummaryLogRef} */ (
-          fatals[0]?.context?.previousSummaryLog
-        ).id
-      ).toBe('previous-summary-log-id')
+
+      const previousSummaryLog = /** @type {PreviousSummaryLogRef} */ (
+        fatals[0]?.context?.previousSummaryLog
+      )
+      expect(previousSummaryLog.id).toBe('previous-summary-log-id')
     })
 
     it('returns fatal errors for multiple missing rows', () => {
@@ -366,16 +362,12 @@ describe('validateRowContinuity', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(
-        /** @type {PreviousSummaryLogRef} */ (
-          fatals[0]?.context?.previousSummaryLog
-        ).id
-      ).toBe(previousSummaryLogId)
-      expect(
-        /** @type {PreviousSummaryLogRef} */ (
-          fatals[0]?.context?.previousSummaryLog
-        ).submittedAt
-      ).toBe(previousSubmitTime)
+
+      const previousSummaryLog = /** @type {PreviousSummaryLogRef} */ (
+        fatals[0]?.context?.previousSummaryLog
+      )
+      expect(previousSummaryLog.id).toBe(previousSummaryLogId)
+      expect(previousSummaryLog.submittedAt).toBe(previousSubmitTime)
     })
   })
 

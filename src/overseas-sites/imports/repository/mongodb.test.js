@@ -164,7 +164,8 @@ describe('MongoDB ORS imports repository', () => {
     await repository.updateStatus('import-ttl-2', ORS_IMPORT_STATUS.PROCESSING)
 
     const found = await repository.findById('import-ttl-2')
-    assertPresent(found?.expiresAt)
+    assertPresent(found)
+    assertPresent(found.expiresAt)
 
     expect(found.expiresAt).toBeInstanceOf(Date)
     expect(found.expiresAt.getTime()).toBeGreaterThan(

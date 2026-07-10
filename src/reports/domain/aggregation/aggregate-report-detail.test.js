@@ -496,7 +496,8 @@ describe('#aggregateReportDetail', () => {
         exporterArgs
       )
 
-      expect(result.exportActivity?.totalTonnageExported).toBe(11.47)
+      assertPresent(result.exportActivity)
+      expect(result.exportActivity.totalTonnageExported).toBe(11.47)
     })
 
     it('routes unresolved ORS IDs to unapprovedOverseasSites and keeps overseasSites empty', () => {
@@ -517,8 +518,9 @@ describe('#aggregateReportDetail', () => {
         exporterArgs
       )
 
-      expect(result.exportActivity?.overseasSites).toStrictEqual([])
-      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
+      assertPresent(result.exportActivity)
+      expect(result.exportActivity.overseasSites).toStrictEqual([])
+      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
         { orsId: '001', tonnageExported: 5 },
         { orsId: '096', tonnageExported: 5 }
       ])
@@ -558,7 +560,8 @@ describe('#aggregateReportDetail', () => {
         orsDetailsMap
       })
 
-      expect(result.exportActivity?.overseasSites).toStrictEqual([
+      assertPresent(result.exportActivity)
+      expect(result.exportActivity.overseasSites).toStrictEqual([
         {
           orsId: '001',
           siteName: 'EuroPlast GmbH',
@@ -567,7 +570,7 @@ describe('#aggregateReportDetail', () => {
           approved: false
         }
       ])
-      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
+      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
         { orsId: '096', tonnageExported: 3 },
         { orsId: '200', tonnageExported: 7 }
       ])
@@ -596,7 +599,8 @@ describe('#aggregateReportDetail', () => {
         exporterArgs
       )
 
-      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
+      assertPresent(result.exportActivity)
+      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
         { orsId: '500', tonnageExported: 7.75 }
       ])
     })
