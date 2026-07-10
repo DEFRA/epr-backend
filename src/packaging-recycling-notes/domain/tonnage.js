@@ -3,8 +3,12 @@ import { CANCELLED_PRN_STATUSES } from './model.js'
 
 /**
  * @typedef {Object} AggregateTonnageParams
- * @property {Date} startDate
- * @property {Date} endDate
+ * @property {Date} startDate - A concrete instant, not a calendar-date
+ *   string. Callers must have already expanded a calendar-date string via
+ *   startOfDay() from #common/helpers/date-formatter.js.
+ * @property {Date} endDate - A concrete instant. Callers must have already
+ *   expanded a calendar-date string via endOfDay() from
+ *   #common/helpers/date-formatter.js.
  */
 
 /**

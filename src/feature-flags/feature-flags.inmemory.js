@@ -12,15 +12,6 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isSummaryLogRowStatesEnabled() {
     return flags.summaryLogRowStates ?? false
   },
-  isSummaryLogRowStatesBackfillEnabled() {
-    return flags.summaryLogRowStatesBackfill ?? false
-  },
-  isSummaryLogRowStatesDiscrepancyReportEnabled() {
-    return flags.summaryLogRowStatesDiscrepancyReport ?? false
-  },
-  isRegisteredOnlySubmittedEventsEnabled() {
-    return flags.registeredOnlySubmittedEvents ?? false
-  },
   isStaleIssuedTonnageReportEnabled() {
     return flags.staleIssuedTonnageReport ?? false
   }
