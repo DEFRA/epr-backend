@@ -1,19 +1,7 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { assertPresent } from '#test/type-helpers.js'
+import { assertPresent, partialMock } from '#test/type-helpers.js'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { createUploadsRepository } from './cdp-uploader.js'
-
-/**
- * @import { S3Client } from '@aws-sdk/client-s3'
- * @import { Mock } from 'vitest'
- */
-
-/**
- * @param {{ send: Mock }} client
- * @returns {S3Client}
- */
-const asS3Client = (client) =>
-  /** @type {S3Client} */ (/** @type {unknown} */ (client))
 
 vi.mock('@aws-sdk/client-s3', async (importOriginal) => {
   const actual = /** @type {Record<string, unknown>} */ (await importOriginal())
@@ -37,7 +25,7 @@ describe('CDP Uploader error handling', () => {
     }
 
     const repository = createUploadsRepository({
-      s3Client: asS3Client(mockS3Client),
+      s3Client: partialMock(mockS3Client),
       ...testConfig
     })
 
@@ -52,7 +40,7 @@ describe('CDP Uploader error handling', () => {
     }
 
     const repository = createUploadsRepository({
-      s3Client: asS3Client(mockS3Client),
+      s3Client: partialMock(mockS3Client),
       ...testConfig
     })
 
@@ -92,7 +80,7 @@ describe('bucket routing', () => {
     stubFetch()
 
     const repository = createUploadsRepository({
-      s3Client: asS3Client({ send: vi.fn() }),
+      s3Client: partialMock({ send: vi.fn() }),
       ...testConfig
     })
 
@@ -111,7 +99,7 @@ describe('bucket routing', () => {
     stubFetch()
 
     const repository = createUploadsRepository({
-      s3Client: asS3Client({ send: vi.fn() }),
+      s3Client: partialMock({ send: vi.fn() }),
       ...testConfig
     })
 
@@ -132,7 +120,7 @@ describe('bucket routing', () => {
     stubFetch()
 
     const repository = createUploadsRepository({
-      s3Client: asS3Client({ send: vi.fn() }),
+      s3Client: partialMock({ send: vi.fn() }),
       ...testConfig
     })
 
@@ -149,7 +137,7 @@ describe('bucket routing', () => {
     stubFetch()
 
     const repository = createUploadsRepository({
-      s3Client: asS3Client({ send: vi.fn() }),
+      s3Client: partialMock({ send: vi.fn() }),
       ...testConfig
     })
 
@@ -178,7 +166,7 @@ describe('deleteByLocation', () => {
     })
 
     const repository = createUploadsRepository({
-      s3Client: asS3Client(mockS3Client),
+      s3Client: partialMock(mockS3Client),
       ...testConfig
     })
 
