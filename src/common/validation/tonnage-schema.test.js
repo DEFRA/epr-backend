@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { wholeTonnage } from './tonnage-schema.js'
+import { tonnage, wholeTonnage } from './tonnage-schema.js'
 import { expectValidationError } from './validation-test-helpers.js'
+
+describe('#tonnage', () => {
+  it('accepts a whole number', () => {
+    const { error, value } = tonnage().validate(100)
+
+    expect(error).toBeUndefined()
+    expect(value).toBe(100)
+  })
+
+  it('accepts a decimal', () => {
+    const { error } = tonnage().validate(100.5)
+
+    expect(error).toBeUndefined()
+  })
+
+  it('rejects a negative value', () => {
+    const [detail] = expectValidationError(tonnage(), -1)
+
+    expect(detail.type).toBe('number.min')
+  })
+})
 
 describe('#wholeTonnage', () => {
   it('accepts a whole number', () => {
