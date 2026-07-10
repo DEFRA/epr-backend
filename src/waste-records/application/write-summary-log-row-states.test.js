@@ -38,6 +38,12 @@ const registeredOnlyLedgerId = {
   accreditationId: null
 }
 
+const accreditedLedgerId = {
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  accreditationId: 'acc-1'
+}
+
 describe('writeSummaryLogRowStates', () => {
   let summaryLogRowStateRepository
 
@@ -58,7 +64,10 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     expect(
-      await summaryLogRowStateRepository.findBySummaryLogId('log-A')
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        registeredOnlyLedgerId,
+        'log-A'
+      )
     ).toHaveLength(0)
   })
 
@@ -74,7 +83,10 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     expect(
-      await summaryLogRowStateRepository.findBySummaryLogId('log-A')
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        registeredOnlyLedgerId,
+        'log-A'
+      )
     ).toHaveLength(0)
   })
 
@@ -109,7 +121,10 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const committed =
-      await summaryLogRowStateRepository.findBySummaryLogId('log-A')
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        registeredOnlyLedgerId,
+        'log-A'
+      )
     expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1', '2'])
     expect(committed.find((doc) => doc.rowId === '1')).toMatchObject({
       organisationId: 'org-1',
@@ -137,7 +152,10 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const [committed] =
-      await summaryLogRowStateRepository.findBySummaryLogId('log-A')
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        registeredOnlyLedgerId,
+        'log-A'
+      )
     expect(committed.data.TONNAGE_RECEIVED_FOR_RECYCLING).toBe(1.01)
   })
 
@@ -153,7 +171,10 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const [committed] =
-      await summaryLogRowStateRepository.findBySummaryLogId('log-A')
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        registeredOnlyLedgerId,
+        'log-A'
+      )
     expect(committed.data.NET_WEIGHT).toBe(7.54)
   })
 
@@ -173,7 +194,10 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const committed =
-      await summaryLogRowStateRepository.findBySummaryLogId('log-A')
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        registeredOnlyLedgerId,
+        'log-A'
+      )
     const storedTonnages = committed.map(
       (doc) => doc.data.TONNAGE_RECEIVED_FOR_RECYCLING
     )
@@ -194,17 +218,16 @@ describe('writeSummaryLogRowStates', () => {
         validFrom: '2023-01-01',
         validTo: '2030-12-31'
       },
-      ledgerId: {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1'
-      },
+      ledgerId: accreditedLedgerId,
       overseasSites,
       summaryLogId: 'log-A'
     })
 
     const [committed] =
-      await summaryLogRowStateRepository.findBySummaryLogId('log-A')
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        accreditedLedgerId,
+        'log-A'
+      )
     expect(committed.accreditationId).toBe('acc-1')
   })
 
@@ -224,7 +247,10 @@ describe('writeSummaryLogRowStates', () => {
     await submit()
 
     const committed =
-      await summaryLogRowStateRepository.findBySummaryLogId('log-A')
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        registeredOnlyLedgerId,
+        'log-A'
+      )
     expect(committed).toHaveLength(1)
     expect(committed[0].summaryLogIds).toEqual(['log-A'])
   })
