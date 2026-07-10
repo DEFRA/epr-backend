@@ -19,6 +19,8 @@ const period = (report, overrides = {}) => ({
   dueDate: '2026-02-20',
   submissionNumber: report?.submissionNumber ?? 1,
   report,
+  // feed-only projection; this builder strips it, so its value is irrelevant here
+  submittedReports: [],
   ...overrides
 })
 
@@ -78,16 +80,19 @@ describe('buildCalendarPeriods', () => {
 
     const result = buildCalendarPeriods([flagged, submitted, noReport])
 
+    // The builder drops the feed-only submittedReports, so the expected items do too
+    const item = ({ submittedReports: _submittedReports, ...rest }) => rest
+
     expect(result).toEqual([
-      { ...flagged, periodStatus: 'submitted' },
+      { ...item(flagged), periodStatus: 'submitted' },
       {
-        ...flagged,
+        ...item(flagged),
         submissionNumber: 2,
         periodStatus: 'requires_resubmission',
         report: null
       },
-      { ...submitted, periodStatus: 'submitted' },
-      { ...noReport, periodStatus: null }
+      { ...item(submitted), periodStatus: 'submitted' },
+      { ...item(noReport), periodStatus: null }
     ])
   })
 })

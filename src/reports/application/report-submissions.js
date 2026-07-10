@@ -51,6 +51,7 @@ import {
  * @property {string} dueDate
  * @property {string} submittedDate
  * @property {string} submittedBy
+ * @property {number | ''} submissionNumber
  */
 
 /** @typedef {SubmissionBaseFields & TonnageFields} ReportSubmissionsRow */
@@ -132,8 +133,7 @@ function buildTonnageFields(report) {
  * @param {string} cadence
  * @param {object} mergedPeriod
  * @param {string} accreditationNumber
- * @param {string} submittedDate
- * @param {string} submittedBy
+ * @param {import('#reports/repository/port.js').ReportSummary | null} report
  * @returns {ReportSubmissionsRow}
  */
 function buildRow(
@@ -142,8 +142,7 @@ function buildRow(
   cadence,
   mergedPeriod,
   accreditationNumber,
-  submittedDate,
-  submittedBy
+  report
 ) {
   return {
     regulator: REGULATOR_DISPLAY[registration.submittedToRegulator],
@@ -169,9 +168,13 @@ function buildRow(
       mergedPeriod.year
     ),
     dueDate: mergedPeriod.dueDate,
-    submittedDate,
-    submittedBy,
-    ...buildTonnageFields(mergedPeriod.report)
+    // Every report-derived field describes this one submitted report, so the
+    // row stays internally consistent. An in-flight draft is never a `report`
+    // here, so it produces no row until it is itself submitted.
+    submittedDate: report?.submittedAt?.slice(0, 10) ?? '',
+    submittedBy: report?.submittedBy?.name ?? '',
+    submissionNumber: report?.submissionNumber ?? '',
+    ...buildTonnageFields(report)
   }
 }
 
@@ -208,16 +211,22 @@ async function buildSubmissionRows(
       cadence
     )
 
-    return merged.map((mergedPeriod) => {
-      const report = mergedPeriod.report
-      return buildRow(
-        org,
-        registration,
-        cadence,
-        mergedPeriod,
-        accreditationNumber,
-        report?.submittedAt?.slice(0, 10) ?? '',
-        report?.submittedBy?.name ?? ''
+    return merged.flatMap((mergedPeriod) => {
+      // One row per submitted report, so a resubmitted period fans out. A period
+      // with nothing submitted still gets a single blank row (`null`), keeping
+      // outstanding periods visible.
+      const reports = mergedPeriod.submittedReports.length
+        ? mergedPeriod.submittedReports
+        : [null]
+      return reports.map((report) =>
+        buildRow(
+          org,
+          registration,
+          cadence,
+          mergedPeriod,
+          accreditationNumber,
+          report
+        )
       )
     })
   })

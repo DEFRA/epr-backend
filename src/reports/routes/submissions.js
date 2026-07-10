@@ -51,6 +51,9 @@ export const getReportSubmissions = {
               dueDate: Joi.string().required(),
               submittedDate: Joi.string().allow('').required(),
               submittedBy: Joi.string().allow('').required(),
+              submissionNumber: Joi.alternatives()
+                .try(Joi.number().integer(), Joi.valid(''))
+                .required(),
               tonnageReceivedForRecycling: tonnageValue,
               tonnageRecycled: tonnageValue,
               tonnageExportedForRecycling: tonnageValue,

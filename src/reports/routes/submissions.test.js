@@ -106,6 +106,11 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     )
     // A real number survives the response schema (not coerced back to a string)
     expect(issued).toContain(80)
+    // The submission number of the latest submitted report survives the schema
+    const submissionNumbers = payload.reportSubmissions.map(
+      (r) => r.submissionNumber
+    )
+    expect(submissionNumbers).toContain(1)
   })
 
   it('returns 403 for a standard user', async () => {

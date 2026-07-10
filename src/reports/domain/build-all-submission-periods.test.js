@@ -29,6 +29,8 @@ const period = (report, overrides = {}) => ({
   submissionNumber: report?.submissionNumber ?? 1,
   report,
   previousSubmissions: [],
+  // feed-only projection; this builder strips it, so its value is irrelevant here
+  submittedReports: [],
   ...overrides
 })
 

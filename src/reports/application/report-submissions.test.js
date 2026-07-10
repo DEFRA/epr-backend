@@ -4,6 +4,8 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
+import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
@@ -117,7 +119,8 @@ describe('generateReportSubmissions (integration)', () => {
           reportingPeriod: 'Jan 2026',
           dueDate: '2026-02-20',
           submittedDate: FIXED_DATE.toISOString().slice(0, 10),
-          submittedBy: 'Jane Smith'
+          submittedBy: 'Jane Smith',
+          submissionNumber: 1
         },
         {
           ...baseRow,
@@ -125,7 +128,8 @@ describe('generateReportSubmissions (integration)', () => {
           reportingPeriod: 'Feb 2026',
           dueDate: '2026-03-20',
           submittedDate: '',
-          submittedBy: ''
+          submittedBy: '',
+          submissionNumber: ''
         },
         {
           ...baseRow,
@@ -133,7 +137,8 @@ describe('generateReportSubmissions (integration)', () => {
           reportingPeriod: 'Mar 2026',
           dueDate: '2026-04-20',
           submittedDate: '',
-          submittedBy: ''
+          submittedBy: '',
+          submissionNumber: ''
         },
         {
           ...baseRow,
@@ -141,7 +146,8 @@ describe('generateReportSubmissions (integration)', () => {
           reportingPeriod: 'Jan 2026',
           dueDate: '2026-02-20',
           submittedDate: '',
-          submittedBy: ''
+          submittedBy: '',
+          submissionNumber: ''
         },
         {
           ...baseRow,
@@ -149,7 +155,8 @@ describe('generateReportSubmissions (integration)', () => {
           reportingPeriod: 'Feb 2026',
           dueDate: '2026-03-20',
           submittedDate: '',
-          submittedBy: ''
+          submittedBy: '',
+          submissionNumber: ''
         },
         {
           ...baseRow,
@@ -157,7 +164,8 @@ describe('generateReportSubmissions (integration)', () => {
           reportingPeriod: 'Mar 2026',
           dueDate: '2026-04-20',
           submittedDate: '',
-          submittedBy: ''
+          submittedBy: '',
+          submissionNumber: ''
         }
       ]
     })
@@ -167,7 +175,7 @@ describe('generateReportSubmissions (integration)', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo)
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
@@ -214,6 +222,175 @@ describe('generateReportSubmissions (integration)', () => {
     const periods = result.reportSubmissions.map((r) => r.reportingPeriod)
 
     expect(periods).toEqual(['Feb 2026', 'Mar 2026'])
+  })
+
+  it('keeps the last submitted figures while an in-flight resubmission draft is current', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const reg = org.registrations[0]
+
+    // Submission 1 submitted with PRN figures and a note the feed must keep
+    // showing, with an in-flight submission 2 draft sitting over it
+    await seedInFlightResubmission(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      prn: {
+        issuedTonnage: 80,
+        freeTonnage: 5,
+        totalRevenue: 40000,
+        averagePricePerTonne: 500
+      },
+      supportingInformation: 'Submission 1 note to the regulator'
+    })
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+
+    // The in-flight draft is not submitted, so it adds no row: the period still
+    // has a single row, sourced from submission 1
+    const janRows = result.reportSubmissions.filter(
+      (r) => r.reportingPeriod === 'Jan 2026'
+    )
+    expect(janRows).toHaveLength(1)
+    const janRow = janRows[0]
+
+    // Date and submitter come from the last submitted report, not the draft
+    expect(janRow.submittedDate).toBe(FIXED_DATE.toISOString().slice(0, 10))
+    expect(janRow.submittedBy).toBe('Jane Smith')
+    // Tonnage/PRN figures and the note to the regulator likewise reflect
+    // submission 1, not the empty draft
+    expect(janRow.tonnagePrnsPernsIssued).toBe(80)
+    expect(janRow.freeTonnagePrnsPerns).toBe(5)
+    expect(janRow.totalRevenuePrnsPerns).toBe(40000)
+    expect(janRow.averagePrnPernPricePerTonne).toBe(500)
+    expect(janRow.noteToRegulator).toBe('Submission 1 note to the regulator')
+    // Only submission 1 has been submitted; the in-flight draft is not counted,
+    // so SubmissionNumber stays at the latest submitted report's number
+    expect(janRow.submissionNumber).toBe(1)
+  })
+
+  it('keeps the last submitted figures after a submitted period is unsubmitted', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const reg = org.registrations[0]
+
+    // A submitted period a service maintainer then unsubmits for correction,
+    // with no newer submission: the submitted slot (date, submitter) is retained
+    await buildUnsubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      prn: {
+        issuedTonnage: 80,
+        freeTonnage: 5,
+        totalRevenue: 40000,
+        averagePricePerTonne: 500
+      },
+      supportingInformation: 'Submitted note retained after unsubmit'
+    })
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+
+    const byPeriod = Object.fromEntries(
+      result.reportSubmissions.map((r) => [r.reportingPeriod, r])
+    )
+    const janRow = byPeriod['Jan 2026']
+
+    // The feed retains the last submitted date, submitter, figures and number
+    // rather than blanking while the period is a draft again
+    expect(janRow.submittedDate).toBe(FIXED_DATE.toISOString().slice(0, 10))
+    expect(janRow.submittedBy).toBe('Jane Smith')
+    expect(janRow.tonnagePrnsPernsIssued).toBe(80)
+    expect(janRow.noteToRegulator).toBe(
+      'Submitted note retained after unsubmit'
+    )
+    expect(janRow.submissionNumber).toBe(1)
+  })
+
+  it('fans out a resubmitted period into one row per submitted report', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const reg = org.registrations[0]
+
+    // Submission 1: submitted, with the original PRN figures and note
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      prn: {
+        issuedTonnage: 80,
+        freeTonnage: 5,
+        totalRevenue: 40000,
+        averagePricePerTonne: 500
+      },
+      supportingInformation: 'Note on the original submission'
+    })
+
+    // Submission 2: a correction, itself submitted a day later with revised
+    // figures and note (April has not yet ended, so the period set is unchanged)
+    vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      submissionNumber: 2,
+      prn: {
+        issuedTonnage: 120,
+        freeTonnage: 8,
+        totalRevenue: 60000,
+        averagePricePerTonne: 500
+      },
+      supportingInformation: 'Note on the corrected submission'
+    })
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+
+    // Advancing the clock to 18 Apr must not change the applicable period set:
+    // April has not yet ended, so no Apr row appears
+    const periods = [
+      ...new Set(result.reportSubmissions.map((r) => r.reportingPeriod))
+    ].sort()
+    expect(periods).toEqual(['Feb 2026', 'Jan 2026', 'Mar 2026'])
+
+    // The resubmitted period now fans out into one row per submitted report,
+    // ordered by submission number ascending
+    const janRows = result.reportSubmissions.filter(
+      (r) => r.reportingPeriod === 'Jan 2026'
+    )
+    expect(janRows).toHaveLength(2)
+
+    const [original, correction] = janRows
+
+    // Row 1 keeps submission 1's original date, figures and note
+    expect(original.submissionNumber).toBe(1)
+    expect(original.submittedDate).toBe('2026-04-17')
+    expect(original.submittedBy).toBe('Jane Smith')
+    expect(original.tonnagePrnsPernsIssued).toBe(80)
+    expect(original.freeTonnagePrnsPerns).toBe(5)
+    expect(original.noteToRegulator).toBe('Note on the original submission')
+
+    // Row 2 carries the correction's revised date, figures and note
+    expect(correction.submissionNumber).toBe(2)
+    expect(correction.submittedDate).toBe('2026-04-18')
+    expect(correction.submittedBy).toBe('Jane Smith')
+    expect(correction.tonnagePrnsPernsIssued).toBe(120)
+    expect(correction.freeTonnagePrnsPerns).toBe(8)
+    expect(correction.totalRevenuePrnsPerns).toBe(60000)
+    expect(correction.noteToRegulator).toBe('Note on the corrected submission')
   })
 })
 
