@@ -168,9 +168,11 @@ export const findStaleIssuedTonnageReports = async ({
     if (!prnsByAccreditationId.has(accreditationId)) {
       prnsByAccreditationId.set(
         accreditationId,
-        await packagingRecyclingNotesRepository.findByAccreditation(
+        await packagingRecyclingNotesRepository.findByAccreditation({
+          organisationId: row.organisationId,
+          registrationId: row.registrationId,
           accreditationId
-        )
+        })
       )
     }
     const prns = prnsByAccreditationId.get(accreditationId)

@@ -20,6 +20,54 @@ const CANCELLED_HISTORY_STEPS = 5
 const CANCELLED_ISSUED_STEP_OFFSET = 3
 
 /**
+ * Builds an accreditation with sensible defaults.
+ * @param {object} [overrides]
+ */
+export const buildAccreditation = (overrides = {}) => ({
+  id: `acc-${randomUUID()}`,
+  accreditationNumber: `ACC-${Date.now()}`,
+  accreditationYear: 2026,
+  material: 'plastic',
+  submittedToRegulator: 'ea',
+  siteAddress: {
+    line1: '1 Test Street',
+    postcode: 'SW1A 1AA'
+  },
+  ...overrides
+})
+
+/**
+ * Builds the identity of an accreditation: the accreditation, and the
+ * registration and organisation above it. Unique per call — the Mongo test
+ * database is shared across the tests in a file, so no two may share ids.
+ *
+ * @param {Partial<import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId>} [overrides]
+ */
+export const buildAccreditationId = (overrides = {}) => ({
+  organisationId: `org-${randomUUID()}`,
+  registrationId: `reg-${randomUUID()}`,
+  accreditationId: `acc-${randomUUID()}`,
+  ...overrides
+})
+
+/**
+ * Places a PRN under an accreditation, so that the ids the PRN carries agree
+ * with the accreditation identity a reader names it by.
+ *
+ * @param {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId} accreditationId
+ * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} [overrides]
+ */
+export const underAccreditation = (accreditationId, overrides = {}) => ({
+  organisation: {
+    id: accreditationId.organisationId,
+    name: 'Test Organisation'
+  },
+  registrationId: accreditationId.registrationId,
+  accreditation: buildAccreditation({ id: accreditationId.accreditationId }),
+  ...overrides
+})
+
+/**
  * Builds a valid PRN for testing with sensible defaults.
  * All required fields are populated, with optional overrides.
  *
@@ -39,17 +87,7 @@ export const buildPrn = (overrides = {}) => {
       tradingName: 'Test Trading'
     },
     registrationId: `reg-${randomUUID()}`,
-    accreditation: {
-      id: `acc-${randomUUID()}`,
-      accreditationNumber: `ACC-${Date.now()}`,
-      accreditationYear: 2026,
-      material: 'plastic',
-      submittedToRegulator: 'ea',
-      siteAddress: {
-        line1: '1 Test Street',
-        postcode: 'SW1A 1AA'
-      }
-    },
+    accreditation: buildAccreditation(),
     issuedToOrganisation: {
       id: `recipient-${randomUUID()}`,
       name: 'Recipient Org',

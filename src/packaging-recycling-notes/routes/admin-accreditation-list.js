@@ -17,66 +17,55 @@ import { createStatusesValidator } from '#packaging-recycling-notes/routes/valid
  * @import {PrnStatus} from '#packaging-recycling-notes/domain/model.js'
  */
 
-const DEFAULT_LIMIT = 500
+export const adminAccreditationPackagingRecyclingNotesListPath =
+  '/v1/admin/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes'
 
-export const adminPackagingRecyclingNotesListPath =
-  '/v1/admin/packaging-recycling-notes'
-
-export const adminPackagingRecyclingNotesList = {
+export const adminAccreditationPackagingRecyclingNotesList = {
   method: 'GET',
-  path: adminPackagingRecyclingNotesListPath,
+  path: adminAccreditationPackagingRecyclingNotesListPath,
   options: {
     auth: getAuthConfig([SCOPES.adminRead]),
-    tags: ['api'],
+    tags: ['api', 'admin'],
     validate: {
       query: Joi.object({
-        statuses: createStatusesValidator(Object.values(PRN_STATUS)),
-        limit: Joi.number().integer().min(1).max(1000).optional(),
-        cursor: Joi.string().optional()
+        statuses: createStatusesValidator(Object.values(PRN_STATUS))
       })
     }
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
-   *   query: {
-   *     statuses: PrnStatus[],
-   *     limit?: number,
-   *     cursor?: string
-   *   }
+   *   query: { statuses: PrnStatus[] }
    * }} request
    */
   handler: async (request, h) => {
-    const { packagingRecyclingNotesRepository, logger } = request
-    const { statuses, limit, cursor } = request.query
+    const { packagingRecyclingNotesRepository, logger, params } = request
+    const { organisationId, registrationId, accreditationId } = params
+    const { statuses } = request.query
 
     try {
-      const effectiveLimit = limit ?? DEFAULT_LIMIT
-
-      const result = await packagingRecyclingNotesRepository.findByStatus({
-        cursor,
-        limit: effectiveLimit,
-        statuses
+      // The PRNs of one accreditation are few, so the whole set is read and the
+      // status filter applied in memory. The global list keeps cursor pagination.
+      const prns = await packagingRecyclingNotesRepository.findByAccreditation({
+        organisationId,
+        registrationId,
+        accreditationId
       })
 
-      const response = {
-        items: result.items.map(mapToAdminPrn),
-        hasMore: result.hasMore
-      }
-
-      if (result.nextCursor) {
-        response.nextCursor = result.nextCursor
-      }
+      const items = prns
+        .filter((prn) => statuses.includes(prn.status.currentStatus))
+        .map(mapToAdminPrn)
 
       logger.info({
-        message: `Admin listed ${result.items.length} PRNs`,
+        message: `Admin listed ${items.length} PRNs for accreditation ${accreditationId}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+          reference: accreditationId
         }
       })
 
-      return h.response(response).code(StatusCodes.OK)
+      return h.response({ items, hasMore: false }).code(StatusCodes.OK)
     } catch (error) {
       if (error.isBoom) {
         throw error
@@ -84,7 +73,7 @@ export const adminPackagingRecyclingNotesList = {
 
       logger.error({
         err: error,
-        message: `Failure on ${adminPackagingRecyclingNotesListPath}`,
+        message: `Failure on ${adminAccreditationPackagingRecyclingNotesListPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -92,7 +81,7 @@ export const adminPackagingRecyclingNotesList = {
       })
 
       throw Boom.badImplementation(
-        `Failure on ${adminPackagingRecyclingNotesListPath}`
+        `Failure on ${adminAccreditationPackagingRecyclingNotesListPath}`
       )
     }
   }

@@ -11,6 +11,16 @@ export class PrnNumberConflictError extends Error {
 }
 
 /**
+ * The identity of an accreditation: the accreditation, and the registration and
+ * organisation above it. A PRN belongs to an accreditation, so selecting the
+ * PRNs of one names the whole chain. `RegistrationOrAccreditationId` with its
+ * `accreditationId` narrowed non-null — a registration in its registered-only
+ * phase has no accreditation to name.
+ *
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & { accreditationId: string }} AccreditationId
+ */
+
+/**
  * @typedef {Object} UpdateStatusParams
  * @property {string} id - PRN ID
  * @property {number} version - Expected current document version (compare-and-set token for OCC)
@@ -67,7 +77,7 @@ export class PrnNumberConflictError extends Error {
  * @property {(id: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findById
  * @property {(prnNumber: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findByPrnNumber
  * @property {(prn: Omit<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} create
- * @property {(accreditationId: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
+ * @property {(accreditationId: AccreditationId) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
  * @property {(params: PersistProjectionParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} persistProjection
