@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import {
   CLASSIFICATION_REASON,
   checkRequiredFields,
@@ -109,21 +109,21 @@ describe('classify-helpers', () => {
     it('treats null as unfilled', () => {
       const data = { FIELD_A: null }
       const result = checkRequiredFields(data, ['FIELD_A'], {})
-      assert(result)
+      assertPresent(result)
       expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
     })
 
     it('treats empty string as unfilled', () => {
       const data = { FIELD_A: '' }
       const result = checkRequiredFields(data, ['FIELD_A'], {})
-      assert(result)
+      assertPresent(result)
       expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
     })
 
     it('treats undefined as unfilled', () => {
       const data = { FIELD_A: undefined }
       const result = checkRequiredFields(data, ['FIELD_A'], {})
-      assert(result)
+      assertPresent(result)
       expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
     })
 
@@ -131,7 +131,7 @@ describe('classify-helpers', () => {
       const data = { DROPDOWN: 'Choose option' }
       const unfilledValues = { DROPDOWN: ['Choose option'] }
       const result = checkRequiredFields(data, ['DROPDOWN'], unfilledValues)
-      assert(result)
+      assertPresent(result)
       expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
     })
 

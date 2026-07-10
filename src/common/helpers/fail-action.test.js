@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import { failAction } from './fail-action.js'
 import { config } from '#root/config.js'
 
@@ -77,7 +77,7 @@ describe('#fail-action', () => {
         { email: sensitiveEmail, age: sensitiveAge, country: sensitiveCountry },
         { abortEarly: false }
       )
-      assert(joiError)
+      assertPresent(joiError)
 
       const mockRequest = createMockRequest()
 
