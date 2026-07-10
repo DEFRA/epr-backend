@@ -523,8 +523,10 @@ describe('validateAccreditation', () => {
       const accreditation = buildAccreditation({
         wasteProcessingType: 'reprocessor',
         site: {
-          line1: '123 Test Street',
-          postcode: 'AB12 3CD'
+          address: {
+            line1: '123 Test Street',
+            postcode: 'AB12 3CD'
+          }
         },
         orsFileUploads: undefined
       })
@@ -536,8 +538,10 @@ describe('validateAccreditation', () => {
       const accreditation = buildAccreditation({
         wasteProcessingType: 'reprocessor',
         site: {
-          line1: '123 Test Street',
-          postcode: 'AB12 3CD'
+          address: {
+            line1: '123 Test Street',
+            postcode: 'AB12 3CD'
+          }
         }
       })
 
@@ -567,10 +571,14 @@ describe('validateAccreditation', () => {
     })
 
     it('non-glass: accepts when glassRecyclingProcess is null', () => {
-      const accreditation = buildAccreditation({
-        material: MATERIAL.PAPER,
-        glassRecyclingProcess: null
-      })
+      const accreditation = buildAccreditation(
+        /** @type {Parameters<typeof buildAccreditation>[0]} */ (
+          /** @type {unknown} */ ({
+            material: MATERIAL.PAPER,
+            glassRecyclingProcess: null
+          })
+        )
+      )
 
       expect(() => validateAccreditation(accreditation)).not.toThrow()
     })
@@ -631,7 +639,7 @@ describe('organisationJSONSchemaOverrides', () => {
       registrations: [registration],
       accreditations: [accreditation]
     })
-    delete organisation.id
+    delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
     const { error } = validate(organisation)
     expect(error).toBeUndefined()
@@ -651,7 +659,7 @@ describe('organisationJSONSchemaOverrides', () => {
         registrations: [registration],
         accreditations: []
       })
-      delete organisation.id
+      delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
       const { error } = validate(organisation)
       expect(error).toBeUndefined()
@@ -670,7 +678,7 @@ describe('organisationJSONSchemaOverrides', () => {
         registrations: [registration],
         accreditations: []
       })
-      delete organisation.id
+      delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
       const { error } = validate(organisation)
       expect(error).toBeUndefined()
@@ -691,7 +699,7 @@ describe('organisationJSONSchemaOverrides', () => {
         registrations: [registration],
         accreditations: []
       })
-      delete organisation.id
+      delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
       const { error } = validate(organisation)
       expect(error).toBeUndefined()
@@ -711,7 +719,7 @@ describe('organisationJSONSchemaOverrides', () => {
         registrations: [registration],
         accreditations: []
       })
-      delete organisation.id
+      delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
       const { error } = validate(organisation)
       expect(error).toBeUndefined()
@@ -728,7 +736,7 @@ describe('organisationJSONSchemaOverrides', () => {
         registrations: [registration],
         accreditations: []
       })
-      delete organisation.id
+      delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
       const { error } = validate(organisation)
       expect(error).toBeUndefined()
@@ -737,19 +745,23 @@ describe('organisationJSONSchemaOverrides', () => {
 
   describe('fixAccreditation', () => {
     it('allows null for accreditation number when not approved', () => {
-      const accreditation = buildAccreditation({
-        status: REG_ACC_STATUS.CREATED,
-        accreditationNumber: null,
-        material: MATERIAL.ALUMINIUM,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
-      })
+      const accreditation = buildAccreditation(
+        /** @type {Parameters<typeof buildAccreditation>[0]} */ (
+          /** @type {unknown} */ ({
+            status: REG_ACC_STATUS.CREATED,
+            accreditationNumber: null,
+            material: MATERIAL.ALUMINIUM,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+          })
+        )
+      )
       delete accreditation.glassRecyclingProcess
       const organisation = buildOrganisation({
         schemaVersion: 2,
         registrations: [],
         accreditations: [accreditation]
       })
-      delete organisation.id
+      delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
       const { error } = validate(organisation)
       expect(error).toBeUndefined()
@@ -768,7 +780,7 @@ describe('organisationJSONSchemaOverrides', () => {
         registrations: [],
         accreditations: [accreditation]
       })
-      delete organisation.id
+      delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
       const { error } = validate(organisation)
       expect(error).toBeUndefined()
