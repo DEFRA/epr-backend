@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
@@ -646,7 +646,7 @@ describe('#aggregateReportDetail', () => {
         ...exporterArgs,
         orsDetailsMap
       })
-      assert(result.exportActivity)
+      assertPresent(result.exportActivity)
 
       const approvedTotal = result.exportActivity.overseasSites.reduce(
         (sum, s) => sum + s.tonnageExported,
@@ -1086,7 +1086,7 @@ describe('#aggregateReportDetail', () => {
         ...accreditedExporterArgs,
         period: 1
       })
-      assert(january.exportActivity)
+      assertPresent(january.exportActivity)
 
       expect(january.recyclingActivity.totalTonnageReceived).toBe(42)
       expect(january.exportActivity.totalTonnageExported).toBe(0)
@@ -1095,7 +1095,7 @@ describe('#aggregateReportDetail', () => {
         asWasteRecords(records),
         accreditedExporterArgs
       )
-      assert(february.exportActivity)
+      assertPresent(february.exportActivity)
 
       expect(february.recyclingActivity.totalTonnageReceived).toBe(0)
       expect(february.exportActivity.totalTonnageExported).toBe(40)

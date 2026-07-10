@@ -1,6 +1,6 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import { describe, expect } from 'vitest'
 import { createOrganisationsRepository } from './mongodb.js'
 
@@ -103,7 +103,7 @@ describe('Organisations repository - ORS operations', () => {
       await database.collection(COLLECTION_NAME).insertOne(org)
 
       const found = await repository.findByOrgId(500042)
-      assert(found)
+      assertPresent(found)
 
       expect(found.orgId).toBe(500042)
       expect(found.id).toBe(org._id.toHexString())
@@ -141,7 +141,7 @@ describe('Organisations repository - ORS operations', () => {
       const updated = await database
         .collection(COLLECTION_NAME)
         .findOne({ _id: ObjectId.createFromHexString(orgId) })
-      assert(updated)
+      assertPresent(updated)
 
       expect(updated.registrations[0].overseasSites).toEqual({
         '001': { overseasSiteId: 'site-aaa' },
@@ -172,7 +172,7 @@ describe('Organisations repository - ORS operations', () => {
       const updated = await database
         .collection(COLLECTION_NAME)
         .findOne({ _id: ObjectId.createFromHexString(orgId) })
-      assert(updated)
+      assertPresent(updated)
 
       expect(updated.registrations[0].overseasSites).toEqual({
         '001': { overseasSiteId: 'new-site' }
@@ -204,7 +204,7 @@ describe('Organisations repository - ORS operations', () => {
       const updated = await database
         .collection(COLLECTION_NAME)
         .findOne({ _id: ObjectId.createFromHexString(orgId) })
-      assert(updated)
+      assertPresent(updated)
 
       expect(updated.registrations[0].overseasSites['001']).toEqual({
         overseasSiteId: 'new-site'
