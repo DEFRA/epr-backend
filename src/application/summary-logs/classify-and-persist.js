@@ -10,6 +10,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { classifyByPeriodStatus } from './period-status.js'
+import { classifyRecordChanges } from './classify-record-changes.js'
 import {
   countByValidity,
   countByWasteBalanceInclusion,
@@ -18,7 +19,7 @@ import {
 } from './load-counts.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
@@ -48,26 +49,28 @@ export const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {string} params.status - Summary log status after validation
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {string} params.summaryLogId
  * @param {ProcessingType} params.processingType
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {Registration} [params.registration]
- * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
+ * @param {Map<string, WasteRecordState>} [params.submittedRowStatesByKey]
  * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
  */
 export const classifyLoads = ({
   processingType,
   status,
-  summaryLogId,
   wasteBalanceRecords,
   wasteRecords,
   periodicReports,
   overseasSites,
   registration,
-  existingRecordsMap
+  submittedRowStatesByKey
 }) => {
-  if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
+  if (
+    status !== SUMMARY_LOG_STATUS.VALIDATED ||
+    !wasteRecords ||
+    !submittedRowStatesByKey
+  ) {
     return {
       loads: null,
       loadsByWasteRecordType: null,
@@ -75,11 +78,18 @@ export const classifyLoads = ({
     }
   }
 
+  const recordChanges = classifyRecordChanges({
+    wasteRecords,
+    submittedRowStatesByKey,
+    accreditation: registration?.accreditation ?? null,
+    overseasSites
+  })
+
   const loads = mergeLoads(
-    countByValidity({ wasteRecords, summaryLogId }),
+    countByValidity({ wasteRecords, recordChanges }),
     countByWasteBalanceInclusion({
       wasteRecords: wasteBalanceRecords,
-      summaryLogId
+      recordChanges
     })
   )
 
@@ -88,21 +98,21 @@ export const classifyLoads = ({
   const loadsByWasteRecordType = countByWasteRecordType({
     wasteRecords,
     wasteBalanceRecords,
-    summaryLogId,
+    recordChanges,
     tableSchemas
   })
 
-  /* v8 ignore start -- defensive guard: all three are always set when status is VALIDATED */
+  /* v8 ignore start -- defensive guard: registration and tableSchemas are always set when status is VALIDATED */
   const loadsByReportingPeriod =
-    registration && existingRecordsMap && tableSchemas
+    registration && tableSchemas
       ? classifyByPeriodStatus({
           wasteRecords,
-          existingRecordsMap,
+          submittedRowStatesByKey,
+          recordChanges,
           periodicReports,
           cadence: isRegistrationAccredited(registration)
             ? CADENCE.monthly
             : CADENCE.quarterly,
-          summaryLogId,
           tableSchemas,
           classificationContext: {
             accreditation: registration.accreditation ?? null,

@@ -17,6 +17,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
 /** @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} SummaryLogRowStateRepository */
+/** @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository */
 /** @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService */
 /** @typedef {import('#feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
@@ -30,6 +31,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {OrganisationsRepository} organisationsRepository
  * @property {WasteRecordsRepository} wasteRecordsRepository
  * @property {SummaryLogRowStateRepository} summaryLogRowStatesRepository
+ * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {WasteBalanceService} wasteBalanceService
  * @property {FeatureFlags} featureFlags
  * @property {ReportsService} reportsService
@@ -72,6 +74,8 @@ export const summaryLogCommandHandlers = [
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        summaryLogRowStatesRepository,
+        ledgerRepository,
         reportsService,
         overseasSitesRepository,
         summaryLogExtractor
@@ -82,6 +86,8 @@ export const summaryLogCommandHandlers = [
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        summaryLogRowStateRepository: summaryLogRowStatesRepository,
+        ledgerRepository,
         reportsService,
         overseasSitesRepository,
         summaryLogExtractor

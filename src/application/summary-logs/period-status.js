@@ -1,4 +1,5 @@
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+import { getTargetAmount } from '#waste-balances/application/target-amount.js'
 import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { periodForDate } from '#reports/domain/period-for-date.js'
@@ -7,7 +8,7 @@ import {
   buildSubmittedPeriods,
   isDateInSubmittedPeriod
 } from '#reports/domain/submitted-periods.js'
-import { RECORD_CHANGE, determineRecordStatus } from './record-change.js'
+import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
 
 /** Internal reporting-period status. Not serialised: mapped to output keys via PERIOD_TO_KEY. */
 const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
@@ -16,7 +17,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {PROCESSING_TYPE_TABLES} from '#domain/summary-logs/table-schemas/index.js' */
@@ -178,7 +179,7 @@ const closedPeriodRefsFor = (
  * @param {ValidatedWasteRecord['record']} record
  * @param {RecordChange} status
  * @param {TableSchema} schema
- * @param {Map<string, WasteRecord>} existingRecordsMap
+ * @param {Map<string, WasteRecordState>} submittedRowStatesByKey
  * @param {Set<string>} submittedPeriods
  * @param {Cadence} cadence
  * @returns {PeriodRef[]}
@@ -187,7 +188,7 @@ const closedPeriodRefsForRecord = (
   record,
   status,
   schema,
-  existingRecordsMap,
+  submittedRowStatesByKey,
   submittedPeriods,
   cadence
 ) => {
@@ -196,7 +197,7 @@ const closedPeriodRefsForRecord = (
       ? [record.data]
       : [
           record.data,
-          existingRecordsMap.get(`${record.type}:${record.rowId}`)?.data
+          submittedRowStatesByKey.get(`${record.type}:${record.rowId}`)?.data
         ]
 
   return changedData
@@ -360,7 +361,7 @@ const reduceEntries = (entries) => {
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord} params.wasteRecord
- * @param {Map<string, WasteRecord>} params.existingRecordsMap
+ * @param {Map<string, WasteRecordState>} params.submittedRowStatesByKey
  * @param {TableSchema} params.schema
  * @param {Set<string>} params.submittedPeriods
  * @param {Cadence} params.cadence
@@ -369,7 +370,7 @@ const reduceEntries = (entries) => {
  */
 const classifyAdjustedWasteRecord = ({
   wasteRecord,
-  existingRecordsMap,
+  submittedRowStatesByKey,
   schema,
   submittedPeriods,
   cadence,
@@ -385,7 +386,7 @@ const classifyAdjustedWasteRecord = ({
     cadence
   )
   const existingKey = `${record.type}:${record.rowId}`
-  const existing = existingRecordsMap.get(existingKey)
+  const existing = submittedRowStatesByKey.get(existingKey)
   const oldPeriod = existing
     ? classifyPeriodStatus(
         existing.data,
@@ -406,9 +407,10 @@ const classifyAdjustedWasteRecord = ({
     record.data,
     context
   )
-  const oldAmount = existing
-    ? classifyRow(schema, existing.data, context).transactionAmount
-    : 0
+  // The old contribution is the amount stamped on the submitted row state — the
+  // figure already applied to the waste balance — not a re-derivation from its
+  // stored data, whose projection drops fields the classifier reads.
+  const oldAmount = existing ? getTargetAmount(existing.classification) : 0
 
   return classifyAdjustedRecord({
     oldPeriod,
@@ -431,20 +433,20 @@ const classifyAdjustedWasteRecord = ({
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {Map<string, WasteRecord>} params.existingRecordsMap
+ * @param {Map<string, WasteRecordState>} params.submittedRowStatesByKey
+ * @param {Map<string, RecordChange>} params.recordChanges
  * @param {PeriodicReport[]} params.periodicReports
  * @param {Cadence} params.cadence
- * @param {string} params.summaryLogId
  * @param {ProcessingTypeSchemas} params.tableSchemas
  * @param {ClassificationContext} params.classificationContext
  * @returns {LoadsByReportingPeriod}
  */
 export const classifyByPeriodStatus = ({
   wasteRecords,
-  existingRecordsMap,
+  submittedRowStatesByKey,
+  recordChanges,
   periodicReports,
   cadence,
-  summaryLogId,
   tableSchemas,
   classificationContext
 }) => {
@@ -458,7 +460,7 @@ export const classifyByPeriodStatus = ({
 
   for (const wasteRecord of wasteRecords) {
     const { record, outcome } = wasteRecord
-    const status = determineRecordStatus(record, summaryLogId)
+    const status = recordChangeFor(recordChanges, record)
     const schema = tableSchemas[wasteRecord.tableName]
 
     if (
@@ -473,7 +475,7 @@ export const classifyByPeriodStatus = ({
       record,
       status,
       schema,
-      existingRecordsMap,
+      submittedRowStatesByKey,
       submittedPeriods,
       cadence
     ).forEach((ref) => closedPeriodsByKey.set(periodKey(ref), ref))
@@ -507,7 +509,7 @@ export const classifyByPeriodStatus = ({
       entries.push(
         ...classifyAdjustedWasteRecord({
           wasteRecord,
-          existingRecordsMap,
+          submittedRowStatesByKey,
           schema,
           submittedPeriods,
           cadence,

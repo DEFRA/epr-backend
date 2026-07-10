@@ -81,6 +81,7 @@ describe('Submission and placeholder tests', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
+      const accreditationId = new ObjectId().toString()
       const testOrg = buildReadOrganisation({
         registrations: [
           {
@@ -93,15 +94,22 @@ describe('Submission and placeholder tests', () => {
             submittedToRegulator: 'ea',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
-            accreditation: {
-              accreditationNumber: 'ACC-2025-001',
-              validFrom: VALID_FROM,
-              validTo: VALID_TO,
-              statusHistory: [
-                { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-                { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-              ]
-            }
+            accreditationId
+          }
+        ],
+        accreditations: [
+          {
+            id: accreditationId,
+            accreditationNumber: 'ACC-2025-001',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            submittedToRegulator: 'ea',
+            statusHistory: [
+              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            ]
           }
         ]
       })
@@ -351,10 +359,22 @@ describe('Submission and placeholder tests', () => {
         createInMemoryWasteRecordsRepository()
       wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
+      // Validate reads and submit writes the same latest-submitted row states,
+      // so both paths must share one ledger and one row-state repository, with
+      // the row-state write flag on (the flag-on invariant that holds in prod).
+      const ledgerRepository = createInMemoryLedgerRepository()()
+      const summaryLogRowStateRepository =
+        createInMemorySummaryLogRowStateRepository()()
+      const featureFlags = createInMemoryFeatureFlags({
+        summaryLogRowStates: true
+      })
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        summaryLogRowStateRepository,
+        ledgerRepository,
         summaryLogExtractor: validationExtractor,
         logger: mockLogger,
         reportsService: createReportsService(
@@ -366,11 +386,9 @@ describe('Submission and placeholder tests', () => {
       const syncWasteRecords = syncFromSummaryLog({
         extractor: transformationExtractor,
         wasteRecordRepository: wasteRecordsRepository,
-        wasteBalanceService: createWasteBalanceService(
-          createInMemoryLedgerRepository()()
-        ),
-        summaryLogRowStateRepository:
-          createInMemorySummaryLogRowStateRepository()(),
+        wasteBalanceService: createWasteBalanceService(ledgerRepository),
+        summaryLogRowStateRepository,
+        featureFlags,
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])
@@ -404,8 +422,6 @@ describe('Submission and placeholder tests', () => {
           )
         }
       }
-
-      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {
@@ -821,6 +837,9 @@ describe('Submission and placeholder tests', () => {
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        summaryLogRowStateRepository:
+          createInMemorySummaryLogRowStateRepository()(),
+        ledgerRepository: createInMemoryLedgerRepository()(),
         summaryLogExtractor,
         logger: mockLogger,
         reportsService: createReportsService(

@@ -3,64 +3,66 @@ import {
   countByValidity,
   mergeLoads
 } from './load-counts.js'
-import {
-  VERSION_STATUS,
-  WASTE_RECORD_TYPE
-} from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-
-const CURRENT_SUMMARY_LOG_ID = 'current-summary-log'
-const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log'
+import { RECORD_CHANGE } from './record-change.js'
 
 /**
- * Creates a transformed record for testing
- * @param {Object} options
- * @param {string} options.status - VERSION_STATUS value
- * @param {string} options.summaryLogId - The summary log ID for the last version
- * @param {Array} [options.issues] - Validation issues (default empty)
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} [options.outcome] - Outcome from validation pipeline (default 'INCLUDED')
- * @param {Array} [options.previousVersions] - Previous versions to prepend (default empty)
- * @param {import('#application/waste-records/transform-from-summary-log.js').WasteRecordChange} [options.change] - What happened to this record (default 'created')
- * @returns {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord}
+ * @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord
+ * @typedef {import('./record-change.js').RecordChange} RecordChange
+ */
+
+/**
+ * @param {{ rowId: string, issues?: Array, outcome?: string }} options
+ * @returns {ValidatedWasteRecord}
  */
 const createValidatedWasteRecord = ({
-  status,
-  summaryLogId,
+  rowId,
   issues = [],
-  outcome = ROW_OUTCOME.INCLUDED,
-  previousVersions = [],
-  change = 'created'
-}) => ({
-  tableName: 'RECEIVED_LOADS_FOR_EXPORT',
-  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-  record: {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    rowId: `row-${Math.random().toString(36).substring(7)}`,
-    type: WASTE_RECORD_TYPE.RECEIVED,
-    data: { ROW_ID: '10001' },
-    versions: [
-      ...previousVersions,
-      {
-        id: `ver-${Math.random().toString(36).substring(7)}`,
-        createdAt: new Date().toISOString(),
-        status,
-        summaryLog: { id: summaryLogId, uri: 's3://bucket/key' },
-        data: { ROW_ID: '10001' }
-      }
-    ]
-  },
-  issues,
-  outcome,
-  change
-})
+  outcome = ROW_OUTCOME.INCLUDED
+}) =>
+  /** @type {any} */ ({
+    tableName: 'RECEIVED_LOADS_FOR_EXPORT',
+    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+    record: {
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId,
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      data: {}
+    },
+    issues,
+    outcome,
+    change: 'created'
+  })
+
+/**
+ * Builds waste records and their record-change map together from per-row specs.
+ * Each spec's `change` is the row's classification against the latest submitted
+ * summary log; the map is what the projections consume in place of the old
+ * version-based derivation.
+ *
+ * @param {Array<{ change?: RecordChange, issues?: Array, outcome?: string }>} specs
+ */
+const build = (specs) => {
+  const wasteRecords = specs.map((spec, i) =>
+    createValidatedWasteRecord({ rowId: `row-${i + 1}`, ...spec })
+  )
+  const recordChanges = new Map(
+    specs.map((spec, i) => [
+      `${WASTE_RECORD_TYPE.RECEIVED}:row-${i + 1}`,
+      spec.change ?? RECORD_CHANGE.ADDED
+    ])
+  )
+  return { wasteRecords, recordChanges }
+}
 
 describe('countByWasteBalanceInclusion', () => {
   describe('with empty data', () => {
     it('returns empty structure when wasteRecords is empty', () => {
       const result = countByWasteBalanceInclusion({
         wasteRecords: [],
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges: new Map()
       })
 
       expect(result).toEqual({
@@ -80,18 +82,15 @@ describe('countByWasteBalanceInclusion', () => {
     })
   })
 
-  describe('classification based on version status', () => {
-    it('classifies as added when last version has CREATED status and matches current summaryLogId', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID
-        })
-      ]
+  describe('classification based on record change', () => {
+    it('classifies an added row under added', () => {
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.added.included.count).toBe(1)
@@ -99,29 +98,14 @@ describe('countByWasteBalanceInclusion', () => {
       expect(result.adjusted.included.count).toBe(0)
     })
 
-    it('classifies as adjusted when last version has UPDATED status and matches current summaryLogId', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.UPDATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          previousVersions: [
-            {
-              id: 'prev-ver-1',
-              createdAt: '2025-01-01T00:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: PREVIOUS_SUMMARY_LOG_ID,
-                uri: 's3://bucket/old-key'
-              },
-              data: { ROW_ID: '10001' }
-            }
-          ]
-        })
-      ]
+    it('classifies an adjusted row under adjusted', () => {
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADJUSTED }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.adjusted.included.count).toBe(1)
@@ -129,17 +113,14 @@ describe('countByWasteBalanceInclusion', () => {
       expect(result.unchanged.included.count).toBe(0)
     })
 
-    it('classifies as unchanged when last version summaryLogId does not match current', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: PREVIOUS_SUMMARY_LOG_ID
-        })
-      ]
+    it('classifies an unchanged row under unchanged', () => {
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.UNCHANGED }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.unchanged.included.count).toBe(1)
@@ -150,18 +131,13 @@ describe('countByWasteBalanceInclusion', () => {
 
   describe('inclusion based on outcome', () => {
     it('classifies as included when outcome is INCLUDED', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          issues: [],
-          outcome: ROW_OUTCOME.INCLUDED
-        })
-      ]
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.INCLUDED }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.added.included.rowIds).toHaveLength(1)
@@ -169,10 +145,10 @@ describe('countByWasteBalanceInclusion', () => {
     })
 
     it('classifies as excluded when outcome is EXCLUDED', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+      const { wasteRecords, recordChanges } = build([
+        {
+          change: RECORD_CHANGE.ADDED,
+          outcome: ROW_OUTCOME.EXCLUDED,
           issues: [
             {
               severity: 'error',
@@ -180,14 +156,13 @@ describe('countByWasteBalanceInclusion', () => {
               message: 'missing required field',
               code: 'MISSING_FIELD'
             }
-          ],
-          outcome: ROW_OUTCOME.EXCLUDED
-        })
-      ]
+          ]
+        }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.added.excluded.rowIds).toHaveLength(1)
@@ -195,25 +170,13 @@ describe('countByWasteBalanceInclusion', () => {
     })
 
     it('classifies as excluded when outcome is REJECTED', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          issues: [
-            {
-              severity: 'error',
-              category: 'TECHNICAL',
-              message: 'invalid row id',
-              code: 'INVALID_ROW_ID'
-            }
-          ],
-          outcome: ROW_OUTCOME.REJECTED
-        })
-      ]
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.REJECTED }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.added.excluded.rowIds).toHaveLength(1)
@@ -223,72 +186,17 @@ describe('countByWasteBalanceInclusion', () => {
 
   describe('mixed scenarios', () => {
     it('correctly classifies mixed records by inclusion', () => {
-      const wasteRecords = [
-        // Added, included
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          issues: [],
-          outcome: ROW_OUTCOME.INCLUDED
-        }),
-        // Added, excluded
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          issues: [
-            {
-              severity: 'error',
-              category: 'TECHNICAL',
-              message: 'test',
-              code: 'TEST_ERROR'
-            }
-          ],
-          outcome: ROW_OUTCOME.EXCLUDED
-        }),
-        // Adjusted, included
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.UPDATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          issues: [],
-          outcome: ROW_OUTCOME.INCLUDED,
-          previousVersions: [
-            {
-              id: 'prev-ver-1',
-              createdAt: '2025-01-01T00:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: PREVIOUS_SUMMARY_LOG_ID,
-                uri: 's3://bucket/old-key'
-              },
-              data: {}
-            }
-          ]
-        }),
-        // Unchanged, included (previous summary log)
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
-          issues: []
-        }),
-        // Unchanged, excluded (previous summary log)
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
-          issues: [
-            {
-              severity: 'error',
-              category: 'TECHNICAL',
-              message: 'test',
-              code: 'TEST_ERROR'
-            }
-          ],
-          outcome: ROW_OUTCOME.EXCLUDED
-        })
-      ]
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.INCLUDED },
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.EXCLUDED },
+        { change: RECORD_CHANGE.ADJUSTED, outcome: ROW_OUTCOME.INCLUDED },
+        { change: RECORD_CHANGE.UNCHANGED, outcome: ROW_OUTCOME.INCLUDED },
+        { change: RECORD_CHANGE.UNCHANGED, outcome: ROW_OUTCOME.EXCLUDED }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.added.included.rowIds).toHaveLength(1)
@@ -302,22 +210,14 @@ describe('countByWasteBalanceInclusion', () => {
 
   describe('counts IGNORED rows as excluded (suspended accreditation)', () => {
     it('counts IGNORED rows as excluded, not invisible', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.IGNORED
-        }),
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.INCLUDED
-        })
-      ]
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.IGNORED },
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.INCLUDED }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.added.included.count).toBe(1)
@@ -325,48 +225,16 @@ describe('countByWasteBalanceInclusion', () => {
     })
 
     it('counts IGNORED added and adjusted rows as excluded, skips IGNORED unchanged rows', () => {
-      const wasteRecords = [
-        // Added, IGNORED (suspended accreditation)
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.IGNORED
-        }),
-        // Adjusted, IGNORED (suspended accreditation)
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.UPDATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.IGNORED,
-          previousVersions: [
-            {
-              id: 'prev-ver-1',
-              createdAt: '2025-01-01T00:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: PREVIOUS_SUMMARY_LOG_ID,
-                uri: 's3://bucket/old-key'
-              },
-              data: { ROW_ID: '10001' }
-            }
-          ]
-        }),
-        // Unchanged, IGNORED (suspended accreditation)
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.IGNORED
-        }),
-        // Added, INCLUDED (not suspended)
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.INCLUDED
-        })
-      ]
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.IGNORED },
+        { change: RECORD_CHANGE.ADJUSTED, outcome: ROW_OUTCOME.IGNORED },
+        { change: RECORD_CHANGE.UNCHANGED, outcome: ROW_OUTCOME.IGNORED },
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.INCLUDED }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.added.included.count).toBe(1)
@@ -377,30 +245,14 @@ describe('countByWasteBalanceInclusion', () => {
       expect(result.unchanged.excluded.count).toBe(0)
     })
 
-    it('counts a re-uploaded row with changed dates (UPDATED + IGNORED) as adjusted.excluded', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.UPDATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.IGNORED,
-          previousVersions: [
-            {
-              id: 'prev-ver-1',
-              createdAt: '2025-01-01T00:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: PREVIOUS_SUMMARY_LOG_ID,
-                uri: 's3://bucket/old-key'
-              },
-              data: { ROW_ID: '10001' }
-            }
-          ]
-        })
-      ]
+    it('counts a re-uploaded row with changed dates (adjusted + IGNORED) as adjusted.excluded', () => {
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADJUSTED, outcome: ROW_OUTCOME.IGNORED }
+      ])
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
       expect(result.adjusted.excluded.count).toBe(1)
@@ -410,197 +262,50 @@ describe('countByWasteBalanceInclusion', () => {
     })
   })
 
-  describe('edge cases', () => {
-    it('handles record with missing summaryLog gracefully (classifies as unchanged)', () => {
-      const wasteRecords = [
-        {
-          tableName: 'RECEIVED_LOADS_FOR_EXPORT',
-          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-          record: {
-            organisationId: 'org-1',
-            registrationId: 'reg-1',
-            rowId: 'row-1',
-            type: WASTE_RECORD_TYPE.RECEIVED,
-            data: {},
-            versions: [
-              {
-                id: 'ver-1',
-                createdAt: new Date().toISOString(),
-                status: VERSION_STATUS.CREATED,
-                summaryLog: null, // Missing summaryLog
-                data: {}
-              }
-            ]
-          },
-          issues: [],
-          outcome: ROW_OUTCOME.INCLUDED,
-          change: /** @type {const} */ ('created')
-        }
-      ]
-
-      const result = countByWasteBalanceInclusion({
-        wasteRecords:
-          /** @type {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord[]} */ (
-            /** @type {unknown} */ (wasteRecords)
-          ),
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
-
-      // When summaryLog.id doesn't match (null !== string), should be unchanged
-      expect(result.unchanged.included.rowIds).toHaveLength(1)
-      expect(result.unchanged.included.rowIds).toContain('row-1')
-      expect(result.unchanged.included.count).toBe(1)
-    })
-
-    it('throws on an empty versions array, a data-integrity state the repository rejects', () => {
-      const wasteRecords = [
-        {
-          tableName: 'RECEIVED_LOADS_FOR_EXPORT',
-          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-          record: {
-            organisationId: 'org-1',
-            registrationId: 'reg-1',
-            rowId: 'row-1',
-            type: WASTE_RECORD_TYPE.RECEIVED,
-            data: {},
-            versions: []
-          },
-          issues: [],
-          outcome: ROW_OUTCOME.INCLUDED,
-          change: /** @type {const} */ ('created')
-        }
-      ]
-
-      expect(() =>
-        countByWasteBalanceInclusion({
-          wasteRecords,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID
-        })
-      ).toThrow('waste record row-1 has no versions')
-    })
-  })
-
   describe('truncation', () => {
     it('truncates rowId arrays at 100 but totals reflect full count', () => {
-      // Create 150 records - all added/included
-      const wasteRecords = Array.from({ length: 150 }, (_, i) => ({
-        tableName: 'RECEIVED_LOADS_FOR_EXPORT',
-        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-        record: {
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: `row-${i + 1}`,
-          type: WASTE_RECORD_TYPE.RECEIVED,
-          data: {},
-          versions: [
-            {
-              id: `ver-${i + 1}`,
-              createdAt: new Date().toISOString(),
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: CURRENT_SUMMARY_LOG_ID,
-                uri: 's3://bucket/key'
-              },
-              data: {}
-            }
-          ]
-        },
-        issues: [],
-        outcome: ROW_OUTCOME.INCLUDED,
-        change: /** @type {const} */ ('created')
-      }))
+      const { wasteRecords, recordChanges } = build(
+        Array.from({ length: 150 }, () => ({ change: RECORD_CHANGE.ADDED }))
+      )
 
       const result = countByWasteBalanceInclusion({
         wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges
       })
 
-      // Arrays truncated to 100
       expect(result.added.included.rowIds).toHaveLength(100)
-      // Count reflects actual total
       expect(result.added.included.count).toBe(150)
-
-      // First 100 rowIds are present
       expect(result.added.included.rowIds[0]).toBe('row-1')
       expect(result.added.included.rowIds[99]).toBe('row-100')
     })
 
     it('truncates each category independently', () => {
-      // Create 120 added/included and 120 added/excluded records
-      const includedRecords = Array.from({ length: 120 }, (_, i) => ({
-        tableName: 'RECEIVED_LOADS_FOR_EXPORT',
-        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-        record: {
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: `included-${i + 1}`,
-          type: WASTE_RECORD_TYPE.RECEIVED,
-          data: {},
-          versions: [
+      const { wasteRecords, recordChanges } = build([
+        ...Array.from({ length: 120 }, () => ({
+          change: RECORD_CHANGE.ADDED,
+          outcome: ROW_OUTCOME.INCLUDED
+        })),
+        ...Array.from({ length: 120 }, () => ({
+          change: RECORD_CHANGE.ADDED,
+          outcome: ROW_OUTCOME.EXCLUDED,
+          issues: [
             {
-              id: `ver-${i + 1}`,
-              createdAt: new Date().toISOString(),
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: CURRENT_SUMMARY_LOG_ID,
-                uri: 's3://bucket/key'
-              },
-              data: {}
+              severity: 'error',
+              category: 'TECHNICAL',
+              message: 'test',
+              code: 'TEST_ERROR'
             }
           ]
-        },
-        issues: [],
-        outcome: ROW_OUTCOME.INCLUDED,
-        change: /** @type {const} */ ('created')
-      }))
-
-      const excludedRecords = Array.from({ length: 120 }, (_, i) => ({
-        tableName: 'RECEIVED_LOADS_FOR_EXPORT',
-        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-        record: {
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: `excluded-${i + 1}`,
-          type: WASTE_RECORD_TYPE.RECEIVED,
-          data: {},
-          versions: [
-            {
-              id: `ver-${i + 1}`,
-              createdAt: new Date().toISOString(),
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: CURRENT_SUMMARY_LOG_ID,
-                uri: 's3://bucket/key'
-              },
-              data: {}
-            }
-          ]
-        },
-        issues: [
-          {
-            severity: 'error',
-            category: 'TECHNICAL',
-            message: 'test',
-            code: 'TEST_ERROR'
-          }
-        ],
-        outcome: ROW_OUTCOME.EXCLUDED,
-        change: /** @type {const} */ ('created')
-      }))
+        }))
+      ])
 
       const result = countByWasteBalanceInclusion({
-        wasteRecords:
-          /** @type {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord[]} */ ([
-            ...includedRecords,
-            ...excludedRecords
-          ]),
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        wasteRecords,
+        recordChanges
       })
 
-      // Each array truncated independently
       expect(result.added.included.rowIds).toHaveLength(100)
       expect(result.added.excluded.rowIds).toHaveLength(100)
-      // Counts reflect actual totals
       expect(result.added.included.count).toBe(120)
       expect(result.added.excluded.count).toBe(120)
     })
@@ -612,7 +317,7 @@ describe('countByValidity', () => {
     it('returns empty structure when wasteRecords is empty', () => {
       const result = countByValidity({
         wasteRecords: [],
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
+        recordChanges: new Map()
       })
 
       expect(result).toEqual({
@@ -632,67 +337,37 @@ describe('countByValidity', () => {
     })
   })
 
-  describe('classification based on version status', () => {
-    it('classifies as added when last version has CREATED status and matches current summaryLogId', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID
-        })
-      ]
+  describe('classification based on record change', () => {
+    it('classifies an added row under added', () => {
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED }
+      ])
 
-      const result = countByValidity({
-        wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
+      const result = countByValidity({ wasteRecords, recordChanges })
 
       expect(result.added.valid.count).toBe(1)
       expect(result.unchanged.valid.count).toBe(0)
       expect(result.adjusted.valid.count).toBe(0)
     })
 
-    it('classifies as adjusted when last version has UPDATED status and matches current summaryLogId', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.UPDATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          previousVersions: [
-            {
-              id: 'prev-ver-1',
-              createdAt: '2025-01-01T00:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: PREVIOUS_SUMMARY_LOG_ID,
-                uri: 's3://bucket/old-key'
-              },
-              data: { ROW_ID: '10001' }
-            }
-          ]
-        })
-      ]
+    it('classifies an adjusted row under adjusted', () => {
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADJUSTED }
+      ])
 
-      const result = countByValidity({
-        wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
+      const result = countByValidity({ wasteRecords, recordChanges })
 
       expect(result.adjusted.valid.count).toBe(1)
       expect(result.added.valid.count).toBe(0)
       expect(result.unchanged.valid.count).toBe(0)
     })
 
-    it('classifies as unchanged when last version summaryLogId does not match current', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: PREVIOUS_SUMMARY_LOG_ID
-        })
-      ]
+    it('classifies an unchanged row under unchanged', () => {
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.UNCHANGED }
+      ])
 
-      const result = countByValidity({
-        wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
+      const result = countByValidity({ wasteRecords, recordChanges })
 
       expect(result.unchanged.valid.count).toBe(1)
       expect(result.added.valid.count).toBe(0)
@@ -702,28 +377,20 @@ describe('countByValidity', () => {
 
   describe('validity based on issues', () => {
     it('classifies as valid when issues array is empty', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          issues: []
-        })
-      ]
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED, issues: [] }
+      ])
 
-      const result = countByValidity({
-        wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
+      const result = countByValidity({ wasteRecords, recordChanges })
 
       expect(result.added.valid.count).toBe(1)
       expect(result.added.invalid.count).toBe(0)
     })
 
     it('classifies as invalid when issues array has items', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+      const { wasteRecords, recordChanges } = build([
+        {
+          change: RECORD_CHANGE.ADDED,
           issues: [
             {
               severity: 'error',
@@ -733,13 +400,10 @@ describe('countByValidity', () => {
               context: {}
             }
           ]
-        })
-      ]
+        }
+      ])
 
-      const result = countByValidity({
-        wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
+      const result = countByValidity({ wasteRecords, recordChanges })
 
       expect(result.added.invalid.count).toBe(1)
       expect(result.added.valid.count).toBe(0)
@@ -748,71 +412,25 @@ describe('countByValidity', () => {
 
   describe('skips IGNORED rows', () => {
     it('does not count IGNORED rows', () => {
-      const wasteRecords = [
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.IGNORED
-        }),
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.INCLUDED
-        })
-      ]
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.IGNORED },
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.INCLUDED }
+      ])
 
-      const result = countByValidity({
-        wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
+      const result = countByValidity({ wasteRecords, recordChanges })
 
       expect(result.added.valid.count).toBe(1)
     })
 
     it('silently excludes IGNORED rows across added, adjusted, and unchanged categories', () => {
-      const wasteRecords = [
-        // Added, IGNORED
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.IGNORED
-        }),
-        // Adjusted, IGNORED
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.UPDATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.IGNORED,
-          previousVersions: [
-            {
-              id: 'prev-ver-1',
-              createdAt: '2025-01-01T00:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: PREVIOUS_SUMMARY_LOG_ID,
-                uri: 's3://bucket/old-key'
-              },
-              data: { ROW_ID: '10001' }
-            }
-          ]
-        }),
-        // Unchanged, IGNORED
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.IGNORED
-        }),
-        // Added, INCLUDED (not ignored)
-        createValidatedWasteRecord({
-          status: VERSION_STATUS.CREATED,
-          summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: ROW_OUTCOME.INCLUDED
-        })
-      ]
+      const { wasteRecords, recordChanges } = build([
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.IGNORED },
+        { change: RECORD_CHANGE.ADJUSTED, outcome: ROW_OUTCOME.IGNORED },
+        { change: RECORD_CHANGE.UNCHANGED, outcome: ROW_OUTCOME.IGNORED },
+        { change: RECORD_CHANGE.ADDED, outcome: ROW_OUTCOME.INCLUDED }
+      ])
 
-      const result = countByValidity({
-        wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
+      const result = countByValidity({ wasteRecords, recordChanges })
 
       expect(result.added.valid.count).toBe(1)
       expect(result.added.invalid.count).toBe(0)
@@ -825,37 +443,11 @@ describe('countByValidity', () => {
 
   describe('truncation', () => {
     it('truncates rowId arrays at 100 but totals reflect full count', () => {
-      const wasteRecords = Array.from({ length: 150 }, (_, i) => ({
-        tableName: 'RECEIVED_LOADS_FOR_EXPORT',
-        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-        record: {
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: `row-${i + 1}`,
-          type: WASTE_RECORD_TYPE.RECEIVED,
-          data: {},
-          versions: [
-            {
-              id: `ver-${i + 1}`,
-              createdAt: new Date().toISOString(),
-              status: VERSION_STATUS.CREATED,
-              summaryLog: {
-                id: CURRENT_SUMMARY_LOG_ID,
-                uri: 's3://bucket/key'
-              },
-              data: {}
-            }
-          ]
-        },
-        issues: [],
-        outcome: ROW_OUTCOME.INCLUDED,
-        change: /** @type {const} */ ('created')
-      }))
+      const { wasteRecords, recordChanges } = build(
+        Array.from({ length: 150 }, () => ({ change: RECORD_CHANGE.ADDED }))
+      )
 
-      const result = countByValidity({
-        wasteRecords,
-        summaryLogId: CURRENT_SUMMARY_LOG_ID
-      })
+      const result = countByValidity({ wasteRecords, recordChanges })
 
       expect(result.added.valid.rowIds).toHaveLength(100)
       expect(result.added.valid.count).toBe(150)
