@@ -19,6 +19,13 @@ const YEAR_SCHEMA = Joi.number()
 const MONGO_ID_LENGTH = 24
 const MONGO_ID_SCHEMA = Joi.string().hex().length(MONGO_ID_LENGTH).required()
 
+const CALENDAR_DATE_SCHEMA = Joi.string()
+  .pattern(/^\d{4}-\d{2}-\d{2}$/)
+  .required()
+  .messages({
+    'string.pattern.base': 'must be a bare YYYY-MM-DD date, not a full datetime'
+  })
+
 export const cadenceSchema = Joi.string()
   .valid(...Object.values(CADENCE))
   .required()
@@ -141,9 +148,9 @@ export const createReportSchema = Joi.object({
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,
-  startDate: Joi.string().isoDate().required(),
-  endDate: Joi.string().isoDate().required(),
-  dueDate: Joi.string().isoDate().required(),
+  startDate: CALENDAR_DATE_SCHEMA,
+  endDate: CALENDAR_DATE_SCHEMA,
+  dueDate: CALENDAR_DATE_SCHEMA,
   material: Joi.string()
     .valid(...TONNAGE_MONITORING_MATERIALS)
     .required(),
