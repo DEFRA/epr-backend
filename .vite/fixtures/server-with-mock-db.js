@@ -31,9 +31,9 @@ import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
  *
  * ~10x faster than testServerFixture because it skips MongoDB startup.
  *
- * vitest cannot infer scoped-fixture (tuple-form) value types in JSDoc/tsc, so
- * the fixture shape is asserted here, at the boundary, and flows to every
- * consumer typed.
+ * `server.decorate('server', 'db', mockDb)` adds the spyable mock db at runtime
+ * but does not change the static server type, so the decorated shape is asserted
+ * here, at the boundary, and flows to every consumer typed.
  */
 export const it =
   /**
