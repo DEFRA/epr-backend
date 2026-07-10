@@ -64,7 +64,7 @@ export function resolveAccreditationNumber(registration, org) {
  * sufficient — an accreditation in 'created', 'rejected', or 'cancelled'
  * state has never been active and must be treated as registered-only.
  *
- * @param {{ accreditation?: { status?: string } | null }} registration
+ * @param {{ accreditation: { status?: string } | null }} registration
  * @returns {boolean}
  */
 export function isRegistrationAccredited(registration) {

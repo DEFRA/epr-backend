@@ -42,7 +42,7 @@ const OPERATOR_CATEGORY_BY_WASTE_PROCESSING_TYPE = Object.freeze({
 /**
  * Derives the operator category from a registration.
  *
- * @param {{ wasteProcessingType: string, accreditationId?: string, accreditation?: { status?: string } | null }} registration
+ * @param {{ wasteProcessingType: string, accreditationId?: string, accreditation: { status?: string } | null }} registration
  * @returns {OperatorCategory}
  */
 export function getOperatorCategory(registration) {
