@@ -23,6 +23,10 @@ export const assertPresent = (value) => {
  *
  *   expect(() => parse(invalidArg(null))).toThrow()
  *
+ * `T` is inferred purely from the call position, so use it only where a target
+ * type exists (an argument slot or an annotated assignment). With no context
+ * `T` falls back to `unknown` and the wrapper is a no-op.
+ *
  * @template T
  * @param {unknown} value
  * @returns {T}
@@ -39,6 +43,12 @@ export const invalidArg = (value) => /** @type {T} */ (value)
  *   \@type {FormSubmissionsRepository}
  *   let repo
  *   repo = partialMock({ findAllOrganisations: vi.fn() })
+ *
+ * Requires a target type to infer `T` from (an annotated variable/const or an
+ * argument slot). Without one, `T` is `unknown`, `Partial<unknown>` is `{}`, and
+ * every property check is silently lost. Note the check is shallow: nested
+ * required fields (e.g. a `User` inside the double) are still enforced, so a
+ * deeply-partial double needs an `unknown` cast, not partialMock.
  *
  * @template T
  * @param {Partial<NoInfer<T>>} value
