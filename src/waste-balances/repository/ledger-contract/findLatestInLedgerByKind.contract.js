@@ -1,7 +1,11 @@
 import { describe, beforeEach, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '../ledger-schema.js'
-import { buildLedgerEvent, buildPrnCreatedEvent } from '../ledger-test-data.js'
+import {
+  buildLedgerEvent,
+  buildLedgerId,
+  buildPrnCreatedEvent
+} from '../ledger-test-data.js'
 
 export const testFindLatestInLedgerByKindBehaviour = (it) => {
   describe('findLatestInLedgerByKind', () => {
@@ -27,8 +31,10 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
       ])
 
       const result = await repository.findLatestInLedgerByKind(
-        'reg-kind',
-        'acc-kind',
+        buildLedgerId({
+          registrationId: 'reg-kind',
+          accreditationId: 'acc-kind'
+        }),
         LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
@@ -62,8 +68,10 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
       ])
 
       const result = await repository.findLatestInLedgerByKind(
-        'reg-filter',
-        'acc-filter',
+        buildLedgerId({
+          registrationId: 'reg-filter',
+          accreditationId: 'acc-filter'
+        }),
         LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
@@ -90,13 +98,11 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
       ])
 
       const a = await repository.findLatestInLedgerByKind(
-        'reg-a',
-        'acc-a',
+        buildLedgerId({ registrationId: 'reg-a', accreditationId: 'acc-a' }),
         LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
       const b = await repository.findLatestInLedgerByKind(
-        'reg-b',
-        'acc-b',
+        buildLedgerId({ registrationId: 'reg-b', accreditationId: 'acc-b' }),
         LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
@@ -104,6 +110,29 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
       expect(a.payload.summaryLogId).toBe('log-a')
       expect(b.accreditationId).toBe('acc-b')
       expect(b.payload.summaryLogId).toBe('log-b')
+    })
+
+    it('does not read a ledger named under a different organisation', async () => {
+      await repository.appendEvents([
+        buildLedgerEvent({
+          organisationId: 'org-owner',
+          registrationId: 'reg-owned',
+          accreditationId: 'acc-owned',
+          number: 1,
+          payload: { summaryLogId: 'log-owned', creditTotal: 100 }
+        })
+      ])
+
+      const result = await repository.findLatestInLedgerByKind(
+        buildLedgerId({
+          organisationId: 'org-stranger',
+          registrationId: 'reg-owned',
+          accreditationId: 'acc-owned'
+        }),
+        LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+      )
+
+      expect(result).toBeNull()
     })
 
     it('treats null and non-null accreditationId as separate ledgers', async () => {
@@ -127,13 +156,14 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
       ])
 
       const nullResult = await repository.findLatestInLedgerByKind(
-        'reg-null',
-        null,
+        buildLedgerId({ registrationId: 'reg-null', accreditationId: null }),
         LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
       const nonNullResult = await repository.findLatestInLedgerByKind(
-        'reg-null',
-        'acc-present',
+        buildLedgerId({
+          registrationId: 'reg-null',
+          accreditationId: 'acc-present'
+        }),
         LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
@@ -149,8 +179,10 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
 
     it('returns null when the ledger is empty', async () => {
       const result = await repository.findLatestInLedgerByKind(
-        'reg-empty',
-        'acc-empty',
+        buildLedgerId({
+          registrationId: 'reg-empty',
+          accreditationId: 'acc-empty'
+        }),
         LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 

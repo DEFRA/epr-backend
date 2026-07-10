@@ -13,16 +13,21 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 /**
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
  * @param {object} [overrides]
+ * @param {{ VALID_FROM: string, VALID_TO: string }} [dateRange] - Accreditation/registration validity range (defaults to today .. one year on)
  * @returns {Promise<import('#repositories/organisations/port.js').Organisation>}
  */
-export async function buildApprovedOrg(organisationsRepository, overrides) {
+export async function buildApprovedOrg(
+  organisationsRepository,
+  overrides,
+  dateRange = getValidDateRange()
+) {
   const org = buildOrganisation(overrides)
 
   const INITIAL_VERSION = 1
 
   await organisationsRepository.insert(org)
 
-  const { VALID_FROM, VALID_TO } = getValidDateRange()
+  const { VALID_FROM, VALID_TO } = dateRange
 
   // Only approve the first accreditation (which is already linked to the first registration)
   const approvedAccreditations = [

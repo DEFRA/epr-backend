@@ -67,10 +67,9 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * The identity of an accreditation, or of a registration in its registered-only
- * phase (`accreditationId` null). `organisationId` is denormalised owner context
- * carried for attribution — the storage uniqueness key is
- * `(registrationId, accreditationId)`, not org — but it always travels with the
- * id and any event can recover it. Named for what it is: a registration or
+ * phase (`accreditationId` null). An accreditation belongs to a registration,
+ * which belongs to an organisation: all three ids are constitutive, and naming
+ * one names those above it. Named for what it is: a registration or
  * accreditation identity, not a ledger-specific type. It is what we key a waste
  * balance ledger by.
  *

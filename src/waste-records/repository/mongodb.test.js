@@ -120,7 +120,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       await createMongoSummaryLogRowStateRepository(database)
     )()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
-    expect(repository.findBySummaryLogId).toBeTypeOf('function')
+    expect(repository.findRowStatesForSummaryLog).toBeTypeOf('function')
     expect(repository.findRowHistory).toBeTypeOf('function')
   })
 
@@ -188,7 +188,10 @@ describe('summary-log row states repository - mongodb implementation', () => {
       expect(history).toHaveLength(1)
       expect(history[0].summaryLogIds).toEqual(['log-1'])
 
-      const committed = await repository.findBySummaryLogId('log-1')
+      const committed = await repository.findRowStatesForSummaryLog(
+        DEFAULT_LEDGER_ID,
+        'log-1'
+      )
       expect(committed).toHaveLength(1)
       expect(committed[0].rowId).toBe('row-1')
     })

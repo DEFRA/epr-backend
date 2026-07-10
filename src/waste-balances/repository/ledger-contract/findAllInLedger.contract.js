@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildLedgerEvent } from '../ledger-test-data.js'
+import { buildLedgerEvent, buildLedgerId } from '../ledger-test-data.js'
 
 export const testFindAllInLedgerBehaviour = (it) => {
   describe('findAllInLedger', () => {
@@ -17,7 +17,12 @@ export const testFindAllInLedgerBehaviour = (it) => {
     )
 
     it('returns an empty array when no events exist for the ledger', async () => {
-      const result = await repository.findAllInLedger('reg-empty', 'acc-empty')
+      const result = await repository.findAllInLedger(
+        buildLedgerId({
+          registrationId: 'reg-empty',
+          accreditationId: 'acc-empty'
+        })
+      )
       expect(result).toEqual([])
     })
 
@@ -47,7 +52,9 @@ export const testFindAllInLedgerBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findAllInLedger('reg-all', 'acc-all')
+      const result = await repository.findAllInLedger(
+        buildLedgerId({ registrationId: 'reg-all', accreditationId: 'acc-all' })
+      )
 
       expect(result).toHaveLength(3)
       expect(result[0].number).toBe(1)
@@ -71,11 +78,34 @@ export const testFindAllInLedgerBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findAllInLedger('reg-a', 'acc-a')
+      const result = await repository.findAllInLedger(
+        buildLedgerId({ registrationId: 'reg-a', accreditationId: 'acc-a' })
+      )
 
       expect(result).toHaveLength(1)
       expect(result[0].registrationId).toBe('reg-a')
       expect(result[0].accreditationId).toBe('acc-a')
+    })
+
+    it('does not read a ledger named under a different organisation', async () => {
+      await repository.appendEvents([
+        buildLedgerEvent({
+          organisationId: 'org-owner',
+          registrationId: 'reg-owned',
+          accreditationId: 'acc-owned',
+          number: 1
+        })
+      ])
+
+      const result = await repository.findAllInLedger(
+        buildLedgerId({
+          organisationId: 'org-stranger',
+          registrationId: 'reg-owned',
+          accreditationId: 'acc-owned'
+        })
+      )
+
+      expect(result).toEqual([])
     })
   })
 }
