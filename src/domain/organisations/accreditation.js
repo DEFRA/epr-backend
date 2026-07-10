@@ -3,7 +3,7 @@
 /**
  * @typedef {{
  *  status: RegAccStatus;
- *  updatedAt: string;
+ *  updatedAt: Date | string;
  * }} StatusHistoryEntry
  */
 

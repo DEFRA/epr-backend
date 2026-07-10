@@ -60,7 +60,11 @@ describe('transform', () => {
       validFrom: VALID_FROM,
       validTo: VALID_TO,
       formSubmission: { id, time: new Date('2025-12-15') },
-      prnIssuance: { tonnageBand: 'up_to_10000' },
+      prnIssuance: {
+        tonnageBand: 'up_to_10000',
+        incomeBusinessPlan: [],
+        signatories: []
+      },
       statusHistory: [
         { status: REG_ACC_STATUS.CREATED, updatedAt: CREATED_DATE },
         { status, updatedAt: TODAY }
