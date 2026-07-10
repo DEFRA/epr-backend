@@ -7,7 +7,11 @@ import {
 } from '../repository/ledger-test-data.js'
 import { latestSubmittedSummaryLog } from './latest-submitted-summary-log.js'
 
-const LEDGER_ID = { registrationId: 'reg-1', accreditationId: 'acc-1' }
+const LEDGER_ID = {
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  accreditationId: 'acc-1'
+}
 
 describe('latestSubmittedSummaryLog', () => {
   it('returns null when the ledger has no events', async () => {
@@ -76,6 +80,7 @@ describe('latestSubmittedSummaryLog', () => {
 
     expect(
       await latestSubmittedSummaryLog(ledgerRepository, {
+        organisationId: 'org-1',
         registrationId: 'reg-1',
         accreditationId: null
       })

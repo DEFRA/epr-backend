@@ -426,7 +426,7 @@ export async function fetchOrGenerateReportForPeriod({
  * no submission yet has a null source.
  *
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
- * @param {{ registrationId: string, accreditationId: string | null }} ledgerId
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
  * @returns {Promise<{ summaryLogId: string|null, lastUploadedAt: string|null }>}
  */
 async function resolveSource(ledgerRepository, ledgerId) {
@@ -480,6 +480,7 @@ async function getAggregatedReportDetail({
   })
 
   const source = await resolveSource(ledgerRepository, {
+    organisationId,
     registrationId,
     accreditationId
   })

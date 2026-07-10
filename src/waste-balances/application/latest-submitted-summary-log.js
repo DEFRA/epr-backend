@@ -6,7 +6,7 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
  * Returns `null` when the ledger has no summary-log submission yet.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
- * @param {{ registrationId: string, accreditationId: string | null }} ledgerId
+ * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
  * @returns {Promise<{ summaryLogId: string, submittedAt: Date } | null>}
  */
 export const latestSubmittedSummaryLog = async (
