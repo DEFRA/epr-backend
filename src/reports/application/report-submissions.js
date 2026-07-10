@@ -8,7 +8,9 @@ import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import {
+  activeAccreditationValidFrom,
   getReportableRegistrations,
+  resolveAccreditation,
   resolveAccreditationNumber
 } from '#domain/organisations/registration-utils.js'
 
@@ -187,7 +189,17 @@ async function buildSubmissionRows(
     const accreditationNumber = resolveAccreditationNumber(registration, org)
     const cadence = accreditationNumber ? CADENCE.monthly : CADENCE.quarterly
 
-    const computedPeriods = generateReportingPeriods(cadence, currentYear)
+    // Match the operator calendar: an accredited operator owes monthly reports
+    // only from the date their accreditation began.
+    const validFrom = activeAccreditationValidFrom(
+      resolveAccreditation(registration, org)
+    )
+    const computedPeriods = generateReportingPeriods(
+      cadence,
+      currentYear,
+      undefined,
+      validFrom
+    )
     const periodicReports =
       reportsByKey.get(`${org.id}::${registration.id}`) ?? []
     const merged = mergeReportingPeriods(
