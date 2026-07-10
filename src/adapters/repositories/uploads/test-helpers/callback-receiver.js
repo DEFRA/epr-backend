@@ -1,5 +1,7 @@
 import { createServer } from 'node:http'
 
+/** @import { AddressInfo } from 'node:net' */
+
 const HTTP_ACCEPTED = 202
 const MAX_POLL_ATTEMPTS = 150
 const POLL_INTERVAL_MS = 100
@@ -48,9 +50,7 @@ export const createCallbackReceiver = async (options = {}) => {
     server.listen(0, bindAddress, () => resolve(undefined))
   })
 
-  const { port } = /** @type {import('node:net').AddressInfo} */ (
-    server.address()
-  )
+  const { port } = /** @type {AddressInfo} */ (server.address())
 
   return {
     port,

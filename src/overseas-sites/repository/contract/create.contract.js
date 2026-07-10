@@ -1,6 +1,5 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildOverseasSite, buildFullOverseasSite } from './test-data.js'
-import { invalidArg } from '#test/type-helpers.js'
 
 /** @import { OverseasSitesRepository } from '../port.js' */
 
@@ -89,10 +88,10 @@ export const testCreateBehaviour = (it) => {
       const input = buildOverseasSite({
         address: {
           line1: '1 Test Street',
-          line2: invalidArg(null),
+          line2: null,
           townOrCity: 'TESTTOWN',
-          stateOrRegion: invalidArg(null),
-          postcode: invalidArg(null)
+          stateOrRegion: null,
+          postcode: null
         }
       })
 

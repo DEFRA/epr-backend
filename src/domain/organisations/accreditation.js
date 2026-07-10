@@ -1,6 +1,13 @@
 /** @import {GlassRecyclingProcess, RegAccStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
+/**
+ * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
+ * getStatusHistoryDateTimes normalises string inputs via `new Date(...)`, so the
+ * consumer contract genuinely accepts either.
+ */
+
+/**
  * @typedef {{
  *  status: RegAccStatus;
  *  updatedAt: Date | string;
