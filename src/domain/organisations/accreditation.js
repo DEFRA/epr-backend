@@ -1,4 +1,4 @@
-/** @import {GlassRecyclingProcess, RegAccStatus, User} from '#domain/organisations/model.js' */
+/** @import {GlassRecyclingProcess, RegAccStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -45,10 +45,11 @@
 /**
  * @typedef {{ id: string } & StatusHistory & {
  *  formSubmission: { id: string; time: Date };
- *  glassRecyclingProcess?: GlassRecyclingProcess[];
+ *  glassRecyclingProcess?: GlassRecyclingProcess[] | null;
  *  material: string;
  *  orsFileUploads?: object[];
  *  prnIssuance: PrnIssuance;
+ *  reprocessingType?: ReprocessingType;
  *  site?: AccreditationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;
