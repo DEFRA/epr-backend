@@ -7,6 +7,7 @@ import {
   ensureLedgerCollection,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from './ledger-mongodb.js'
+import { LedgerSlotConflictError } from './ledger-port.js'
 import { buildLedgerEvent } from './ledger-test-data.js'
 import { testLedgerRepositoryContract } from './ledger-port.contract.js'
 
@@ -34,6 +35,38 @@ const it = mongoIt.extend({
     await use(factory)
   }
 })
+
+/**
+ * A view of a real database whose `insertMany` waits for `release` before
+ * reaching mongod, and which announces when a writer has got that far. Lets a
+ * test place two writers past the slot pre-check before either one inserts.
+ */
+const databaseHoldingInsert = (/** @type {*} */ database, release) => {
+  /** @type {() => void} */
+  let announce
+  const reachedInsert = new Promise((resolve) => {
+    announce = resolve
+  })
+
+  const view = {
+    collection: (/** @type {string} */ name) =>
+      new Proxy(database.collection(name), {
+        get: (target, property) => {
+          if (property === 'insertMany') {
+            return async (/** @type {*[]} */ ...args) => {
+              announce()
+              await release
+              return target.insertMany(...args)
+            }
+          }
+          const value = Reflect.get(target, property)
+          return typeof value === 'function' ? value.bind(target) : value
+        }
+      })
+  }
+
+  return { view, reachedInsert }
+}
 
 const indexKeyFor = (indexes, name) =>
   indexes.find((idx) => idx.name === name)?.key
@@ -134,47 +167,47 @@ describe('MongoDB ledger repository', () => {
       ).rejects.toBe(upstream)
     })
 
-    it('rethrows E11000 with unrecognised keyPattern as the raw error', async () => {
-      const mongoError = Object.assign(new Error('E11000'), {
-        code: 11000,
-        keyPattern: { unknownField: 1 }
-      })
-      const stubCollection = {
-        createIndex: () => Promise.resolve(),
-        findOne: () => Promise.resolve(null),
-        insertMany: () => Promise.reject(mongoError)
-      }
-      const stubDb = { collection: () => stubCollection }
+    it('classifies the loser of a race for the same slot as a slot conflict', async (/** @type {*} */ {
+      mongoClient
+    }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const collection = database.collection(
+        WASTE_BALANCE_EVENTS_COLLECTION_NAME
+      )
+      await collection.deleteMany({})
 
-      const repository = (
-        await createMongoLedgerRepository(/** @type {*} */ (stubDb))
+      /** @type {() => void} */
+      let releaseLoserInsert
+      const released = new Promise((resolve) => {
+        releaseLoserInsert = resolve
+      })
+      const { view, reachedInsert } = databaseHoldingInsert(database, released)
+
+      const winner = (await createMongoLedgerRepository(database))()
+      const loser = (
+        await createMongoLedgerRepository(/** @type {*} */ (view))
       )()
 
-      await expect(
-        repository.appendEvents([buildLedgerEvent({ number: 1 })])
-      ).rejects.toBe(mongoError)
-    })
+      // Hold the loser between its slot pre-check and its insert. Both writers
+      // then find slot 1 free and claim it, and only the unique index can
+      // separate them — which is the collision the pre-check cannot see.
+      const contestedSlot = buildLedgerEvent({ number: 1 })
+      const losingAppend = loser.appendEvents([contestedSlot])
+      await reachedInsert
+      await winner.appendEvents([contestedSlot])
+      releaseLoserInsert()
 
-    it('classifies a slot conflict raised when inserting the batch', async () => {
-      const mongoError = Object.assign(new Error('E11000'), {
-        writeErrors: [{ code: 11000, keyPattern: { number: 1 } }]
+      const reason = await losingAppend.catch(
+        (/** @type {*} */ caught) => caught
+      )
+      expect(reason).toBeInstanceOf(LedgerSlotConflictError)
+      expect(reason).toMatchObject({
+        registrationId: contestedSlot.registrationId,
+        accreditationId: contestedSlot.accreditationId,
+        slotNumber: contestedSlot.number
       })
-      const stubCollection = {
-        createIndex: () => Promise.resolve(),
-        findOne: () => Promise.resolve(null),
-        insertMany: () => Promise.reject(mongoError)
-      }
-      const stubDb = { collection: () => stubCollection }
 
-      const repository = (
-        await createMongoLedgerRepository(/** @type {*} */ (stubDb))
-      )()
-
-      await expect(
-        repository.appendEvents([buildLedgerEvent({ number: 1 })])
-      ).rejects.toMatchObject({
-        name: 'LedgerSlotConflictError'
-      })
+      await expect(collection.countDocuments()).resolves.toBe(1)
     })
   })
 })
