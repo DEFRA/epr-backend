@@ -29,12 +29,19 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
  * @param {SummaryLogRowState} doc
+ * @param {WasteBalanceLedgerId} ledgerId
+ */
+const matchesLedgerIdentity = (doc, ledgerId) =>
+  doc.organisationId === ledgerId.organisationId &&
+  doc.registrationId === ledgerId.registrationId &&
+  doc.accreditationId === ledgerId.accreditationId
+
+/**
+ * @param {SummaryLogRowState} doc
  * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesRowIdentity = (doc, candidate) =>
-  doc.organisationId === candidate.organisationId &&
-  doc.registrationId === candidate.registrationId &&
-  doc.accreditationId === candidate.accreditationId &&
+  matchesLedgerIdentity(doc, candidate) &&
   doc.rowId === candidate.rowId &&
   doc.wasteRecordType === candidate.wasteRecordType
 
@@ -106,10 +113,17 @@ export const createInMemorySummaryLogRowStateRepository = (
         upsertOne(storage, ledgerId, entry, summaryLogId)
       ),
 
-    /** @param {string} summaryLogId */
-    findBySummaryLogId: async (summaryLogId) =>
+    /**
+     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {string} summaryLogId
+     */
+    findRowStatesForSummaryLog: async (ledgerId, summaryLogId) =>
       structuredClone(
-        storage.filter((doc) => doc.summaryLogIds.includes(summaryLogId))
+        storage.filter(
+          (doc) =>
+            matchesLedgerIdentity(doc, ledgerId) &&
+            doc.summaryLogIds.includes(summaryLogId)
+        )
       ),
 
     /**
