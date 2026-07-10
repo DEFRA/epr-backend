@@ -52,95 +52,95 @@ let testCounter = 0
  *
  * Access queue names via sqsClient.queueName and sqsClient.dlqName
  */
-// vitest's extend cannot infer this mix of tuple- and function-form fixtures
-// under tsc (see bead repos-o97); the fixture bodies are still type-checked via
-// their JSDoc params, so we assert only the extended shape here.
 export const it =
-  /** @type {{ extend: (fixtures: object) => TestAPI<{ floci: Floci, sqsClient: TestSqsClient }> }} */ (
-    /** @type {unknown} */ (baseTest)
-  ).extend({
-    floci: [
-      /**
-       * @param {Record<string, never>} _deps
-       * @param {(value: Floci) => Promise<void>} use
-       */
-      // eslint-disable-next-line no-empty-pattern -- vitest fixtures require object destructuring
-      async ({}, use) => {
-        const container = await new GenericContainer(FLOCI_IMAGE)
-          .withExposedPorts(FLOCI_PORT)
-          .withEnvironment({
-            FLOCI_DEFAULT_REGION: REGION,
-            AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
-            AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey
-          })
-          .withStartupTimeout(90000)
-          .start()
-
-        const port = container.getMappedPort(FLOCI_PORT)
-        const endpoint = `http://127.0.0.1:${port}`
-
-        await use({
-          container,
-          endpoint,
-          region: REGION,
-          credentials: CREDENTIALS
-        })
-
-        await container.stop()
-      },
-      { scope: 'file' }
-    ],
-
-    /**
-     * @param {{ floci: Floci }} deps
-     * @param {(value: TestSqsClient) => Promise<void>} use
-     */
-    sqsClient: async ({ floci }, use) => {
-      const client = new SQSClient({
-        region: floci.region,
-        endpoint: floci.endpoint,
-        credentials: floci.credentials
-      })
-
-      // Create unique queue names for this test to ensure isolation
-      const testId = testCounter++
-      const queueName = `${QUEUE_NAME_PREFIX}_${testId}`
-      const dlqName = `${DLQ_NAME_PREFIX}_${testId}`
-
-      // Create DLQ first
-      const dlqResult = await client.send(
-        new CreateQueueCommand({ QueueName: dlqName })
-      )
-
-      // Get DLQ ARN for redrive policy
-      const dlqAttributes = await client.send(
-        new GetQueueAttributesCommand({
-          QueueUrl: dlqResult.QueueUrl,
-          AttributeNames: ['QueueArn']
-        })
-      )
-      const dlqArn = dlqAttributes.Attributes?.QueueArn
-
-      // Create main queue with redrive policy
-      await client.send(
-        new CreateQueueCommand({
-          QueueName: queueName,
-          Attributes: {
-            VisibilityTimeout: '1',
-            RedrivePolicy: JSON.stringify({
-              deadLetterTargetArn: dlqArn,
-              maxReceiveCount: '2'
+  /** @type {TestAPI<{ floci: Floci, sqsClient: TestSqsClient }>} */ (
+    baseTest.extend({
+      floci: [
+        /**
+         * @param {Record<string, never>} _deps
+         * @param {(value: Floci) => Promise<void>} use
+         */
+        // eslint-disable-next-line no-empty-pattern -- vitest fixtures require object destructuring
+        async ({}, use) => {
+          const container = await new GenericContainer(FLOCI_IMAGE)
+            .withExposedPorts(FLOCI_PORT)
+            .withEnvironment({
+              FLOCI_DEFAULT_REGION: REGION,
+              AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
+              AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey
             })
-          }
-        })
-      )
+            .withStartupTimeout(90000)
+            .start()
 
-      // Extend client with queue names for easy access in tests
-      const fixtureClient = /** @type {FixtureSqsClient} */ (client)
-      fixtureClient.queueName = queueName
-      fixtureClient.dlqName = dlqName
+          const port = container.getMappedPort(FLOCI_PORT)
+          const endpoint = `http://127.0.0.1:${port}`
 
-      await use(fixtureClient)
-      fixtureClient.destroy()
-    }
-  })
+          await use({
+            container,
+            endpoint,
+            region: REGION,
+            credentials: CREDENTIALS
+          })
+
+          await container.stop()
+        },
+        { scope: 'file' }
+      ],
+
+      sqsClient: [
+        /**
+         * @param {{ floci: Floci }} deps
+         * @param {(value: TestSqsClient) => Promise<void>} use
+         */
+        async ({ floci }, use) => {
+          const client = new SQSClient({
+            region: floci.region,
+            endpoint: floci.endpoint,
+            credentials: floci.credentials
+          })
+
+          // Create unique queue names for this test to ensure isolation
+          const testId = testCounter++
+          const queueName = `${QUEUE_NAME_PREFIX}_${testId}`
+          const dlqName = `${DLQ_NAME_PREFIX}_${testId}`
+
+          // Create DLQ first
+          const dlqResult = await client.send(
+            new CreateQueueCommand({ QueueName: dlqName })
+          )
+
+          // Get DLQ ARN for redrive policy
+          const dlqAttributes = await client.send(
+            new GetQueueAttributesCommand({
+              QueueUrl: dlqResult.QueueUrl,
+              AttributeNames: ['QueueArn']
+            })
+          )
+          const dlqArn = dlqAttributes.Attributes?.QueueArn
+
+          // Create main queue with redrive policy
+          await client.send(
+            new CreateQueueCommand({
+              QueueName: queueName,
+              Attributes: {
+                VisibilityTimeout: '1',
+                RedrivePolicy: JSON.stringify({
+                  deadLetterTargetArn: dlqArn,
+                  maxReceiveCount: '2'
+                })
+              }
+            })
+          )
+
+          // Extend client with queue names for easy access in tests
+          const fixtureClient = /** @type {FixtureSqsClient} */ (client)
+          fixtureClient.queueName = queueName
+          fixtureClient.dlqName = dlqName
+
+          await use(fixtureClient)
+          fixtureClient.destroy()
+        },
+        { scope: 'test' }
+      ]
+    })
+  )
