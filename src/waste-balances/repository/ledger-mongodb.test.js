@@ -36,17 +36,22 @@ const it = mongoIt.extend({
   }
 })
 
+const deferred = () => {
+  /** @type {() => void} */
+  let settle = () => undefined
+  const promise = new Promise((resolve) => {
+    settle = () => resolve(undefined)
+  })
+  return { promise, settle }
+}
+
 /**
  * A view of a real database whose `insertMany` waits for `release` before
  * reaching mongod, and which announces when a writer has got that far. Lets a
  * test place two writers past the slot pre-check before either one inserts.
  */
 const databaseHoldingInsert = (/** @type {*} */ database, release) => {
-  /** @type {() => void} */
-  let announce
-  const reachedInsert = new Promise((resolve) => {
-    announce = resolve
-  })
+  const reached = deferred()
 
   const view = {
     collection: (/** @type {string} */ name) =>
@@ -54,7 +59,7 @@ const databaseHoldingInsert = (/** @type {*} */ database, release) => {
         get: (target, property) => {
           if (property === 'insertMany') {
             return async (/** @type {*[]} */ ...args) => {
-              announce()
+              reached.settle()
               await release
               return target.insertMany(...args)
             }
@@ -65,7 +70,7 @@ const databaseHoldingInsert = (/** @type {*} */ database, release) => {
       })
   }
 
-  return { view, reachedInsert }
+  return { view, reachedInsert: reached.promise }
 }
 
 const indexKeyFor = (indexes, name) =>
@@ -176,12 +181,11 @@ describe('MongoDB ledger repository', () => {
       )
       await collection.deleteMany({})
 
-      /** @type {() => void} */
-      let releaseLoserInsert
-      const released = new Promise((resolve) => {
-        releaseLoserInsert = resolve
-      })
-      const { view, reachedInsert } = databaseHoldingInsert(database, released)
+      const loserInsert = deferred()
+      const { view, reachedInsert } = databaseHoldingInsert(
+        database,
+        loserInsert.promise
+      )
 
       const winner = (await createMongoLedgerRepository(database))()
       const loser = (
@@ -195,7 +199,7 @@ describe('MongoDB ledger repository', () => {
       const losingAppend = loser.appendEvents([contestedSlot])
       await reachedInsert
       await winner.appendEvents([contestedSlot])
-      releaseLoserInsert()
+      loserInsert.settle()
 
       const reason = await losingAppend.catch(
         (/** @type {*} */ caught) => caught
