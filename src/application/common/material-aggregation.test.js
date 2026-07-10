@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import { Decimal128 } from 'mongodb'
 import {
   buildEffectiveMaterialStages,
@@ -209,7 +209,7 @@ describe('material-aggregation', () => {
       const plasticExporter = result.materials.find(
         (m) => m.material === 'plastic' && m.type === 'Exporter'
       )
-      assert(plasticExporter)
+      assertPresent(plasticExporter)
 
       expect(plasticExporter.year).toBe(2026)
       expect(plasticExporter.months).toHaveLength(1)
@@ -220,7 +220,7 @@ describe('material-aggregation', () => {
       const aluminiumExporter = result.materials.find(
         (m) => m.material === 'aluminium' && m.type === 'Exporter'
       )
-      assert(aluminiumExporter)
+      assertPresent(aluminiumExporter)
 
       aluminiumExporter.months.forEach((m) => {
         expect(m.tonnage).toBe(0)
@@ -263,7 +263,7 @@ describe('material-aggregation', () => {
       const plasticExporter = result.materials.find(
         (m) => m.material === 'plastic' && m.type === 'Exporter'
       )
-      assert(plasticExporter)
+      assertPresent(plasticExporter)
 
       expect(plasticExporter.months).toEqual([
         { month: 'Jan', tonnage: 100 },
@@ -273,7 +273,7 @@ describe('material-aggregation', () => {
       const aluminiumReprocessor = result.materials.find(
         (m) => m.material === 'aluminium' && m.type === 'Reprocessor'
       )
-      assert(aluminiumReprocessor)
+      assertPresent(aluminiumReprocessor)
 
       expect(aluminiumReprocessor.months).toEqual([
         { month: 'Jan', tonnage: 0 },

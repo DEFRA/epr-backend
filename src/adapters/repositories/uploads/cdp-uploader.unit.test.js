@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { createUploadsRepository } from './cdp-uploader.js'
 
@@ -84,7 +84,7 @@ describe('bucket routing', () => {
 
   const parseFetchBody = () => {
     const fetchCall = vi.mocked(fetch).mock.calls[0]
-    assert(fetchCall)
+    assertPresent(fetchCall)
     return JSON.parse(/** @type {string} */ (fetchCall[1]?.body))
   }
 

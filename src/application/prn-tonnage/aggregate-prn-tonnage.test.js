@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { aggregatePrnTonnage } from './aggregate-prn-tonnage.js'
 
@@ -45,7 +45,7 @@ describe('aggregatePrnTonnage', () => {
     expect(mockAggregate).toHaveBeenCalledTimes(1)
 
     const pipeline = mockAggregate.mock.calls[0]?.[0]
-    assert(pipeline)
+    assertPresent(pipeline)
 
     expect(Array.isArray(pipeline)).toBe(true)
     expect(pipeline[0]).toEqual({

@@ -9,7 +9,7 @@ import {
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from './parse-forms-data.js'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import { ORGANISATION } from '../organisation/form-field-constants.js'
 import { REGISTRATION } from '../registration/form-field-constants.js'
 import { ACCREDITATION } from '../accreditation/form-field-constants.js'
@@ -647,7 +647,7 @@ describe('retrieveFileUploadDetails', () => {
 describe('extractTimestamp', () => {
   it('should extract timestamp from raw form submission as Date object', () => {
     const result = extractTimestamp(registeredLtdPartnership.rawSubmissionData)
-    assert(result)
+    assertPresent(result)
 
     expect(result).toBeInstanceOf(Date)
     expect(result.toISOString()).toBe('2025-10-08T16:14:15.390Z')
@@ -681,7 +681,7 @@ describe('extractTimestamp', () => {
     }
 
     const result = extractTimestamp(mockData)
-    assert(result)
+    assertPresent(result)
 
     expect(result).toBeInstanceOf(Date)
     expect(result.getFullYear()).toBe(2025)

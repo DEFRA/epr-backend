@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import { mergeReportingPeriods } from './merge-reporting-periods.js'
 
 /**
@@ -178,7 +178,7 @@ describe('mergeReportingPeriods', () => {
 
     expect(result).toHaveLength(3)
     const period3 = result.find((p) => p.period === 3)
-    assert(period3)
+    assertPresent(period3)
     expect(period3.report).toEqual({
       id: 'report-uuid-3',
       status: 'in_progress',

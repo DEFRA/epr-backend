@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import assert from 'node:assert'
+import { assertPresent } from '#test/assert-present.js'
 import { createSentOnLoadsSchema } from './sent-on-loads-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
@@ -71,7 +71,7 @@ describe('createSentOnLoadsSchema', () => {
         const { error } = validationSchema.validate({
           ROW_ID: ROW_ID_MINIMUM - 1
         })
-        assert(error)
+        assertPresent(error)
         expect(error.details[0].message).toBe(
           `must be at least ${ROW_ID_MINIMUM}`
         )
@@ -90,7 +90,7 @@ describe('createSentOnLoadsSchema', () => {
         const { error } = validationSchema.validate({
           DATE_LOAD_LEFT_SITE: 'not-a-date'
         })
-        assert(error)
+        assertPresent(error)
         expect(error.details[0].message).toBe('must be a valid date')
       })
     })
@@ -107,7 +107,7 @@ describe('createSentOnLoadsSchema', () => {
         const { error } = validationSchema.validate({
           TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: -1
         })
-        assert(error)
+        assertPresent(error)
         expect(error.details[0].message).toBe('must be at least 0')
       })
     })
@@ -119,7 +119,7 @@ describe('createSentOnLoadsSchema', () => {
       const { error } = exporterSchema.validationSchema.validate({
         ROW_ID: 3999
       })
-      assert(error)
+      assertPresent(error)
 
       expect(error.details[0].message).toBe('must be at least 4000')
     })
@@ -129,7 +129,7 @@ describe('createSentOnLoadsSchema', () => {
       const { error } = reprocessorSchema.validationSchema.validate({
         ROW_ID: 4999
       })
-      assert(error)
+      assertPresent(error)
 
       expect(error.details[0].message).toBe('must be at least 5000')
     })
