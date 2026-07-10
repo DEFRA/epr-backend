@@ -7,6 +7,9 @@ import {
   buildDeletedPrn
 } from './test-data.js'
 
+/** @typedef {import('../port.js').PackagingRecyclingNotesRepository} PrnRepository */
+/** @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['status']} PrnStatusBlock */
+
 const compensator = { id: 'user-compensator', name: 'Compensator User' }
 
 const buildCancelledFromAwaitingCancellation = (overrides = {}) =>
@@ -22,9 +25,13 @@ export const testRollbackBehaviour = (it) => {
   describe('rollbackIssuance', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: PrnRepository }} */ { prnRepository }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     it('reverts status from AWAITING_ACCEPTANCE back to AWAITING_AUTHORISATION', async () => {
       const created = await repository.create(buildAwaitingAcceptancePrn())
@@ -259,20 +266,24 @@ export const testRollbackBehaviour = (it) => {
   describe('rollbackPendingCancellation', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: PrnRepository }} */ { prnRepository }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     it('reverts status from CANCELLED to AWAITING_AUTHORISATION', async () => {
       const created = await repository.create(
         buildAwaitingAuthorisationPrn({
-          status: {
+          status: /** @type {PrnStatusBlock} */ ({
             currentStatus: PRN_STATUS.CANCELLED,
             cancelled: {
               at: new Date(),
               by: { id: 'user-canceller', name: 'Canceller User' }
             }
-          }
+          })
         })
       )
 
@@ -306,13 +317,13 @@ export const testRollbackBehaviour = (it) => {
     it('unsets the cancelled operation slot when rolling back from CANCELLED', async () => {
       const created = await repository.create(
         buildAwaitingAuthorisationPrn({
-          status: {
+          status: /** @type {PrnStatusBlock} */ ({
             currentStatus: PRN_STATUS.CANCELLED,
             cancelled: {
               at: new Date(),
               by: { id: 'user-canceller', name: 'Canceller User' }
             }
-          }
+          })
         })
       )
 
@@ -406,9 +417,13 @@ export const testRollbackBehaviour = (it) => {
   describe('rollbackIssuedCancellation', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: PrnRepository }} */ { prnRepository }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     it('reverts status from CANCELLED to AWAITING_CANCELLATION', async () => {
       const created = await repository.create(

@@ -45,10 +45,12 @@ export const createCallbackReceiver = async (options = {}) => {
   })
 
   await new Promise((resolve) => {
-    server.listen(0, bindAddress, resolve)
+    server.listen(0, bindAddress, () => resolve(undefined))
   })
 
-  const { port } = server.address()
+  const { port } = /** @type {import('node:net').AddressInfo} */ (
+    server.address()
+  )
 
   return {
     port,
@@ -59,7 +61,7 @@ export const createCallbackReceiver = async (options = {}) => {
     },
     stop: () =>
       new Promise((resolve) => {
-        server.close(resolve)
+        server.close(() => resolve())
       })
   }
 }
