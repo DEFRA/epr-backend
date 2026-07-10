@@ -384,9 +384,21 @@ describe('generateReportCompliance', () => {
 
     const result = await generateReportCompliance(orgRepo, reportsRepo)
 
-    expect([...result.entries.get(reg.id).submittedDates.keys()]).toEqual([
-      '2026:monthly:2',
-      '2026:monthly:3'
-    ])
+    // Jan absent, only Feb and Mar remain as obligations.
+    expect(result.entries).toEqual(
+      new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: new Map([
+              ['2026:monthly:2', null],
+              ['2026:monthly:3', null]
+            ])
+          }
+        ]
+      ])
+    )
   })
 })
