@@ -6,13 +6,10 @@ import {
   formatTonnageMonitoringResults
 } from '#application/common/material-aggregation.js'
 import { getMonthNames } from '#common/helpers/date-formatter.js'
-import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
-import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
-import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
-const PROCESSING_TYPE_FIELD = '$processingType'
-const WASTE_RECORD_TYPE_FIELD = '$wasteRecordType'
+const WASTE_RECORDS_COLLECTION = 'waste-records'
+const DATA_PROCESSING_TYPE = '$data.processingType'
 const DISPATCH_DATE_FIELD = '$dispatchDate'
 
 const buildTonnageExpression = () => ({
@@ -21,8 +18,8 @@ const buildTonnageExpression = () => ({
       {
         case: {
           $and: [
-            { $eq: [PROCESSING_TYPE_FIELD, PROCESSING_TYPES.EXPORTER] },
-            { $eq: [WASTE_RECORD_TYPE_FIELD, WASTE_RECORD_TYPE.EXPORTED] }
+            { $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.EXPORTER] },
+            { $eq: ['$type', WASTE_RECORD_TYPE.EXPORTED] }
           ]
         },
         then: {
@@ -43,9 +40,9 @@ const buildTonnageExpression = () => ({
         case: {
           $and: [
             {
-              $eq: [PROCESSING_TYPE_FIELD, PROCESSING_TYPES.REPROCESSOR_INPUT]
+              $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_INPUT]
             },
-            { $eq: [WASTE_RECORD_TYPE_FIELD, WASTE_RECORD_TYPE.RECEIVED] }
+            { $eq: ['$type', WASTE_RECORD_TYPE.RECEIVED] }
           ]
         },
         then: { $ifNull: ['$data.TONNAGE_RECEIVED_FOR_RECYCLING', 0] }
@@ -54,9 +51,9 @@ const buildTonnageExpression = () => ({
         case: {
           $and: [
             {
-              $eq: [PROCESSING_TYPE_FIELD, PROCESSING_TYPES.REPROCESSOR_OUTPUT]
+              $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_OUTPUT]
             },
-            { $eq: [WASTE_RECORD_TYPE_FIELD, WASTE_RECORD_TYPE.PROCESSED] },
+            { $eq: ['$type', WASTE_RECORD_TYPE.PROCESSED] },
             { $eq: ['$data.ADD_PRODUCT_WEIGHT', 'Yes'] }
           ]
         },
@@ -71,18 +68,18 @@ const buildDispatchDateExpression = () => ({
   $switch: {
     branches: [
       {
-        case: { $eq: [PROCESSING_TYPE_FIELD, PROCESSING_TYPES.EXPORTER] },
+        case: { $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.EXPORTER] },
         then: '$data.DATE_OF_EXPORT'
       },
       {
         case: {
-          $eq: [PROCESSING_TYPE_FIELD, PROCESSING_TYPES.REPROCESSOR_INPUT]
+          $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_INPUT]
         },
         then: '$data.DATE_RECEIVED_FOR_REPROCESSING'
       },
       {
         case: {
-          $eq: [PROCESSING_TYPE_FIELD, PROCESSING_TYPES.REPROCESSOR_OUTPUT]
+          $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_OUTPUT]
         },
         then: '$data.DATE_LOAD_LEFT_SITE'
       }
@@ -103,18 +100,18 @@ const buildTypeExpression = () => ({
   $switch: {
     branches: [
       {
-        case: { $eq: [PROCESSING_TYPE_FIELD, PROCESSING_TYPES.EXPORTER] },
+        case: { $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.EXPORTER] },
         then: capitalizeType(WASTE_PROCESSING_TYPE.EXPORTER)
       },
       {
         case: {
-          $eq: [PROCESSING_TYPE_FIELD, PROCESSING_TYPES.REPROCESSOR_INPUT]
+          $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_INPUT]
         },
         then: capitalizeType(WASTE_PROCESSING_TYPE.REPROCESSOR)
       },
       {
         case: {
-          $eq: [PROCESSING_TYPE_FIELD, PROCESSING_TYPES.REPROCESSOR_OUTPUT]
+          $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_OUTPUT]
         },
         then: capitalizeType(WASTE_PROCESSING_TYPE.REPROCESSOR)
       }
@@ -171,19 +168,16 @@ const buildMaterialLookupStage = () => ({
   }
 })
 
-const buildLatestSubmittedRowStateMatchStage = (
-  latestSubmittedSummaryLogIds
-) => ({
+const buildWasteRecordMatchStage = () => ({
   $match: {
-    summaryLogIds: { $in: latestSubmittedSummaryLogIds },
-    wasteRecordType: {
+    type: {
       $in: [
         WASTE_RECORD_TYPE.RECEIVED,
         WASTE_RECORD_TYPE.PROCESSED,
         WASTE_RECORD_TYPE.EXPORTED
       ]
     },
-    processingType: {
+    'data.processingType': {
       $in: [
         PROCESSING_TYPES.EXPORTER,
         PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -260,8 +254,8 @@ const buildProjectionStage = () => ({
   }
 })
 
-const buildAggregationPipeline = (latestSubmittedSummaryLogIds) => [
-  buildLatestSubmittedRowStateMatchStage(latestSubmittedSummaryLogIds),
+const buildAggregationPipeline = () => [
+  buildWasteRecordMatchStage(),
   buildComputedFieldsStage(),
   buildValidRecordMatchStage(),
   buildDateFieldsStage(),
@@ -272,36 +266,11 @@ const buildAggregationPipeline = (latestSubmittedSummaryLogIds) => [
   buildProjectionStage()
 ]
 
-const buildLatestSubmittedSummaryLogPipeline = () => [
-  { $match: { kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED } },
-  { $sort: { number: -1 } },
-  {
-    $group: {
-      _id: {
-        registrationId: '$registrationId',
-        accreditationId: '$accreditationId'
-      },
-      summaryLogId: { $first: '$payload.summaryLogId' }
-    }
-  }
-]
-
-const resolveLatestSubmittedSummaryLogIds = async (db) => {
-  const latestSubmitted = await db
-    .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
-    .aggregate(buildLatestSubmittedSummaryLogPipeline())
-    .toArray()
-
-  return latestSubmitted.map((submission) => submission.summaryLogId)
-}
-
 export const aggregateTonnageByMaterial = async (db) => {
-  const latestSubmittedSummaryLogIds =
-    await resolveLatestSubmittedSummaryLogIds(db)
-  const pipeline = buildAggregationPipeline(latestSubmittedSummaryLogIds)
+  const pipeline = buildAggregationPipeline()
 
   const results = await db
-    .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
+    .collection(WASTE_RECORDS_COLLECTION)
     .aggregate(pipeline)
     .toArray()
 
