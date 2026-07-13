@@ -378,6 +378,12 @@ describe('Submission and placeholder tests', () => {
         logger: mockLogger
       })
 
+      const syncUser = {
+        id: 'test-user',
+        email: 'test-user@example.com',
+        scope: ['some-scope']
+      }
+
       const submitterWorker = {
         validate: validateSummaryLog,
         submit: async (summaryLogId) => {
@@ -389,7 +395,7 @@ describe('Submission and placeholder tests', () => {
               existing
             )
 
-          await syncWasteRecords(summaryLog)
+          await syncWasteRecords(summaryLog, syncUser)
 
           await summaryLogsRepository.update(
             summaryLogId,

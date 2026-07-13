@@ -167,13 +167,18 @@ const performCreate = async (db, prn) => {
 
 /**
  * @param {Db} db
- * @param {string} accreditationId
+ * @param {import('./port.js').AccreditationId} accreditationId
  * @returns {Promise<PackagingRecyclingNote[]>}
  */
-const performFindByAccreditation = async (db, accreditationId) => {
+const performFindByAccreditation = async (
+  db,
+  { organisationId, registrationId, accreditationId }
+) => {
   const docs = await db
     .collection(COLLECTION_NAME)
     .find({
+      'organisation.id': organisationId,
+      registrationId,
       'accreditation.id': accreditationId,
       'status.currentStatus': { $ne: PRN_STATUS.DELETED }
     })

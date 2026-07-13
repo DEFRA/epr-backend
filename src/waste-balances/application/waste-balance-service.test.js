@@ -101,7 +101,11 @@ describe('createWasteBalanceService', () => {
       expect(rejected).toHaveLength(1)
       expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
 
-      const all = await ledgerRepository.findAllInLedger('reg-1', 'acc-1')
+      const all = await ledgerRepository.findAllInLedger({
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      })
       expect(all).toHaveLength(1)
     })
   })
@@ -147,7 +151,11 @@ describe('createWasteBalanceService', () => {
         status: PRN_COMMAND_STATUS.REJECTED,
         reason: PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE
       })
-      const all = await ledgerRepository.findAllInLedger('reg-1', 'acc-1')
+      const all = await ledgerRepository.findAllInLedger({
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      })
       expect(all).toHaveLength(1)
     })
 
@@ -287,7 +295,11 @@ describe('createWasteBalanceService', () => {
         service.createPrn(ledgerId, { prnId: 'prn-1', amount: -100 }, createdBy)
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
 
-      const all = await ledgerRepository.findAllInLedger('reg-1', 'acc-1')
+      const all = await ledgerRepository.findAllInLedger({
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      })
       expect(all).toHaveLength(1)
     })
 
@@ -315,6 +327,7 @@ describe('createWasteBalanceService', () => {
 
   describe('prnCatchupEvents', () => {
     const catchupParams = {
+      organisationId: 'org-1',
       registrationId: 'reg-1',
       accreditationId: 'acc-1',
       prnId: 'prn-1'
@@ -371,7 +384,11 @@ describe('createWasteBalanceService', () => {
         summaryLogId: 'log-A'
       })
 
-      const all = await ledgerRepository.findAllInLedger('reg-1', 'acc-1')
+      const all = await ledgerRepository.findAllInLedger({
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      })
       expect(all).toHaveLength(0)
     })
   })

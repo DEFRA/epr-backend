@@ -534,10 +534,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        const events = await ledgerRepository.findAllInLedger(
+        const events = await ledgerRepository.findAllInLedger({
+          organisationId,
           registrationId,
           accreditationId
-        )
+        })
         expect(events.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
         expect(events.at(-1)?.createdBy).toEqual(
           expect.objectContaining({ id: userId, name: userName })
@@ -561,10 +562,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        const events = await ledgerRepository.findAllInLedger(
+        const events = await ledgerRepository.findAllInLedger({
+          organisationId,
           registrationId,
           accreditationId
-        )
+        })
         expect(events.at(-1)?.createdBy).toEqual(
           expect.objectContaining({ id: 'unknown', name: 'unknown' })
         )
@@ -869,10 +871,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        const events = await ledgerRepository.findAllInLedger(
+        const events = await ledgerRepository.findAllInLedger({
+          organisationId,
           registrationId,
           accreditationId
-        )
+        })
         expect(events).toHaveLength(1)
         expect(events[0]?.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       })

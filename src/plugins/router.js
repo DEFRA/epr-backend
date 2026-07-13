@@ -14,6 +14,7 @@ import * as prnTonnageRoutes from '#routes/v1/prn-tonnage/index.js'
 import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availability/index.js'
 import * as overseasSitesRoutes from '#overseas-sites/routes/index.js'
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
+import { adminAccreditationPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-accreditation-list.js'
 import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
 import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
 import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
@@ -23,7 +24,7 @@ import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registra
 import * as reportsRoutes from '#reports/routes/index.js'
 import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
 import { adminMeGet } from '#routes/v1/admin/me/get.js'
-import { ledgerEventsGet } from '#routes/v1/admin/registrations/accreditations/ledger-events/get.js'
+import { ledgerEventsGet } from '#routes/v1/admin/organisations/registrations/accreditations/ledger-events/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
@@ -62,6 +63,7 @@ const router = {
           packagingRecyclingNotesList,
           packagingRecyclingNotesReject,
           ...summaryLogUploadsReportRoutes,
+          adminAccreditationPackagingRecyclingNotesList,
           adminPackagingRecyclingNotesList,
           ...Object.values(overseasSitesRoutes),
           ...Object.values(coreReportsRoutes),

@@ -170,6 +170,41 @@ describe('generateReportingPeriods', () => {
     })
   })
 
+  describe('fromDate bound', () => {
+    it('drops periods that ended before fromDate', () => {
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        2026,
+        march20,
+        '2026-02-01'
+      )
+
+      expect(periods.map((p) => p.period)).toEqual([2])
+    })
+
+    it('keeps the period containing a mid-period fromDate', () => {
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        2026,
+        march20,
+        '2026-02-10'
+      )
+
+      expect(periods.map((p) => p.period)).toEqual([2])
+    })
+
+    it('is a no-op when fromDate is null', () => {
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        2026,
+        march20,
+        null
+      )
+
+      expect(periods.map((p) => p.period)).toEqual([1, 2])
+    })
+  })
+
   describe('validation', () => {
     it('throws TypeError for unknown cadence', () => {
       // @ts-expect-error - unknown cadence is rejected by types and guarded at runtime

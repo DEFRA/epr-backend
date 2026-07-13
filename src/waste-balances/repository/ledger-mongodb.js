@@ -8,6 +8,10 @@
  * @typedef {import('./ledger-schema.js').LedgerEvent} LedgerEvent
  */
 
+/**
+ * @typedef {import('./ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ */
+
 import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
 import {
   validateLedgerEventInsert,
@@ -65,32 +69,26 @@ const toLedgerEvent = (doc) => {
 }
 
 /**
- * Classify a MongoDB E11000 duplicate key error by inspecting the
- * `keyPattern` on the write error to determine which index was violated.
+ * Classify a MongoDB E11000 duplicate key error raised by an append.
+ *
+ * `partition_number` is the only unique index on this collection — the other
+ * two are non-unique, and driver-generated `_id`s do not collide — so a
+ * duplicate key can only mean a competing writer took the slot.
  *
  * @param {unknown} error
  * @param {LedgerEventInsert} event
  */
 const classifyDuplicateKeyError = (error, event) => {
-  const writeError = findDuplicateKeyWriteError(error)
-  if (!writeError) {
+  if (!findDuplicateKeyWriteError(error)) {
     return undefined
   }
 
-  if (writeError.keyPattern?.number) {
-    return new LedgerSlotConflictError(
-      event.registrationId,
-      event.accreditationId,
-      event.number
-    )
-  }
-
-  return undefined
+  return new LedgerSlotConflictError(event)
 }
 
 /**
  * @param {unknown} candidate
- * @returns {candidate is { code: number, keyPattern?: Record<string, number> }}
+ * @returns {candidate is { code: number }}
  */
 const isDuplicateKeyWriteError = (candidate) =>
   typeof candidate === 'object' &&
@@ -99,15 +97,13 @@ const isDuplicateKeyWriteError = (candidate) =>
   candidate.code === MONGODB_DUPLICATE_KEY_ERROR_CODE
 
 /**
+ * `insertMany` reports a failed write as a `writeErrors` entry on the
+ * enclosing `MongoBulkWriteError`. An entry is where a write records its own
+ * outcome, so a duplicate key is looked up there rather than on the aggregate.
+ *
  * @param {unknown} error
  */
 const findDuplicateKeyWriteError = (error) => {
-  if (isDuplicateKeyWriteError(error)) {
-    return /** @type {{ code: number, keyPattern?: Record<string, number> }} */ (
-      error
-    )
-  }
-
   if (
     typeof error === 'object' &&
     error !== null &&
@@ -121,26 +117,36 @@ const findDuplicateKeyWriteError = (error) => {
 }
 
 /**
- * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null) => Promise<LedgerEvent | null>}
+ * The filter selecting exactly the events of one ledger. Every read builds its
+ * filter from this, so no read can name a ledger by less than its whole id.
+ *
+ * @param {WasteBalanceLedgerId} ledgerId
  */
-const performFindLatestInLedger =
-  (collection) => async (registrationId, accreditationId) => {
-    const doc = await collection.findOne(
-      { registrationId, accreditationId },
-      { sort: { number: -1 } }
-    )
-    return doc ? toLedgerEvent(doc) : null
-  }
+const ledgerFilter = ({ organisationId, registrationId, accreditationId }) => ({
+  organisationId,
+  registrationId,
+  accreditationId
+})
 
 /**
  * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null, kind: string) => Promise<LedgerEvent | null>}
+ * @returns {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>}
+ */
+const performFindLatestInLedger = (collection) => async (ledgerId) => {
+  const doc = await collection.findOne(ledgerFilter(ledgerId), {
+    sort: { number: -1 }
+  })
+  return doc ? toLedgerEvent(doc) : null
+}
+
+/**
+ * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, kind: string) => Promise<LedgerEvent | null>}
  */
 const performFindLatestInLedgerByKind =
-  (collection) => async (registrationId, accreditationId, kind) => {
+  (collection) => async (ledgerId, kind) => {
     const doc = await collection.findOne(
-      { registrationId, accreditationId, kind },
+      { ...ledgerFilter(ledgerId), kind },
       { sort: { number: -1 } }
     )
     return doc ? toLedgerEvent(doc) : null
@@ -148,15 +154,13 @@ const performFindLatestInLedgerByKind =
 
 /**
  * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>}
  */
 const performFindEventsByPrnIdAfter =
-  (collection) =>
-  async (registrationId, accreditationId, prnId, afterNumber) => {
+  (collection) => async (ledgerId, prnId, afterNumber) => {
     const docs = await collection
       .find({
-        registrationId,
-        accreditationId,
+        ...ledgerFilter(ledgerId),
         'payload.prnId': prnId,
         number: { $gt: afterNumber }
       })
@@ -168,31 +172,26 @@ const performFindEventsByPrnIdAfter =
 
 /**
  * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null) => Promise<LedgerEvent[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent[]>}
  */
-const performFindAllInLedger =
-  (collection) => async (registrationId, accreditationId) => {
-    const docs = await collection
-      .find({ registrationId, accreditationId })
-      .sort({ number: 1 })
-      .toArray()
+const performFindAllInLedger = (collection) => async (ledgerId) => {
+  const docs = await collection
+    .find(ledgerFilter(ledgerId))
+    .sort({ number: 1 })
+    .toArray()
 
-    return docs.map(toLedgerEvent)
-  }
+  return docs.map(toLedgerEvent)
+}
 
 /**
  * @migration PAE-1382 — delete all events for a ledgerId.
  * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null) => Promise<number>}
+ * @returns {(ledgerId: WasteBalanceLedgerId) => Promise<number>}
  */
-const performDeleteInLedger =
-  (collection) => async (registrationId, accreditationId) => {
-    const result = await collection.deleteMany({
-      registrationId,
-      accreditationId
-    })
-    return result.deletedCount
-  }
+const performDeleteInLedger = (collection) => async (ledgerId) => {
+  const result = await collection.deleteMany(ledgerFilter(ledgerId))
+  return result.deletedCount
+}
 
 /**
  * Append a contiguous batch of events. Validates sequence: events must be
@@ -216,41 +215,24 @@ const performAppendEvents = (collection) => async (events) => {
 
   const first = validated[0]
 
-  const latest = await collection.findOne(
-    {
-      registrationId: first.registrationId,
-      accreditationId: first.accreditationId
-    },
-    { sort: { number: -1 }, projection: { number: 1 } }
-  )
+  const latest = await collection.findOne(ledgerFilter(first), {
+    sort: { number: -1 },
+    projection: { number: 1 }
+  })
 
   const expectedStart = (latest?.number ?? 0) + 1
 
   if (first.number !== expectedStart) {
     if (first.number <= (latest?.number ?? 0)) {
-      throw new LedgerSlotConflictError(
-        first.registrationId,
-        first.accreditationId,
-        first.number
-      )
+      throw new LedgerSlotConflictError(first)
     }
-    throw new LedgerSequenceError(
-      first.registrationId,
-      first.accreditationId,
-      first.number,
-      expectedStart
-    )
+    throw new LedgerSequenceError(first, expectedStart)
   }
 
   for (let i = 1; i < validated.length; i++) {
     const expected = first.number + i
     if (validated[i].number !== expected) {
-      throw new LedgerSequenceError(
-        validated[i].registrationId,
-        validated[i].accreditationId,
-        validated[i].number,
-        expected
-      )
+      throw new LedgerSequenceError(validated[i], expected)
     }
   }
 

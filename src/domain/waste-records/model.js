@@ -45,6 +45,14 @@ export const WASTE_RECORD_CHANGE = Object.freeze({
  */
 
 /**
+ * A waste record is keyed by `(organisationId, registrationId, type, rowId)` —
+ * `accreditationId` is not part of that key and is never persisted. It is set
+ * only on a freshly transformed record for an accredited stream, and is absent
+ * on a registered-only one and on every record read back from storage. It is
+ * therefore optional rather than nullable: absent is reachable, `null` is not.
+ * This is why the record does not name `RegistrationOrAccreditationId`, which
+ * requires the key to be present.
+ *
  * @typedef {Object} WasteRecord
  * @property {string} organisationId
  * @property {string} registrationId
