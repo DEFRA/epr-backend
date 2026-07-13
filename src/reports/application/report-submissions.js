@@ -5,6 +5,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import {
@@ -216,7 +217,7 @@ async function buildSubmissionRows(
         cadence,
         mergedPeriod,
         accreditationNumber,
-        report?.submittedAt?.slice(0, 10) ?? '',
+        calendarDate(report?.submittedAt) ?? '',
         report?.submittedBy?.name ?? ''
       )
     })

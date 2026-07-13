@@ -3,6 +3,7 @@ import { periodKey } from '#reports/domain/period-key.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   activeAccreditationValidFrom,
   getReportableRegistrations,
@@ -111,7 +112,7 @@ export async function generateReportCompliance(
             cadence,
             period: mergedPeriod.period
           }),
-          mergedPeriod.report?.submittedAt?.slice(0, 10) ?? null
+          calendarDate(mergedPeriod.report?.submittedAt)
         )
       }
     }

@@ -1,4 +1,5 @@
 import { YEAR_MONTH_LENGTH } from '#common/helpers/dates/year-month.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * Returns true when value is a string containing a valid ISO date that falls
@@ -14,8 +15,8 @@ export function isDateInRange(value, startDate, endDate) {
     return false
   }
 
-  const date = value.slice(0, 10)
-  if (Number.isNaN(new Date(date).getTime())) {
+  const date = calendarDate(value)
+  if (date === null || Number.isNaN(new Date(date).getTime())) {
     return false
   }
 

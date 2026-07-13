@@ -6,6 +6,7 @@ import {
   formatDateISO,
   formatDateTimeDots,
   startOfDay,
+  toCalendarDate,
   toISOString,
   getMonthNames,
   getMonthRange
@@ -67,6 +68,28 @@ describe('calendarDate', () => {
 
   it('extracts the calendar date from a full ISO datetime with end-of-day time', () => {
     expect(calendarDate('2025-01-31T23:59:59.999Z')).toBe('2025-01-31')
+  })
+
+  it('returns null for null', () => {
+    expect(calendarDate(null)).toBeNull()
+  })
+
+  it('returns null for undefined', () => {
+    expect(calendarDate(undefined)).toBeNull()
+  })
+})
+
+describe('toCalendarDate', () => {
+  it('returns the UTC calendar date for a start-of-day instant', () => {
+    expect(toCalendarDate(new Date('2025-01-31T00:00:00.000Z'))).toBe(
+      '2025-01-31'
+    )
+  })
+
+  it('returns the UTC calendar date for an end-of-day instant', () => {
+    expect(toCalendarDate(new Date('2025-01-31T23:59:59.999Z'))).toBe(
+      '2025-01-31'
+    )
   })
 })
 

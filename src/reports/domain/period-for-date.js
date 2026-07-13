@@ -1,4 +1,5 @@
 import { MONTHS_PER_PERIOD } from './cadence.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /** Position of the year portion end in an ISO date string (YYYY-MM-DD) */
 const YEAR_END = 4
@@ -11,9 +12,7 @@ const MONTH_END = 7
  * @returns {string}
  */
 const toIsoDate = (dateValue) =>
-  dateValue instanceof Date
-    ? dateValue.toISOString().slice(0, 10)
-    : String(dateValue)
+  dateValue instanceof Date ? toCalendarDate(dateValue) : String(dateValue)
 
 /**
  * Maps a date to the reporting period it falls in for the given cadence.

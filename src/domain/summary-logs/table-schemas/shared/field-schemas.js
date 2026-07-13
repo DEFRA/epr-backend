@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
 import { customJoi } from '#common/validation/custom-joi.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * Common field schema factories for table validation
@@ -22,9 +23,6 @@ const DATE_MIN = new Date('2000-01-01')
 const DATE_MAX = new Date('2100-01-01')
 const CALENDAR_DATE_ERROR = 'any.calendarDate'
 const CALENDAR_DATE_PATTERN = /^(\d{4}-\d{2}-\d{2})/
-
-/** @param {Date} date */
-const toCalendarDate = (date) => date.toISOString().slice(0, 10)
 
 /**
  * 3-digit ID constraints

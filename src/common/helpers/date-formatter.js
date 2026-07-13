@@ -52,28 +52,33 @@ export function formatDateTimeDots(date) {
 }
 
 /**
+ * The YYYY-MM-DD calendar date for a Date, in UTC.
+ * @param {Date} date
+ * @returns {string} YYYY-MM-DD
+ */
+export const toCalendarDate = (date) => date.toISOString().slice(0, 10)
+
+/**
  * Formats year, month, and day components as an ISO date string (YYYY-MM-DD).
  * @param {number} year
  * @param {number} month - 0-indexed month
  * @param {number} day - day of month (0 = last day of previous month)
  * @returns {string}
  */
-export function formatDateISO(year, month, day) {
-  return new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10)
-}
+export const formatDateISO = (year, month, day) =>
+  toCalendarDate(new Date(Date.UTC(year, month, day)))
 
 /**
  * Extracts the YYYY-MM-DD calendar date from a date field, tolerant of either
  * a bare date string or a full ISO datetime string — older persisted
  * documents may carry the latter due to historical Joi coercion. Slicing to
  * the first 10 characters means callers never need to know or care which
- * shape a given stored value is in.
- * @param {string} dateString
- * @returns {string} YYYY-MM-DD
+ * shape a given stored value is in. Nullish input passes through as null so
+ * optional-chained callers compose without a pre-slice guard.
+ * @param {string | null | undefined} dateString
+ * @returns {string | null} YYYY-MM-DD, or null when input is nullish
  */
-export function calendarDate(dateString) {
-  return dateString.slice(0, 10)
-}
+export const calendarDate = (dateString) => dateString?.slice(0, 10) ?? null
 
 /**
  * Expands a calendar-date string (bare YYYY-MM-DD or a full ISO datetime,

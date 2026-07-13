@@ -1,4 +1,5 @@
 import { PERIOD_STATUS } from './period-status.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * @import { ReportStatus } from './report-status.js'
@@ -9,7 +10,7 @@ import { PERIOD_STATUS } from './period-status.js'
  * Current UTC date as an ISO `YYYY-MM-DD` string.
  * @returns {string}
  */
-const currentIsoDate = () => new Date().toISOString().split('T')[0]
+const currentIsoDate = () => toCalendarDate(new Date())
 
 /**
  * Derive a reporting period's status from its stored report and period dates.

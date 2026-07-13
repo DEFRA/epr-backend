@@ -1,3 +1,5 @@
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
+
 /**
  * Checks if the cell value is a formula cell (regular or shared).
  */
@@ -32,7 +34,7 @@ const extractObjectCellValue = (cellValue, recursiveExtract) => {
     if (Number.isNaN(cellValue.getTime())) {
       return null
     }
-    return cellValue.toISOString().slice(0, 10)
+    return toCalendarDate(cellValue)
   }
 
   // Formula cells with result - recursively extract
