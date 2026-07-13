@@ -75,14 +75,14 @@ describe('validateRegistrationNumber', () => {
       "Summary log's registration number does not match this registration"
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.location).toEqual({
+    expect(fatals[0].context?.location).toEqual({
       sheet: 'Cover',
       row: 12,
       column: 'F',
       field: 'REGISTRATION_NUMBER'
     })
-    expect(fatals[0].context.expected).toBe('REG12345')
-    expect(fatals[0].context.actual).toBe('REG99999')
+    expect(fatals[0].context?.expected).toBe('REG12345')
+    expect(fatals[0].context?.actual).toBe('REG99999')
   })
 
   it('returns valid result when registration numbers match', () => {
@@ -131,14 +131,14 @@ describe('validateRegistrationNumber', () => {
     })
 
     const error = result.getAllIssues()[0]
-    expect(error.context.location).toEqual({
+    expect(error.context?.location).toEqual({
       sheet: 'Cover',
       row: 12,
       column: 'F',
       field: 'REGISTRATION_NUMBER'
     })
-    expect(error.context.expected).toBe('REG12345')
-    expect(error.context.actual).toBe('REG99999')
+    expect(error.context?.expected).toBe('REG12345')
+    expect(error.context?.actual).toBe('REG99999')
   })
 
   it('categorizes mismatched numbers as fatal business error', () => {
@@ -211,7 +211,7 @@ describe('validateRegistrationNumber', () => {
 
     expect(result.isFatal()).toBe(true)
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals[0].context.actual).toBe('REG99999')
+    expect(fatals[0].context?.actual).toBe('REG99999')
   })
 
   it('coerces numeric spreadsheet value to string before comparing', () => {
@@ -260,7 +260,7 @@ describe('validateRegistrationNumber', () => {
     expect(result.isFatal()).toBe(true)
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
-    expect(fatals[0].context.actual).toBeNull()
+    expect(fatals[0].context?.actual).toBeNull()
   })
 
   it('handles missing location gracefully by including only field', () => {
@@ -284,7 +284,7 @@ describe('validateRegistrationNumber', () => {
 
     expect(result.isFatal()).toBe(true)
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals[0].context.location).toEqual({
+    expect(fatals[0].context?.location).toEqual({
       field: 'REGISTRATION_NUMBER' // Only field is set when location is missing
     })
   })

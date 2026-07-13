@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { assertPresent } from '#test/assert-present.js'
 import {
   mergeReportingPeriods,
   selectSubmittedReports
@@ -38,6 +39,16 @@ const reportSummary = (overrides = {}) => {
     ...overrides
   }
 }
+
+/**
+ * @import { PeriodicReport } from '../repository/port.js'
+ */
+
+/**
+ * @param {unknown} reports
+ * @returns {PeriodicReport[]}
+ */
+const asPeriodicReports = (reports) => /** @type {PeriodicReport[]} */ (reports)
 
 describe('mergeReportingPeriods', () => {
   const computedPeriods = [
@@ -89,7 +100,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -122,7 +133,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -333,7 +344,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -362,14 +373,15 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
     expect(result).toHaveLength(3)
     const period3 = result.find((p) => p.period === 3)
-    expect(period3?.report).toEqual(reportSummary({ id: 'report-uuid-3' }))
-    expect(period3?.startDate).toBe('2026-03-01')
+    assertPresent(period3)
+    expect(period3.report).toEqual(reportSummary({ id: 'report-uuid-3' }))
+    expect(period3.startDate).toBe('2026-03-01')
   })
 
   it('ignores persisted slots with null current not in computed set', () => {
@@ -399,7 +411,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -428,7 +440,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -458,7 +470,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
