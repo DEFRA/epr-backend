@@ -3,7 +3,10 @@
 
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+import {
+  mergeReportingPeriods,
+  selectSubmittedReports
+} from '#reports/domain/merge-reporting-periods.js'
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
@@ -52,6 +55,7 @@ import {
  * @property {string} dueDate
  * @property {string} submittedDate
  * @property {string} submittedBy
+ * @property {number | ''} submissionNumber
  */
 
 /** @typedef {SubmissionBaseFields & TonnageFields} ReportSubmissionsRow */
@@ -133,8 +137,7 @@ function buildTonnageFields(report) {
  * @param {string} cadence
  * @param {object} mergedPeriod
  * @param {string} accreditationNumber
- * @param {string} submittedDate
- * @param {string} submittedBy
+ * @param {import('#reports/repository/port.js').ReportSummary | null} report
  * @returns {ReportSubmissionsRow}
  */
 function buildRow(
@@ -143,8 +146,7 @@ function buildRow(
   cadence,
   mergedPeriod,
   accreditationNumber,
-  submittedDate,
-  submittedBy
+  report
 ) {
   return {
     regulator: REGULATOR_DISPLAY[registration.submittedToRegulator],
@@ -170,9 +172,13 @@ function buildRow(
       mergedPeriod.year
     ),
     dueDate: mergedPeriod.dueDate,
-    submittedDate,
-    submittedBy,
-    ...buildTonnageFields(mergedPeriod.report)
+    // Every report-derived field describes this one submitted report, so the
+    // row stays internally consistent. An in-flight draft is never a `report`
+    // here, so it produces no row until it is itself submitted.
+    submittedDate: calendarDate(report?.submittedAt) ?? '',
+    submittedBy: report?.submittedBy?.name ?? '',
+    submissionNumber: report?.submissionNumber ?? '',
+    ...buildTonnageFields(report)
   }
 }
 
@@ -209,16 +215,26 @@ async function buildSubmissionRows(
       cadence
     )
 
-    return merged.map((mergedPeriod) => {
-      const report = mergedPeriod.report
-      return buildRow(
-        org,
-        registration,
-        cadence,
-        mergedPeriod,
-        accreditationNumber,
-        calendarDate(report?.submittedAt) ?? '',
-        report?.submittedBy?.name ?? ''
+    return merged.flatMap((mergedPeriod) => {
+      // One row per submitted report, so a resubmitted period fans out. A period
+      // with nothing submitted still gets a single blank row (`null`), keeping
+      // outstanding periods visible. The feed is the only consumer of this
+      // projection, so it derives it here rather than the merge stamping it onto
+      // every period for the calendar path to strip straight back off.
+      const submitted = selectSubmittedReports({
+        current: mergedPeriod.report,
+        previousSubmissions: mergedPeriod.previousSubmissions
+      })
+      const reports = submitted.length ? submitted : [null]
+      return reports.map((report) =>
+        buildRow(
+          org,
+          registration,
+          cadence,
+          mergedPeriod,
+          accreditationNumber,
+          report
+        )
       )
     })
   })
