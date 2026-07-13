@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 import { Decimal128 } from 'mongodb'
 import {
   buildEffectiveMaterialStages,
@@ -17,10 +17,13 @@ import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
  * @param {string} material
  * @returns {{ totalTonnage: number, availableAmount: number }}
  */
-const findMaterial = (materials, material) =>
-  /** @type {{ totalTonnage: number, availableAmount: number }} */ (
-    /** @type {unknown} */ (materials.find((m) => m.material === material))
+const findMaterial = (materials, material) => {
+  const found = materials.find((m) => m.material === material)
+  assertPresent(found)
+  return /** @type {{ totalTonnage: number, availableAmount: number }} */ (
+    /** @type {unknown} */ (found)
   )
+}
 
 describe('material-aggregation', () => {
   describe('buildEffectiveMaterialStages', () => {

@@ -7,6 +7,7 @@ import { performUpdateViaLedger } from './update-via-ledger.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { partialMock } from '#test/type-helpers.js'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
@@ -56,13 +57,12 @@ const ledgerId = {
   accreditationId
 }
 
-const accreditation = /** @type {Accreditation} */ (
-  /** @type {unknown} */ ({
-    id: accreditationId,
-    validFrom: '2023-01-01',
-    validTo: '2030-12-31'
-  })
-)
+/** @type {Accreditation} */
+const accreditation = partialMock({
+  id: accreditationId,
+  validFrom: '2023-01-01',
+  validTo: '2030-12-31'
+})
 
 const overseasSites = /** @type {*} */ (new Map())
 const user = {

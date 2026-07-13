@@ -29,13 +29,15 @@ describe('collateUsers', () => {
       email: 'org-submitter@example.com'
     }
   } = {}) =>
-    /** @type {Organisation} */ ({
-      statusHistory: [{ status: 'created', updatedAt: new Date() }],
-      submitterContactDetails,
-      users,
-      registrations,
-      accreditations
-    })
+    /** @type {Organisation} */ (
+      /** @type {unknown} */ ({
+        statusHistory: [{ status: 'created', updatedAt: new Date() }],
+        submitterContactDetails,
+        users,
+        registrations,
+        accreditations
+      })
+    )
 
   /**
    * @param {{

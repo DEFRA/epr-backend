@@ -1,10 +1,10 @@
 /**
  * @typedef {Object} OverseasSiteAddress
  * @property {string} line1
- * @property {string} [line2]
+ * @property {string | null} [line2]
  * @property {string} townOrCity
- * @property {string} [stateOrRegion]
- * @property {string} [postcode]
+ * @property {string | null} [stateOrRegion]
+ * @property {string | null} [postcode]
  */
 
 /**

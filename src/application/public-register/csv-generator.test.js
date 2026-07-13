@@ -1,6 +1,9 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { generateCsv } from './csv-generator.js'
 
+/** @import {PublicRegisterRow} from './types.js' */
+/** @import {CompliancePeriod} from '#reports/domain/compliance-reporting-periods.js' */
+
 describe('generateCsv', () => {
   const mockInput = [
     {
@@ -51,14 +54,16 @@ describe('generateCsv', () => {
   })
 
   it('should generate a CSV string with correct headers and data rows', async () => {
-    const periods = [
+    const periods = /** @type {CompliancePeriod[]} */ ([
       { label: 'Jan Report', key: '2026:monthly:1' },
       { label: 'Q1 Report', key: '2026:quarterly:1' }
-    ]
-    const rows = [
-      { ...mockInput[0], 'Jan Report': '05/01/2026', 'Q1 Report': 'N/A' },
-      { ...mockInput[1], 'Jan Report': '', 'Q1 Report': '15/04/2026' }
-    ]
+    ])
+    const rows = /** @type {PublicRegisterRow[]} */ (
+      /** @type {unknown} */ ([
+        { ...mockInput[0], 'Jan Report': '05/01/2026', 'Q1 Report': 'N/A' },
+        { ...mockInput[1], 'Jan Report': '', 'Q1 Report': '15/04/2026' }
+      ])
+    )
 
     const csv = await generateCsv(rows, periods)
 

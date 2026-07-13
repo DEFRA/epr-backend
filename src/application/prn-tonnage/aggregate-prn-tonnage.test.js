@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { aggregatePrnTonnage } from './aggregate-prn-tonnage.js'
 

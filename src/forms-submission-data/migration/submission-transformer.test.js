@@ -249,7 +249,7 @@ describe('transformAll', () => {
       })
 
     // But parse operations fail for second item in each category
-    parseOrgSubmission
+    vi.mocked(parseOrgSubmission)
       .mockReturnValueOnce([
         {
           id: org1Id.toString(),
@@ -263,7 +263,7 @@ describe('transformAll', () => {
       .mockImplementationOnce(() => {
         throw new Error('Organisation parse failed')
       })
-    parseRegistrationSubmission
+    vi.mocked(parseRegistrationSubmission)
       .mockReturnValueOnce([
         {
           id: reg1Id.toString(),
@@ -275,7 +275,7 @@ describe('transformAll', () => {
       .mockImplementationOnce(() => {
         throw new Error('Registration parse failed')
       })
-    parseAccreditationSubmission
+    vi.mocked(parseAccreditationSubmission)
       .mockReturnValueOnce([
         {
           id: accrId1.toString(),

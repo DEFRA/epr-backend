@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { assertPresent } from '#test/type-helpers.js'
 import Joi from 'joi'
 import {
   validateUkPackagingWeightProportion,
@@ -82,11 +83,11 @@ describe('validateUkPackagingWeightProportion', () => {
         PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 400 // Should be 375
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe(
+      assertPresent(error)
+      expect(error.details[0]?.type).toBe(
         'custom.ukPackagingProportionCalculationMismatch'
       )
-      expect(error.details[0].message).toBe(
+      expect(error.details[0]?.message).toBe(
         'must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE'
       )
     })
@@ -99,8 +100,8 @@ describe('validateUkPackagingWeightProportion', () => {
         PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 375.001
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe(
+      assertPresent(error)
+      expect(error.details[0]?.type).toBe(
         'custom.ukPackagingProportionCalculationMismatch'
       )
     })
@@ -113,8 +114,8 @@ describe('validateUkPackagingWeightProportion', () => {
         PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 999
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].context.field).toBe(
+      assertPresent(error)
+      expect(error.details[0]?.context?.field).toBe(
         'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
       )
     })

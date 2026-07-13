@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { assertPresent } from '#test/type-helpers.js'
 import Joi from 'joi'
 import {
   validateNetWeight,
@@ -39,6 +40,7 @@ describe('extractWeightFields', () => {
       }
 
       const result = extractWeightFields(row)
+      assertPresent(result)
 
       expect(Object.keys(result)).toEqual([
         'grossWeight',
@@ -205,9 +207,9 @@ describe('validateNetWeight', () => {
         NET_WEIGHT: 80 // Should be 75
       })
 
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.netWeightCalculationMismatch')
-      expect(error.details[0].message).toBe(
+      assertPresent(error)
+      expect(error.details[0]?.type).toBe('custom.netWeightCalculationMismatch')
+      expect(error.details[0]?.message).toBe(
         'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
       )
     })

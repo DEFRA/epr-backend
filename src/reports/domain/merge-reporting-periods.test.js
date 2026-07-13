@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 import {
   mergeReportingPeriods,
   selectSubmittedReports
@@ -164,7 +164,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 

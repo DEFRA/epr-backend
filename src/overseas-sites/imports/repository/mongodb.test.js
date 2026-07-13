@@ -1,6 +1,6 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 import { afterEach, describe, expect, vi } from 'vitest'
 import { createOrsImportsRepository } from './mongodb.js'
 import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
@@ -164,7 +164,8 @@ describe('MongoDB ORS imports repository', () => {
     await repository.updateStatus('import-ttl-2', ORS_IMPORT_STATUS.PROCESSING)
 
     const found = await repository.findById('import-ttl-2')
-    assertPresent(found?.expiresAt)
+    assertPresent(found)
+    assertPresent(found.expiresAt)
 
     expect(found.expiresAt).toBeInstanceOf(Date)
     expect(found.expiresAt.getTime()).toBeGreaterThan(

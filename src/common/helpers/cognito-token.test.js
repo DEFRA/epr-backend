@@ -139,7 +139,10 @@ describe('#getCognitoToken', () => {
 
   describe('on error responses', () => {
     test('throws error when fetchJson fails', async () => {
-      const error = new Error('Failed to fetch')
+      const error =
+        /** @type {Error & { isBoom: boolean, output: { statusCode: number } }} */ (
+          new Error('Failed to fetch')
+        )
       error.isBoom = true
       error.output = { statusCode: 401 }
 

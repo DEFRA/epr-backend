@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { assertPresent } from '#test/type-helpers.js'
 import { aggregateTonnageByMaterial } from './aggregate-tonnage.js'
 
 const createMockDb = (aggregateResults) => ({
@@ -126,6 +127,8 @@ describe('aggregateTonnageByMaterial', () => {
     const plasticReprocessor = result.materials.find(
       (m) => m.material === 'plastic' && m.type === 'Reprocessor'
     )
+    assertPresent(plasticReprocessor)
+
     expect(plasticReprocessor.months).toEqual([
       { month: 'Jan', tonnage: 0 },
       { month: 'Feb', tonnage: 0 }
@@ -135,6 +138,8 @@ describe('aggregateTonnageByMaterial', () => {
     const aluminiumExporter = result.materials.find(
       (m) => m.material === 'aluminium' && m.type === 'Exporter'
     )
+    assertPresent(aluminiumExporter)
+
     expect(aluminiumExporter.months).toEqual([
       { month: 'Jan', tonnage: 0 },
       { month: 'Feb', tonnage: 0 }

@@ -8,9 +8,15 @@ import {
   extractReferenceNumber,
   getRegulatorEmail
 } from './extract-answers.js'
+import { invalidArg } from '#test/type-helpers.js'
+
+/** @import { Answer, Component } from './extract-answers.js' */
 
 vi.mock('#root/config.js', async (importOriginal) => {
-  const configImportOriginal = await importOriginal()
+  const configImportOriginal =
+    /** @type {Record<string, unknown> & { getConfig: typeof getConfig }} */ (
+      await importOriginal()
+    )
 
   return {
     ...configImportOriginal,
@@ -30,12 +36,12 @@ describe('extractAnswers', () => {
           pages: [
             {
               components: [
-                {
+                /** @type {Component} */ ({
                   name: 'test',
                   shortDescription: 'test desc',
                   title: 'Test',
                   type: 'text'
-                }
+                })
               ]
             }
           ]
@@ -58,18 +64,18 @@ describe('extractAnswers', () => {
   })
 
   it('should return empty array for undefined payload', () => {
-    expect(extractAnswers(undefined)).toEqual([])
+    expect(extractAnswers(invalidArg(undefined))).toEqual([])
   })
 })
 
 describe('extractEmail', () => {
   it('should extract email from answers', () => {
-    const answers = [
+    const answers = /** @type {Answer[]} */ ([
       {
         shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.EMAIL,
         value: 'test@example.com'
       }
-    ]
+    ])
     expect(extractEmail(answers)).toEqual('test@example.com')
   })
 
@@ -80,12 +86,12 @@ describe('extractEmail', () => {
 
 describe('extractOrgId', () => {
   it('should extract organisation id from answers', () => {
-    const answers = [
+    const answers = /** @type {Answer[]} */ ([
       {
         shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ID,
         value: '500019'
       }
-    ]
+    ])
     expect(extractOrgId(answers)).toEqual(500019)
   })
 
@@ -96,12 +102,12 @@ describe('extractOrgId', () => {
 
 describe('extractOrgName', () => {
   it('should extract organisation name from answers', () => {
-    const answers = [
+    const answers = /** @type {Answer[]} */ ([
       {
         shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_NAME,
         value: 'Test Org'
       }
-    ]
+    ])
     expect(extractOrgName(answers)).toEqual('Test Org')
   })
 
@@ -112,12 +118,12 @@ describe('extractOrgName', () => {
 
 describe('extractReferenceNumber', () => {
   it('should extract reference number from answers', () => {
-    const answers = [
+    const answers = /** @type {Answer[]} */ ([
       {
         shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.REFERENCE_NUMBER,
         value: '68a66ec3dabf09f3e442b2da'
       }
-    ]
+    ])
     expect(extractReferenceNumber(answers)).toEqual('68a66ec3dabf09f3e442b2da')
   })
 
@@ -178,7 +184,7 @@ describe('getRegulatorEmail', () => {
   it('should return undefined if regulator config is missing', () => {
     const config = getConfig()
 
-    getConfig.mockImplementation(() => ({
+    vi.mocked(getConfig).mockImplementation(() => ({
       ...config,
       get: (item) => {
         if (item.startsWith('regulator')) {

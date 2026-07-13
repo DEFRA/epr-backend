@@ -9,7 +9,7 @@ import {
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from './parse-forms-data.js'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 import { ORGANISATION } from '../organisation/form-field-constants.js'
 import { REGISTRATION } from '../registration/form-field-constants.js'
 import { ACCREDITATION } from '../accreditation/form-field-constants.js'

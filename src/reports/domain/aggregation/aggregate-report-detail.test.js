@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertPresent } from '#test/assert-present.js'
+import { assertPresent } from '#test/type-helpers.js'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
@@ -496,7 +496,8 @@ describe('#aggregateReportDetail', () => {
         exporterArgs
       )
 
-      expect(result.exportActivity?.totalTonnageExported).toBe(11.47)
+      assertPresent(result.exportActivity)
+      expect(result.exportActivity.totalTonnageExported).toBe(11.47)
     })
 
     it('routes unresolved ORS IDs to unapprovedOverseasSites and keeps overseasSites empty', () => {
@@ -517,8 +518,9 @@ describe('#aggregateReportDetail', () => {
         exporterArgs
       )
 
-      expect(result.exportActivity?.overseasSites).toStrictEqual([])
-      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
+      assertPresent(result.exportActivity)
+      expect(result.exportActivity.overseasSites).toStrictEqual([])
+      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
         { orsId: '001', tonnageExported: 5 },
         { orsId: '096', tonnageExported: 5 }
       ])
@@ -558,7 +560,8 @@ describe('#aggregateReportDetail', () => {
         orsDetailsMap
       })
 
-      expect(result.exportActivity?.overseasSites).toStrictEqual([
+      assertPresent(result.exportActivity)
+      expect(result.exportActivity.overseasSites).toStrictEqual([
         {
           orsId: '001',
           siteName: 'EuroPlast GmbH',
@@ -596,7 +599,8 @@ describe('#aggregateReportDetail', () => {
         exporterArgs
       )
 
-      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
+      assertPresent(result.exportActivity)
+      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
         { orsId: '500', tonnageExported: 7.75 }
       ])
     })

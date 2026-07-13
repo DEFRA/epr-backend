@@ -264,7 +264,8 @@ describe('validation-pipeline', () => {
             SOME_FIELD: Joi.string().optional()
           })
             .unknown(true)
-            .prefs({ abortEarly: false })
+            .prefs({ abortEarly: false }),
+          classifyForWasteBalance: null
         }
 
         const row = { ROW_ID: 10001, SOME_FIELD: 'valid value' }
@@ -282,7 +283,8 @@ describe('validation-pipeline', () => {
             ROW_ID: Joi.number().min(10000).optional()
           })
             .unknown(true)
-            .prefs({ abortEarly: false })
+            .prefs({ abortEarly: false }),
+          classifyForWasteBalance: null
         }
 
         const row = { ROW_ID: 9999 }
@@ -430,12 +432,14 @@ describe('validation-pipeline', () => {
         const result = classifyRow(row, schema)
 
         expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
-        expect(result.issues).toHaveLength(1)
-        expect(result.issues[0].field).toBe('RESULT')
-        expect(result.issues[0].message).toBe('must equal VALUE_A × VALUE_B')
-        expect(result.issues[0].type).toBe(
-          'custom.netWeightCalculationMismatch'
-        )
+        expect(result.issues).toStrictEqual([
+          {
+            code: 'VALIDATION_ERROR',
+            field: 'RESULT',
+            message: 'must equal VALUE_A × VALUE_B',
+            type: 'custom.netWeightCalculationMismatch'
+          }
+        ])
       })
     })
 
