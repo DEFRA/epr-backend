@@ -8,13 +8,10 @@ import {
   MATERIAL,
   GLASS_RECYCLING_PROCESS
 } from '#domain/organisations/model.js'
-import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
-import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
-import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 const DATABASE_NAME = 'epr-backend'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
+const WASTE_RECORDS_COLLECTION = 'waste-records'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -39,122 +36,78 @@ const createRegistration = (id, material, glassRecyclingProcess) => ({
   ...(glassRecyclingProcess && { glassRecyclingProcess })
 })
 
-const latestSubmittedSummaryLogIdFor = (registrationId) =>
-  `sl-${registrationId}`
-
-const createRowState = ({
+const createExporterWasteRecord = (
   organisationId,
   registrationId,
-  accreditationId = null,
-  wasteRecordType,
-  processingType,
-  data,
-  summaryLogId
-}) => ({
+  tonnage,
+  dateOfExport
+) => ({
   organisationId,
   registrationId,
-  accreditationId,
-  wasteRecordType,
   rowId: `row-${Math.random()}`,
-  processingType,
-  data,
-  classification: {
-    outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
-    reasons: [],
-    transactionAmount: 0
+  type: WASTE_RECORD_TYPE.EXPORTED,
+  data: {
+    processingType: PROCESSING_TYPES.EXPORTER,
+    TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: tonnage,
+    DATE_OF_EXPORT: dateOfExport
   },
-  summaryLogIds: [summaryLogId]
+  versions: []
 })
 
-const createExporterRowState = (
+const createExporterInterimSiteWasteRecord = (
   organisationId,
   registrationId,
   tonnage,
-  dateOfExport,
-  summaryLogId = latestSubmittedSummaryLogIdFor(registrationId)
-) =>
-  createRowState({
-    organisationId,
-    registrationId,
-    summaryLogId,
-    wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+  dateOfExport
+) => ({
+  organisationId,
+  registrationId,
+  rowId: `row-${Math.random()}`,
+  type: WASTE_RECORD_TYPE.EXPORTED,
+  data: {
     processingType: PROCESSING_TYPES.EXPORTER,
-    data: {
-      TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: tonnage,
-      DATE_OF_EXPORT: dateOfExport
-    }
-  })
+    DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'Yes',
+    TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR: tonnage,
+    DATE_OF_EXPORT: dateOfExport
+  },
+  versions: []
+})
 
-const createExporterInterimSiteRowState = (
+const createReprocessorInputWasteRecord = (
   organisationId,
   registrationId,
   tonnage,
-  dateOfExport,
-  summaryLogId = latestSubmittedSummaryLogIdFor(registrationId)
-) =>
-  createRowState({
-    organisationId,
-    registrationId,
-    summaryLogId,
-    wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-    processingType: PROCESSING_TYPES.EXPORTER,
-    data: {
-      DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'Yes',
-      TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR: tonnage,
-      DATE_OF_EXPORT: dateOfExport
-    }
-  })
-
-const createReprocessorInputRowState = (
+  dateReceived
+) => ({
   organisationId,
   registrationId,
-  tonnage,
-  dateReceived,
-  summaryLogId = latestSubmittedSummaryLogIdFor(registrationId)
-) =>
-  createRowState({
-    organisationId,
-    registrationId,
-    summaryLogId,
-    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  rowId: `row-${Math.random()}`,
+  type: WASTE_RECORD_TYPE.RECEIVED,
+  data: {
     processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-    data: {
-      TONNAGE_RECEIVED_FOR_RECYCLING: tonnage,
-      DATE_RECEIVED_FOR_REPROCESSING: dateReceived
-    }
-  })
+    TONNAGE_RECEIVED_FOR_RECYCLING: tonnage,
+    DATE_RECEIVED_FOR_REPROCESSING: dateReceived
+  },
+  versions: []
+})
 
-const createReprocessorOutputRowState = (
+const createReprocessorOutputWasteRecord = (
   organisationId,
   registrationId,
   tonnage,
-  dateLeftSite,
-  summaryLogId = latestSubmittedSummaryLogIdFor(registrationId)
-) =>
-  createRowState({
-    organisationId,
-    registrationId,
-    summaryLogId,
-    wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
+  dateLeftSite
+) => ({
+  organisationId,
+  registrationId,
+  rowId: `row-${Math.random()}`,
+  type: WASTE_RECORD_TYPE.PROCESSED,
+  data: {
     processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT,
-    data: {
-      ADD_PRODUCT_WEIGHT: 'Yes',
-      PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: tonnage,
-      DATE_LOAD_LEFT_SITE: dateLeftSite
-    }
-  })
-
-const submittedSummaryLogEvent = ({
-  registrationId,
-  accreditationId,
-  summaryLogId,
-  number
-}) => ({
-  registrationId,
-  accreditationId,
-  number,
-  kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-  payload: { summaryLogId, creditTotal: 0 }
+    ADD_PRODUCT_WEIGHT: 'Yes',
+    PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: tonnage,
+    DATE_LOAD_LEFT_SITE: dateLeftSite
+  },
+  versions: []
 })
 
 describe('aggregateTonnageByMaterial - Integration', () => {
@@ -166,32 +119,6 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
   let db
 
-  /**
-   * Insert row states and record one submitted summary log per distinct ledger
-   * partition, so every row's `summaryLogIds[0]` is the latest submitted summary
-   * log of its `(registrationId, accreditationId)` ledger.
-   */
-  const submitRows = async (rows) => {
-    await db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).insertMany(rows)
-
-    const submissions = new Map()
-    for (const row of rows) {
-      submissions.set(`${row.registrationId}::${row.accreditationId}`, {
-        registrationId: row.registrationId,
-        accreditationId: row.accreditationId,
-        summaryLogId: row.summaryLogIds[0]
-      })
-    }
-
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
-      .insertMany(
-        [...submissions.values()].map((submission) =>
-          submittedSummaryLogEvent({ ...submission, number: 1 })
-        )
-      )
-  }
-
   beforeEach(
     async (
       /** @type {{ mongoClient: import('mongodb').MongoClient }} */ {
@@ -202,8 +129,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       vi.setSystemTime(new Date('2026-03-15T10:00:00.000Z'))
       db = mongoClient.db(DATABASE_NAME)
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-      await db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).deleteMany({})
-      await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).deleteMany({})
+      await db.collection(WASTE_RECORDS_COLLECTION).deleteMany({})
     }
   )
 
@@ -220,10 +146,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         ])
       )
 
-    await submitRows([
-      createExporterRowState(orgId1, regId1, 100, '2026-01-15'),
-      createExporterRowState(orgId1, regId1, 50, '2026-01-16')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15'),
+        createExporterWasteRecord(orgId1, regId1, 50, '2026-01-16')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
@@ -299,10 +227,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         ])
       )
 
-    await submitRows([
-      createExporterInterimSiteRowState(orgId1, regId1, 75, '2026-01-15'),
-      createExporterInterimSiteRowState(orgId1, regId1, 25, '2026-01-16')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterInterimSiteWasteRecord(orgId1, regId1, 75, '2026-01-15'),
+        createExporterInterimSiteWasteRecord(orgId1, regId1, 25, '2026-01-16')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
@@ -330,10 +260,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         ])
       )
 
-    await submitRows([
-      createExporterRowState(orgId1, regId1, 60, '2026-01-15'),
-      createExporterRowState(orgId1, regId1, 40, '2026-01-16')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterWasteRecord(orgId1, regId1, 60, '2026-01-15'),
+        createExporterWasteRecord(orgId1, regId1, 40, '2026-01-16')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
@@ -361,10 +293,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         ])
       )
 
-    await submitRows([
-      createReprocessorInputRowState(orgId1, regId1, 120, '2026-01-10'),
-      createReprocessorInputRowState(orgId1, regId1, 80, '2026-01-11')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createReprocessorInputWasteRecord(orgId1, regId1, 120, '2026-01-10'),
+        createReprocessorInputWasteRecord(orgId1, regId1, 80, '2026-01-11')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
@@ -397,10 +331,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         ])
       )
 
-    await submitRows([
-      createExporterRowState(orgId1, regId1, 100, '2026-01-15'),
-      createExporterRowState(orgId1, regId4, 75, '2026-01-15')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15'),
+        createExporterWasteRecord(orgId1, regId4, 75, '2026-01-15')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
@@ -434,10 +370,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         createOrganisation(orgId1, [createRegistration(regId1, MATERIAL.PAPER)])
       )
 
-    await submitRows([
-      createReprocessorInputRowState(orgId1, regId1, 200, '2026-01-10'),
-      createReprocessorInputRowState(orgId1, regId1, 300, '2026-01-11')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createReprocessorInputWasteRecord(orgId1, regId1, 200, '2026-01-10'),
+        createReprocessorInputWasteRecord(orgId1, regId1, 300, '2026-01-11')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
@@ -461,10 +399,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         createOrganisation(orgId1, [createRegistration(regId1, MATERIAL.STEEL)])
       )
 
-    await submitRows([
-      createReprocessorOutputRowState(orgId1, regId1, 150, '2026-01-20'),
-      createReprocessorOutputRowState(orgId1, regId1, 50, '2026-01-21')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createReprocessorOutputWasteRecord(orgId1, regId1, 150, '2026-01-20'),
+        createReprocessorOutputWasteRecord(orgId1, regId1, 50, '2026-01-21')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
@@ -496,11 +436,13 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         ])
       ])
 
-    await submitRows([
-      createExporterRowState(orgId1, regId1, 100, '2026-01-15'),
-      createExporterRowState(orgId1, regId2, 50, '2026-01-15'),
-      createReprocessorInputRowState(orgId2, regId3, 200, '2026-01-15')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15'),
+        createExporterWasteRecord(orgId1, regId2, 50, '2026-01-15'),
+        createReprocessorInputWasteRecord(orgId2, regId3, 200, '2026-01-15')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
@@ -537,161 +479,6 @@ describe('aggregateTonnageByMaterial - Integration', () => {
     expect(result.total).toBe(350)
   })
 
-  it('includes only the row states from the latest submitted summary log, excluding superseded states', async () => {
-    await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC)
-        ])
-      )
-
-    // An earlier submission carried a 100t row; a later submission re-stated it
-    // as 250t. The changed content lives in a distinct state document whose
-    // membership carries only its own submission, so the two never merge.
-    await db
-      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-      .insertMany([
-        createExporterRowState(orgId1, regId1, 100, '2026-01-15', 'sl-old'),
-        createExporterRowState(orgId1, regId1, 250, '2026-01-15', 'sl-new')
-      ])
-
-    await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).insertMany([
-      submittedSummaryLogEvent({
-        registrationId: regId1,
-        accreditationId: null,
-        summaryLogId: 'sl-old',
-        number: 1
-      }),
-      submittedSummaryLogEvent({
-        registrationId: regId1,
-        accreditationId: null,
-        summaryLogId: 'sl-new',
-        number: 2
-      })
-    ])
-
-    const result = await aggregateTonnageByMaterial(db)
-
-    expect(result.materials).toContainEqual({
-      material: MATERIAL.PLASTIC,
-      year: 2026,
-      type: 'Exporter',
-      months: [
-        { month: 'Jan', tonnage: 250 },
-        { month: 'Feb', tonnage: 0 },
-        { month: 'Mar', tonnage: 0 }
-      ]
-    })
-    expect(result.total).toBe(250)
-  })
-
-  it('excludes row states whose registration has no submitted summary log', async () => {
-    await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC)
-        ])
-      )
-
-    await db
-      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-      .insertOne(createExporterRowState(orgId1, regId1, 100, '2026-01-15'))
-
-    const result = await aggregateTonnageByMaterial(db)
-
-    expect(result.total).toBe(0)
-  })
-
-  it('resolves the latest submitted summary log even when later ledger events exist', async () => {
-    await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC)
-        ])
-      )
-
-    await db
-      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-      .insertOne(createExporterRowState(orgId1, regId1, 100, '2026-01-15'))
-
-    await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).insertMany([
-      submittedSummaryLogEvent({
-        registrationId: regId1,
-        accreditationId: null,
-        summaryLogId: latestSubmittedSummaryLogIdFor(regId1),
-        number: 1
-      }),
-      {
-        registrationId: regId1,
-        accreditationId: null,
-        number: 2,
-        kind: LEDGER_EVENT_KIND.PRN_ISSUED,
-        payload: { prnId: 'PRN-1', amount: 10 }
-      }
-    ])
-
-    const result = await aggregateTonnageByMaterial(db)
-
-    expect(result.total).toBe(100)
-  })
-
-  it('resolves the latest submitted summary log independently for a registered-only and an accredited ledger', async () => {
-    await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertMany([
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC)
-        ]),
-        createOrganisation(orgId2, [
-          createRegistration(regId2, MATERIAL.PLASTIC)
-        ])
-      ])
-
-    const registeredOnlyRow = createExporterRowState(
-      orgId1,
-      regId1,
-      100,
-      '2026-01-15',
-      'sl-registered-only'
-    )
-    const accreditedRow = {
-      ...createExporterRowState(
-        orgId2,
-        regId2,
-        30,
-        '2026-01-15',
-        'sl-accredited'
-      ),
-      accreditationId: 'ACC-1'
-    }
-
-    await db
-      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-      .insertMany([registeredOnlyRow, accreditedRow])
-
-    await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).insertMany([
-      submittedSummaryLogEvent({
-        registrationId: regId1,
-        accreditationId: null,
-        summaryLogId: 'sl-registered-only',
-        number: 1
-      }),
-      submittedSummaryLogEvent({
-        registrationId: regId2,
-        accreditationId: 'ACC-1',
-        summaryLogId: 'sl-accredited',
-        number: 1
-      })
-    ])
-
-    const result = await aggregateTonnageByMaterial(db)
-
-    expect(result.total).toBe(130)
-  })
-
   it('excludes records without dispatch date', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
@@ -701,18 +488,19 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         ])
       )
 
-    await submitRows([
-      createExporterRowState(orgId1, regId1, 100, '2026-01-15'),
-      createRowState({
+    await db.collection(WASTE_RECORDS_COLLECTION).insertMany([
+      createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15'),
+      {
         organisationId: orgId1,
         registrationId: regId1,
-        summaryLogId: latestSubmittedSummaryLogIdFor(regId1),
-        wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-        processingType: PROCESSING_TYPES.EXPORTER,
+        rowId: 'row-no-date',
+        type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 999
-        }
-      })
+        },
+        versions: []
+      }
     ])
 
     const result = await aggregateTonnageByMaterial(db)
@@ -739,23 +527,24 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         ])
       )
 
-    await submitRows([
-      createExporterRowState(orgId1, regId1, 100, '2026-01-15'),
-      createExporterRowState(orgId1, regId1, 999, '09/02/20256'), // invalid year (5 digits)
-      createExporterRowState(orgId1, regId1, 999, '2026-99-15'), // invalid month
-      createExporterRowState(orgId1, regId1, 999, '2026-01-99'), // invalid day
-      createExporterRowState(orgId1, regId1, 999, 'not-a-date'), // not a date string,
-      createExporterRowState(orgId1, regId1, 999, null),
-      createRowState({
+    await db.collection(WASTE_RECORDS_COLLECTION).insertMany([
+      createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15'),
+      createExporterWasteRecord(orgId1, regId1, 999, '09/02/20256'), // invalid year (5 digits)
+      createExporterWasteRecord(orgId1, regId1, 999, '2026-99-15'), // invalid month
+      createExporterWasteRecord(orgId1, regId1, 999, '2026-01-99'), // invalid day
+      createExporterWasteRecord(orgId1, regId1, 999, 'not-a-date'), // not a date string,
+      createExporterWasteRecord(orgId1, regId1, 999, null),
+      {
         organisationId: orgId1,
         registrationId: regId1,
-        summaryLogId: latestSubmittedSummaryLogIdFor(regId1),
-        wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-        processingType: PROCESSING_TYPES.EXPORTER,
+        rowId: 'row-null-date',
+        type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 999
-        }
-      })
+        },
+        versions: []
+      }
     ])
 
     const result = await aggregateTonnageByMaterial(db)
@@ -780,10 +569,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         createOrganisation(orgId1, [createRegistration(regId1, MATERIAL.WOOD)])
       )
 
-    await submitRows([
-      createExporterRowState(orgId1, regId1, 50, '2026-01-15'),
-      createExporterRowState(orgId1, regId1, 0, '2026-01-16')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterWasteRecord(orgId1, regId1, 50, '2026-01-15'),
+        createExporterWasteRecord(orgId1, regId1, 0, '2026-01-16')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
@@ -833,20 +624,21 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         createOrganisation(orgId1, [createRegistration(regId1, MATERIAL.FIBRE)])
       )
 
-    await submitRows([
-      createReprocessorOutputRowState(orgId1, regId1, 100, '2026-01-20'),
-      createRowState({
+    await db.collection(WASTE_RECORDS_COLLECTION).insertMany([
+      createReprocessorOutputWasteRecord(orgId1, regId1, 100, '2026-01-20'),
+      {
         organisationId: orgId1,
         registrationId: regId1,
-        summaryLogId: latestSubmittedSummaryLogIdFor(regId1),
-        wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
-        processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        rowId: 'row-no-add',
+        type: WASTE_RECORD_TYPE.PROCESSED,
         data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT,
           ADD_PRODUCT_WEIGHT: 'No',
           PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 500,
           DATE_LOAD_LEFT_SITE: '2026-01-21'
-        }
-      })
+        },
+        versions: []
+      }
     ])
 
     const result = await aggregateTonnageByMaterial(db)
@@ -878,10 +670,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createOrganisation(orgId1, [createRegistration(regId1, MATERIAL.PLASTIC)])
     ])
 
-    await submitRows([
-      createExporterRowState(testOrgId, testRegId, 500, '2026-01-15'),
-      createExporterRowState(orgId1, regId1, 100, '2026-01-15')
-    ])
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterWasteRecord(testOrgId, testRegId, 500, '2026-01-15'),
+        createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15')
+      ])
 
     const result = await aggregateTonnageByMaterial(db)
 
