@@ -118,7 +118,9 @@ describe('validateRowContinuity', () => {
 
     it('returns valid result when existingWasteRecords is null', () => {
       const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
-      const existingWasteRecords = null
+      const existingWasteRecords = /** @type {WasteRecord[]} */ (
+        /** @type {unknown} */ (null)
+      )
 
       const result = validateRowContinuity({
         wasteRecords,
@@ -131,7 +133,9 @@ describe('validateRowContinuity', () => {
 
     it('returns valid result when existingWasteRecords is undefined', () => {
       const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
-      const existingWasteRecords = undefined
+      const existingWasteRecords = /** @type {WasteRecord[]} */ (
+        /** @type {unknown} */ (undefined)
+      )
 
       const result = validateRowContinuity({
         wasteRecords,

@@ -570,7 +570,7 @@ describe('#aggregateReportDetail', () => {
           approved: false
         }
       ])
-      expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
+      expect(result.exportActivity?.unapprovedOverseasSites).toStrictEqual([
         { orsId: '096', tonnageExported: 3 },
         { orsId: '200', tonnageExported: 7 }
       ])
