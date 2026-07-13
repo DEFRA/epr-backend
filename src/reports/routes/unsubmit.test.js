@@ -373,7 +373,8 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
           ...asServiceMaintainer()
         })
 
-        const report = await reportsRepository.findReportById(supersededReportId)
+        const report =
+          await reportsRepository.findReportById(supersededReportId)
         expect(report.status.currentStatus).toBe('submitted')
       })
 
