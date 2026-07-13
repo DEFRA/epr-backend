@@ -1,10 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { aggregateTonnageByMaterial } from './aggregate-tonnage.js'
+import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
+import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
 
-const createMockDb = (aggregateResults) => ({
-  collection: vi.fn(() => ({
+const createMockDb = (
+  aggregateResults,
+  latestSubmittedSummaryLogs = [{ summaryLogId: 'sl-1' }]
+) => ({
+  collection: vi.fn((name) => ({
     aggregate: vi.fn(() => ({
-      toArray: vi.fn().mockResolvedValue(aggregateResults)
+      toArray: vi
+        .fn()
+        .mockResolvedValue(
+          name === WASTE_BALANCE_EVENTS_COLLECTION_NAME
+            ? latestSubmittedSummaryLogs
+            : aggregateResults
+        )
     }))
   }))
 })
@@ -126,19 +137,29 @@ describe('aggregateTonnageByMaterial', () => {
     const plasticReprocessor = result.materials.find(
       (m) => m.material === 'plastic' && m.type === 'Reprocessor'
     )
-    expect(plasticReprocessor.months).toEqual([
-      { month: 'Jan', tonnage: 0 },
-      { month: 'Feb', tonnage: 0 }
-    ])
+    expect(plasticReprocessor).toEqual({
+      material: 'plastic',
+      year: 2026,
+      type: 'Reprocessor',
+      months: [
+        { month: 'Jan', tonnage: 0 },
+        { month: 'Feb', tonnage: 0 }
+      ]
+    })
 
     // Verify other materials have 0 tonnage
     const aluminiumExporter = result.materials.find(
       (m) => m.material === 'aluminium' && m.type === 'Exporter'
     )
-    expect(aluminiumExporter.months).toEqual([
-      { month: 'Jan', tonnage: 0 },
-      { month: 'Feb', tonnage: 0 }
-    ])
+    expect(aluminiumExporter).toEqual({
+      material: 'aluminium',
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 0 },
+        { month: 'Feb', tonnage: 0 }
+      ]
+    })
   })
 
   it('should return generatedAt timestamp', async () => {
@@ -233,5 +254,34 @@ describe('aggregateTonnageByMaterial', () => {
     const result = await aggregateTonnageByMaterial(db)
 
     expect(result.total).toBe(60)
+  })
+
+  it('filters row states to the latest submitted summary logs resolved from the ledger', async () => {
+    const aggregateCalls = []
+    const db = {
+      collection: vi.fn((name) => ({
+        aggregate: vi.fn((pipeline) => {
+          aggregateCalls.push({ name, pipeline })
+          return {
+            toArray: vi
+              .fn()
+              .mockResolvedValue(
+                name === WASTE_BALANCE_EVENTS_COLLECTION_NAME
+                  ? [{ summaryLogId: 'sl-1' }, { summaryLogId: 'sl-2' }]
+                  : []
+              )
+          }
+        })
+      }))
+    }
+
+    await aggregateTonnageByMaterial(db)
+
+    const rowStatesCall = aggregateCalls.find(
+      (call) => call.name === SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
+    )
+    expect(rowStatesCall.pipeline[0].$match.summaryLogIds).toEqual({
+      $in: ['sl-1', 'sl-2']
+    })
   })
 })
