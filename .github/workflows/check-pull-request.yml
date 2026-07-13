@@ -71,12 +71,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: pr-prep
     if: needs.pr-prep.outputs.docs-only != 'true'
-    continue-on-error: true
     permissions:
       contents: read
       pull-requests: write
     steps:
       - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types-tests@main
+        with:
+          fail-on: all
 
   dependency-review:
     name: Dependency Review
