@@ -20,7 +20,7 @@ const WASTE_RECEIVED_TYPES = new Set([
 const isWasteReceivedType = (type) => WASTE_RECEIVED_TYPES.has(type)
 
 /**
- * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteReceivedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} wasteReceivedRecords
  * @param {string} tonnageField
  */
 export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {

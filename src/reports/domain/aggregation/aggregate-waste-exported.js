@@ -124,7 +124,7 @@ function calculateTonnageReceivedNotExported(
  * Sum refused, stopped, and refused-or-stopped export tonnages, rounding each
  * row to 2dp before adding (round-each-then-sum).
  *
- * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} exportedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} exportedRecords
  * @returns {{ tonnageRefusedAtDestination: number, tonnageStoppedDuringExport: number, totalTonnageRefusedOrStopped: number }}
  */
 function calculateRefusedAndStoppedTonnages(exportedRecords) {
@@ -169,9 +169,9 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
 
 /**
  * @param {object} params
- * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.wasteExportedRecords
- * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.repatriatedRecords
- * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.wasteReceivedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteExportedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.repatriatedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteReceivedRecords
  * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
  * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
  * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]

@@ -12,6 +12,15 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
 import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
 
 /**
+ * The slice of a waste-record state the report aggregation reads: the row's
+ * type and its coerced data. Narrower than the full `WasteRecordState` so the
+ * type doesn't demand fields (classification, row identity) the aggregation
+ * never consumes.
+ *
+ * @typedef {Pick<import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState, 'wasteRecordType' | 'data'>} ReportableWasteRecordState
+ */
+
+/**
  * @typedef {Object} AggregatedRecyclingActivity
  * @property {Array<{supplierName: string, facilityType: string, tonnageReceived: number, supplierAddress: string, supplierPhone: string|null, supplierEmail: string|null}>} suppliers
  * @property {number} totalTonnageReceived
@@ -63,7 +72,7 @@ import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
  * submitted) is resolved by the caller from the latest submitted summary log
  * and passed in.
  *
- * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @param {ReportableWasteRecordState[]} wasteRecordStates
  * @param {object} options
  * @param {string} options.operatorCategory
  * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
@@ -159,7 +168,7 @@ export function aggregateReportDetail(
  * Slices waste-record states into per-section record sets, each filtered to
  * those whose section date field falls within [startDate, endDate].
  *
- * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecords
+ * @param {ReportableWasteRecordState[]} wasteRecords
  * @param {{ wasteReceived?: string, wasteExported?: string, wasteRepatriated?: string, wasteSentOn?: string }} sectionDateFields
  * @param {string} startDate - ISO date string (YYYY-MM-DD)
  * @param {string} endDate - ISO date string (YYYY-MM-DD)

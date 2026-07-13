@@ -49,7 +49,7 @@ function sumByFacilityType(validEntries) {
 }
 
 /**
- * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteSentOnRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} wasteSentOnRecords
  */
 export function aggregateWasteSentOn(wasteSentOnRecords) {
   const validEntries = wasteSentOnRecords.filter(

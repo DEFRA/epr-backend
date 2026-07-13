@@ -3,11 +3,11 @@ import wasteRecordsRegisteredOnlyJson from './test-data/reprocessor-registered-o
 import wasteRecordsAccreditedJson from './test-data/reprocessor-on-input-accredited.json' with { type: 'json' }
 
 const wasteRecordsRegisteredOnly =
-  /** @type {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} */ (
+  /** @type {import('#root/reports/domain/aggregation/aggregate-report-detail.js').ReportableWasteRecordState[]} */ (
     /** @type {unknown} */ (wasteRecordsRegisteredOnlyJson)
   )
 const wasteRecordsAccredited =
-  /** @type {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} */ (
+  /** @type {import('#root/reports/domain/aggregation/aggregate-report-detail.js').ReportableWasteRecordState[]} */ (
     /** @type {unknown} */ (wasteRecordsAccreditedJson)
   )
 

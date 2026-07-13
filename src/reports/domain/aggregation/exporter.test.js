@@ -5,11 +5,11 @@ import wasteRecordsAccreditedJson from './test-data/exporter-accredited.json' wi
 import wasteRecordsRegisteredOnlyJson from './test-data/exporter-reg-only.json' with { type: 'json' }
 
 const wasteRecordsAccredited =
-  /** @type {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} */ (
+  /** @type {import('#root/reports/domain/aggregation/aggregate-report-detail.js').ReportableWasteRecordState[]} */ (
     /** @type {unknown} */ (wasteRecordsAccreditedJson)
   )
 const wasteRecordsRegisteredOnly =
-  /** @type {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} */ (
+  /** @type {import('#root/reports/domain/aggregation/aggregate-report-detail.js').ReportableWasteRecordState[]} */ (
     /** @type {unknown} */ (wasteRecordsRegisteredOnlyJson)
   )
 
