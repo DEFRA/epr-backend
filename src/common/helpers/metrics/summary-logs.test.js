@@ -8,6 +8,8 @@ import {
 } from '#common/enums/validation.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
+/** @import { MetricsLogger } from 'aws-embedded-metrics' */
+
 const mockPutMetric = vi.fn()
 const mockPutDimensions = vi.fn()
 const mockFlush = vi.fn()
@@ -19,11 +21,14 @@ vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
 
   return {
     ...original,
-    createMetricsLogger: () => ({
-      putMetric: mockPutMetric,
-      putDimensions: mockPutDimensions,
-      flush: mockFlush
-    })
+    createMetricsLogger: () =>
+      /** @type {MetricsLogger} */ (
+        /** @type {unknown} */ ({
+          putMetric: mockPutMetric,
+          putDimensions: mockPutDimensions,
+          flush: mockFlush
+        })
+      )
   }
 })
 
@@ -32,10 +37,12 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 
 vi.mock('#common/helpers/metrics.js', async (importOriginal) => {
-  const original = await importOriginal()
+  const original = /** @type {Record<string, unknown>} */ (
+    await importOriginal()
+  )
   return {
     ...original,
-    timed: (...args) => mockTimed(...args)
+    timed: mockTimed
   }
 })
 

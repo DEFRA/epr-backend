@@ -56,7 +56,7 @@ describe('processImportFile', () => {
   it('creates overseas site records and replaces registration mapping', async () => {
     const buffer = Buffer.from('fake-spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/AB1234CD/R1',
@@ -155,7 +155,7 @@ describe('processImportFile', () => {
   it('returns failure when spreadsheet has parse errors', async () => {
     const buffer = Buffer.from('bad-spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/AB1234CD/R1',
@@ -188,7 +188,7 @@ describe('processImportFile', () => {
   it('rethrows non-SpreadsheetValidationError exceptions', async () => {
     const buffer = Buffer.from('corrupt')
 
-    parse.mockRejectedValue(new Error('ExcelJS internal error'))
+    vi.mocked(parse).mockRejectedValue(new Error('ExcelJS internal error'))
 
     await expect(processImportFile(buffer, deps())).rejects.toThrow(
       'ExcelJS internal error'
@@ -201,7 +201,7 @@ describe('processImportFile', () => {
     const validationError = new SpreadsheetValidationError(
       "Missing required 'ORS ID Log' worksheet"
     )
-    parse.mockRejectedValue(validationError)
+    vi.mocked(parse).mockRejectedValue(validationError)
 
     const result = await processImportFile(buffer, deps())
 
@@ -225,7 +225,7 @@ describe('processImportFile', () => {
   it('returns failure when organisation is not found', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 999999,
         registrationNumber: 'EPR/XX0000XX/R1',
@@ -269,7 +269,7 @@ describe('processImportFile', () => {
   it('returns failure when registration is not found in organisation', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/NOMATCH/R1',
@@ -324,7 +324,7 @@ describe('processImportFile', () => {
   it('parses validFrom dates when creating site records', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/AB1234CD/R1',
@@ -379,7 +379,7 @@ describe('processImportFile', () => {
   it('returns failure when replaceRegistrationOverseasSites has version conflict', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/AB1234CD/R1',
@@ -433,7 +433,7 @@ describe('processImportFile', () => {
   it('reuses existing site when all properties match instead of creating a new one', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/AB1234CD/R1',
@@ -517,7 +517,7 @@ describe('processImportFile', () => {
   it('creates a system log entry on successful import', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/AB1234CD/R1',
@@ -585,7 +585,7 @@ describe('processImportFile', () => {
   it('does not create a system log entry when import fails', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 999999,
         registrationNumber: 'EPR/XX0000XX/R1',
@@ -622,7 +622,7 @@ describe('processImportFile', () => {
   it('does not create a system log entry on version conflict', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/AB1234CD/R1',
@@ -675,7 +675,7 @@ describe('processImportFile', () => {
   it('still returns success when system log write fails', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/AB1234CD/R1',
@@ -738,7 +738,7 @@ describe('processImportFile', () => {
   it('sets null validFrom when not provided', async () => {
     const buffer = Buffer.from('spreadsheet')
 
-    parse.mockResolvedValue({
+    vi.mocked(parse).mockResolvedValue({
       metadata: {
         orgId: 500001,
         registrationNumber: 'EPR/AB1234CD/R1',

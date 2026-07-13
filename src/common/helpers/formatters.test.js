@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { invalidArg } from '#test/type-helpers.js'
 import {
   capitalize,
   formatAddress,
@@ -54,7 +55,7 @@ describe('formatters', () => {
     })
 
     it('should handle null address', () => {
-      expect(formatAddress(null)).toBe('')
+      expect(formatAddress(invalidArg(null))).toBe('')
     })
   })
 
@@ -69,7 +70,7 @@ describe('formatters', () => {
     })
 
     it('should return empty string for null or undefined', () => {
-      expect(capitalize(null)).toBe('')
+      expect(capitalize(invalidArg(null))).toBe('')
     })
   })
 
@@ -117,7 +118,7 @@ describe('formatters', () => {
     })
 
     it('should return empty string for unknown material', () => {
-      expect(getAnnexIIProcess('unknown')).toBe('')
+      expect(getAnnexIIProcess(invalidArg('unknown'))).toBe('')
     })
   })
 
@@ -130,11 +131,11 @@ describe('formatters', () => {
     })
 
     it('should return empty string for unknown tonnage band', () => {
-      expect(formatTonnageBand('unknown')).toBe('')
+      expect(formatTonnageBand(invalidArg('unknown'))).toBe('')
     })
 
     it('should return empty string for null or undefined', () => {
-      expect(formatTonnageBand(null)).toBe('')
+      expect(formatTonnageBand(invalidArg(null))).toBe('')
     })
   })
 
@@ -147,7 +148,7 @@ describe('formatters', () => {
     })
 
     it('should return empty string for null', () => {
-      expect(uppercaseString(null)).toBe('')
+      expect(uppercaseString(invalidArg(null))).toBe('')
     })
   })
 })

@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { upsertOrganisations } from './organisation-persistence.js'
+import { partialMock } from '#test/type-helpers.js'
+
+/** @import { OrganisationMigrationItem } from '#formsubmission/types.js' */
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -55,13 +58,14 @@ describe('upsertOrganisations', () => {
         name: 'Updated'
       }
 
+      /** @type {OrganisationMigrationItem[]} */
       const organisations = [
         {
-          value: { id: org1Id.toString(), orgId: 500001 },
+          value: partialMock({ id: org1Id.toString(), orgId: 500001 }),
           operation: 'insert'
         },
         {
-          value: updatedOrg,
+          value: partialMock(updatedOrg),
           operation: 'update'
         }
       ]
@@ -116,9 +120,10 @@ describe('upsertOrganisations', () => {
 
     it('should handle insert failure and log error', async () => {
       const org1IdStr = org1Id.toString()
+      /** @type {OrganisationMigrationItem[]} */
       const organisations = [
         {
-          value: { id: org1IdStr, orgId: 500001 },
+          value: partialMock({ id: org1IdStr, orgId: 500001 }),
           operation: 'insert'
         }
       ]
@@ -153,9 +158,10 @@ describe('upsertOrganisations', () => {
     it('should handle update failure and log error', async () => {
       const org1IdStr = org1Id.toString()
       const previousOrg = { id: org1IdStr, version: 1, orgId: 500001 }
+      /** @type {OrganisationMigrationItem[]} */
       const organisations = [
         {
-          value: { id: org1IdStr, version: 1, orgId: 500001 },
+          value: partialMock({ id: org1IdStr, version: 1, orgId: 500001 }),
           operation: 'update'
         }
       ]
@@ -200,13 +206,14 @@ describe('upsertOrganisations', () => {
       const previousOrg = { id: org2IdStr, version: 1, orgId: 500002 }
       const updatedOrg = { id: org2IdStr, version: 2, orgId: 500002 }
 
+      /** @type {OrganisationMigrationItem[]} */
       const organisations = [
         {
-          value: { id: org1IdStr, orgId: 500001 },
+          value: partialMock({ id: org1IdStr, orgId: 500001 }),
           operation: 'insert'
         },
         {
-          value: updatedOrg,
+          value: partialMock(updatedOrg),
           operation: 'update'
         }
       ]

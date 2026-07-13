@@ -8,6 +8,7 @@ import {
   transitionStatus,
   UPLOAD_STATUS
 } from './status.js'
+import { invalidArg } from '#test/type-helpers.js'
 
 const FIXED_NOW = new Date('2024-12-19T12:00:00.000Z')
 const TWENTY_MINUTES_LATER = new Date('2024-12-19T12:20:00.000Z')
@@ -90,7 +91,7 @@ describe('status', () => {
     })
 
     it('returns FILE_REJECTED when error message is null', () => {
-      const result = mapUploaderErrorToCode(null)
+      const result = mapUploaderErrorToCode(invalidArg(null))
       expect(result).toBe('FILE_REJECTED')
     })
   })
@@ -131,7 +132,7 @@ describe('status', () => {
     it('returns status update when fromStatus is null (initial insert)', () => {
       const summaryLog = { id: 'log-123', file: { id: 'file-1' } }
       const result = transitionStatus(
-        summaryLog,
+        invalidArg(summaryLog),
         SUMMARY_LOG_STATUS.PREPROCESSING
       )
 
@@ -144,7 +145,7 @@ describe('status', () => {
     it('returns status update when fromStatus is undefined (initial insert)', () => {
       const summaryLog = { id: 'log-456', file: { id: 'file-2' } }
       const result = transitionStatus(
-        summaryLog,
+        invalidArg(summaryLog),
         SUMMARY_LOG_STATUS.PREPROCESSING
       )
 
@@ -246,7 +247,10 @@ describe('status', () => {
       const summaryLog = { status: 'unknown-status' }
 
       expect(() =>
-        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.PREPROCESSING)
+        transitionStatus(
+          invalidArg(summaryLog),
+          SUMMARY_LOG_STATUS.PREPROCESSING
+        )
       ).toThrow(
         'Cannot transition summary log from unknown-status to preprocessing'
       )

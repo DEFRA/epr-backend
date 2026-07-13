@@ -33,7 +33,7 @@ describe('setupGlobalErrorHandler', () => {
     const listeners = process.listeners('unhandledRejection')
     expect(listeners.length).toBeGreaterThan(0)
 
-    listeners[listeners.length - 1](error)
+    listeners[listeners.length - 1](error, Promise.resolve())
 
     expect(mockLogger.error).toHaveBeenCalledWith({
       err: error,
@@ -60,7 +60,7 @@ describe('setupGlobalErrorHandler', () => {
     }
     const listeners = process.listeners('unhandledRejection')
 
-    listeners[listeners.length - 1](boomError)
+    listeners[listeners.length - 1](boomError, Promise.resolve())
 
     expect(mockLogger.error).toHaveBeenCalledWith({
       err: boomError,

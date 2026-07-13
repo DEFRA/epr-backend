@@ -6,21 +6,25 @@ import {
   isDateInSubmittedPeriod
 } from './submitted-periods.js'
 
-/** @import {ReportStatus} from './report-status.js' */
+/**
+ * @import {ReportStatus} from './report-status.js'
+ * @import {ReportSummary} from '#reports/repository/port.js'
+ */
 
 /**
  * @param {ReportStatus} status
  * @param {string} id
- * @returns {import('#reports/repository/port.js').ReportSummary}
+ * @returns {ReportSummary}
  */
-const reportSummary = (status, id) => ({
-  id,
-  status,
-  submissionNumber: 1,
-  submittedAt:
-    status === REPORT_STATUS.SUBMITTED ? '2026-04-10T00:00:00Z' : null,
-  submittedBy: null
-})
+const reportSummary = (status, id) =>
+  /** @type {ReportSummary} */ ({
+    id,
+    status,
+    submissionNumber: 1,
+    submittedAt:
+      status === REPORT_STATUS.SUBMITTED ? '2026-04-10T00:00:00Z' : null,
+    submittedBy: null
+  })
 
 /**
  * @param {Partial<import('#reports/repository/port.js').ReportPerPeriod>} [overrides]

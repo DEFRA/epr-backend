@@ -8,15 +8,15 @@ import {
   underAccreditation
 } from './test-data.js'
 
+/** @import { PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
+
 export const testFindBehaviour = (it) => {
   describe('find', () => {
     let repository
 
     beforeEach(
       async (
-        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
-          prnRepository
-        }
+        /** @type {{ prnRepository: PrnRepository }} */ { prnRepository }
       ) => {
         repository = prnRepository
       }

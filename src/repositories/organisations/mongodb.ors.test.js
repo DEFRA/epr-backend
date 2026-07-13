@@ -1,29 +1,44 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
+import { assertPresent } from '#test/type-helpers.js'
 import { describe, expect } from 'vitest'
 import { createOrganisationsRepository } from './mongodb.js'
+
+/**
+ * @import { Db } from 'mongodb'
+ * @import { TestAPI } from 'vitest'
+ * @import { OrganisationsRepository } from './port.js'
+ *
+ * @typedef {{
+ *   mongoClient: MongoClient
+ *   repository: OrganisationsRepository
+ *   database: Db
+ * }} MongoFixtures
+ */
 
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'epr-organisations'
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  },
+const it = /** @type {TestAPI<MongoFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
 
-  repository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    await database.collection(COLLECTION_NAME).deleteMany({})
-    const factory = await createOrganisationsRepository(database)
-    await use(factory())
-  },
+    repository: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      await database.collection(COLLECTION_NAME).deleteMany({})
+      const factory = await createOrganisationsRepository(database)
+      await use(factory())
+    },
 
-  database: async ({ mongoClient }, use) => {
-    await use(mongoClient.db(DATABASE_NAME))
-  }
-})
+    database: async ({ mongoClient }, use) => {
+      await use(mongoClient.db(DATABASE_NAME))
+    }
+  })
+)
 
 const buildOrganisation = (overrides = {}) => {
   const orgId = overrides.orgId ?? 500001
@@ -88,8 +103,8 @@ describe('Organisations repository - ORS operations', () => {
       await database.collection(COLLECTION_NAME).insertOne(org)
 
       const found = await repository.findByOrgId(500042)
+      assertPresent(found)
 
-      expect(found).not.toBeNull()
       expect(found.orgId).toBe(500042)
       expect(found.id).toBe(org._id.toHexString())
     })
@@ -126,6 +141,7 @@ describe('Organisations repository - ORS operations', () => {
       const updated = await database
         .collection(COLLECTION_NAME)
         .findOne({ _id: ObjectId.createFromHexString(orgId) })
+      assertPresent(updated)
 
       expect(updated.registrations[0].overseasSites).toEqual({
         '001': { overseasSiteId: 'site-aaa' },
@@ -156,6 +172,7 @@ describe('Organisations repository - ORS operations', () => {
       const updated = await database
         .collection(COLLECTION_NAME)
         .findOne({ _id: ObjectId.createFromHexString(orgId) })
+      assertPresent(updated)
 
       expect(updated.registrations[0].overseasSites).toEqual({
         '001': { overseasSiteId: 'new-site' }
@@ -187,6 +204,7 @@ describe('Organisations repository - ORS operations', () => {
       const updated = await database
         .collection(COLLECTION_NAME)
         .findOne({ _id: ObjectId.createFromHexString(orgId) })
+      assertPresent(updated)
 
       expect(updated.registrations[0].overseasSites['001']).toEqual({
         overseasSiteId: 'new-site'

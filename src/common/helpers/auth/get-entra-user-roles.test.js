@@ -29,6 +29,9 @@ function setListsForRole(role, email) {
   mockConfigGet.mockImplementation((key) => JSON.stringify(lists[key]))
 }
 
+/**
+ * @param {{ write?: string[], maintainer?: string[], support?: string[] }} [lists]
+ */
 function setListsExplicit({ write = [], maintainer = [], support = [] } = {}) {
   const lists = {
     'roles.serviceMaintainersWrite': write,

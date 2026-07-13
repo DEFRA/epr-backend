@@ -7,7 +7,7 @@ import {
 const mockLoggerError = vi.fn()
 
 vi.mock('./logging/logger.js', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = /** @type {Record<string, unknown>} */ (await importOriginal())
   return {
     ...actual,
     logger: {
