@@ -153,6 +153,88 @@ describe('report-service', () => {
       expect(report).not.toHaveProperty('id')
     })
 
+    it('derives rows and source from the same submission when a new submission commits mid-read', async () => {
+      const reportsRepository = createInMemoryReportsRepository()()
+      const packagingRecyclingNotesRepository = createPrnRepo()
+      const params = defaultParams()
+      const accreditationId = /** @type {string | null} */ (
+        params.registration.accreditationId ?? null
+      )
+      const ledgerId = {
+        organisationId: params.organisationId,
+        registrationId: params.registrationId,
+        accreditationId
+      }
+
+      const summaryLogRowStateRepository =
+        createInMemorySummaryLogRowStateRepository()()
+      await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+        ledgerId,
+        [buildReceivedEntry({ SUPPLIER_NAME: 'First Supplier' })],
+        'sl-1'
+      )
+      await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+        ledgerId,
+        [buildReceivedEntry({ SUPPLIER_NAME: 'Second Supplier' })],
+        'sl-2'
+      )
+
+      const firstSubmission = buildLedgerEvent({
+        ...ledgerId,
+        number: 1,
+        createdAt: SUBMITTED_AT,
+        payload: { summaryLogId: 'sl-1', creditTotal: 100 }
+      })
+      const secondSubmission = buildLedgerEvent({
+        ...ledgerId,
+        number: 2,
+        createdAt: new Date('2024-02-15T00:00:00.000Z'),
+        payload: { summaryLogId: 'sl-2', creditTotal: 150 }
+      })
+      const beforeCommit = createInMemoryLedgerRepository([firstSubmission])()
+      const afterCommit = createInMemoryLedgerRepository([
+        firstSubmission,
+        secondSubmission
+      ])()
+      let lookups = 0
+      const ledgerRepository = /** @type {any} */ ({
+        findLatestInLedgerByKind: (
+          registrationId,
+          ledgerAccreditationId,
+          kind
+        ) =>
+          (lookups++ === 0
+            ? beforeCommit
+            : afterCommit
+          ).findLatestInLedgerByKind(
+            registrationId,
+            ledgerAccreditationId,
+            kind
+          )
+      })
+
+      const report =
+        /** @type {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail} */ (
+          await fetchOrGenerateReportForPeriod({
+            reportsRepository,
+            ledgerRepository,
+            summaryLogRowStateRepository,
+            packagingRecyclingNotesRepository,
+            ...params
+          })
+        )
+
+      expect(report.source).toEqual({
+        summaryLogId: 'sl-1',
+        lastUploadedAt: SUBMITTED_AT.toISOString()
+      })
+      expect(
+        report.recyclingActivity.suppliers.map(
+          ({ supplierName }) => supplierName
+        )
+      ).toEqual(['First Supplier'])
+    })
+
     it('returns stored report when one exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const packagingRecyclingNotesRepository = createPrnRepo()

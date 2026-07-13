@@ -3,7 +3,7 @@ import { resolveDetailedMaterial } from '#domain/organisations/registration-util
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
@@ -421,21 +421,18 @@ export async function fetchOrGenerateReportForPeriod({
 }
 
 /**
- * Resolves the report source — which submission produced the current state, and
- * when it was submitted — from the latest submitted summary log. A stream with
- * no submission yet has a null source.
+ * The report source — which submission produced the current state, and when
+ * it was submitted. A ledger with no submission yet has a null source.
  *
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
- * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
- * @returns {Promise<{ summaryLogId: string|null, lastUploadedAt: string|null }>}
+ * @param {{ summaryLogId: string, submittedAt: Date } | null} latestSubmission
+ * @returns {{ summaryLogId: string|null, lastUploadedAt: string|null }}
  */
-async function resolveSource(ledgerRepository, ledgerId) {
-  const latest = await latestSubmittedSummaryLog(ledgerRepository, ledgerId)
-  return latest === null
+function toSource(latestSubmission) {
+  return latestSubmission === null
     ? { summaryLogId: null, lastUploadedAt: null }
     : {
-        summaryLogId: latest.summaryLogId,
-        lastUploadedAt: latest.submittedAt.toISOString()
+        summaryLogId: latestSubmission.summaryLogId,
+        lastUploadedAt: latestSubmission.submittedAt.toISOString()
       }
 }
 
@@ -472,13 +469,21 @@ async function getAggregatedReportDetail({
   const accreditationId = registration.accreditationId ?? null
   const ledgerId = { organisationId, registrationId, accreditationId }
 
-  const wasteRecordStates = await summaryLogRowStatesForRegistration({
+  // One head resolution serves both reads: the row states and the source
+  // metadata must describe the same submission, so a submission committing
+  // mid-read cannot skew them apart.
+  const latestSubmission = await latestSubmittedSummaryLog(
     ledgerRepository,
-    summaryLogRowStateRepository,
-    ...ledgerId
-  })
+    ledgerId
+  )
 
-  const source = await resolveSource(ledgerRepository, ledgerId)
+  const wasteRecordStates = await wasteRecordStatesForHead(
+    summaryLogRowStateRepository,
+    ledgerId,
+    latestSubmission === null ? null : latestSubmission.summaryLogId
+  )
+
+  const source = toSource(latestSubmission)
 
   const orsDetailsMap = await getOrsDetailsMap(
     overseasSitesRepository,
