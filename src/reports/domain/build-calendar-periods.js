@@ -50,6 +50,8 @@ const latestSubmitted = (current, previousSubmissions) =>
  * @returns {CalendarPeriod[]}
  */
 export const buildCalendarPeriods = (mergedPeriods) =>
+  // previousSubmissions is a feed-only projection, not part of a calendar item,
+  // so it is dropped here rather than spread through.
   mergedPeriods.flatMap(({ previousSubmissions = [], ...period }) => {
     const flaggedSubmitted = latestSubmitted(period.report, previousSubmissions)
 
