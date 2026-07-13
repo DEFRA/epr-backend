@@ -198,19 +198,11 @@ describe('report-service', () => {
       ])()
       let lookups = 0
       const ledgerRepository = /** @type {any} */ ({
-        findLatestInLedgerByKind: (
-          registrationId,
-          ledgerAccreditationId,
-          kind
-        ) =>
+        findLatestInLedgerByKind: (lookupLedgerId, kind) =>
           (lookups++ === 0
             ? beforeCommit
             : afterCommit
-          ).findLatestInLedgerByKind(
-            registrationId,
-            ledgerAccreditationId,
-            kind
-          )
+          ).findLatestInLedgerByKind(lookupLedgerId, kind)
       })
 
       const report =
