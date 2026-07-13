@@ -75,6 +75,34 @@ describe('summaryLogRowStatesForRegistration', () => {
     })
   })
 
+  it('reads the row states of its own ledger when another ledger shares the summary log id', async () => {
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+      DEFAULT_LEDGER_ID,
+      [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
+      'log-1'
+    )
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+      { ...DEFAULT_LEDGER_ID, organisationId: 'org-2' },
+      [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 20 } })],
+      'log-1'
+    )
+    const ledgerRepository = createInMemoryLedgerRepository([
+      submissionEvent(1, 'log-1')
+    ])()
+
+    const states = await summaryLogRowStatesForRegistration({
+      ledgerRepository,
+      summaryLogRowStateRepository,
+      ...registration
+    })
+
+    expect(states).toEqual([
+      expect.objectContaining({ rowId: 'row-1', data: { tonnage: 10 } })
+    ])
+  })
+
   it('projects to domain content, dropping storage id, membership and ledger identity', async () => {
     const summaryLogRowStateRepository =
       createInMemorySummaryLogRowStateRepository()()

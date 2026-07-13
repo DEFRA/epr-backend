@@ -50,11 +50,15 @@ export const packagingRecyclingNotesList = {
       params,
       logger
     } = request
-    const { organisationId, accreditationId } = params
+    const { organisationId, registrationId, accreditationId } = params
 
     try {
       const [prns, accreditation] = await Promise.all([
-        packagingRecyclingNotesRepository.findByAccreditation(accreditationId),
+        packagingRecyclingNotesRepository.findByAccreditation({
+          organisationId,
+          registrationId,
+          accreditationId
+        }),
         organisationsRepository.findAccreditationById(
           organisationId,
           accreditationId

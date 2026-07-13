@@ -26,6 +26,7 @@ const projectFromStreamTail = async (prn, ledgerRepository) => {
   const tailEvents = await createWasteBalanceService(
     ledgerRepository
   ).prnCatchupEvents({
+    organisationId: prn.organisation.id,
     registrationId: prn.registrationId,
     accreditationId: prn.accreditation.id,
     prnId: prn.id,

@@ -11,15 +11,6 @@ export const createConfigFeatureFlags = (config) => ({
   isSummaryLogRowStatesEnabled() {
     return config.get('featureFlags.summaryLogRowStates')
   },
-  isSummaryLogRowStatesBackfillEnabled() {
-    return config.get('featureFlags.summaryLogRowStatesBackfill')
-  },
-  isSummaryLogRowStatesDiscrepancyReportEnabled() {
-    return config.get('featureFlags.summaryLogRowStatesDiscrepancyReport')
-  },
-  isRegisteredOnlySubmittedEventsEnabled() {
-    return config.get('featureFlags.registeredOnlySubmittedEvents')
-  },
   isStaleIssuedTonnageReportEnabled() {
     return config.get('featureFlags.staleIssuedTonnageReport')
   }

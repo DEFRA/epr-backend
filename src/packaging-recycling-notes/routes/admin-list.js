@@ -8,8 +8,7 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
+import { mapToAdminPrn } from '#packaging-recycling-notes/application/admin-prn-mapper.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createStatusesValidator } from '#packaging-recycling-notes/routes/validation.js'
 
@@ -23,31 +22,6 @@ const DEFAULT_LIMIT = 500
 export const adminPackagingRecyclingNotesListPath =
   '/v1/admin/packaging-recycling-notes'
 
-/**
- * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
- */
-const buildResponseItem = (prn) => ({
-  id: prn.id,
-  prnNumber: prn.prnNumber ?? null,
-  status: prn.status.currentStatus,
-  issuedToOrganisation: prn.issuedToOrganisation,
-  tonnage: prn.tonnage,
-  material: prn.accreditation.material,
-  processToBeUsed: getProcessCode(prn.accreditation.material),
-  isDecemberWaste: prn.isDecemberWaste,
-  notes: prn.notes ?? null,
-  issuedAt: prn.status.issued?.at ?? null,
-  issuedBy: prn.status.issued?.by ?? null,
-  accreditationNumber: prn.accreditation.accreditationNumber ?? null,
-  accreditationYear: prn.accreditation.accreditationYear,
-  submittedToRegulator: prn.accreditation.submittedToRegulator ?? null,
-  wasteProcessingType: prn.isExport
-    ? WASTE_PROCESSING_TYPE.EXPORTER
-    : WASTE_PROCESSING_TYPE.REPROCESSOR,
-  organisationName: prn.organisation.name,
-  createdAt: prn.createdAt
-})
-
 export const adminPackagingRecyclingNotesList = {
   method: 'GET',
   path: adminPackagingRecyclingNotesListPath,
@@ -58,8 +32,7 @@ export const adminPackagingRecyclingNotesList = {
       query: Joi.object({
         statuses: createStatusesValidator(Object.values(PRN_STATUS)),
         limit: Joi.number().integer().min(1).max(1000).optional(),
-        cursor: Joi.string().optional(),
-        accreditationId: Joi.string().optional()
+        cursor: Joi.string().optional()
       })
     }
   },
@@ -69,42 +42,15 @@ export const adminPackagingRecyclingNotesList = {
    *   query: {
    *     statuses: PrnStatus[],
    *     limit?: number,
-   *     cursor?: string,
-   *     accreditationId?: string
+   *     cursor?: string
    *   }
    * }} request
    */
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
-    const { statuses, limit, cursor, accreditationId } = request.query
+    const { statuses, limit, cursor } = request.query
 
     try {
-      // When scoped to a single accreditation we read the whole (small) set
-      // for that accreditation and apply the status filter in memory. This
-      // backs the per-registration download on the admin org overview page;
-      // the unscoped path keeps cursor pagination for the global list.
-      if (accreditationId) {
-        const prns =
-          await packagingRecyclingNotesRepository.findByAccreditation(
-            accreditationId
-          )
-
-        const items = prns
-          .filter((prn) => statuses.includes(prn.status.currentStatus))
-          .map(buildResponseItem)
-
-        logger.info({
-          message: `Admin listed ${items.length} PRNs for accreditation ${accreditationId}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
-            reference: accreditationId
-          }
-        })
-
-        return h.response({ items, hasMore: false }).code(StatusCodes.OK)
-      }
-
       const effectiveLimit = limit ?? DEFAULT_LIMIT
 
       const result = await packagingRecyclingNotesRepository.findByStatus({
@@ -114,7 +60,7 @@ export const adminPackagingRecyclingNotesList = {
       })
 
       const response = {
-        items: result.items.map(buildResponseItem),
+        items: result.items.map(mapToAdminPrn),
         hasMore: result.hasMore
       }
 

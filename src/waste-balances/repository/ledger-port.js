@@ -9,12 +9,32 @@
  */
 
 /**
- * Raised by `appendEvents` when a `(registrationId, accreditationId, number)`
- * slot is already occupied. Adapters translate their native conflict signal
- * (MongoDB `E11000`, in-memory index check) into this typed error so callers
- * can react uniformly.
+ * @typedef {import('./ledger-schema.js').LedgerPosition} LedgerPosition
+ */
+
+/**
+ * @typedef {import('./ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ */
+
+/**
+ * Names the ledger a failed append was addressing. Both append errors report the
+ * full ledger coordinate, so a caller or a log line never has to guess which
+ * organisation's ledger refused the write.
+ *
+ * @param {WasteBalanceLedgerId} ledgerId
+ */
+const describeLedger = ({ organisationId, registrationId, accreditationId }) =>
+  `organisation ${organisationId} registration ${registrationId} accreditation ${accreditationId}`
+
+/**
+ * Raised by `appendEvents` when the slot a position addresses is already
+ * occupied. Adapters translate their native conflict signal (MongoDB `E11000`,
+ * in-memory occupancy check) into this typed error so callers can react
+ * uniformly.
  */
 export class LedgerSlotConflictError extends Error {
+  /** @type {string} */
+  organisationId
   /** @type {string} */
   registrationId
   /** @type {string | null} */
@@ -23,18 +43,17 @@ export class LedgerSlotConflictError extends Error {
   slotNumber
 
   /**
-   * @param {string} registrationId
-   * @param {string | null} accreditationId
-   * @param {number} slotNumber
+   * @param {LedgerPosition} position
    */
-  constructor(registrationId, accreditationId, slotNumber) {
+  constructor(position) {
     super(
-      `Ledger slot already occupied for registration ${registrationId} accreditation ${accreditationId} number ${slotNumber}`
+      `Ledger slot already occupied for ${describeLedger(position)} number ${position.number}`
     )
     this.name = 'LedgerSlotConflictError'
-    this.registrationId = registrationId
-    this.accreditationId = accreditationId
-    this.slotNumber = slotNumber
+    this.organisationId = position.organisationId
+    this.registrationId = position.registrationId
+    this.accreditationId = position.accreditationId
+    this.slotNumber = position.number
   }
 }
 
@@ -46,6 +65,8 @@ export class LedgerSlotConflictError extends Error {
  */
 export class LedgerSequenceError extends Error {
   /** @type {string} */
+  organisationId
+  /** @type {string} */
   registrationId
   /** @type {string | null} */
   accreditationId
@@ -55,19 +76,18 @@ export class LedgerSequenceError extends Error {
   expectedNumber
 
   /**
-   * @param {string} registrationId
-   * @param {string | null} accreditationId
-   * @param {number} providedNumber
-   * @param {number} expectedNumber
+   * @param {LedgerPosition} position - The position the event claimed.
+   * @param {number} expectedNumber - The only number the ledger would accept.
    */
-  constructor(registrationId, accreditationId, providedNumber, expectedNumber) {
+  constructor(position, expectedNumber) {
     super(
-      `Ledger sequence violation for registration ${registrationId} accreditation ${accreditationId}: expected number ${expectedNumber}, got ${providedNumber}`
+      `Ledger sequence violation for ${describeLedger(position)}: expected number ${expectedNumber}, got ${position.number}`
     )
     this.name = 'LedgerSequenceError'
-    this.registrationId = registrationId
-    this.accreditationId = accreditationId
-    this.providedNumber = providedNumber
+    this.organisationId = position.organisationId
+    this.registrationId = position.registrationId
+    this.accreditationId = position.accreditationId
+    this.providedNumber = position.number
     this.expectedNumber = expectedNumber
   }
 }
@@ -81,21 +101,27 @@ export class LedgerSequenceError extends Error {
  */
 
 /**
+ * Every read names its ledger with a complete `WasteBalanceLedgerId`, and every
+ * adapter filters on all three of its ids. A ledger read that names a
+ * registration or accreditation under the wrong organisation matches nothing —
+ * it does not fall back to the ledger that registration happens to live in.
+ *
  * @typedef {Object} WasteBalanceLedgerRepository
- * @property {(registrationId: string, accreditationId: string | null) => Promise<LedgerEvent | null>} findLatestInLedger
+ * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>} findLatestInLedger
  *   Return the highest-numbered event for the ledger, or `null`
  *   if none exist.
- * @property {(registrationId: string, accreditationId: string | null, kind: import('./ledger-schema.js').LedgerEventKind) => Promise<LedgerEvent | null>} findLatestInLedgerByKind
- *   Return the highest-numbered event of the given kind for the ledger
- *   ledger, or `null` if none of that kind exist.
- * @property {(registrationId: string, accreditationId: string | null, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>} findEventsByPrnIdAfter
+ * @property {(ledgerId: WasteBalanceLedgerId, kind: import('./ledger-schema.js').LedgerEventKind) => Promise<LedgerEvent | null>} findLatestInLedgerByKind
+ *   Return the highest-numbered event of the given kind for the ledger,
+ *   or `null` if none of that kind exist.
+ * @property {(ledgerId: WasteBalanceLedgerId, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>} findEventsByPrnIdAfter
  *   Return events referencing the given `prnId` in `payload.prnId` within
  *   the specified ledger, with `number > afterNumber`, ordered by
- *   `number` ascending.
- * @property {(registrationId: string, accreditationId: string | null) => Promise<LedgerEvent[]>} findAllInLedger
+ *   `number` ascending. A ledger read that happens to be about a PRN: it takes
+ *   a ledger id, not a PRN's ancestry.
+ * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent[]>} findAllInLedger
  *   Return all events for the given ledger, ordered by `number`
  *   ascending. Returns an empty array if the ledger has no events.
- * @property {(registrationId: string, accreditationId: string | null) => Promise<number>} deleteAllInLedger
+ * @property {(ledgerId: WasteBalanceLedgerId) => Promise<number>} deleteAllInLedger
  *   Migration PAE-1382: delete all events for the given ledger.
  *   Returns the number of deleted events. No-op on empty ledger.
  * @property {(events: LedgerEventInsert[]) => Promise<LedgerEvent[]>} appendEvents

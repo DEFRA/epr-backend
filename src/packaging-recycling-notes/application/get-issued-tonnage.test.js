@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { PRN_STATUS } from '../domain/model.js'
 import { getIssuedTonnage } from './get-issued-tonnage.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '../repository/inmemory.plugin.js'
-import { buildPrn } from '../repository/contract/test-data.js'
+import {
+  buildPrn,
+  underAccreditation
+} from '../repository/contract/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
 const PERIOD_START = '2025-01-01'
@@ -10,10 +13,14 @@ const PERIOD_END = '2025-12-31'
 const IN_PERIOD = new Date('2025-06-15T12:00:00Z')
 const ACTOR = { id: 'u', name: 'U' }
 
-const ACCREDITATION_ID = 'acc-123'
+const ACCREDITATION = {
+  organisationId: 'org-123',
+  registrationId: 'reg-123',
+  accreditationId: 'acc-123'
+}
 
 const defaultParams = {
-  accreditationId: ACCREDITATION_ID,
+  ...ACCREDITATION,
   startDate: PERIOD_START,
   endDate: PERIOD_END
 }
@@ -31,17 +38,7 @@ function createRepo() {
  */
 async function issuePrn(repo, { tonnage, issuedAt = IN_PERIOD }) {
   const draft = await repo.create(
-    buildPrn({
-      tonnage,
-      accreditation: {
-        id: ACCREDITATION_ID,
-        accreditationNumber: 'ACC-001',
-        accreditationYear: 2026,
-        material: 'plastic',
-        submittedToRegulator: 'ea',
-        siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-      }
-    })
+    buildPrn(underAccreditation(ACCREDITATION, { tonnage }))
   )
 
   return repo.updateStatus({
@@ -148,17 +145,7 @@ describe('getIssuedTonnage', () => {
   it('excludes PRN with no qualifying slot timestamps in period', async () => {
     const repo = createRepo()
     await repo.create(
-      buildPrn({
-        tonnage: 100,
-        accreditation: {
-          id: ACCREDITATION_ID,
-          accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
-          material: 'plastic',
-          submittedToRegulator: 'ea',
-          siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-        }
-      })
+      buildPrn(underAccreditation(ACCREDITATION, { tonnage: 100 }))
     )
 
     const result = await getIssuedTonnage(repo, defaultParams)

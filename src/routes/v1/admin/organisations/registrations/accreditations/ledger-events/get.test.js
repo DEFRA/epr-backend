@@ -7,8 +7,9 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { ledgerEventsGetPath } from './get.js'
 
-const makePath = (regId, accId) =>
+const makePath = (orgId, regId, accId) =>
   ledgerEventsGetPath
+    .replace('{organisationId}', orgId)
     .replace('{registrationId}', regId)
     .replace('{accreditationId}', accId)
 
@@ -35,7 +36,7 @@ describe(`GET ${ledgerEventsGetPath}`, () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: makePath('reg-1', 'acc-1'),
+      url: makePath('org-1', 'reg-1', 'acc-1'),
       ...asServiceMaintainer()
     })
 
@@ -66,7 +67,7 @@ describe(`GET ${ledgerEventsGetPath}`, () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: makePath('reg-2', 'acc-2'),
+      url: makePath('org-2', 'reg-2', 'acc-2'),
       ...asServiceMaintainer()
     })
 
@@ -80,7 +81,7 @@ describe(`GET ${ledgerEventsGetPath}`, () => {
   it('returns an empty array when no events exist', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: makePath('reg-none', 'acc-none'),
+      url: makePath('org-none', 'reg-none', 'acc-none'),
       ...asServiceMaintainer()
     })
 
@@ -89,10 +90,30 @@ describe(`GET ${ledgerEventsGetPath}`, () => {
     expect(result).toEqual([])
   })
 
+  it('returns no events for a registration named under a different organisation', async () => {
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        organisationId: 'org-owner',
+        registrationId: 'reg-owned',
+        accreditationId: 'acc-owned',
+        number: 1
+      })
+    ])
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath('org-stranger', 'reg-owned', 'acc-owned'),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toEqual([])
+  })
+
   it('returns 401 when not authenticated', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: makePath('some-reg', 'some-acc')
+      url: makePath('some-org', 'some-reg', 'some-acc')
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)

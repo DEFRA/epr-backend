@@ -2,6 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '../ledger-schema.js'
 import {
+  buildLedgerId,
   buildPrnCreatedEvent,
   buildPrnCancelledAfterIssueEvent
 } from '../ledger-test-data.js'
@@ -39,8 +40,10 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
       ])
 
       const result = await repository.findEventsByPrnIdAfter(
-        'reg-prn',
-        'acc-prn',
+        buildLedgerId({
+          registrationId: 'reg-prn',
+          accreditationId: 'acc-prn'
+        }),
         'prn-watermark',
         0
       )
@@ -71,8 +74,7 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
       ])
 
       const result = await repository.findEventsByPrnIdAfter(
-        'reg-wm',
-        'acc-wm',
+        buildLedgerId({ registrationId: 'reg-wm', accreditationId: 'acc-wm' }),
         'prn-filter',
         1
       )
@@ -92,8 +94,10 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
       ])
 
       const result = await repository.findEventsByPrnIdAfter(
-        'reg-caught-up',
-        'acc-caught-up',
+        buildLedgerId({
+          registrationId: 'reg-caught-up',
+          accreditationId: 'acc-caught-up'
+        }),
         'prn-caught-up',
         1
       )
@@ -103,8 +107,10 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
 
     it('returns an empty array when no events exist for the prnId', async () => {
       const result = await repository.findEventsByPrnIdAfter(
-        'reg-none',
-        'acc-none',
+        buildLedgerId({
+          registrationId: 'reg-none',
+          accreditationId: 'acc-none'
+        }),
         'prn-nonexistent',
         0
       )
@@ -131,8 +137,7 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
       ])
 
       const result = await repository.findEventsByPrnIdAfter(
-        'reg-a',
-        'acc-a',
+        buildLedgerId({ registrationId: 'reg-a', accreditationId: 'acc-a' }),
         'prn-shared',
         0
       )
@@ -140,6 +145,30 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
       expect(result).toHaveLength(1)
       expect(result[0].registrationId).toBe('reg-a')
       expect(result[0].accreditationId).toBe('acc-a')
+    })
+
+    it('does not read a ledger named under a different organisation', async () => {
+      await repository.appendEvents([
+        buildPrnCreatedEvent({
+          organisationId: 'org-owner',
+          registrationId: 'reg-owned',
+          accreditationId: 'acc-owned',
+          number: 1,
+          payload: { prnId: 'prn-owned', amount: 50 }
+        })
+      ])
+
+      const result = await repository.findEventsByPrnIdAfter(
+        buildLedgerId({
+          organisationId: 'org-stranger',
+          registrationId: 'reg-owned',
+          accreditationId: 'acc-owned'
+        }),
+        'prn-owned',
+        0
+      )
+
+      expect(result).toEqual([])
     })
   })
 }

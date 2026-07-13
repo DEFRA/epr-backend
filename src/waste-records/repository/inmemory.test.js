@@ -2,6 +2,7 @@ import { describe, it as base, expect } from 'vitest'
 
 import { createInMemorySummaryLogRowStateRepository } from './inmemory.js'
 import { testSummaryLogRowStateRepositoryContract } from './port.contract.js'
+import { DEFAULT_LEDGER_ID } from './test-data.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -14,7 +15,7 @@ describe('summary-log row states repository - in-memory implementation', () => {
   it('exposes the row-state port surface', () => {
     const repository = createInMemorySummaryLogRowStateRepository()()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
-    expect(repository.findBySummaryLogId).toBeTypeOf('function')
+    expect(repository.findRowStatesForSummaryLog).toBeTypeOf('function')
     expect(repository.findRowHistory).toBeTypeOf('function')
   })
 
@@ -38,7 +39,10 @@ describe('summary-log row states repository - in-memory implementation', () => {
       }
     ])()
 
-    const committed = await repository.findBySummaryLogId('log-seed')
+    const committed = await repository.findRowStatesForSummaryLog(
+      DEFAULT_LEDGER_ID,
+      'log-seed'
+    )
     expect(committed).toHaveLength(1)
     expect(committed[0].id).toBe('seed-1')
   })

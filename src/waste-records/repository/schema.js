@@ -22,15 +22,10 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  */
 
 /**
- * Ledger identity a row state belongs to. Mirrors the event ledger identity
- * `(registrationId, accreditationId)` with `organisationId` denormalised on,
- * exactly as stream events carry it. `accreditationId` is null for
- * registered-only streams.
+ * Ledger identity a row state belongs to — the ledger's own id type, not a
+ * copy of it, so a row state's identity cannot drift from the ledger's.
  *
- * @typedef {Object} WasteBalanceLedgerId
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string | null} accreditationId
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
 /**
@@ -49,18 +44,16 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 /**
  * Shape accepted by the row-states schema for a stored document — a ledger identity,
  * a row entry's content + classification, and the membership of submissions
- * that committed this exact state.
+ * that produced this exact state.
  *
- * @typedef {Object} SummaryLogRowStateInsert
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string | null} accreditationId
- * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
- * @property {string} rowId
- * @property {string} processingType
- * @property {Record<string, any>} data
- * @property {RowClassification} classification
- * @property {string[]} summaryLogIds
+ * @typedef {WasteBalanceLedgerId & {
+ *   wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType,
+ *   rowId: string,
+ *   processingType: string,
+ *   data: Record<string, any>,
+ *   classification: RowClassification,
+ *   summaryLogIds: string[]
+ * }} SummaryLogRowStateInsert
  */
 
 /**

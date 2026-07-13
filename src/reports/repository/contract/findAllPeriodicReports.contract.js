@@ -255,9 +255,9 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         buildCreateReportParams({
           period: MONTHLY_PERIODS.January,
           year: NEXT_YEAR,
-          startDate: `${NEXT_YEAR}-01-01T00:00:00.000Z`,
-          endDate: `${NEXT_YEAR}-01-31T00:00:00.000Z`,
-          dueDate: `${NEXT_YEAR}-02-15T00:00:00.000Z`
+          startDate: `${NEXT_YEAR}-01-01`,
+          endDate: `${NEXT_YEAR}-01-31`,
+          dueDate: `${NEXT_YEAR}-02-15`
         })
       )
 
