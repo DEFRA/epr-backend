@@ -69,28 +69,26 @@ const toLedgerEvent = (doc) => {
 }
 
 /**
- * Classify a MongoDB E11000 duplicate key error by inspecting the
- * `keyPattern` on the write error to determine which index was violated.
+ * Classify a MongoDB E11000 duplicate key error raised by an append.
+ *
+ * `partition_number` is the only unique index on this collection — the other
+ * two are non-unique, and driver-generated `_id`s do not collide — so a
+ * duplicate key can only mean a competing writer took the slot.
  *
  * @param {unknown} error
  * @param {LedgerEventInsert} event
  */
 const classifyDuplicateKeyError = (error, event) => {
-  const writeError = findDuplicateKeyWriteError(error)
-  if (!writeError) {
+  if (!findDuplicateKeyWriteError(error)) {
     return undefined
   }
 
-  if (writeError.keyPattern?.number) {
-    return new LedgerSlotConflictError(event)
-  }
-
-  return undefined
+  return new LedgerSlotConflictError(event)
 }
 
 /**
  * @param {unknown} candidate
- * @returns {candidate is { code: number, keyPattern?: Record<string, number> }}
+ * @returns {candidate is { code: number }}
  */
 const isDuplicateKeyWriteError = (candidate) =>
   typeof candidate === 'object' &&
@@ -99,15 +97,13 @@ const isDuplicateKeyWriteError = (candidate) =>
   candidate.code === MONGODB_DUPLICATE_KEY_ERROR_CODE
 
 /**
+ * `insertMany` reports a failed write as a `writeErrors` entry on the
+ * enclosing `MongoBulkWriteError`. An entry is where a write records its own
+ * outcome, so a duplicate key is looked up there rather than on the aggregate.
+ *
  * @param {unknown} error
  */
 const findDuplicateKeyWriteError = (error) => {
-  if (isDuplicateKeyWriteError(error)) {
-    return /** @type {{ code: number, keyPattern?: Record<string, number> }} */ (
-      error
-    )
-  }
-
   if (
     typeof error === 'object' &&
     error !== null &&
