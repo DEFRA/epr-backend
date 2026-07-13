@@ -563,7 +563,7 @@ These are for us to define in this codebase, but as a default starting point try
 new values if genuinely necessary. By doing this, you will be making it easier to search the logs by category and
 therefore helping yourself and other engineers.
 
-You can find the [enums of event values here]()
+You can find the [enums of event values here](./src/common/enums/event.js)
 
 ## Auditing
 
