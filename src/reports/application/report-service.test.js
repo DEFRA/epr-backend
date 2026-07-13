@@ -16,6 +16,7 @@ import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod,
   fetchReportBySubmissionNumber,
+  isLatestSubmittedSubmission,
   createReportsService
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -314,6 +315,50 @@ describe('report-service', () => {
       )
 
       expect(result).toBeNull()
+    })
+  })
+
+  describe('isLatestSubmittedSubmission', () => {
+    const stubRepository = (periodicReports) =>
+      /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockResolvedValue(periodicReports)
+      })
+
+    const slotWith = (current, previousSubmissions = []) => [
+      {
+        year: 2024,
+        reports: { monthly: { 1: { current, previousSubmissions } } }
+      }
+    ]
+
+    it('returns false when the period has no reports at all', async () => {
+      const result = await isLatestSubmittedSubmission(
+        stubRepository([]),
+        'org-1',
+        'reg-1',
+        2024,
+        'monthly',
+        1,
+        1
+      )
+
+      expect(result).toBe(false)
+    })
+
+    it('returns false when the period holds no submitted submission', async () => {
+      const draft = { status: REPORT_STATUS.IN_PROGRESS, submissionNumber: 1 }
+
+      const result = await isLatestSubmittedSubmission(
+        stubRepository(slotWith(draft)),
+        'org-1',
+        'reg-1',
+        2024,
+        'monthly',
+        1,
+        1
+      )
+
+      expect(result).toBe(false)
     })
   })
 

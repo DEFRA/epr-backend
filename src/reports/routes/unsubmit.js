@@ -3,7 +3,10 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
-import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
+import {
+  fetchReportBySubmissionNumber,
+  isLatestSubmittedSubmission
+} from '#reports/application/report-service.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -59,6 +62,24 @@ export const reportsUnsubmit = {
     if (report.status.currentStatus !== REPORT_STATUS.SUBMITTED) {
       throw Boom.conflict(
         `Cannot unsubmit a report with status '${report.status.currentStatus}'`
+      )
+    }
+
+    // Only the latest submitted submission may be unsubmitted. Unsubmitting a
+    // submission that a later resubmission has superseded would silently drop it
+    // from the admin submission history (PAE-1657).
+    const isLatest = await isLatestSubmittedSubmission(
+      reportsRepository,
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber
+    )
+    if (!isLatest) {
+      throw Boom.conflict(
+        `Cannot unsubmit submission ${submissionNumber}: it has been superseded by a later submission`
       )
     }
 

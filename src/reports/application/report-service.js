@@ -3,6 +3,7 @@ import { resolveDetailedMaterial } from '#domain/organisations/registration-util
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
+import { latestSubmitted } from '#reports/domain/build-calendar-periods.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -138,6 +139,45 @@ export async function fetchReportBySubmissionNumber(
   }
 
   return reportsRepository.findReportById(currentReportId)
+}
+
+/**
+ * Determines whether a submission is the latest submitted submission for its
+ * period. Only the latest submitted submission may be unsubmitted: unsubmitting
+ * a superseded submission (an earlier one that a later resubmission has
+ * replaced) would silently drop it from the admin submission history (PAE-1657).
+ * A resubmission still in progress does not supersede: the earlier submission
+ * remains the latest *submitted* one until the resubmission is itself submitted.
+ * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {number} year
+ * @param {Cadence} cadence
+ * @param {number} period
+ * @param {number} submissionNumber
+ * @returns {Promise<boolean>}
+ */
+export async function isLatestSubmittedSubmission(
+  reportsRepository,
+  organisationId,
+  registrationId,
+  year,
+  cadence,
+  period,
+  submissionNumber
+) {
+  const periodicReports = await reportsRepository.findPeriodicReports({
+    organisationId,
+    registrationId
+  })
+  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
+    cadence
+  ]?.[period]
+  if (!slot) {
+    return false
+  }
+  const latest = latestSubmitted(slot.current, slot.previousSubmissions)
+  return latest?.submissionNumber === submissionNumber
 }
 
 /**
