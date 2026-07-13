@@ -19,27 +19,28 @@ import { validateLedgerEventInsert } from './ledger-validation.js'
  */
 
 /**
- * @param {LedgerEvent} event
- * @param {string} registrationId
- * @param {string | null} accreditationId
+ * @typedef {import('./ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
-const matchesLedger = (event, registrationId, accreditationId) =>
-  event.registrationId === registrationId &&
-  event.accreditationId === accreditationId
+
+/**
+ * @param {LedgerEvent} event
+ * @param {WasteBalanceLedgerId} ledgerId
+ */
+const matchesLedger = (event, ledgerId) =>
+  event.organisationId === ledgerId.organisationId &&
+  event.registrationId === ledgerId.registrationId &&
+  event.accreditationId === ledgerId.accreditationId
 
 /**
  * Migration PAE-1382: delete all events for a ledgerId.
  *
  * @param {LedgerEvent[]} storage
- * @param {string} registrationId
- * @param {string | null} accreditationId
+ * @param {WasteBalanceLedgerId} ledgerId
  * @returns {number}
  */
-const doDeleteInLedger = (storage, registrationId, accreditationId) => {
+const doDeleteInLedger = (storage, ledgerId) => {
   const before = storage.length
-  const remaining = storage.filter(
-    (event) => !matchesLedger(event, registrationId, accreditationId)
-  )
+  const remaining = storage.filter((event) => !matchesLedger(event, ledgerId))
   storage.length = 0
   storage.push(...remaining)
   return before - remaining.length
@@ -60,7 +61,7 @@ const doAppendEvents = (storage, events) => {
 
   const first = events[0]
   const ledgerEvents = storage.filter((existing) =>
-    matchesLedger(existing, first.registrationId, first.accreditationId)
+    matchesLedger(existing, first)
   )
   const currentMax =
     ledgerEvents.length > 0
@@ -71,29 +72,15 @@ const doAppendEvents = (storage, events) => {
 
   if (first.number !== expectedStart) {
     if (ledgerEvents.some((e) => e.number === first.number)) {
-      throw new LedgerSlotConflictError(
-        first.registrationId,
-        first.accreditationId,
-        first.number
-      )
+      throw new LedgerSlotConflictError(first)
     }
-    throw new LedgerSequenceError(
-      first.registrationId,
-      first.accreditationId,
-      first.number,
-      expectedStart
-    )
+    throw new LedgerSequenceError(first, expectedStart)
   }
 
   for (let i = 1; i < events.length; i++) {
     const expected = first.number + i
     if (events[i].number !== expected) {
-      throw new LedgerSequenceError(
-        events[i].registrationId,
-        events[i].accreditationId,
-        events[i].number,
-        expected
-      )
+      throw new LedgerSequenceError(events[i], expected)
     }
   }
 
@@ -114,13 +101,10 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
 
   return () => ({
     /**
-     * @param {string} registrationId
-     * @param {string | null} accreditationId
+     * @param {WasteBalanceLedgerId} ledgerId
      */
-    findLatestInLedger: async (registrationId, accreditationId) => {
-      const matches = storage.filter((event) =>
-        matchesLedger(event, registrationId, accreditationId)
-      )
+    findLatestInLedger: async (ledgerId) => {
+      const matches = storage.filter((event) => matchesLedger(event, ledgerId))
 
       if (matches.length === 0) {
         return null
@@ -130,15 +114,12 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     },
 
     /**
-     * @param {string} registrationId
-     * @param {string | null} accreditationId
+     * @param {WasteBalanceLedgerId} ledgerId
      * @param {import('./ledger-schema.js').LedgerEventKind} kind
      */
-    findLatestInLedgerByKind: async (registrationId, accreditationId, kind) => {
+    findLatestInLedgerByKind: async (ledgerId, kind) => {
       const matches = storage.filter(
-        (event) =>
-          matchesLedger(event, registrationId, accreditationId) &&
-          event.kind === kind
+        (event) => matchesLedger(event, ledgerId) && event.kind === kind
       )
 
       if (matches.length === 0) {
@@ -149,21 +130,15 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     },
 
     /**
-     * @param {string} registrationId
-     * @param {string | null} accreditationId
+     * @param {WasteBalanceLedgerId} ledgerId
      * @param {string} prnId
      * @param {number} afterNumber
      */
-    findEventsByPrnIdAfter: async (
-      registrationId,
-      accreditationId,
-      prnId,
-      afterNumber
-    ) => {
+    findEventsByPrnIdAfter: async (ledgerId, prnId, afterNumber) => {
       const matches = storage
         .filter(
           (event) =>
-            matchesLedger(event, registrationId, accreditationId) &&
+            matchesLedger(event, ledgerId) &&
             /** @type {*} */ (event.payload).prnId === prnId &&
             event.number > afterNumber
         )
@@ -173,21 +148,20 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     },
 
     /**
-     * @param {string} registrationId
-     * @param {string | null} accreditationId
+     * @param {WasteBalanceLedgerId} ledgerId
      */
-    findAllInLedger: async (registrationId, accreditationId) => {
+    findAllInLedger: async (ledgerId) => {
       const matches = storage
-        .filter((event) =>
-          matchesLedger(event, registrationId, accreditationId)
-        )
+        .filter((event) => matchesLedger(event, ledgerId))
         .sort((a, b) => a.number - b.number)
 
       return structuredClone(matches)
     },
 
-    deleteAllInLedger: async (registrationId, accreditationId) =>
-      doDeleteInLedger(storage, registrationId, accreditationId),
+    /**
+     * @param {WasteBalanceLedgerId} ledgerId
+     */
+    deleteAllInLedger: async (ledgerId) => doDeleteInLedger(storage, ledgerId),
 
     appendEvents: async (events) => doAppendEvents(storage, events)
   })

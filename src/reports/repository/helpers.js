@@ -1,9 +1,23 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { periodKey } from '#reports/domain/period-key.js'
 import { randomUUID } from 'node:crypto'
+
+const BARE_DATE_LENGTH = 10
+
+/**
+ * Only reports persisted before the bare-date schema fix carry a full ISO
+ * datetime here (historical Joi coercion); new reports are already bare, so
+ * this only does work for the old-shape case. Safe to delete once no
+ * pre-fix reports remain.
+ * @param {string} dateString
+ * @returns {string}
+ */
+const backCompatCalendarDate = (dateString) =>
+  dateString.length > BARE_DATE_LENGTH ? calendarDate(dateString) : dateString
 
 /**
  * Picks the latest submission (highest submissionNumber) per reporting period
@@ -112,9 +126,9 @@ export const groupAsPeriodicReports = (
     )
     const { startDate, endDate, dueDate } = first
     return {
-      startDate,
-      endDate,
-      dueDate,
+      startDate: backCompatCalendarDate(startDate),
+      endDate: backCompatCalendarDate(endDate),
+      dueDate: backCompatCalendarDate(dueDate),
       current: toSubmission(first),
       previousSubmissions: rest.map(toSubmission)
     }

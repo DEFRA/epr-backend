@@ -141,7 +141,11 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(
           packagingRecyclingNotesRepository.findByAccreditation
-        ).toHaveBeenCalledWith(accreditationId)
+        ).toHaveBeenCalledWith({
+          organisationId,
+          registrationId,
+          accreditationId
+        })
 
         const payload = JSON.parse(response.payload)
         expect(payload).toHaveLength(2)

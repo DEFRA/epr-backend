@@ -410,6 +410,8 @@ export async function fetchOrGenerateReportForPeriod({
     overseasSitesRepository,
     wasteRecords,
     operatorCategory,
+    organisationId,
+    registrationId,
     registration,
     year,
     cadence,
@@ -424,6 +426,8 @@ export async function fetchOrGenerateReportForPeriod({
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {string} params.operatorCategory
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
  * @param {object} params.registration
  * @param {number} params.year
  * @param {Cadence} params.cadence
@@ -435,6 +439,8 @@ async function getAggregatedReportDetail({
   overseasSitesRepository,
   wasteRecords,
   operatorCategory,
+  organisationId,
+  registrationId,
   registration,
   year,
   cadence,
@@ -454,6 +460,8 @@ async function getAggregatedReportDetail({
   })
 
   const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
+    organisationId,
+    registrationId,
     accreditationId: registration.accreditationId,
     startDate: aggregatedReportDetail.startDate,
     endDate: aggregatedReportDetail.endDate
@@ -536,6 +544,8 @@ export async function createReportForPeriod({
     overseasSitesRepository,
     wasteRecords,
     operatorCategory,
+    organisationId,
+    registrationId,
     registration,
     year,
     cadence,

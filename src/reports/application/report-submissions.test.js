@@ -23,12 +23,16 @@ describe('generateReportSubmissions (integration)', () => {
     vi.useRealTimers()
   })
 
+  // Accredited from the start of the reporting year, so every period of the
+  // year is within the accreditation window (no validFrom trim).
+  const FULL_YEAR_RANGE = { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
+
   it('generates full report submissions across multiple orgs', async () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
     // Org 1: one approved accredited registration (glass, monthly cadence); Jan submitted
-    const org1 = await buildApprovedOrg(orgRepo)
+    const org1 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const org1Reg = org1.registrations[0]
     await buildSubmittedReport(reportsRepo, {
       organisationId: org1.id,
@@ -45,7 +49,7 @@ describe('generateReportSubmissions (integration)', () => {
     })
 
     // Org 2: approved registration with no report submissions
-    await buildApprovedOrg(orgRepo)
+    await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
 
     const result = await generateReportSubmissions(orgRepo, reportsRepo)
 
@@ -193,6 +197,23 @@ describe('generateReportSubmissions (integration)', () => {
     expect(byPeriod['Jan 2026'].submittedDate).toBe(
       FIXED_DATE.toISOString().slice(0, 10)
     )
+  })
+
+  it('trims monthly obligation rows to the accreditation validFrom (PAE-1737)', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    // Accredited from mid-February: January is before validFrom, so no January
+    // obligation row should be generated. Feb and Mar have ended by Apr 17.
+    await buildApprovedOrg(orgRepo, undefined, {
+      VALID_FROM: '2026-02-15',
+      VALID_TO: '2026-12-31'
+    })
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+    const periods = result.reportSubmissions.map((r) => r.reportingPeriod)
+
+    expect(periods).toEqual(['Feb 2026', 'Mar 2026'])
   })
 })
 
