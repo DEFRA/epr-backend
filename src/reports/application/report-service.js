@@ -143,6 +143,49 @@ export async function fetchReportBySubmissionNumber(
 }
 
 /**
+ * Determines whether a submission is the latest submission for its period, by
+ * submission number, regardless of status. Only the latest submission may be
+ * unsubmitted: unsubmitting an earlier one would silently drop it from the admin
+ * submission history (PAE-1657). This intentionally guards the absolute latest
+ * submission, not merely the latest *submitted* one, so an earlier submitted
+ * report cannot be unsubmitted while a later resubmission draft is in progress.
+ * The caller separately requires the target to be submitted.
+ * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {number} year
+ * @param {Cadence} cadence
+ * @param {number} period
+ * @param {number} submissionNumber
+ * @returns {Promise<boolean>}
+ */
+export async function isLatestSubmission(
+  reportsRepository,
+  organisationId,
+  registrationId,
+  year,
+  cadence,
+  period,
+  submissionNumber
+) {
+  const periodicReports = await reportsRepository.findPeriodicReports({
+    organisationId,
+    registrationId
+  })
+  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
+    cadence
+  ]?.[period]
+  const submissions = [
+    slot?.current,
+    ...(slot?.previousSubmissions ?? [])
+  ].flatMap((s) => (s ? [s.submissionNumber] : []))
+  if (submissions.length === 0) {
+    return false
+  }
+  return Math.max(...submissions) === submissionNumber
+}
+
+/**
  * Formats a site address object into a single-line string.
  * @param {object|undefined} address
  * @returns {string|undefined}
