@@ -308,7 +308,7 @@ const markActiveReportsStaleForSummaryLog = async (
       report.organisationId === organisationId &&
       report.registrationId === registrationId &&
       ACTIVE_REPORT_STATUSES.has(report.status.currentStatus) &&
-      report.stale?.summaryLogChanged?.summaryLogId !== summaryLogId &&
+      !report.stale?.summaryLogChanged &&
       report.source?.summaryLogId !== summaryLogId
     ) {
       reports.set(id, {
@@ -359,27 +359,27 @@ const isReportInPeriodSlot = (report, slot) =>
   report.period === slot.period
 
 /**
- * Whether `report` is active and not yet flagged stale for this `prnId`.
+ * Whether `report` is active and not yet flagged stale for a PRN
+ * cancellation (first cancellation wins; later ones are no-ops here).
  *
  * @param {Object} report
- * @param {string} prnId
  * @returns {boolean}
  */
-const isUnflaggedForPrnCancellation = (report, prnId) =>
+const isUnflaggedForPrnCancellation = (report) =>
   ACTIVE_REPORT_STATUSES.has(report.status.currentStatus) &&
-  report.stale?.prnCancelled?.prnId !== prnId
+  !report.stale?.prnCancelled
 
 /**
  * Whether `report` is the active report matching the given org/reg/period
- * slot and not yet flagged stale for this `prnId`.
+ * slot and not yet flagged stale for a PRN cancellation.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number, prnId: string }} criteria
+ * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number }} criteria
  * @returns {boolean}
  */
 const isActiveReportForPrnCancellationSlot = (report, criteria) =>
   isReportInPeriodSlot(report, criteria) &&
-  isUnflaggedForPrnCancellation(report, criteria.prnId)
+  isUnflaggedForPrnCancellation(report)
 
 /**
  * Marks the active (in_progress / ready_to_submit) report for the given
@@ -414,8 +414,7 @@ const markActiveReportsStaleForPrnCancellation = async (reports, params) => {
         registrationId,
         year,
         cadence,
-        period,
-        prnId
+        period
       })
     ) {
       reports.set(id, {

@@ -63,13 +63,13 @@ export const createOnPrnCancelled =
 
     if (reportsMarkedStale.length === 0) {
       logger.info({
-        message: `No active report to mark stale for PRN cancellation: ${prnId}`
+        message: `No active report marked stale for ${organisationId}/${registrationId} prnId=${prnId} (none active, or already flagged by an earlier trigger)`
       })
       return
     }
 
     logger.info({
-      message: `Reports marked as stale for PRN cancellation: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
+      message: `Reports marked as stale for ${organisationId}/${registrationId} prnId=${prnId}: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
     })
 
     await auditMarkReportsStale({

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   assertNotStale,
+  assertValidStaleReasonsCode,
   normaliseStale,
   STALE_REASON,
   staleReasons
@@ -194,5 +195,31 @@ describe('assertNotStale', () => {
     })
 
     expect(() => assertNotStale(report)).not.toThrow()
+  })
+})
+
+describe('assertValidStaleReasonsCode', () => {
+  it('does not throw for a valid non-empty array of known reasons', () => {
+    expect(() =>
+      assertValidStaleReasonsCode([STALE_REASON.SUMMARY_LOG_CHANGED])
+    ).not.toThrow()
+  })
+
+  it('throws 500 for an empty array', () => {
+    expect(() => assertValidStaleReasonsCode([])).toThrow(
+      expect.objectContaining({
+        isBoom: true,
+        output: expect.objectContaining({ statusCode: 500 })
+      })
+    )
+  })
+
+  it('throws 500 for an unrecognised reason code', () => {
+    expect(() => assertValidStaleReasonsCode(['not_a_known_reason'])).toThrow(
+      expect.objectContaining({
+        isBoom: true,
+        output: expect.objectContaining({ statusCode: 500 })
+      })
+    )
   })
 })

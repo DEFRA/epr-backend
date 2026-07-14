@@ -1,10 +1,21 @@
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 
 export const STALE_REASON = Object.freeze({
   SUMMARY_LOG_CHANGED: 'summary_log_changed',
   PRN_CANCELLED: 'prn_cancelled'
 })
+
+/**
+ * Contract for the 409 payload's `code` field: a non-empty array of known
+ * stale reasons. Asserted just before assignment so the shape `staleReasons`
+ * produces is verified, not just assumed by callers that read `err.output.payload.code`.
+ */
+const staleReasonsCodeSchema = Joi.array()
+  .items(Joi.string().valid(...Object.values(STALE_REASON)))
+  .min(1)
+  .required()
 
 /** @typedef {(typeof STALE_REASON)[keyof typeof STALE_REASON]} StaleReason */
 
@@ -64,6 +75,24 @@ export const normaliseStale = (stale) => {
 }
 
 /**
+ * Asserts `reasons` matches the 409 payload's `code` contract, so the shape
+ * `staleReasons` produces is verified rather than just assumed by callers
+ * that read `err.output.payload.code`. Exported standalone so the failure
+ * branch is directly testable without needing `staleReasons` itself to ever
+ * produce an invalid array.
+ *
+ * @param {string[]} reasons
+ */
+export const assertValidStaleReasonsCode = (reasons) => {
+  const { error } = staleReasonsCodeSchema.validate(reasons)
+  if (error) {
+    throw Boom.badImplementation(
+      `Invalid stale reasons payload: ${error.message}`
+    )
+  }
+}
+
+/**
  * @param {import('#reports/repository/port.js').Report} report
  */
 export const assertNotStale = (report) => {
@@ -72,6 +101,8 @@ export const assertNotStale = (report) => {
     reasons.length > 0 &&
     report.status.currentStatus !== REPORT_STATUS.SUBMITTED
   ) {
+    assertValidStaleReasonsCode(reasons)
+
     const err = Boom.conflict(
       'Report cannot be submitted: summary log has changed or a PRN was cancelled'
     )

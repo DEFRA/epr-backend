@@ -435,7 +435,8 @@ const flagReportsByIdempotencyKey = async (
 
 /**
  * Bulk-marks all active reports not sourced from `summaryLogId` as stale.
- * Skips reports already stale from this SL (retry-safe) and reports built from it (already current).
+ * Skips reports already stale from this SL (retry-safe), and reports already
+ * flagged stale by an earlier upload (first trigger wins; the audit trail records every occurrence).
  *
  * @param {Db} db
  * @param {string} organisationId
@@ -465,7 +466,8 @@ const performMarkActiveReportsStaleForSummaryLog = async (
       organisationId,
       registrationId,
       'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
-      'source.summaryLogId': { $ne: summaryLogId }
+      'source.summaryLogId': { $ne: summaryLogId },
+      'stale.summaryLogChanged': { $exists: false }
     },
     readScope: { organisationId, registrationId },
     idempotencyKeyField: 'summaryLogId',
@@ -483,10 +485,8 @@ const performMarkActiveReportsStaleForSummaryLog = async (
 /**
  * Marks the active (in_progress / ready_to_submit) report for the given
  * org/reg/period as stale for a PRN cancellation. Skips it if already
- * flagged for this `prnId` (retry-safe). At most one active report can match
- * — reporting periods don't overlap, and the partial unique index
- * `reports_one_active_draft_per_period` guarantees at most one active draft
- * per period — so this returns zero or one result.
+ * flagged, whether by this `prnId` (retry-safe) or another one (first
+ * cancellation wins; the audit trail records every occurrence).
  *
  * @param {Db} db
  * @param {import('./port.js').MarkActiveReportsStaleForPrnCancellationParams} params
@@ -512,7 +512,8 @@ const performMarkActiveReportsStaleForPrnCancellation = async (db, params) => {
       year,
       cadence,
       period,
-      'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] }
+      'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
+      'stale.prnCancelled': { $exists: false }
     },
     readScope: { organisationId, registrationId, year, cadence, period },
     idempotencyKeyField: 'prnId',

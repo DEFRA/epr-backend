@@ -99,6 +99,31 @@ export const testMarkActiveReportsStaleForPrnCancellationBehaviour = (it) => {
       expect(second).toEqual([])
     })
 
+    it('does not overwrite the first PRN when a different PRN is cancelled afterwards', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
+
+      const first =
+        await repository.markActiveReportsStaleForPrnCancellation(
+          DEFAULT_PARAMS
+        )
+      expect(first).toHaveLength(1)
+
+      const second = await repository.markActiveReportsStaleForPrnCancellation({
+        ...DEFAULT_PARAMS,
+        prnId: 'prn-id-000000000000000000000002',
+        occurredAt: '2026-06-02T12:00:00.000Z'
+      })
+      expect(second).toEqual([])
+
+      const report = await repository.findReportById(reportId)
+      expect(report.stale.prnCancelled).toEqual({
+        occurredAt: OCCURRED_AT,
+        prnId: PRN_ID
+      })
+    })
+
     it('does not clobber an existing stale.summaryLogChanged flag', async () => {
       const { id: reportId } = await repository.createReport(
         buildCreateReportParams()

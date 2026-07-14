@@ -644,6 +644,38 @@ describe('updatePrnStatus', () => {
       })
     })
 
+    it('resolves with the updated PRN and logs the error when the cancellation notification fails', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 60,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            issued: { at: EVENT_AT, by: USER },
+            history: []
+          }
+        }),
+        balance: { amount: 440, availableAmount: 940 }
+      })
+      const logger = createMockLogger()
+      const notifyError = new Error('reports repository unavailable')
+      mockOnCancelled.mockRejectedValueOnce(notifyError)
+
+      const updatedPrn = await callUpdate({
+        ...repositories,
+        logger,
+        newStatus: PRN_STATUS.CANCELLED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      expect(updatedPrn.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ err: notifyError })
+      )
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
+    })
+
     it('throws when cancelling an issued PRN with no waste balance', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({

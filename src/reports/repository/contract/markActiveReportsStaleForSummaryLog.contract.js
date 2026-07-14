@@ -100,6 +100,34 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
       expect(second).toEqual([])
     })
 
+    it('does not overwrite the first summary log when a different one is uploaded afterwards', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
+
+      const first = await repository.markActiveReportsStaleForSummaryLog(
+        DEFAULT_ORG_ID,
+        DEFAULT_REG_ID,
+        SL_ID,
+        UPLOADED_AT
+      )
+      expect(first).toHaveLength(1)
+
+      const second = await repository.markActiveReportsStaleForSummaryLog(
+        DEFAULT_ORG_ID,
+        DEFAULT_REG_ID,
+        'sl-id-new-000000000000000000000002',
+        '2026-06-02T12:00:00.000Z'
+      )
+      expect(second).toEqual([])
+
+      const report = await repository.findReportById(reportId)
+      expect(report.stale.summaryLogChanged).toEqual({
+        uploadedAt: UPLOADED_AT,
+        summaryLogId: SL_ID
+      })
+    })
+
     it('skips reports whose source.summaryLogId matches the given summaryLogId', async () => {
       // Default source.summaryLogId is 'sl-1' (see test-data.js buildCreateReportParams)
       await repository.createReport(buildCreateReportParams())

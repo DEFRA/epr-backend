@@ -49,6 +49,10 @@ export const createOnSummaryLogUploaded =
   }) => {
     const uploadedAt = new Date().toISOString()
 
+    logger.info({
+      message: `Summary log uploaded, marking reports stale for ${organisationId}/${registrationId}: summaryLogId=${summaryLogId}`
+    })
+
     const reportsMarkedStale =
       await reportsRepository.markActiveReportsStaleForSummaryLog(
         organisationId,
@@ -59,7 +63,7 @@ export const createOnSummaryLogUploaded =
 
     if (reportsMarkedStale.length > 0) {
       logger.info({
-        message: `Reports marked as stale: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
+        message: `Reports marked as stale for ${organisationId}/${registrationId} summaryLogId=${summaryLogId}: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
       })
 
       await auditMarkReportsStale({
@@ -68,6 +72,10 @@ export const createOnSummaryLogUploaded =
         registrationId,
         reportsMarkedStale,
         action: MARK_STALE_ACTION.SUMMARY_LOG_CHANGED
+      })
+    } else {
+      logger.info({
+        message: `No active report marked stale for ${organisationId}/${registrationId} summaryLogId=${summaryLogId} (none active, or already flagged by an earlier trigger)`
       })
     }
 
@@ -86,7 +94,7 @@ export const createOnSummaryLogUploaded =
 
     if (reportsRequiringResubmission.length > 0) {
       logger.info({
-        message: `Reports flagged requiring resubmission: ${reportsRequiringResubmission.map((r) => r.reportId).join(', ')}`
+        message: `Reports flagged requiring resubmission for ${organisationId}/${registrationId} summaryLogId=${summaryLogId}: ${reportsRequiringResubmission.map((r) => r.reportId).join(', ')}`
       })
 
       await auditMarkReportsRequiringResubmission({

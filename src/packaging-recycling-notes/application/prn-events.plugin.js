@@ -29,8 +29,8 @@ export const prnEventsPlugin = {
 
   register: (server) => {
     registerDependency(server, 'prnEvents', (request) => {
-      const { reportsRepository, systemLogsRepository } =
-        /** @type {{ reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} */ (
+      const { reportsRepository, systemLogsRepository, logger } =
+        /** @type {{ reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository, logger: import('#common/hapi-types.js').TypedLogger }} */ (
           /** @type {unknown} */ (request)
         )
 
@@ -41,9 +41,19 @@ export const prnEventsPlugin = {
 
       return {
         onCancelled: async (/** @type {PrnCancelledParams} */ params) => {
-          await Promise.all(
+          const results = await Promise.allSettled(
             onCancelledHandlers.map((handler) => handler(params))
           )
+
+          results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+              logger.error({
+                err: result.reason,
+                message: `prnEvents.onCancelled handler[${index}] failed for organisationId=${params.organisationId} registrationId=${params.registrationId} prnId=${params.prnId}`,
+                event: { reference: params.prnId }
+              })
+            }
+          })
         }
       }
     })

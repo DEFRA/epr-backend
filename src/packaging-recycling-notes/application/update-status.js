@@ -300,7 +300,15 @@ export async function updatePrnStatus({
     isExport: prn.isExport
   })
 
-  await notifyPrnCancelled(prnEvents, newStatus, updatedPrn)
+  try {
+    await notifyPrnCancelled(prnEvents, newStatus, updatedPrn)
+  } catch (error) {
+    // Best-effort: the PRN transition is already committed, so don't fail the caller for a stale-notification error.
+    logger.error({
+      err: error,
+      message: `PRN-cancellation notification failed for ${updatedPrn.id}; PRN status is already committed`
+    })
+  }
 
   return updatedPrn
 }
