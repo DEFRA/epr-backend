@@ -19,6 +19,10 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
     "paths": {
       "#adapters/*": ["./src/adapters/*"],
       "#application/*": ["./src/application/*"],

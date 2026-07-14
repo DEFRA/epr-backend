@@ -3,10 +3,6 @@
   "compilerOptions": {
     "types": ["vitest/globals"],
     "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
     "useUnknownInCatchVariables": true,
     "noImplicitAny": true,
     "noUncheckedIndexedAccess": true
