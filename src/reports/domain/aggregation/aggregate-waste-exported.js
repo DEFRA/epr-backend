@@ -83,7 +83,9 @@ const generateOverseasSiteSummaries = (
 function getTonnageRepatriated(repatriatedRecords) {
   return roundToTwoDecimalPlaces(
     repatriatedRecords
-      .filter(({ type }) => type === WASTE_RECORD_TYPE.EXPORTED)
+      .filter(
+        ({ wasteRecordType }) => wasteRecordType === WASTE_RECORD_TYPE.EXPORTED
+      )
       .reduce(
         (sum, { data }) =>
           addRounded(
@@ -122,7 +124,7 @@ function calculateTonnageReceivedNotExported(
  * Sum refused, stopped, and refused-or-stopped export tonnages, rounding each
  * row to 2dp before adding (round-each-then-sum).
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} exportedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} exportedRecords
  * @returns {{ tonnageRefusedAtDestination: number, tonnageStoppedDuringExport: number, totalTonnageRefusedOrStopped: number }}
  */
 function calculateRefusedAndStoppedTonnages(exportedRecords) {
@@ -167,9 +169,9 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
 
 /**
  * @param {object} params
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteExportedRecords
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.repatriatedRecords
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteReceivedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteExportedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.repatriatedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteReceivedRecords
  * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
  * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
  * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]
@@ -185,7 +187,7 @@ export function aggregateWasteExported({
   operatorCategory
 }) {
   const exportedRecords = wasteExportedRecords.filter(
-    ({ type }) => type === WASTE_RECORD_TYPE.EXPORTED
+    ({ wasteRecordType }) => wasteRecordType === WASTE_RECORD_TYPE.EXPORTED
   )
 
   const totalTonnageExportedDecimal = exportedRecords.reduce(
