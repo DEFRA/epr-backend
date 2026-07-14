@@ -316,6 +316,106 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           expect(finalReg2.status).toBe(REG_ACC_STATUS.APPROVED)
           expect(finalAcc2.status).toBe(REG_ACC_STATUS.APPROVED)
         })
+
+        it('allows transition from CANCELLED to APPROVED (reinstatement)', async () => {
+          // Suspend then cancel
+          await repository.replace(
+            organisation.id,
+            2,
+            prepareOrgUpdate(afterApproval, {
+              registrations: [
+                { ...registration1, status: REG_ACC_STATUS.SUSPENDED }
+              ]
+            })
+          )
+          await repository.replace(
+            organisation.id,
+            3,
+            prepareOrgUpdate(afterApproval, {
+              registrations: [
+                { ...registration1, status: REG_ACC_STATUS.CANCELLED }
+              ]
+            })
+          )
+
+          // Reinstate
+          const afterCancellation = await repository.findById(
+            organisation.id,
+            4
+          )
+          const cancelledReg = afterCancellation.registrations.find(
+            (r) => r.id === registration1.id
+          )
+
+          await repository.replace(
+            organisation.id,
+            4,
+            prepareOrgUpdate(afterCancellation, {
+              registrations: [
+                { ...cancelledReg, status: REG_ACC_STATUS.APPROVED }
+              ]
+            })
+          )
+
+          const result = await repository.findById(organisation.id, 5)
+          const reinstatedReg = result.registrations.find(
+            (r) => r.id === registration1.id
+          )
+
+          expect(reinstatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
+        })
+
+        it('does not reinstate the cascade-cancelled accreditation when the registration is reinstated', async () => {
+          // Suspend then cancel — the cancellation cascades to accreditation1
+          await repository.replace(
+            organisation.id,
+            2,
+            prepareOrgUpdate(afterApproval, {
+              registrations: [
+                { ...registration1, status: REG_ACC_STATUS.SUSPENDED }
+              ]
+            })
+          )
+          await repository.replace(
+            organisation.id,
+            3,
+            prepareOrgUpdate(afterApproval, {
+              registrations: [
+                { ...registration1, status: REG_ACC_STATUS.CANCELLED }
+              ]
+            })
+          )
+
+          // Reinstate the registration only
+          const afterCancellation = await repository.findById(
+            organisation.id,
+            4
+          )
+          const cancelledReg = afterCancellation.registrations.find(
+            (r) => r.id === registration1.id
+          )
+
+          await repository.replace(
+            organisation.id,
+            4,
+            prepareOrgUpdate(afterCancellation, {
+              registrations: [
+                { ...cancelledReg, status: REG_ACC_STATUS.APPROVED }
+              ]
+            })
+          )
+
+          const result = await repository.findById(organisation.id, 5)
+          const reinstatedReg = result.registrations.find(
+            (r) => r.id === registration1.id
+          )
+          const linkedAcc = result.accreditations.find(
+            (a) => a.id === accreditation1.id
+          )
+
+          expect(reinstatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(linkedAcc.status).toBe(REG_ACC_STATUS.CANCELLED)
+        })
       })
     })
 
@@ -487,6 +587,172 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           )
 
           expect(updatedAcc.status).toBe(REG_ACC_STATUS.CANCELLED)
+        })
+
+        it('allows transition from CANCELLED to APPROVED (reinstatement)', async () => {
+          // Suspend then cancel the accreditation; the registration stays approved
+          await repository.replace(
+            organisation.id,
+            2,
+            prepareOrgUpdate(afterApproval, {
+              accreditations: [
+                { ...accreditation, status: REG_ACC_STATUS.SUSPENDED }
+              ]
+            })
+          )
+          await repository.replace(
+            organisation.id,
+            3,
+            prepareOrgUpdate(afterApproval, {
+              accreditations: [
+                { ...accreditation, status: REG_ACC_STATUS.CANCELLED }
+              ]
+            })
+          )
+
+          // Reinstate
+          const afterCancellation = await repository.findById(
+            organisation.id,
+            4
+          )
+          const cancelledAcc = afterCancellation.accreditations.find(
+            (a) => a.id === accreditation.id
+          )
+
+          await repository.replace(
+            organisation.id,
+            4,
+            prepareOrgUpdate(afterCancellation, {
+              accreditations: [
+                { ...cancelledAcc, status: REG_ACC_STATUS.APPROVED }
+              ]
+            })
+          )
+
+          const result = await repository.findById(organisation.id, 5)
+          const reinstatedAcc = result.accreditations.find(
+            (a) => a.id === accreditation.id
+          )
+
+          expect(reinstatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
+        })
+
+        it('keeps the accreditation CANCELLED when reinstatement is attempted while the linked registration is cancelled', async () => {
+          // Cancel the registration; the cancellation cascades to the accreditation
+          const registration = afterApproval.registrations[0]
+
+          await repository.replace(
+            organisation.id,
+            2,
+            prepareOrgUpdate(afterApproval, {
+              registrations: [
+                { ...registration, status: REG_ACC_STATUS.SUSPENDED }
+              ]
+            })
+          )
+          await repository.replace(
+            organisation.id,
+            3,
+            prepareOrgUpdate(afterApproval, {
+              registrations: [
+                { ...registration, status: REG_ACC_STATUS.CANCELLED }
+              ]
+            })
+          )
+
+          // Attempt to reinstate the accreditation while the registration is
+          // cancelled — the cascade re-applies the registration status, so the
+          // accreditation is held at CANCELLED
+          const afterCancellation = await repository.findById(
+            organisation.id,
+            4
+          )
+          const cancelledAcc = afterCancellation.accreditations.find(
+            (a) => a.id === accreditation.id
+          )
+
+          await repository.replace(
+            organisation.id,
+            4,
+            prepareOrgUpdate(afterCancellation, {
+              accreditations: [
+                { ...cancelledAcc, status: REG_ACC_STATUS.APPROVED }
+              ]
+            })
+          )
+
+          const result = await repository.findById(organisation.id, 5)
+          const heldAcc = result.accreditations.find(
+            (a) => a.id === accreditation.id
+          )
+
+          expect(heldAcc.status).toBe(REG_ACC_STATUS.CANCELLED)
+        })
+
+        it('rejects transition from CANCELLED to APPROVED when no approved registration is linked', async () => {
+          // Suspend then cancel the accreditation, then revert the
+          // registration to created (no cascade applies from created)
+          await repository.replace(
+            organisation.id,
+            2,
+            prepareOrgUpdate(afterApproval, {
+              accreditations: [
+                { ...accreditation, status: REG_ACC_STATUS.SUSPENDED }
+              ]
+            })
+          )
+          await repository.replace(
+            organisation.id,
+            3,
+            prepareOrgUpdate(afterApproval, {
+              accreditations: [
+                { ...accreditation, status: REG_ACC_STATUS.CANCELLED }
+              ]
+            })
+          )
+
+          const afterAccCancellation = await repository.findById(
+            organisation.id,
+            4
+          )
+          const registration = afterAccCancellation.registrations[0]
+          await repository.replace(
+            organisation.id,
+            4,
+            prepareOrgUpdate(afterAccCancellation, {
+              registrations: [
+                { ...registration, status: REG_ACC_STATUS.CREATED }
+              ]
+            })
+          )
+
+          // Attempt to reinstate the accreditation with no approved registration
+          const afterRevert = await repository.findById(organisation.id, 5)
+          const cancelledAcc = afterRevert.accreditations.find(
+            (a) => a.id === accreditation.id
+          )
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              5,
+              prepareOrgUpdate(afterRevert, {
+                accreditations: [
+                  { ...cancelledAcc, status: REG_ACC_STATUS.APPROVED }
+                ]
+              })
+            )
+          ).rejects.toMatchObject({
+            isBoom: true,
+            output: {
+              statusCode: 422,
+              payload: {
+                message: expect.stringContaining(
+                  'approved but not linked to an approved registration'
+                )
+              }
+            }
+          })
         })
       })
     })
