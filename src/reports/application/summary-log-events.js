@@ -2,7 +2,8 @@ import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   auditMarkReportsStale,
-  auditMarkReportsRequiringResubmission
+  auditMarkReportsRequiringResubmission,
+  MARK_STALE_ACTION
 } from '#reports/application/audit.js'
 
 /**
@@ -48,12 +49,13 @@ export const createOnSummaryLogUploaded =
   }) => {
     const uploadedAt = new Date().toISOString()
 
-    const reportsMarkedStale = await reportsRepository.markActiveReportsStale(
-      organisationId,
-      registrationId,
-      summaryLogId,
-      uploadedAt
-    )
+    const reportsMarkedStale =
+      await reportsRepository.markActiveReportsStaleForSummaryLog(
+        organisationId,
+        registrationId,
+        summaryLogId,
+        uploadedAt
+      )
 
     if (reportsMarkedStale.length > 0) {
       logger.info({
@@ -64,7 +66,8 @@ export const createOnSummaryLogUploaded =
         systemLogsRepository,
         organisationId,
         registrationId,
-        reportsMarkedStale
+        reportsMarkedStale,
+        action: MARK_STALE_ACTION.SUMMARY_LOG_CHANGED
       })
     }
 

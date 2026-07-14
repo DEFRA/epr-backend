@@ -1141,7 +1141,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
 
         const uploadedAt = new Date().toISOString()
-        await reportsRepository.markActiveReportsStale(
+        await reportsRepository.markActiveReportsStaleForSummaryLog(
           organisationId,
           String(registrationId),
           'sl-new',
@@ -1156,8 +1156,155 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
         const payload = JSON.parse(response.payload)
         expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(payload.stale.reason).toBe('summary_log_changed')
-        expect(payload.stale.uploadedAt).toBe(uploadedAt)
+        expect(payload.stale.summaryLogChanged.summaryLogId).toBe('sl-new')
+        expect(payload.stale.summaryLogChanged.uploadedAt).toBe(uploadedAt)
+      })
+
+      it('returns 200 with stale field for a report made stale by a cancelled PRN', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepositoryFactory
+        } = await createServerWithReports({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport(
+          /** @type {import('#reports/repository/port.js').CreateReportParams} */ (
+            /** @type {unknown} */ ({
+              organisationId,
+              registrationId: String(registrationId),
+              year: 2026,
+              cadence: 'quarterly',
+              period: 1,
+              startDate: '2026-01-01',
+              endDate: '2026-03-31',
+              dueDate: '2026-04-20',
+              changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+              material: 'plastic',
+              wasteProcessingType: 'reprocessor',
+              recyclingActivity: {
+                suppliers: [],
+                totalTonnageReceived: 0,
+                tonnageRecycled: null,
+                tonnageNotRecycled: null
+              },
+              wasteSent: {
+                tonnageSentToReprocessor: 0,
+                tonnageSentToExporter: 0,
+                tonnageSentToAnotherSite: 0,
+                finalDestinations: []
+              },
+              prn: null,
+              source: { summaryLogId: 'sl-1', lastUploadedAt: null }
+            })
+          )
+        )
+
+        const prnId = new ObjectId().toString()
+        const occurredAt = new Date().toISOString()
+        await reportsRepository.markActiveReportsStaleForPrnCancellation({
+          organisationId,
+          registrationId: String(registrationId),
+          year: 2026,
+          cadence: 'quarterly',
+          period: 1,
+          prnId,
+          occurredAt
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: makeUrl(organisationId, registrationId, 2026, 'quarterly', 1),
+          ...asOperator()
+        })
+
+        const payload = JSON.parse(response.payload)
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.stale.prnCancelled.prnId).toBe(prnId)
+        expect(payload.stale.prnCancelled.occurredAt).toBe(occurredAt)
+        expect(payload.stale.summaryLogChanged).toBeUndefined()
+      })
+
+      it('returns 200 with both stale reasons when a report is stale for both a changed summary log and a cancelled PRN', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepositoryFactory
+        } = await createServerWithReports({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport(
+          /** @type {import('#reports/repository/port.js').CreateReportParams} */ (
+            /** @type {unknown} */ ({
+              organisationId,
+              registrationId: String(registrationId),
+              year: 2026,
+              cadence: 'quarterly',
+              period: 1,
+              startDate: '2026-01-01',
+              endDate: '2026-03-31',
+              dueDate: '2026-04-20',
+              changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+              material: 'plastic',
+              wasteProcessingType: 'reprocessor',
+              recyclingActivity: {
+                suppliers: [],
+                totalTonnageReceived: 0,
+                tonnageRecycled: null,
+                tonnageNotRecycled: null
+              },
+              wasteSent: {
+                tonnageSentToReprocessor: 0,
+                tonnageSentToExporter: 0,
+                tonnageSentToAnotherSite: 0,
+                finalDestinations: []
+              },
+              prn: null,
+              source: { summaryLogId: 'sl-1', lastUploadedAt: null }
+            })
+          )
+        )
+
+        const uploadedAt = new Date().toISOString()
+        await reportsRepository.markActiveReportsStaleForSummaryLog(
+          organisationId,
+          String(registrationId),
+          'sl-new',
+          uploadedAt
+        )
+
+        const prnId = new ObjectId().toString()
+        const occurredAt = new Date().toISOString()
+        await reportsRepository.markActiveReportsStaleForPrnCancellation({
+          organisationId,
+          registrationId: String(registrationId),
+          year: 2026,
+          cadence: 'quarterly',
+          period: 1,
+          prnId,
+          occurredAt
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: makeUrl(organisationId, registrationId, 2026, 'quarterly', 1),
+          ...asOperator()
+        })
+
+        const payload = JSON.parse(response.payload)
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.stale.summaryLogChanged.summaryLogId).toBe('sl-new')
+        expect(payload.stale.summaryLogChanged.uploadedAt).toBe(uploadedAt)
+        expect(payload.stale.prnCancelled.prnId).toBe(prnId)
+        expect(payload.stale.prnCancelled.occurredAt).toBe(occurredAt)
       })
     })
 

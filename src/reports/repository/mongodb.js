@@ -7,6 +7,7 @@ import {
   validateFindPeriodicReports,
   validateFindReportById,
   validateMarkActiveReportsStale,
+  validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
   validateUpdateReport,
   validateUpdateReportStatus
@@ -15,13 +16,13 @@ import {
   transformToPeriodicReports,
   groupAsPeriodicReports,
   latestSubmissionPerPeriod,
+  mapReport,
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
 import {
   REPORT_STATUS,
   ACTIVE_REPORT_STATUSES
 } from '#root/reports/domain/report-status.js'
-import { STALE_REASON } from '#root/reports/domain/stale.js'
 import { RESUBMISSION_REASON } from '#root/reports/domain/resubmission.js'
 
 /**
@@ -182,7 +183,7 @@ const performUpdateReport = async (db, params) => {
   }
 
   const { _id, ...report } = doc
-  return report
+  return mapReport(report)
 }
 
 /**
@@ -222,7 +223,7 @@ const performUpdateReportStatus = async (db, params) => {
   }
 
   const { _id, ...report } = doc
-  return report
+  return mapReport(report)
 }
 
 /**
@@ -237,7 +238,7 @@ const performFindReportById = async (db, reportId) => {
     throw Boom.notFound(`Report not found: ${reportId}`)
   }
   const { _id, ...report } = doc
-  return report
+  return mapReport(report)
 }
 
 /**
@@ -361,32 +362,41 @@ const performFindAllPeriodicReports = async (db) => {
 }
 
 /**
- * Atomically flags the reports matched by `selectFilter` with a summary-log
- * marker, then returns the flagged reports (sans marker) for auditing. The
- * `$ne` guards plus the modifiedCount gate make a redelivered or concurrent
- * submit of the same log a no-op (no double-flag, version over-increment, or
- * duplicate audit). The stale and resubmission marks differ only in how they
- * select candidate reports.
+ * Atomically flags the reports matched by `selectFilter` with a marker at
+ * `field` (a dot-path, e.g. `stale.summaryLogChanged`), then returns the
+ * flagged reports (sans marker) for auditing. The `$ne` guard plus the
+ * modifiedCount gate make a redelivered or concurrent trigger a no-op (no
+ * double-flag, version over-increment, or duplicate audit). `field` is always
+ * a nested path under a container field (`stale`, `resubmissionRequired`), so
+ * the `$set` only ever touches that one named field — a sibling trigger's
+ * marker on the same container is untouched.
  *
  * @param {Db} db
  * @param {{
  *   selectFilter: object,
  *   readScope: object,
- *   summaryLogId: string,
+ *   idempotencyKeyField: string,
+ *   idempotencyKeyValue: string,
  *   field: string,
  *   value: object
  * }} params
  * @returns {Promise<Array<{ reportId: string, year: number, cadence: string, period: number, submissionNumber: number }>>}
  */
-const flagReportsBySummaryLog = async (
+const flagReportsByIdempotencyKey = async (
   db,
-  { selectFilter, readScope, summaryLogId, field, value }
+  {
+    selectFilter,
+    readScope,
+    idempotencyKeyField,
+    idempotencyKeyValue,
+    field,
+    value
+  }
 ) => {
   const { modifiedCount } = await reportsCollection(db).updateMany(
     {
       ...selectFilter,
-      [`${field}.summaryLogId`]: { $ne: summaryLogId },
-      'source.summaryLogId': { $ne: summaryLogId }
+      [`${field}.${idempotencyKeyField}`]: { $ne: idempotencyKeyValue }
     },
     { $set: { [field]: value }, $inc: { version: 1 } }
   )
@@ -397,7 +407,10 @@ const flagReportsBySummaryLog = async (
 
   const flaggedDocs = await reportsCollection(db)
     .find(
-      { ...readScope, [`${field}.summaryLogId`]: summaryLogId },
+      {
+        ...readScope,
+        [`${field}.${idempotencyKeyField}`]: idempotencyKeyValue
+      },
       {
         projection: {
           _id: 0,
@@ -431,7 +444,7 @@ const flagReportsBySummaryLog = async (
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
-const performMarkActiveReportsStale = async (
+const performMarkActiveReportsStaleForSummaryLog = async (
   db,
   organisationId,
   registrationId,
@@ -445,25 +458,73 @@ const performMarkActiveReportsStale = async (
     uploadedAt
   })
 
-  const stale = {
-    uploadedAt,
-    reason: STALE_REASON.SUMMARY_LOG_CHANGED,
-    summaryLogId
-  }
+  const summaryLogChanged = { uploadedAt, summaryLogId }
 
-  const flagged = await flagReportsBySummaryLog(db, {
+  const flagged = await flagReportsByIdempotencyKey(db, {
     selectFilter: {
       organisationId,
       registrationId,
-      'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] }
+      'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
+      'source.summaryLogId': { $ne: summaryLogId }
     },
     readScope: { organisationId, registrationId },
-    summaryLogId,
-    field: 'stale',
-    value: stale
+    idempotencyKeyField: 'summaryLogId',
+    idempotencyKeyValue: summaryLogId,
+    field: 'stale.summaryLogChanged',
+    value: summaryLogChanged
   })
 
-  return flagged.map((report) => ({ ...report, stale }))
+  return flagged.map((report) => ({
+    ...report,
+    stale: { summaryLogChanged }
+  }))
+}
+
+/**
+ * Marks the active (in_progress / ready_to_submit) report for the given
+ * org/reg/period as stale for a PRN cancellation. Skips it if already
+ * flagged for this `prnId` (retry-safe). At most one active report can match
+ * — reporting periods don't overlap, and the partial unique index
+ * `reports_one_active_draft_per_period` guarantees at most one active draft
+ * per period — so this returns zero or one result.
+ *
+ * @param {Db} db
+ * @param {import('./port.js').MarkActiveReportsStaleForPrnCancellationParams} params
+ * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
+ */
+const performMarkActiveReportsStaleForPrnCancellation = async (db, params) => {
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    prnId,
+    occurredAt
+  } = validateMarkActiveReportsStaleForPrnCancellation(params)
+
+  const prnCancelled = { occurredAt, prnId }
+
+  const flagged = await flagReportsByIdempotencyKey(db, {
+    selectFilter: {
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] }
+    },
+    readScope: { organisationId, registrationId, year, cadence, period },
+    idempotencyKeyField: 'prnId',
+    idempotencyKeyValue: prnId,
+    field: 'stale.prnCancelled',
+    value: prnCancelled
+  })
+
+  return flagged.map((report) => ({
+    ...report,
+    stale: { prnCancelled }
+  }))
 }
 
 /**
@@ -529,10 +590,11 @@ const performMarkSubmittedReportsRequiringResubmission = async (
   }
 
   const scope = { id: { $in: flaggedIds } }
-  const flagged = await flagReportsBySummaryLog(db, {
+  const flagged = await flagReportsByIdempotencyKey(db, {
     selectFilter: scope,
     readScope: scope,
-    summaryLogId,
+    idempotencyKeyField: 'summaryLogId',
+    idempotencyKeyValue: summaryLogId,
     field: 'resubmissionRequired',
     value: resubmissionRequired
   })
@@ -589,19 +651,21 @@ export const createReportsRepository = async (db) => {
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
     findAllPeriodicReports: () => performFindAllPeriodicReports(db),
     findReportById: (reportId) => performFindReportById(db, reportId),
-    markActiveReportsStale: (
+    markActiveReportsStaleForSummaryLog: (
       organisationId,
       registrationId,
       summaryLogId,
       uploadedAt
     ) =>
-      performMarkActiveReportsStale(
+      performMarkActiveReportsStaleForSummaryLog(
         db,
         organisationId,
         registrationId,
         summaryLogId,
         uploadedAt
       ),
+    markActiveReportsStaleForPrnCancellation: (params) =>
+      performMarkActiveReportsStaleForPrnCancellation(db, params),
     markSubmittedReportsRequiringResubmission: (params) =>
       performMarkSubmittedReportsRequiringResubmission(db, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>

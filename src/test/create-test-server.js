@@ -29,6 +29,7 @@ import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/ind
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'
+import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
@@ -276,6 +277,7 @@ export async function createTestServer(options = {}) {
         : [],
       options.repositories ?? {}
     ),
+    prnEventsPlugin,
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
     {
       plugin: mockDlqAdminPlugin,

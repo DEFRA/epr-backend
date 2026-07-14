@@ -16,9 +16,18 @@ import {
   buildOrganisation,
   buildAccreditation
 } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import {
+  DEFAULT_ORG_ID,
+  DEFAULT_REG_ID,
+  DEFAULT_REPORT_START_DATE
+} from '#reports/repository/contract/test-data.js'
+import { createOnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
+import { createDraftReport } from '#vite/helpers/create-draft-report.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
 const mockRecordStatusTransition = vi.fn()
+const mockOnCancelled = vi.fn()
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -165,6 +174,13 @@ const readBalance = (wasteBalanceService) =>
     accreditationId: ACC_ID
   })
 
+const buildSystemLogsRepository = () => ({
+  insert: vi.fn().mockResolvedValue(undefined),
+  insertMany: vi.fn().mockResolvedValue(undefined),
+  find: vi.fn(),
+  findSummaryLogSubmitActors: vi.fn()
+})
+
 const callUpdate = (overrides) =>
   updatePrnStatus({
     logger: createMockLogger(),
@@ -173,12 +189,14 @@ const callUpdate = (overrides) =>
     registrationId: REG_ID,
     accreditationId: ACC_ID,
     user: USER,
+    prnEvents: { onCancelled: mockOnCancelled },
     ...overrides
   })
 
 describe('updatePrnStatus', () => {
   beforeEach(() => {
     mockRecordStatusTransition.mockResolvedValue(undefined)
+    mockOnCancelled.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -540,6 +558,7 @@ describe('updatePrnStatus', () => {
           tonnage: 60,
           status: {
             currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            issued: { at: EVENT_AT, by: USER },
             history: []
           }
         }),
@@ -558,6 +577,71 @@ describe('updatePrnStatus', () => {
       expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
         { amount: 500, availableAmount: 1000 }
       )
+    })
+
+    it('marks the active report for the PRN issuance period stale when the cancellation completes', async () => {
+      const reportsRepositoryFactory = createInMemoryReportsRepository()
+      const reportId = await createDraftReport(reportsRepositoryFactory())
+
+      const issuedAt = new Date(`${DEFAULT_REPORT_START_DATE}T00:00:00.000Z`)
+      const prnRepository = createInMemoryPackagingRecyclingNotesRepository([
+        buildPrn({
+          organisation: { id: DEFAULT_ORG_ID, name: 'Test Reprocessor' },
+          registrationId: DEFAULT_REG_ID,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            issued: { at: issuedAt, by: USER },
+            history: []
+          }
+        })
+      ])(createMockLogger())
+      const ledgerRepository = createInMemoryLedgerRepository([
+        {
+          id: 'opening-balance',
+          registrationId: DEFAULT_REG_ID,
+          accreditationId: ACC_ID,
+          organisationId: DEFAULT_ORG_ID,
+          number: 1,
+          kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+          payload: { summaryLogId: 'seed-summary-log', creditTotal: 440 },
+          openingBalance: { amount: 0, availableAmount: 0 },
+          closingBalance: { amount: 440, availableAmount: 940 },
+          createdAt: issuedAt,
+          createdBy: USER
+        }
+      ])()
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        buildOrgWithAccreditation()
+      ])()
+
+      await updatePrnStatus({
+        logger: createMockLogger(),
+        id: PRN_ID,
+        organisationId: DEFAULT_ORG_ID,
+        registrationId: DEFAULT_REG_ID,
+        accreditationId: ACC_ID,
+        user: USER,
+        prnRepository,
+        ledgerRepository,
+        organisationsRepository,
+        prnEvents: {
+          onCancelled: createOnPrnCancelled({
+            reportsRepository: reportsRepositoryFactory(),
+            systemLogsRepository: buildSystemLogsRepository()
+          })
+        },
+        newStatus: PRN_STATUS.CANCELLED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const updatedReport =
+        await reportsRepositoryFactory().findReportById(reportId)
+      expect(updatedReport.stale).toEqual({
+        prnCancelled: {
+          occurredAt: expect.any(String),
+          prnId: PRN_ID
+        }
+      })
     })
 
     it('throws when cancelling an issued PRN with no waste balance', async () => {

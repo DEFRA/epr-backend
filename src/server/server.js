@@ -21,6 +21,7 @@ import {
   orsImportsRepositoryPlugin,
   overseasSitesRepositoryPlugin
 } from '#overseas-sites/index.js'
+import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
@@ -137,7 +138,7 @@ function getProductionPlugins(config) {
     mongoSummaryLogRowStatesRepositoryPlugin
   ]
 
-  plugins.push(mongoReportsRepositoryPlugin)
+  plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)
 
   /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
   if (config.get('featureFlags.devEndpoints')) {

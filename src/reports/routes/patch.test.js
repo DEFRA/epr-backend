@@ -901,7 +901,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           accreditationId: undefined
         })
 
-      await reportsRepository.markActiveReportsStale(
+      await reportsRepository.markActiveReportsStaleForSummaryLog(
         organisationId,
         registrationId,
         'sl-new',
@@ -916,7 +916,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       )
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
+      expect(JSON.parse(response.payload).code).toEqual(['summary_log_changed'])
     })
   })
 })

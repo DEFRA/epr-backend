@@ -22,6 +22,7 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { OnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
  */
 
 export const packagingRecyclingNotesUpdateStatusPath =
@@ -83,7 +84,8 @@ export const packagingRecyclingNotesUpdateStatus = {
   },
   /**
    * @param {HapiRequest<{ status: PrnStatus }> & {
-   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   prnEvents: { onCancelled: OnPrnCancelled }
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
@@ -92,6 +94,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       packagingRecyclingNotesRepository,
       ledgerRepository,
       organisationsRepository,
+      prnEvents,
       params,
       payload,
       logger,
@@ -122,6 +125,7 @@ export const packagingRecyclingNotesUpdateStatus = {
         prnRepository: packagingRecyclingNotesRepository,
         ledgerRepository,
         organisationsRepository,
+        prnEvents,
         logger,
         id,
         organisationId,
