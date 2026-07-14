@@ -89,7 +89,8 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: DEFRA/epr-re-ex-service/.github/actions/typecheck-burndown@main
+      # temporary: pin to branch until typecheck-burndown is on main, then revert to @main
+      - uses: DEFRA/epr-re-ex-service/.github/actions/typecheck-burndown@PAE-000-strict-soft-ratchet
 
   dependency-review:
     name: Dependency Review
