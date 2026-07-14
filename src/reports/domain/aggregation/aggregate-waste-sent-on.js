@@ -49,15 +49,18 @@ function sumByFacilityType(validEntries) {
 }
 
 /**
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteSentOnRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} wasteSentOnRecords
  */
 export function aggregateWasteSentOn(wasteSentOnRecords) {
-  const validEntries = wasteSentOnRecords.filter(({ type, data }) => {
-    const tonnage = toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
-    return (
-      type === WASTE_RECORD_TYPE.SENT_ON && isTonnageGreaterThanZero(tonnage)
-    )
-  })
+  const validEntries = wasteSentOnRecords.filter(
+    ({ wasteRecordType, data }) => {
+      const tonnage = toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
+      return (
+        wasteRecordType === WASTE_RECORD_TYPE.SENT_ON &&
+        isTonnageGreaterThanZero(tonnage)
+      )
+    }
+  )
 
   const { toReprocessorDecimal, toExporterDecimal, toAnotherSiteDecimal } =
     sumByFacilityType(validEntries)
