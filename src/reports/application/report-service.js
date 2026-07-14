@@ -3,7 +3,6 @@ import { resolveDetailedMaterial } from '#domain/organisations/registration-util
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
-import { latestSubmitted } from '#reports/domain/build-calendar-periods.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -142,12 +141,13 @@ export async function fetchReportBySubmissionNumber(
 }
 
 /**
- * Determines whether a submission is the latest submitted submission for its
- * period. Only the latest submitted submission may be unsubmitted: unsubmitting
- * a superseded submission (an earlier one that a later resubmission has
- * replaced) would silently drop it from the admin submission history (PAE-1657).
- * A resubmission still in progress does not supersede: the earlier submission
- * remains the latest *submitted* one until the resubmission is itself submitted.
+ * Determines whether a submission is the latest submission for its period, by
+ * submission number, regardless of status. Only the latest submission may be
+ * unsubmitted: unsubmitting an earlier one would silently drop it from the admin
+ * submission history (PAE-1657). This intentionally guards the absolute latest
+ * submission, not merely the latest *submitted* one, so an earlier submitted
+ * report cannot be unsubmitted while a later resubmission draft is in progress.
+ * The caller separately requires the target to be submitted.
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {string} organisationId
  * @param {string} registrationId
@@ -157,7 +157,7 @@ export async function fetchReportBySubmissionNumber(
  * @param {number} submissionNumber
  * @returns {Promise<boolean>}
  */
-export async function isLatestSubmittedSubmission(
+export async function isLatestSubmission(
   reportsRepository,
   organisationId,
   registrationId,
@@ -173,11 +173,14 @@ export async function isLatestSubmittedSubmission(
   const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
     cadence
   ]?.[period]
-  if (!slot) {
+  const submissions = [
+    slot?.current,
+    ...(slot?.previousSubmissions ?? [])
+  ].flatMap((s) => (s ? [s.submissionNumber] : []))
+  if (submissions.length === 0) {
     return false
   }
-  const latest = latestSubmitted(slot.current, slot.previousSubmissions)
-  return latest?.submissionNumber === submissionNumber
+  return Math.max(...submissions) === submissionNumber
 }
 
 /**

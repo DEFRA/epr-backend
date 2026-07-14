@@ -27,7 +27,7 @@ const isSubmitted = (report) => report?.status === REPORT_STATUS.SUBMITTED
  * @param {ReportSummary[]} previousSubmissions
  * @returns {ReportSummary | undefined}
  */
-export const latestSubmitted = (current, previousSubmissions) =>
+const latestSubmitted = (current, previousSubmissions) =>
   [current, ...previousSubmissions]
     .filter(isSubmitted)
     .sort((a, b) => b.submissionNumber - a.submissionNumber)[0]

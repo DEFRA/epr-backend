@@ -5,7 +5,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import {
   fetchReportBySubmissionNumber,
-  isLatestSubmittedSubmission
+  isLatestSubmission
 } from '#reports/application/report-service.js'
 import {
   REPORT_STATUS,
@@ -65,10 +65,11 @@ export const reportsUnsubmit = {
       )
     }
 
-    // Only the latest submitted submission may be unsubmitted. Unsubmitting a
-    // submission that a later resubmission has superseded would silently drop it
-    // from the admin submission history (PAE-1657).
-    const isLatest = await isLatestSubmittedSubmission(
+    // Only the latest submission may be unsubmitted. Unsubmitting one that a
+    // later submission has superseded — whether that later submission is itself
+    // submitted or still an in-progress resubmission draft — would silently drop
+    // it from the admin submission history (PAE-1657).
+    const isLatest = await isLatestSubmission(
       reportsRepository,
       organisationId,
       registrationId,

@@ -391,7 +391,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
-      it('allows unsubmitting the submitted submission while a resubmission draft is in progress', async () => {
+      it('returns 409 when unsubmitting a submitted submission while a later resubmission draft is in progress', async () => {
         const registration = buildRegistration({
           wasteProcessingType: 'reprocessor',
           accreditationId: undefined
@@ -412,8 +412,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
           ...period,
           submissionNumber: 1
         })
-        // Submission 2 is only a draft (in_progress), so submission 1 is still
-        // the latest submitted one and remains unsubmittable.
+        // Submission 2 is a draft (in_progress). Even though submission 1 is the
+        // latest *submitted* one, a later submission exists, so unsubmit of 1 is
+        // rejected: only the absolute latest submission may be unsubmitted.
         await reportsRepository.createReport(
           buildCreateReportParams({ ...period, submissionNumber: 2 })
         )
@@ -434,7 +435,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
           ...asServiceMaintainer()
         })
 
-        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       })
     })
   })
