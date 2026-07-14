@@ -1,11 +1,11 @@
 {
   "extends": "./jsconfig.typecheck.base.json",
   "compilerOptions": {
-    "types": ["vitest/globals"],
-    "strictFunctionTypes": true,
-    "useUnknownInCatchVariables": true,
     "noImplicitAny": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "strictFunctionTypes": true,
+    "types": ["vitest/globals"],
+    "useUnknownInCatchVariables": true
   },
   "include": [
     "src/**/*.js",

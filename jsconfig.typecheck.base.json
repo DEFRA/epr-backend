@@ -1,28 +1,21 @@
 {
   "compilerOptions": {
     "allowJs": true,
+    "alwaysStrict": true,
     "checkJs": true,
-    "noEmit": true,
-    "target": "es2024",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
     "lib": ["ES2024", "ESNext.Collection"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": false,
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
     "noImplicitAny": false,
-    "strictNullChecks": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
     "paths": {
       "#adapters/*": ["./src/adapters/*"],
       "#application/*": ["./src/application/*"],
@@ -36,6 +29,13 @@
       "#root/*": ["./src/*"],
       "#routes/*": ["./src/routes/*"],
       "#server/*": ["./src/server/*"]
-    }
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "strictBindCallApply": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "target": "es2024"
   }
 }
