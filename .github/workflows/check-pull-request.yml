@@ -75,8 +75,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      # temporary: pin to branch for preview until on main, then revert to @main
-      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types@PAE-000-strict-soft-ratchet
+      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types@main
         with:
           npm-script: lint:types
           tsconfig: jsconfig.typecheck.json
@@ -93,8 +92,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      # temporary: pin to branch for preview until on main, then revert to @main
-      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types@PAE-000-strict-soft-ratchet
+      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types@main
         with:
           fail-on: all
 
@@ -108,8 +106,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      # temporary: pin to branch until typecheck-burndown is on main, then revert to @main
-      - uses: DEFRA/epr-re-ex-service/.github/actions/typecheck-burndown@PAE-000-strict-soft-ratchet
+      - uses: DEFRA/epr-re-ex-service/.github/actions/typecheck-burndown@main
 
   dependency-review:
     name: Dependency Review
