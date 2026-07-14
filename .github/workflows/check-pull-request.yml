@@ -75,7 +75,8 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types-tests@main
+      # temporary: pin to branch for preview until on main, then revert to @main
+      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types@PAE-000-strict-soft-ratchet
         with:
           npm-script: lint:types
           tsconfig: jsconfig.typecheck.json
@@ -92,7 +93,8 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types-tests@main
+      # temporary: pin to branch for preview until on main, then revert to @main
+      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types@PAE-000-strict-soft-ratchet
         with:
           fail-on: all
 
