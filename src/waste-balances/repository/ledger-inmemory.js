@@ -115,6 +115,22 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
 
     /**
      * @param {WasteBalanceLedgerId} ledgerId
+     * @param {Date} cutoff
+     */
+    findLatestInLedgerBefore: async (ledgerId, cutoff) => {
+      const matches = storage.filter(
+        (event) => matchesLedger(event, ledgerId) && event.createdAt < cutoff
+      )
+
+      if (matches.length === 0) {
+        return null
+      }
+
+      return structuredClone(/** @type {LedgerEvent} */ (matches.at(-1)))
+    },
+
+    /**
+     * @param {WasteBalanceLedgerId} ledgerId
      * @param {import('./ledger-schema.js').LedgerEventKind} kind
      */
     findLatestInLedgerByKind: async (ledgerId, kind) => {

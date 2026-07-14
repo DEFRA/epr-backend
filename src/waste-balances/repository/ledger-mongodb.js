@@ -141,6 +141,19 @@ const performFindLatestInLedger = (collection) => async (ledgerId) => {
 
 /**
  * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, cutoff: Date) => Promise<LedgerEvent | null>}
+ */
+const performFindLatestInLedgerBefore =
+  (collection) => async (ledgerId, cutoff) => {
+    const doc = await collection.findOne(
+      { ...ledgerFilter(ledgerId), createdAt: { $lt: cutoff } },
+      { sort: { number: -1 } }
+    )
+    return doc ? toLedgerEvent(doc) : null
+  }
+
+/**
+ * @param {Collection} collection
  * @returns {(ledgerId: WasteBalanceLedgerId, kind: string) => Promise<LedgerEvent | null>}
  */
 const performFindLatestInLedgerByKind =
@@ -261,6 +274,7 @@ export const createMongoLedgerRepository = async (db) => {
 
   return () => ({
     findLatestInLedger: performFindLatestInLedger(collection),
+    findLatestInLedgerBefore: performFindLatestInLedgerBefore(collection),
     findLatestInLedgerByKind: performFindLatestInLedgerByKind(collection),
     findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection),
     findAllInLedger: performFindAllInLedger(collection),

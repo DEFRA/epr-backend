@@ -110,6 +110,10 @@ export class LedgerSequenceError extends Error {
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>} findLatestInLedger
  *   Return the highest-numbered event for the ledger, or `null`
  *   if none exist.
+ * @property {(ledgerId: WasteBalanceLedgerId, cutoff: Date) => Promise<LedgerEvent | null>} findLatestInLedgerBefore
+ *   Return the highest-numbered event for the ledger whose `createdAt` is
+ *   strictly before `cutoff`, or `null` if no event precedes it. An event
+ *   created at exactly `cutoff` does not count as before it.
  * @property {(ledgerId: WasteBalanceLedgerId, kind: import('./ledger-schema.js').LedgerEventKind) => Promise<LedgerEvent | null>} findLatestInLedgerByKind
  *   Return the highest-numbered event of the given kind for the ledger,
  *   or `null` if none of that kind exist.
