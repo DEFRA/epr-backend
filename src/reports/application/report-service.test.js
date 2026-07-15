@@ -24,6 +24,11 @@ import {
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
+/**
+ * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
+ */
+
 const SUMMARY_LOG_ID = 'sl-1'
 const SUBMITTED_AT = new Date('2024-01-15T00:00:00.000Z')
 

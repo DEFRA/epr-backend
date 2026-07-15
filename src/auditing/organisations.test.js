@@ -4,6 +4,11 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest'
 import { randomBytes } from 'crypto'
 
+/**
+ * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ */
+
 const mockAudit = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
@@ -28,17 +33,19 @@ describe('auditOrganisationUpdate', () => {
   })
 
   const createRequest = () =>
-    /** @type {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} */ ({
-      systemLogsRepository,
-      auth: {
-        credentials: {
-          id: 'user-1',
-          email: 'user@example.com',
-          scope: [],
-          role: null
+    /** @type {HapiRequest & { systemLogsRepository: SystemLogsRepository }} */ (
+      /** @type {unknown} */ ({
+        systemLogsRepository,
+        auth: {
+          credentials: {
+            id: 'user-1',
+            email: 'user@example.com',
+            scope: [],
+            role: null
+          }
         }
-      }
-    })
+      })
+    )
 
   const findStoredLogs = async () => {
     const { systemLogs } = await systemLogsRepository.find({

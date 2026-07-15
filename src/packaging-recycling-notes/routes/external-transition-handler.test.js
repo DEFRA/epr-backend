@@ -15,6 +15,7 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import {
   setupAuthContext,
   cognitoJwksUrl
@@ -161,12 +162,14 @@ describe('external PRN transition read-side fold', () => {
     await startServer({
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       events: [
-        buildLedgerEvent({
-          registrationId: REG_ID,
-          accreditationId: ACC_ID,
-          organisationId: ORG_ID,
-          number: 1
-        })
+        partialMock(
+          buildLedgerEvent({
+            registrationId: REG_ID,
+            accreditationId: ACC_ID,
+            organisationId: ORG_ID,
+            number: 1
+          })
+        )
       ]
     })
 

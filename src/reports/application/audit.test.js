@@ -3,7 +3,19 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
+/**
+ * @import { Report } from '#reports/repository/port.js'
+ */
+
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+
+/**
+ * Casts a deliberately-partial report fixture to the full {@link Report} type.
+ * The audit functions only read `status.currentStatus`.
+ * @param {unknown} value
+ * @returns {Report}
+ */
+const asReport = (value) => /** @type {Report} */ (value)
 
 const mockAudit = vi.fn()
 
@@ -67,16 +79,16 @@ describe('auditReportStatusTransition', () => {
     period: 1,
     submissionNumber: 1,
     reportId: 'rep-1',
-    previous: {
+    previous: asReport({
       id: 'rep-1',
       version: 1,
       status: { currentStatus: 'in_progress' }
-    },
-    next: {
+    }),
+    next: asReport({
       id: 'rep-1',
       version: 2,
       status: { currentStatus: 'ready_to_submit' }
-    }
+    })
   }
 
   it('sends CDP audit event', async () => {
@@ -119,18 +131,18 @@ describe('auditReportStatusTransition', () => {
       period: 1,
       submissionNumber: 1,
       reportId: 'rep-1',
-      previous: {
+      previous: asReport({
         id: 'rep-1',
         version: 1,
         status: { currentStatus: 'in_progress' },
         veryLongString
-      },
-      next: {
+      }),
+      next: asReport({
         id: 'rep-1',
         version: 2,
         status: { currentStatus: 'ready_to_submit' },
         veryLongString
-      }
+      })
     }
 
     await auditReportStatusTransition(createMockRequest(), oversizedParams)

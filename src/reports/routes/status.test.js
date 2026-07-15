@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
@@ -68,7 +69,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         ...(accreditationId && { accreditationId })
       })
       const org = buildOrganisationWithRegistration(
-        registration,
+        partialMock(registration),
         accreditationStatus
       )
       return { org, registration }

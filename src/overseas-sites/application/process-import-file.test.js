@@ -427,7 +427,9 @@ describe('processImportFile', () => {
     const result = await processImportFile(buffer, deps())
 
     expect(result.status).toBe(ORS_FILE_RESULT_STATUS.FAILURE)
-    expect(result.errors[0].message).toContain('version conflict')
+    expect(
+      /** @type {{ message: string }} */ (result.errors[0]).message
+    ).toContain('version conflict')
   })
 
   it('reuses existing site when all properties match instead of creating a new one', async () => {
