@@ -10,7 +10,8 @@ import {
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import {
  *   MarkReportStaleResult,
- *   MarkSubmittedReportRequiringResubmissionResult
+ *   MarkSubmittedReportRequiringResubmissionResult,
+ *   Report
  * } from '#reports/repository/port.js'
  */
 
@@ -46,8 +47,8 @@ export const MARK_STALE_ACTION = Object.freeze({
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId
- * @param {object} params.previous
- * @param {object} params.next
+ * @param {Report} params.previous
+ * @param {Report} params.next
  */
 export async function auditReportStatusTransition(request, params) {
   const {
@@ -117,7 +118,7 @@ export async function auditReportStatusTransition(request, params) {
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId
- * @param {object} params.previous
+ * @param {Report} params.previous
  */
 export async function auditReportDelete(request, params) {
   const {

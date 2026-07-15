@@ -1,5 +1,11 @@
 /**
- * @import { PeriodicReport, ReportSummary } from '../repository/port.js'
+ * @import { PeriodicReport, ReportPerPeriod, ReportSummary } from '../repository/port.js'
+ */
+
+/**
+ * A persisted period slot indexed by "year:period", carrying its year and
+ * period alongside the stored report data.
+ * @typedef {ReportPerPeriod & { year: number, period: number }} IndexedSlot
  */
 
 /**
@@ -44,7 +50,7 @@ export function selectSubmittedReports(slot) {
  * Indexes persisted periodic-report slots by "year:period" key for a given cadence.
  * @param {PeriodicReport[]} periodicReports
  * @param {string} cadence
- * @returns {Map<string, object>}
+ * @returns {Map<string, IndexedSlot>}
  */
 function indexPersistedSlots(periodicReports, cadence) {
   const slots = new Map()

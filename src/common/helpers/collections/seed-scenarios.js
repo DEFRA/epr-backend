@@ -25,6 +25,8 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 
+/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {Db} from 'mongodb' */
 
@@ -63,10 +65,10 @@ const SUFFIX_LENGTH = 3
 /**
  * Creates approved registrations with unique numbers for all items
  *
- * @param {object} org - Organisation data
+ * @param {Omit<Organisation, 'status'>} org - Organisation data
  * @param {string} approvedTesterEmail - Email for approved tester
- * @param {object} dateRange - Valid date range
- * @returns {object[]} Approved registrations
+ * @param {{ VALID_FROM: string, VALID_TO: string }} dateRange - Valid date range
+ * @returns {Registration[]} Approved registrations
  */
 function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
   const { VALID_FROM, VALID_TO } = dateRange
@@ -115,9 +117,9 @@ function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
 /**
  * Creates approved accreditations with unique numbers for all items
  *
- * @param {object} org - Organisation data
+ * @param {Omit<Organisation, 'status'>} org - Organisation data
  * @param {Set<string>} linkedAccreditationIds - IDs of linked accreditations
- * @param {object} dateRange - Valid date range
+ * @param {{ VALID_FROM: string, VALID_TO: string }} dateRange - Valid date range
  * @returns {object[]} Approved accreditations
  */
 function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
@@ -156,8 +158,8 @@ function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
  * Creates an approved organisation with approved registration and accreditation
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {object} overrides
- * @returns {Promise<object>}
+ * @param {Partial<Organisation>} overrides
+ * @returns {Promise<Organisation>}
  */
 async function buildApprovedOrgForSeed(
   organisationsRepository,
@@ -213,8 +215,8 @@ async function buildApprovedOrgForSeed(
  * They do NOT transition to ACTIVE when the organisation becomes active.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {object} overrides
- * @returns {Promise<object>}
+ * @param {Partial<Organisation>} overrides
+ * @returns {Promise<Organisation>}
  */
 async function buildActiveOrgForSeed(organisationsRepository, overrides = {}) {
   const testerEmail = getTesterEmail()
@@ -259,8 +261,8 @@ async function buildActiveOrgForSeed(organisationsRepository, overrides = {}) {
  * APPROVED → REJECTED is NOT valid (REJECTED can only come from CREATED).
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {object} overrides
- * @returns {Promise<object>}
+ * @param {Partial<Organisation>} overrides
+ * @returns {Promise<Organisation>}
  */
 async function buildActiveOrgWithSuspendedAccreditation(
   organisationsRepository,
@@ -274,14 +276,13 @@ async function buildActiveOrgWithSuspendedAccreditation(
     (r) => r.status === REG_ACC_STATUS.APPROVED
   )
   const matchingAccIndex = org.accreditations.findIndex(
-    (acc) => acc.material === approvedReg.material
+    (acc) => acc.material === approvedReg?.material
   )
 
-  const updatedAccreditations = org.accreditations.map(
-    (/** @type {object} */ acc, /** @type {number} */ index) =>
-      index === matchingAccIndex
-        ? { ...acc, status: REG_ACC_STATUS.SUSPENDED }
-        : acc
+  const updatedAccreditations = org.accreditations.map((acc, index) =>
+    index === matchingAccIndex
+      ? { ...acc, status: REG_ACC_STATUS.SUSPENDED }
+      : acc
   )
 
   const currentVersion = org.version

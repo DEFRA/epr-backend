@@ -40,6 +40,7 @@ import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-
 import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
+/** @import { FeatureFlags } from '#common/hapi-types.js' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
 /** @import { Mock } from 'vitest' */
 
@@ -56,7 +57,7 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
 /**
  * @typedef {{
  *   config?: Record<string, any>
- *   featureFlags?: object
+ *   featureFlags?: FeatureFlags
  *   repositories?: object
  *   workers?: object
  *   dlqService?: import('#plugins/dlq-admin.js').DlqService

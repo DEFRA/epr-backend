@@ -29,7 +29,15 @@ describe('auditOrganisationUpdate', () => {
 
   const createRequest = () =>
     /** @type {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} */ ({
-      systemLogsRepository
+      systemLogsRepository,
+      auth: {
+        credentials: {
+          id: 'user-1',
+          email: 'user@example.com',
+          scope: [],
+          role: null
+        }
+      }
     })
 
   const findStoredLogs = async () => {

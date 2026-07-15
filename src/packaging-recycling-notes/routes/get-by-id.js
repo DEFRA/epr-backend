@@ -50,7 +50,7 @@ export const packagingRecyclingNoteById = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
-   * @param {object} h - Hapi response toolkit
+   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {

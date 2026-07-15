@@ -13,7 +13,11 @@ import {
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
- * @param {Array<{data: object}>} validEntries
+ * @import { ReportableWasteRecordState } from './aggregate-report-detail.js'
+ */
+
+/**
+ * @param {ReportableWasteRecordState[]} validEntries
  */
 function sumByFacilityType(validEntries) {
   let toReprocessorDecimal = toDecimal(0)
@@ -49,7 +53,7 @@ function sumByFacilityType(validEntries) {
 }
 
 /**
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} wasteSentOnRecords
+ * @param {ReportableWasteRecordState[]} wasteSentOnRecords
  */
 export function aggregateWasteSentOn(wasteSentOnRecords) {
   const validEntries = wasteSentOnRecords.filter(

@@ -9,6 +9,7 @@ import { createSummaryLogsValidator } from '#application/summary-logs/validate.j
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /**
+ * @import { SubmitUser } from '#domain/summary-logs/worker/port.js'
  * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
  */
 
@@ -34,6 +35,17 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {SummaryLogExtractor} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {OnSummaryLogUploaded} onSummaryLogUploaded
+ */
+
+/**
+ * @typedef {object} ValidateCommandPayload
+ * @property {string} summaryLogId
+ */
+
+/**
+ * @typedef {object} SubmitCommandPayload
+ * @property {string} summaryLogId
+ * @property {SubmitUser} user
  */
 
 const userSchema = Joi.object({
@@ -64,7 +76,10 @@ export const summaryLogCommandHandlers = [
     payloadSchema: Joi.object({
       summaryLogId: Joi.string().required()
     }),
-    execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
+    execute: async (
+      /** @type {ValidateCommandPayload} */ payload,
+      /** @type {SummaryLogHandlerDeps} */ deps
+    ) => {
       const {
         logger,
         summaryLogsRepository,
@@ -87,14 +102,18 @@ export const summaryLogCommandHandlers = [
 
       await validateSummaryLog(payload.summaryLogId)
     },
-    onFailure: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
+    onFailure: async (
+      /** @type {ValidateCommandPayload} */ payload,
+      /** @type {SummaryLogHandlerDeps} */ deps
+    ) => {
       await markAsValidationFailed(
         payload.summaryLogId,
         deps.summaryLogsRepository,
         deps.logger
       )
     },
-    describe: (payload) => `summaryLogId=${payload.summaryLogId}`
+    describe: (/** @type {ValidateCommandPayload} */ payload) =>
+      `summaryLogId=${payload.summaryLogId}`
   },
   {
     command: SUMMARY_LOG_COMMAND.SUBMIT,
@@ -102,19 +121,26 @@ export const summaryLogCommandHandlers = [
       summaryLogId: Joi.string().required(),
       user: userSchema.required()
     }),
-    execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
+    execute: async (
+      /** @type {SubmitCommandPayload} */ payload,
+      /** @type {SummaryLogHandlerDeps} */ deps
+    ) => {
       await submitSummaryLog(payload.summaryLogId, {
         ...deps,
         user: payload.user
       })
     },
-    onFailure: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
+    onFailure: async (
+      /** @type {SubmitCommandPayload} */ payload,
+      /** @type {SummaryLogHandlerDeps} */ deps
+    ) => {
       await markAsSubmissionFailed(
         payload.summaryLogId,
         deps.summaryLogsRepository,
         deps.logger
       )
     },
-    describe: (payload) => `summaryLogId=${payload.summaryLogId}`
+    describe: (/** @type {SubmitCommandPayload} */ payload) =>
+      `summaryLogId=${payload.summaryLogId}`
   }
 ]

@@ -487,6 +487,30 @@ const rowHasContent = (row) => {
  */
 
 /**
+ * @typedef {{
+ *   complete?: boolean,
+ *   currentRow: unknown[],
+ *   currentRowNumber: number | null,
+ *   headers: Array<string | null>,
+ *   location: {column: string, row: number, sheet: string},
+ *   rows: Array<{rowNumber: number | null, values: unknown[]}>,
+ *   sectionName: string,
+ *   skipColumnIndices: number[],
+ *   startColumn: number,
+ *   state: string
+ * }} ParserCollection
+ */
+
+/**
+ * @typedef {{
+ *   activeCollections: ParserCollection[],
+ *   metadataContext: {metadataName: string} | null,
+ *   result: {data: Record<string, unknown>, meta: Record<string, unknown>},
+ *   unfilledValues: Record<string, string[]>
+ * }} ParserState
+ */
+
+/**
  * Streams rows from a worksheet, applying validation limits and phantom-row
  * detection. Structurally empty rows (every cell `ValueType.Null`) are
  * skipped to match the DOM path's `eachRow({includeEmpty: false})`
@@ -497,7 +521,7 @@ const rowHasContent = (row) => {
  * still consumed from the stream (to keep the underlying zip pipeline
  * draining cleanly) but not processed.
  *
- * @param {object} draftState - Immer draft of the parser state
+ * @param {ParserState} draftState - Immer draft of the parser state
  * @param {StreamingWorksheet} worksheet - WorksheetReader instance
  * @param {StreamWorksheetOptions} options
  */
@@ -520,7 +544,7 @@ const streamWorksheet = async (draftState, worksheet, options) => {
 }
 
 /**
- * @param {object} draftState
+ * @param {ParserState} draftState
  * @param {StreamingWorksheet} worksheet
  * @param {StreamingRow} row
  * @param {number} rowNumber

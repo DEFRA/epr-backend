@@ -12,7 +12,11 @@ import { processOrsImport } from '#overseas-sites/application/process-import.js'
 import { orsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
+/** @import {UploadsRepository} from '#domain/uploads/repository/port.js' */
+/** @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js' */
+/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
+/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {SystemLogsRepository, SystemLogHumanActor} from '#repositories/system-logs/port.js' */
 /** @import {CommandHandler} from './summary-log-commands.js' */
 
 const userSchema = Joi.object({
@@ -25,11 +29,17 @@ const userSchema = Joi.object({
 /**
  * @typedef {object} OrsImportHandlerDeps
  * @property {TypedLogger} logger
- * @property {object} orsImportsRepository
- * @property {object} uploadsRepository
- * @property {object} overseasSitesRepository
- * @property {object} organisationsRepository
+ * @property {OrsImportsRepository} orsImportsRepository
+ * @property {UploadsRepository} uploadsRepository
+ * @property {OverseasSitesRepository} overseasSitesRepository
+ * @property {OrganisationsRepository} organisationsRepository
  * @property {SystemLogsRepository} systemLogsRepository
+ */
+
+/**
+ * @typedef {object} OrsImportPayload
+ * @property {string} importId
+ * @property {SystemLogHumanActor} [user]
  */
 
 /** @type {CommandHandler} */
@@ -39,7 +49,10 @@ export const importOverseasSitesHandler = {
     importId: Joi.string().required(),
     user: userSchema.optional()
   }),
-  execute: async (payload, /** @type {OrsImportHandlerDeps} */ deps) => {
+  execute: async (
+    /** @type {OrsImportPayload} */ payload,
+    /** @type {OrsImportHandlerDeps} */ deps
+  ) => {
     await processOrsImport(payload.importId, {
       orsImportsRepository: deps.orsImportsRepository,
       uploadsRepository: deps.uploadsRepository,
@@ -51,7 +64,10 @@ export const importOverseasSitesHandler = {
       user: payload.user
     })
   },
-  onFailure: async (payload, /** @type {OrsImportHandlerDeps} */ deps) => {
+  onFailure: async (
+    /** @type {OrsImportPayload} */ payload,
+    /** @type {OrsImportHandlerDeps} */ deps
+  ) => {
     try {
       const updated = await deps.orsImportsRepository.updateStatus(
         payload.importId,
@@ -81,7 +97,8 @@ export const importOverseasSitesHandler = {
       })
     }
   },
-  describe: (payload) => `importId=${payload.importId}`
+  describe: (/** @type {OrsImportPayload} */ payload) =>
+    `importId=${payload.importId}`
 }
 
 /** @type {CommandHandler[]} */
