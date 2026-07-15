@@ -131,7 +131,7 @@
     "prettier": "3.9.5",
     "testcontainers": "12.0.4",
     "tinybench": "6.0.2",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "vitest": "4.1.10",
     "vitest-mongodb": "1.0.3"
   }
