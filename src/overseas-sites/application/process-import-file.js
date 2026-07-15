@@ -3,8 +3,20 @@ import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/excel
 import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 
 /**
- * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  * @import { TypedLogger } from '#common/hapi-types.js'
+ * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
+ */
+
+/**
+ * @typedef {{
+ *   errors: Array<object>
+ *   mappingsUpdated: number
+ *   registrationNumber: string | null
+ *   sitesCreated: number
+ *   status: string
+ * }} OrsFileResult
  */
 
 /**
@@ -13,12 +25,12 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  *
  * @param {Buffer} buffer - Excel file contents
  * @param {object} deps
- * @param {object} deps.overseasSitesRepository
- * @param {object} deps.organisationsRepository
+ * @param {OverseasSitesRepository} deps.overseasSitesRepository
+ * @param {OrganisationsRepository} deps.organisationsRepository
  * @param {SystemLogsRepository} deps.systemLogsRepository
  * @param {TypedLogger} deps.logger
  * @param {SystemLogHumanActor} deps.user
- * @returns {Promise<{status: string, sitesCreated: number, mappingsUpdated: number, registrationNumber: string|null, errors: Array}>}
+ * @returns {Promise<OrsFileResult>}
  */
 export const processImportFile = async (
   buffer,
