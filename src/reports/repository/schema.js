@@ -130,6 +130,24 @@ const wasteSentSchema = Joi.object({
   finalDestinations: Joi.array().items(finalDestinationSchema).required()
 }).required()
 
+/**
+ * Shape of a report's `stale` field. A report can be stale for either or
+ * both independent reasons at once; presence of a named field is the reason
+ * code (see `staleReasons` in `#reports/domain/stale.js`). Not part of
+ * `createReportSchema` — a report is never created already-stale, this field
+ * is only ever set by the mark-stale repository operations after creation.
+ */
+export const staleSchema = Joi.object({
+  summaryLogChanged: Joi.object({
+    uploadedAt: Joi.string().isoDate().required(),
+    summaryLogId: Joi.string().required()
+  }).optional(),
+  prnCancelled: Joi.object({
+    occurredAt: Joi.string().isoDate().required(),
+    prnId: Joi.string().required()
+  }).optional()
+})
+
 const reportDataFieldsSchema = {
   source: Joi.object({
     summaryLogId: Joi.string().allow(null),
@@ -224,6 +242,16 @@ export const markActiveReportsStaleSchema = Joi.object({
   registrationId: MONGO_ID_SCHEMA,
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required()
+})
+
+export const markActiveReportsStaleForPrnCancellationSchema = Joi.object({
+  organisationId: MONGO_ID_SCHEMA,
+  registrationId: MONGO_ID_SCHEMA,
+  year: YEAR_SCHEMA,
+  cadence: cadenceSchema,
+  period: periodSchema,
+  prnId: Joi.string().required(),
+  occurredAt: Joi.string().isoDate().required()
 })
 
 export const markSubmittedReportsRequiringResubmissionSchema = Joi.object({

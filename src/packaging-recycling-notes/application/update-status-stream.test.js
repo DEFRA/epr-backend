@@ -134,6 +134,7 @@ const callUpdate = (overrides) =>
     registrationId: REG_ID,
     accreditationId: ACC_ID,
     user: USER,
+    prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
     ...overrides
   })
 
@@ -246,6 +247,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       providedPrn: buildPrn({
         status: {
           currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+          issued: { at: EVENT_AT, by: USER },
           history: []
         },
         lastAppliedEventNumber: SEED_NUMBER

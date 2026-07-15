@@ -2,7 +2,8 @@ import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   auditMarkReportsStale,
-  auditMarkReportsRequiringResubmission
+  auditMarkReportsRequiringResubmission,
+  MARK_STALE_ACTION
 } from '#reports/application/audit.js'
 
 /**
@@ -48,23 +49,33 @@ export const createOnSummaryLogUploaded =
   }) => {
     const uploadedAt = new Date().toISOString()
 
-    const reportsMarkedStale = await reportsRepository.markActiveReportsStale(
-      organisationId,
-      registrationId,
-      summaryLogId,
-      uploadedAt
-    )
+    logger.info({
+      message: `Summary log uploaded, marking reports stale for ${organisationId}/${registrationId}: summaryLogId=${summaryLogId}`
+    })
+
+    const reportsMarkedStale =
+      await reportsRepository.markActiveReportsStaleForSummaryLog(
+        organisationId,
+        registrationId,
+        summaryLogId,
+        uploadedAt
+      )
 
     if (reportsMarkedStale.length > 0) {
       logger.info({
-        message: `Reports marked as stale: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
+        message: `Reports marked as stale for ${organisationId}/${registrationId} summaryLogId=${summaryLogId}: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
       })
 
       await auditMarkReportsStale({
         systemLogsRepository,
         organisationId,
         registrationId,
-        reportsMarkedStale
+        reportsMarkedStale,
+        action: MARK_STALE_ACTION.SUMMARY_LOG_CHANGED
+      })
+    } else {
+      logger.info({
+        message: `No active report marked stale for ${organisationId}/${registrationId} summaryLogId=${summaryLogId} (none active, or already flagged by an earlier trigger)`
       })
     }
 
@@ -83,7 +94,7 @@ export const createOnSummaryLogUploaded =
 
     if (reportsRequiringResubmission.length > 0) {
       logger.info({
-        message: `Reports flagged requiring resubmission: ${reportsRequiringResubmission.map((r) => r.reportId).join(', ')}`
+        message: `Reports flagged requiring resubmission for ${organisationId}/${registrationId} summaryLogId=${summaryLogId}: ${reportsRequiringResubmission.map((r) => r.reportId).join(', ')}`
       })
 
       await auditMarkReportsRequiringResubmission({

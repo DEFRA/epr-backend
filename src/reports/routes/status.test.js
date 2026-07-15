@@ -693,7 +693,7 @@ describe(`POST ${reportsStatusPath}`, () => {
             accreditationId: undefined
           })
 
-        await reportsRepository.markActiveReportsStale(
+        await reportsRepository.markActiveReportsStaleForSummaryLog(
           organisationId,
           registrationId,
           'sl-new',
@@ -708,7 +708,9 @@ describe(`POST ${reportsStatusPath}`, () => {
         )
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
+        expect(JSON.parse(response.payload).code).toEqual([
+          'summary_log_changed'
+        ])
       })
     })
   })

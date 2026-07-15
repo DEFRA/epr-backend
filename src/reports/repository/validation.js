@@ -7,6 +7,7 @@ import {
   findPeriodicReportsSchema,
   findReportByIdSchema,
   markActiveReportsStaleSchema,
+  markActiveReportsStaleForPrnCancellationSchema,
   markSubmittedReportsRequiringResubmissionSchema
 } from './schema.js'
 
@@ -117,6 +118,23 @@ export const validateMarkActiveReportsStale = (params) => {
   const { error, value } = markActiveReportsStaleSchema.validate(params, {
     abortEarly: false
   })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
+ * @param {import('./port.js').MarkActiveReportsStaleForPrnCancellationParams} params
+ * @returns {import('./port.js').MarkActiveReportsStaleForPrnCancellationParams}
+ */
+export const validateMarkActiveReportsStaleForPrnCancellation = (params) => {
+  const { error, value } =
+    markActiveReportsStaleForPrnCancellationSchema.validate(params, {
+      abortEarly: false
+    })
 
   if (error) {
     throw Boom.badRequest(error.message)

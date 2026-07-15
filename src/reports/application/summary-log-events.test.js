@@ -1,5 +1,4 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { STALE_REASON } from '#reports/domain/stale.js'
 import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { config } from '#root/config.js'
@@ -29,11 +28,15 @@ const CLOSED_PERIOD_ADJUSTMENTS = 'featureFlags.closedPeriodAdjustments'
 const mockAuditMarkReportsStale = vi.fn()
 const mockAuditMarkReportsRequiringResubmission = vi.fn()
 
-vi.mock('#reports/application/audit.js', () => ({
-  auditMarkReportsStale: (...args) => mockAuditMarkReportsStale(...args),
-  auditMarkReportsRequiringResubmission: (...args) =>
-    mockAuditMarkReportsRequiringResubmission(...args)
-}))
+vi.mock(import('#reports/application/audit.js'), async (importOriginal) => {
+  const original = await importOriginal()
+  return {
+    ...original,
+    auditMarkReportsStale: (...args) => mockAuditMarkReportsStale(...args),
+    auditMarkReportsRequiringResubmission: (...args) =>
+      mockAuditMarkReportsRequiringResubmission(...args)
+  }
+})
 
 /**
  * @param {SummaryLogUploadedParams & SummaryLogUploadedRepositories} args
@@ -94,9 +97,10 @@ describe('onSummaryLogUploaded', () => {
 
     const updated = await reportsRepositoryFactory().findReportById(reportId)
     expect(updated.stale).toEqual({
-      uploadedAt: FIXED_NOW,
-      reason: STALE_REASON.SUMMARY_LOG_CHANGED,
-      summaryLogId: DEFAULT_SL_ID
+      summaryLogChanged: {
+        uploadedAt: FIXED_NOW,
+        summaryLogId: DEFAULT_SL_ID
+      }
     })
   })
 
@@ -150,8 +154,8 @@ describe('onSummaryLogUploaded', () => {
     const updated1 = await repo2.findReportById(id1)
     const updated2 = await repo2.findReportById(id2)
 
-    expect(updated1.stale?.reason).toBe(STALE_REASON.SUMMARY_LOG_CHANGED)
-    expect(updated2.stale?.reason).toBe(STALE_REASON.SUMMARY_LOG_CHANGED)
+    expect(updated1.stale?.summaryLogChanged?.summaryLogId).toBe(DEFAULT_SL_ID)
+    expect(updated2.stale?.summaryLogChanged?.summaryLogId).toBe(DEFAULT_SL_ID)
   })
 
   it('audits stale reports in a single batch call', async () => {
@@ -178,8 +182,9 @@ describe('onSummaryLogUploaded', () => {
         reportsMarkedStale: expect.arrayContaining([
           expect.objectContaining({
             stale: expect.objectContaining({
-              reason: STALE_REASON.SUMMARY_LOG_CHANGED,
-              summaryLogId: DEFAULT_SL_ID
+              summaryLogChanged: expect.objectContaining({
+                summaryLogId: DEFAULT_SL_ID
+              })
             })
           })
         ])

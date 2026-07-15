@@ -19,13 +19,35 @@ import { getProjectedPrnByNumber } from '#packaging-recycling-notes/application/
  * @import { HapiRequest, MachineCredentials } from '#common/hapi-types.js'
  * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { OnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
  */
 
 /**
  * @typedef {HapiRequest & {
- *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository
+ *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+ *   prnEvents: { onCancelled: OnPrnCancelled }
  * }} ExternalTransitionRequest
  */
+
+/**
+ * Resolves the transition timestamp from the payload, falling back to now,
+ * and the acting user from the request's machine credentials.
+ *
+ * @param {ExternalTransitionRequest} request
+ * @param {string} timestampField
+ * @returns {{ timestamp: Date, user: { id: string, name: string } }}
+ */
+function resolveTransitionContext(request, timestampField) {
+  const timestamp = request.payload?.[timestampField]
+    ? new Date(request.payload[timestampField])
+    : new Date()
+
+  const { id, name } = /** @type {MachineCredentials} */ (
+    request.auth.credentials
+  )
+
+  return { timestamp, user: { id, name } }
+}
 
 /**
  * Creates a Hapi route handler for external PRN status transitions.
@@ -53,8 +75,8 @@ export function createExternalTransitionHandler({
         packagingRecyclingNotesRepository,
         ledgerRepository,
         organisationsRepository,
+        prnEvents,
         params,
-        payload,
         logger
       } = request
       const { prnNumber } = params
@@ -72,19 +94,16 @@ export function createExternalTransitionHandler({
           )
         }
 
-        const timestamp = payload?.[timestampField]
-          ? new Date(payload[timestampField])
-          : new Date()
-
-        const { id, name } = /** @type {MachineCredentials} */ (
-          request.auth.credentials
+        const { timestamp, user } = resolveTransitionContext(
+          request,
+          timestampField
         )
-        const user = { id, name }
 
         const updatedPrn = await updatePrnStatus({
           prnRepository: packagingRecyclingNotesRepository,
           ledgerRepository,
           organisationsRepository,
+          prnEvents,
           logger,
           id: prn.id,
           organisationId: prn.organisation.id,
