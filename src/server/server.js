@@ -110,9 +110,6 @@ function getSwaggerPlugins() {
   ]
 }
 
-export const shouldRegisterSummaryLogRowStates = (config) =>
-  config.get('featureFlags.summaryLogRowStates')
-
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
@@ -136,15 +133,9 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
-    orsImportsRepositoryPlugin
+    orsImportsRepositoryPlugin,
+    mongoSummaryLogRowStatesRepositoryPlugin
   ]
-
-  // Defer row-state repository construction (and thus ensureSummaryLogRowStatesCollection
-  // creating the collection + indexes) until the row-state flag is on, so nothing
-  // is built ahead of the ADR-0037 switch-on.
-  if (shouldRegisterSummaryLogRowStates(config)) {
-    plugins.push(mongoSummaryLogRowStatesRepositoryPlugin)
-  }
 
   plugins.push(mongoReportsRepositoryPlugin)
 

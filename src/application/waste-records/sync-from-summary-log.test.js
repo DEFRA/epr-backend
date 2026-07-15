@@ -7,7 +7,6 @@ import {
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildVersionData,
   toWasteRecordVersions
@@ -32,9 +31,12 @@ describe('syncFromSummaryLog', () => {
   let wasteBalanceService
   let organisationsRepository
   let overseasSitesRepository
+  let summaryLogRowStateRepository
 
   beforeEach(() => {
     wasteRecordRepository = createInMemoryWasteRecordsRepository()()
+    summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
     wasteBalanceService = {
       submitSummaryLog: vi.fn(),
       commitSummaryLogSubmittedEvent: vi.fn()
@@ -100,7 +102,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -178,7 +181,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -271,7 +275,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -361,7 +366,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -449,7 +455,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -547,7 +554,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -635,7 +643,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -702,7 +711,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -764,7 +774,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -830,7 +841,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -897,7 +909,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -978,7 +991,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -1028,7 +1042,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -1083,7 +1098,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await expect(sync(summaryLog, TEST_USER)).rejects.toThrow(
@@ -1116,7 +1132,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -1173,7 +1190,8 @@ describe('syncFromSummaryLog', () => {
         wasteRecordRepository,
         wasteBalanceService,
         organisationsRepository,
-        overseasSitesRepository
+        overseasSitesRepository,
+        summaryLogRowStateRepository
       })
 
       const result = await sync(summaryLog, TEST_USER)
@@ -1263,7 +1281,8 @@ describe('syncFromSummaryLog', () => {
         wasteRecordRepository,
         wasteBalanceService,
         organisationsRepository,
-        overseasSitesRepository
+        overseasSitesRepository,
+        summaryLogRowStateRepository
       })
 
       const result = await sync(summaryLog, TEST_USER)
@@ -1348,7 +1367,8 @@ describe('syncFromSummaryLog', () => {
         wasteRecordRepository,
         wasteBalanceService,
         organisationsRepository,
-        overseasSitesRepository
+        overseasSitesRepository,
+        summaryLogRowStateRepository
       })
 
       const result = await sync(summaryLog, TEST_USER)
@@ -1402,7 +1422,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     const result = await sync(summaryLog, TEST_USER)
@@ -1502,7 +1523,8 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalanceService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStateRepository
     })
 
     const result = await sync(summaryLog, TEST_USER)
@@ -1551,23 +1573,14 @@ describe('syncFromSummaryLog', () => {
   })
 
   describe('committed summary-log row states (forward path)', () => {
-    let summaryLogRowStateRepository
-    const flagOn = createInMemoryFeatureFlags({ summaryLogRowStates: true })
-
-    beforeEach(() => {
-      summaryLogRowStateRepository =
-        createInMemorySummaryLogRowStateRepository()()
-    })
-
-    const syncWith = (extractor, featureFlags = flagOn) =>
+    const syncWith = (extractor) =>
       /** @type {any} */ (syncFromSummaryLog)({
         extractor,
         wasteRecordRepository,
         wasteBalanceService,
         organisationsRepository,
         overseasSitesRepository,
-        summaryLogRowStateRepository,
-        featureFlags
+        summaryLogRowStateRepository
       })
 
     const ledgerIdFor = (summaryLog) => ({
@@ -1775,40 +1788,9 @@ describe('syncFromSummaryLog', () => {
       })
       expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalled()
     })
-
-    it('writes no row states when the feature flag is off', async () => {
-      const fileId = 'file-flag-off-states'
-      const summaryLog = {
-        file: { id: fileId, uri: 's3://bucket/flag-off' },
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: /** @type {any} */ (reprocessorRegisteredOnlyData)
-      })
-
-      await syncWith(
-        extractor,
-        createInMemoryFeatureFlags({ summaryLogRowStates: false })
-      )(summaryLog, TEST_USER)
-
-      expect(
-        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
-          ledgerIdFor(summaryLog),
-          fileId
-        )
-      ).toHaveLength(0)
-      const savedRecords = await wasteRecordRepository.findByRegistration(
-        'org-1',
-        'reg-1'
-      )
-      expect(savedRecords).toHaveLength(2)
-    })
   })
 
   describe('registered-only summary-log submitted event (forward path)', () => {
-    const featureFlags = createInMemoryFeatureFlags({})
-
     const regOnlyData = {
       meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
       data: {
@@ -1836,9 +1818,7 @@ describe('syncFromSummaryLog', () => {
         wasteBalanceService,
         organisationsRepository,
         overseasSitesRepository,
-        summaryLogRowStateRepository:
-          createInMemorySummaryLogRowStateRepository()(),
-        featureFlags
+        summaryLogRowStateRepository
       })
 
     it('emits a zero-delta summary-log submitted event for a reg-only submission', async () => {

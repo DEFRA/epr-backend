@@ -364,18 +364,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_FIX_DUPLICATE_ACCREDITATION_LINKS'
     },
-    summaryLogRowStates: {
-      doc: 'Feature Flag: Persist summary-log row states on summary-log submission (ADR-0037)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES'
-    },
-    registeredOnlySubmittedEvents: {
-      doc: 'Feature Flag: Emit zero-delta summary-log-submitted events for registered-only (null-accreditation) streams (ADR-0031)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_REGISTERED_ONLY_SUBMITTED_EVENTS'
-    },
     staleIssuedTonnageReport: {
       doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
       format: Boolean,
