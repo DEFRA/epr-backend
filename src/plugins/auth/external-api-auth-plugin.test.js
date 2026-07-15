@@ -1,3 +1,4 @@
+import { invalidArg } from '#test/type-helpers.js'
 import {
   generateExternalApiToken,
   generateExternalApiTokenWithoutClientId
@@ -107,7 +108,10 @@ describe('external API auth plugin', () => {
   })
 
   it('should return 401 when token_use is not access', async () => {
-    const token = generateExternalApiToken(clientId, { token_use: 'id' })
+    const token = generateExternalApiToken(
+      clientId,
+      invalidArg({ token_use: 'id' })
+    )
 
     const response = await server.inject({
       method: 'GET',

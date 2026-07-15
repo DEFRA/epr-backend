@@ -27,7 +27,7 @@ import {
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste records from the current upload
- * @param {WasteRecord[]} params.existingWasteRecords - Existing waste records from previous uploads
+ * @param {WasteRecord[] | null | undefined} params.existingWasteRecords - Existing waste records from previous uploads
  * @returns {ValidationIssuesCollector} Validation issues object
  */
 export const validateRowContinuity = ({

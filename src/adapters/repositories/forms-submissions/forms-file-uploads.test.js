@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createFormsFileUploadsRepository } from './forms-file-uploads.js'
+import { partialMock } from '#test/type-helpers.js'
 
 const mockGetCognitoToken = vi.fn()
 const mockFetchJson = vi.fn()
@@ -33,7 +34,9 @@ describe('createFormsFileUploadsRepository', () => {
       send: vi.fn()
     }
 
-    repository = createFormsFileUploadsRepository({ s3Client: mockS3Client })
+    repository = createFormsFileUploadsRepository({
+      s3Client: partialMock(mockS3Client)
+    })
   })
 
   afterEach(() => {

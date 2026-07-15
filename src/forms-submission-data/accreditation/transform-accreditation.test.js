@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import exporter from '#data/fixtures/ea/accreditation/exporter.json'
-import reprocessorPaper from '#data/fixtures/ea/accreditation/reprocessor-paper.json'
-import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.json'
-import exporterWithoutRegistration from '#data/fixtures/ea/accreditation/exporter-without-registration.json'
+import exporter from '#data/fixtures/ea/accreditation/exporter.json' with { type: 'json' }
+import reprocessorPaper from '#data/fixtures/ea/accreditation/reprocessor-paper.json' with { type: 'json' }
+import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.json' with { type: 'json' }
+import exporterWithoutRegistration from '#data/fixtures/ea/accreditation/exporter-without-registration.json' with { type: 'json' }
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
 import { validateAccreditation } from '#repositories/organisations/schema/validation.js'
 import {

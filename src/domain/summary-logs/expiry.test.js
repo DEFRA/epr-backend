@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { invalidArg } from '#test/type-helpers.js'
 import { SUMMARY_LOG_STATUS, calculateExpiresAt } from './status.js'
 
 describe('calculateExpiresAt', () => {
@@ -72,13 +73,13 @@ describe('calculateExpiresAt', () => {
     })
 
     it('throws for null status', () => {
-      expect(() => calculateExpiresAt(null)).toThrow(
+      expect(() => calculateExpiresAt(invalidArg(null))).toThrow(
         'Unknown status for TTL calculation: null'
       )
     })
 
     it('throws for undefined status', () => {
-      expect(() => calculateExpiresAt(undefined)).toThrow(
+      expect(() => calculateExpiresAt(invalidArg(undefined))).toThrow(
         'Unknown status for TTL calculation: undefined'
       )
     })

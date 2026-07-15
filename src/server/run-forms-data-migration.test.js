@@ -5,6 +5,11 @@ import { createFormDataMigrator } from '#formsubmission/migration/migration-orch
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
+import { partialMock } from '#test/type-helpers.js'
+
+/** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
+/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -28,17 +33,22 @@ vi.mock('#repositories/system-logs/mongodb.js', () => ({
 
 describe('runFormsDataMigration', () => {
   let mockServer
+  /** @type {FormSubmissionsRepository} */
   let mockFormSubmissionsRepository
+  /** @type {OrganisationsRepository} */
   let mockOrganisationsRepository
   let mockLock
   let mockFormsDataMigration
-  const mockSystemLogsRepository = {}
+  /** @type {SystemLogsRepository} */
+  const mockSystemLogsRepository = partialMock({})
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockFormSubmissionsRepository = { findAllOrganisations: vi.fn() }
-    mockOrganisationsRepository = { insert: vi.fn() }
+    mockFormSubmissionsRepository = partialMock({
+      findAllOrganisations: vi.fn()
+    })
+    mockOrganisationsRepository = partialMock({ insert: vi.fn() })
 
     mockFormsDataMigration = {
       migrate: vi.fn().mockResolvedValue(undefined)
@@ -55,14 +65,16 @@ describe('runFormsDataMigration', () => {
       }
     }
 
-    createFormSubmissionsRepository.mockReturnValue(
+    vi.mocked(createFormSubmissionsRepository).mockResolvedValue(
       () => mockFormSubmissionsRepository
     )
-    createOrganisationsRepository.mockReturnValue(
+    vi.mocked(createOrganisationsRepository).mockResolvedValue(
       () => mockOrganisationsRepository
     )
-    createSystemLogsRepository.mockResolvedValue(() => mockSystemLogsRepository)
-    createFormDataMigrator.mockReturnValue(mockFormsDataMigration)
+    vi.mocked(createSystemLogsRepository).mockResolvedValue(
+      () => mockSystemLogsRepository
+    )
+    vi.mocked(createFormDataMigrator).mockReturnValue(mockFormsDataMigration)
 
     logger.info = vi.fn()
     logger.error = vi.fn()

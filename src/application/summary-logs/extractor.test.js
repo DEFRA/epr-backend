@@ -2,10 +2,15 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSummaryLogExtractor } from './extractor.js'
 import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
+/** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
+/** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
+
 vi.mock(
   '#adapters/parsers/summary-logs/exceljs-parser.js',
   async (importOriginal) => {
-    const actual = await importOriginal()
+    const actual = /** @type {Record<string, unknown>} */ (
+      await importOriginal()
+    )
     return {
       ...actual,
       parse: vi.fn()
@@ -36,7 +41,9 @@ describe('SummaryLogExtractor', () => {
     }
 
     summaryLogExtractor = createSummaryLogExtractor({
-      uploadsRepository
+      uploadsRepository: /** @type {UploadsRepository} */ (
+        /** @type {unknown} */ (uploadsRepository)
+      )
     })
 
     summaryLog = {
@@ -93,18 +100,20 @@ describe('SummaryLogExtractor', () => {
   })
 
   it('should return parsed data', async () => {
-    const parsedData = {
-      meta: {
-        foo: { value: 'bar', location: { sheet: 'S1', row: 1, column: 'A' } }
-      },
-      data: {
-        baz: {
-          headers: ['col'],
-          rows: [[123]],
-          location: { sheet: 'S1', row: 2, column: 'A' }
+    const parsedData = /** @type {ParsedSummaryLog} */ (
+      /** @type {unknown} */ ({
+        meta: {
+          foo: { value: 'bar', location: { sheet: 'S1', row: 1, column: 'A' } }
+        },
+        data: {
+          baz: {
+            headers: ['col'],
+            rows: [[123]],
+            location: { sheet: 'S1', row: 2, column: 'A' }
+          }
         }
-      }
-    }
+      })
+    )
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
     const result = await summaryLogExtractor.extract(summaryLog, { logger })
@@ -135,24 +144,26 @@ describe('SummaryLogExtractor', () => {
   })
 
   it('should log parsing summary with metadata and data tables', async () => {
-    const parsedData = {
-      meta: {
-        DateSubmitted: {
-          value: '2024-01-15',
-          location: { sheet: 'Sheet1', row: 1, column: 'B' }
+    const parsedData = /** @type {ParsedSummaryLog} */ (
+      /** @type {unknown} */ ({
+        meta: {
+          DateSubmitted: {
+            value: '2024-01-15',
+            location: { sheet: 'Sheet1', row: 1, column: 'B' }
+          }
+        },
+        data: {
+          OrganisationDetails: {
+            headers: ['Name', 'Type'],
+            rows: [
+              ['Acme Corp', 'Producer'],
+              ['Widget Ltd', 'Retailer']
+            ],
+            location: { sheet: 'Sheet1', row: 5, column: 'A' }
+          }
         }
-      },
-      data: {
-        OrganisationDetails: {
-          headers: ['Name', 'Type'],
-          rows: [
-            ['Acme Corp', 'Producer'],
-            ['Widget Ltd', 'Retailer']
-          ],
-          location: { sheet: 'Sheet1', row: 5, column: 'A' }
-        }
-      }
-    }
+      })
+    )
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
     await summaryLogExtractor.extract(summaryLog, { logger })
@@ -232,16 +243,18 @@ describe('SummaryLogExtractor', () => {
   it('should emit through the logger passed to extract', async () => {
     const callLogger = { info: vi.fn() }
     const otherLogger = { info: vi.fn() }
-    const parsedData = {
-      meta: {},
-      data: {
-        SomeTable: {
-          headers: ['c'],
-          rows: [['x']],
-          location: { sheet: 'Sheet1', row: 1, column: 'A' }
+    const parsedData = /** @type {ParsedSummaryLog} */ (
+      /** @type {unknown} */ ({
+        meta: {},
+        data: {
+          SomeTable: {
+            headers: ['c'],
+            rows: [['x']],
+            location: { sheet: 'Sheet1', row: 1, column: 'A' }
+          }
         }
-      }
-    }
+      })
+    )
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
     await summaryLogExtractor.extract(summaryLog, { logger: callLogger })
@@ -256,16 +269,18 @@ describe('SummaryLogExtractor', () => {
   })
 
   it('should handle data table with only one row', async () => {
-    const parsedData = {
-      meta: {},
-      data: {
-        SingleRowTable: {
-          headers: ['Column1', 'Column2'],
-          rows: [['Example1', 'Example2']],
-          location: { sheet: 'Sheet1', row: 1, column: 'A' }
+    const parsedData = /** @type {ParsedSummaryLog} */ (
+      /** @type {unknown} */ ({
+        meta: {},
+        data: {
+          SingleRowTable: {
+            headers: ['Column1', 'Column2'],
+            rows: [['Example1', 'Example2']],
+            location: { sheet: 'Sheet1', row: 1, column: 'A' }
+          }
         }
-      }
-    }
+      })
+    )
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
     await summaryLogExtractor.extract(summaryLog, { logger })

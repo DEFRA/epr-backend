@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { validateImmutableFields } from './helpers.js'
+import { invalidArg } from '#test/type-helpers.js'
 
 describe('validateImmutableFields', () => {
   const fields = ['status']
@@ -27,7 +28,7 @@ describe('validateImmutableFields', () => {
   })
 
   it('should pass if original context is missing', () => {
-    const helpers = createHelpers('registrations', null)
+    const helpers = createHelpers('registrations', invalidArg(null))
     const value = [{ id: '1', status: 'modified' }]
 
     expect(validator(value, helpers)).toEqual(value)
@@ -35,7 +36,9 @@ describe('validateImmutableFields', () => {
   })
 
   it('should pass if original items is not an array', () => {
-    const helpers = createHelpers('registrations', { registrations: null })
+    const helpers = createHelpers('registrations', {
+      registrations: invalidArg(null)
+    })
     const value = [{ id: '1', status: 'modified' }]
 
     expect(validator(value, helpers)).toEqual(value)
@@ -91,7 +94,7 @@ describe('validateImmutableFields', () => {
     const original = {
       items: [{ id: '1', meta: { a: 1, b: 2 } }]
     }
-    const helpers = createHelpers('items', original)
+    const helpers = createHelpers('items', invalidArg(original))
 
     // Same content
     const valuePass = [{ id: '1', meta: { a: 1, b: 2 } }]

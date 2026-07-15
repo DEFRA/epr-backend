@@ -29,7 +29,15 @@ import {
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
+ * @import { ObjectSchema } from 'joi'
+ * @import { MetadataEntry } from '#domain/summary-logs/extractor/port.js'
+ * @import { ClassifyForWasteBalance } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+ */
+
+/**
  * Helper to create a workbook buffer from worksheet definitions
+ *
+ * @returns {Promise<Buffer>}
  */
 const createWorkbook = async (worksheets) => {
   const workbook = new ExcelJS.Workbook()
@@ -41,11 +49,18 @@ const createWorkbook = async (worksheets) => {
     })
   }
 
-  return workbook.xlsx.writeBuffer()
+  return Buffer.from(await workbook.xlsx.writeBuffer())
 }
 
 /**
  * Minimal schema for testing - matches structure of real domain schemas
+ *
+ * @param {{
+ *   unfilledValues?: Record<string, string[]>
+ *   requiredHeaders?: string[]
+ *   validationSchema?: ObjectSchema
+ *   wasteBalanceFields?: string[]
+ * }} [options]
  */
 const createTestSchema = (options = {}) => {
   const unfilledValues = options.unfilledValues || {}
@@ -63,23 +78,26 @@ const createTestSchema = (options = {}) => {
       })
         .unknown(true)
         .prefs({ abortEarly: false }),
-    ...(requiredFields.length > 0 && {
-      classifyForWasteBalance: (data, _context) => {
-        const missing = requiredFields.filter(
-          (field) => !isFilled(data[field], unfilledValues[field] || [])
-        )
-        if (missing.length > 0) {
-          return {
-            outcome: 'EXCLUDED',
-            reasons: missing.map((field) => ({
-              code: 'MISSING_REQUIRED_FIELD',
-              field
-            }))
-          }
-        }
-        return { outcome: 'INCLUDED', reasons: [], transactionAmount: 0 }
-      }
-    })
+    classifyForWasteBalance:
+      requiredFields.length > 0
+        ? /** @type {ClassifyForWasteBalance} */ (
+            (data, _context) => {
+              const missing = requiredFields.filter(
+                (field) => !isFilled(data[field], unfilledValues[field] || [])
+              )
+              if (missing.length > 0) {
+                return {
+                  outcome: 'EXCLUDED',
+                  reasons: missing.map((field) => ({
+                    code: 'MISSING_REQUIRED_FIELD',
+                    field
+                  }))
+                }
+              }
+              return { outcome: 'INCLUDED', reasons: [], transactionAmount: 0 }
+            }
+          )
+        : null
   }
 }
 
@@ -200,7 +218,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
 
       worksheet.getRow(3).values = [null, 1001, '2025-01-15']
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = Buffer.from(await workbook.xlsx.writeBuffer())
       const parsed = await parse(buffer)
 
       // Parser returns the richText header row
@@ -507,7 +525,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       // This will NOT be included because Row 6 terminated the table!
       dataSheet.getRow(7).values = [null, 1003, null, '2025-05-17', 'Option B']
 
-      const buffer = await workbook.xlsx.writeBuffer()
+      const buffer = Buffer.from(await workbook.xlsx.writeBuffer())
       const parsed = await parse(buffer, {
         unfilledValues: { DROPDOWN_FIELD: ['Choose option'] }
       })
@@ -613,7 +631,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         ...parsed,
         meta: {
           ...parsed.meta,
-          PROCESSING_TYPE: { value: 'TEST_TYPE' }
+          PROCESSING_TYPE: /** @type {MetadataEntry} */ ({ value: 'TEST_TYPE' })
         }
       })
 

@@ -3,11 +3,11 @@ import wasteRecordsRegisteredOnlyJson from './test-data/reprocessor-registered-o
 import wasteRecordsAccreditedJson from './test-data/reprocessor-on-input-accredited.json' with { type: 'json' }
 
 const wasteRecordsRegisteredOnly =
-  /** @type {import('#domain/waste-records/model.js').WasteRecord[]} */ (
+  /** @type {import('#root/reports/domain/aggregation/aggregate-report-detail.js').ReportableWasteRecordState[]} */ (
     /** @type {unknown} */ (wasteRecordsRegisteredOnlyJson)
   )
 const wasteRecordsAccredited =
-  /** @type {import('#domain/waste-records/model.js').WasteRecord[]} */ (
+  /** @type {import('#root/reports/domain/aggregation/aggregate-report-detail.js').ReportableWasteRecordState[]} */ (
     /** @type {unknown} */ (wasteRecordsAccreditedJson)
   )
 
@@ -17,7 +17,11 @@ describe('#aggregateReportDetail — REPROCESSOR_REGISTERED_ONLY quarterly Q1 20
       operatorCategory: 'REPROCESSOR_REGISTERED_ONLY',
       cadence: 'quarterly',
       year: 2026,
-      period: 1
+      period: 1,
+      source: {
+        lastUploadedAt: '2026-03-31T19:35:45.562Z',
+        summaryLogId: '18bde18b-5200-4e86-9aad-738a16b05db8'
+      }
     })
 
     expect(result).toEqual({
@@ -112,7 +116,11 @@ describe('#aggregateReportDetail — REPROCESSOR accredited monthly January 2026
       operatorCategory: 'REPROCESSOR',
       cadence: 'monthly',
       year: 2026,
-      period: 1
+      period: 1,
+      source: {
+        lastUploadedAt: '2026-03-31T19:37:45.709Z',
+        summaryLogId: 'a8721bcb-8d55-44ea-9d5b-d0a4776e9aad'
+      }
     })
 
     expect(result).toEqual({

@@ -43,6 +43,8 @@ vi.mock('@aws-sdk/client-s3', async () => {
           mockStorage.set(command.input.Key, command.input.Body)
           return {}
         }
+
+        return {}
       })
     }
   }

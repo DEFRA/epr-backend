@@ -1,4 +1,4 @@
-import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
+import { latestSubmittedSummaryLog } from './latest-submitted-summary-log.js'
 
 /**
  * Resolve the `summaryLogId` of the most recent submitted summary log for a
@@ -13,16 +13,7 @@ export const latestSubmittedSummaryLogId = async (
   ledgerRepository,
   ledgerId
 ) => {
-  const latest = await ledgerRepository.findLatestInLedgerByKind(
-    ledgerId,
-    LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
-  )
+  const latest = await latestSubmittedSummaryLog(ledgerRepository, ledgerId)
 
-  if (latest === null) {
-    return null
-  }
-
-  return /** @type {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload} */ (
-    latest.payload
-  ).summaryLogId
+  return latest === null ? null : latest.summaryLogId
 }

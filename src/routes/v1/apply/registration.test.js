@@ -7,7 +7,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
-import registrationFixture from '#data/fixtures/registration.json'
+import registrationFixture from '#data/fixtures/registration.json' with { type: 'json' }
 import { registrationPath } from './registration.js'
 import { it } from '#vite/fixtures/server-with-mock-db.js'
 
@@ -20,7 +20,7 @@ vi.mock('@defra/cdp-auditing', () => ({
 }))
 
 vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = /** @type {Record<string, unknown>} */ (await importOriginal())
   return {
     ...actual,
     logger: {
