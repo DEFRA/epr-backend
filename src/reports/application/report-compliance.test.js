@@ -4,6 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS,
@@ -362,6 +363,97 @@ describe('generateReportCompliance', () => {
             submittedDates: new Map([
               ['2026:monthly:1', null],
               ['2026:monthly:2', SUBMITTED_DATE],
+              ['2026:monthly:3', null]
+            ])
+          }
+        ]
+      ])
+    })
+  })
+
+  it('retains the original submitted date while a resubmission is in progress', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const reg = org.registrations[0]
+
+    // Submission 1 submitted, with an in-flight submission 2 draft over it. The
+    // draft is the current report but carries no submitted date, so reading it
+    // would transiently blank a period that has in fact been submitted.
+    await seedInFlightResubmission(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
+    // The public register keeps showing submission 1's date, not a blank.
+    expect(result).toEqual({
+      periods: EXPECTED_PERIODS,
+      entries: new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: new Map([
+              ['2026:monthly:1', SUBMITTED_DATE],
+              ['2026:monthly:2', null],
+              ['2026:monthly:3', null]
+            ])
+          }
+        ]
+      ])
+    })
+  })
+
+  it('keeps the original submitted date after a resubmission is completed', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const reg = org.registrations[0]
+
+    // Submission 1 submitted on 17 Apr.
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    // Submission 2, a correction, itself submitted the next day. April has not
+    // yet ended, so the applicable period set is unchanged.
+    vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      submissionNumber: 2
+    })
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
+    // Resubmissions are not reflected externally: the register still shows the
+    // original submission date (17 Apr), not the correction's (18 Apr).
+    expect(result).toEqual({
+      periods: EXPECTED_PERIODS,
+      entries: new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: new Map([
+              ['2026:monthly:1', SUBMITTED_DATE],
+              ['2026:monthly:2', null],
               ['2026:monthly:3', null]
             ])
           }

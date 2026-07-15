@@ -1,7 +1,10 @@
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodKey } from '#reports/domain/period-key.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+import {
+  mergeReportingPeriods,
+  selectSubmittedReports
+} from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
 import {
   activeAccreditationValidFrom,
@@ -28,6 +31,25 @@ import {
  *   entries: Map<string, ReportComplianceEntry>;
  * }} ReportComplianceData
  */
+
+/**
+ * The date the public register shows for a period. It retains the ORIGINAL
+ * submitted date: resubmissions are not reflected externally.
+ * `selectSubmittedReports` orders by submissionNumber ascending, so its first
+ * entry is the earliest submission — never the in-flight draft in `report`, nor
+ * a later correction. A period with nothing submitted yields no entry, so
+ * resolves to null.
+ *
+ * @param {import('#reports/domain/merge-reporting-periods.js').MergedPeriod} mergedPeriod
+ * @returns {string | null}
+ */
+function originalSubmittedDate(mergedPeriod) {
+  const [original] = selectSubmittedReports({
+    current: mergedPeriod.report,
+    previousSubmissions: mergedPeriod.previousSubmissions
+  })
+  return original?.submittedAt?.slice(0, 10) ?? null
+}
 
 /**
  * Groups all periodic reports by `${organisationId}::${registrationId}`.
@@ -111,7 +133,7 @@ export async function generateReportCompliance(
             cadence,
             period: mergedPeriod.period
           }),
-          mergedPeriod.report?.submittedAt?.slice(0, 10) ?? null
+          originalSubmittedDate(mergedPeriod)
         )
       }
     }
