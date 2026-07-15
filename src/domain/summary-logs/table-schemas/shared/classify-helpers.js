@@ -1,10 +1,7 @@
-import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { isFilled, ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from './classification-reason.js'
 
 export { CLASSIFICATION_REASON }
-
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
 /**
  * Checks whether all required fields are filled in the row data.
@@ -32,32 +29,3 @@ export const checkRequiredFields = (data, requiredFields, unfilledValues) => {
 
   return null
 }
-
-/**
- * Creates a classifyForWasteBalance function for tables that do not contribute
- * to waste balance but still need date-range checking to preserve IGNORED
- * marking for rows with dates outside the accreditation period.
- *
- * @param {string} dateField - The field name containing the date to check
- * @returns {import('../validation-pipeline.js').ClassifyForWasteBalance}
- */
-export const createDateOnlyClassifier =
-  (dateField) =>
-  (
-    /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: Accreditation | null }} */ { accreditation }
-  ) => {
-    const date = data[dateField]
-
-    if (date && !isAccreditedAtDates([date], accreditation)) {
-      return {
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
-      }
-    }
-
-    return {
-      outcome: ROW_OUTCOME.EXCLUDED,
-      reasons: []
-    }
-  }
