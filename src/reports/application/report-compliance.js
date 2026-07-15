@@ -35,10 +35,17 @@ import {
 /**
  * The date the public register shows for a period. It retains the ORIGINAL
  * submitted date: resubmissions are not reflected externally.
- * `selectSubmittedReports` orders by submissionNumber ascending, so its first
- * entry is the earliest submission — never the in-flight draft in `report`, nor
- * a later correction. A period with nothing submitted yields no entry, so
- * resolves to null.
+ *
+ * `selectSubmittedReports` returns the period's submitted reports ordered by
+ * submissionNumber ascending, so its first entry is the lowest-numbered
+ * submission. That is the original submission, because the write model only
+ * permits unsubmitting the latest submission (`isLatestSubmission` in
+ * report-service.js), so an earlier submission's `submittedAt` is never
+ * re-stamped after a later one exists. Keying on a retained `submittedAt`
+ * rather than the current status means a submitted-then-unsubmitted period
+ * keeps its date instead of blanking. A period with nothing submitted yields
+ * no entry, so resolves to null (never the in-flight draft in `report`, nor a
+ * later correction).
  *
  * @param {import('#reports/domain/merge-reporting-periods.js').MergedPeriod} mergedPeriod
  * @returns {string | null}

@@ -5,6 +5,7 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
+import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS,
@@ -443,6 +444,45 @@ describe('generateReportCompliance', () => {
 
     // Resubmissions are not reflected externally: the register still shows the
     // original submission date (17 Apr), not the correction's (18 Apr).
+    expect(result).toEqual({
+      periods: EXPECTED_PERIODS,
+      entries: new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: new Map([
+              ['2026:monthly:1', SUBMITTED_DATE],
+              ['2026:monthly:2', null],
+              ['2026:monthly:3', null]
+            ])
+          }
+        ]
+      ])
+    })
+  })
+
+  it('retains the submitted date after a submitted period is unsubmitted', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const reg = org.registrations[0]
+
+    // A submitted period a service maintainer then unsubmits for correction:
+    // status reverts to ready_to_submit but the submitted date is retained.
+    // Keying on status rather than the retained submittedAt would blank it.
+    await buildUnsubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
