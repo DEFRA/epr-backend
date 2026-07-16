@@ -46,6 +46,10 @@
  *   identity matches nothing.
  * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
  *   Return every state document for the given row identity.
+ * @property {() => Promise<string[]>} findDistinctDataKeys
+ *   Return the union of every key observed on `data` across every state
+ *   document in the collection. Used by the CSV export to compose its dynamic
+ *   header without materialising any document into memory.
  */
 
 /**

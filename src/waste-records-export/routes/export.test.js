@@ -2,6 +2,10 @@ import { StatusCodes } from 'http-status-codes'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -25,28 +29,37 @@ const buildRegistration = (overrides = {}) => ({
   ...overrides
 })
 
-const buildReceivedRecord = (overrides = {}) => ({
-  type: WASTE_RECORD_TYPE.RECEIVED,
+const receivedRowState = (overrides = {}) => ({
   rowId: '1001',
-  data: {
-    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-    DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01'
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+  data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01' },
+  classification: {
+    outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+    reasons: [],
+    transactionAmount: 0
   },
-  versions: [{ summaryLog: { id: 'sl-1' } }],
   ...overrides
 })
 
+const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
+
 /**
+ * Stand up a test server whose export reads from the real in-memory ledger and
+ * row-state adapters. `seeds` records each registration's submitted summary log
+ * and its committed rows, so the export resolves that summary log as the
+ * registration's latest and reads its rows.
+ *
  * @param {{
  *   organisations?: any[],
- *   wasteRecords?: any[],
+ *   seeds?: any[],
  *   summaryLogs?: any[],
  *   overseasSites?: any[]
  * }} [options]
  */
-const createServerWithRepos = ({
+const createServerWithRepos = async ({
   organisations = [],
-  wasteRecords = [],
+  seeds = [],
   summaryLogs = [],
   overseasSites = []
 } = {}) => {
@@ -54,16 +67,36 @@ const createServerWithRepos = ({
     findAll: vi.fn().mockResolvedValue(organisations),
     findById: vi.fn().mockResolvedValue(organisations[0])
   }
-  const observedKeys = new Set()
-  for (const record of wasteRecords) {
-    for (const key of Object.keys(record.data ?? {})) {
-      observedKeys.add(key)
-    }
+
+  const ledgerRepository = createInMemoryLedgerRepository(
+    seeds.map((seed) =>
+      buildLedgerEvent({
+        organisationId: seed.organisationId ?? 'org-1',
+        registrationId: seed.registrationId ?? 'reg-1',
+        accreditationId: seed.accreditationId ?? null,
+        number: 1,
+        payload: {
+          summaryLogId: seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID,
+          creditTotal: 0
+        }
+      })
+    )
+  )()
+
+  const summaryLogRowStatesRepository =
+    createInMemorySummaryLogRowStateRepository()()
+  for (const seed of seeds) {
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
+      {
+        organisationId: seed.organisationId ?? 'org-1',
+        registrationId: seed.registrationId ?? 'reg-1',
+        accreditationId: seed.accreditationId ?? null
+      },
+      seed.rows ?? [],
+      seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID
+    )
   }
-  const wasteRecordsRepository = {
-    findByRegistration: vi.fn().mockResolvedValue(wasteRecords),
-    findDistinctDataKeys: vi.fn().mockResolvedValue([...observedKeys])
-  }
+
   const summaryLogsRepository = {
     findAllByOrgReg: vi.fn().mockResolvedValue(summaryLogs)
   }
@@ -74,7 +107,8 @@ const createServerWithRepos = ({
   return createTestServer({
     repositories: {
       organisationsRepository: () => organisationsRepository,
-      wasteRecordsRepository: () => wasteRecordsRepository,
+      summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
+      ledgerRepository: () => ledgerRepository,
       summaryLogsRepository: () => summaryLogsRepository,
       overseasSitesRepository: () => overseasSitesRepository
     }
@@ -125,7 +159,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       })
       const server = await createServerWithRepos({
         organisations: [organisation],
-        wasteRecords: [buildReceivedRecord()],
+        seeds: [{ rows: [receivedRowState()] }],
         summaryLogs: [
           {
             id: 'sl-1',
@@ -161,7 +195,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       })
       const server = await createServerWithRepos({
         organisations: [organisation],
-        wasteRecords: [buildReceivedRecord()]
+        seeds: [{ rows: [receivedRowState()] }]
       })
 
       const response = await server.inject({
@@ -191,7 +225,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       })
       const server = await createServerWithRepos({
         organisations: [organisation],
-        wasteRecords: [buildReceivedRecord()]
+        seeds: [{ rows: [receivedRowState()] }]
       })
 
       const response = await server.inject({
@@ -230,7 +264,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       })
       const server = await createServerWithRepos({
         organisations: [organisation],
-        wasteRecords: [buildReceivedRecord()]
+        seeds: [{ rows: [receivedRowState()] }]
       })
 
       const response = await server.inject({
