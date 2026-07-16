@@ -6,6 +6,8 @@ import {
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
+ * @import { SummaryLogReference } from '#domain/waste-records/model.js'
+ *
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
  * @typedef {import('#domain/waste-records/model.js').WasteRecordType} WasteRecordType
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
@@ -64,7 +66,7 @@ const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPE_TABLES)
  *
  * @param {WasteRecord} existingRecord
  * @param {Record<string, any>} data - Full row data from the transformer
- * @param {{ timestamp: string, summaryLog: object }} versionContext
+ * @param {{ timestamp: string, summaryLog: SummaryLogReference }} versionContext
  * @returns {{ record: WasteRecord, change: WasteRecordChange }}
  */
 const updateExistingRecord = (
@@ -109,7 +111,7 @@ const updateExistingRecord = (
  *
  * @param {Object} tableData - Table data with rows
  * @param {TransformableRow[]} tableData.rows - Array of rows to transform
- * @param {function(Record<string, any>): {wasteRecordType: WasteRecordType, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform row data
+ * @param {(row: Record<string, any>) => {wasteRecordType: WasteRecordType, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform row data
  * @param {Object} context - Context for creating waste records
  * @param {Object} context.summaryLog - Summary log reference
  * @param {string} context.summaryLog.id - Summary log ID

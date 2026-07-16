@@ -9,13 +9,25 @@ import {
   DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { partialMock } from '#test/type-helpers.js'
 import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
 
+/**
+ * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
+ */
+
+/**
+ * @param {number} number
+ * @param {string} summaryLogId
+ * @returns {LedgerEvent}
+ */
 const submissionEvent = (number, summaryLogId) =>
-  buildLedgerEvent({
-    number,
-    payload: { summaryLogId, creditTotal: number * 10 }
-  })
+  partialMock(
+    buildLedgerEvent({
+      number,
+      payload: { summaryLogId, creditTotal: number * 10 }
+    })
+  )
 
 const registration = {
   organisationId: DEFAULT_LEDGER_ID.organisationId,
