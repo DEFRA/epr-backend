@@ -276,6 +276,26 @@ const performFindRowHistory =
   }
 
 /**
+ * The union of keys observed on `data` across every state document, computed
+ * server-side so the CSV export composes its dynamic header without pulling any
+ * document into memory. Cost scales with the count of distinct field names
+ * (typically <200) rather than the document count.
+ *
+ * @param {Collection} collection
+ * @returns {() => Promise<string[]>}
+ */
+const performFindDistinctDataKeys = (collection) => async () => {
+  const docs = await collection
+    .aggregate([
+      { $project: { kv: { $objectToArray: '$data' } } },
+      { $unwind: '$kv' },
+      { $group: { _id: '$kv.k' } }
+    ])
+    .toArray()
+  return docs.map((doc) => /** @type {string} */ (doc._id))
+}
+
+/**
  * Creates a MongoDB-backed summary-log row state repository.
  *
  * @param {Db} db
@@ -287,6 +307,7 @@ export const createMongoSummaryLogRowStateRepository = async (db) => {
   return () => ({
     upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
     findRowStatesForSummaryLog: performFindRowStatesForSummaryLog(collection),
-    findRowHistory: performFindRowHistory(collection)
+    findRowHistory: performFindRowHistory(collection),
+    findDistinctDataKeys: performFindDistinctDataKeys(collection)
   })
 }
