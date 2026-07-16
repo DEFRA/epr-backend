@@ -10,8 +10,12 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  */
 
 /**
+ * @typedef {{ field?: string, message: string }} OrsFileError
+ */
+
+/**
  * @typedef {{
- *   errors: Array<{ field?: string, message: string }>
+ *   errors: OrsFileError[]
  *   mappingsUpdated: number
  *   registrationNumber: string | null
  *   sitesCreated: number
@@ -210,6 +214,11 @@ const recordImportSystemLog = async (
   }
 }
 
+/**
+ * @param {string | null} registrationNumber
+ * @param {OrsFileError[]} errors
+ * @returns {OrsFileResult}
+ */
 const failureResult = (registrationNumber, errors) => ({
   status: ORS_FILE_RESULT_STATUS.FAILURE,
   sitesCreated: 0,
