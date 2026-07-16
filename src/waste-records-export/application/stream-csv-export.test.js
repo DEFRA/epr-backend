@@ -522,6 +522,37 @@ describe('streamCsvExport', () => {
     expect(cells[METADATA_COL_INDEX['Accreditation Number']]).toBe('ACC-SUS-1')
   })
 
+  it('still exports rows submitted under a since-cancelled accreditation, as Accredited "No"', async () => {
+    // Row states are keyed by the accreditation id stamped at submission —
+    // whatever its status — so a cancellation after submission must not drop
+    // the registration's rows from the FOI export.
+    const org = baseOrg({
+      accreditations: [
+        {
+          id: 'acc-1',
+          status: 'cancelled',
+          accreditationNumber: 'ACC-CAN-1',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: []
+        }
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [{ accreditationId: 'acc-1', rows: [receivedRowState()] }]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    expect(out).toHaveLength(2) // header + the row survives the cancellation
+    const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+  })
+
   it('iterates organisations and registrations sorted by id for deterministic output', async () => {
     const orgB = baseOrg({
       id: 'org-b',

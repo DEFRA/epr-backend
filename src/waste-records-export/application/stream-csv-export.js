@@ -113,13 +113,17 @@ async function* streamRegistrationRows({
   summaryLogsRepository
 }) {
   const accreditation = resolveAccreditation(registration, org)
-  const accreditationId = accreditation?.id ?? null
   const overseasSites = buildOverseasSitesContext(registration, sitesById)
 
+  // The ledger is keyed by the accreditation id stamped at submission —
+  // whatever its status — so the lookup uses the registration's raw
+  // accreditationId. resolveAccreditation is active-only (approved/suspended)
+  // and serves the Accredited columns; keying the ledger by it would drop
+  // every row submitted under a since-cancelled accreditation.
   const ledgerId = {
     organisationId: org.id,
     registrationId: registration.id,
-    accreditationId
+    accreditationId: registration.accreditationId ?? null
   }
 
   const latestSummaryLogId = await latestSubmittedSummaryLogId(
