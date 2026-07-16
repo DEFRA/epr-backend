@@ -1,10 +1,12 @@
-import { isPayloadSmallEnoughToAudit, safeAudit } from './helpers.js'
+import {
+  isPayloadSmallEnoughToAudit,
+  safeAudit,
+  SYSTEM_USER
+} from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  */
-
-const SYSTEM_USER = { id: 'system', email: 'system', scope: [], role: null }
 
 /**
  * Audit an incremental form migration for an organisation.

@@ -10,6 +10,7 @@ import {
 } from '#overseas-sites/domain/import-status.js'
 import { processOrsImport } from '#overseas-sites/application/process-import.js'
 import { orsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
+import { SYSTEM_USER } from '#root/auditing/helpers.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {UploadsRepository} from '#domain/uploads/repository/port.js' */
@@ -61,7 +62,7 @@ export const importOverseasSitesHandler = {
       systemLogsRepository: deps.systemLogsRepository,
       logger: deps.logger,
       orsImportMetrics,
-      user: /** @type {SystemLogHumanActor} */ (payload.user)
+      user: payload.user ?? SYSTEM_USER
     })
   },
   onFailure: async (
