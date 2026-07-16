@@ -11,7 +11,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 
 /**
  * @typedef {{
- *   errors: Array<object>
+ *   errors: Array<{ field?: string, message: string }>
  *   mappingsUpdated: number
  *   registrationNumber: string | null
  *   sitesCreated: number

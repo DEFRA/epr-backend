@@ -7,6 +7,7 @@
  * @see docs/architecture/decisions/0001-hybrid-seed-data-strategy-for-non-prod-environments.md
  */
 
+import assert from 'node:assert'
 import crypto from 'node:crypto'
 import { ObjectId } from 'mongodb'
 
@@ -271,12 +272,15 @@ async function buildActiveOrgWithSuspendedAccreditation(
   const org = await buildActiveOrgForSeed(organisationsRepository, overrides)
 
   // Find the first approved registration's material to match with accreditation
-  // Note: buildActiveOrgForSeed guarantees at least one approved registration
   const approvedReg = org.registrations.find(
     (r) => r.status === REG_ACC_STATUS.APPROVED
   )
+  assert(
+    approvedReg,
+    'buildActiveOrgWithSuspendedAccreditation: expected buildActiveOrgForSeed to produce an approved registration'
+  )
   const matchingAccIndex = org.accreditations.findIndex(
-    (acc) => acc.material === approvedReg?.material
+    (acc) => acc.material === approvedReg.material
   )
 
   const updatedAccreditations = org.accreditations.map((acc, index) =>
