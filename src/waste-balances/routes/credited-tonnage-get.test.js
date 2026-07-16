@@ -154,7 +154,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       tonnage: {
         totalCredited: 100,
         eligibleForWasteBalance: 100,
-        deductibleFromCredited: 0
+        sentOnDeductions: 0
       }
     })
     expect(

@@ -35,7 +35,7 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
  * @property {string} month - `YYYY-MM`
  * @property {{ id: string, reference: string }} organisation - internal id and external reference
  * @property {{ id: string, accreditationNumber: string, processingType: string, material: string }} accreditation
- * @property {{ totalCredited: number, eligibleForWasteBalance: number, deductibleFromCredited: number }} tonnage
+ * @property {{ totalCredited: number, eligibleForWasteBalance: number, sentOnDeductions: number }} tonnage
  */
 
 /**
@@ -239,7 +239,7 @@ export const buildCreditedTonnageReport = async ({
         tonnage: {
           totalCredited: month.totalCredited,
           eligibleForWasteBalance: month.eligibleForWasteBalance,
-          deductibleFromCredited: month.deductibleFromCredited
+          sentOnDeductions: month.sentOnDeductions
         }
       })
     }

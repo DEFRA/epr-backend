@@ -29,7 +29,7 @@ export const creditedTonnageResponseSchema = Joi.object({
         tonnage: Joi.object({
           totalCredited: Joi.number().required(),
           eligibleForWasteBalance: Joi.number().required(),
-          deductibleFromCredited: Joi.number().required()
+          sentOnDeductions: Joi.number().required()
         }).required()
       })
     )

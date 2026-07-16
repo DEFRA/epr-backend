@@ -161,7 +161,7 @@ describe('buildCreditedTonnageReport', () => {
           tonnage: {
             totalCredited: 0,
             eligibleForWasteBalance: 0,
-            deductibleFromCredited: 0
+            sentOnDeductions: 0
           }
         },
         {
@@ -176,7 +176,7 @@ describe('buildCreditedTonnageReport', () => {
           tonnage: {
             totalCredited: 100,
             eligibleForWasteBalance: 100,
-            deductibleFromCredited: 0
+            sentOnDeductions: 0
           }
         },
         {
@@ -191,7 +191,7 @@ describe('buildCreditedTonnageReport', () => {
           tonnage: {
             totalCredited: 0,
             eligibleForWasteBalance: 0,
-            deductibleFromCredited: 0
+            sentOnDeductions: 0
           }
         }
       ]
@@ -382,7 +382,7 @@ describe('buildCreditedTonnageReport', () => {
         (r) =>
           r.tonnage.totalCredited === 0 &&
           r.tonnage.eligibleForWasteBalance === 0 &&
-          r.tonnage.deductibleFromCredited === 0
+          r.tonnage.sentOnDeductions === 0
       )
     ).toBe(true)
   })
@@ -406,7 +406,7 @@ describe('buildCreditedTonnageReport', () => {
     ).toEqual({
       totalCredited: 40,
       eligibleForWasteBalance: 40,
-      deductibleFromCredited: 0
+      sentOnDeductions: 0
     })
   })
 

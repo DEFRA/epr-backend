@@ -83,11 +83,11 @@ describe('creditedTonnageByMonth', () => {
         month: '2026-02',
         totalCredited: 12.5,
         eligibleForWasteBalance: 12.5,
-        deductibleFromCredited: 0
+        sentOnDeductions: 0
       })
     })
 
-    it('buckets reprocessor-input sent-on loads by DATE_LOAD_LEFT_SITE using TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON into deductibleFromCredited as a positive number', () => {
+    it('buckets reprocessor-input sent-on loads by DATE_LOAD_LEFT_SITE using TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON into sentOnDeductions as a positive number', () => {
       const result = creditedTonnageByMonth(
         [sentOnRow('5000', '2026-03-01', 7.25)],
         REPROCESSOR_INPUT,
@@ -98,7 +98,7 @@ describe('creditedTonnageByMonth', () => {
         month: '2026-03',
         totalCredited: 0,
         eligibleForWasteBalance: 0,
-        deductibleFromCredited: 7.25
+        sentOnDeductions: 7.25
       })
     })
 
@@ -113,7 +113,7 @@ describe('creditedTonnageByMonth', () => {
         month: '2026-01',
         totalCredited: 30,
         eligibleForWasteBalance: 30,
-        deductibleFromCredited: 0
+        sentOnDeductions: 0
       })
     })
 
@@ -135,7 +135,7 @@ describe('creditedTonnageByMonth', () => {
         month: '2026-02',
         totalCredited: 40,
         eligibleForWasteBalance: 40,
-        deductibleFromCredited: 0
+        sentOnDeductions: 0
       })
     })
   })
@@ -152,7 +152,7 @@ describe('creditedTonnageByMonth', () => {
         month: '2026-02',
         totalCredited: 0,
         eligibleForWasteBalance: 0,
-        deductibleFromCredited: 0
+        sentOnDeductions: 0
       })
       expect(result.skippedRowCount).toBe(0)
     })
@@ -282,7 +282,7 @@ describe('creditedTonnageByMonth', () => {
         month: '2026-02',
         totalCredited: 0,
         eligibleForWasteBalance: 0,
-        deductibleFromCredited: 0
+        sentOnDeductions: 0
       })
       expect(result.skippedRowCount).toBe(0)
     })
@@ -294,7 +294,7 @@ describe('creditedTonnageByMonth', () => {
         RANGE
       )
 
-      expect(monthFor(result, '2026-02').deductibleFromCredited).toBe(0)
+      expect(monthFor(result, '2026-02').sentOnDeductions).toBe(0)
     })
   })
 
@@ -328,7 +328,7 @@ describe('creditedTonnageByMonth', () => {
         month: '2026-02',
         totalCredited: 0,
         eligibleForWasteBalance: 0,
-        deductibleFromCredited: 0
+        sentOnDeductions: 0
       })
       expect(monthFor(result, '2026-03').totalCredited).toBe(20)
     })
@@ -366,9 +366,9 @@ describe('creditedTonnageByMonth', () => {
       )
 
       expect(result.skippedRowCount).toBe(1)
-      expect(
-        result.months.every((entry) => entry.deductibleFromCredited === 0)
-      ).toBe(true)
+      expect(result.months.every((entry) => entry.sentOnDeductions === 0)).toBe(
+        true
+      )
     })
 
     it('counts each dropped row and still aggregates the in-range rows', () => {
@@ -414,7 +414,7 @@ describe('creditedTonnageByMonth', () => {
         RANGE
       )
 
-      expect(monthFor(result, '2026-01').deductibleFromCredited).toBe(0.3)
+      expect(monthFor(result, '2026-01').sentOnDeductions).toBe(0.3)
     })
   })
 

@@ -53,7 +53,7 @@ const YES = 'Yes'
  * @property {string} month - `YYYY-MM`
  * @property {number} totalCredited - gross tonnage on crediting rows, 2dp
  * @property {number} eligibleForWasteBalance - tonnage that credited the balance (persisted INCLUDED classification), 2dp
- * @property {number} deductibleFromCredited - sent-on tonnage, positive, reprocessor input only, 2dp
+ * @property {number} sentOnDeductions - sent-on tonnage, positive, reprocessor input only, 2dp
  */
 
 /**
@@ -197,7 +197,7 @@ const contributionFor = (rowState, processingType) => {
  * `totalCredited` gross — every row regardless of classification — and add the
  * persisted `classification.transactionAmount` to `eligibleForWasteBalance`
  * when the row's persisted outcome is `INCLUDED`. Sent-on rows on a
- * reprocessor-input accreditation add their tonnage to `deductibleFromCredited`
+ * reprocessor-input accreditation add their tonnage to `sentOnDeductions`
  * as a positive number. Rows whose month-assignment date is missing,
  * unparseable, or outside the range are dropped and counted in
  * `skippedRowCount`. Sums are decimal-safe to 2dp.
@@ -220,7 +220,7 @@ export const creditedTonnageByMonth = (
       {
         totalCredited: 0,
         eligibleForWasteBalance: 0,
-        deductibleFromCredited: 0
+        sentOnDeductions: 0
       }
     ])
   )
@@ -254,8 +254,8 @@ export const creditedTonnageByMonth = (
         )
       }
     } else {
-      bucket.deductibleFromCredited = toNumber(
-        addRounded(bucket.deductibleFromCredited, contribution.tonnage, 2)
+      bucket.sentOnDeductions = toNumber(
+        addRounded(bucket.sentOnDeductions, contribution.tonnage, 2)
       )
     }
   }
