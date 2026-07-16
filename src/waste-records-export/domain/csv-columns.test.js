@@ -10,11 +10,11 @@ import {
 } from './csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 describe('csv-columns', () => {
   describe('METADATA_COLUMNS', () => {
@@ -183,44 +183,33 @@ describe('csv-columns', () => {
       validTo: '2026-12-31'
     }
 
-    /** @type {WasteRecord} */
-    const recordFixture = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      rowId: '1001',
-      data: {
-        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-        DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
-        GROSS_WEIGHT: 10,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 9
-      },
-      versions: [
-        {
-          id: 'v1',
-          createdAt: '2026-02-01T00:00:00Z',
-          status: 'created',
-          summaryLog: { id: 'sl-1', uri: 's3://bucket/sl-1' },
-          data: {}
-        }
-      ]
+    // Coerced committed row data, carrying its `processingType`, as the
+    // application layer hands it to `buildDataRow`.
+    const dataFixture = {
+      processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+      DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+      GROSS_WEIGHT: 10,
+      TONNAGE_RECEIVED_FOR_RECYCLING: 9
     }
 
     /** @returns {Registration} */
     const buildReg = (overrides = {}) => ({ ...regFixture, ...overrides })
 
-    /** @returns {WasteRecord} */
-    const buildRecord = (overrides = {}) => ({ ...recordFixture, ...overrides })
-
     const baseInput = {
       org: orgFixture,
       registration: regFixture,
       accreditation: accreditationFixture,
-      record: recordFixture,
+      data: dataFixture,
+      wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+      rowId: '1001',
+      classification: {
+        outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: 9
+      },
       summaryLogEntry: {
         submittedAt: '2026-04-15T09:00:00Z'
       },
-      wasteBalanceClassification: { included: true, reasons: [], tonnage: 9 },
       dataFieldColumns
     }
 
@@ -275,7 +264,7 @@ describe('csv-columns', () => {
       expect(row[METADATA_COL_INDEX['Accreditation Number']]).toBe('')
     })
 
-    it('emits empty string when a data field is absent on the record', () => {
+    it('emits empty string when a data field is absent on the row', () => {
       const row = buildDataRow(baseInput)
       expect(row[dataCol('CONTAINER_NUMBER')]).toBe('')
     })
@@ -288,9 +277,7 @@ describe('csv-columns', () => {
     it('apostrophe-prefixes a string data cell that begins with a formula trigger', () => {
       const row = buildDataRow({
         ...baseInput,
-        record: buildRecord({
-          data: { ...recordFixture.data, PRODUCT_DESCRIPTION: '=SUM(A1:A2)' }
-        })
+        data: { ...dataFixture, PRODUCT_DESCRIPTION: '=SUM(A1:A2)' }
       })
       expect(row[dataCol('PRODUCT_DESCRIPTION')]).toBe("'=SUM(A1:A2)")
     })
@@ -300,9 +287,7 @@ describe('csv-columns', () => {
       (value) => {
         const row = buildDataRow({
           ...baseInput,
-          record: buildRecord({
-            data: { ...recordFixture.data, PRODUCT_DESCRIPTION: value }
-          })
+          data: { ...dataFixture, PRODUCT_DESCRIPTION: value }
         })
         expect(row[dataCol('PRODUCT_DESCRIPTION')]).toBe(`'${value}`)
       }
@@ -326,12 +311,7 @@ describe('csv-columns', () => {
       const cols = buildDataFieldColumns(observedKeys)
       const row = buildDataRow({
         ...baseInput,
-        record: buildRecord({
-          data: {
-            ...recordFixture.data,
-            BILL_OF_LANDING_REFERENCE_NUMBER: 'BL-99'
-          }
-        }),
+        data: { ...dataFixture, BILL_OF_LANDING_REFERENCE_NUMBER: 'BL-99' },
         dataFieldColumns: cols
       })
       const idx =
@@ -353,16 +333,16 @@ describe('csv-columns', () => {
       expect(row[METADATA_COL_INDEX['Submitted At']]).toBe('')
     })
 
-    it('emits waste balance columns from the classification', () => {
+    it('emits waste balance columns from a stamped EXCLUDED classification', () => {
       const excluded = buildDataRow({
         ...baseInput,
-        wasteBalanceClassification: {
-          included: false,
+        classification: {
+          outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
           reasons: [
             { code: 'PRN_ISSUED' },
             { code: 'MISSING_REQUIRED_FIELD', field: 'EWC_CODE' }
           ],
-          tonnage: null
+          transactionAmount: 0
         }
       })
       expect(excluded[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
@@ -372,13 +352,15 @@ describe('csv-columns', () => {
         excluded[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]
       ).toBe('PRN_ISSUED; MISSING_REQUIRED_FIELD: EWC_CODE')
       expect(excluded[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
+    })
 
+    it('emits the contributed tonnage from a stamped INCLUDED classification', () => {
       const included = buildDataRow({
         ...baseInput,
-        wasteBalanceClassification: {
-          included: true,
+        classification: {
+          outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
           reasons: [],
-          tonnage: -5.25
+          transactionAmount: -5.25
         }
       })
       expect(included[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
@@ -387,10 +369,14 @@ describe('csv-columns', () => {
       expect(included[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe(-5.25)
     })
 
-    it('emits "NA" and blank reason/tonnage when inclusion cannot be computed', () => {
+    it('emits "NA" and blank reason/tonnage for a stamped NOT_APPLICABLE classification', () => {
       const row = buildDataRow({
         ...baseInput,
-        wasteBalanceClassification: null
+        classification: {
+          outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+          reasons: [],
+          transactionAmount: 0
+        }
       })
       expect(row[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
       expect(row[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
@@ -412,9 +398,7 @@ describe('csv-columns', () => {
       it('populates OSR_COUNTRY_REVISED and OSR_NAME_REVISED from the site matched by OSR_ID', () => {
         const row = buildDataRow({
           ...baseInput,
-          record: buildRecord({
-            data: { ...recordFixture.data, OSR_ID: '001' }
-          }),
+          data: { ...dataFixture, OSR_ID: '001' },
           overseasSites
         })
         expect(row[countryIdx]).toBe('Germany')
@@ -424,14 +408,14 @@ describe('csv-columns', () => {
       it('zero-pads OSR_ID before looking up the approved site', () => {
         const row = buildDataRow({
           ...baseInput,
-          record: buildRecord({ data: { ...recordFixture.data, OSR_ID: 1 } }),
+          data: { ...dataFixture, OSR_ID: 1 },
           overseasSites
         })
         expect(row[countryIdx]).toBe('Germany')
         expect(row[nameIdx]).toBe('Acme Recycling')
       })
 
-      it('leaves both derived columns blank when the record has no OSR_ID', () => {
+      it('leaves both derived columns blank when the row has no OSR_ID', () => {
         const row = buildDataRow({ ...baseInput, overseasSites })
         expect(row[countryIdx]).toBe('')
         expect(row[nameIdx]).toBe('')
@@ -440,9 +424,7 @@ describe('csv-columns', () => {
       it('leaves both derived columns blank when OSR_ID has no matching approved site', () => {
         const row = buildDataRow({
           ...baseInput,
-          record: buildRecord({
-            data: { ...recordFixture.data, OSR_ID: '999' }
-          }),
+          data: { ...dataFixture, OSR_ID: '999' },
           overseasSites
         })
         expect(row[countryIdx]).toBe('')
@@ -452,9 +434,7 @@ describe('csv-columns', () => {
       it('leaves both derived columns blank when the matched site has null name and country', () => {
         const row = buildDataRow({
           ...baseInput,
-          record: buildRecord({
-            data: { ...recordFixture.data, OSR_ID: '001' }
-          }),
+          data: { ...dataFixture, OSR_ID: '001' },
           overseasSites: {
             '001': { validFrom: null, siteName: null, country: null }
           }
@@ -466,9 +446,7 @@ describe('csv-columns', () => {
       it('leaves both derived columns blank when no overseas-sites context is supplied', () => {
         const row = buildDataRow({
           ...baseInput,
-          record: buildRecord({
-            data: { ...recordFixture.data, OSR_ID: '001' }
-          })
+          data: { ...dataFixture, OSR_ID: '001' }
         })
         expect(row[countryIdx]).toBe('')
         expect(row[nameIdx]).toBe('')

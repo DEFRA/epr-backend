@@ -382,10 +382,19 @@ function getValidatedPeriodInfo(cadence, year, period) {
 }
 
 /**
+ * @typedef {Pick<AggregatedReportDetail, 'source' | 'recyclingActivity' | 'exportActivity' | 'wasteSent'> & {
+ *   material: string,
+ *   wasteProcessingType: string,
+ *   siteAddress: string | undefined,
+ *   prn: { issuedTonnage: number } | null | undefined
+ * }} ReportData
+ */
+
+/**
  * Extracts the report-specific fields from aggregated data and registration.
- * @param {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn?: { issuedTonnage: number } | null }} aggregated
+ * @param {AggregatedReportDetail & { prn?: { issuedTonnage: number } | null }} aggregated
  * @param {Registration} registration
- * @returns {Pick<AggregatedReportDetail, 'source' | 'recyclingActivity' | 'exportActivity' | 'wasteSent'> & { material: string, wasteProcessingType: string, siteAddress: string | undefined, prn: { issuedTonnage: number } | null | undefined }}
+ * @returns {ReportData}
  */
 function buildReportData(aggregated, registration) {
   const { recyclingActivity, exportActivity, wasteSent, prn, source } =
