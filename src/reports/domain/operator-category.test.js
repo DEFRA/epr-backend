@@ -11,7 +11,7 @@ describe('getOperatorCategory', () => {
   it.each([
     {
       scenario: 'registered-only exporter (no accreditationId)',
-      registration: { wasteProcessingType: 'exporter' },
+      registration: { wasteProcessingType: 'exporter', accreditation: null },
       expected: 'EXPORTER_REGISTERED_ONLY'
     },
     {
@@ -70,7 +70,7 @@ describe('getOperatorCategory', () => {
     },
     {
       scenario: 'registered-only reprocessor (no accreditationId)',
-      registration: { wasteProcessingType: 'reprocessor' },
+      registration: { wasteProcessingType: 'reprocessor', accreditation: null },
       expected: 'REPROCESSOR_REGISTERED_ONLY'
     },
     {
@@ -124,7 +124,10 @@ describe('getOperatorCategory', () => {
 
   it('throws for unknown wasteProcessingType', () => {
     expect(() => {
-      getOperatorCategory({ wasteProcessingType: 'unknown' })
+      getOperatorCategory({
+        wasteProcessingType: 'unknown',
+        accreditation: null
+      })
     }).toThrow('Unknown wasteProcessingType: unknown')
   })
 })

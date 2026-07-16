@@ -4,7 +4,6 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -133,7 +132,6 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     wasteBalanceService: createWasteBalanceService(
       createInMemoryLedgerRepository()()
     ),
-    featureFlags: createInMemoryFeatureFlags(),
     summaryLogExtractor,
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsService: createReportsService(reportsRepository),

@@ -4,9 +4,18 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { periodKey } from '#reports/domain/period-key.js'
+import { normaliseStale } from '#reports/domain/stale.js'
 import { randomUUID } from 'node:crypto'
 
 const BARE_DATE_LENGTH = 10
+
+/**
+ * @template {{ stale?: Record<string, unknown> }} T
+ * @param {T} report
+ * @returns {T}
+ */
+export const mapReport = (report) =>
+  report.stale ? { ...report, stale: normaliseStale(report.stale) } : report
 
 /**
  * Only reports persisted before the bare-date schema fix carry a full ISO

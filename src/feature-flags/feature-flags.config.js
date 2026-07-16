@@ -8,9 +8,6 @@ export const createConfigFeatureFlags = (config) => ({
   isFixDuplicateAccreditationLinksEnabled() {
     return config.get('featureFlags.fixDuplicateAccreditationLinks')
   },
-  isSummaryLogRowStatesEnabled() {
-    return config.get('featureFlags.summaryLogRowStates')
-  },
   isStaleIssuedTonnageReportEnabled() {
     return config.get('featureFlags.staleIssuedTonnageReport')
   }

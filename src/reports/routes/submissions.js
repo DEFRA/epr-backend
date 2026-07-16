@@ -14,14 +14,10 @@ import { generateReportSubmissions } from '#reports/application/report-submissio
 export const getReportSubmissionsPath = '/v1/organisations/reports/submissions'
 
 // A tonnage cell is a genuine number, or '' when there is no value to report.
-const tonnageValue = Joi.alternatives()
-  .try(Joi.number(), Joi.valid(''))
-  .required()
+const tonnageValue = Joi.number().allow('').required()
 
 // A monetary cell is a genuine number, or '' when there is no value to report.
-const monetaryValue = Joi.alternatives()
-  .try(Joi.number(), Joi.valid(''))
-  .required()
+const monetaryValue = Joi.number().allow('').required()
 
 export const getReportSubmissions = {
   method: 'GET',
@@ -51,6 +47,7 @@ export const getReportSubmissions = {
               dueDate: Joi.string().required(),
               submittedDate: Joi.string().allow('').required(),
               submittedBy: Joi.string().allow('').required(),
+              submissionNumber: Joi.number().integer().allow('').required(),
               tonnageReceivedForRecycling: tonnageValue,
               tonnageRecycled: tonnageValue,
               tonnageExportedForRecycling: tonnageValue,

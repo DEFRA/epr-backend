@@ -1,0 +1,20 @@
+{
+  "extends": "./jsconfig.typecheck.base.json",
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "strictFunctionTypes": true,
+    "types": ["vitest/globals"],
+    "useUnknownInCatchVariables": true
+  },
+  "include": [
+    "src/**/*.js",
+    "**/*.test.js",
+    "**/*.contract.js",
+    "**/*-test-helpers.js",
+    "**/test-helpers/**/*.js",
+    "**/test-fixtures.js",
+    "**/*.d.ts"
+  ],
+  "exclude": ["node_modules", ".vite"]
+}

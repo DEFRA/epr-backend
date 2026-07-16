@@ -2,7 +2,24 @@ import { describe, expect, it } from 'vitest'
 import { collateUsers } from './collate-users.js'
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 
+/**
+ * @import {Organisation, RegAccStatus} from '#domain/organisations/model.js'
+ * @import {Registration} from '#domain/organisations/registration.js'
+ * @import {Accreditation} from '#domain/organisations/accreditation.js'
+ *
+ * @typedef {{ email: string, fullName: string }} TestPerson
+ */
+
 describe('collateUsers', () => {
+  /**
+   * @param {{
+   *   registrations?: Registration[]
+   *   accreditations?: Accreditation[]
+   *   users?: TestPerson[]
+   *   submitterContactDetails?: TestPerson
+   * }} [options]
+   * @returns {Organisation}
+   */
   const buildOrg = ({
     registrations = [],
     accreditations = [],
@@ -11,45 +28,75 @@ describe('collateUsers', () => {
       fullName: 'Org Submitter',
       email: 'org-submitter@example.com'
     }
-  } = {}) => ({
-    statusHistory: [{ status: 'created', updatedAt: new Date() }],
-    submitterContactDetails,
-    users,
-    registrations,
-    accreditations
-  })
+  } = {}) =>
+    /** @type {Organisation} */ (
+      /** @type {unknown} */ ({
+        statusHistory: [{ status: 'created', updatedAt: new Date() }],
+        submitterContactDetails,
+        users,
+        registrations,
+        accreditations
+      })
+    )
 
+  /**
+   * @param {{
+   *   id?: string
+   *   status: RegAccStatus
+   *   submitterEmail?: string
+   *   approvedPersons?: TestPerson[]
+   *   applicationContact?: TestPerson
+   * }} options
+   * @returns {Registration}
+   */
   const buildRegistration = ({
     id = 'reg-1',
     status,
     submitterEmail = 'reg-submitter@example.com',
     approvedPersons = [],
     applicationContact
-  }) => ({
-    id,
-    statusHistory: [{ status, updatedAt: new Date() }],
-    submitterContactDetails: {
-      fullName: 'Reg Submitter',
-      email: submitterEmail
-    },
-    approvedPersons,
-    ...(applicationContact && { applicationContactDetails: applicationContact })
-  })
+  }) =>
+    /** @type {Registration} */ (
+      /** @type {unknown} */ ({
+        id,
+        statusHistory: [{ status, updatedAt: new Date() }],
+        submitterContactDetails: {
+          fullName: 'Reg Submitter',
+          email: submitterEmail
+        },
+        approvedPersons,
+        ...(applicationContact && {
+          applicationContactDetails: applicationContact
+        })
+      })
+    )
 
+  /**
+   * @param {{
+   *   id?: string
+   *   status: RegAccStatus
+   *   submitterEmail?: string
+   *   signatories?: TestPerson[]
+   * }} options
+   * @returns {Accreditation}
+   */
   const buildAccreditation = ({
     id = 'acc-1',
     status,
     submitterEmail = 'acc-submitter@example.com',
     signatories = []
-  }) => ({
-    id,
-    statusHistory: [{ status, updatedAt: new Date() }],
-    submitterContactDetails: {
-      fullName: 'Acc Submitter',
-      email: submitterEmail
-    },
-    prnIssuance: { signatories }
-  })
+  }) =>
+    /** @type {Accreditation} */ (
+      /** @type {unknown} */ ({
+        id,
+        statusHistory: [{ status, updatedAt: new Date() }],
+        submitterContactDetails: {
+          fullName: 'Acc Submitter',
+          email: submitterEmail
+        },
+        prnIssuance: { signatories }
+      })
+    )
 
   it('returns submitter and all approvedPersons for an approved registration', () => {
     const org = buildOrg({
@@ -71,7 +118,7 @@ describe('collateUsers', () => {
     expect(emails).toContain('ap-one@example.com')
     expect(emails).toContain('ap-two@example.com')
     expect(
-      result.find((u) => u.email === 'ap-one@example.com').roles
+      result.find((u) => u.email === 'ap-one@example.com')?.roles
     ).toContain(USER_ROLES.INITIAL)
   })
 
@@ -136,7 +183,7 @@ describe('collateUsers', () => {
 
     expect(emails).toContain('app-contact@example.com')
     expect(
-      result.find((u) => u.email === 'app-contact@example.com').roles
+      result.find((u) => u.email === 'app-contact@example.com')?.roles
     ).toContain(USER_ROLES.INITIAL)
   })
 
@@ -212,13 +259,13 @@ describe('collateUsers', () => {
     expect(emails).toContain('acc-submitter@example.com')
     expect(emails).toContain('signatory@example.com')
     expect(
-      result.find((u) => u.email === 'signatory@example.com').roles
+      result.find((u) => u.email === 'signatory@example.com')?.roles
     ).toContain(USER_ROLES.INITIAL)
   })
 
   it('omits the org-level submitter when it is absent', () => {
     const org = buildOrg()
-    delete org.submitterContactDetails
+    delete (/** @type {Partial<Organisation>} */ (org).submitterContactDetails)
 
     const emails = collateUsers(org).map((u) => u.email)
 
@@ -227,7 +274,7 @@ describe('collateUsers', () => {
 
   it('handles an org with no users field', () => {
     const org = buildOrg()
-    delete org.users
+    delete (/** @type {Partial<Organisation>} */ (org).users)
 
     expect(() => collateUsers(org)).not.toThrow()
     expect(collateUsers(org)).toEqual([

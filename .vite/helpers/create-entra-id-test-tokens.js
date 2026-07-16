@@ -1,6 +1,8 @@
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'crypto'
 
+/** @import { JsonWebKey } from 'crypto' */
+
 // Must match oidc.entra.clientId in config.js (ADMIN_UI_ENTRA_CLIENT_ID)
 const VALID_ENTRA_AUDIENCE = 'test'
 
@@ -26,10 +28,10 @@ const keyPair = generateKeyPairSync('rsa', {
 })
 
 const privateKey = keyPair.privateKey
-/** @type {import('crypto').JsonWebKey & {kid: string, use: string, alg: string}} */
 
+/** @type {JsonWebKey & { kid: string, use: string, alg: string }} */
 export const publicKey = {
-  ...keyPair.publicKey,
+  .../** @type {JsonWebKey} */ (/** @type {unknown} */ (keyPair.publicKey)),
 
   // Add JWKS-required fields to the public key
   kid: 'test-key-id',

@@ -568,6 +568,13 @@ describe(`GET ${reportsGetPath}`, () => {
         )
         expect(januaryItems).toHaveLength(2)
 
+        // previousSubmissions is a feed-only projection: the merged period here
+        // carries previous submissions, but the calendar items must not leak it
+        // (the strict response schema would reject it).
+        for (const item of januaryItems) {
+          expect(item).not.toHaveProperty('previousSubmissions')
+        }
+
         const original = januaryItems.find(
           (p) => p.periodStatus === 'submitted'
         )

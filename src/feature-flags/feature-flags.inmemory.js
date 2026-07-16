@@ -9,9 +9,6 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isFixDuplicateAccreditationLinksEnabled() {
     return flags.fixDuplicateAccreditationLinks ?? false
   },
-  isSummaryLogRowStatesEnabled() {
-    return flags.summaryLogRowStates ?? false
-  },
   isStaleIssuedTonnageReportEnabled() {
     return flags.staleIssuedTonnageReport ?? false
   }

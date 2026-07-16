@@ -4,6 +4,8 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
+import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS,
@@ -362,6 +364,78 @@ describe('generateReportCompliance', () => {
             submittedDates: new Map([
               ['2026:monthly:1', null],
               ['2026:monthly:2', SUBMITTED_DATE],
+              ['2026:monthly:3', null]
+            ])
+          }
+        ]
+      ])
+    })
+  })
+
+  // The register date is the original submission date, stable across every
+  // state of the resubmission lifecycle: an in-flight redraft, a completed
+  // correction, and an unsubmit all leave period 1 showing its 17 Apr date.
+  // Production keys the date on submittedAt truthiness (via
+  // selectSubmittedReports), never on status, so each seeded state must yield
+  // the identical baseline result below. The retention invariant itself is
+  // owned at the domain layer (merge-reporting-periods.test.js).
+  it.for([
+    {
+      // Submission 1 submitted, with an in-flight submission 2 draft over it.
+      // The draft is the current report but carries no submitted date, so
+      // reading it naively would blank a period that has in fact been submitted.
+      state: 'a resubmission is in progress',
+      seed: (reportsRepo, ids) => seedInFlightResubmission(reportsRepo, ids)
+    },
+    {
+      // Submission 1 submitted on 17 Apr, then a correction (submission 2) itself
+      // submitted the next day. April has not yet ended, so the applicable period
+      // set is unchanged and the register must still show the original 17 Apr.
+      state: 'a resubmission has completed the next day',
+      seed: async (reportsRepo, ids) => {
+        await buildSubmittedReport(reportsRepo, ids)
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        await buildSubmittedReport(reportsRepo, {
+          ...ids,
+          submissionNumber: 2
+        })
+      }
+    },
+    {
+      // A submitted period a service maintainer then unsubmits for correction:
+      // status reverts to ready_to_submit but the submitted date is retained.
+      // Keying on status rather than the retained submittedAt would blank it.
+      state: 'a submitted period is unsubmitted for correction',
+      seed: (reportsRepo, ids) => buildUnsubmittedReport(reportsRepo, ids)
+    }
+  ])('shows the original submitted date given $state', async ({ seed }) => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const reg = org.registrations[0]
+
+    await seed(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
+    expect(result).toEqual({
+      periods: EXPECTED_PERIODS,
+      entries: new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: new Map([
+              ['2026:monthly:1', SUBMITTED_DATE],
+              ['2026:monthly:2', null],
               ['2026:monthly:3', null]
             ])
           }

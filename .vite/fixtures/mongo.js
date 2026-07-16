@@ -10,11 +10,7 @@ export const it = /** @type {import('vitest').TestAPI<{ db: string }>} */ (
       // eslint-disable-next-line no-empty-pattern
       async ({}, use) => {
         await setupMongo({
-          binary: {
-            version: 'latest'
-          },
-          serverOptions: {},
-          autoStart: false
+          serverOptions: {}
         })
 
         const mongoUri = globalThis.__MONGO_URI__

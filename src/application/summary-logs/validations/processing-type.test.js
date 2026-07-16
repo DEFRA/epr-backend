@@ -43,7 +43,7 @@ describe('validateProcessingType', () => {
       'Invalid summary log: registration has invalid waste processing type'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.actual).toBe('invalid-type')
+    expect(fatals[0].context?.actual).toBe('invalid-type')
   })
 
   it('returns fatal business error when types do not match', () => {
@@ -75,14 +75,14 @@ describe('validateProcessingType', () => {
       'Summary log processing type does not match registration waste processing type'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.location).toEqual({
+    expect(fatals[0].context?.location).toEqual({
       sheet: 'Cover',
       row: 5,
       column: 'B',
       field: 'PROCESSING_TYPE'
     })
-    expect(fatals[0].context.expected).toBe('exporter')
-    expect(fatals[0].context.actual).toBe('REPROCESSOR_INPUT')
+    expect(fatals[0].context?.expected).toBe('exporter')
+    expect(fatals[0].context?.actual).toBe('REPROCESSOR_INPUT')
   })
 
   it.each([
@@ -165,8 +165,8 @@ describe('validateProcessingType', () => {
         'Summary log processing type does not match registration reprocessing type'
       )
       expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-      expect(fatals[0].context.expected).toBe(reprocessingType)
-      expect(fatals[0].context.actual).toBe(spreadsheetType)
+      expect(fatals[0].context?.expected).toBe(reprocessingType)
+      expect(fatals[0].context?.actual).toBe(spreadsheetType)
     }
   )
 
@@ -282,7 +282,7 @@ describe('validateProcessingType', () => {
 
     expect(result.isFatal()).toBe(true)
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals[0].context.location).toEqual({
+    expect(fatals[0].context?.location).toEqual({
       field: 'PROCESSING_TYPE' // Only field is set when location is missing
     })
   })

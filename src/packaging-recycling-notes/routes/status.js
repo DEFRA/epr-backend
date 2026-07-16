@@ -22,6 +22,7 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { OnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
  */
 
 export const packagingRecyclingNotesUpdateStatusPath =
@@ -65,6 +66,54 @@ const buildResponse = (prn) => ({
   updatedAt: prn.updatedAt
 })
 
+/**
+ * Builds the acting user from request credentials, defaulting id/name when
+ * absent and only carrying email when it's actually a string.
+ * @param {HapiRequest['auth']} auth
+ */
+const buildUser = (auth) => {
+  const credentialEmail = auth.credentials?.email
+  return {
+    id: auth.credentials?.id ?? 'unknown',
+    name: auth.credentials?.name ?? 'unknown',
+    ...(typeof credentialEmail === 'string' ? { email: credentialEmail } : {})
+  }
+}
+
+/**
+ * Maps a status-update failure to the HTTP error it should surface as.
+ * @param {*} error
+ * @param {string} path
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ */
+const mapUpdateStatusError = (error, path, logger) => {
+  if (error instanceof AccreditationStatusError) {
+    return Boom.forbidden(error.message)
+  }
+
+  if (
+    error instanceof StatusConflictError ||
+    error instanceof UnauthorisedTransitionError
+  ) {
+    return Boom.badRequest(error.message)
+  }
+
+  if (error.isBoom) {
+    return error
+  }
+
+  logger.error({
+    err: error,
+    message: `Failure on ${path}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+    }
+  })
+
+  return Boom.badImplementation(`Failure on ${path}`)
+}
+
 export const packagingRecyclingNotesUpdateStatus = {
   method: 'POST',
   path: packagingRecyclingNotesUpdateStatusPath,
@@ -83,7 +132,8 @@ export const packagingRecyclingNotesUpdateStatus = {
   },
   /**
    * @param {HapiRequest<{ status: PrnStatus }> & {
-   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   prnEvents: { onCancelled: OnPrnCancelled }
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
@@ -92,6 +142,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       packagingRecyclingNotesRepository,
       ledgerRepository,
       organisationsRepository,
+      prnEvents,
       params,
       payload,
       logger,
@@ -99,12 +150,7 @@ export const packagingRecyclingNotesUpdateStatus = {
     } = request
     const { organisationId, registrationId, accreditationId, id } = params
     const { status: newStatus } = payload
-    const credentialEmail = auth.credentials?.email
-    const user = {
-      id: auth.credentials?.id ?? 'unknown',
-      name: auth.credentials?.name ?? 'unknown',
-      ...(typeof credentialEmail === 'string' ? { email: credentialEmail } : {})
-    }
+    const user = buildUser(auth)
 
     try {
       // Fetch PRN before update to capture previous state for audit
@@ -122,6 +168,7 @@ export const packagingRecyclingNotesUpdateStatus = {
         prnRepository: packagingRecyclingNotesRepository,
         ledgerRepository,
         organisationsRepository,
+        prnEvents,
         logger,
         id,
         organisationId,
@@ -146,32 +193,10 @@ export const packagingRecyclingNotesUpdateStatus = {
 
       return h.response(buildResponse(updatedPrn)).code(StatusCodes.OK)
     } catch (error) {
-      if (error instanceof AccreditationStatusError) {
-        throw Boom.forbidden(error.message)
-      }
-
-      if (
-        error instanceof StatusConflictError ||
-        error instanceof UnauthorisedTransitionError
-      ) {
-        throw Boom.badRequest(error.message)
-      }
-
-      if (error.isBoom) {
-        throw error
-      }
-
-      logger.error({
-        err: error,
-        message: `Failure on ${packagingRecyclingNotesUpdateStatusPath}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-        }
-      })
-
-      throw Boom.badImplementation(
-        `Failure on ${packagingRecyclingNotesUpdateStatusPath}`
+      throw mapUpdateStatusError(
+        error,
+        packagingRecyclingNotesUpdateStatusPath,
+        logger
       )
     }
   }

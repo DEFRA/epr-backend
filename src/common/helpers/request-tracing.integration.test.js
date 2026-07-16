@@ -90,7 +90,9 @@ describe('#request-tracing', () => {
         url: '/test',
         headers: { 'x-cdp-request-id': 'incoming-trace-resp' }
       })
-      const out = findLine((l) => l.url?.path === '/test' && l.http?.response)
+      const out = findLine(
+        (l) => l.url?.path === '/test' && Boolean(l.http?.response)
+      )
 
       expect(out?.trace?.id).toBe('incoming-trace-resp')
     })
@@ -102,7 +104,7 @@ describe('#request-tracing', () => {
       await server.inject('/test')
       const handler = findLine((l) => l.message === 'inside handler')
       const response = findLine(
-        (l) => l.url?.path === '/test' && l.http?.response
+        (l) => l.url?.path === '/test' && Boolean(l.http?.response)
       )
 
       expect(handler?.trace?.id).toMatch(UUID_V4)

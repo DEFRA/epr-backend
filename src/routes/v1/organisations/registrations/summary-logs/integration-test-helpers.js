@@ -613,7 +613,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     organisationsRepository,
     overseasSitesRepository,
     summaryLogRowStateRepository,
-    featureFlags,
     logger: mockLogger
   })
 

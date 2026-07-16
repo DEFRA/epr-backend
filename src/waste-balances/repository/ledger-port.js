@@ -101,10 +101,22 @@ export class LedgerSequenceError extends Error {
  */
 
 /**
- * Every read names its ledger with a complete `WasteBalanceLedgerId`, and every
- * adapter filters on all three of its ids. A ledger read that names a
+ * The latest submitted summary log of one accredited ledger partition: the
+ * ledger id and the `summaryLogId` carried by the highest-numbered
+ * `summary log submitted` event in that partition.
+ *
+ * @typedef {Object} LatestSubmittedSummaryLogPerLedger
+ * @property {WasteBalanceLedgerId} ledgerId
+ * @property {string} summaryLogId
+ */
+
+/**
+ * Every per-ledger read names its ledger with a complete `WasteBalanceLedgerId`,
+ * and every adapter filters on all three of its ids. A ledger read that names a
  * registration or accreditation under the wrong organisation matches nothing —
- * it does not fall back to the ledger that registration happens to live in.
+ * it does not fall back to the ledger that registration happens to live in. The
+ * one exception is `findLatestSubmittedSummaryLogPerLedger`, a cross-ledger
+ * reporting query that scans partitions rather than naming one.
  *
  * @typedef {Object} WasteBalanceLedgerRepository
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>} findLatestInLedger
@@ -121,6 +133,13 @@ export class LedgerSequenceError extends Error {
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent[]>} findAllInLedger
  *   Return all events for the given ledger, ordered by `number`
  *   ascending. Returns an empty array if the ledger has no events.
+ * @property {() => Promise<LatestSubmittedSummaryLogPerLedger[]>} findLatestSubmittedSummaryLogPerLedger
+ *   Return one entry per accredited ledger partition (`accreditationId`
+ *   non-null) that has at least one `summary log submitted` event: the ledger
+ *   id and the `summaryLogId` of the highest-numbered such event in that
+ *   partition. Registered-only partitions (`accreditationId` null) and
+ *   partitions with no submitted summary log never appear. Order is
+ *   unspecified.
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<number>} deleteAllInLedger
  *   Migration PAE-1382: delete all events for the given ledger.
  *   Returns the number of deleted events. No-op on empty ledger.

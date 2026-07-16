@@ -75,7 +75,7 @@ describe('sendEmail', () => {
   })
 
   it('initialises NotifyClient with key from getLocalSecret in development', async () => {
-    getLocalSecret.mockReturnValue('dev-secret-key')
+    vi.mocked(getLocalSecret).mockReturnValue('dev-secret-key')
     config.get.mockImplementation((key) => {
       if (key === 'isDevelopment') return true
       return null
@@ -111,7 +111,7 @@ describe('sendEmail', () => {
   })
 
   it('calls logger.debug (not warn) if apiKey is not set in development', async () => {
-    getLocalSecret.mockReturnValue(null)
+    vi.mocked(getLocalSecret).mockReturnValue(null)
     config.get.mockImplementation((key) => {
       if (key === 'isDevelopment') return true
       return null

@@ -109,6 +109,53 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
     return { server, organisationId: org.id, registrationId: registration.id }
   }
 
+  // A period holding two submitted submissions: submission 1 has been
+  // superseded by a later submitted resubmission (submission 2, the current
+  // one). Reproduces Tony Bruce's PAE-1657 finding.
+  const buildServerWithTwoSubmittedSubmissions = async () => {
+    const registration = buildRegistration({
+      wasteProcessingType: 'reprocessor',
+      accreditationId: undefined
+    })
+    const org = buildOrganisationWithRegistration(registration)
+
+    const reportsRepositoryFactory = createInMemoryReportsRepository()
+    const reportsRepository = reportsRepositoryFactory()
+
+    const period = {
+      organisationId: org.id,
+      registrationId: registration.id,
+      year: 2024,
+      cadence: 'monthly',
+      period: 1
+    }
+    const supersededReportId = await createAndSubmitReport(reportsRepository, {
+      ...period,
+      submissionNumber: 1
+    })
+    const currentReportId = await createAndSubmitReport(reportsRepository, {
+      ...period,
+      submissionNumber: 2
+    })
+
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: createInMemoryOrganisationsRepository([org]),
+        wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
+        reportsRepository: reportsRepositoryFactory
+      }
+    })
+
+    return {
+      server,
+      organisationId: org.id,
+      registrationId: registration.id,
+      supersededReportId,
+      currentReportId,
+      reportsRepository
+    }
+  }
+
   describe('when feature flag is enabled', () => {
     describe('successful unsubmit', () => {
       beforeEach(() => vi.clearAllMocks())
@@ -288,6 +335,103 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         const response = await server.inject({
           method: 'POST',
           url: makeUrl(organisationId, registrationId),
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+    })
+
+    describe('superseded submission', () => {
+      beforeEach(() => vi.clearAllMocks())
+
+      it('returns 409 when unsubmitting a submission superseded by a later one', async () => {
+        const { server, organisationId, registrationId } =
+          await buildServerWithTwoSubmittedSubmissions()
+
+        const response = await server.inject({
+          method: 'POST',
+          url: makeUrl(organisationId, registrationId, 2024, 'monthly', 1, 1),
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+
+      it('leaves the superseded submission submitted after a rejected unsubmit', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          supersededReportId,
+          reportsRepository
+        } = await buildServerWithTwoSubmittedSubmissions()
+
+        await server.inject({
+          method: 'POST',
+          url: makeUrl(organisationId, registrationId, 2024, 'monthly', 1, 1),
+          ...asServiceMaintainer()
+        })
+
+        const report =
+          await reportsRepository.findReportById(supersededReportId)
+        expect(report.status.currentStatus).toBe('submitted')
+      })
+
+      it('allows unsubmitting the latest submitted submission', async () => {
+        const { server, organisationId, registrationId } =
+          await buildServerWithTwoSubmittedSubmissions()
+
+        const response = await server.inject({
+          method: 'POST',
+          url: makeUrl(organisationId, registrationId, 2024, 'monthly', 1, 2),
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+      })
+
+      it('returns 409 when unsubmitting a submitted submission while a later resubmission draft is in progress', async () => {
+        const registration = buildRegistration({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+        const org = buildOrganisationWithRegistration(registration)
+
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const reportsRepository = reportsRepositoryFactory()
+
+        const period = {
+          organisationId: org.id,
+          registrationId: registration.id,
+          year: 2024,
+          cadence: 'monthly',
+          period: 1
+        }
+        await createAndSubmitReport(reportsRepository, {
+          ...period,
+          submissionNumber: 1
+        })
+        // Submission 2 is a draft (in_progress). Even though submission 1 is the
+        // latest *submitted* one, a later submission exists, so unsubmit of 1 is
+        // rejected: only the absolute latest submission may be unsubmitted.
+        await reportsRepository.createReport(
+          buildCreateReportParams({ ...period, submissionNumber: 2 })
+        )
+
+        const server = await createTestServer({
+          repositories: {
+            organisationsRepository: createInMemoryOrganisationsRepository([
+              org
+            ]),
+            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
+            reportsRepository: reportsRepositoryFactory
+          }
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: makeUrl(org.id, registration.id, 2024, 'monthly', 1, 1),
           ...asServiceMaintainer()
         })
 

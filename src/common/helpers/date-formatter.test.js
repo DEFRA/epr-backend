@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { invalidArg } from '#test/type-helpers.js'
 import {
   calendarDate,
   endOfDay,
@@ -27,7 +28,7 @@ describe('formatDate', () => {
   })
 
   it('should return empty string for null', () => {
-    expect(formatDate(null)).toBe('')
+    expect(formatDate(invalidArg(null))).toBe('')
   })
 })
 
