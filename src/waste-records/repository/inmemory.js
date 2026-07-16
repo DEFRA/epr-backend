@@ -146,6 +146,16 @@ export const createInMemorySummaryLogRowStateRepository = (
             doc.rowId === rowId &&
             doc.wasteRecordType === wasteRecordType
         )
-      )
+      ),
+
+    findDistinctDataKeys: async () => {
+      const keys = new Set()
+      for (const doc of storage) {
+        for (const key of Object.keys(doc.data)) {
+          keys.add(key)
+        }
+      }
+      return [...keys]
+    }
   })
 }

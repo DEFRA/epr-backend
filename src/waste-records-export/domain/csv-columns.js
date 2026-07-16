@@ -1,5 +1,6 @@
 import { uppercaseString } from '#common/helpers/formatters.js'
 import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 import * as exporter from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import * as exporterRegisteredOnly from '#domain/summary-logs/table-schemas/exporter-registered-only/fields.js'
@@ -11,8 +12,8 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
-/** @import {CsvWasteBalanceClassification} from './is-included-in-waste-balance.js' */
+/** @import {WasteRecordType} from '#domain/waste-records/model.js' */
+/** @import {RowClassification} from '#waste-records/repository/schema.js' */
 
 const FORMULA_INJECTION_PREFIX = /^[=+\-@]/
 
@@ -144,26 +145,30 @@ export const buildHeaderRow = (dataFieldColumns) => [
 
 const formatReason = (r) => (r.field ? `${r.code}: ${r.field}` : r.code)
 
-// `null` means inclusion could not be computed for this record at all (e.g.
-// no accreditation, registered-only template, no classification schema) —
-// rendered as "NA" rather than a reason, since there is no per-row outcome.
-const buildWasteBalanceCells = (classification) =>
-  classification === null
-    ? ['NA', '', '']
-    : [
-        String(classification.included),
-        classification.reasons.map(formatReason).join('; '),
-        classification.tonnage ?? ''
-      ]
+// A NOT_APPLICABLE outcome stamps a row whose registration or template carries
+// no per-row waste-balance decision at all (no accreditation, registered-only
+// template, no classification schema) — rendered as "NA" rather than a reason.
+// INCLUDED carries its contributed tonnage; EXCLUDED carries its reason codes.
+const buildWasteBalanceCells = (classification) => {
+  if (classification.outcome === WASTE_BALANCE_OUTCOME.NOT_APPLICABLE) {
+    return ['NA', '', '']
+  }
+  if (classification.outcome === WASTE_BALANCE_OUTCOME.INCLUDED) {
+    return ['true', '', classification.transactionAmount]
+  }
+  return ['false', classification.reasons.map(formatReason).join('; '), '']
+}
 
 /**
  * @typedef {Object} BuildDataRowInput
  * @property {Organisation} org
  * @property {Registration} registration
  * @property {Accreditation | null} accreditation
- * @property {WasteRecord} record
+ * @property {Record<string, any>} data - Coerced committed row data, carrying `processingType`.
+ * @property {WasteRecordType} wasteRecordType
+ * @property {string} rowId
+ * @property {RowClassification} classification - The row's stamped waste-balance classification.
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
- * @property {CsvWasteBalanceClassification | null} wasteBalanceClassification
  * @property {Record<string, import('./overseas-sites-context.js').OverseasSiteContextEntry>} [overseasSites]
  * @property {string[]} dataFieldColumns
  */
@@ -174,12 +179,15 @@ const buildWasteBalanceCells = (classification) =>
  * numbers so they serialise unquoted; string cells are formula-injection
  * sanitised.
  *
+ * Inclusion, reasons and tonnage come from the classification stamped on the
+ * row state when its summary log was submitted — not recomputed — so the export
+ * reflects exactly what counted toward the waste balance at submission.
+ *
  * The derived OSR columns (OSR_COUNTRY_REVISED / OSR_NAME_REVISED) sit at the
  * end of the metadata prefix and are looked up from the approved
- * overseas-sites context by the record's OSR_ID. They are blank when the
- * record has no OSR_ID or no matching approved site is found — which also
- * leaves them blank for reprocessor rows, whose registrations carry no
- * overseas sites.
+ * overseas-sites context by the row's OSR_ID. They are blank when the row has
+ * no OSR_ID or no matching approved site is found — which also leaves them
+ * blank for reprocessor rows, whose registrations carry no overseas sites.
  *
  * @param {BuildDataRowInput} input
  * @returns {(string | number)[]}
@@ -188,14 +196,15 @@ export const buildDataRow = ({
   org,
   registration,
   accreditation,
-  record,
+  data,
+  wasteRecordType,
+  rowId,
+  classification,
   summaryLogEntry,
-  wasteBalanceClassification,
   overseasSites,
   dataFieldColumns
 }) => {
   const accredited = accreditation !== null ? 'Yes' : 'No'
-  const data = record.data
 
   const orsDetails = data.OSR_ID
     ? overseasSites?.[zeroPadOrsId(data.OSR_ID)]
@@ -209,10 +218,10 @@ export const buildDataRow = ({
     data.processingType,
     accredited,
     accreditation?.accreditationNumber ?? '',
-    record.type,
+    wasteRecordType,
     summaryLogEntry?.submittedAt ?? '',
-    ...buildWasteBalanceCells(wasteBalanceClassification),
-    String(record.rowId),
+    ...buildWasteBalanceCells(classification),
+    String(rowId),
     orsDetails?.country ?? '',
     orsDetails?.siteName ?? ''
   ]

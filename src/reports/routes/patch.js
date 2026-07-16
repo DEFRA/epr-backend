@@ -227,7 +227,7 @@ export const reportsPatch = {
 
 /**
  * @import { Registration } from '#domain/organisations/registration.js'
- * @import { ExportActivity, PrnData, RecyclingActivity, Report, ReportsRepository } from '#reports/repository/port.js'
+ * @import { PrnData, Report, ReportsRepository, UpdateReportParams } from '#reports/repository/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
  */
@@ -244,10 +244,5 @@ export const reportsPatch = {
  */
 
 /**
- * @typedef {{
- *   exportActivity?: Partial<ExportActivity>,
- *   prn?: Partial<PrnData>,
- *   recyclingActivity?: Partial<RecyclingActivity>,
- *   supportingInformation?: string
- * }} ReportUpdateFields
+ * @typedef {Omit<UpdateReportParams['fields'], 'status'>} ReportUpdateFields
  */
