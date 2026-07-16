@@ -6,7 +6,8 @@ import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { WasteRecordsRepository } from '#repositories/waste-records/port.js' */
+/** @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
@@ -54,7 +55,8 @@ export const wasteRecordsExportRoute = {
   /**
    * @param {HapiRequest & {
    *   organisationsRepository: OrganisationsRepository,
-   *   wasteRecordsRepository: WasteRecordsRepository,
+   *   summaryLogRowStatesRepository: SummaryLogRowStateRepository,
+   *   ledgerRepository: WasteBalanceLedgerRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
    *   overseasSitesRepository: OverseasSitesRepository,
    *   query: { organisationId?: string, registrationId?: string }
@@ -65,7 +67,8 @@ export const wasteRecordsExportRoute = {
 
     const stream = streamCsvExportToReadable({
       organisationsRepository: request.organisationsRepository,
-      wasteRecordsRepository: request.wasteRecordsRepository,
+      summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
+      ledgerRepository: request.ledgerRepository,
       summaryLogsRepository: request.summaryLogsRepository,
       overseasSitesRepository: request.overseasSitesRepository,
       organisationId,
