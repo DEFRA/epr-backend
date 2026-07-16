@@ -29,11 +29,6 @@ jobs:
           fetch-depth: 0 # Depth 0 is required for branch-based versioning
 
       - name: Test and Scan
-        # TEMP (2026-07-16): non-blocking while SonarCloud is down (api.sonarcloud.io
-        # 504s during JRE provisioning fail the scan step inside this composite).
-        # Tests already gate via check-pull-request before merge. Revert once
-        # SonarCloud recovers or DEFRA/epr-re-ex-service#361 is merged.
-        continue-on-error: true
         uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
