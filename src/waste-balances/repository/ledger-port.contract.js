@@ -3,6 +3,7 @@ import { testFindLatestInLedgerBehaviour } from './ledger-contract/findLatestInL
 import { testFindLatestInLedgerByKindBehaviour } from './ledger-contract/findLatestInLedgerByKind.contract.js'
 import { testFindEventsByPrnIdAfterBehaviour } from './ledger-contract/findEventsByPrnIdAfter.contract.js'
 import { testFindAllInLedgerBehaviour } from './ledger-contract/findAllInLedger.contract.js'
+import { testFindLatestSubmittedSummaryLogPerLedgerBehaviour } from './ledger-contract/findLatestSubmittedSummaryLogPerLedger.contract.js'
 import { testDeleteAllInLedgerBehaviour } from './ledger-contract/deleteAllInLedger.contract.js'
 
 export const testLedgerRepositoryContract = (it) => {
@@ -11,5 +12,6 @@ export const testLedgerRepositoryContract = (it) => {
   testFindLatestInLedgerByKindBehaviour(it)
   testFindEventsByPrnIdAfterBehaviour(it)
   testFindAllInLedgerBehaviour(it)
+  testFindLatestSubmittedSummaryLogPerLedgerBehaviour(it)
   testDeleteAllInLedgerBehaviour(it)
 }
