@@ -187,11 +187,11 @@ describe('auditReportDelete', () => {
     period: 1,
     submissionNumber: 1,
     reportId: 'rep-1',
-    previous: {
+    previous: asReport({
       id: 'rep-1',
       version: 1,
       status: { currentStatus: 'in_progress' }
-    }
+    })
   }
 
   it('sends CDP audit event with action: delete', async () => {
@@ -234,12 +234,12 @@ describe('auditReportDelete', () => {
       period: 1,
       submissionNumber: 1,
       reportId: 'rep-1',
-      previous: {
+      previous: asReport({
         id: 'rep-1',
         version: 1,
         status: { currentStatus: 'in_progress' },
         veryLongString
-      }
+      })
     }
 
     await auditReportDelete(createMockRequest(), oversizedParams)

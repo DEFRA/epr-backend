@@ -6,6 +6,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { partialMock } from '#test/type-helpers.js'
 import {
   buildOrganisationWithRegistration,
   buildRegistration
@@ -60,7 +61,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([org]),
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
         wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
         reportsRepository: reportsRepositoryFactory
       }
@@ -106,7 +109,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([org]),
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
         wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
         reportsRepository: reportsRepositoryFactory
       }
@@ -148,7 +153,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([org]),
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
         wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
         reportsRepository: reportsRepositoryFactory
       }
@@ -309,7 +316,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         const server = await createTestServer({
           repositories: {
             organisationsRepository: createInMemoryOrganisationsRepository([
-              org
+              partialMock(org)
             ]),
             wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
             reportsRepository: createInMemoryReportsRepository()
@@ -434,7 +441,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         const server = await createTestServer({
           repositories: {
             organisationsRepository: createInMemoryOrganisationsRepository([
-              org
+              partialMock(org)
             ]),
             wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
             reportsRepository: reportsRepositoryFactory

@@ -5,6 +5,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { partialMock } from '#test/type-helpers.js'
 
 import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
 
@@ -84,13 +85,15 @@ describe('registered-only summary-log submitted event — balance neutrality', (
 
   it('does not touch an accredited balance in the same registration', async () => {
     const ledgerRepository = createInMemoryLedgerRepository([
-      buildLedgerEvent({
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
-        number: 1,
-        payload: { summaryLogId: 'log-acc', creditTotal: 50 },
-        closingBalance: { amount: 50, availableAmount: 50 }
-      })
+      partialMock(
+        buildLedgerEvent({
+          registrationId: 'reg-1',
+          accreditationId: 'acc-1',
+          number: 1,
+          payload: { summaryLogId: 'log-acc', creditTotal: 50 },
+          closingBalance: { amount: 50, availableAmount: 50 }
+        })
+      )
     ])()
 
     await emitRegOnlyEvent(ledgerRepository, 'log-1')

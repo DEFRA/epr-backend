@@ -86,7 +86,7 @@ describe(`POST ${reportsStatusPath}`, () => {
       )
 
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([partialMock(org)])
 
       const reportsRepositoryFactory = createInMemoryReportsRepository()
       const reportsRepository = reportsRepositoryFactory()
@@ -134,7 +134,7 @@ describe(`POST ${reportsStatusPath}`, () => {
       )
 
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([partialMock(org)])
 
       const server = await createTestServer({
         repositories: {
