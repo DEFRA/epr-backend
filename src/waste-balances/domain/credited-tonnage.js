@@ -12,6 +12,7 @@ import {
 } from '#domain/summary-logs/table-schemas/shared/fields.js'
 import { REPROCESSED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
 import { RECEIVED_LOADS_FIELDS as EXPORTER_RECEIVED_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
+import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
 
 /**
  * @typedef {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState} WasteRecordState
@@ -91,29 +92,6 @@ const processingTypeFor = ({ wasteProcessingType, reprocessingType }) => {
     return PROCESSING_TYPES.REPROCESSOR_OUTPUT
   }
   return PROCESSING_TYPES.REPROCESSOR_INPUT
-}
-
-/**
- * The `YYYY-MM` key a date value falls in, or `null` when it is missing or
- * unparseable. Calendar dates are persisted as `YYYY-MM-DD` strings, so parsing
- * is done in UTC to avoid a timezone shifting the month. `null` is guarded
- * explicitly because `new Date(null)` is the epoch, not an invalid date.
- *
- * @param {unknown} value
- * @returns {string | null}
- */
-const monthKeyForDate = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-  const date = new Date(/** @type {any} */ (value))
-  const time = date.getTime()
-  if (Number.isNaN(time)) {
-    return null
-  }
-  const year = date.getUTCFullYear()
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-  return `${year}-${month}`
 }
 
 /**
