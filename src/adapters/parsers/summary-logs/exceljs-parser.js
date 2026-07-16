@@ -251,6 +251,10 @@ const processDataMarker = (
   }
 }
 
+/**
+ * @param {ParserCollection} draftCollection
+ * @param {string} cellValueStr
+ */
 const processHeaderCell = (draftCollection, cellValueStr) => {
   if (cellValueStr === '') {
     draftCollection.state = CollectionState.ROWS
@@ -262,6 +266,33 @@ const processHeaderCell = (draftCollection, cellValueStr) => {
   }
 }
 
+/**
+ * Treats blank cells and known unfilled placeholders as empty (`null`), passing
+ * every other value through unchanged. Only string cells can be a placeholder.
+ *
+ * @param {CellValue} cellValue
+ * @param {string[]} unfilledPlaceholders - marker strings that count as blank
+ * @returns {CellValue}
+ */
+const normaliseCellValue = (cellValue, unfilledPlaceholders) => {
+  if (cellValue === null || cellValue === undefined || cellValue === '') {
+    return null
+  }
+  if (
+    typeof cellValue === 'string' &&
+    unfilledPlaceholders.includes(cellValue.trim())
+  ) {
+    return null
+  }
+  return cellValue
+}
+
+/**
+ * @param {ParserCollection} draftCollection
+ * @param {CellValue} cellValue
+ * @param {number} columnIndex
+ * @param {UnfilledValues} unfilledValues
+ */
 const processRowCell = (
   draftCollection,
   cellValue,
@@ -269,19 +300,19 @@ const processRowCell = (
   unfilledValues
 ) => {
   const headerName = draftCollection.headers[columnIndex]
-  const columnUnfilledValues = unfilledValues[headerName] || []
-  const trimmedValue =
-    typeof cellValue === 'string' ? cellValue.trim() : cellValue
-  const normalisedValue =
-    cellValue === null ||
-    cellValue === undefined ||
-    cellValue === '' ||
-    columnUnfilledValues.includes(trimmedValue)
-      ? null
-      : cellValue
-  draftCollection.currentRow.push(normalisedValue)
+  const columnUnfilledValues = (headerName && unfilledValues[headerName]) || []
+  draftCollection.currentRow.push(
+    normaliseCellValue(cellValue, columnUnfilledValues)
+  )
 }
 
+/**
+ * @param {ParserCollection} draftCollection
+ * @param {CellValue} cellValue
+ * @param {string} cellValueStr
+ * @param {number} colNumber
+ * @param {UnfilledValues} unfilledValues
+ */
 const updateCollectionWithCell = (
   draftCollection,
   cellValue,
@@ -304,6 +335,7 @@ const updateCollectionWithCell = (
   }
 }
 
+/** @param {ParserCollection} draftCollection */
 const shouldSkipRow = (draftCollection) => {
   for (const skipIndex of draftCollection.skipColumnIndices) {
     const cellValue = draftCollection.currentRow[skipIndex]
@@ -315,6 +347,7 @@ const shouldSkipRow = (draftCollection) => {
   return false
 }
 
+/** @param {ParserCollection} draftCollection */
 const finalizeRowForCollection = (draftCollection) => {
   if (draftCollection.state === CollectionState.HEADERS) {
     draftCollection.state = CollectionState.ROWS
@@ -486,14 +519,18 @@ const rowHasContent = (row) => {
  * @typedef {AsyncIterable<StreamingRow> & {name: string}} StreamingWorksheet
  */
 
+/** @typedef {unknown} CellValue - A raw, un-narrowed spreadsheet cell value */
+
+/** @typedef {Record<string, string[]>} UnfilledValues - Unfilled placeholder values keyed by column header */
+
 /**
  * @typedef {{
  *   complete?: boolean,
- *   currentRow: unknown[],
+ *   currentRow: CellValue[],
  *   currentRowNumber: number | null,
  *   headers: Array<string | null>,
  *   location: {column: string, row: number, sheet: string},
- *   rows: Array<{rowNumber: number | null, values: unknown[]}>,
+ *   rows: Array<{rowNumber: number | null, values: CellValue[]}>,
  *   sectionName: string,
  *   skipColumnIndices: number[],
  *   startColumn: number,
@@ -506,7 +543,7 @@ const rowHasContent = (row) => {
  *   activeCollections: ParserCollection[],
  *   metadataContext: {metadataName: string} | null,
  *   result: {data: Record<string, unknown>, meta: Record<string, unknown>},
- *   unfilledValues: Record<string, string[]>
+ *   unfilledValues: UnfilledValues
  * }} ParserState
  */
 
