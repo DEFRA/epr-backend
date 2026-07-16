@@ -53,6 +53,12 @@ jobs:
           fetch-depth: 0
 
       - name: Test and Scan
+        # TEMP (2026-07-16): non-blocking while SonarCloud is down (api.sonarcloud.io
+        # 504s during JRE provisioning fail the scan step inside this composite).
+        # Tests still run and their results are visible in the job log; unit tests
+        # also gate locally via pre-commit hooks. Revert once SonarCloud recovers
+        # or DEFRA/epr-re-ex-service#361 is merged.
+        continue-on-error: true
         uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
