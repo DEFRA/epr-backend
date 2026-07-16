@@ -12,7 +12,12 @@
  * @typedef {import('./ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
+/**
+ * @typedef {import('./ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
+ */
+
 import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
+import { LEDGER_EVENT_KIND } from './ledger-schema.js'
 import {
   validateLedgerEventInsert,
   validateLedgerEventRead
@@ -55,6 +60,11 @@ export async function ensureLedgerCollection(db) {
       number: 1
     },
     { name: 'prn_watermark_catchup' }
+  )
+
+  await collection.createIndex(
+    { kind: 1, number: -1 },
+    { name: 'kind_number_report' }
   )
 
   return collection
@@ -117,8 +127,11 @@ const findDuplicateKeyWriteError = (error) => {
 }
 
 /**
- * The filter selecting exactly the events of one ledger. Every read builds its
- * filter from this, so no read can name a ledger by less than its whole id.
+ * The filter selecting exactly the events of one ledger. Every per-ledger read
+ * builds its filter from this, so no such read can name a ledger by less than
+ * its whole id. The cross-ledger reporting query
+ * (`findLatestSubmittedSummaryLogPerLedger`) is the deliberate exception: it
+ * scans across partitions rather than filtering to one.
  *
  * @param {WasteBalanceLedgerId} ledgerId
  */
@@ -182,6 +195,42 @@ const performFindAllInLedger = (collection) => async (ledgerId) => {
 
   return docs.map(toLedgerEvent)
 }
+
+/**
+ * One entry per accredited partition with a submitted summary log, carrying the
+ * latest submission's `summaryLogId`. Sorting descending before the group lets
+ * `$first` name the highest-numbered submission per partition.
+ *
+ * @param {Collection} collection
+ * @returns {() => Promise<LatestSubmittedSummaryLogPerLedger[]>}
+ */
+const performFindLatestSubmittedSummaryLogPerLedger =
+  (collection) => async () => {
+    const results = await collection
+      .aggregate([
+        {
+          $match: {
+            accreditationId: { $ne: null },
+            kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+          }
+        },
+        { $sort: { number: -1 } },
+        {
+          $group: {
+            _id: {
+              organisationId: '$organisationId',
+              registrationId: '$registrationId',
+              accreditationId: '$accreditationId'
+            },
+            summaryLogId: { $first: '$payload.summaryLogId' }
+          }
+        },
+        { $project: { _id: 0, ledgerId: '$_id', summaryLogId: 1 } }
+      ])
+      .toArray()
+
+    return /** @type {LatestSubmittedSummaryLogPerLedger[]} */ (results)
+  }
 
 /**
  * @migration PAE-1382 — delete all events for a ledgerId.
@@ -264,6 +313,8 @@ export const createMongoLedgerRepository = async (db) => {
     findLatestInLedgerByKind: performFindLatestInLedgerByKind(collection),
     findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection),
     findAllInLedger: performFindAllInLedger(collection),
+    findLatestSubmittedSummaryLogPerLedger:
+      performFindLatestSubmittedSummaryLogPerLedger(collection),
     deleteAllInLedger: performDeleteInLedger(collection),
     appendEvents: performAppendEvents(collection)
   })

@@ -9,3 +9,4 @@
 
 // Route exports
 export { wasteBalanceGet } from './routes/get.js'
+export { creditedTonnageGet } from './routes/credited-tonnage-get.js'

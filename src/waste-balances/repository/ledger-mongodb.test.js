@@ -123,6 +123,16 @@ describe('ensureLedgerCollection', () => {
         number: 1
       })
     })
+
+    it('creates the kind_number_report index for findLatestSubmittedSummaryLogPerLedger', async (/** @type {*} */ {
+      ledgerCollection
+    }) => {
+      const indexes = await ledgerCollection.indexes()
+      expect(indexKeyFor(indexes, 'kind_number_report')).toEqual({
+        kind: 1,
+        number: -1
+      })
+    })
   })
 
   describe('idempotency', () => {
@@ -147,6 +157,9 @@ describe('MongoDB ledger repository', () => {
     expect(repository.findLatestInLedgerByKind).toBeTypeOf('function')
     expect(repository.findEventsByPrnIdAfter).toBeTypeOf('function')
     expect(repository.findAllInLedger).toBeTypeOf('function')
+    expect(repository.findLatestSubmittedSummaryLogPerLedger).toBeTypeOf(
+      'function'
+    )
   })
 
   describe('ledger repository contract', () => {
