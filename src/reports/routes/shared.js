@@ -15,6 +15,7 @@ export const periodParamsSchema = Joi.object({
 })
 
 /**
+ * @import { Registration } from '#domain/organisations/registration.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  *
  * @typedef {{
@@ -31,7 +32,7 @@ export const periodParamsSchema = Joi.object({
 /**
  * Wraps a report (stored or computed) with registration details.
  * @param {object} report
- * @param {object} registration
+ * @param {Registration} registration
  * @returns {object}
  */
 export function withRegistrationDetails(report, registration) {
@@ -48,7 +49,7 @@ export function withRegistrationDetails(report, registration) {
  * Extracts a changedBy user summary from request credentials.
  * Carries name and email distinctly: name is omitted when there is no real
  * name, and the email is never coerced into the name slot.
- * @param {object} credentials
+ * @param {{ email?: string, id: string, name?: string, position?: string }} credentials
  * @returns {{ id: string, name?: string, email?: string, position: string }}
  */
 export function extractChangedBy(credentials) {
