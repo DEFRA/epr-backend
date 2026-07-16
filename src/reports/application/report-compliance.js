@@ -1,7 +1,10 @@
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodKey } from '#reports/domain/period-key.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+import {
+  mergeReportingPeriods,
+  selectSubmittedReports
+} from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
 import {
   activeAccreditationValidFrom,
@@ -28,6 +31,32 @@ import {
  *   entries: Map<string, ReportComplianceEntry>;
  * }} ReportComplianceData
  */
+
+/**
+ * The date the public register shows for a period. It retains the ORIGINAL
+ * submitted date: resubmissions are not reflected externally.
+ *
+ * `selectSubmittedReports` returns the period's submitted reports ordered by
+ * submissionNumber ascending, so its first entry is the lowest-numbered
+ * submission. That is the original submission, because the write model only
+ * permits unsubmitting the latest submission (`isLatestSubmission` in
+ * report-service.js), so an earlier submission's `submittedAt` is never
+ * re-stamped after a later one exists. Keying on a retained `submittedAt`
+ * rather than the current status means a submitted-then-unsubmitted period
+ * keeps its date instead of blanking. A period with nothing submitted yields
+ * no entry, so resolves to null (never the in-flight draft in `report`, nor a
+ * later correction).
+ *
+ * @param {import('#reports/domain/merge-reporting-periods.js').MergedPeriod} mergedPeriod
+ * @returns {string | null}
+ */
+function originalSubmittedDate(mergedPeriod) {
+  const [original] = selectSubmittedReports({
+    current: mergedPeriod.report,
+    previousSubmissions: mergedPeriod.previousSubmissions
+  })
+  return original?.submittedAt?.slice(0, 10) ?? null
+}
 
 /**
  * Groups all periodic reports by `${organisationId}::${registrationId}`.
@@ -111,7 +140,7 @@ export async function generateReportCompliance(
             cadence,
             period: mergedPeriod.period
           }),
-          mergedPeriod.report?.submittedAt?.slice(0, 10) ?? null
+          originalSubmittedDate(mergedPeriod)
         )
       }
     }
