@@ -12,6 +12,7 @@ import {
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
@@ -47,18 +48,20 @@ const seedStream = (closingBalance = SEED_BALANCE) =>
   createInMemoryLedgerRepository(
     closingBalance
       ? [
-          buildLedgerEvent({
-            registrationId,
-            accreditationId,
-            organisationId,
-            number: 1,
-            payload: {
-              summaryLogId: 'log-1',
-              creditTotal: closingBalance.amount
-            },
-            openingBalance: { amount: 0, availableAmount: 0 },
-            closingBalance
-          })
+          partialMock(
+            buildLedgerEvent({
+              registrationId,
+              accreditationId,
+              organisationId,
+              number: 1,
+              payload: {
+                summaryLogId: 'log-1',
+                creditTotal: closingBalance.amount
+              },
+              openingBalance: { amount: 0, availableAmount: 0 },
+              closingBalance
+            })
+          )
         ]
       : []
   )()

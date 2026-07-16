@@ -3,29 +3,45 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { config } from '#root/config.js'
 
 /**
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {HumanCredentials, MachineCredentials} from '#common/hapi-types.js'
+ * @import {SystemLog, SystemLogActor, SystemLogsRepository} from '#repositories/system-logs/port.js'
+ */
+
+/**
+ * @typedef {Omit<SystemLog, 'createdAt' | 'createdBy'> & { user: SystemLogActor }} SystemLogInput
+ */
+
+/**
+ * @typedef {{
+ *   context?: object
+ *   event: { action: string, category: string, subCategory?: string }
+ *   user?: SystemLogActor
+ * }} AuditPayload
  */
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest} request
+ * @returns {SystemLogActor}
  */
 function extractUserDetails(request) {
-  return request.auth?.credentials?.isMachine
+  /** @type {MachineCredentials | HumanCredentials} */
+  const credentials = request.auth.credentials
+  return 'isMachine' in credentials
     ? {
-        id: request.auth.credentials.id,
-        name: request.auth.credentials.name
+        id: credentials.id,
+        name: credentials.name
       }
     : {
-        id: request.auth?.credentials?.id,
-        email: request.auth?.credentials?.email,
-        scope: request.auth?.credentials?.scope,
-        role: request.auth?.credentials?.role
+        id: credentials.id,
+        email: credentials.email,
+        scope: credentials.scope,
+        role: credentials.role
       }
 }
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {object} payload
+ * @param {SystemLogInput} payload
  */
 async function recordSystemLog(request, { user, ...restPayload }) {
   return request.systemLogsRepository.insert({
@@ -40,7 +56,7 @@ async function recordSystemLog(request, { user, ...restPayload }) {
  * Uses {@link SystemLogsRepository.insertMany} for a single DB round-trip.
  *
  * @param {SystemLogsRepository} systemLogsRepository
- * @param {Array<{ user: object } & object>} payloads
+ * @param {SystemLogInput[]} payloads
  */
 async function recordSystemLogs(systemLogsRepository, payloads) {
   const records = payloads.map(({ user, ...restPayload }) => ({
@@ -67,7 +83,7 @@ function isPayloadSmallEnoughToAudit(payload) {
  * Safety-net wrapper around CDP audit. Passes small payloads through unchanged.
  * For oversized payloads, logs a warning and sends a stripped payload (event + user only)
  * so the audit event is still recorded without risking log pipeline fragmentation.
- * @param {object} payload
+ * @param {AuditPayload} payload
  */
 function safeAudit(payload) {
   if (isPayloadSmallEnoughToAudit(payload)) {
@@ -80,6 +96,7 @@ function safeAudit(payload) {
     message: `Audit payload too large, stripping context for ${category}/${subCategory}/${action}`
   })
 
+  /** @type {AuditPayload} */
   const reducedPayload = { event: payload.event }
   if (payload.user) {
     reducedPayload.user = payload.user

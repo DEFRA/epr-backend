@@ -8,6 +8,7 @@ import {
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 export const overseasSiteByIdPath = '/v1/overseas-sites/{id}'
@@ -20,8 +21,8 @@ export const overseasSiteById = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {overseasSitesRepository: OverseasSitesRepository}} request
-   * @param {object} h - Hapi response toolkit
+   * @param {HapiRequest & {overseasSitesRepository: OverseasSitesRepository}} request
+   * @param {HapiResponseToolkit} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const { overseasSitesRepository, params, logger } = request

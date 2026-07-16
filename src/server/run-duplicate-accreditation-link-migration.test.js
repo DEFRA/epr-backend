@@ -14,6 +14,19 @@ import {
 
 import { runDuplicateAccreditationLinkMigration } from './run-duplicate-accreditation-link-migration.js'
 import { auditDuplicateAccreditationLinkMigration } from '#auditing/duplicate-accreditation-link-migration.js'
+import { partialMock } from '#test/type-helpers.js'
+
+/** @import { Server } from '@hapi/hapi' */
+/** @import { Mock } from 'vitest' */
+
+/**
+ * @typedef {Server & {
+ *   db: object,
+ *   locker: { lock: Mock },
+ *   featureFlags: { isFixDuplicateAccreditationLinksEnabled: () => boolean },
+ *   _mockLock: { free: Mock }
+ * }} MockMigrationServer
+ */
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -32,9 +45,13 @@ vi.mock('#auditing/duplicate-accreditation-link-migration.js', () => ({
   auditDuplicateAccreditationLinkMigration: vi.fn().mockResolvedValue(undefined)
 }))
 
+/**
+ * @param {boolean} [featureFlagEnabled]
+ * @returns {MockMigrationServer}
+ */
 const buildServer = (featureFlagEnabled = false) => {
   const mockLock = { free: vi.fn().mockResolvedValue(undefined) }
-  return {
+  return partialMock({
     db: {},
     locker: {
       lock: vi.fn().mockResolvedValue(mockLock)
@@ -43,7 +60,7 @@ const buildServer = (featureFlagEnabled = false) => {
       isFixDuplicateAccreditationLinksEnabled: () => featureFlagEnabled
     },
     _mockLock: mockLock
-  }
+  })
 }
 
 /**
