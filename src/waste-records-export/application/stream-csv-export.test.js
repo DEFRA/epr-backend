@@ -15,6 +15,8 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+
+/** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 
 const collect = async (gen) => {
@@ -101,7 +103,9 @@ const buildDeps = async ({
       }
     })
   )
-  const ledgerRepository = createInMemoryLedgerRepository(ledgerEvents)()
+  const ledgerRepository = createInMemoryLedgerRepository(
+    /** @type {LedgerEvent[]} */ (ledgerEvents)
+  )()
 
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStateRepository()()
