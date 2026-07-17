@@ -2,6 +2,10 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 
+/**
+ * @import { ReportStale, StaleSummaryLogChanged } from '#reports/repository/port.js'
+ */
+
 export const STALE_REASON = Object.freeze({
   SUMMARY_LOG_CHANGED: 'summary_log_changed',
   PRN_CANCELLED: 'prn_cancelled'
@@ -44,27 +48,29 @@ export const staleReasons = (stale) => {
 }
 
 /**
- * Normalises a report's `stale` field to the current nested shape.
- * Upgrading the legacy flat shape (`{ uploadedAt, reason, summaryLogId }`) where needed.
+ * Normalises a report's `stale` field to the current nested shape
+ * (`{ summaryLogChanged?, prnCancelled? }`), upgrading the legacy flat
+ * shape (`{ uploadedAt, reason, summaryLogId }`) where needed.
  *
- * @param {any} stale
- * @returns {import('#reports/repository/port.js').ReportStale | undefined}
+ * @param {Record<string, unknown> | undefined} stale
+ * @returns {ReportStale | undefined}
  */
 export const normaliseStale = (stale) => {
-  if (!stale) return undefined
+  if (!stale) {
+    return undefined
+  }
 
   const { summaryLogChanged, prnCancelled, reason: _reason, ...rest } = stale
 
-  // If we have either of the new structured fields, extract and return them
   if (summaryLogChanged || prnCancelled) {
-    return {
-      ...(summaryLogChanged && { summaryLogChanged }),
-      ...(prnCancelled && { prnCancelled })
-    }
+    return /** @type {ReportStale} */ ({
+      ...(summaryLogChanged ? { summaryLogChanged } : {}),
+      ...(prnCancelled ? { prnCancelled } : {})
+    })
   }
 
-  // Fallback for the old flat shape (everything except 'reason' goes into summaryLogChanged)
-  return { summaryLogChanged: rest }
+  // Old flat shape: the only reason that existed before this change.
+  return { summaryLogChanged: /** @type {StaleSummaryLogChanged} */ (rest) }
 }
 
 const KNOWN_STALE_KEYS = new Set(['summaryLogChanged', 'prnCancelled'])
