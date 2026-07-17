@@ -92,18 +92,80 @@ const submittedSubmissions = (slot) =>
   )
 
 /**
- * Flattens periodic reports into one entry per submitted period, attributing to
- * the latest submitted report (the highest submissionNumber, first in
- * `submittedSubmissions`) and remembering when the period first closed. The
- * first close is the earliest submittedAt across the submitted submissions,
- * taken by timestamp rather than submissionNumber order: a resubmission's number
- * need not increase with its submission time, so the lowest-numbered submission
- * is not necessarily the earliest-submitted one.
+ * Flattens the nested { cadence: { period: slot } } report structure into a flat
+ * list of period slots, so each slot is classified in one shallow loop.
  *
- * A submitted report should always carry a submittedAt; one whose attributed
- * submission is missing it is split into `missingSubmittedAt` for review rather
- * than evaluated, since a null submittedAt cannot be placed in the timeline (it
- * fails every gate comparison silently).
+ * @param {any[]} periodicReports
+ * @returns {{ pr: any, cadence: string, period: number, slot: any }[]}
+ */
+const periodSlots = (periodicReports) =>
+  periodicReports.flatMap((pr) =>
+    Object.entries(pr.reports).flatMap(([cadence, byPeriod]) =>
+      Object.entries(byPeriod).map(([period, slot]) => ({
+        pr,
+        cadence,
+        period: Number(period),
+        slot
+      }))
+    )
+  )
+
+/**
+ * The earliest submittedAt among submissions that carry one — the time the
+ * period first closed. Taken by timestamp, not submissionNumber order: a
+ * resubmission's number need not increase with its submission time, so the
+ * lowest-numbered submission is not necessarily the earliest-submitted one.
+ *
+ * @param {any[]} submissions
+ * @returns {string}
+ */
+const earliestSubmittedAtOf = (submissions) =>
+  submissions
+    .map((s) => s.submittedAt)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b))[0]
+
+/**
+ * Classifies one submitted period slot: a SubmittedReport attributed to its
+ * latest submitted report (the highest submissionNumber) when that submission
+ * carries a submittedAt, or a ReportIdentity flagged as missing it otherwise. A
+ * submitted report should always carry a submittedAt; a null one cannot be
+ * placed in the closed-vs-open timeline (it fails every gate comparison
+ * silently), so it is surfaced for review rather than evaluated. Returns null
+ * for a period with no submitted submission.
+ *
+ * @param {{ pr: any, cadence: string, period: number, slot: any }} entry
+ * @returns {{ report?: SubmittedReport, missing?: ReportIdentity } | null}
+ */
+const classifySlot = ({ pr, cadence, period, slot }) => {
+  const submitted = submittedSubmissions(slot)
+  if (!submitted.length) {
+    return null
+  }
+  const attributed = submitted[0]
+  const identity = {
+    organisationId: pr.organisationId,
+    registrationId: pr.registrationId,
+    reportId: attributed.id,
+    year: pr.year,
+    cadence,
+    period
+  }
+  if (!attributed.submittedAt) {
+    return { missing: identity }
+  }
+  return {
+    report: {
+      ...identity,
+      reportSubmittedAt: attributed.submittedAt,
+      earliestSubmittedAt: earliestSubmittedAtOf(submitted)
+    }
+  }
+}
+
+/**
+ * Splits every submitted period into evaluable `reports` and the data-integrity
+ * `missingSubmittedAt` list.
  *
  * @param {any[]} periodicReports
  * @returns {{ reports: SubmittedReport[], missingSubmittedAt: ReportIdentity[] }}
@@ -111,37 +173,12 @@ const submittedSubmissions = (slot) =>
 const collectSubmittedReports = (periodicReports) => {
   const reports = []
   const missingSubmittedAt = []
-  for (const pr of periodicReports) {
-    for (const [cadence, byPeriod] of Object.entries(pr.reports)) {
-      for (const [periodKey, slot] of Object.entries(byPeriod)) {
-        const submitted = submittedSubmissions(slot)
-        if (!submitted.length) {
-          continue
-        }
-        const attributed = submitted[0]
-        const identity = {
-          organisationId: pr.organisationId,
-          registrationId: pr.registrationId,
-          reportId: attributed.id,
-          year: pr.year,
-          cadence,
-          period: Number(periodKey)
-        }
-        if (!attributed.submittedAt) {
-          missingSubmittedAt.push(identity)
-          continue
-        }
-        const earliestSubmittedAt = submitted.reduce(
-          (earliest, s) =>
-            s.submittedAt < earliest ? s.submittedAt : earliest,
-          attributed.submittedAt
-        )
-        reports.push({
-          ...identity,
-          reportSubmittedAt: attributed.submittedAt,
-          earliestSubmittedAt
-        })
-      }
+  for (const entry of periodSlots(periodicReports)) {
+    const classified = classifySlot(entry)
+    if (classified?.missing) {
+      missingSubmittedAt.push(classified.missing)
+    } else if (classified?.report) {
+      reports.push(classified.report)
     }
   }
   return { reports, missingSubmittedAt }
@@ -347,11 +384,88 @@ const restatedPeriods = (row, previousByRow) => {
 }
 
 /**
+ * Whether a report's period had already closed when this upload landed (its
+ * earliest submission predates the upload). Compared via localeCompare so the
+ * operands of `<` are numbers: the submittedAt values are ISO-8601 UTC strings,
+ * for which lexical order is chronological order.
+ *
+ * @param {SubmittedReport} report
+ * @param {{ submittedAt: string }} upload
+ * @returns {boolean}
+ */
+const closedBeforeUpload = (report, upload) =>
+  report.earliestSubmittedAt.localeCompare(upload.submittedAt) < 0
+
+/**
+ * Rows present in `current` but not the previous snapshot. A changed or added
+ * row commits a new state-doc id, so a row whose id is absent from the previous
+ * snapshot is a restatement (mirrors determineRecordStatus ADDED/ADJUSTED).
+ *
+ * @param {{ rows: any[] }} current
+ * @param {Set<string>} previousIds
+ * @returns {any[]}
+ */
+const changedRows = (current, previousIds) =>
+  current.rows.filter((row) => !previousIds.has(row.id))
+
+/**
+ * Live CPA (classifyByPeriodStatus) skips IGNORED (outside-accreditation) rows,
+ * so they never become findings. A report period should never overlap
+ * unaccredited time, so an IGNORED row folding into a reported closed period
+ * should be impossible; such rows are routed to an invariant probe tally
+ * (expected empty) rather than silently discarded.
+ *
+ * @param {any} row
+ * @returns {boolean}
+ */
+const isIgnoredRow = (row) =>
+  row.classification?.outcome === WASTE_BALANCE_OUTCOME.IGNORED
+
+/**
+ * The already-closed reports a changed row restates: each period the row folds
+ * into whose report was submitted before this upload landed.
+ *
+ * @param {any} row
+ * @param {Map<string, any>} previousByRow
+ * @param {Map<string, SubmittedReport>} reportByPeriodKey
+ * @param {{ submittedAt: string }} current
+ * @returns {SubmittedReport[]}
+ */
+const closedRestatements = (row, previousByRow, reportByPeriodKey, current) => {
+  const reports = []
+  for (const ref of restatedPeriods(row, previousByRow)) {
+    const report = reportByPeriodKey.get(periodKey(ref))
+    if (report && closedBeforeUpload(report, current)) {
+      reports.push(report)
+    }
+  }
+  return reports
+}
+
+/**
+ * @param {SubmittedReport} report
+ * @param {{ id: string }} current
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @returns {PreCpaResubmissionFinding}
+ */
+const buildFinding = (report, current, organisationId, registrationId) => ({
+  organisationId,
+  registrationId,
+  reportId: report.reportId,
+  year: report.year,
+  cadence: report.cadence,
+  period: report.period,
+  reportSubmittedAt: report.reportSubmittedAt,
+  restatingSummaryLogId: current.id
+})
+
+/**
  * Walks consecutive upload pairs and records a finding whenever a changed row
  * restates a period whose report was already submitted before the upload. The
  * row's cadence (and so which cadence's report it maps to) is taken per row from
- * its processing type. IGNORED (outside-accreditation) rows are split off into a
- * separate probe tally rather than counted or discarded — see the loop comment.
+ * its processing type. IGNORED (outside-accreditation) rows are routed to a
+ * separate probe tally rather than counted or discarded — see isIgnoredRow.
  *
  * @param {{
  *   snapshots: { id: string, submittedAt: string, rows: any[] }[],
@@ -376,31 +490,17 @@ const diffFindings = ({
     const previousByRow = new Map(
       previous.rows.map((row) => [rowIdentityKey(row), row])
     )
-    for (const row of current.rows) {
-      if (previousIds.has(row.id)) {
-        continue
-      }
-      // Live CPA (classifyByPeriodStatus) skips IGNORED (outside-accreditation)
-      // rows, so they never become findings. A report period should never
-      // overlap unaccredited time, so an IGNORED row folding into a reported
-      // closed period should be impossible — tally any as an invariant probe
-      // (expected empty) rather than silently discarding them.
-      const isIgnored =
-        row.classification?.outcome === WASTE_BALANCE_OUTCOME.IGNORED
-      for (const ref of restatedPeriods(row, previousByRow)) {
-        const report = reportByPeriodKey.get(periodKey(ref))
-        if (report && report.earliestSubmittedAt < current.submittedAt) {
-          ;(isIgnored ? ignored : findings).push({
-            organisationId,
-            registrationId,
-            reportId: report.reportId,
-            year: report.year,
-            cadence: report.cadence,
-            period: report.period,
-            reportSubmittedAt: report.reportSubmittedAt,
-            restatingSummaryLogId: current.id
-          })
-        }
+    for (const row of changedRows(current, previousIds)) {
+      const bucket = isIgnoredRow(row) ? ignored : findings
+      for (const report of closedRestatements(
+        row,
+        previousByRow,
+        reportByPeriodKey,
+        current
+      )) {
+        bucket.push(
+          buildFinding(report, current, organisationId, registrationId)
+        )
       }
     }
   }
