@@ -21,9 +21,10 @@ const getUserRolesForStatus = (status) => {
 }
 
 /**
+ * @template {Accreditation|Registration} T
  * @param {Organisation} updated
  * @param {'accreditations'|'registrations'} collectionKey
- * @param {(item: any) => SlimUser[]} extractAdditionalUsers
+ * @param {(item: T) => SlimUser[]} extractAdditionalUsers
  * @returns {SlimUser[]}
  */
 const collateItems = (updated, collectionKey, extractAdditionalUsers) => {
@@ -40,7 +41,9 @@ const collateItems = (updated, collectionKey, extractAdditionalUsers) => {
           email: item.submitterContactDetails.email,
           roles: getUserRolesForStatus(itemStatus)
         },
-        ...extractAdditionalUsers(item)
+        // collectionKey pins the element type at each call site; bridge the
+        // key-to-element relationship the signature cannot express.
+        ...extractAdditionalUsers(/** @type {T} */ (item))
       )
     }
   }
