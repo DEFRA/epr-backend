@@ -1,5 +1,6 @@
 import { MongoClient } from 'mongodb'
 
+import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
@@ -16,8 +17,6 @@ import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-m
  *
  * @typedef {TestServer & { db: Db }} TestServerWithRealDb
  */
-
-const DATABASE_NAME = 'epr-backend'
 
 /**
  * A real Hapi server whose `request.db` and `request.ledgerRepository` are both

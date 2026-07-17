@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { MongoClient, ObjectId } from 'mongodb'
+import { ObjectId } from 'mongodb'
+import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { aggregatePrnTonnage } from './aggregate-prn-tonnage.js'
 import { MATERIAL, TONNAGE_BAND } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
@@ -11,17 +11,8 @@ import {
 
 /** @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
-const DATABASE_NAME = 'epr-backend'
 const PRNS_COLLECTION = 'packaging-recycling-notes'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
-
-const it = mongoIt.extend({
-  mongoClient: async (/** @type {{ db: string }} */ { db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  }
-})
 
 const orgId = '507f1f77bcf86cd799439011'
 const accId = 'acc-1'
