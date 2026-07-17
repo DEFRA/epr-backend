@@ -21,7 +21,9 @@ import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repos
 
 const collect = async (gen) => {
   const out = []
-  for await (const row of gen) out.push(row)
+  for await (const row of gen) {
+    out.push(row)
+  }
   return out
 }
 

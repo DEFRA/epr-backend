@@ -74,8 +74,12 @@ describe('#getJwtStrategyConfig', () => {
   describe('configuration structure', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         if (key === 'roles.serviceMaintainers') {
           return JSON.stringify(['maintainer@example.com'])
         }
@@ -120,8 +124,12 @@ describe('#getJwtStrategyConfig', () => {
   describe('validate function - Entra ID tokens', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         if (key === 'roles.serviceMaintainers') {
           return JSON.stringify(['maintainer@example.com'])
         }
@@ -417,8 +425,12 @@ describe('#getJwtStrategyConfig', () => {
   describe('OIDC config variations', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         if (key === 'roles.serviceMaintainers') {
           return JSON.stringify(['maintainer@example.com'])
         }
@@ -493,8 +505,12 @@ describe('#getJwtStrategyConfig', () => {
 
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         return null
       })
     })
