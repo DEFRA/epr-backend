@@ -4,6 +4,8 @@ import {
   WASTE_RECORD_TYPE
 } from '#domain/waste-records/model.js'
 
+/** @import { ValidatedWasteRecord } from '#application/waste-records/transform-from-summary-log.js' */
+
 describe('validateDataBusiness', () => {
   /**
    * Creates a transformed record for testing
@@ -11,42 +13,45 @@ describe('validateDataBusiness', () => {
    * @param {string} options.rowId - The row ID
    * @param {string} [options.type] - The waste record type
    * @param {Array} [options.issues] - Validation issues
-   * @returns {{ record: Object, issues: Array }}
+   * @returns {ValidatedWasteRecord}
    */
   const createValidatedWasteRecord = ({
     rowId,
     type = WASTE_RECORD_TYPE.RECEIVED,
     issues = []
-  }) => ({
-    record: {
-      organisationId: 'org-456',
-      registrationId: 'reg-789',
-      accreditationId: 'acc-111',
-      rowId,
-      type,
-      data: {
-        ROW_ID: rowId,
-        DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
-        GROSS_WEIGHT: 100
-      },
-      versions: [
-        {
-          createdAt: new Date().toISOString(),
-          status: VERSION_STATUS.CREATED,
-          summaryLog: {
-            id: 'current-summary-log-id',
-            uri: 's3://bucket/current-file.xlsx'
-          },
+  }) =>
+    /** @type {ValidatedWasteRecord} */ (
+      /** @type {unknown} */ ({
+        record: {
+          organisationId: 'org-456',
+          registrationId: 'reg-789',
+          accreditationId: 'acc-111',
+          rowId,
+          type,
           data: {
             ROW_ID: rowId,
             DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
             GROSS_WEIGHT: 100
-          }
-        }
-      ]
-    },
-    issues
-  })
+          },
+          versions: [
+            {
+              createdAt: new Date().toISOString(),
+              status: VERSION_STATUS.CREATED,
+              summaryLog: {
+                id: 'current-summary-log-id',
+                uri: 's3://bucket/current-file.xlsx'
+              },
+              data: {
+                ROW_ID: rowId,
+                DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
+                GROSS_WEIGHT: 100
+              }
+            }
+          ]
+        },
+        issues
+      })
+    )
 
   /**
    * Creates an existing waste record for testing

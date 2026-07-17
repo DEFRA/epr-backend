@@ -152,7 +152,11 @@ const expectOneWinsOneStreamConflict = async (
   expect(rejected).toHaveLength(1)
   expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
 
-  const latest = await ledgerRepository.findLatestInLedger(REG_ID, ACC_ID)
+  const latest = await ledgerRepository.findLatestInLedger({
+    organisationId: ORG_ID,
+    registrationId: REG_ID,
+    accreditationId: ACC_ID
+  })
   expect(latest?.number).toBe(COMMITTED_EVENT_NUMBER)
 
   const prn = await prnRepository.findById(PRN_ID)
@@ -176,6 +180,7 @@ describe('updatePrnStatus concurrency', () => {
         prnRepository,
         ledgerRepository,
         organisationsRepository,
+        prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
         organisationId: ORG_ID,
@@ -214,6 +219,7 @@ describe('updatePrnStatus concurrency', () => {
         prnRepository,
         ledgerRepository,
         organisationsRepository,
+        prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
         organisationId: ORG_ID,
@@ -253,6 +259,7 @@ describe('updatePrnStatus concurrency', () => {
         prnRepository,
         ledgerRepository,
         organisationsRepository,
+        prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
         organisationId: ORG_ID,

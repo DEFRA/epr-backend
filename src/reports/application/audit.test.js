@@ -16,7 +16,8 @@ const {
   auditReportCreate,
   auditReportDelete,
   auditMarkReportsStale,
-  auditMarkReportsRequiringResubmission
+  auditMarkReportsRequiringResubmission,
+  MARK_STALE_ACTION
 } = await import('./audit.js')
 
 const mockInsert = vi.fn()
@@ -275,11 +276,14 @@ const buildSystemLogsRepository = (
     })
   )
 
-/** @type {import('#reports/repository/port.js').ReportStale} */
-const stale = {
+const summaryLogChanged = {
   uploadedAt: '2025-06-01T12:00:00.000Z',
-  reason: 'summary_log_changed',
   summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+}
+
+const prnCancelled = {
+  occurredAt: '2025-06-01T12:00:00.000Z',
+  prnId: 'prn-id-00000000-0000-0000-0000-000000000001'
 }
 
 /** @type {import('#reports/repository/port.js').ReportResubmissionRequired} */
@@ -299,16 +303,33 @@ const flaggedReport = {
 
 describe.each([
   {
-    name: 'auditMarkReportsStale',
-    action: 'mark-stale',
+    name: 'auditMarkReportsStale (summary log)',
+    action: MARK_STALE_ACTION.SUMMARY_LOG_CHANGED,
     field: 'stale',
-    flag: stale,
+    flag: { summaryLogChanged },
     run: (/** @type {SystemLogsRepository} */ systemLogsRepository) =>
       auditMarkReportsStale({
         systemLogsRepository,
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        reportsMarkedStale: [{ ...flaggedReport, stale }]
+        reportsMarkedStale: [
+          { ...flaggedReport, stale: { summaryLogChanged } }
+        ],
+        action: MARK_STALE_ACTION.SUMMARY_LOG_CHANGED
+      })
+  },
+  {
+    name: 'auditMarkReportsStale (PRN cancelled)',
+    action: MARK_STALE_ACTION.PRN_CANCELLED,
+    field: 'stale',
+    flag: { prnCancelled },
+    run: (/** @type {SystemLogsRepository} */ systemLogsRepository) =>
+      auditMarkReportsStale({
+        systemLogsRepository,
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        reportsMarkedStale: [{ ...flaggedReport, stale: { prnCancelled } }],
+        action: MARK_STALE_ACTION.PRN_CANCELLED
       })
   },
   {

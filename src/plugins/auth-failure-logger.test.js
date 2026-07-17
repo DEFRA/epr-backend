@@ -6,6 +6,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 
+/** @import { ServerRegisterPluginObject } from '@hapi/hapi' */
+
 describe('auth-failure-logger plugin', () => {
   let server
   let mockLogger
@@ -21,7 +23,11 @@ describe('auth-failure-logger plugin', () => {
       return h.continue
     })
 
-    await server.register({ plugin: authFailureLogger.plugin })
+    await server.register(
+      /** @type {ServerRegisterPluginObject<void>} */ (
+        /** @type {unknown} */ (authFailureLogger)
+      )
+    )
 
     server.route([
       {

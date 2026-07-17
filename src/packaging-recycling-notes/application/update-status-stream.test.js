@@ -134,6 +134,7 @@ const callUpdate = (overrides) =>
     registrationId: REG_ID,
     accreditationId: ACC_ID,
     user: USER,
+    prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
     ...overrides
   })
 
@@ -246,6 +247,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       providedPrn: buildPrn({
         status: {
           currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+          issued: { at: EVENT_AT, by: USER },
           history: []
         },
         lastAppliedEventNumber: SEED_NUMBER
@@ -286,7 +288,11 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
     ).rejects.toThrow('doc write failed')
 
-    const all = await ledgerRepository.findAllInLedger(REG_ID, ACC_ID)
+    const all = await ledgerRepository.findAllInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
     expect(all).toHaveLength(2)
     expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
   })
@@ -413,7 +419,11 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
     ).rejects.toThrow('doc write failed')
 
-    const all = await ledgerRepository.findAllInLedger(REG_ID, ACC_ID)
+    const all = await ledgerRepository.findAllInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
     expect(all).toHaveLength(2)
     expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
   })

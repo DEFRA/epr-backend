@@ -78,20 +78,24 @@ const enforceMonotonicWatermark = (
 
 /**
  * @param {Storage} storage
- * @returns {(accreditationId: string) => Promise<PackagingRecyclingNote[]>}
+ * @returns {(accreditationId: import('./port.js').AccreditationId) => Promise<PackagingRecyclingNote[]>}
  */
-const performFindByAccreditation = (storage) => async (accreditationId) => {
-  const results = []
-  for (const prn of storage.values()) {
-    if (
-      prn.accreditation?.id === accreditationId &&
-      prn.status?.currentStatus !== PRN_STATUS.DELETED
-    ) {
-      results.push(structuredClone(prn))
+const performFindByAccreditation =
+  (storage) =>
+  async ({ organisationId, registrationId, accreditationId }) => {
+    const results = []
+    for (const prn of storage.values()) {
+      if (
+        prn.organisation?.id === organisationId &&
+        prn.registrationId === registrationId &&
+        prn.accreditation?.id === accreditationId &&
+        prn.status?.currentStatus !== PRN_STATUS.DELETED
+      ) {
+        results.push(structuredClone(prn))
+      }
     }
+    return results
   }
-  return results
-}
 
 /**
  * @param {PackagingRecyclingNote['status']['currentStatusAt'] | undefined} statusAt

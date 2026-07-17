@@ -1,6 +1,7 @@
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 import { getTargetAmount } from '#waste-balances/application/target-amount.js'
 import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { periodForDate } from '#reports/domain/period-for-date.js'
 import { periodKey } from '#reports/domain/period-key.js'
@@ -218,18 +219,35 @@ const closedPeriodRefsForRecord = (
  * exclusion reason codes. Code-only and deduped: a row missing several fields
  * yields a single MISSING_REQUIRED_FIELD code, and an included row yields [].
  *
- * @param {import('#domain/summary-logs/table-schemas/index.js').TableSchema | null} schema
+ * A table with no classifyForWasteBalance never contributes to the balance by
+ * design (eg Processed on a reprocessor input template, or Sent on for an
+ * exporter). Such rows carry an explicit by-design code so their
+ * exclusionReasons stay unambiguous: separate from rows evaluated and excluded
+ * for a data reason (which carry that reason's code), and from included
+ * zero-tonnage rows (which keep []).
+ *
+ * @param {import('#domain/summary-logs/table-schemas/index.js').TableSchema} schema
  * @param {Record<string, any>} data
  * @param {ClassificationContext} context
  * @returns {{ transactionAmount: number, exclusionReasons: string[] }}
  */
-const classifyRow = (schema, data, context) => {
-  const result = schema?.classifyForWasteBalance?.(data, context)
+const classifyRowForWasteBalance = (schema, data, context) => {
+  const classify = schema.classifyForWasteBalance
+  if (!classify) {
+    return {
+      transactionAmount: 0,
+      exclusionReasons: [
+        CLASSIFICATION_REASON.TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE
+      ]
+    }
+  }
+
+  const result = classify(data, context)
   const transactionAmount =
-    result?.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
-  const exclusionReasons = result?.reasons
-    ? [...new Set(result.reasons.map((reason) => reason.code))]
-    : []
+    result.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
+  // Every result carries a reasons array (empty for an included row), so the
+  // dedup collapses to [] naturally without a guard.
+  const exclusionReasons = [...new Set(result.reasons.map((r) => r.code))]
   return { transactionAmount, exclusionReasons }
 }
 
@@ -402,11 +420,8 @@ const classifyAdjustedWasteRecord = ({
 
   // Reasons come from the current row, so both legs (including the old-period
   // reversal) reflect what the operator is uploading now.
-  const { transactionAmount: newAmount, exclusionReasons } = classifyRow(
-    schema,
-    record.data,
-    context
-  )
+  const { transactionAmount: newAmount, exclusionReasons } =
+    classifyRowForWasteBalance(schema, record.data, context)
   // The old contribution is the amount stamped on the submitted row state — the
   // figure already applied to the waste balance — not a re-derivation from its
   // stored data, whose projection drops fields the classifier reads.
@@ -488,11 +503,8 @@ export const classifyByPeriodStatus = ({
         cadence
       )
       if (period) {
-        const { transactionAmount, exclusionReasons } = classifyRow(
-          schema,
-          record.data,
-          classificationContext
-        )
+        const { transactionAmount, exclusionReasons } =
+          classifyRowForWasteBalance(schema, record.data, classificationContext)
         entries.push(
           ...classifyAddedRecord({
             period,

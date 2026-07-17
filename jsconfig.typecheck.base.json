@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "alwaysStrict": true,
+    "checkJs": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2024", "ESNext.Collection"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": false,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "paths": {
+      "#adapters/*": ["./src/adapters/*"],
+      "#application/*": ["./src/application/*"],
+      "#common/*": ["./src/common/*"],
+      "#data/*": ["./src/data/*"],
+      "#domain/*": ["./src/domain/*"],
+      "#feature-flags/*": ["./src/feature-flags/*"],
+      "#formsubmission/*": ["./src/forms-submission-data/*"],
+      "#plugins/*": ["./src/plugins/*"],
+      "#repositories/*": ["./src/repositories/*"],
+      "#root/*": ["./src/*"],
+      "#routes/*": ["./src/routes/*"],
+      "#server/*": ["./src/server/*"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "strictBindCallApply": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "target": "es2024"
+  }
+}

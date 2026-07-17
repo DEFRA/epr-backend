@@ -37,48 +37,55 @@ const toWasteRecordState = ({
 })
 
 /**
- * Membership query for a resolved head: every row whose committed
- * state belongs to that submission, or nothing when there is no head.
+ * The ledger's row states at a resolved head submission, projected to their
+ * domain content — or nothing when the ledger has no submitted summary log
+ * yet. For a caller that has already resolved the head (and whose read must
+ * stay consistent with it), this is the whole read;
+ * `summaryLogRowStatesForRegistration` composes it with the head resolution.
  *
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} summaryLogRowStateRepository
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
  * @param {string | null} head
- * @returns {Promise<SummaryLogRowState[]>}
+ * @returns {Promise<WasteRecordState[]>}
  */
-const summaryLogRowStatesForHead = async (
+export const wasteRecordStatesForHead = async (
   summaryLogRowStateRepository,
+  ledgerId,
   head
-) =>
-  head === null ? [] : summaryLogRowStateRepository.findBySummaryLogId(head)
+) => {
+  if (head === null) {
+    return []
+  }
+  const summaryLogRowStates =
+    await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+      ledgerId,
+      head
+    )
+  return summaryLogRowStates.map(toWasteRecordState)
+}
 
 /**
- * Waste record states of a registration at its current head submission. The
- * head resolves in one stream lookup; the membership query then returns every
- * row whose committed state belongs to that submission, projected to its
- * domain content.
+ * Waste record states of a registration at its latest submitted summary log.
+ * The head resolves in one stream lookup against the ledger; the row states
+ * are then read back for that same ledger at that submission, projected to
+ * their domain content.
  *
- * @param {{
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & {
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
- *   summaryLogRowStateRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository,
- *   organisationId: string,
- *   registrationId: string,
- *   accreditationId: string | null
+ *   summaryLogRowStateRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository
  * }} context
  * @returns {Promise<WasteRecordState[]>}
  */
 export const summaryLogRowStatesForRegistration = async ({
   ledgerRepository,
   summaryLogRowStateRepository,
+  organisationId,
   registrationId,
   accreditationId
 }) => {
-  const head = await latestSubmittedSummaryLogId(ledgerRepository, {
-    registrationId,
-    accreditationId
-  })
+  const ledgerId = { organisationId, registrationId, accreditationId }
 
-  const summaryLogRowStates = await summaryLogRowStatesForHead(
-    summaryLogRowStateRepository,
-    head
-  )
-  return summaryLogRowStates.map(toWasteRecordState)
+  const head = await latestSubmittedSummaryLogId(ledgerRepository, ledgerId)
+
+  return wasteRecordStatesForHead(summaryLogRowStateRepository, ledgerId, head)
 }

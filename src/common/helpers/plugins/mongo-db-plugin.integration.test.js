@@ -4,6 +4,8 @@ import { Db, MongoClient } from 'mongodb'
 import { LockManager } from 'mongo-locks'
 import { randomUUID } from 'node:crypto'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+
+/** @import { HapiServer } from '#common/hapi-types.js' */
 vi.mock(
   '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
   async () => import('#adapters/sqs-command-executor/mock.plugin.js')
@@ -21,11 +23,7 @@ describe('MongoDB plugin', () => {
 
   beforeAll(async () => {
     await setupMongo({
-      binary: {
-        version: 'latest'
-      },
-      serverOptions: {},
-      autoStart: false
+      serverOptions: {}
     })
 
     const mongoUri = globalThis.__MONGO_URI__
@@ -67,6 +65,8 @@ describe('MongoDB plugin', () => {
     await server2.initialize()
     await server2.stop()
 
-    expect(server2.db).toBeInstanceOf(Db)
+    expect(
+      /** @type {HapiServer} */ (/** @type {unknown} */ (server2)).db
+    ).toBeInstanceOf(Db)
   })
 })

@@ -686,6 +686,8 @@ describe('findStaleIssuedTonnageReports', () => {
         /** @type {any} */ ([
           {
             id: 'prn-1',
+            organisation: { id: organisationId },
+            registrationId,
             accreditation: { id: accreditationId },
             tonnage: 50,
             status: {

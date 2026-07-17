@@ -97,7 +97,21 @@
  */
 
 /**
- * @typedef {{ uploadedAt: string, reason: StaleReason, summaryLogId?: string }} ReportStale
+ * @typedef {{ uploadedAt: string, summaryLogId: string }} StaleSummaryLogChanged
+ */
+
+/**
+ * @typedef {{ occurredAt: string, prnId: string }} StalePrnCancelled
+ */
+
+/**
+ * A report can be stale for either or both independent reasons at once, each
+ * carrying its own provenance. Presence of a named field is the reason code
+ * — see {@link staleReasons} in `#reports/domain/stale.js`.
+ * @typedef {{
+ *   summaryLogChanged?: StaleSummaryLogChanged,
+ *   prnCancelled?: StalePrnCancelled
+ * }} ReportStale
  */
 
 /**
@@ -105,7 +119,7 @@
  */
 
 /**
- * Per-report result returned by {@link ReportsRepository.markActiveReportsStale}.
+ * Per-report result returned by {@link ReportsRepository.markActiveReportsStaleForSummaryLog}.
  * Contains the fields needed to audit the stale transition.
  *
  * @typedef {Object} MarkReportStaleResult
@@ -115,6 +129,18 @@
  * @property {number} period
  * @property {number} submissionNumber
  * @property {ReportStale} stale
+ */
+
+/**
+ * Parameters for {@link ReportsRepository.markActiveReportsStaleForPrnCancellation}.
+ * @typedef {Object} MarkActiveReportsStaleForPrnCancellationParams
+ * @property {string} organisationId - MongoDB ObjectId hex string
+ * @property {string} registrationId - MongoDB ObjectId hex string
+ * @property {number} year
+ * @property {string} cadence - 'monthly' or 'quarterly'
+ * @property {number} period
+ * @property {string} prnId
+ * @property {string} occurredAt
  */
 
 /**
@@ -293,10 +319,17 @@
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
- * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStale
+ * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
  *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
  *   skipping any report already built from `summaryLogId` or already stale from it.
+ *   Sets `stale.summaryLogChanged`, leaving `stale.prnCancelled` untouched if present.
  *   Returns the per-report stale details for auditing.
+ * @property {(params: MarkActiveReportsStaleForPrnCancellationParams) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForPrnCancellation
+ *   Marks the active (in_progress / ready_to_submit) report for the given org/reg/period
+ *   as stale for a PRN cancellation, skipping it if already flagged for this `prnId`.
+ *   Sets `stale.prnCancelled`, leaving `stale.summaryLogChanged` untouched if present.
+ *   Returns the per-report stale details for auditing (empty array if no active report
+ *   exists for the period).
  * @property {(params: MarkSubmittedReportsRequiringResubmissionParams) => Promise<MarkSubmittedReportRequiringResubmissionResult[]>} markSubmittedReportsRequiringResubmission
  *   For each given period, flags the latest submitted report as requiring resubmission,
  *   skipping any report already flagged from `summaryLogId` or built from it.
@@ -313,7 +346,6 @@
  */
 
 /**
- * @import { StaleReason } from '#reports/domain/stale.js'
  * @import { ResubmissionReason } from '#reports/domain/resubmission.js'
  * @import { PeriodRef } from '#reports/domain/period-key.js'
  */

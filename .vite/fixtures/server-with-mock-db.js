@@ -2,7 +2,17 @@ import { test, vi } from 'vitest'
 import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
 
 /**
- * @typedef {import('#common/hapi-types.js').HapiServer & {
+ * @import { TestAPI, Mock } from 'vitest'
+ * @import { HapiServer } from '#common/hapi-types.js'
+ */
+
+/**
+ * The `db` decoration is replaced with the spyable mock this fixture installs,
+ * so tests can `vi.spyOn(server.db, 'collection')` without fighting the real
+ * `Db` type.
+ *
+ * @typedef {Omit<HapiServer, 'db'> & {
+ *   db: { collection: Mock }
  *   loggerMocks: {
  *     info: ReturnType<typeof vi.fn>
  *     error: ReturnType<typeof vi.fn>
@@ -20,66 +30,78 @@ import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
  * delete this file and use createTestServer() with in-memory repositories instead.
  *
  * ~10x faster than testServerFixture because it skips MongoDB startup.
+ *
+ * `server.decorate('server', 'db', mockDb)` adds the spyable mock db at runtime
+ * but does not change the static server type, so the decorated shape is asserted
+ * here, at the boundary, and flows to every consumer typed.
  */
-export const it = test.extend({
-  mockOidcServer: [
-    // eslint-disable-next-line no-empty-pattern
-    async ({}, use) => {
-      const mockOidcServer = createMockOidcServers()
-      mockOidcServer.listen({ onUnhandledRequest: 'warn' })
+export const it =
+  /**
+   * @type {TestAPI<{
+   *   mockOidcServer: ReturnType<typeof createMockOidcServers>
+   *   server: TestServer
+   * }>}
+   */ (
+    test.extend({
+      mockOidcServer: [
+        // eslint-disable-next-line no-empty-pattern
+        async ({}, use) => {
+          const mockOidcServer = createMockOidcServers()
+          mockOidcServer.listen({ onUnhandledRequest: 'warn' })
 
-      await use(mockOidcServer)
+          await use(mockOidcServer)
 
-      mockOidcServer.resetHandlers()
-      mockOidcServer.close()
-    },
-    { auto: true } // Always initialize this fixture even if not used in test
-  ],
-  server: [
-    // eslint-disable-next-line no-empty-pattern
-    async ({}, use) => {
-      const { createServer } = await import('#server/server.js')
-      const testServer = await createServer({
-        _testOnlyLegacyApplyRoutes: true
-      })
+          mockOidcServer.resetHandlers()
+          mockOidcServer.close()
+        },
+        { auto: true } // Always initialize this fixture even if not used in test
+      ],
+      server: [
+        // eslint-disable-next-line no-empty-pattern
+        async ({}, use) => {
+          const { createServer } = await import('#server/server.js')
+          const testServer = await createServer({
+            _testOnlyLegacyApplyRoutes: true
+          })
 
-      // Add a mock db object that can be spied on
-      // This allows tests to do: vi.spyOn(server.db, 'collection')
-      const mockDb = {
-        collection: vi.fn()
-      }
+          // Add a mock db object that can be spied on
+          // This allows tests to do: vi.spyOn(server.db, 'collection')
+          const mockDb = {
+            collection: vi.fn()
+          }
 
-      testServer.decorate('server', 'db', mockDb)
-      testServer.decorate('request', 'db', mockDb)
+          testServer.decorate('server', 'db', mockDb)
+          testServer.decorate('request', 'db', mockDb)
 
-      await testServer.initialize()
+          await testServer.initialize()
 
-      /** @type {TestServer} */
-      const server = /** @type {*} */ (testServer)
+          /** @type {TestServer} */
+          const server = /** @type {*} */ (testServer)
 
-      server.loggerMocks = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn()
-      }
+          server.loggerMocks = {
+            info: vi.fn(),
+            error: vi.fn(),
+            warn: vi.fn()
+          }
 
-      server.ext('onRequest', (request, h) => {
-        vi.spyOn(request.logger, 'info').mockImplementation(
-          server.loggerMocks.info
-        )
-        vi.spyOn(request.logger, 'error').mockImplementation(
-          server.loggerMocks.error
-        )
-        vi.spyOn(request.logger, 'warn').mockImplementation(
-          server.loggerMocks.warn
-        )
-        return h.continue
-      })
+          server.ext('onRequest', (request, h) => {
+            vi.spyOn(request.logger, 'info').mockImplementation(
+              server.loggerMocks.info
+            )
+            vi.spyOn(request.logger, 'error').mockImplementation(
+              server.loggerMocks.error
+            )
+            vi.spyOn(request.logger, 'warn').mockImplementation(
+              server.loggerMocks.warn
+            )
+            return h.continue
+          })
 
-      await use(server)
+          await use(server)
 
-      await testServer.stop()
-    },
-    { scope: 'file' }
-  ]
-})
+          await testServer.stop()
+        },
+        { scope: 'file' }
+      ]
+    })
+  )

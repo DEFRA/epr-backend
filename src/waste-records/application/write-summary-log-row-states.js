@@ -11,9 +11,7 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * and waste-balance classification. Runs for every submission regardless of
  * processing type or accreditation: the ledger's `accreditationId` is null
  * for registered-only and no-accreditation registrations, and rows whose schema
- * has no waste balance classify as EXCLUDED with no contribution. The write is
- * gated by the summary-log-row-states feature flag; with it off this is a no-op,
- * so the row-state repository is never reached.
+ * has no waste balance classify as EXCLUDED with no contribution.
  *
  * Records are first marked excluded-or-included exactly as the balance path
  * does, then classified against the same accreditation (or null), so an
@@ -22,7 +20,6 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  *
  * @param {Object} params
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {{ id: string, validFrom?: string, validTo?: string } | null} params.accreditation
  * @param {import('#waste-records/repository/schema.js').WasteBalanceLedgerId} params.ledgerId
@@ -32,17 +29,12 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  */
 export const writeSummaryLogRowStates = async ({
   summaryLogRowStateRepository,
-  featureFlags,
   wasteRecords,
   accreditation,
   ledgerId,
   overseasSites,
   summaryLogId
 }) => {
-  if (!featureFlags?.isSummaryLogRowStatesEnabled()) {
-    return
-  }
-
   const classifiedRows = markExcludedRecords(wasteRecords).map((record) =>
     projectSummaryLogRowState(record, accreditation, overseasSites)
   )

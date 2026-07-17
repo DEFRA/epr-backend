@@ -14,6 +14,13 @@ import {
   linkRegistrationToAccreditations
 } from '#formsubmission/link-form-submissions.js'
 
+/**
+ * @import { FormSubmissionsRepository } from '#repositories/form-submissions/port.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { Organisation, Registration, Accreditation } from '#formsubmission/types.js'
+ */
+
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: vi.fn(),
@@ -75,31 +82,40 @@ describe('MigrationOrchestrator', () => {
     }
   })
 
-  const createOrg = (id = new ObjectId().toString(), orgId = 500001) => ({
-    id,
-    orgId,
-    companyDetails: { name: `Company ${orgId}` }
-  })
+  const createOrg = (id = new ObjectId().toString(), orgId = 500001) =>
+    /** @type {Organisation} */ (
+      /** @type {unknown} */ ({
+        id,
+        orgId,
+        companyDetails: { name: `Company ${orgId}` }
+      })
+    )
 
   const createReg = (
     id = new ObjectId().toString(),
     systemRef,
     orgId = 500001
-  ) => ({
-    id,
-    systemReference: systemRef,
-    orgId
-  })
+  ) =>
+    /** @type {Registration} */ (
+      /** @type {unknown} */ ({
+        id,
+        systemReference: systemRef,
+        orgId
+      })
+    )
 
   const createAccr = (
     id = new ObjectId().toString(),
     systemRef,
     orgId = 500001
-  ) => ({
-    id,
-    systemReference: systemRef,
-    orgId
-  })
+  ) =>
+    /** @type {Accreditation} */ (
+      /** @type {unknown} */ ({
+        id,
+        systemReference: systemRef,
+        orgId
+      })
+    )
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -127,26 +143,36 @@ describe('MigrationOrchestrator', () => {
     }
 
     migrator = createFormDataMigrator(
-      formsSubmissionRepository,
-      organisationsRepository,
-      systemLogsRepository,
+      /** @type {FormSubmissionsRepository} */ (
+        /** @type {unknown} */ (formsSubmissionRepository)
+      ),
+      /** @type {OrganisationsRepository} */ (
+        /** @type {unknown} */ (organisationsRepository)
+      ),
+      /** @type {SystemLogsRepository} */ (
+        /** @type {unknown} */ (systemLogsRepository)
+      ),
       formsFileUploadsRepository
     )
 
     // Default mock implementations
-    linkItemsToOrganisations.mockImplementation((orgs, items, propName) => {
-      return orgs.map((org) => ({
-        ...org,
-        [propName]: items.filter((item) => item.systemReference === org.id)
-      }))
-    })
+    vi.mocked(linkItemsToOrganisations).mockImplementation(
+      (orgs, items, propName) => {
+        return orgs.map((org) => ({
+          ...org,
+          [propName]: items.filter((item) => item.systemReference === org.id)
+        }))
+      }
+    )
 
-    linkRegistrationToAccreditations.mockImplementation((orgs) => orgs)
+    vi.mocked(linkRegistrationToAccreditations).mockImplementation(
+      (orgs) => orgs
+    )
   })
 
   describe('migrate()', () => {
     it('should exit early when no submissions to migrate', async () => {
-      getSubmissionsToMigrate.mockResolvedValue(createMockDelta())
+      vi.mocked(getSubmissionsToMigrate).mockResolvedValue(createMockDelta())
 
       await migrator.migrate()
 
@@ -162,7 +188,7 @@ describe('MigrationOrchestrator', () => {
       const regId = new ObjectId().toString()
       const accrId = new ObjectId().toString()
 
-      getSubmissionsToMigrate.mockResolvedValue(
+      vi.mocked(getSubmissionsToMigrate).mockResolvedValue(
         createMockDelta([], [orgId], [regId], [accrId])
       )
 
@@ -170,7 +196,7 @@ describe('MigrationOrchestrator', () => {
       const reg = createReg(regId, orgId)
       const accr = createAccr(accrId, orgId)
 
-      transformAll.mockResolvedValue({
+      vi.mocked(transformAll).mockResolvedValue({
         organisations: [org],
         registrations: [reg],
         accreditations: [accr]
@@ -204,14 +230,14 @@ describe('MigrationOrchestrator', () => {
       const regId = new ObjectId().toString()
       const accrId = new ObjectId().toString()
 
-      getSubmissionsToMigrate.mockResolvedValue(
+      vi.mocked(getSubmissionsToMigrate).mockResolvedValue(
         createMockDelta([orgId], [], [regId], [accrId])
       )
 
       const reg = createReg(regId, orgId)
       const accr = createAccr(accrId, orgId)
 
-      transformAll.mockResolvedValue({
+      vi.mocked(transformAll).mockResolvedValue({
         organisations: [],
         registrations: [reg],
         accreditations: [accr]
@@ -245,7 +271,7 @@ describe('MigrationOrchestrator', () => {
       const reg1Id = new ObjectId().toString()
       const reg2Id = new ObjectId().toString()
 
-      getSubmissionsToMigrate.mockResolvedValue(
+      vi.mocked(getSubmissionsToMigrate).mockResolvedValue(
         createMockDelta([existingOrgId], [newOrgId], [reg1Id, reg2Id], [])
       )
 
@@ -253,7 +279,7 @@ describe('MigrationOrchestrator', () => {
       const reg1 = createReg(reg1Id, newOrgId, 500001)
       const reg2 = createReg(reg2Id, existingOrgId, 500002)
 
-      transformAll.mockResolvedValue({
+      vi.mocked(transformAll).mockResolvedValue({
         organisations: [newOrg],
         registrations: [reg1, reg2],
         accreditations: []
@@ -293,7 +319,7 @@ describe('MigrationOrchestrator', () => {
       const regId = new ObjectId().toString()
       const accrId = new ObjectId().toString()
 
-      getSubmissionsToMigrate.mockResolvedValue(
+      vi.mocked(getSubmissionsToMigrate).mockResolvedValue(
         createMockDelta([], [orgId], [regId], [accrId])
       )
 
@@ -301,7 +327,7 @@ describe('MigrationOrchestrator', () => {
       const reg = createReg(regId, orgId)
       const accr = createAccr(accrId, orgId)
 
-      transformAll.mockResolvedValue({
+      vi.mocked(transformAll).mockResolvedValue({
         organisations: [org],
         registrations: [reg],
         accreditations: [accr]
@@ -317,7 +343,7 @@ describe('MigrationOrchestrator', () => {
     })
 
     it('should not call copyOperatorUploadedFiles when there are no submissions to migrate', async () => {
-      getSubmissionsToMigrate.mockResolvedValue(createMockDelta())
+      vi.mocked(getSubmissionsToMigrate).mockResolvedValue(createMockDelta())
 
       await migrator.migrate()
 
@@ -369,7 +395,7 @@ describe('MigrationOrchestrator', () => {
         accreditations: new Set()
       })
 
-      transformAll.mockResolvedValue({
+      vi.mocked(transformAll).mockResolvedValue({
         organisations: [org],
         registrations: [],
         accreditations: []
@@ -418,7 +444,7 @@ describe('MigrationOrchestrator', () => {
         accreditations: new Set()
       })
 
-      transformAll.mockResolvedValue({
+      vi.mocked(transformAll).mockResolvedValue({
         organisations: [org],
         registrations: [reg],
         accreditations: []
@@ -462,7 +488,7 @@ describe('MigrationOrchestrator', () => {
         accreditations: new Set()
       })
 
-      transformAll.mockResolvedValue({
+      vi.mocked(transformAll).mockResolvedValue({
         organisations: [org],
         registrations: [],
         accreditations: [accr]
@@ -504,13 +530,13 @@ describe('MigrationOrchestrator', () => {
         accreditations: new Set()
       })
 
-      transformAll.mockResolvedValue({
+      vi.mocked(transformAll).mockResolvedValue({
         organisations: [org],
         registrations: [],
         accreditations: []
       })
 
-      upsertOrganisations.mockResolvedValueOnce({
+      vi.mocked(upsertOrganisations).mockResolvedValueOnce({
         successful: [],
         failed: [{ success: false, id: orgId, phase: 'insert' }]
       })
@@ -543,7 +569,7 @@ describe('MigrationOrchestrator', () => {
         accreditations: new Set()
       })
 
-      transformAll.mockResolvedValue({
+      vi.mocked(transformAll).mockResolvedValue({
         organisations: [org],
         registrations: [reg],
         accreditations: [accr]

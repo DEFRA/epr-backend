@@ -46,6 +46,7 @@
  *   reprocessingNations?: string[]
  *   submitterContactDetails: User
  *   submittedToRegulator: string
+ *   version?: number
  *   wasteProcessingTypes: string[]
  * }} BaseOrganisation
  */

@@ -7,6 +7,8 @@ import {
 
 import { boomErrorLogger } from './boom-error-logger.js'
 
+/** @import { ServerRegisterPluginObject } from '@hapi/hapi' */
+
 describe('boom-error-logger plugin', () => {
   let server
   let mockLogger
@@ -22,7 +24,11 @@ describe('boom-error-logger plugin', () => {
       return h.continue
     })
 
-    await server.register({ plugin: boomErrorLogger.plugin })
+    await server.register(
+      /** @type {ServerRegisterPluginObject<void>} */ (
+        /** @type {unknown} */ (boomErrorLogger)
+      )
+    )
 
     server.route([
       {
@@ -62,13 +68,14 @@ describe('boom-error-logger plugin', () => {
         method: 'GET',
         path: '/enriched',
         handler: () => {
-          const boom = Boom.badRequest('Something invalid')
-          boom.code = 'SOMETHING_INVALID'
-          boom.event = {
-            action: 'create_report',
-            reason: 'foo=bar baz=qux',
-            reference: 'reg-123'
-          }
+          const boom = Object.assign(Boom.badRequest('Something invalid'), {
+            code: 'SOMETHING_INVALID',
+            event: {
+              action: 'create_report',
+              reason: 'foo=bar baz=qux',
+              reference: 'reg-123'
+            }
+          })
           throw boom
         }
       }

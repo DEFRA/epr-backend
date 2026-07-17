@@ -6,7 +6,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 describe('GET /health', () => {
   setupAuthContext()
   it('returns 200 with success message', async () => {
-    const server = await createTestServer({ skipMongoDb: true })
+    const server = await createTestServer()
 
     const response = await server.inject({
       method: 'GET',

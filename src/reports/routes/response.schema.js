@@ -7,7 +7,8 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   cadenceSchema,
   periodSchema,
-  prnSchema
+  prnSchema,
+  staleSchema
 } from '#reports/repository/schema.js'
 
 const userSummarySchema = Joi.object({
@@ -84,6 +85,7 @@ export const reportDetailResponseSchema = Joi.object({
   })
     .unknown(true)
     .required(),
+  stale: staleSchema.optional(),
   startDate: Joi.string().isoDate().optional(),
   wasteSent: Joi.object({
     finalDestinations: Joi.array().required(),

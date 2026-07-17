@@ -36,21 +36,6 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(false)
   })
 
-  it('returns true when summaryLogRowStates flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({ summaryLogRowStates: true })
-    expect(flags.isSummaryLogRowStatesEnabled()).toBe(true)
-  })
-
-  it('returns false when summaryLogRowStates flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({ summaryLogRowStates: false })
-    expect(flags.isSummaryLogRowStatesEnabled()).toBe(false)
-  })
-
-  it('returns false when summaryLogRowStates flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isSummaryLogRowStatesEnabled()).toBe(false)
-  })
-
   it('returns true when staleIssuedTonnageReport flag is enabled', () => {
     const flags = createInMemoryFeatureFlags({
       staleIssuedTonnageReport: true

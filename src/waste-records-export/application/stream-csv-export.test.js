@@ -12,10 +12,16 @@ import {
 } from '../domain/csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 
 const collect = async (gen) => {
   const out = []
-  for await (const row of gen) out.push(row)
+  for await (const row of gen) {
+    out.push(row)
+  }
   return out
 }
 
@@ -42,48 +48,98 @@ const baseRegistration = (overrides = {}) => ({
   ...overrides
 })
 
-const reprocessorReceivedRecord = (overrides = {}) => ({
-  type: WASTE_RECORD_TYPE.RECEIVED,
+const naClassification = () => ({
+  outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+  reasons: [],
+  transactionAmount: 0
+})
+
+// A committed row-state entry (upsert shape). Defaults to an NA-outcome
+// reprocessor received row — inclusion is now read from the stamped
+// classification rather than recomputed, so tests set the outcome directly.
+const receivedRowState = (overrides = {}) => ({
   rowId: '1001',
-  data: {
-    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-    DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01'
-  },
-  versions: [{ summaryLog: { id: 'sl-1' } }],
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+  data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01' },
+  classification: naClassification(),
   ...overrides
 })
 
-const defaultDeps = () => ({
-  organisationsRepository: {
-    findAll: vi.fn().mockResolvedValue([]),
-    findById: vi.fn().mockResolvedValue(baseOrg())
-  },
-  wasteRecordsRepository: {
-    findByRegistration: vi.fn().mockResolvedValue([]),
-    findDistinctDataKeys: vi.fn().mockResolvedValue([])
-  },
-  summaryLogsRepository: {
-    findAllByOrgReg: vi.fn().mockResolvedValue([])
-  },
-  overseasSitesRepository: {
-    findAll: vi.fn().mockResolvedValue([])
-  }
-})
+const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
 
-// Shallow-merges per-repo overrides so individual tests can swap a single
-// method (e.g. `findByRegistration`) without losing the default mocks for
-// other methods on the same repository.
-const baseDeps = (overrides = {}) => {
-  const merged = defaultDeps()
-  for (const [key, value] of Object.entries(overrides)) {
-    merged[key] = { ...merged[key], ...value }
+/**
+ * Build export deps backed by the real in-memory ledger and row-state
+ * adapters. `seeds` lists each registration's submitted summary log and its
+ * committed rows; the ledger records one submitted event per seed so the
+ * export resolves that summary log as the registration's latest.
+ *
+ * @param {{
+ *   orgs?: any[],
+ *   seeds?: any[],
+ *   summaryLogs?: Record<string, any[]>,
+ *   sites?: any[],
+ *   organisationId?: string,
+ *   registrationId?: string
+ * }} [options]
+ */
+const buildDeps = async ({
+  orgs = [],
+  seeds = [],
+  summaryLogs = {},
+  sites = [],
+  organisationId,
+  registrationId
+} = {}) => {
+  const ledgerEvents = seeds.map((seed) =>
+    buildLedgerEvent({
+      organisationId: seed.organisationId ?? 'org-1',
+      registrationId: seed.registrationId ?? 'reg-1',
+      accreditationId: seed.accreditationId ?? null,
+      number: 1,
+      payload: {
+        summaryLogId: seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID,
+        creditTotal: 0
+      }
+    })
+  )
+  const ledgerRepository = createInMemoryLedgerRepository(ledgerEvents)()
+
+  const summaryLogRowStatesRepository =
+    createInMemorySummaryLogRowStateRepository()()
+  for (const seed of seeds) {
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
+      {
+        organisationId: seed.organisationId ?? 'org-1',
+        registrationId: seed.registrationId ?? 'reg-1',
+        accreditationId: seed.accreditationId ?? null
+      },
+      seed.rows ?? [],
+      seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID
+    )
   }
-  return merged
+
+  return {
+    organisationsRepository: {
+      findAll: async () => orgs,
+      findById: async (id) => orgs.find((org) => org.id === id)
+    },
+    summaryLogRowStatesRepository,
+    ledgerRepository,
+    summaryLogsRepository: {
+      findAllByOrgReg: async (org, reg) => summaryLogs[`${org}/${reg}`] ?? []
+    },
+    overseasSitesRepository: {
+      findAll: async () => sites
+    },
+    organisationId,
+    registrationId
+  }
 }
 
 describe('streamCsvExport', () => {
   it('emits the header row even when no organisations exist', async () => {
-    const out = await collect(streamCsvExport(baseDeps()))
+    const out = await collect(streamCsvExport(await buildDeps()))
     expect(out).toHaveLength(1)
     // The header row is CSV-encoded and ends with a newline
     expect(out[0].endsWith('\n')).toBe(true)
@@ -95,23 +151,17 @@ describe('streamCsvExport', () => {
     }
   })
 
-  it('emits one data row per waste record with org/registration/record/summaryLog data populated', async () => {
-    const org = baseOrg({
-      registrations: [baseRegistration()]
-    })
-    const record = reprocessorReceivedRecord()
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([record])
-      },
-      summaryLogsRepository: {
-        findAllByOrgReg: vi.fn().mockResolvedValue([
+  it('emits one data row per row state with org/registration/row/summaryLog data populated', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [{ rows: [receivedRowState()] }],
+      summaryLogs: {
+        'org-1/reg-1': [
           {
-            id: 'sl-1',
+            id: DEFAULT_SUMMARY_LOG_ID,
             summaryLog: { submittedAt: '2026-04-15T09:00:00Z' }
           }
-        ])
+        ]
       }
     })
 
@@ -124,14 +174,6 @@ describe('streamCsvExport', () => {
     expect(out[1]).toContain('received')
     expect(out[1]).toContain('2026-04-15T09:00:00Z')
     expect(out[1]).toContain('1001')
-    expect(deps.summaryLogsRepository.findAllByOrgReg).toHaveBeenCalledWith(
-      'org-1',
-      'reg-1'
-    )
-    expect(deps.wasteRecordsRepository.findByRegistration).toHaveBeenCalledWith(
-      'org-1',
-      'reg-1'
-    )
   })
 
   it('emits registration and accreditation numbers and the detailed glass material', async () => {
@@ -155,12 +197,9 @@ describe('streamCsvExport', () => {
         })
       ]
     })
-    const record = reprocessorReceivedRecord()
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([record])
-      }
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [{ accreditationId: 'acc-1', rows: [receivedRowState()] }]
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -173,18 +212,20 @@ describe('streamCsvExport', () => {
   })
 
   it('serialises a numeric data field bare so it is a real number in the CSV', async () => {
-    const org = baseOrg({ registrations: [baseRegistration()] })
-    const record = reprocessorReceivedRecord({
-      data: {
-        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-        GROSS_WEIGHT: 10
-      }
-    })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([record])
-      }
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+                GROSS_WEIGHT: 10
+              }
+            })
+          ]
+        }
+      ]
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -196,16 +237,14 @@ describe('streamCsvExport', () => {
   })
 
   it('apostrophe-prefixes a dangerous free-text value end to end', async () => {
-    const org = baseOrg({
-      companyDetails: { name: '=cmd|calc' },
-      registrations: [baseRegistration()]
-    })
-    const record = reprocessorReceivedRecord()
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([record])
-      }
+    const deps = await buildDeps({
+      orgs: [
+        baseOrg({
+          companyDetails: { name: '=cmd|calc' },
+          registrations: [baseRegistration()]
+        })
+      ],
+      seeds: [{ rows: [receivedRowState()] }]
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -216,19 +255,11 @@ describe('streamCsvExport', () => {
     expect(out[1]).not.toContain('"=cmd|calc"')
   })
 
-  it('emits empty Submitted At when the record references a missing summary log', async () => {
-    const org = baseOrg({ registrations: [baseRegistration()] })
-    const record = reprocessorReceivedRecord({
-      versions: [{ summaryLog: { id: 'sl-missing' } }]
-    })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([record])
-      },
-      summaryLogsRepository: {
-        findAllByOrgReg: vi.fn().mockResolvedValue([])
-      }
+  it('emits empty Submitted At when no summary log matches the latest submitted id', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [{ rows: [receivedRowState()] }],
+      summaryLogs: {}
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -237,44 +268,41 @@ describe('streamCsvExport', () => {
     expect(cells[METADATA_COL_INDEX['Submitted At']]).toBe('')
   })
 
-  it('processes received, processed, sentOn and exported records on the same registration', async () => {
-    const org = baseOrg({ registrations: [baseRegistration()] })
-    const received = reprocessorReceivedRecord({ rowId: '1001' })
-    const processed = {
-      type: WASTE_RECORD_TYPE.PROCESSED,
-      rowId: '2001',
-      data: { processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT },
-      versions: [{ summaryLog: { id: 'sl-1' } }]
-    }
-    const sentOn = {
-      type: WASTE_RECORD_TYPE.SENT_ON,
-      rowId: '3001',
-      data: {
-        processingType: PROCESSING_TYPES.EXPORTER,
-        FINAL_DESTINATION_NAME: 'Other Co'
-      },
-      versions: [{ summaryLog: { id: 'sl-1' } }]
-    }
-    const exported = {
-      type: WASTE_RECORD_TYPE.EXPORTED,
-      rowId: '4001',
-      data: {
-        processingType: PROCESSING_TYPES.EXPORTER,
-        DATE_OF_EXPORT: '2026-03-01'
-      },
-      versions: [{ summaryLog: { id: 'sl-1' } }]
-    }
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([received, processed, sentOn, exported])
-      }
+  it('processes received, processed, sentOn and exported rows on the same registration', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({ rowId: '1001' }),
+            {
+              rowId: '2001',
+              wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
+              processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+              data: {},
+              classification: naClassification()
+            },
+            {
+              rowId: '3001',
+              wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+              processingType: PROCESSING_TYPES.EXPORTER,
+              data: { FINAL_DESTINATION_NAME: 'Other Co' },
+              classification: naClassification()
+            },
+            {
+              rowId: '4001',
+              wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+              processingType: PROCESSING_TYPES.EXPORTER,
+              data: { DATE_OF_EXPORT: '2026-03-01' },
+              classification: naClassification()
+            }
+          ]
+        }
+      ]
     })
 
     const out = await collect(streamCsvExport(deps))
-    expect(out).toHaveLength(5) // header + 4 records
+    expect(out).toHaveLength(5) // header + 4 rows
     // After sort by (type, rowId): exported < processed < received < sentOn (alphabetical)
     expect(out[1]).toContain('exported')
     expect(out[2]).toContain('processed')
@@ -284,7 +312,6 @@ describe('streamCsvExport', () => {
   })
 
   it('builds the ORS context once per registration from the pre-loaded sites map', async () => {
-    const validFrom = new Date('2026-01-01')
     const org = baseOrg({
       accreditations: [
         {
@@ -299,57 +326,39 @@ describe('streamCsvExport', () => {
         baseRegistration({
           accreditation: null,
           accreditationId: 'acc-1',
-          overseasSites: {
-            '001': { overseasSiteId: 'site-a' }
-          }
+          overseasSites: { '001': { overseasSiteId: 'site-a' } }
         })
       ]
     })
-    // An EXPORTED record with all required fields and OSR_ID '001'.
-    // With validFrom matching the export date, classifyForWasteBalance should INCLUDE it.
-    const exportedRecord = {
-      type: WASTE_RECORD_TYPE.EXPORTED,
-      rowId: '4001',
-      data: {
-        processingType: PROCESSING_TYPES.EXPORTER,
-        ROW_ID: '4001',
-        DATE_RECEIVED_FOR_EXPORT: '2026-02-01',
-        EWC_CODE: '15 01 02',
-        DESCRIPTION_WASTE: 'Plastic packaging',
-        WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
-        GROSS_WEIGHT: 10,
-        TARE_WEIGHT: 1,
-        PALLET_WEIGHT: 0,
-        NET_WEIGHT: 9,
-        BAILING_WIRE_PROTOCOL: 'No',
-        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
-        WEIGHT_OF_NON_TARGET_MATERIALS: 0,
-        RECYCLABLE_PROPORTION_PERCENTAGE: 100,
-        TONNAGE_RECEIVED_FOR_EXPORT: 9,
-        TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9,
-        DATE_OF_EXPORT: '2026-03-01',
-        BASEL_EXPORT_CODE: 'B3010',
-        CUSTOMS_CODES: '391510',
-        CONTAINER_NUMBER: 'CN-001',
-        DATE_RECEIVED_BY_OSR: '2026-04-01',
-        OSR_ID: '001',
-        DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'No'
-      },
-      versions: [{ summaryLog: { id: 'sl-1' } }]
-    }
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([exportedRecord])
-      },
-      overseasSitesRepository: {
-        findAll: vi.fn().mockResolvedValue([{ id: 'site-a', validFrom }])
-      }
+    const findAll = vi
+      .fn()
+      .mockResolvedValue([{ id: 'site-a', validFrom: new Date('2026-01-01') }])
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-1',
+          rows: [
+            {
+              rowId: '4001',
+              wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+              processingType: PROCESSING_TYPES.EXPORTER,
+              data: { OSR_ID: '001', DATE_OF_EXPORT: '2026-03-01' },
+              classification: {
+                outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+                reasons: [],
+                transactionAmount: 9
+              }
+            }
+          ]
+        }
+      ]
     })
+    deps.overseasSitesRepository.findAll = findAll
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(2)
-    expect(deps.overseasSitesRepository.findAll).toHaveBeenCalledTimes(1)
+    expect(findAll).toHaveBeenCalledTimes(1)
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
   })
@@ -362,31 +371,29 @@ describe('streamCsvExport', () => {
         })
       ]
     })
-    const exportedRecord = {
-      type: WASTE_RECORD_TYPE.EXPORTED,
-      rowId: '4001',
-      data: {
-        processingType: PROCESSING_TYPES.EXPORTER,
-        OSR_ID: '001',
-        DATE_OF_EXPORT: '2026-03-01'
-      },
-      versions: [{ summaryLog: { id: 'sl-1' } }]
-    }
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([exportedRecord])
-      },
-      overseasSitesRepository: {
-        findAll: vi.fn().mockResolvedValue([
-          {
-            id: 'site-a',
-            validFrom: new Date('2026-01-01'),
-            name: 'Acme Recycling',
-            country: 'Germany'
-          }
-        ])
-      }
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          rows: [
+            {
+              rowId: '4001',
+              wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+              processingType: PROCESSING_TYPES.EXPORTER,
+              data: { OSR_ID: '001', DATE_OF_EXPORT: '2026-03-01' },
+              classification: naClassification()
+            }
+          ]
+        }
+      ],
+      sites: [
+        {
+          id: 'site-a',
+          validFrom: new Date('2026-01-01'),
+          name: 'Acme Recycling',
+          country: 'Germany'
+        }
+      ]
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -397,14 +404,9 @@ describe('streamCsvExport', () => {
   })
 
   it('leaves the derived OSR columns blank for a reprocessor row with no OSR_ID', async () => {
-    const org = baseOrg({ registrations: [baseRegistration()] })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([reprocessorReceivedRecord()])
-      }
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [{ rows: [receivedRowState()] }]
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -414,112 +416,26 @@ describe('streamCsvExport', () => {
     expect(cells[header.indexOf(OSR_NAME_REVISED)]).toBe('')
   })
 
-  const exporterAccreditation = {
-    id: 'acc-1',
-    status: 'approved',
-    validFrom: '2026-01-01',
-    validTo: '2026-12-31',
-    statusHistory: []
-  }
-
-  const exportedRecordForAccreditationTests = (dateOfExport) => ({
-    type: WASTE_RECORD_TYPE.EXPORTED,
-    rowId: '5001',
-    data: {
-      processingType: PROCESSING_TYPES.EXPORTER,
-      ROW_ID: '5001',
-      DATE_RECEIVED_FOR_EXPORT: '2026-02-01',
-      EWC_CODE: '15 01 02',
-      DESCRIPTION_WASTE: 'Plastic packaging',
-      WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
-      GROSS_WEIGHT: 10,
-      TARE_WEIGHT: 1,
-      PALLET_WEIGHT: 0,
-      NET_WEIGHT: 9,
-      BAILING_WIRE_PROTOCOL: 'No',
-      HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
-      WEIGHT_OF_NON_TARGET_MATERIALS: 0,
-      RECYCLABLE_PROPORTION_PERCENTAGE: 100,
-      TONNAGE_RECEIVED_FOR_EXPORT: 9,
-      TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9,
-      DATE_OF_EXPORT: dateOfExport,
-      BASEL_EXPORT_CODE: 'B3010',
-      CUSTOMS_CODES: '391510',
-      CONTAINER_NUMBER: 'CN-001',
-      DATE_RECEIVED_BY_OSR: '2026-04-01',
-      OSR_ID: '001',
-      DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'No'
-    },
-    versions: [{ summaryLog: { id: 'sl-1' } }]
-  })
-
-  it('marks accredited exporter row as included when DATE_OF_EXPORT is within accreditation period', async () => {
-    const org = baseOrg({
-      accreditations: [exporterAccreditation],
-      registrations: [
-        baseRegistration({
-          accreditation: null,
-          accreditationId: 'acc-1',
-          overseasSites: { '001': { overseasSiteId: 'site-a' } }
-        })
+  it('renders a stamped EXCLUDED classification as false with its reason and blank tonnage', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({
+              classification: {
+                outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
+                reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }],
+                transactionAmount: 0
+              }
+            })
+          ]
+        }
       ]
-    })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([
-            exportedRecordForAccreditationTests('2026-03-01')
-          ])
-      },
-      overseasSitesRepository: {
-        findAll: vi
-          .fn()
-          .mockResolvedValue([
-            { id: 'site-a', validFrom: new Date('2026-01-01') }
-          ])
-      }
     })
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
-    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
-    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
-  })
-
-  it('marks accredited exporter row as not included when DATE_OF_EXPORT is outside accreditation period', async () => {
-    const org = baseOrg({
-      accreditations: [exporterAccreditation],
-      registrations: [
-        baseRegistration({
-          accreditation: null,
-          accreditationId: 'acc-1',
-          overseasSites: { '001': { overseasSiteId: 'site-a' } }
-        })
-      ]
-    })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([
-            exportedRecordForAccreditationTests('2025-06-01')
-          ])
-      },
-      overseasSitesRepository: {
-        findAll: vi
-          .fn()
-          .mockResolvedValue([
-            { id: 'site-a', validFrom: new Date('2026-01-01') }
-          ])
-      }
-    })
-
-    const out = await collect(streamCsvExport(deps))
-    const cells = out[1].trim().split(',')
-    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
     expect(
       cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]
@@ -527,72 +443,116 @@ describe('streamCsvExport', () => {
     expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
   })
 
-  it('emits empty Waste Balance Exclusion Reason when the record is included', async () => {
-    const org = baseOrg({
-      accreditations: [exporterAccreditation],
-      registrations: [
-        baseRegistration({
-          accreditation: null,
-          accreditationId: 'acc-1',
-          overseasSites: { '001': { overseasSiteId: 'site-a' } }
-        })
+  it('renders a stamped EXCLUDED reason with a field as "code: field"', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({
+              classification: {
+                outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
+                reasons: [
+                  {
+                    code: 'MISSING_REQUIRED_FIELD',
+                    field: 'TONNAGE_RECEIVED_FOR_RECYCLING'
+                  }
+                ],
+                transactionAmount: 0
+              }
+            })
+          ]
+        }
       ]
     })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([
-            exportedRecordForAccreditationTests('2026-03-01')
-          ])
-      },
-      overseasSitesRepository: {
-        findAll: vi
-          .fn()
-          .mockResolvedValue([
-            { id: 'site-a', validFrom: new Date('2026-01-01') }
-          ])
-      }
+
+    const out = await collect(streamCsvExport(deps))
+    expect(out[1]).toContain(
+      'MISSING_REQUIRED_FIELD: TONNAGE_RECEIVED_FOR_RECYCLING'
+    )
+  })
+
+  it('renders a stamped INCLUDED classification as true with its tonnage and blank reason', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({
+              classification: {
+                outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+                reasons: [],
+                transactionAmount: 9
+              }
+            })
+          ]
+        }
+      ]
     })
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
     expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
-    expect(
-      Number(cells[METADATA_COL_INDEX['Waste Balance Tonnage']])
-    ).toBeGreaterThan(0)
+    expect(Number(cells[METADATA_COL_INDEX['Waste Balance Tonnage']])).toBe(9)
   })
 
   it('reads Accredited "Yes" with the number for a suspended accreditation', async () => {
-    const suspendedAccreditation = {
-      id: 'acc-1',
-      status: 'suspended',
-      accreditationNumber: 'ACC-SUS-1',
-      validFrom: '2026-01-01',
-      validTo: '2026-12-31',
-      statusHistory: []
-    }
     const org = baseOrg({
-      accreditations: [suspendedAccreditation],
+      accreditations: [
+        {
+          id: 'acc-1',
+          status: 'suspended',
+          accreditationNumber: 'ACC-SUS-1',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: []
+        }
+      ],
       registrations: [
         baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
       ]
     })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([reprocessorReceivedRecord()])
-      }
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [{ accreditationId: 'acc-1', rows: [receivedRowState()] }]
     })
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
     expect(cells[METADATA_COL_INDEX['Accreditation Number']]).toBe('ACC-SUS-1')
+  })
+
+  it('still exports rows submitted under a since-cancelled accreditation, as Accredited "No"', async () => {
+    // Row states are keyed by the accreditation id stamped at submission —
+    // whatever its status — so a cancellation after submission must not drop
+    // the registration's rows from the FOI export.
+    const org = baseOrg({
+      accreditations: [
+        {
+          id: 'acc-1',
+          status: 'cancelled',
+          accreditationNumber: 'ACC-CAN-1',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: []
+        }
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [{ accreditationId: 'acc-1', rows: [receivedRowState()] }]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    expect(out).toHaveLength(2) // header + the row survives the cancellation
+    const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
   })
 
   it('iterates organisations and registrations sorted by id for deterministic output', async () => {
@@ -609,32 +569,49 @@ describe('streamCsvExport', () => {
       companyDetails: { name: 'Alpha' },
       registrations: [baseRegistration({ id: 'reg-x' })]
     })
-    const callOrder = []
-    const deps = baseDeps({
-      organisationsRepository: {
-        findAll: vi.fn().mockResolvedValue([orgB, orgA])
-      },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn(async (orgId, regId) => {
-          callOrder.push(`${orgId}/${regId}`)
-          return []
-        })
-      }
+    const deps = await buildDeps({
+      orgs: [orgB, orgA],
+      seeds: [
+        {
+          organisationId: 'org-a',
+          registrationId: 'reg-x',
+          summaryLogId: 'sl-ax',
+          rows: [receivedRowState()]
+        },
+        {
+          organisationId: 'org-b',
+          registrationId: 'reg-1',
+          summaryLogId: 'sl-b1',
+          rows: [receivedRowState()]
+        },
+        {
+          organisationId: 'org-b',
+          registrationId: 'reg-2',
+          summaryLogId: 'sl-b2',
+          rows: [receivedRowState()]
+        }
+      ]
     })
 
-    await collect(streamCsvExport(deps))
-    expect(callOrder).toEqual(['org-a/reg-x', 'org-b/reg-1', 'org-b/reg-2'])
+    const out = await collect(streamCsvExport(deps))
+    // header + one row each, ordered org-a/reg-x, org-b/reg-1, org-b/reg-2
+    expect(out).toHaveLength(4)
+    expect(out[1]).toContain('Alpha')
+    expect(out[2]).toContain('Beta')
+    expect(out[3]).toContain('Beta')
   })
 
-  it('emits records sorted by (type, rowId) for determinism', async () => {
-    const org = baseOrg({ registrations: [baseRegistration()] })
-    const recordHigh = reprocessorReceivedRecord({ rowId: '2002' })
-    const recordLow = reprocessorReceivedRecord({ rowId: '1001' })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([recordHigh, recordLow])
-      }
+  it('emits rows sorted by (type, rowId) for determinism', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({ rowId: '2002' }),
+            receivedRowState({ rowId: '1001' })
+          ]
+        }
+      ]
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -644,14 +621,16 @@ describe('streamCsvExport', () => {
   })
 
   it('orders rowIds naturally so "9" comes before "10"', async () => {
-    const org = baseOrg({ registrations: [baseRegistration()] })
-    const recordTen = reprocessorReceivedRecord({ rowId: '10' })
-    const recordNine = reprocessorReceivedRecord({ rowId: '9' })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([recordTen, recordNine])
-      }
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({ rowId: '10' }),
+            receivedRowState({ rowId: '9' })
+          ]
+        }
+      ]
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -660,63 +639,32 @@ describe('streamCsvExport', () => {
     expect(out[2].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('10')
   })
 
-  it('emits NA when inclusion cannot be computed (e.g. no accreditation)', async () => {
-    const org = baseOrg({
-      registrations: [baseRegistration({ accreditation: undefined })]
-    })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([reprocessorReceivedRecord()])
-      }
+  it('renders a stamped NOT_APPLICABLE classification as NA with blank reason and tonnage', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [{ rows: [receivedRowState()] }]
     })
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
-    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
     expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
     expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
   })
 
-  it('emits NA WB columns for an operator with a cancelled accreditation', async () => {
-    const cancelledAccreditation = {
-      id: 'acc-1',
-      status: 'cancelled',
-      accreditationNumber: 'ACC-CAN-1',
-      validFrom: '2026-01-01',
-      validTo: '2026-12-31',
-      statusHistory: []
-    }
-    const org = baseOrg({
-      accreditations: [cancelledAccreditation],
-      registrations: [
-        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
-      ]
-    })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([reprocessorReceivedRecord()])
-      }
+  it('contributes no rows for a registration with no submitted summary log', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: []
     })
 
     const out = await collect(streamCsvExport(deps))
-    const cells = out[1].trim().split(',')
-    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
-    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
-    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
-    expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
+    expect(out).toHaveLength(1) // header only
   })
 
   it('skips organisations that have no registrations array', async () => {
-    const org = baseOrg({ registrations: undefined })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) }
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: undefined })]
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -739,14 +687,22 @@ describe('streamCsvExport', () => {
       companyDetails: { name: 'Real Org' },
       registrations: [baseRegistration({ id: 'reg-real' })]
     })
-    const findByRegistration = vi
-      .fn()
-      .mockResolvedValue([reprocessorReceivedRecord()])
-    const deps = baseDeps({
-      organisationsRepository: {
-        findAll: vi.fn().mockResolvedValue([testOrg, realOrg])
-      },
-      wasteRecordsRepository: { findByRegistration }
+    const deps = await buildDeps({
+      orgs: [testOrg, realOrg],
+      seeds: [
+        {
+          organisationId: 'org-test',
+          registrationId: 'reg-test',
+          summaryLogId: 'sl-test',
+          rows: [receivedRowState()]
+        },
+        {
+          organisationId: 'org-real',
+          registrationId: 'reg-real',
+          summaryLogId: 'sl-real',
+          rows: [receivedRowState()]
+        }
+      ]
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -754,8 +710,6 @@ describe('streamCsvExport', () => {
     expect(out).toHaveLength(2) // header + one row for the real org only
     expect(out[1]).toContain('Real Org')
     expect(out[1]).not.toContain('Test Org')
-    expect(findByRegistration).toHaveBeenCalledTimes(1)
-    expect(findByRegistration).toHaveBeenCalledWith('org-real', 'reg-real')
   })
 
   it('fetches a single organisation by id and skips findAll when scoped by organisationId', async () => {
@@ -764,26 +718,17 @@ describe('streamCsvExport', () => {
       companyDetails: { name: 'Scoped Org' },
       registrations: [baseRegistration()]
     })
-    const deps = baseDeps({
-      organisationsRepository: {
-        findById: vi.fn().mockResolvedValue(org),
-        findAll: vi.fn().mockResolvedValue([])
-      },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([reprocessorReceivedRecord()])
-      }
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [{ organisationId: 'org-scoped', rows: [receivedRowState()] }],
+      organisationId: 'org-scoped'
     })
+    const findAll = vi.fn().mockResolvedValue([])
+    deps.organisationsRepository.findAll = findAll
 
-    const out = await collect(
-      streamCsvExport({ ...deps, organisationId: 'org-scoped' })
-    )
+    const out = await collect(streamCsvExport(deps))
 
-    expect(deps.organisationsRepository.findById).toHaveBeenCalledWith(
-      'org-scoped'
-    )
-    expect(deps.organisationsRepository.findAll).not.toHaveBeenCalled()
+    expect(findAll).not.toHaveBeenCalled()
     expect(out).toHaveLength(2)
     expect(out[1]).toContain('Scoped Org')
   })
@@ -796,25 +741,30 @@ describe('streamCsvExport', () => {
         baseRegistration({ id: 'reg-2' })
       ]
     })
-    const findByRegistration = vi
-      .fn()
-      .mockResolvedValue([reprocessorReceivedRecord()])
-    const deps = baseDeps({
-      organisationsRepository: { findById: vi.fn().mockResolvedValue(org) },
-      wasteRecordsRepository: { findByRegistration }
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          organisationId: 'org-scoped',
+          registrationId: 'reg-1',
+          summaryLogId: 'sl-1',
+          rows: [receivedRowState()]
+        },
+        {
+          organisationId: 'org-scoped',
+          registrationId: 'reg-2',
+          summaryLogId: 'sl-2',
+          rows: [receivedRowState({ rowId: '2001' })]
+        }
+      ],
+      organisationId: 'org-scoped',
+      registrationId: 'reg-2'
     })
 
-    const out = await collect(
-      streamCsvExport({
-        ...deps,
-        organisationId: 'org-scoped',
-        registrationId: 'reg-2'
-      })
-    )
+    const out = await collect(streamCsvExport(deps))
 
-    expect(out).toHaveLength(2) // header + one record for reg-2 only
-    expect(findByRegistration).toHaveBeenCalledTimes(1)
-    expect(findByRegistration).toHaveBeenCalledWith('org-scoped', 'reg-2')
+    expect(out).toHaveLength(2) // header + one row for reg-2 only
+    expect(out[1].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('2001')
   })
 
   it('includes a test organisation when it is explicitly requested by id', async () => {
@@ -824,31 +774,88 @@ describe('streamCsvExport', () => {
       companyDetails: { name: 'Test Org' },
       registrations: [baseRegistration({ id: 'reg-test' })]
     })
-    const deps = baseDeps({
-      organisationsRepository: { findById: vi.fn().mockResolvedValue(testOrg) },
-      wasteRecordsRepository: {
-        findByRegistration: vi
-          .fn()
-          .mockResolvedValue([reprocessorReceivedRecord()])
-      }
+    const deps = await buildDeps({
+      orgs: [testOrg],
+      seeds: [
+        {
+          organisationId: 'org-test',
+          registrationId: 'reg-test',
+          rows: [receivedRowState()]
+        }
+      ],
+      organisationId: 'org-test'
     })
 
-    const out = await collect(
-      streamCsvExport({ ...deps, organisationId: 'org-test' })
-    )
+    const out = await collect(streamCsvExport(deps))
 
     expect(out).toHaveLength(2)
     expect(out[1]).toContain('Test Org')
   })
 
-  it('propagates errors from the waste records iterator', async () => {
-    const org = baseOrg({ registrations: [baseRegistration()] })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockRejectedValue(new Error('cursor died'))
-      }
+  it('coerces a mixed-typed column to a single type so the PAE-1560 discrepancy does not reproduce', async () => {
+    // A tonnage submitted as a numeric-string is stored verbatim; the export
+    // coerces it against the schema on read, so the exported cell is a bare
+    // number matching a row that submitted the same value as a number.
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({
+              rowId: '1001',
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+                TONNAGE_RECEIVED_FOR_RECYCLING: 9.5
+              }
+            }),
+            receivedRowState({
+              rowId: '1002',
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+                TONNAGE_RECEIVED_FOR_RECYCLING: '9.5'
+              }
+            })
+          ]
+        }
+      ]
     })
+
+    const out = await collect(streamCsvExport(deps))
+    const idx = buildHeaderRow(buildDataFieldColumns([])).indexOf(
+      'TONNAGE_RECEIVED_FOR_RECYCLING'
+    )
+    const numberCell = out[1].trim().split(',')[idx]
+    const stringCell = out[2].trim().split(',')[idx]
+    expect(numberCell).toBe('9.5')
+    expect(stringCell).toBe('9.5') // bare, not the quoted '"9.5"'
+  })
+
+  it('leaves data untouched when no schema matches the processing type', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({
+              processingType: 'UNKNOWN_PROCESSING_TYPE',
+              data: { SOME_FREE_COLUMN: 'kept' }
+            })
+          ]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    expect(out[1]).toContain('kept')
+  })
+
+  it('propagates errors from the row-state read', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [{ rows: [receivedRowState()] }]
+    })
+    deps.summaryLogRowStatesRepository.findRowStatesForSummaryLog = () =>
+      Promise.reject(new Error('cursor died'))
 
     await expect(collect(streamCsvExport(deps))).rejects.toThrow('cursor died')
   })
@@ -856,7 +863,7 @@ describe('streamCsvExport', () => {
 
 describe('streamCsvExportToReadable', () => {
   it('returns a Readable stream that emits the same lines as the generator', async () => {
-    const readable = streamCsvExportToReadable(baseDeps())
+    const readable = streamCsvExportToReadable(await buildDeps())
     const chunks = []
     for await (const chunk of readable) {
       chunks.push(chunk.toString('utf8'))
@@ -868,48 +875,50 @@ describe('streamCsvExportToReadable', () => {
   })
 
   it('includes runtime-observed data keys in the header even when not in any schema constant', async () => {
-    const org = baseOrg({ registrations: [baseRegistration()] })
-    const record = reprocessorReceivedRecord({
-      data: {
-        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-        DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
-        BILL_OF_LANDING_REFERENCE_NUMBER: 'BL-99'
-      }
-    })
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([record]),
-        findDistinctDataKeys: vi
-          .fn()
-          .mockResolvedValue([
-            'processingType',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            'BILL_OF_LANDING_REFERENCE_NUMBER'
-          ])
-      }
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+                BILL_OF_LANDING_REFERENCE_NUMBER: 'BL-99'
+              }
+            })
+          ]
+        }
+      ]
     })
     const out = await collect(streamCsvExport(deps))
     expect(out[0]).toContain('BILL_OF_LANDING_REFERENCE_NUMBER')
     expect(out[1]).toContain('BL-99')
   })
 
-  it('uses findDistinctDataKeys to compose the header without buffering any record document', async () => {
-    const org = baseOrg({ registrations: [baseRegistration()] })
-    const record = reprocessorReceivedRecord()
-    const deps = baseDeps({
-      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
-      wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([record]),
-        findDistinctDataKeys: vi.fn().mockResolvedValue(['WASTE_TRANSFER_NOTE'])
-      }
+  it('composes the header from the row-state distinct keys without buffering any row', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          rows: [
+            receivedRowState({
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+                WASTE_TRANSFER_NOTE: 'WTN-1'
+              }
+            })
+          ]
+        }
+      ]
     })
+    const findDistinctDataKeys = vi.spyOn(
+      deps.summaryLogRowStatesRepository,
+      'findDistinctDataKeys'
+    )
 
     const out = await collect(streamCsvExport(deps))
 
-    expect(
-      deps.wasteRecordsRepository.findDistinctDataKeys
-    ).toHaveBeenCalledTimes(1)
+    expect(findDistinctDataKeys).toHaveBeenCalledTimes(1)
     expect(out[0]).toContain('WASTE_TRANSFER_NOTE')
   })
 })

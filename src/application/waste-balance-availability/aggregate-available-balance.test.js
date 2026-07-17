@@ -40,7 +40,11 @@ describe('aggregateAvailableBalance', () => {
 
     const result = await aggregateAvailableBalance(db)
 
-    const plasticEntry = result.materials.find((m) => m.material === 'plastic')
+    const plasticEntry = /** @type {{ availableAmount: number }} */ (
+      /** @type {unknown} */ (
+        result.materials.find((m) => m.material === 'plastic')
+      )
+    )
     expect(plasticEntry.availableAmount).toBe(0)
   })
 

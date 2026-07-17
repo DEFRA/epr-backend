@@ -7,6 +7,7 @@ import { performUpdateViaLedger } from './update-via-ledger.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { partialMock } from '#test/type-helpers.js'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
@@ -50,13 +51,18 @@ vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
 
 const accreditationId = 'acc-1'
 
-const accreditation = /** @type {Accreditation} */ (
-  /** @type {unknown} */ ({
-    id: accreditationId,
-    validFrom: '2023-01-01',
-    validTo: '2030-12-31'
-  })
-)
+const ledgerId = {
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  accreditationId
+}
+
+/** @type {Accreditation} */
+const accreditation = partialMock({
+  id: accreditationId,
+  validFrom: '2023-01-01',
+  validTo: '2030-12-31'
+})
 
 const overseasSites = /** @type {*} */ (new Map())
 const user = {
@@ -125,10 +131,7 @@ describe('performUpdateViaLedger', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await ledgerRepository.findLatestInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.number).toBe(1)
       expect(latest.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       expect(latest.payload).toEqual({
@@ -171,10 +174,7 @@ describe('performUpdateViaLedger', () => {
         summaryLogId: 'log-B'
       })
 
-      const latest = await ledgerRepository.findLatestInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.number).toBe(2)
       expect(latest.payload).toEqual({
         summaryLogId: 'log-B',
@@ -207,10 +207,7 @@ describe('performUpdateViaLedger', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await ledgerRepository.findLatestInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.payload.creditTotal).toBe(100)
     })
   })
@@ -238,10 +235,7 @@ describe('performUpdateViaLedger', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await ledgerRepository.findLatestInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.payload.creditTotal).toBe(
         includedTonnages.reduce((sum, tonnage) => sum + tonnage, 0)
       )
@@ -283,10 +277,7 @@ describe('performUpdateViaLedger', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await ledgerRepository.findLatestInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
 
       const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
       expect(systemLogs).toHaveLength(1)
@@ -324,10 +315,7 @@ describe('performUpdateViaLedger', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await ledgerRepository.findLatestInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.number).toBe(1)
       expect(latest.payload.creditTotal).toBe(100)
 
@@ -359,10 +347,7 @@ describe('performUpdateViaLedger', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await ledgerRepository.findLatestInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.payload.creditTotal).toBe(0)
     })
   })
@@ -379,10 +364,7 @@ describe('performUpdateViaLedger', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await ledgerRepository.findLatestInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.createdBy).toEqual({
         id: user.id,
         name: user.name,
@@ -406,10 +388,7 @@ describe('performUpdateViaLedger', () => {
         summaryLogId: 'log-A'
       })
 
-      const latest = await ledgerRepository.findLatestInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.createdBy).toEqual({
         id: 'user-2',
         email: 'noname@example.test'
@@ -441,10 +420,7 @@ describe('performUpdateViaLedger', () => {
       expect(rejected).toHaveLength(1)
       expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
 
-      const all = await ledgerRepository.findAllInLedger(
-        'reg-1',
-        accreditationId
-      )
+      const all = await ledgerRepository.findAllInLedger(ledgerId)
       expect(all).toHaveLength(1)
     })
   })

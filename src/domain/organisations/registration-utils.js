@@ -73,6 +73,25 @@ export function isRegistrationAccredited(registration) {
 }
 
 /**
+ * Returns the `validFrom` of a live (approved/suspended) accreditation, or null
+ * when the accreditation is absent or not live. Used to bound an accredited
+ * operator's monthly report obligations to the date their accreditation began.
+ *
+ * @param {{ status: RegAccStatus, validFrom?: string | null } | null | undefined} accreditation
+ * @returns {string | null}
+ */
+export function activeAccreditationValidFrom(accreditation) {
+  if (
+    accreditation &&
+    (accreditation.status === REG_ACC_STATUS.APPROVED ||
+      accreditation.status === REG_ACC_STATUS.SUSPENDED)
+  ) {
+    return accreditation.validFrom ?? null
+  }
+  return null
+}
+
+/**
  * Returns the registration's material at its finest granularity. Glass is the
  * only material that sub-divides: each glass registration carries a single
  * recycling process (submissions are split per process upstream), so the

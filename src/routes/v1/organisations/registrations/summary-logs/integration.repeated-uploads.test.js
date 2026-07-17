@@ -247,14 +247,11 @@ describe('Repeated uploads of identical data', () => {
       wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
       // Validate reads and submit writes the same latest-submitted row states,
-      // so both paths must share one ledger and one row-state repository, with
-      // the row-state write flag on (the flag-on invariant that holds in prod).
+      // so both paths must share one ledger and one row-state repository.
       const ledgerRepository = createInMemoryLedgerRepository()()
       const summaryLogRowStateRepository =
         createInMemorySummaryLogRowStateRepository()()
-      const featureFlags = createInMemoryFeatureFlags({
-        summaryLogRowStates: true
-      })
+      const featureFlags = createInMemoryFeatureFlags()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
@@ -277,7 +274,6 @@ describe('Repeated uploads of identical data', () => {
         wasteRecordRepository: wasteRecordsRepository,
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStateRepository,
-        featureFlags,
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])

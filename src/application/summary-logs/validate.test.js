@@ -1200,33 +1200,81 @@ describe('SummaryLogsValidator', () => {
       // (per PAE-659 AC03: "has all mandatory fields completed")
       const buildRow = (rowId, exportDate, receivedDate = '2025-01-01') =>
         headers.map((h) => {
-          if (h === 'ROW_ID') return rowId
-          if (h === 'DATE_OF_EXPORT') return exportDate
-          if (h === 'DATE_RECEIVED_FOR_EXPORT') return receivedDate
-          if (h === 'EWC_CODE') return '03 03 08'
-          if (h === 'DESCRIPTION_WASTE') return 'Paper - other'
-          if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') return 'No'
-          if (h === 'GROSS_WEIGHT') return 100
-          if (h === 'TARE_WEIGHT') return 0
-          if (h === 'PALLET_WEIGHT') return 0
-          if (h === 'NET_WEIGHT') return 100
-          if (h === 'BAILING_WIRE_PROTOCOL') return 'No'
+          if (h === 'ROW_ID') {
+            return rowId
+          }
+          if (h === 'DATE_OF_EXPORT') {
+            return exportDate
+          }
+          if (h === 'DATE_RECEIVED_FOR_EXPORT') {
+            return receivedDate
+          }
+          if (h === 'EWC_CODE') {
+            return '03 03 08'
+          }
+          if (h === 'DESCRIPTION_WASTE') {
+            return 'Paper - other'
+          }
+          if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') {
+            return 'No'
+          }
+          if (h === 'GROSS_WEIGHT') {
+            return 100
+          }
+          if (h === 'TARE_WEIGHT') {
+            return 0
+          }
+          if (h === 'PALLET_WEIGHT') {
+            return 0
+          }
+          if (h === 'NET_WEIGHT') {
+            return 100
+          }
+          if (h === 'BAILING_WIRE_PROTOCOL') {
+            return 'No'
+          }
           if (h === 'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION') {
             return 'Actual weight (100%)'
           }
-          if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') return 0
-          if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') return 1
-          if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') return 100
-          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED') return 100
-          if (h === 'BASEL_EXPORT_CODE') return 'B3020'
-          if (h === 'CUSTOMS_CODES') return '123456'
-          if (h === 'CONTAINER_NUMBER') return 'CONT123'
-          if (h === 'DATE_RECEIVED_BY_OSR') return '2025-01-15'
-          if (h === 'OSR_ID') return 100
-          if (h === 'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE') return 'No'
-          if (h === 'INTERIM_SITE_ID') return 100
-          if (h === 'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR') return 0
-          if (h === 'EXPORT_CONTROLS') return 'Article 18 (Green list)'
+          if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') {
+            return 0
+          }
+          if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') {
+            return 1
+          }
+          if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') {
+            return 100
+          }
+          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED') {
+            return 100
+          }
+          if (h === 'BASEL_EXPORT_CODE') {
+            return 'B3020'
+          }
+          if (h === 'CUSTOMS_CODES') {
+            return '123456'
+          }
+          if (h === 'CONTAINER_NUMBER') {
+            return 'CONT123'
+          }
+          if (h === 'DATE_RECEIVED_BY_OSR') {
+            return '2025-01-15'
+          }
+          if (h === 'OSR_ID') {
+            return 100
+          }
+          if (h === 'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE') {
+            return 'No'
+          }
+          if (h === 'INTERIM_SITE_ID') {
+            return 100
+          }
+          if (h === 'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR') {
+            return 0
+          }
+          if (h === 'EXPORT_CONTROLS') {
+            return 'Article 18 (Green list)'
+          }
           return ''
         })
 
@@ -1651,10 +1699,18 @@ describe('SummaryLogsValidator', () => {
 
       const buildRow = (rowId) =>
         headers.map((h) => {
-          if (h === 'ROW_ID') return rowId
-          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON') return 10
-          if (h === 'EWC_CODE') return '03 03 08'
-          if (h === 'DESCRIPTION_WASTE') return 'Aluminium - other'
+          if (h === 'ROW_ID') {
+            return rowId
+          }
+          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON') {
+            return 10
+          }
+          if (h === 'EWC_CODE') {
+            return '03 03 08'
+          }
+          if (h === 'DESCRIPTION_WASTE') {
+            return 'Aluminium - other'
+          }
           return ''
         })
 

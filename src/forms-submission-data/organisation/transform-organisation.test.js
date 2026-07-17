@@ -8,14 +8,14 @@ import {
   NATION
 } from '#domain/organisations/model.js'
 
-import registeredLtdPartnership from '#data/fixtures/ea/organisation/registered-ltd-partnership.json'
-import registeredLtdLiability from '#data/fixtures/ea/organisation/registered-ltd-liability.json'
-import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-no-partnership.json'
-import nonRegisteredUkSoleTrader from '#data/fixtures/ea/organisation/non-registered-uk-sole-trader.json'
-import nonRegisteredOutsideUk from '#data/fixtures/ea/organisation/non-registered-outside-uk-address.json'
-import unincorporatedSeparateControl from '#data/fixtures/ea/organisation/unincorporated-separate-control.json'
-import soleTraderSeparateControl from '#data/fixtures/ea/organisation/sole-trader-separate-contro.json'
-import nonUkSeparateControl from '#data/fixtures/ea/organisation/non-uk-separate-control.json'
+import registeredLtdPartnership from '#data/fixtures/ea/organisation/registered-ltd-partnership.json' with { type: 'json' }
+import registeredLtdLiability from '#data/fixtures/ea/organisation/registered-ltd-liability.json' with { type: 'json' }
+import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-no-partnership.json' with { type: 'json' }
+import nonRegisteredUkSoleTrader from '#data/fixtures/ea/organisation/non-registered-uk-sole-trader.json' with { type: 'json' }
+import nonRegisteredOutsideUk from '#data/fixtures/ea/organisation/non-registered-outside-uk-address.json' with { type: 'json' }
+import unincorporatedSeparateControl from '#data/fixtures/ea/organisation/unincorporated-separate-control.json' with { type: 'json' }
+import soleTraderSeparateControl from '#data/fixtures/ea/organisation/sole-trader-separate-contro.json' with { type: 'json' }
+import nonUkSeparateControl from '#data/fixtures/ea/organisation/non-uk-separate-control.json' with { type: 'json' }
 import { validateOrganisationInsert } from '#repositories/organisations/schema/index.js'
 
 describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {

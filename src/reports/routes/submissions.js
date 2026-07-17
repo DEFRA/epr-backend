@@ -4,6 +4,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import { generateReportSubmissions } from '#reports/application/report-submissions.js'
+import { reportResponseFailAction } from './response-fail-action.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
@@ -14,14 +15,10 @@ import { generateReportSubmissions } from '#reports/application/report-submissio
 export const getReportSubmissionsPath = '/v1/organisations/reports/submissions'
 
 // A tonnage cell is a genuine number, or '' when there is no value to report.
-const tonnageValue = Joi.alternatives()
-  .try(Joi.number(), Joi.valid(''))
-  .required()
+const tonnageValue = Joi.number().allow('').required()
 
 // A monetary cell is a genuine number, or '' when there is no value to report.
-const monetaryValue = Joi.alternatives()
-  .try(Joi.number(), Joi.valid(''))
-  .required()
+const monetaryValue = Joi.number().allow('').required()
 
 export const getReportSubmissions = {
   method: 'GET',
@@ -51,6 +48,7 @@ export const getReportSubmissions = {
               dueDate: Joi.string().required(),
               submittedDate: Joi.string().allow('').required(),
               submittedBy: Joi.string().allow('').required(),
+              submissionNumber: Joi.number().integer().allow('').required(),
               tonnageReceivedForRecycling: tonnageValue,
               tonnageRecycled: tonnageValue,
               tonnageExportedForRecycling: tonnageValue,
@@ -72,7 +70,7 @@ export const getReportSubmissions = {
           )
           .required()
       }),
-      failAction: 'error'
+      failAction: reportResponseFailAction
     }
   },
   /**

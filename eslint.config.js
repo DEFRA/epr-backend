@@ -73,10 +73,12 @@ export default [
   },
   {
     rules: {
+      curly: ['error', 'all'],
       eqeqeq: ['error', 'always'],
       'no-unused-vars': [
         'error',
         {
+          args: 'all',
           argsIgnorePattern: '^_',
           caughtErrorsIgnorePattern: '^_',
           varsIgnorePattern: '^_'

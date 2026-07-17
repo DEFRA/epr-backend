@@ -16,12 +16,14 @@ import {
   withRegistrationDetails
 } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
+import { reportResponseFailAction } from './response-fail-action.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
- * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
+ * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
+ * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
@@ -61,14 +63,15 @@ export const reportsPost = {
     },
     response: {
       schema: reportDetailResponseSchema,
-      failAction: 'error'
+      failAction: reportResponseFailAction
     }
   },
   /**
    * @param {HapiRequest & {
    *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
-   *   wasteRecordsRepository: WasteRecordsRepository,
+   *   ledgerRepository: WasteBalanceLedgerRepository,
+   *   summaryLogRowStatesRepository: SummaryLogRowStateRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   reportsRepository: ReportsRepository,
    *   overseasSitesRepository: OverseasSitesRepository
@@ -78,7 +81,8 @@ export const reportsPost = {
   handler: async (request, h) => {
     const {
       organisationsRepository,
-      wasteRecordsRepository,
+      ledgerRepository,
+      summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository,
       reportsRepository,
       overseasSitesRepository,
@@ -104,7 +108,8 @@ export const reportsPost = {
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
-        wasteRecordsRepository,
+        ledgerRepository,
+        summaryLogRowStateRepository: summaryLogRowStatesRepository,
         packagingRecyclingNotesRepository,
         overseasSitesRepository,
         organisationId,

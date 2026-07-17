@@ -39,11 +39,17 @@
  *   new state document whose membership starts with `summaryLogId`. Idempotent:
  *   re-running the same submission adds no document and no membership entry.
  *   Returns the resulting state document for each entry, in input order.
- * @property {(summaryLogId: string) => Promise<SummaryLogRowState[]>} findBySummaryLogId
- *   Return every state document whose membership contains `summaryLogId` — the
- *   full summary-log row state of the submission that produced it.
+ * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLog
+ *   Return the row states `ledgerId` holds at the summary log `summaryLogId`.
+ *   A row state belongs to the ledger that wrote it, so the summary log alone
+ *   does not identify one: the same `summaryLogId` under a different ledger
+ *   identity matches nothing.
  * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
  *   Return every state document for the given row identity.
+ * @property {() => Promise<string[]>} findDistinctDataKeys
+ *   Return the union of every key observed on `data` across every state
+ *   document in the collection. Used by the CSV export to compose its dynamic
+ *   header without materialising any document into memory.
  */
 
 /**

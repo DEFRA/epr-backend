@@ -12,6 +12,15 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
 import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
 
 /**
+ * The slice of a waste-record state the report aggregation reads: the row's
+ * type and its coerced data. Narrower than the full `WasteRecordState` so the
+ * type doesn't demand fields (classification, row identity) the aggregation
+ * never consumes.
+ *
+ * @typedef {Pick<import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState, 'wasteRecordType' | 'data'>} ReportableWasteRecordState
+ */
+
+/**
  * @typedef {Object} AggregatedRecyclingActivity
  * @property {Array<{supplierName: string, facilityType: string, tonnageReceived: number, supplierAddress: string, supplierPhone: string|null, supplierEmail: string|null}>} suppliers
  * @property {number} totalTonnageReceived
@@ -55,22 +64,27 @@ import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
  */
 
 /**
- * Aggregates waste records into a report detail for a specific period.
+ * Aggregates a registration's waste-record states into a report detail for a
+ * specific period.
  *
- * Pure function — no repository or infrastructure dependencies.
+ * Pure function — no repository or infrastructure dependencies. The source
+ * metadata (which submission produced the current state, and when it was
+ * submitted) is resolved by the caller from the latest submitted summary log
+ * and passed in.
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
+ * @param {ReportableWasteRecordState[]} wasteRecordStates
  * @param {object} options
  * @param {string} options.operatorCategory
  * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
  * @param {number} options.year
  * @param {number} options.period
+ * @param {{ summaryLogId: string|null, lastUploadedAt: string|null }} options.source
  * @param {Map<string, {siteName: string|null, country: string|null, validFrom: Date|null}>} [options.orsDetailsMap]
  * @returns {AggregatedReportDetail}
  */
 export function aggregateReportDetail(
-  wasteRecords,
-  { operatorCategory, cadence, year, period, orsDetailsMap }
+  wasteRecordStates,
+  { operatorCategory, cadence, year, period, source, orsDetailsMap }
 ) {
   const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
 
@@ -89,7 +103,7 @@ export function aggregateReportDetail(
   const wasteReceivedDateField = sectionDateFields.wasteReceived
   const wasteExportedDateField = sectionDateFields.wasteExported
 
-  const coercedRecords = coerceWasteRecordsForRead(wasteRecords)
+  const coercedRecords = coerceWasteRecordsForRead(wasteRecordStates)
 
   const {
     wasteReceivedRecords,
@@ -102,8 +116,6 @@ export function aggregateReportDetail(
     startDate,
     endDate
   )
-
-  const { lastUploadedAt, summaryLogId } = findLastUpload(coercedRecords)
 
   const tonnageReceivedField =
     TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY[operatorCategory]
@@ -121,7 +133,7 @@ export function aggregateReportDetail(
   // the same date field name regardless of operator category.
   const wasteReceivedRecordsExcluded = coercedRecords.filter(
     (r) =>
-      r.type === WASTE_RECORD_TYPE.RECEIVED &&
+      r.wasteRecordType === WASTE_RECORD_TYPE.RECEIVED &&
       wasteReceivedDateField &&
       (r.data[wasteReceivedDateField] === null ||
         r.data[wasteReceivedDateField] === undefined)
@@ -134,7 +146,7 @@ export function aggregateReportDetail(
     period,
     startDate,
     endDate,
-    source: { summaryLogId, lastUploadedAt },
+    source,
     recyclingActivity,
     ...(wasteExportedDateField && {
       exportActivity: aggregateWasteExported({
@@ -153,10 +165,10 @@ export function aggregateReportDetail(
 }
 
 /**
- * Slices waste records into per-section record sets, each filtered to those
- * whose section date field falls within [startDate, endDate].
+ * Slices waste-record states into per-section record sets, each filtered to
+ * those whose section date field falls within [startDate, endDate].
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
+ * @param {ReportableWasteRecordState[]} wasteRecords
  * @param {{ wasteReceived?: string, wasteExported?: string, wasteRepatriated?: string, wasteSentOn?: string }} sectionDateFields
  * @param {string} startDate - ISO date string (YYYY-MM-DD)
  * @param {string} endDate - ISO date string (YYYY-MM-DD)
@@ -193,27 +205,4 @@ function sliceRecordsByPeriod(
       endDate
     )
   }
-}
-
-/**
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
- * @returns {{ lastUploadedAt: string | null, summaryLogId: string | null }}
- */
-function findLastUpload(wasteRecords) {
-  let lastUploadedAt = null
-  let summaryLogId = null
-
-  for (const wasteRecord of wasteRecords) {
-    for (const wasteRecordVersion of wasteRecord.versions) {
-      if (
-        !lastUploadedAt ||
-        Date.parse(wasteRecordVersion.createdAt) > Date.parse(lastUploadedAt)
-      ) {
-        lastUploadedAt = wasteRecordVersion.createdAt
-        summaryLogId = wasteRecordVersion.summaryLog.id
-      }
-    }
-  }
-
-  return { lastUploadedAt, summaryLogId }
 }

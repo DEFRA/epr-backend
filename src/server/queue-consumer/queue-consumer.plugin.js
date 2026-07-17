@@ -52,8 +52,6 @@ function buildConsumerDeps(server, { config }) {
     systemLogsRepository
   } = /** @type {QueueConsumerRepositories} */ (server.app)
 
-  const { featureFlags } = server
-
   const onSummaryLogUploaded = createOnSummaryLogUploaded({
     reportsRepository,
     systemLogsRepository
@@ -69,7 +67,6 @@ function buildConsumerDeps(server, { config }) {
     summaryLogRowStatesRepository,
     ledgerRepository,
     wasteBalanceService,
-    featureFlags,
     reportsService: createReportsService(reportsRepository),
     summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
     onSummaryLogUploaded

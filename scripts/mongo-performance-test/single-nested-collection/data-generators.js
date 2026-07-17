@@ -253,7 +253,7 @@ export function generatePrnIssuance() {
   }
 }
 
-export function generateRegistration(orgId, material, wasteProcessingType) {
+export function generateRegistration(_orgId, material, wasteProcessingType) {
   const formSubmissionTime = randomDate()
 
   const registration = {
@@ -304,7 +304,7 @@ function getRecyclingProcess() {
   return randomChoices(RECYCLING_PROCESSES, randomInt(1, 2))
 }
 
-export function generateAccreditation(orgId, material, wasteProcessingType) {
+export function generateAccreditation(_orgId, material, wasteProcessingType) {
   const formSubmissionTime = randomDate()
   const accreditation = {
     id: generateObjectId(),

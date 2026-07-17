@@ -16,22 +16,15 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
  *   registration or accreditation whose ledger is read.
  * @returns {Promise<import('../domain/model.js').WasteBalance | null>}
  */
-export const currentWasteBalance = async (
-  ledgerRepository,
-  { organisationId, registrationId, accreditationId }
-) => {
-  const latest = await ledgerRepository.findLatestInLedger(
-    registrationId,
-    accreditationId
-  )
+export const currentWasteBalance = async (ledgerRepository, ledgerId) => {
+  const latest = await ledgerRepository.findLatestInLedger(ledgerId)
 
   if (!latest) {
     return null
   }
 
   const latestSubmission = await ledgerRepository.findLatestInLedgerByKind(
-    registrationId,
-    accreditationId,
+    ledgerId,
     LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
   )
 
@@ -42,9 +35,7 @@ export const currentWasteBalance = async (
     : 0
 
   return {
-    organisationId,
-    registrationId,
-    accreditationId,
+    ...ledgerId,
     amount: latest.closingBalance.amount,
     availableAmount: latest.closingBalance.availableAmount,
     eventNumber: latest.number,

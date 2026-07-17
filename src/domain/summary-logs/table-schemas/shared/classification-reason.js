@@ -4,7 +4,13 @@ export const CLASSIFICATION_REASON = Object.freeze({
   OUTSIDE_ACCREDITATION_PERIOD: 'OUTSIDE_ACCREDITATION_PERIOD',
   PRODUCT_WEIGHT_NOT_ADDED: 'PRODUCT_WEIGHT_NOT_ADDED',
   ORS_NOT_APPROVED: 'ORS_NOT_APPROVED',
-  ORS_NOT_FOUND: 'ORS_NOT_FOUND'
+  ORS_NOT_FOUND: 'ORS_NOT_FOUND',
+  // A template section whose rows never feed the waste balance by design (eg
+  // Processed on a reprocessor input template, or Sent on for an exporter).
+  // Distinguishes these by-design rows from rows that were evaluated and
+  // excluded for a data reason, and from included zero-tonnage rows.
+  TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE:
+    'TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE'
 })
 
 /**

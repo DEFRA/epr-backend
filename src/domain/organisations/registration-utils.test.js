@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  activeAccreditationValidFrom,
   getReportableRegistrations,
   isRegistrationAccredited,
   resolveAccreditationNumber,
   resolveAccreditation,
   resolveDetailedMaterial
 } from './registration-utils.js'
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
@@ -158,6 +160,48 @@ describe('isRegistrationAccredited', () => {
 
   it('returns false when accreditation is null', () => {
     expect(isRegistrationAccredited({ accreditation: null })).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// activeAccreditationValidFrom
+// ---------------------------------------------------------------------------
+
+describe('activeAccreditationValidFrom', () => {
+  it.each([REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.SUSPENDED])(
+    'returns validFrom when accreditation status is %s',
+    (status) => {
+      expect(
+        activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })
+      ).toBe('2026-03-15')
+    }
+  )
+
+  it('returns null for an active accreditation with no validFrom', () => {
+    expect(
+      activeAccreditationValidFrom({
+        status: REG_ACC_STATUS.APPROVED,
+        validFrom: null
+      })
+    ).toBeNull()
+  })
+
+  it.each([
+    REG_ACC_STATUS.CREATED,
+    REG_ACC_STATUS.REJECTED,
+    REG_ACC_STATUS.CANCELLED
+  ])('returns null when accreditation status is %s', (status) => {
+    expect(
+      activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })
+    ).toBeNull()
+  })
+
+  it('returns null when accreditation is null', () => {
+    expect(activeAccreditationValidFrom(null)).toBeNull()
+  })
+
+  it('returns null when accreditation is undefined', () => {
+    expect(activeAccreditationValidFrom(undefined)).toBeNull()
   })
 })
 

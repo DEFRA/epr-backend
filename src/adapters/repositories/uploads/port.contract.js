@@ -18,6 +18,8 @@ const TEST_FILE_PATH = path.resolve(
  * @property {import('./test-helpers/callback-receiver.js').CallbackReceiver} callbackReceiver - Captures HTTP callbacks
  */
 
+/** @typedef {{ form: { file: { s3Bucket: string, s3Key: string } } }} CallbackPayload */
+
 /**
  * Contract test for the uploads repository.
  * Tests the full round-trip: initiate upload → callback received → retrieve file.
@@ -32,11 +34,13 @@ export const testUploadsRepositoryContract = (it) => {
     let callbackReceiver
 
     beforeEach(
-      async ({
-        uploadsRepository: repo,
-        performUpload: upload,
-        callbackReceiver: receiver
-      }) => {
+      async (
+        /** @type {ContractTestFixtures} */ {
+          uploadsRepository: repo,
+          performUpload: upload,
+          callbackReceiver: receiver
+        }
+      ) => {
         uploadsRepository = repo
         performUpload = upload
         callbackReceiver = receiver
@@ -100,7 +104,9 @@ export const testUploadsRepositoryContract = (it) => {
       const callback = await waitForCallback(callbackReceiver)
 
       // 4. Extract S3 URI from callback
-      const { s3Bucket, s3Key } = callback.payload.form.file
+      const { s3Bucket, s3Key } = /** @type {CallbackPayload} */ (
+        callback.payload
+      ).form.file
       const s3Uri = `s3://${s3Bucket}/${s3Key}`
 
       // 5. Retrieve file
@@ -134,7 +140,9 @@ export const testUploadsRepositoryContract = (it) => {
       await performUpload(uploadId, testFileBuffer)
 
       const callback = await waitForCallback(callbackReceiver)
-      const { s3Bucket, s3Key } = callback.payload.form.file
+      const { s3Bucket, s3Key } = /** @type {CallbackPayload} */ (
+        callback.payload
+      ).form.file
       const s3Uri = `s3://${s3Bucket}/${s3Key}`
 
       const beforeDelete = await uploadsRepository.findByLocation(s3Uri)

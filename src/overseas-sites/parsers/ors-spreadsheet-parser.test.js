@@ -12,6 +12,28 @@ const FIXTURES_DIR = join(
 )
 
 /**
+ * @typedef {{
+ *   packagingWasteCategory?: string
+ *   orgId?: number | string
+ *   registrationNumber?: string | null
+ *   accreditationNumber?: string | null
+ * }} OrsWorkbookMetadata
+ *
+ * @typedef {{
+ *   orsId?: number | string | null
+ *   country?: string | null
+ *   name?: string | null
+ *   line1?: string | null
+ *   line2?: string | null
+ *   townOrCity?: string | null
+ *   stateOrRegion?: string | null
+ *   postcode?: string | number | null
+ *   coordinates?: string | null
+ *   validFrom?: string | Date | null
+ * }} OrsDataRow
+ */
+
+/**
  * Builds a minimal ORS ID Log workbook for testing.
  * Row layout matches the real spreadsheet structure:
  *   Row 4: Packaging waste category
@@ -20,6 +42,12 @@ const FIXTURES_DIR = join(
  *   Row 7: Accreditation Number
  *   Row 9: Column headers
  *   Row 10+: Data rows
+ *
+ * @param {{
+ *   metadata?: OrsWorkbookMetadata
+ *   dataRows?: OrsDataRow[]
+ *   sheetName?: string
+ * }} [options]
  */
 const buildOrsWorkbook = ({
   metadata = {},

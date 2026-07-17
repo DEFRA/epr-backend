@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { parseRegistrationSubmission } from './transform-registration.js'
 import { validateRegistration } from '#repositories/organisations/schema/validation.js'
 
-import exporter from '#data/fixtures/ea/registration/exporter.json'
-import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json'
-import reprocessorSepa from '#data/fixtures/ea/registration/reprocessor-all-materials-sepa-handcrafted.json'
+import exporter from '#data/fixtures/ea/registration/exporter.json' with { type: 'json' }
+import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json' with { type: 'json' }
+import reprocessorSepa from '#data/fixtures/ea/registration/reprocessor-all-materials-sepa-handcrafted.json' with { type: 'json' }
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,

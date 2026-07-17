@@ -1,3 +1,4 @@
+import { invalidArg } from '#test/type-helpers.js'
 import {
   EPR_PREFIX,
   META_PREFIX,
@@ -75,12 +76,12 @@ describe('Summary Log Markers', () => {
     })
 
     it('should return false for null and undefined', () => {
-      expect(isEprMarker(null)).toBe(false)
-      expect(isEprMarker(undefined)).toBe(false)
+      expect(isEprMarker(invalidArg(null))).toBe(false)
+      expect(isEprMarker(invalidArg(undefined))).toBe(false)
     })
 
     it('should handle numbers by converting to string', () => {
-      expect(isEprMarker(123)).toBe(false)
+      expect(isEprMarker(invalidArg(123))).toBe(false)
     })
 
     it('should handle empty string', () => {

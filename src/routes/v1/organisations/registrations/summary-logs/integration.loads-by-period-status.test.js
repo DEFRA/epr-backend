@@ -433,8 +433,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       organisationId,
-      registrationId,
-      featureFlagOverrides: { summaryLogRowStates: true }
+      registrationId
     })
 
     // First submission establishes the load at 100t.
@@ -475,8 +474,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
   it('debits the closed period and credits the open period when a re-upload moves a load across periods', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
-      processingType: 'exporter',
-      featureFlagOverrides: { summaryLogRowStates: true }
+      processingType: 'exporter'
     })
     await closeJanuary2025(env)
 
@@ -549,8 +547,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
   it('classifies a re-upload that nets to zero as nonBalanceAffecting', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
-      processingType: 'exporter',
-      featureFlagOverrides: { summaryLogRowStates: true }
+      processingType: 'exporter'
     })
 
     await upload(
@@ -603,8 +600,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
   it('keeps a load amended to PRN-excluded in balanceAffecting as a reversal', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
-      processingType: 'exporter',
-      featureFlagOverrides: { summaryLogRowStates: true }
+      processingType: 'exporter'
     })
 
     // Establish an included load contributing 100t to the balance.
@@ -768,8 +764,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       processingType: 'reprocessor',
       accredited: false,
       organisationId,
-      registrationId,
-      featureFlagOverrides: { summaryLogRowStates: true }
+      registrationId
     })
 
     const registeredOnlyRows = createRegisteredOnlyUploadData([

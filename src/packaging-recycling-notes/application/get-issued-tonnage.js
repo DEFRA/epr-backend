@@ -3,6 +3,8 @@ import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnag
 
 /**
  * @typedef {Object} GetIssuedTonnageParams
+ * @property {string} organisationId
+ * @property {string} registrationId
  * @property {string | null | undefined} accreditationId
  * @property {string} startDate - Calendar-date string e.g. '2025-01-01', bare
  *   or a full ISO datetime — startOfDay()/endOfDay() tolerate either shape.
@@ -20,7 +22,13 @@ import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnag
  * @returns {Promise<{ issuedTonnage: number } | null>}
  */
 export async function getIssuedTonnage(prnRepository, params) {
-  const { accreditationId, startDate, endDate } = params
+  const {
+    organisationId,
+    registrationId,
+    accreditationId,
+    startDate,
+    endDate
+  } = params
   if (!accreditationId) {
     return null
   }
@@ -29,7 +37,11 @@ export async function getIssuedTonnage(prnRepository, params) {
   // PRN volumes per accreditation are in the hundreds, so in-memory filtering is negligible.
   // Period filtering stays in the domain layer while the "issued in period" rules are still fluid.
   // Once stable, it could move to the repository with an index on status.issued.at.
-  const prns = await prnRepository.findByAccreditation(accreditationId)
+  const prns = await prnRepository.findByAccreditation({
+    organisationId,
+    registrationId,
+    accreditationId
+  })
   return {
     issuedTonnage: aggregateIssuedTonnage(prns, {
       startDate: start,
