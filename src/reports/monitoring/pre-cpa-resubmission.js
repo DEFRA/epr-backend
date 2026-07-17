@@ -14,8 +14,17 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
  * (closed-period adjustments) would flag as needing resubmission once enabled.
  * Read-only: writes nothing, backfills no flags.
  *
- * Reconstructs the CPA rule from the `summary-log-row-states` collection
- * (ADR-0037). Per registration it snapshot-diffs consecutive submitted uploads
+ * A deliberately one-off diagnostic that REIMPLEMENTS the CPA rule rather than
+ * calling the live path. Live CPA derives resubmission from waste-records; the
+ * durable fix is to re-base that detection on the summary-log row-states
+ * (ADR-0037) this diagnostic reads, but that rewrite is not yet scheduled and a
+ * rough population size is needed sooner. So the rule is reconstructed here as a
+ * faithful mirror of the live behaviour, accepting the residuals below, rather
+ * than shared with it — retire this once CPA detection itself moves onto
+ * row-states.
+ *
+ * It reads the `summary-log-row-states` collection (ADR-0037) and, per
+ * registration, snapshot-diffs consecutive submitted uploads
  * by state-doc `id` (a changed or added row gets a new id, mirroring
  * `determineRecordStatus`, so oscillations a net-figure diff would miss still
  * count), maps each changed row to the periods it restates (the new row's dates
