@@ -214,11 +214,7 @@ const performFindAllBySchemaVersion = (db) => async (schemaVersion) => {
 const performFindPage =
   (db) =>
   async (
-    /** @type {{ search?: string, page: number, pageSize: number }} */ {
-      search,
-      page,
-      pageSize
-    }
+    /** @type {import('./port.js').FindPageParams} */ { search, page, pageSize }
   ) => {
     const trimmedSearch = (search ?? '').trim()
     const filter =

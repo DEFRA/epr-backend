@@ -315,7 +315,7 @@ export const performFindAllForOverseasSitesAdminList = (db) => async () => {
 export const performFindPageForOrsAdminList =
   (db) =>
   async (
-    /** @type {{ page: number, pageSize: number, registrationNumber?: string }} */ {
+    /** @type {import('./port.js').FindPageForOrsAdminListParams} */ {
       page,
       pageSize,
       registrationNumber
