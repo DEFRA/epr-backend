@@ -11,5 +11,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isStaleIssuedTonnageReportEnabled() {
     return flags.staleIssuedTonnageReport ?? false
+  },
+  isPreCpaResubmissionReportEnabled() {
+    return flags.preCpaResubmissionReport ?? false
   }
 })
