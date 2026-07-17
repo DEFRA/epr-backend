@@ -13,22 +13,35 @@ import {
   UPLOAD_FILE_STATUS
 } from './post-upload-completed.schema.js'
 
+/** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
 /** @import { OrsImportsCommandExecutor } from '#overseas-sites/imports/worker/port.js' */
 
 /**
- * @typedef {{ form: { orsUpload: object | object[] } }} OrsUploadCompletedPayload
+ * @typedef {{
+ *   errorMessage?: string,
+ *   fileId: string,
+ *   fileStatus: string,
+ *   filename: string,
+ *   hasError?: boolean,
+ *   s3Bucket?: string,
+ *   s3Key?: string
+ * }} OrsUploadFile
  */
 
 /**
- * @param {object|object[]} fileOrFiles
- * @returns {object[]}
+ * @typedef {{ form: { orsUpload: OrsUploadFile | OrsUploadFile[] } }} OrsUploadCompletedPayload
+ */
+
+/**
+ * @param {OrsUploadFile|OrsUploadFile[]} fileOrFiles
+ * @returns {OrsUploadFile[]}
  */
 const normaliseToArray = (fileOrFiles) =>
   Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles]
 
 /**
- * @param {object} upload
+ * @param {OrsUploadFile} upload
  * @returns {{ fileId: string, fileName: string, s3Uri: string }}
  */
 const toFileRecord = (upload) => ({
@@ -38,7 +51,7 @@ const toFileRecord = (upload) => ({
 })
 
 /**
- * @param {object[]} uploads
+ * @param {OrsUploadFile[]} uploads
  * @returns {boolean}
  */
 const hasCompletedFiles = (uploads) =>
@@ -58,7 +71,7 @@ export const orsUploadCompleted = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<OrsUploadCompletedPayload> & {orsImportsRepository: OrsImportsRepository, orsImportsWorker: OrsImportsCommandExecutor}} request
-   * @param {object} h
+   * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { orsImportsRepository, orsImportsWorker, payload, params, logger } =

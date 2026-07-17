@@ -12,8 +12,11 @@ import { errorCodes } from '#reports/enums/error-codes.js'
 import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 
 /**
- * @import { PeriodicReport } from '#reports/repository/port.js'
+ * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 
 /**
@@ -187,7 +190,7 @@ export async function isLatestSubmission(
 
 /**
  * Formats a site address object into a single-line string.
- * @param {object|undefined} address
+ * @param {RegistrationAddress|undefined} address
  * @returns {string|undefined}
  */
 function formatSiteAddress(address) {
@@ -379,10 +382,19 @@ function getValidatedPeriodInfo(cadence, year, period) {
 }
 
 /**
+ * @typedef {Pick<AggregatedReportDetail, 'source' | 'recyclingActivity' | 'exportActivity' | 'wasteSent'> & {
+ *   material: string,
+ *   wasteProcessingType: string,
+ *   siteAddress: string | undefined,
+ *   prn: { issuedTonnage: number } | null | undefined
+ * }} ReportData
+ */
+
+/**
  * Extracts the report-specific fields from aggregated data and registration.
- * @param {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn?: { issuedTonnage: number } | null }} aggregated
- * @param {object} registration
- * @returns {object}
+ * @param {AggregatedReportDetail & { prn?: { issuedTonnage: number } | null }} aggregated
+ * @param {Registration} registration
+ * @returns {ReportData}
  */
 function buildReportData(aggregated, registration) {
   const { recyclingActivity, exportActivity, wasteSent, prn, source } =
@@ -407,11 +419,11 @@ function buildReportData(aggregated, registration) {
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
- * @param {object} params.packagingRecyclingNotesRepository
+ * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {object} params.registration
+ * @param {Registration} params.registration
  * @param {number} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -485,12 +497,12 @@ function toSource(latestSubmission) {
  * @param {object} params
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
- * @param {object} params.packagingRecyclingNotesRepository
+ * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.operatorCategory
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {object} params.registration
+ * @param {Registration} params.registration
  * @param {number} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -561,11 +573,11 @@ async function getAggregatedReportDetail({
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
- * @param {object} params.packagingRecyclingNotesRepository
+ * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {object} params.registration
+ * @param {Registration} params.registration
  * @param {number} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period

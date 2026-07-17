@@ -24,9 +24,18 @@ import {
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
+/**
+ * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
+ */
+
 const SUMMARY_LOG_ID = 'sl-1'
 const SUBMITTED_AT = new Date('2024-01-15T00:00:00.000Z')
 
+/**
+ * @param {Partial<Registration>} [overrides]
+ * @returns {Registration}
+ */
 const buildRegistration = (overrides = {}) => {
   const hasAccreditationIdOverride = 'accreditationId' in overrides
   const accreditationId = hasAccreditationIdOverride
@@ -38,21 +47,23 @@ const buildRegistration = (overrides = {}) => {
       ? overrides.accreditation
       : defaultAccreditation
   const { accreditation: _a, accreditationId: _b, ...rest } = overrides
-  return {
-    id: new ObjectId().toString(),
-    accreditationId,
-    accreditation,
-    material: 'plastic',
-    wasteProcessingType: 'reprocessor',
-    site: {
-      address: {
-        line1: '1 Recycling Lane',
-        town: 'Greenville',
-        postcode: 'GR1 1AA'
-      }
-    },
-    ...rest
-  }
+  return /** @type {Registration} */ (
+    /** @type {unknown} */ ({
+      id: new ObjectId().toString(),
+      accreditationId,
+      accreditation,
+      material: 'plastic',
+      wasteProcessingType: 'reprocessor',
+      site: {
+        address: {
+          line1: '1 Recycling Lane',
+          town: 'Greenville',
+          postcode: 'GR1 1AA'
+        }
+      },
+      ...rest
+    })
+  )
 }
 
 const buildReceivedEntry = (overrides = {}) =>
@@ -180,18 +191,22 @@ describe('report-service', () => {
         'sl-2'
       )
 
-      const firstSubmission = buildLedgerEvent({
-        ...ledgerId,
-        number: 1,
-        createdAt: SUBMITTED_AT,
-        payload: { summaryLogId: 'sl-1', creditTotal: 100 }
-      })
-      const secondSubmission = buildLedgerEvent({
-        ...ledgerId,
-        number: 2,
-        createdAt: new Date('2024-02-15T00:00:00.000Z'),
-        payload: { summaryLogId: 'sl-2', creditTotal: 150 }
-      })
+      const firstSubmission = /** @type {LedgerEvent} */ (
+        buildLedgerEvent({
+          ...ledgerId,
+          number: 1,
+          createdAt: SUBMITTED_AT,
+          payload: { summaryLogId: 'sl-1', creditTotal: 100 }
+        })
+      )
+      const secondSubmission = /** @type {LedgerEvent} */ (
+        buildLedgerEvent({
+          ...ledgerId,
+          number: 2,
+          createdAt: new Date('2024-02-15T00:00:00.000Z'),
+          payload: { summaryLogId: 'sl-2', creditTotal: 150 }
+        })
+      )
       const beforeCommit = createInMemoryLedgerRepository([firstSubmission])()
       const afterCommit = createInMemoryLedgerRepository([
         firstSubmission,

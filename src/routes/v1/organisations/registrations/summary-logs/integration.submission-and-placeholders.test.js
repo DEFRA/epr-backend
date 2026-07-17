@@ -28,6 +28,7 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -83,7 +84,7 @@ describe('Submission and placeholder tests', () => {
 
       const testOrg = buildReadOrganisation({
         registrations: [
-          {
+          partialMock({
             id: registrationId,
             registrationNumber: 'REG-12345',
             status: 'approved',
@@ -93,7 +94,7 @@ describe('Submission and placeholder tests', () => {
             submittedToRegulator: 'ea',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
-            accreditation: {
+            accreditation: partialMock({
               accreditationNumber: 'ACC-2025-001',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -101,8 +102,8 @@ describe('Submission and placeholder tests', () => {
                 { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
                 { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
               ]
-            }
-          }
+            })
+          })
         ]
       })
       testOrg.id = organisationId
@@ -766,7 +767,7 @@ describe('Submission and placeholder tests', () => {
       const accreditationId = 'acc-placeholder-test'
       const testOrg = buildReadOrganisation({
         registrations: [
-          {
+          partialMock({
             id: registrationId,
             registrationNumber: 'REG-123',
             material: 'paper',
@@ -774,17 +775,17 @@ describe('Submission and placeholder tests', () => {
             reprocessingType: 'input',
             submittedToRegulator: 'ea',
             accreditationId
-          }
+          })
         ],
         accreditations: [
-          {
+          partialMock({
             id: accreditationId,
             accreditationNumber: 'ACC-PLACEHOLDER-001',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
             submittedToRegulator: 'ea'
-          }
+          })
         ]
       })
       testOrg.id = organisationId

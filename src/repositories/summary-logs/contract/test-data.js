@@ -46,7 +46,7 @@ const DEFAULT_CREATED_AT = '2024-01-01T00:00:00.000Z'
  * Creates a factory function for a given status with default values.
  * The factory merges overrides with defaults, handling nested file objects.
  * @param {string} status
- * @param {() => object} [getDefaults] - Function that returns defaults (for lazy file generation)
+ * @param {() => { file?: { id: string, name: string, status: string, uri?: string }, submittedAt?: string, validatedAgainstSummaryLogId?: string }} [getDefaults] - Function that returns defaults (for lazy file generation)
  */
 const createFactory = (status, getDefaults = () => ({})) => {
   return (overrides = {}) => {

@@ -12,6 +12,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { SCOPES, ADMIN_ROLES } from './constants.js'
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
 
+const entraIdMockIssuer = /** @type {{ issuer: string }} */ (
+  entraIdMockOidcWellKnownResponse
+).issuer
+
 const maintainerCredential = {
   role: 'service_maintainer',
   scopes: [...ADMIN_ROLES.service_maintainer]
@@ -70,8 +74,12 @@ describe('#getJwtStrategyConfig', () => {
   describe('configuration structure', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         if (key === 'roles.serviceMaintainers') {
           return JSON.stringify(['maintainer@example.com'])
         }
@@ -116,8 +124,12 @@ describe('#getJwtStrategyConfig', () => {
   describe('validate function - Entra ID tokens', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         if (key === 'roles.serviceMaintainers') {
           return JSON.stringify(['maintainer@example.com'])
         }
@@ -131,7 +143,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             preferred_username: 'user@example.com'
@@ -146,7 +158,7 @@ describe('#getJwtStrategyConfig', () => {
         credentials: {
           id: 'contact-123',
           email: 'user@example.com',
-          issuer: entraIdMockOidcWellKnownResponse.issuer,
+          issuer: entraIdMockIssuer,
           role: 'service_maintainer',
           scope: expectedMaintainerScope
         }
@@ -159,7 +171,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             preferred_username: 'user@example.com'
@@ -176,7 +188,7 @@ describe('#getJwtStrategyConfig', () => {
       const config = getJwtStrategyConfig(mockOidcConfigs)
 
       const tokenPayload = {
-        iss: entraIdMockOidcWellKnownResponse.issuer,
+        iss: entraIdMockIssuer,
         aud: mockEntraClientId,
         oid: 'contact-123',
         preferred_username: 'user@example.com'
@@ -206,7 +218,7 @@ describe('#getJwtStrategyConfig', () => {
         const artifacts = {
           decoded: {
             payload: {
-              iss: entraIdMockOidcWellKnownResponse.issuer,
+              iss: entraIdMockIssuer,
               aud: mockEntraClientId,
               oid: 'contact-123',
               preferred_username: preferredUsername
@@ -229,7 +241,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: 'wrong-client-id',
             oid: 'contact-123',
             email: 'user@example.com'
@@ -253,7 +265,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             email: 'user@example.com'
@@ -279,7 +291,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             email: 'support@example.com'
@@ -300,7 +312,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-456',
             email: 'regular-user@example.com'
@@ -319,7 +331,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             // oid is missing
             email: 'user@example.com'
@@ -339,7 +351,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: null,
             email: null,
@@ -361,7 +373,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             email: 'user@example.com'
@@ -380,7 +392,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts1 = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-1',
             email: 'user1@example.com'
@@ -391,7 +403,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts2 = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-2',
             email: 'user2@example.com'
@@ -413,8 +425,12 @@ describe('#getJwtStrategyConfig', () => {
   describe('OIDC config variations', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         if (key === 'roles.serviceMaintainers') {
           return JSON.stringify(['maintainer@example.com'])
         }
@@ -489,8 +505,12 @@ describe('#getJwtStrategyConfig', () => {
 
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         return null
       })
     })
@@ -686,7 +706,7 @@ describe('#getJwtStrategyConfig', () => {
         const entraArtifacts = {
           decoded: {
             payload: {
-              iss: entraIdMockOidcWellKnownResponse.issuer,
+              iss: entraIdMockIssuer,
               aud: mockEntraClientId,
               oid: 'entra-contact',
               email: 'entra@example.com'

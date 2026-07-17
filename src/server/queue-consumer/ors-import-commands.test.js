@@ -113,7 +113,28 @@ describe('orsImportCommandHandlers', () => {
     })
 
     describe('execute', () => {
-      it('calls processOrsImport with importId and deps', async () => {
+      it('passes the payload user through to processOrsImport', async () => {
+        const user = {
+          id: 'user-1',
+          email: 'maintainer@example.com',
+          scope: ['serviceMaintainer'],
+          role: 'service_maintainer'
+        }
+
+        await handler.execute({ importId: 'import-123', user }, deps)
+
+        expect(processOrsImport).toHaveBeenCalledWith('import-123', {
+          orsImportsRepository: deps.orsImportsRepository,
+          uploadsRepository: deps.uploadsRepository,
+          overseasSitesRepository: deps.overseasSitesRepository,
+          organisationsRepository: deps.organisationsRepository,
+          logger: deps.logger,
+          orsImportMetrics,
+          user
+        })
+      })
+
+      it('defaults to the system user when the payload carries none', async () => {
         await handler.execute({ importId: 'import-123' }, deps)
 
         expect(processOrsImport).toHaveBeenCalledWith('import-123', {
@@ -122,7 +143,8 @@ describe('orsImportCommandHandlers', () => {
           overseasSitesRepository: deps.overseasSitesRepository,
           organisationsRepository: deps.organisationsRepository,
           logger: deps.logger,
-          orsImportMetrics
+          orsImportMetrics,
+          user: { id: 'system', email: 'system', scope: [], role: null }
         })
       })
     })
