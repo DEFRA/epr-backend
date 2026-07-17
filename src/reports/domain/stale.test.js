@@ -107,6 +107,56 @@ describe('normaliseStale', () => {
       }
     })
   })
+
+  it('strips legacy flat siblings left behind by a dot-path $set onto an old-shape document', () => {
+    // A doc first written in the old flat shape, then later `$set` with a
+    // dot-path (e.g. `stale.summaryLogChanged`) merges rather than replaces,
+    // leaving the legacy top-level keys alongside the new nested key.
+    const mixed = {
+      uploadedAt: '2025-01-01T00:00:00.000Z',
+      reason: 'summary_log_changed',
+      summaryLogId: 'sl-1',
+      summaryLogChanged: {
+        uploadedAt: '2025-02-01T00:00:00.000Z',
+        summaryLogId: 'sl-2'
+      }
+    }
+
+    expect(normaliseStale(mixed)).toEqual({
+      summaryLogChanged: {
+        uploadedAt: '2025-02-01T00:00:00.000Z',
+        summaryLogId: 'sl-2'
+      }
+    })
+  })
+
+  it('strips legacy flat siblings alongside a nested prnCancelled key', () => {
+    const mixed = {
+      uploadedAt: '2025-01-01T00:00:00.000Z',
+      reason: 'summary_log_changed',
+      summaryLogId: 'sl-1',
+      prnCancelled: buildPrnCancelled()
+    }
+
+    expect(normaliseStale(mixed)).toEqual({
+      prnCancelled: buildPrnCancelled()
+    })
+  })
+
+  it('preserves both reasons when both nested keys are present alongside legacy siblings', () => {
+    const mixed = {
+      uploadedAt: '2025-01-01T00:00:00.000Z',
+      reason: 'summary_log_changed',
+      summaryLogId: 'sl-1',
+      summaryLogChanged: buildSummaryLogChanged(),
+      prnCancelled: buildPrnCancelled()
+    }
+
+    expect(normaliseStale(mixed)).toEqual({
+      summaryLogChanged: buildSummaryLogChanged(),
+      prnCancelled: buildPrnCancelled()
+    })
+  })
 })
 
 describe('assertNotStale', () => {

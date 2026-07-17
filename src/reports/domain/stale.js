@@ -44,34 +44,27 @@ export const staleReasons = (stale) => {
 }
 
 /**
- * Normalises a report's `stale` field to the current nested shape. Old
- * documents (written before the PRN-cancellation trigger existed) carry a
- * flat `{ uploadedAt, reason, summaryLogId }` object; new writes only ever
- * produce `{ summaryLogChanged?, prnCancelled? }`. Applied at the repository
- * read boundary so every caller sees the current shape regardless of when
- * the document was written — no bulk migration needed, since `stale` only
- * ever applies to active drafts, which are short-lived by construction.
+ * Normalises a report's `stale` field to the current nested shape.
+ * Upgrading the legacy flat shape (`{ uploadedAt, reason, summaryLogId }`) where needed.
  *
- * @param {Record<string, unknown> | undefined} stale
+ * @param {any} stale
  * @returns {import('#reports/repository/port.js').ReportStale | undefined}
  */
 export const normaliseStale = (stale) => {
-  if (!stale) {
-    return undefined
+  if (!stale) return undefined
+
+  const { summaryLogChanged, prnCancelled, reason: _reason, ...rest } = stale
+
+  // If we have either of the new structured fields, extract and return them
+  if (summaryLogChanged || prnCancelled) {
+    return {
+      ...(summaryLogChanged && { summaryLogChanged }),
+      ...(prnCancelled && { prnCancelled })
+    }
   }
-  if ('summaryLogChanged' in stale || 'prnCancelled' in stale) {
-    return /** @type {import('#reports/repository/port.js').ReportStale} */ (
-      stale
-    )
-  }
-  // Old flat shape: the only reason that existed before this change.
-  const { reason: _reason, ...rest } = stale
-  return {
-    summaryLogChanged:
-      /** @type {import('#reports/repository/port.js').StaleSummaryLogChanged} */ (
-        rest
-      )
-  }
+
+  // Fallback for the old flat shape (everything except 'reason' goes into summaryLogChanged)
+  return { summaryLogChanged: rest }
 }
 
 /**
