@@ -37,7 +37,7 @@ describe('mapReport', () => {
   })
 
   it('does not log for a clean nested-shape stale', () => {
-    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => logger)
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => logger)
 
     mapReport(
       buildReport({
@@ -48,11 +48,11 @@ describe('mapReport', () => {
       })
     )
 
-    expect(warn).not.toHaveBeenCalled()
+    expect(info).not.toHaveBeenCalled()
   })
 
-  it('warns with the report id and stripped keys when normalising a legacy stale shape', () => {
-    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => logger)
+  it('logs at info with the report id and stripped keys when normalising a legacy stale shape', () => {
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => logger)
 
     mapReport(
       buildReport({
@@ -66,7 +66,7 @@ describe('mapReport', () => {
       })
     )
 
-    expect(warn).toHaveBeenCalledWith(
+    expect(info).toHaveBeenCalledWith(
       expect.objectContaining({
         event: expect.objectContaining({
           action: LOGGING_EVENT_ACTIONS.LEGACY_STALE_SHAPE_NORMALISED,

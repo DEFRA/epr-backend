@@ -16,9 +16,10 @@ const BARE_DATE_LENGTH = 10
 
 /**
  * Normalises a report's `stale` field to the current nested shape on read.
- * Warns when the document still carries the legacy flat shape, so the number
- * of un-migrated documents is observable — the back-compat branch in
- * `normaliseStale` is safe to remove once this stops firing (PAE-1755).
+ * Logs at info when the document still carries the legacy flat shape, so the
+ * number of un-migrated documents is observable — the back-compat branch in
+ * `normaliseStale` is safe to remove once this stops firing (PAE-1755). Info,
+ * not warn: old documents are expected, so this must not raise alerts.
  *
  * @template {{ id?: string, stale?: Record<string, unknown> }} T
  * @param {T} report
@@ -30,7 +31,7 @@ export const mapReport = (report) => {
   }
   const strippedKeys = legacyStaleKeys(report.stale)
   if (strippedKeys.length > 0) {
-    logger.warn({
+    logger.info({
       message: 'Normalised legacy stale shape on report read',
       event: {
         category: LOGGING_EVENT_CATEGORIES.DB,
