@@ -22,10 +22,15 @@ import { createReportsService } from '#reports/application/report-service.js'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { partialMock } from '#test/type-helpers.js'
 
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
+
+/** @import { HapiServer } from '#common/hapi-types.js' */
+/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
+/** @import { Material, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
@@ -353,7 +358,7 @@ const DEFAULT_MAX_ATTEMPTS = 20
 
 /**
  * Poll until summary log status changes from the specified status.
- * @param {object} server - Test server instance
+ * @param {HapiServer} server - Test server instance
  * @param {string} organisationId - Organisation ID
  * @param {string} registrationId - Registration ID
  * @param {string} summaryLogId - Summary log ID
@@ -711,14 +716,14 @@ const buildComplexTestOrg = ({
   const registration = {
     id: registrationId,
     registrationNumber: 'REG-123',
-    status: 'approved',
-    statusHistory: [
+    status: /** @type {'approved'} */ ('approved'),
+    statusHistory: /** @type {StatusHistoryEntry[]} */ ([
       { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
       { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-    ],
-    material,
+    ]),
+    material: /** @type {Material} */ (material),
     wasteProcessingType: processingType,
-    reprocessingType,
+    reprocessingType: /** @type {ReprocessingType} */ (reprocessingType),
     formSubmission: { id: registrationId, time: new Date() },
     submittedToRegulator: 'ea',
     validFrom: VALID_FROM,
@@ -736,10 +741,10 @@ const buildComplexTestOrg = ({
 
   return buildReadOrganisation({
     status: 'active',
-    registrations: [registration],
+    registrations: [partialMock(registration)],
     accreditations: accredited
       ? [
-          {
+          partialMock({
             id: accreditationId,
             accreditationNumber: 'ACC-123',
             validFrom: VALID_FROM,
@@ -752,11 +757,11 @@ const buildComplexTestOrg = ({
                 postcode: 'AB1 2CD'
               }
             },
-            statusHistory: [
+            statusHistory: /** @type {StatusHistoryEntry[]} */ ([
               { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
               { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-            ]
-          }
+            ])
+          })
         ]
       : []
   })

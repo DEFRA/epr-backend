@@ -7,6 +7,7 @@ import {
   buildPrnCreatedEvent
 } from '../repository/ledger-test-data.js'
 import { latestSubmittedSummaryLog } from './latest-submitted-summary-log.js'
+import { partialMock } from '#test/type-helpers.js'
 
 const LEDGER_ID = buildLedgerId()
 
@@ -21,7 +22,7 @@ describe('latestSubmittedSummaryLog', () => {
 
   it('returns null when the ledger has events but no submission', async () => {
     const ledgerRepository = createInMemoryLedgerRepository([
-      buildPrnCreatedEvent({ number: 1 })
+      partialMock(buildPrnCreatedEvent({ number: 1 }))
     ])()
 
     expect(
@@ -32,11 +33,13 @@ describe('latestSubmittedSummaryLog', () => {
   it('returns the latest submitted summaryLogId and its submitted timestamp', async () => {
     const submittedAt = new Date('2026-02-15T15:09:00.000Z')
     const ledgerRepository = createInMemoryLedgerRepository([
-      buildLedgerEvent({
-        number: 1,
-        createdAt: submittedAt,
-        payload: { summaryLogId: 'log-1', creditTotal: 100 }
-      })
+      partialMock(
+        buildLedgerEvent({
+          number: 1,
+          createdAt: submittedAt,
+          payload: { summaryLogId: 'log-1', creditTotal: 100 }
+        })
+      )
     ])()
 
     expect(
@@ -47,16 +50,20 @@ describe('latestSubmittedSummaryLog', () => {
   it('returns the latest submission, ignoring a later PRN event', async () => {
     const submittedAt = new Date('2026-03-01T12:00:00.000Z')
     const ledgerRepository = createInMemoryLedgerRepository([
-      buildLedgerEvent({
-        number: 1,
-        payload: { summaryLogId: 'log-1', creditTotal: 100 }
-      }),
-      buildLedgerEvent({
-        number: 2,
-        createdAt: submittedAt,
-        payload: { summaryLogId: 'log-2', creditTotal: 150 }
-      }),
-      buildPrnCreatedEvent({ number: 3 })
+      partialMock(
+        buildLedgerEvent({
+          number: 1,
+          payload: { summaryLogId: 'log-1', creditTotal: 100 }
+        })
+      ),
+      partialMock(
+        buildLedgerEvent({
+          number: 2,
+          createdAt: submittedAt,
+          payload: { summaryLogId: 'log-2', creditTotal: 150 }
+        })
+      ),
+      partialMock(buildPrnCreatedEvent({ number: 3 }))
     ])()
 
     expect(
@@ -67,12 +74,14 @@ describe('latestSubmittedSummaryLog', () => {
   it('resolves the head for a registered-only ledger', async () => {
     const submittedAt = new Date('2026-01-15T10:00:00.000Z')
     const ledgerRepository = createInMemoryLedgerRepository([
-      buildLedgerEvent({
-        number: 1,
-        accreditationId: null,
-        createdAt: submittedAt,
-        payload: { summaryLogId: 'log-1', creditTotal: 100 }
-      })
+      partialMock(
+        buildLedgerEvent({
+          number: 1,
+          accreditationId: null,
+          createdAt: submittedAt,
+          payload: { summaryLogId: 'log-1', creditTotal: 100 }
+        })
+      )
     ])()
 
     expect(
