@@ -325,6 +325,57 @@ describe('findPreCpaResubmissionReports', () => {
     })
   })
 
+  it('closes a period by earliest submission time, not submissionNumber order', async () => {
+    // submissionNumber need not increase with submission time. Here the higher
+    // submissionNumber (v2) was submitted BEFORE the lower one (v1), so the
+    // period first closed at v2's 5 Aug, not the lowest-submissionNumber v1's
+    // 10 Aug. A 7 Aug restating upload lands after the true first close but
+    // before v1's timestamp, so it is a finding only when the earliest close is
+    // taken by timestamp rather than by submissionNumber order.
+    const reg = {
+      organisationId: newId(),
+      registrationId: newId(),
+      accreditationId: newId(),
+      reports: [
+        {
+          reportId: 'report-v1',
+          submissionNumber: 1,
+          submittedAt: '2025-08-10T00:00:00.000Z'
+        },
+        {
+          reportId: 'report-v2',
+          submissionNumber: 2,
+          submittedAt: '2025-08-05T00:00:00.000Z'
+        }
+      ],
+      logs: [
+        { id: 'sl-original', submittedAt: '2025-08-01T00:00:00.000Z' },
+        { id: 'sl-restating', submittedAt: '2025-08-07T00:00:00.000Z' }
+      ],
+      rowStates: [
+        {
+          id: 'rs-original',
+          summaryLogIds: ['sl-original'],
+          dateReceived: '2025-06-15'
+        },
+        {
+          id: 'rs-restated',
+          summaryLogIds: ['sl-restating'],
+          dateReceived: '2025-06-15'
+        }
+      ]
+    }
+
+    const { findings } = await run(await buildRepos([reg]))
+
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toMatchObject({
+      reportId: 'report-v2',
+      reportSubmittedAt: '2025-08-05T00:00:00.000Z',
+      restatingSummaryLogId: 'sl-restating'
+    })
+  })
+
   it('counts an oscillation that returns to its original state (net-zero restatement)', async () => {
     const reg = {
       organisationId: newId(),

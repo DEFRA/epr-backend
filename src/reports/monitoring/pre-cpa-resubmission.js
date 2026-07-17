@@ -2,6 +2,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { REGISTERED_ONLY_PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodForDate } from '#reports/domain/period-for-date.js'
 import { periodKey } from '#reports/domain/period-key.js'
@@ -73,21 +74,26 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
  * `current` (the highest submissionNumber) first, then `previousSubmissions`.
  * `current` may itself be an unsubmitted resubmission-in-progress, so it is
  * dropped unless it reached 'submitted'; a period counts as closed whenever any
- * of its submissions did. A submitted report always carries a submittedAt.
+ * of its submissions did. `status` here is the report's currentStatus, so it is
+ * filtered against REPORT_STATUS. A submitted report always carries a
+ * submittedAt.
  *
  * @param {any} slot
  * @returns {any[]}
  */
 const submittedSubmissions = (slot) =>
   [slot.current, ...slot.previousSubmissions].filter(
-    (s) => s.status === SUMMARY_LOG_STATUS.SUBMITTED
+    (s) => s.status === REPORT_STATUS.SUBMITTED
   )
 
 /**
- * Flattens periodic reports into one entry per submitted period, attributing
- * to the latest submitted report and remembering when the period first closed.
- * `submittedSubmissions` is ordered newest-first, so the first entry is the
- * report to attribute to and the last is the submission that first closed it.
+ * Flattens periodic reports into one entry per submitted period, attributing to
+ * the latest submitted report (the highest submissionNumber, first in
+ * `submittedSubmissions`) and remembering when the period first closed. The
+ * first close is the earliest submittedAt across the submitted submissions,
+ * taken by timestamp rather than submissionNumber order: a resubmission's number
+ * need not increase with its submission time, so the lowest-numbered submission
+ * is not necessarily the earliest-submitted one.
  *
  * @param {any[]} periodicReports
  * @returns {SubmittedReport[]}
@@ -102,6 +108,11 @@ const collectSubmittedReports = (periodicReports) => {
           continue
         }
         const attributed = submitted[0]
+        const earliestSubmittedAt = submitted.reduce(
+          (earliest, s) =>
+            s.submittedAt < earliest ? s.submittedAt : earliest,
+          attributed.submittedAt
+        )
         collected.push({
           organisationId: pr.organisationId,
           registrationId: pr.registrationId,
@@ -110,7 +121,7 @@ const collectSubmittedReports = (periodicReports) => {
           cadence,
           period: Number(periodKey),
           reportSubmittedAt: attributed.submittedAt,
-          earliestSubmittedAt: submitted[submitted.length - 1].submittedAt
+          earliestSubmittedAt
         })
       }
     }
