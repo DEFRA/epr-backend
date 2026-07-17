@@ -39,7 +39,8 @@ import { createInMemoryLedgerRepositoryPlugin } from '#waste-balances/repository
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
 
-/** @import { Lifecycle } from '@hapi/hapi' */
+/** @import { Lifecycle, Plugin } from '@hapi/hapi' */
+/** @import { Db } from 'mongodb' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
 /** @import { Mock } from 'vitest' */
 
@@ -56,6 +57,7 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
 /**
  * @typedef {{
  *   config?: Record<string, any>
+ *   db?: Db
  *   featureFlags?: object
  *   repositories?: object
  *   workers?: object
@@ -88,6 +90,21 @@ function createRepositoryPlugin(name, repositoryOrFactory) {
     }
   }
 }
+
+/**
+ * Decorates `server` and `request` with a real Mongo `Db`, for route tests that
+ * exercise raw `request.db` access instead of a repository.
+ *
+ * @param {Db} db
+ * @returns {Plugin<void>}
+ */
+const createDbPlugin = (db) => ({
+  name: 'test-db',
+  register: (server) => {
+    server.decorate('server', 'db', db)
+    server.decorate('request', 'db', db)
+  }
+})
 
 const repositoryConfigs = [
   {
@@ -283,6 +300,7 @@ export async function createTestServer(options = {}) {
       plugin: mockDlqAdminPlugin,
       options: { dlqService: options.dlqService }
     },
+    ...(options.db ? [createDbPlugin(options.db)] : []),
     router
   ]
 
