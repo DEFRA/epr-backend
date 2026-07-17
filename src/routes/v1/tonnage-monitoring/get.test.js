@@ -78,17 +78,14 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
       expect(JSON.parse(response.payload)).toEqual(mockTonnageData)
     })
 
-    it('calls aggregateTonnageByMaterial with db', async () => {
-      const mockTonnageData = {
-        generatedAt: '2026-01-29T12:00:00.000Z',
-        materials: [],
-        total: 0
-      }
-      mockAggregateTonnageByMaterial.mockResolvedValue(mockTonnageData)
-
+    it('calls aggregateTonnageByMaterial with db and ledgerRepository', async () => {
       await makeRequest()
 
       expect(mockAggregateTonnageByMaterial).toHaveBeenCalledTimes(1)
+      const [, ledgerRepository] = mockAggregateTonnageByMaterial.mock.calls[0]
+      expect(
+        ledgerRepository.findLatestSubmittedSummaryLogPerLedger
+      ).toBeTypeOf('function')
     })
   })
 

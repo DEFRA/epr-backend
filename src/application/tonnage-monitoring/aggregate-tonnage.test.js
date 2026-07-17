@@ -1,23 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { aggregateTonnageByMaterial } from './aggregate-tonnage.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
-import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
 
-const createMockDb = (
-  aggregateResults,
-  latestSubmittedSummaryLogs = [{ summaryLogId: 'sl-1' }]
-) => ({
-  collection: vi.fn((name) => ({
+const createMockDb = (aggregateResults) => ({
+  collection: vi.fn(() => ({
     aggregate: vi.fn(() => ({
-      toArray: vi
-        .fn()
-        .mockResolvedValue(
-          name === WASTE_BALANCE_EVENTS_COLLECTION_NAME
-            ? latestSubmittedSummaryLogs
-            : aggregateResults
-        )
+      toArray: vi.fn().mockResolvedValue(aggregateResults)
     }))
   }))
+})
+
+const ledgerEntry = (summaryLogId) => ({
+  ledgerId: {
+    organisationId: 'org-1',
+    registrationId: `reg-${summaryLogId}`,
+    accreditationId: `acc-${summaryLogId}`
+  },
+  summaryLogId
+})
+
+const createStubLedgerRepository = (entries = [ledgerEntry('sl-1')]) => ({
+  findLatestSubmittedSummaryLogPerLedger: async () => entries
 })
 
 describe('aggregateTonnageByMaterial', () => {
@@ -53,7 +56,10 @@ describe('aggregateTonnageByMaterial', () => {
     ]
     const db = createMockDb(mockResults)
 
-    const result = await aggregateTonnageByMaterial(db)
+    const result = await aggregateTonnageByMaterial(
+      db,
+      createStubLedgerRepository()
+    )
 
     // Should return 8 materials × 2 types = 16 entries (each with 2 months)
     expect(result.materials).toHaveLength(16)
@@ -113,7 +119,10 @@ describe('aggregateTonnageByMaterial', () => {
     ]
     const db = createMockDb(mockResults)
 
-    const result = await aggregateTonnageByMaterial(db)
+    const result = await aggregateTonnageByMaterial(
+      db,
+      createStubLedgerRepository()
+    )
 
     // 8 materials × 2 types = 16 entries
     expect(result.materials).toHaveLength(16)
@@ -165,7 +174,10 @@ describe('aggregateTonnageByMaterial', () => {
   it('should return generatedAt timestamp', async () => {
     const db = createMockDb([])
 
-    const result = await aggregateTonnageByMaterial(db)
+    const result = await aggregateTonnageByMaterial(
+      db,
+      createStubLedgerRepository()
+    )
 
     expect(result.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
   })
@@ -193,7 +205,10 @@ describe('aggregateTonnageByMaterial', () => {
     ]
     const db = createMockDb(mockResults)
 
-    const result = await aggregateTonnageByMaterial(db)
+    const result = await aggregateTonnageByMaterial(
+      db,
+      createStubLedgerRepository()
+    )
 
     // Find and verify glass_other Reprocessor
     const glassOtherReprocessor = result.materials.find(
@@ -251,7 +266,10 @@ describe('aggregateTonnageByMaterial', () => {
     ]
     const db = createMockDb(mockResults)
 
-    const result = await aggregateTonnageByMaterial(db)
+    const result = await aggregateTonnageByMaterial(
+      db,
+      createStubLedgerRepository()
+    )
 
     expect(result.total).toBe(60)
   })
@@ -262,20 +280,16 @@ describe('aggregateTonnageByMaterial', () => {
       collection: vi.fn((name) => ({
         aggregate: vi.fn((pipeline) => {
           aggregateCalls.push({ name, pipeline })
-          return {
-            toArray: vi
-              .fn()
-              .mockResolvedValue(
-                name === WASTE_BALANCE_EVENTS_COLLECTION_NAME
-                  ? [{ summaryLogId: 'sl-1' }, { summaryLogId: 'sl-2' }]
-                  : []
-              )
-          }
+          return { toArray: vi.fn().mockResolvedValue([]) }
         })
       }))
     }
+    const ledgerRepository = createStubLedgerRepository([
+      ledgerEntry('sl-1'),
+      ledgerEntry('sl-2')
+    ])
 
-    await aggregateTonnageByMaterial(db)
+    await aggregateTonnageByMaterial(db, ledgerRepository)
 
     const rowStatesCall = aggregateCalls.find(
       (call) => call.name === SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
