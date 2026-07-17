@@ -197,7 +197,7 @@ const performFindAllInLedger = (collection) => async (ledgerId) => {
 }
 
 /**
- * One entry per accredited partition with a submitted summary log, carrying the
+ * One entry per ledger partition with a submitted summary log, carrying the
  * latest submission's `summaryLogId`. Sorting descending before the group lets
  * `$first` name the highest-numbered submission per partition.
  *
@@ -210,7 +210,6 @@ const performFindLatestSubmittedSummaryLogPerLedger =
       .aggregate([
         {
           $match: {
-            accreditationId: { $ne: null },
             kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
           }
         },
