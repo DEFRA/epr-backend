@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assertNotStale,
   assertValidStaleReasonsCode,
+  legacyStaleKeys,
   normaliseStale,
   STALE_REASON,
   staleReasons
@@ -156,6 +157,42 @@ describe('normaliseStale', () => {
       summaryLogChanged: buildSummaryLogChanged(),
       prnCancelled: buildPrnCancelled()
     })
+  })
+})
+
+describe('legacyStaleKeys', () => {
+  it('returns [] for undefined', () => {
+    expect(legacyStaleKeys(undefined)).toEqual([])
+  })
+
+  it('returns [] for the current nested shape', () => {
+    expect(
+      legacyStaleKeys({
+        summaryLogChanged: buildSummaryLogChanged(),
+        prnCancelled: buildPrnCancelled()
+      })
+    ).toEqual([])
+  })
+
+  it('returns every flat key for the old flat shape', () => {
+    expect(
+      legacyStaleKeys({
+        uploadedAt: '2025-01-01T00:00:00.000Z',
+        reason: 'summary_log_changed',
+        summaryLogId: 'sl-1'
+      })
+    ).toEqual(['uploadedAt', 'reason', 'summaryLogId'])
+  })
+
+  it('returns only the stray siblings for a hybrid shape', () => {
+    expect(
+      legacyStaleKeys({
+        uploadedAt: '2025-01-01T00:00:00.000Z',
+        reason: 'summary_log_changed',
+        summaryLogId: 'sl-1',
+        summaryLogChanged: buildSummaryLogChanged()
+      })
+    ).toEqual(['uploadedAt', 'reason', 'summaryLogId'])
   })
 })
 
