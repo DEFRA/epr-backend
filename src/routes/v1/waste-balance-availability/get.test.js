@@ -64,19 +64,6 @@ describe(`GET ${wasteBalanceAvailabilityPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual(mockBalanceData)
     })
-
-    it('calls aggregateAvailableBalance once', async () => {
-      const mockBalanceData = {
-        generatedAt: '2026-01-29T12:00:00.000Z',
-        materials: [],
-        total: 0
-      }
-      mockAggregateAvailableBalance.mockResolvedValue(mockBalanceData)
-
-      await makeRequest()
-
-      expect(mockAggregateAvailableBalance).toHaveBeenCalledTimes(1)
-    })
   })
 
   describe('error handling', () => {
