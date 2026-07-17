@@ -305,6 +305,7 @@ const performValidationChecks = async ({
   validateDataSyntax
 }) => {
   const issues = createValidationIssues()
+  /** @type {ValidatedWasteRecord[] | null} */
   let wasteRecords = null
   /** @type {ExtractedMeta | undefined} */
   let meta

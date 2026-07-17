@@ -17,6 +17,7 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
+/** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
@@ -25,7 +26,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 /**
  * Checks if the summary log's preview is stale and handles the superseded transition
  * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {object} summaryLog
+ * @param {SummaryLog & {validatedAgainstSummaryLogId?: string}} summaryLog
  * @param {string} summaryLogId
  * @param {string} organisationId
  * @param {string} registrationId

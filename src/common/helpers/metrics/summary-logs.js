@@ -21,7 +21,7 @@ import {
 
 /**
  * @typedef {Object} ProcessingTypeDimensions
- * @property {ProcessingType} processingType
+ * @property {ProcessingType} [processingType]
  */
 
 /**

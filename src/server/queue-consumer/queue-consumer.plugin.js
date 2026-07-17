@@ -10,6 +10,8 @@ import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
 import { orsImportCommandHandlers } from './ors-import-commands.js'
 
+/** @import { Consumer } from 'sqs-consumer' */
+
 /**
  * @typedef {Object} CommandQueueConsumerPluginOptions
  * @property {{get: (key: string) => string}} config
@@ -89,6 +91,7 @@ export const commandQueueConsumerPlugin = {
   ) => {
     const { sqsClient, queueName, uploadsRepository, ...baseDeps } =
       buildConsumerDeps(server, options)
+    /** @type {Consumer | null} */
     let consumer = null
 
     server.events.on('start', async () => {

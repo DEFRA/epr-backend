@@ -13,9 +13,14 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { processImportFile } from './process-import-file.js'
 
 /**
- * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  * @import { TypedLogger } from '#common/hapi-types.js'
+ * @import { UploadsRepository } from '#domain/uploads/repository/port.js'
+ * @import { OrsImportFile, OrsImportsRepository } from '#overseas-sites/imports/repository/port.js'
  * @import { OrsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
+ * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
+ * @import { OrsFileResult } from './process-import-file.js'
  */
 
 /**
@@ -26,10 +31,10 @@ import { processImportFile } from './process-import-file.js'
  *
  * @param {string} importId
  * @param {object} deps
- * @param {object} deps.orsImportsRepository
- * @param {object} deps.uploadsRepository
- * @param {object} deps.overseasSitesRepository
- * @param {object} deps.organisationsRepository
+ * @param {OrsImportsRepository} deps.orsImportsRepository
+ * @param {UploadsRepository} deps.uploadsRepository
+ * @param {OverseasSitesRepository} deps.overseasSitesRepository
+ * @param {OrganisationsRepository} deps.organisationsRepository
  * @param {SystemLogsRepository} deps.systemLogsRepository
  * @param {TypedLogger} deps.logger
  * @param {OrsImportMetrics} deps.orsImportMetrics
@@ -115,9 +120,15 @@ export const processOrsImport = async (importId, deps) => {
 }
 
 /**
- * @param {object} file
+ * @param {OrsImportFile} file
  * @param {object} deps
- * @returns {Promise<object>}
+ * @param {UploadsRepository} deps.uploadsRepository
+ * @param {OverseasSitesRepository} deps.overseasSitesRepository
+ * @param {OrganisationsRepository} deps.organisationsRepository
+ * @param {SystemLogsRepository} deps.systemLogsRepository
+ * @param {TypedLogger} deps.logger
+ * @param {SystemLogHumanActor} deps.user
+ * @returns {Promise<OrsFileResult>}
  */
 const processFile = async (file, deps) => {
   const {
