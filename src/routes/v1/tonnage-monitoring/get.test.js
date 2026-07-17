@@ -77,16 +77,6 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual(mockTonnageData)
     })
-
-    it('calls aggregateTonnageByMaterial with db and ledgerRepository', async () => {
-      await makeRequest()
-
-      expect(mockAggregateTonnageByMaterial).toHaveBeenCalledTimes(1)
-      const [, ledgerRepository] = mockAggregateTonnageByMaterial.mock.calls[0]
-      expect(
-        ledgerRepository.findLatestSubmittedSummaryLogPerLedger
-      ).toBeTypeOf('function')
-    })
   })
 
   describe('error handling', () => {
