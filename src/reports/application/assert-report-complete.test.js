@@ -21,7 +21,9 @@ const getMissing = (report, category) => {
       /** @type {OperatorCategory} */ (category)
     )
   } catch (err) {
-    if (err?.isBoom) return err.output.payload.missingFields
+    if (err?.isBoom) {
+      return err.output.payload.missingFields
+    }
     throw err
   }
   return []
