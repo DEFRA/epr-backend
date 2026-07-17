@@ -4,6 +4,10 @@ import { StatusCodes } from 'http-status-codes'
 import { it } from '#vite/fixtures/server-with-real-db.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
 import { MATERIAL } from '#domain/organisations/model.js'
 import {
   buildAwaitingAcceptancePrn,
@@ -14,6 +18,7 @@ import { prnTonnagePath } from './get.js'
 /** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
 
 const PRNS_COLLECTION = 'packaging-recycling-notes'
+const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const { validToken } = entraIdMockAuthTokens
 
 const orgId = '507f1f77bcf86cd799439011'
@@ -24,6 +29,7 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
   beforeEach(
     async (/** @type {{ server: TestServerWithRealDb }} */ { server }) => {
       await server.db.collection(PRNS_COLLECTION).deleteMany({})
+      await server.db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
     }
   )
 
@@ -60,5 +66,12 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
         cancelledTonnage: 0
       }
     ])
+    expect(server.loggerMocks.info).toHaveBeenCalledWith({
+      message: 'PRN tonnage data retrieved successfully',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+      }
+    })
   })
 })
