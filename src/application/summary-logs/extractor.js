@@ -15,7 +15,6 @@ import {
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
-/** @typedef {import('#domain/summary-logs/model.js').StoredSummaryLog} StoredSummaryLog */
 
 const FILE_PROCESSING_CATEGORY = 'file-processing'
 
@@ -99,11 +98,15 @@ export const createSummaryLogExtractor = ({ uploadsRepository }) => {
      * @returns {Promise<ParsedSummaryLog>}
      */
     extract: async (summaryLog, { logger }) => {
-      const {
-        file: { uri }
-      } = /** @type {StoredSummaryLog} */ (summaryLog)
+      const { file } = summaryLog
 
-      const summaryLogBuffer = await uploadsRepository.findByLocation(uri)
+      if (file.status !== 'complete') {
+        throw new Error(
+          `Cannot extract summary log: file upload is not complete (status: ${file.status})`
+        )
+      }
+
+      const summaryLogBuffer = await uploadsRepository.findByLocation(file.uri)
 
       if (!summaryLogBuffer) {
         throw new Error(
