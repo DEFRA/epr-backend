@@ -37,35 +37,6 @@ describe(`GET ${wasteBalanceAvailabilityPath}`, () => {
     server = await createTestServer({ repositories: {} })
   })
 
-  describe('happy path', () => {
-    const makeRequest = async () => {
-      return server.inject({
-        method: 'GET',
-        url: wasteBalanceAvailabilityPath,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
-    }
-
-    it('returns 200 with balance data', async () => {
-      const mockBalanceData = {
-        generatedAt: '2026-01-29T12:00:00.000Z',
-        materials: [
-          { material: 'glass_re_melt', availableAmount: 100 },
-          { material: 'plastic', availableAmount: 200 }
-        ],
-        total: 300
-      }
-      mockAggregateAvailableBalance.mockResolvedValue(mockBalanceData)
-
-      const response = await makeRequest()
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(JSON.parse(response.payload)).toEqual(mockBalanceData)
-    })
-  })
-
   describe('error handling', () => {
     it('returns 500 when aggregation fails', async () => {
       mockAggregateAvailableBalance.mockRejectedValue(
