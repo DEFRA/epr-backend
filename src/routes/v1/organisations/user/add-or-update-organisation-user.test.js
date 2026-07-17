@@ -266,11 +266,13 @@ describe('addOrUpdateOrganisationUser', () => {
 
   describe('when organisation has no users property', () => {
     test('should add user when users property is undefined', async () => {
-      mockOrganisation = {
-        id: new ObjectId().toString(),
-        version: 1
-        // users property is missing/undefined
-      }
+      mockOrganisation = /** @type {Organisation} */ (
+        /** @type {unknown} */ ({
+          id: new ObjectId().toString(),
+          version: 1
+          // users property is missing/undefined
+        })
+      )
 
       await addOrUpdateOrganisationUser(
         mockRequest,
@@ -297,11 +299,13 @@ describe('addOrUpdateOrganisationUser', () => {
     })
 
     test('should add user when users property is null', async () => {
-      mockOrganisation = {
-        id: new ObjectId().toString(),
-        version: 1,
-        users: null
-      }
+      mockOrganisation = /** @type {Organisation} */ (
+        /** @type {unknown} */ ({
+          id: new ObjectId().toString(),
+          version: 1,
+          users: null
+        })
+      )
 
       await addOrUpdateOrganisationUser(
         mockRequest,
