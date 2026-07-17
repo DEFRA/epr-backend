@@ -9,6 +9,19 @@ import { periodKey } from '#reports/domain/period-key.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 
 /**
+ * @typedef {import('#reports/repository/port.js').PeriodicReport} PeriodicReport
+ * @typedef {import('#reports/repository/port.js').ReportPerPeriod} ReportPerPeriod
+ * @typedef {import('#reports/repository/port.js').ReportSummary} ReportSummary
+ * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
+ * @typedef {import('#waste-records/repository/port.js').SummaryLogRowState} SummaryLogRowState
+ * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} SummaryLogRowStateRepository
+ * @typedef {import('#waste-records/repository/port.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ * @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository
+ * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {{ reportingDateFields: string[] }} TableSchema
+ */
+
+/**
  * Startup diagnostic (PAE-1747): retrospectively sizes the reports a later
  * summary-log upload restated in an already-closed period — the ones CPA
  * (closed-period adjustments) would flag as needing resubmission once enabled.
@@ -78,25 +91,28 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
  * closed if any submission did. `status` is the report's currentStatus, hence
  * REPORT_STATUS not the summary-log enum.
  *
- * @param {any} slot
- * @returns {any[]}
+ * @param {ReportPerPeriod} slot
+ * @returns {ReportSummary[]}
  */
 const submittedSubmissions = (slot) =>
-  [slot.current, ...slot.previousSubmissions].filter(
-    (s) => s.status === REPORT_STATUS.SUBMITTED
-  )
+  [
+    /** @type {ReportSummary} */ (slot.current),
+    ...slot.previousSubmissions
+  ].filter((s) => s.status === REPORT_STATUS.SUBMITTED)
 
 /**
  * Flattens the nested { cadence: { period: slot } } report structure into a flat
  * list of period slots, so each slot is classified in one shallow loop.
  *
- * @param {any[]} periodicReports
- * @returns {{ pr: any, cadence: string, period: number, slot: any }[]}
+ * @param {PeriodicReport[]} periodicReports
+ * @returns {{ pr: PeriodicReport, cadence: string, period: number, slot: ReportPerPeriod }[]}
  */
 const periodSlots = (periodicReports) =>
   periodicReports.flatMap((pr) =>
     Object.entries(pr.reports).flatMap(([cadence, byPeriod]) =>
-      Object.entries(byPeriod).map(([period, slot]) => ({
+      Object.entries(
+        /** @type {Record<string, ReportPerPeriod>} */ (byPeriod)
+      ).map(([period, slot]) => ({
         pr,
         cadence,
         period: Number(period),
@@ -111,14 +127,15 @@ const periodSlots = (periodicReports) =>
  * resubmission's number need not increase with its submission time, so the
  * lowest-numbered submission is not necessarily the earliest-submitted one.
  *
- * @param {any[]} submissions
+ * @param {ReportSummary[]} submissions
  * @returns {string}
  */
-const earliestSubmittedAtOf = (submissions) =>
-  submissions
-    .map((s) => s.submittedAt)
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b))[0]
+const earliestSubmittedAtOf = (submissions) => {
+  const times = /** @type {string[]} */ (
+    submissions.map((s) => s.submittedAt).filter(Boolean)
+  )
+  return times.sort((a, b) => a.localeCompare(b))[0]
+}
 
 /**
  * Classifies one submitted period slot, attributing to its latest submitted
@@ -127,7 +144,7 @@ const earliestSubmittedAtOf = (submissions) =>
  * gate comparison silently), so it is surfaced under `missing` for review. Null
  * when the period has no submitted submission.
  *
- * @param {{ pr: any, cadence: string, period: number, slot: any }} entry
+ * @param {{ pr: PeriodicReport, cadence: string, period: number, slot: ReportPerPeriod }} entry
  * @returns {{ report?: SubmittedReport, missing?: ReportIdentity } | null}
  */
 const classifySlot = ({ pr, cadence, period, slot }) => {
@@ -160,7 +177,7 @@ const classifySlot = ({ pr, cadence, period, slot }) => {
  * Splits every submitted period into evaluable `reports` and the data-integrity
  * `missingSubmittedAt` list.
  *
- * @param {any[]} periodicReports
+ * @param {PeriodicReport[]} periodicReports
  * @returns {{ reports: SubmittedReport[], missingSubmittedAt: ReportIdentity[] }}
  */
 const collectSubmittedReports = (periodicReports) => {
@@ -203,10 +220,10 @@ const groupByRegistration = (submittedReports) => {
  * can no longer be looked up (deleted org/registration), skipping it. Only the
  * current accreditation is exposed, so earlier ids are not covered — residual 1.
  *
- * @param {any} organisationsRepository
+ * @param {OrganisationsRepository} organisationsRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @returns {Promise<{ organisationId: string, registrationId: string, accreditationId: string | null }[] | null>}
+ * @returns {Promise<WasteBalanceLedgerId[] | null>}
  */
 const resolveLedgers = async (
   organisationsRepository,
@@ -236,7 +253,7 @@ const resolveLedgers = async (
  * Submitted upload timeline for a registration, oldest-first. Only 'submitted'
  * logs committed row states; failure-status logs are excluded.
  *
- * @param {any} summaryLogsRepository
+ * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {string} organisationId
  * @param {string} registrationId
  * @returns {Promise<{ id: string, submittedAt: string }[]>}
@@ -256,7 +273,10 @@ const loadSubmittedLogTimeline = async (
         summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED &&
         summaryLog.submittedAt
     )
-    .map(({ id, summaryLog }) => ({ id, submittedAt: summaryLog.submittedAt }))
+    .map(({ id, summaryLog }) => ({
+      id,
+      submittedAt: /** @type {string} */ (summaryLog.submittedAt)
+    }))
     .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))
 }
 
@@ -267,11 +287,13 @@ const loadSubmittedLogTimeline = async (
  * registered-only template and reports quarterly); it diverges only for an
  * accreditation cancelled while keeping its number — see residual 2.
  *
- * @param {any} row
+ * @param {SummaryLogRowState} row
  * @returns {string}
  */
 const cadenceForRow = (row) =>
-  REGISTERED_ONLY_PROCESSING_TYPES.has(row.processingType)
+  /** @type {ReadonlySet<string>} */ (REGISTERED_ONLY_PROCESSING_TYPES).has(
+    row.processingType
+  )
     ? CADENCE.quarterly
     : CADENCE.monthly
 
@@ -283,10 +305,10 @@ const cadenceForRow = (row) =>
  * registered-only/accredited transition still pairs with its predecessor (within
  * the ledgers read — see residual 1).
  *
- * @param {any} summaryLogRowStateRepository
- * @param {{ organisationId: string, registrationId: string, accreditationId: string | null }[]} ledgers
+ * @param {SummaryLogRowStateRepository} summaryLogRowStateRepository
+ * @param {WasteBalanceLedgerId[]} ledgers
  * @param {{ id: string, submittedAt: string }[]} logs
- * @returns {Promise<{ id: string, submittedAt: string, rows: any[] }[]>}
+ * @returns {Promise<{ id: string, submittedAt: string, rows: SummaryLogRowState[] }[]>}
  */
 const loadSnapshots = async (summaryLogRowStateRepository, ledgers, logs) => {
   const snapshots = []
@@ -310,7 +332,7 @@ const loadSnapshots = async (summaryLogRowStateRepository, ledgers, logs) => {
  * wasteRecordType and rowId while committing a new state-doc id. Mirrors the
  * `${type}:${rowId}` key live CPA uses to pair a new row with its predecessor.
  *
- * @param {any} row
+ * @param {SummaryLogRowState} row
  * @returns {string}
  */
 const rowIdentityKey = (row) => `${row.wasteRecordType}:${row.rowId}`
@@ -321,7 +343,7 @@ const rowIdentityKey = (row) => `${row.wasteRecordType}:${row.rowId}`
  * for exporter tables).
  *
  * @param {Record<string, any>} data
- * @param {any} schema
+ * @param {TableSchema} schema
  * @param {string} cadence
  * @returns {import('#reports/domain/period-key.js').PeriodRef[]}
  */
@@ -343,8 +365,8 @@ const periodsForData = (data, schema, cadence) => {
  * closedPeriodRefsForRecord (both classified under the new row's schema; a row
  * with no schema is skipped). Deduped so a same-period edit counts once.
  *
- * @param {any} row - the changed (later-snapshot) row
- * @param {Map<string, any>} previousByRow - previous snapshot rows by identity
+ * @param {SummaryLogRowState} row - the changed (later-snapshot) row
+ * @param {Map<string, SummaryLogRowState>} previousByRow - previous snapshot rows by identity
  * @returns {import('#reports/domain/period-key.js').PeriodRef[]}
  */
 const restatedPeriods = (row, previousByRow) => {
@@ -382,9 +404,9 @@ const closedBeforeUpload = (report, upload) =>
  * row commits a new state-doc id, so a row whose id is absent from the previous
  * snapshot is a restatement (mirrors determineRecordStatus ADDED/ADJUSTED).
  *
- * @param {{ rows: any[] }} current
+ * @param {{ rows: SummaryLogRowState[] }} current
  * @param {Set<string>} previousIds
- * @returns {any[]}
+ * @returns {SummaryLogRowState[]}
  */
 const changedRows = (current, previousIds) =>
   current.rows.filter((row) => !previousIds.has(row.id))
@@ -395,7 +417,7 @@ const changedRows = (current, previousIds) =>
  * time, an IGNORED row in a reported closed period should be impossible; such
  * rows go to an invariant probe (expected empty) rather than being discarded.
  *
- * @param {any} row
+ * @param {SummaryLogRowState} row
  * @returns {boolean}
  */
 const isIgnoredRow = (row) =>
@@ -405,8 +427,8 @@ const isIgnoredRow = (row) =>
  * The already-closed reports a changed row restates: each period the row folds
  * into whose report was submitted before this upload landed.
  *
- * @param {any} row
- * @param {Map<string, any>} previousByRow
+ * @param {SummaryLogRowState} row
+ * @param {Map<string, SummaryLogRowState>} previousByRow
  * @param {Map<string, SubmittedReport>} reportByPeriodKey
  * @param {{ submittedAt: string }} current
  * @returns {SubmittedReport[]}
@@ -448,7 +470,7 @@ const buildFinding = (report, current, organisationId, registrationId) => ({
  * separate probe tally rather than counted or discarded — see isIgnoredRow.
  *
  * @param {{
- *   snapshots: { id: string, submittedAt: string, rows: any[] }[],
+ *   snapshots: { id: string, submittedAt: string, rows: SummaryLogRowState[] }[],
  *   reportByPeriodKey: Map<string, SubmittedReport>,
  *   organisationId: string,
  *   registrationId: string
@@ -492,9 +514,9 @@ const diffFindings = ({
  *   organisationId: string,
  *   registrationId: string,
  *   reports: SubmittedReport[],
- *   summaryLogsRepository: any,
- *   summaryLogRowStateRepository: any,
- *   organisationsRepository: any
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   organisationsRepository: OrganisationsRepository
  * }} params
  * @returns {Promise<{ findings: PreCpaResubmissionFinding[], ignored: PreCpaResubmissionFinding[] }>}
  */
@@ -567,10 +589,10 @@ const dedupeByReportId = (findings) => {
  * excluded from `scanned` and surfaced rather than silently dropped.
  *
  * @param {{
- *   reportsRepository: any,
- *   summaryLogsRepository: any,
- *   summaryLogRowStateRepository: any,
- *   organisationsRepository: any
+ *   reportsRepository: ReportsRepository,
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   organisationsRepository: OrganisationsRepository
  * }} deps
  * @returns {Promise<{ scanned: number, findings: PreCpaResubmissionFinding[], ignoredInClosedPeriods: PreCpaResubmissionFinding[], reportsMissingSubmittedAt: ReportIdentity[] }>}
  */
