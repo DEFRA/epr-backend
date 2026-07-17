@@ -73,6 +73,20 @@ export const normaliseStale = (stale) => {
   return { summaryLogChanged: /** @type {StaleSummaryLogChanged} */ (rest) }
 }
 
+const KNOWN_STALE_KEYS = new Set(['summaryLogChanged', 'prnCancelled'])
+
+/**
+ * Lists the top-level `stale` keys that `normaliseStale` would drop: the legacy
+ * flat fields left on a document written (or re-flagged) in the old shape. Empty
+ * for a clean nested-shape `stale`. Lets the read boundary flag which documents
+ * still carry the legacy shape so the migration tail is observable (PAE-1755).
+ *
+ * @param {Record<string, unknown> | undefined} stale
+ * @returns {string[]}
+ */
+export const legacyStaleKeys = (stale) =>
+  stale ? Object.keys(stale).filter((key) => !KNOWN_STALE_KEYS.has(key)) : []
+
 /**
  * Asserts `reasons` matches the 409 payload's `code` contract, so the shape
  * `staleReasons` produces is verified rather than just assumed by callers
