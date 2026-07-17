@@ -168,14 +168,21 @@ export const buildCreditedTonnageReport = async ({
     organisationsRepository.findAll()
   ])
 
+  // Credits only exist for accredited partitions; registered-only entries
+  // (accreditationId null) carry zero-delta submissions and never appear in
+  // this report.
+  const creditedEntries = entries.filter(
+    (entry) => entry.ledgerId.accreditationId !== null
+  )
+
   const { index, testOrgAccreditationIds } = indexAccreditations(organisations)
 
   /** @type {CreditedTonnageRow[]} */
   const rows = []
 
-  for (const { ledgerId, summaryLogId } of entries) {
-    // The ledger query only ever yields accredited partitions, so
-    // `accreditationId` is non-null here despite the ledger id's wider type.
+  for (const { ledgerId, summaryLogId } of creditedEntries) {
+    // creditedEntries holds accredited partitions only, so `accreditationId`
+    // is non-null here despite the ledger id's wider type.
     const accreditationId = /** @type {string} */ (ledgerId.accreditationId)
     const context = index.get(accreditationId)
     if (!context) {
