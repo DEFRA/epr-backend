@@ -107,6 +107,36 @@ const oneFindingApp = ({
   }
 })
 
+/**
+ * A single submitted June report whose stored submittedAt is missing — a data
+ * anomaly the real finder pulls out of sizing and surfaces for review.
+ */
+const missingSubmittedAtApp = () => ({
+  ...emptyEstateApp(),
+  reportsRepository: {
+    findAllPeriodicReports: vi.fn().mockResolvedValue([
+      {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2025,
+        reports: {
+          monthly: {
+            6: {
+              current: {
+                id: 'report-1',
+                status: 'submitted',
+                submissionNumber: 1,
+                submittedAt: null
+              },
+              previousSubmissions: []
+            }
+          }
+        }
+      }
+    ])
+  }
+})
+
 const buildServer = (
   app,
   {
@@ -224,6 +254,25 @@ describe('runPreCpaResubmissionReport', () => {
       message:
         'Invariant check: 1 IGNORED restatements fell in a closed reported ' +
         'period (expected 0) — reports report-1'
+    })
+  })
+
+  it('warns with report ids when a submitted report is missing its submittedAt', async () => {
+    const server = buildServer(missingSubmittedAtApp())
+
+    await runPreCpaResubmissionReport(server)
+
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Pre-CPA resubmission sizing: scanned 0 submitted reports, 0 would ' +
+        'require resubmission, across 0 organisations / 0 registrations. ' +
+        'Retrospective — not a prediction of the next upload.'
+    })
+    expect(logger.warn).toHaveBeenCalledWith({
+      message:
+        'Data integrity: 1 submitted reports missing a submittedAt were ' +
+        'skipped from sizing — reports report-1'
     })
   })
 

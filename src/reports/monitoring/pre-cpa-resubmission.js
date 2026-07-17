@@ -58,15 +58,20 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
  */
 
 /**
- * @typedef {Object} SubmittedReport
+ * @typedef {Object} ReportIdentity
  * @property {string} organisationId
  * @property {string} registrationId
  * @property {string} reportId
  * @property {number} year
  * @property {string} cadence
  * @property {number} period
- * @property {string} reportSubmittedAt
- * @property {string} earliestSubmittedAt
+ */
+
+/**
+ * @typedef {ReportIdentity & {
+ *   reportSubmittedAt: string,
+ *   earliestSubmittedAt: string
+ * }} SubmittedReport
  */
 
 /**
@@ -95,11 +100,17 @@ const submittedSubmissions = (slot) =>
  * need not increase with its submission time, so the lowest-numbered submission
  * is not necessarily the earliest-submitted one.
  *
+ * A submitted report should always carry a submittedAt; one whose attributed
+ * submission is missing it is split into `missingSubmittedAt` for review rather
+ * than evaluated, since a null submittedAt cannot be placed in the timeline (it
+ * fails every gate comparison silently).
+ *
  * @param {any[]} periodicReports
- * @returns {SubmittedReport[]}
+ * @returns {{ reports: SubmittedReport[], missingSubmittedAt: ReportIdentity[] }}
  */
 const collectSubmittedReports = (periodicReports) => {
-  const collected = []
+  const reports = []
+  const missingSubmittedAt = []
   for (const pr of periodicReports) {
     for (const [cadence, byPeriod] of Object.entries(pr.reports)) {
       for (const [periodKey, slot] of Object.entries(byPeriod)) {
@@ -108,25 +119,32 @@ const collectSubmittedReports = (periodicReports) => {
           continue
         }
         const attributed = submitted[0]
-        const earliestSubmittedAt = submitted.reduce(
-          (earliest, s) =>
-            s.submittedAt < earliest ? s.submittedAt : earliest,
-          attributed.submittedAt
-        )
-        collected.push({
+        const identity = {
           organisationId: pr.organisationId,
           registrationId: pr.registrationId,
           reportId: attributed.id,
           year: pr.year,
           cadence,
-          period: Number(periodKey),
+          period: Number(periodKey)
+        }
+        if (!attributed.submittedAt) {
+          missingSubmittedAt.push(identity)
+          continue
+        }
+        const earliestSubmittedAt = submitted.reduce(
+          (earliest, s) =>
+            s.submittedAt < earliest ? s.submittedAt : earliest,
+          attributed.submittedAt
+        )
+        reports.push({
+          ...identity,
           reportSubmittedAt: attributed.submittedAt,
           earliestSubmittedAt
         })
       }
     }
   }
-  return collected
+  return { reports, missingSubmittedAt }
 }
 
 /**
@@ -467,13 +485,17 @@ const dedupeByReportId = (findings) => {
  * because report periods never overlap unaccredited time; a non-empty result
  * flags a period that did, or a genuine CPA blind spot, and warrants review.
  *
+ * `reportsMissingSubmittedAt` lists submitted reports with no submittedAt: a
+ * data-integrity anomaly excluded from the scan (and so from `scanned`) and
+ * surfaced for review rather than silently dropped.
+ *
  * @param {{
  *   reportsRepository: any,
  *   summaryLogsRepository: any,
  *   summaryLogRowStateRepository: any,
  *   organisationsRepository: any
  * }} deps
- * @returns {Promise<{ scanned: number, findings: PreCpaResubmissionFinding[], ignoredInClosedPeriods: PreCpaResubmissionFinding[] }>}
+ * @returns {Promise<{ scanned: number, findings: PreCpaResubmissionFinding[], ignoredInClosedPeriods: PreCpaResubmissionFinding[], reportsMissingSubmittedAt: ReportIdentity[] }>}
  */
 export const findPreCpaResubmissionReports = async ({
   reportsRepository,
@@ -482,7 +504,8 @@ export const findPreCpaResubmissionReports = async ({
   organisationsRepository
 }) => {
   const periodicReports = await reportsRepository.findAllPeriodicReports()
-  const submittedReports = collectSubmittedReports(periodicReports)
+  const { reports: submittedReports, missingSubmittedAt } =
+    collectSubmittedReports(periodicReports)
   const findings = []
   const ignored = []
   for (const { organisationId, registrationId, reports } of groupByRegistration(
@@ -502,7 +525,8 @@ export const findPreCpaResubmissionReports = async ({
   return {
     scanned: submittedReports.length,
     findings: dedupeByReportId(findings),
-    ignoredInClosedPeriods: dedupeByReportId(ignored)
+    ignoredInClosedPeriods: dedupeByReportId(ignored),
+    reportsMissingSubmittedAt: missingSubmittedAt
   }
 }
 

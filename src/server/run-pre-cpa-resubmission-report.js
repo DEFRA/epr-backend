@@ -33,6 +33,25 @@ const logInvariantProbe = (ignored) => {
 }
 
 /**
+ * Warns when a submitted report carried no submittedAt and so was excluded from
+ * the sizing scan. Expected empty; a non-empty result is a data-integrity
+ * anomaly surfaced with its report ids for investigation.
+ *
+ * @param {import('#reports/monitoring/pre-cpa-resubmission.js').ReportIdentity[]} missing
+ */
+const logMissingSubmittedAt = (missing) => {
+  if (missing.length === 0) {
+    return
+  }
+  logger.warn({
+    message:
+      `Data integrity: ${missing.length} submitted reports missing a ` +
+      `submittedAt were skipped from sizing — reports ` +
+      `${missing.map((report) => report.reportId).join(', ')}`
+  })
+}
+
+/**
  * Scans the estate for submitted reports a later summary-log upload restated in
  * an already-closed period, then logs each affected report, a sizing summary,
  * and the invariant probe result. Read-only.
@@ -40,13 +59,17 @@ const logInvariantProbe = (ignored) => {
  * @param {Object} server - Hapi server instance
  */
 const runReport = async (server) => {
-  const { scanned, findings, ignoredInClosedPeriods } =
-    await findPreCpaResubmissionReports({
-      reportsRepository: server.app.reportsRepository,
-      summaryLogsRepository: server.app.summaryLogsRepository,
-      summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository,
-      organisationsRepository: server.app.organisationsRepository
-    })
+  const {
+    scanned,
+    findings,
+    ignoredInClosedPeriods,
+    reportsMissingSubmittedAt
+  } = await findPreCpaResubmissionReports({
+    reportsRepository: server.app.reportsRepository,
+    summaryLogsRepository: server.app.summaryLogsRepository,
+    summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository,
+    organisationsRepository: server.app.organisationsRepository
+  })
 
   for (const finding of findings) {
     logger.info({ message: formatPreCpaResubmissionFinding(finding) })
@@ -64,6 +87,7 @@ const runReport = async (server) => {
   })
 
   logInvariantProbe(ignoredInClosedPeriods)
+  logMissingSubmittedAt(reportsMissingSubmittedAt)
 }
 
 /**

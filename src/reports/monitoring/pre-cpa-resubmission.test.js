@@ -376,6 +376,51 @@ describe('findPreCpaResubmissionReports', () => {
     })
   })
 
+  it('surfaces a submitted report missing its submittedAt rather than silently dropping it', async () => {
+    // A submitted report should always carry a submittedAt; one that does not
+    // cannot be placed in the closed-vs-open timeline (a null submittedAt fails
+    // every gate comparison unnoticed), so it is reported for review rather than
+    // silently counted as producing no finding.
+    const reg = {
+      organisationId: newId(),
+      registrationId: newId(),
+      accreditationId: newId(),
+      reports: [{ reportId: 'report-1', submittedAt: undefined }],
+      logs: [
+        { id: 'sl-original', submittedAt: '2025-06-25T00:00:00.000Z' },
+        { id: 'sl-restating', submittedAt: '2025-08-01T00:00:00.000Z' }
+      ],
+      rowStates: [
+        {
+          id: 'rs-original',
+          summaryLogIds: ['sl-original'],
+          dateReceived: '2025-06-15'
+        },
+        {
+          id: 'rs-restated',
+          summaryLogIds: ['sl-restating'],
+          dateReceived: '2025-06-15'
+        }
+      ]
+    }
+
+    const { scanned, findings, reportsMissingSubmittedAt } = await run(
+      await buildRepos([reg])
+    )
+
+    expect(scanned).toBe(0)
+    expect(findings).toEqual([])
+    expect(reportsMissingSubmittedAt).toHaveLength(1)
+    expect(reportsMissingSubmittedAt[0]).toMatchObject({
+      organisationId: reg.organisationId,
+      registrationId: reg.registrationId,
+      reportId: 'report-1',
+      year: 2025,
+      cadence: 'monthly',
+      period: 6
+    })
+  })
+
   it('counts an oscillation that returns to its original state (net-zero restatement)', async () => {
     const reg = {
       organisationId: newId(),
