@@ -10,5 +10,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isStaleIssuedTonnageReportEnabled() {
     return config.get('featureFlags.staleIssuedTonnageReport')
+  },
+  isPreCpaResubmissionReportEnabled() {
+    return config.get('featureFlags.preCpaResubmissionReport')
   }
 })

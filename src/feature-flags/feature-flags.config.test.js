@@ -17,4 +17,13 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.staleIssuedTonnageReport'
     )
   })
+
+  it('returns true when preCpaResubmissionReport flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.preCpaResubmissionReport'
+    )
+  })
 })
