@@ -21,13 +21,15 @@ const DATABASE_NAME = 'epr-backend'
 
 /**
  * A real Hapi server whose `request.db` and `request.ledgerRepository` are both
- * backed by one in-memory Mongo, so raw-`db` routes can be exercised end-to-end
- * through `server.inject`. Seed and assert against the same db via `server.db`.
+ * backed by one in-memory Mongo, so routes that query mongo directly can be
+ * exercised end-to-end through `server.inject`. Seed and assert against the same
+ * db via `server.db`.
  *
- * Prefer this over `createTestServer()` alone for the legacy routes that read
- * `request.db` directly (tonnage-monitoring, prn-tonnage,
- * waste-balance-availability); once those move to repositories, delete this and
- * use in-memory repositories instead.
+ * This suits the read-model reporting routes (tonnage-monitoring, prn-tonnage,
+ * waste-balance-availability): their heavy aggregation pipelines are best
+ * verified against a real mongo, not reimplemented behind an in-memory
+ * repository. Use `createTestServer()` with in-memory repositories for routes
+ * whose data access genuinely belongs behind a port.
  */
 export const it = /** @type {TestAPI<{ server: RealDbTestServer }>} */ (
   mongoIt.extend({
