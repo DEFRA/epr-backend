@@ -4,8 +4,20 @@ import { config } from '#root/config.js'
 
 /**
  * @import {HumanCredentials, MachineCredentials} from '#common/hapi-types.js'
- * @import {SystemLog, SystemLogActor, SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLog, SystemLogActor, SystemLogHumanActor, SystemLogsRepository} from '#repositories/system-logs/port.js'
  */
+
+/**
+ * The actor recorded for system-initiated actions that have no user request
+ * context (migrations, background jobs).
+ * @type {SystemLogHumanActor}
+ */
+export const SYSTEM_USER = Object.freeze({
+  id: 'system',
+  email: 'system',
+  scope: [],
+  role: null
+})
 
 /**
  * @typedef {Omit<SystemLog, 'createdAt' | 'createdBy'> & { user: SystemLogActor }} SystemLogInput

@@ -121,13 +121,15 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     )
 
     const ledgerRepository = createInMemoryLedgerRepository([
-      buildLedgerEvent({
-        organisationId: org.id,
-        registrationId: linkedRegistration.id,
-        accreditationId: linkedAccreditation.id,
-        number: 1,
-        payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
-      })
+      partialMock(
+        buildLedgerEvent({
+          organisationId: org.id,
+          registrationId: linkedRegistration.id,
+          accreditationId: linkedAccreditation.id,
+          number: 1,
+          payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
+        })
+      )
     ])()
 
     const server = await createTestServer({
