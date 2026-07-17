@@ -15,7 +15,7 @@ import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { tonnageMonitoringPath } from './get.js'
 
 /** @import { Db } from 'mongodb' */
-/** @import { RealDbTestServer } from '#vite/fixtures/server-with-real-db.js' */
+/** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const { validToken } = entraIdMockAuthTokens
@@ -72,15 +72,17 @@ const seedSubmittedSummaryLog = (db) =>
 describe(`GET ${tonnageMonitoringPath} (integration)`, () => {
   setupAuthContext()
 
-  beforeEach(async (/** @type {{ server: RealDbTestServer }} */ { server }) => {
-    await server.db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-    await server.db
-      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-      .deleteMany({})
-    await server.db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
-      .deleteMany({})
-  })
+  beforeEach(
+    async (/** @type {{ server: TestServerWithRealDb }} */ { server }) => {
+      await server.db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
+      await server.db
+        .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
+        .deleteMany({})
+      await server.db
+        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+        .deleteMany({})
+    }
+  )
 
   it('aggregates seeded tonnage via the real db and ledger repository', async ({
     server

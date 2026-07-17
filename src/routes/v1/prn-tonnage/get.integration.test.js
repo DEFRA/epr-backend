@@ -11,7 +11,7 @@ import {
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { prnTonnagePath } from './get.js'
 
-/** @import { RealDbTestServer } from '#vite/fixtures/server-with-real-db.js' */
+/** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
 
 const PRNS_COLLECTION = 'packaging-recycling-notes'
 const { validToken } = entraIdMockAuthTokens
@@ -21,9 +21,11 @@ const orgId = '507f1f77bcf86cd799439011'
 describe(`GET ${prnTonnagePath} (integration)`, () => {
   setupAuthContext()
 
-  beforeEach(async (/** @type {{ server: RealDbTestServer }} */ { server }) => {
-    await server.db.collection(PRNS_COLLECTION).deleteMany({})
-  })
+  beforeEach(
+    async (/** @type {{ server: TestServerWithRealDb }} */ { server }) => {
+      await server.db.collection(PRNS_COLLECTION).deleteMany({})
+    }
+  )
 
   it('aggregates PRN tonnage by status via the real db', async ({ server }) => {
     await server.db.collection(PRNS_COLLECTION).insertOne(

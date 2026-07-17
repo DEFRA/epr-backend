@@ -14,7 +14,7 @@ import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-m
  * A test server with its `db` decoration guaranteed present (this fixture always
  * supplies one), so tests can seed and assert against `server.db` directly.
  *
- * @typedef {TestServer & { db: Db }} RealDbTestServer
+ * @typedef {TestServer & { db: Db }} TestServerWithRealDb
  */
 
 const DATABASE_NAME = 'epr-backend'
@@ -31,7 +31,7 @@ const DATABASE_NAME = 'epr-backend'
  * repository. Use `createTestServer()` with in-memory repositories for routes
  * whose data access genuinely belongs behind a port.
  */
-export const it = /** @type {TestAPI<{ server: RealDbTestServer }>} */ (
+export const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
   mongoIt.extend({
     server: [
       async (/** @type {{ db: string }} */ { db }, use) => {
@@ -43,7 +43,7 @@ export const it = /** @type {TestAPI<{ server: RealDbTestServer }>} */ (
           repositories: { ledgerRepository }
         })
 
-        await use(/** @type {RealDbTestServer} */ (server))
+        await use(/** @type {TestServerWithRealDb} */ (server))
 
         await server.stop()
         await client.close()
