@@ -36,17 +36,23 @@ export const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
     server: [
       async (/** @type {{ db: string }} */ { db }, use) => {
         const client = await MongoClient.connect(db)
-        const mongoDb = client.db(DATABASE_NAME)
-        const ledgerRepository = (await createMongoLedgerRepository(mongoDb))()
-        const server = await createTestServer({
-          db: mongoDb,
-          repositories: { ledgerRepository }
-        })
 
-        await use(/** @type {TestServerWithRealDb} */ (server))
+        try {
+          const mongoDb = client.db(DATABASE_NAME)
+          const ledgerRepository = (
+            await createMongoLedgerRepository(mongoDb)
+          )()
+          const server = await createTestServer({
+            db: mongoDb,
+            repositories: { ledgerRepository }
+          })
 
-        await server.stop()
-        await client.close()
+          await use(/** @type {TestServerWithRealDb} */ (server))
+
+          await server.stop()
+        } finally {
+          await client.close()
+        }
       },
       { scope: 'file' }
     ]

@@ -64,7 +64,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     }
   )
 
-  it('buckets tonnage by status and resolves tonnageBand from the org lookup', async () => {
+  it('buckets tonnage by status and resolves tonnage-band from the org lookup', async () => {
     await db.collection(ORGANISATIONS_COLLECTION).insertOne({
       _id: new ObjectId(orgId),
       accreditations: [
@@ -112,7 +112,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     expect(rows).toStrictEqual([])
   })
 
-  it('resolves tonnageBand to null when no matching organisation exists', async () => {
+  it('resolves tonnage-band to null when no matching organisation exists', async () => {
     await db
       .collection(PRNS_COLLECTION)
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))

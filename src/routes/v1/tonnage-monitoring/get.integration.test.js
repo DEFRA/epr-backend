@@ -98,6 +98,14 @@ describe(`GET ${tonnageMonitoringPath} (integration)`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload).total).toBe(100)
+    const payload = JSON.parse(response.payload)
+
+    expect(payload.total).toBe(100)
+    expect(payload.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      year: 2026,
+      type: 'Exporter',
+      months: expect.arrayContaining([{ month: 'Jan', tonnage: 100 }])
+    })
   })
 })
