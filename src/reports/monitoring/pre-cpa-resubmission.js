@@ -134,7 +134,7 @@ const earliestSubmittedAtOf = (submissions) => {
   const times = /** @type {string[]} */ (
     submissions.map((s) => s.submittedAt).filter(Boolean)
   )
-  return times.sort((a, b) => a.localeCompare(b))[0]
+  return times.toSorted((a, b) => a.localeCompare(b))[0]
 }
 
 /**
@@ -187,7 +187,8 @@ const collectSubmittedReports = (periodicReports) => {
     const classified = classifySlot(entry)
     if (classified?.missing) {
       missingSubmittedAt.push(classified.missing)
-    } else if (classified?.report) {
+    }
+    if (classified?.report) {
       reports.push(classified.report)
     }
   }
