@@ -34,11 +34,11 @@ const summariseViolations = (err) =>
  *
  * @param {HapiRequest} request
  * @param {HapiResponseToolkit} _h
- * @param {Error} err - always the Joi ValidationError from response validation
+ * @param {ValidationError} err
  * @returns {never}
  */
 export const reportResponseFailAction = (request, _h, err) => {
-  const violations = summariseViolations(/** @type {ValidationError} */ (err))
+  const violations = summariseViolations(err)
   throw internal(err.message, 'report_response_schema_violation', {
     event: {
       action: LOGGING_EVENT_ACTIONS.REPORT_RESPONSE_SCHEMA_VIOLATION,
