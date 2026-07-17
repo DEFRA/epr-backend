@@ -14,6 +14,7 @@ import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { config } from '#root/config.js'
 import { orsImportCreatePayloadSchema } from './post-import.schema.js'
 
+/** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -36,7 +37,7 @@ export const orsImportCreate = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<OrsImportCreatePayload> & {orsImportsRepository: OrsImportsRepository, uploadsRepository: UploadsRepository, systemLogsRepository: SystemLogsRepository}} request
-   * @param {object} h - Hapi response toolkit
+   * @param {HapiResponseToolkit} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const { orsImportsRepository, uploadsRepository, payload, logger } = request

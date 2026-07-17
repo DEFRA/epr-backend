@@ -308,6 +308,11 @@ function logUnlinkedAccreditations(organisation) {
   logger.warn({ message })
 }
 
+/**
+ * @param {any[]} organisations
+ * @param {string} propertyName
+ * @param {(item: any) => boolean} [filter]
+ */
 function countItems(organisations, propertyName, filter = () => true) {
   return organisations.flatMap((org) => org[propertyName] ?? []).filter(filter)
     .length

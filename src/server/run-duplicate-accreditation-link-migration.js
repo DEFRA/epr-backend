@@ -4,7 +4,13 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
+/** @import {HapiServer} from '#common/hapi-types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Server} from '@hapi/hapi' */
+
+/**
+ * @typedef {HapiServer & Required<Pick<HapiServer, 'db' | 'locker'>>} MigrationServer
+ */
 
 const LOCK_NAME = 'duplicate-accreditation-link-migration'
 
@@ -237,16 +243,15 @@ const processOrganisation = async ({
 }
 
 /**
- * @param {object} server
+ * @param {Server} server
  * @param {boolean} isDryRun
  */
 const runMigration = async (server, isDryRun) => {
-  const organisationsRepository = (
-    await createOrganisationsRepository(server.db)
-  )()
-  const systemLogsRepository = (await createSystemLogsRepository(server.db))(
-    logger
+  const { db } = /** @type {MigrationServer} */ (
+    /** @type {unknown} */ (server)
   )
+  const organisationsRepository = (await createOrganisationsRepository(db))()
+  const systemLogsRepository = (await createSystemLogsRepository(db))(logger)
 
   const organisations = await organisationsRepository.findAll()
 
@@ -280,18 +285,20 @@ const runMigration = async (server, isDryRun) => {
  * When the feature flag is disabled the migration runs in dry-run mode: it logs
  * everything it would do but makes no database changes.
  *
- * @param {object} server - Hapi server instance
+ * @param {Server} server - Hapi server instance
  */
 export const runDuplicateAccreditationLinkMigration = async (server) => {
-  const isDryRun =
-    !server.featureFlags.isFixDuplicateAccreditationLinksEnabled()
+  const { featureFlags, locker } = /** @type {MigrationServer} */ (
+    /** @type {unknown} */ (server)
+  )
+  const isDryRun = !featureFlags.isFixDuplicateAccreditationLinksEnabled()
 
   try {
     logger.info({
       message: `Starting duplicate accreditation link migration: isDryRun=${isDryRun}`
     })
 
-    const lock = await server.locker.lock(LOCK_NAME)
+    const lock = await locker.lock(LOCK_NAME)
     if (!lock) {
       logger.info({
         message:

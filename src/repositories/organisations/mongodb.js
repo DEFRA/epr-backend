@@ -138,6 +138,12 @@ const performReplace = (db) => async (id, version, updates) => {
   }
 }
 
+/**
+ * @returns {(
+ *   | { shouldReturn: true, result: ReturnType<typeof mapDocumentWithCurrentStatuses> }
+ *   | { shouldReturn: false }
+ * )}
+ */
 const handleFoundDocument = (doc, minimumVersion) => {
   const mapped = mapDocumentWithCurrentStatuses(doc)
 
@@ -171,12 +177,9 @@ const performFindById =
       const isLastRetry = i === maxRetries - 1
 
       if (doc) {
-        const { shouldReturn, result } = handleFoundDocument(
-          doc,
-          minimumVersion
-        )
-        if (shouldReturn) {
-          return result
+        const outcome = handleFoundDocument(doc, minimumVersion)
+        if (outcome.shouldReturn) {
+          return outcome.result
         }
         // Document exists but version too low - will retry
       } else if (minimumVersion === undefined || isLastRetry) {
