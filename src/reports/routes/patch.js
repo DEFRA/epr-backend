@@ -30,10 +30,10 @@ const payloadSchema = Joi.object({
 
 /**
  * Merges user-entered PRN data with the existing prn object and computes averagePricePerTonne.
- * @param {import('#reports/repository/port.js').PrnData } existingPrn
+ * @param {PrnData} existingPrn
  * @param {number | undefined} totalRevenue
  * @param {number | undefined} freeTonnage
- * @returns {object}
+ * @returns {PrnData}
  */
 export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
   const updated = {
@@ -61,9 +61,9 @@ export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
 
 /**
  * Guards against updates to report data fields when the report is not in progress.
- * @param {object} payload
- * @param {import('#reports/repository/port.js').Report} report
- * @param {object} registration
+ * @param {ReportPatchPayload} payload
+ * @param {Report} report
+ * @param {Registration} registration
  */
 function guardReportDataFields(payload, report, registration) {
   const hasPrnFields = 'prnRevenue' in payload || 'freeTonnage' in payload
@@ -75,7 +75,7 @@ function guardReportDataFields(payload, report, registration) {
   }
 
   if (
-    'freeTonnage' in payload &&
+    payload.freeTonnage !== undefined &&
     report.prn?.issuedTonnage !== undefined &&
     payload.freeTonnage > report.prn.issuedTonnage
   ) {
@@ -98,9 +98,9 @@ function guardReportDataFields(payload, report, registration) {
 
 /**
  * Builds the update fields from the PATCH payload and existing report data.
- * @param {object} payload
- * @param {object} report
- * @returns {object}
+ * @param {ReportPatchPayload} payload
+ * @param {Report} report
+ * @returns {ReportUpdateFields}
  */
 function buildUpdateFields(payload, report) {
   const {
@@ -112,10 +112,15 @@ function buildUpdateFields(payload, report) {
     ...otherFields
   } = payload
 
+  /** @type {ReportUpdateFields} */
   const fields = { ...otherFields }
 
   if (prnRevenue !== undefined || freeTonnage !== undefined) {
-    fields.prn = buildUpdatedPrn(report.prn, prnRevenue, freeTonnage)
+    fields.prn = buildUpdatedPrn(
+      /** @type {PrnData} */ (report.prn),
+      prnRevenue,
+      freeTonnage
+    )
   }
 
   if (tonnageRecycled !== undefined || tonnageNotRecycled !== undefined) {
@@ -221,7 +226,23 @@ export const reportsPatch = {
 }
 
 /**
- * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { PrnData, Report, ReportsRepository, UpdateReportParams } from '#reports/repository/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
+ */
+
+/**
+ * @typedef {{
+ *   freeTonnage?: number,
+ *   prnRevenue?: number,
+ *   supportingInformation?: string,
+ *   tonnageNotExported?: number,
+ *   tonnageNotRecycled?: number,
+ *   tonnageRecycled?: number
+ * }} ReportPatchPayload
+ */
+
+/**
+ * @typedef {Omit<UpdateReportParams['fields'], 'status'>} ReportUpdateFields
  */

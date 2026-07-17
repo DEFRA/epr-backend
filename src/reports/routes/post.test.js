@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -70,14 +71,16 @@ describe(`POST ${reportsPostPath}`, () => {
       SUMMARY_LOG_ID
     )
     const ledgerRepository = createInMemoryLedgerRepository([
-      buildLedgerEvent({
-        organisationId: org.id,
-        registrationId: registration.id,
-        accreditationId,
-        number: 1,
-        createdAt: SUBMITTED_AT,
-        payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
-      })
+      partialMock(
+        buildLedgerEvent({
+          organisationId: org.id,
+          registrationId: registration.id,
+          accreditationId,
+          number: 1,
+          createdAt: SUBMITTED_AT,
+          payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
+        })
+      )
     ])()
     return { ledgerRepository, summaryLogRowStatesRepository }
   }
@@ -306,9 +309,12 @@ describe(`POST ${reportsPostPath}`, () => {
       wasteProcessingType: 'reprocessor',
       accreditationId
     })
-    const org = buildOrganisationWithRegistration(registration, 'approved')
+    const org = buildOrganisationWithRegistration(
+      partialMock(registration),
+      'approved'
+    )
     const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository([org])
+      createInMemoryOrganisationsRepository([partialMock(org)])
 
     const server = await createTestServer({
       repositories: {
@@ -623,9 +629,12 @@ describe(`POST ${reportsPostPath}`, () => {
       wasteProcessingType: 'reprocessor',
       accreditationId
     })
-    const org = buildOrganisationWithRegistration(registration, 'approved')
+    const org = buildOrganisationWithRegistration(
+      partialMock(registration),
+      'approved'
+    )
     const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository([org])
+      createInMemoryOrganisationsRepository([partialMock(org)])
 
     const prn = {
       ...buildAwaitingAcceptancePrn({

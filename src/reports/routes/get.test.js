@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -17,6 +18,7 @@ import {
 import { reportsGetPath } from './get.js'
 
 /**
+ * @import { Registration } from '#domain/organisations/registration.js'
  * @import { TestServer } from '#test/create-test-server.js'
  */
 
@@ -35,7 +37,9 @@ describe(`GET ${reportsGetPath}`, () => {
       reportsRepositoryFactory,
       accreditationStatus
     ) => {
-      const registration = buildRegistration(registrationOverrides)
+      const registration = /** @type {Registration} */ (
+        buildRegistration(registrationOverrides)
+      )
       const org = buildOrganisationWithRegistration(
         registration,
         accreditationStatus
@@ -44,7 +48,7 @@ describe(`GET ${reportsGetPath}`, () => {
       // Use initial-org pattern to preserve accreditation statusHistory
       // (insert() overrides statusHistory to the default 'created' entry).
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([partialMock(org)])
 
       const server = await createTestServer({
         repositories: {
@@ -305,17 +309,19 @@ describe(`GET ${reportsGetPath}`, () => {
           status = 'approved'
         }
       ) => {
-        const registration = buildRegistration({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
+        const registration = /** @type {Registration} */ (
+          buildRegistration({
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          })
+        )
         const org = buildOrganisationWithRegistration(registration, status)
         org.accreditations[0].validFrom = validFrom
 
         const server = await createTestServer({
           repositories: {
             organisationsRepository: createInMemoryOrganisationsRepository([
-              org
+              partialMock(org)
             ])
           },
           featureFlags: createInMemoryFeatureFlags({})
@@ -367,15 +373,17 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('does not trim a registered-only (quarterly) operator', async () => {
-        const registration = buildRegistration({
-          wasteProcessingType: 'exporter',
-          accreditationId: undefined
-        })
+        const registration = /** @type {Registration} */ (
+          buildRegistration({
+            wasteProcessingType: 'exporter',
+            accreditationId: undefined
+          })
+        )
         const org = buildOrganisationWithRegistration(registration)
         const server = await createTestServer({
           repositories: {
             organisationsRepository: createInMemoryOrganisationsRepository([
-              org
+              partialMock(org)
             ])
           },
           featureFlags: createInMemoryFeatureFlags({})
