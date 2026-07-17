@@ -9,42 +9,30 @@ import { periodKey } from '#reports/domain/period-key.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 
 /**
- * Startup diagnostic (PAE-1747): retrospectively sizes the pre-CPA population
- * of submitted reports that a later summary-log upload restated in an
- * already-closed period — the reports live CPA (closed-period adjustments)
- * would now surface as needing resubmission. Read-only: it writes nothing and
- * backfills no flags.
+ * Startup diagnostic (PAE-1747): retrospectively sizes the reports a later
+ * summary-log upload restated in an already-closed period — the ones CPA
+ * (closed-period adjustments) would flag as needing resubmission once enabled.
+ * Read-only: writes nothing, backfills no flags.
  *
- * It reconstructs the live rule from the `summary-log-row-states` collection
- * (ADR-0037): for each registration with submitted reports it snapshot-diffs
- * consecutive submitted uploads by state-doc `id` (an unchanged row keeps its
- * id; a changed or added row gets a new one — mirroring `determineRecordStatus`
- * ADDED/ADJUSTED, including oscillations a net-figure comparison would miss),
- * maps each changed row to the reporting periods it restates — the new row's
- * dates plus, for an adjustment, the previous row's dates so the period a load
- * moved OUT of is included, mirroring `closedPeriodRefsForRecord` — and records
- * a finding when a report for such a period had already been submitted before
- * the restating upload. Each row's cadence is taken from its processing type
- * (registered-only = quarterly, otherwise monthly) — the one cadence live CPA
- * applies per upload — so dates map to their own-cadence reports without
- * double-counting a month that a mid-quarter accreditation change left in both a
- * quarterly and a monthly report. Snapshots merge the rows committed under the
- * registered-only (null accreditationId) and current-accreditation ledgers,
- * approximating the registration-scoped committed state live CPA diffs against.
+ * Reconstructs the CPA rule from the `summary-log-row-states` collection
+ * (ADR-0037). Per registration it snapshot-diffs consecutive submitted uploads
+ * by state-doc `id` (a changed or added row gets a new id, mirroring
+ * `determineRecordStatus`, so oscillations a net-figure diff would miss still
+ * count), maps each changed row to the periods it restates (the new row's dates
+ * plus, for an adjustment, the previous row's, so a moved-out period is counted,
+ * per `closedPeriodRefsForRecord`), and records a finding when that period's
+ * report was submitted before the upload. Cadence comes from the row's
+ * processing type (registered-only quarterly, else monthly); snapshots merge the
+ * null- and current-accreditation ledgers to approximate the registration-scoped
+ * state CPA diffs against.
  *
- * KNOWN RESIDUALS (accepted for a flag-off sizing diagnostic; the figure sizes,
- * it is not authoritative). Both come from approximating a registration's
- * accreditation history from its current record:
- * 1. Only the null and current-accreditation ledgers are read. A registration
- *    re-accredited under a fresh id (or accredited then cancelled) has rows under
- *    a prior accreditation id that are not read, so an adjustment of such a row
- *    can look like an add and its moved-out closed period be missed — an
- *    under-count.
- * 2. Cadence is derived from the row's template, which is pinned to the presence
- *    of an accreditation number rather than to the accreditation status live CPA
- *    uses. They agree except for an accreditation that keeps its number after
- *    being cancelled: such uploads carry a monthly template but live CPA reports
- *    them quarterly, so those periods are mapped under the wrong cadence.
+ * Known residuals (accepted for a flag-off sizing figure; both from reading only
+ * a registration's current accreditation):
+ * 1. Prior accreditation ids are not read, so an adjustment of a row under one
+ *    can look like an add and its moved-out period be missed (under-count).
+ * 2. Cadence keys off the template's accreditation-number presence, not the
+ *    status CPA uses; they differ only for an accreditation cancelled while
+ *    keeping its number, whose periods then map under the wrong cadence.
  *
  * @typedef {Object} PreCpaResubmissionFinding
  * @property {string} organisationId
@@ -75,13 +63,11 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
  */
 
 /**
- * Submitted submissions for a period in descending submissionNumber order —
- * `current` (the highest submissionNumber) first, then `previousSubmissions`.
- * `current` may itself be an unsubmitted resubmission-in-progress, so it is
- * dropped unless it reached 'submitted'; a period counts as closed whenever any
- * of its submissions did. `status` here is the report's currentStatus, so it is
- * filtered against REPORT_STATUS. A submitted report always carries a
- * submittedAt.
+ * A period's submitted submissions (`current` then `previousSubmissions`, so
+ * descending submissionNumber). `current` may be an unsubmitted resubmission in
+ * progress, so it is kept only if it reached 'submitted'; a period counts as
+ * closed if any submission did. `status` is the report's currentStatus, hence
+ * REPORT_STATUS not the summary-log enum.
  *
  * @param {any} slot
  * @returns {any[]}
@@ -126,13 +112,11 @@ const earliestSubmittedAtOf = (submissions) =>
     .sort((a, b) => a.localeCompare(b))[0]
 
 /**
- * Classifies one submitted period slot: a SubmittedReport attributed to its
- * latest submitted report (the highest submissionNumber) when that submission
- * carries a submittedAt, or a ReportIdentity flagged as missing it otherwise. A
- * submitted report should always carry a submittedAt; a null one cannot be
- * placed in the closed-vs-open timeline (it fails every gate comparison
- * silently), so it is surfaced for review rather than evaluated. Returns null
- * for a period with no submitted submission.
+ * Classifies one submitted period slot, attributing to its latest submitted
+ * report (highest submissionNumber). Returns that report when it carries a
+ * submittedAt; a missing one cannot be placed in the timeline (it fails every
+ * gate comparison silently), so it is surfaced under `missing` for review. Null
+ * when the period has no submitted submission.
  *
  * @param {{ pr: any, cadence: string, period: number, slot: any }} entry
  * @returns {{ report?: SubmittedReport, missing?: ReportIdentity } | null}
@@ -204,17 +188,11 @@ const groupByRegistration = (submittedReports) => {
 }
 
 /**
- * Row-state ledger identities a registration's uploads may sit under. The
- * registered-only phase commits rows under a null accreditationId and the
- * accredited phase under the accreditation id, so a registration that changed
- * state has snapshots under both — the diagnostic must read both to see the
- * registered-only-phase (quarterly) restatements. Registrations that can no
- * longer be looked up (deleted org/registration) are skipped, mirroring the
- * stale-issued-tonnage diagnostic.
- *
- * A registration that held several accreditation ids over its lifetime is only
- * partially covered — its current id plus null — since the registration record
- * exposes only the current accreditation.
+ * The ledgers a registration's uploads may sit under: null (registered-only
+ * phase) and the current accreditation id (accredited phase), so a registration
+ * that changed state is read under both. Returns null for a registration that
+ * can no longer be looked up (deleted org/registration), skipping it. Only the
+ * current accreditation is exposed, so earlier ids are not covered — residual 1.
  *
  * @param {any} organisationsRepository
  * @param {string} organisationId
@@ -274,13 +252,11 @@ const loadSubmittedLogTimeline = async (
 }
 
 /**
- * The cadence a row reports under, taken from its processing type — the
- * registered-only template maps to quarterly, any other template to monthly.
- * The template is pinned to the presence of an accreditation number, a close
- * proxy for the accreditation status live CPA derives cadence from: a
- * not-yet-approved registration (no number) uploads the registered-only template
- * and maps to quarterly, matching its reports. The proxy diverges only for an
- * accreditation cancelled while keeping its number — see the module residuals.
+ * The cadence a row reports under, from its processing type: registered-only
+ * template quarterly, any other monthly. The template proxies the accreditation
+ * status CPA derives cadence from (a not-yet-approved registration uploads the
+ * registered-only template and reports quarterly); it diverges only for an
+ * accreditation cancelled while keeping its number — see residual 2.
  *
  * @param {any} row
  * @returns {string}
@@ -292,13 +268,11 @@ const cadenceForRow = (row) =>
 
 /**
  * Each submitted log's full committed row-state snapshot, oldest-first. A row
- * commits under one ledger (the accreditation state at that upload), so reading
- * each candidate ledger and concatenating yields that log's snapshot with no
- * duplication. The merged snapshot approximates the registration-scoped
- * committed state live CPA diffs against (its existingRecordsMap is
- * registration-scoped, not ledger-scoped), so a load adjusted across the
- * registered-only/accredited transition is still paired with its predecessor —
- * within the ledgers read (see the module residuals for prior-accreditation ids).
+ * commits under one ledger, so concatenating the candidate ledgers yields the
+ * log's snapshot without duplication. Merging the ledgers approximates the
+ * registration-scoped state CPA diffs against, so a load adjusted across the
+ * registered-only/accredited transition still pairs with its predecessor (within
+ * the ledgers read — see residual 1).
  *
  * @param {any} summaryLogRowStateRepository
  * @param {{ organisationId: string, registrationId: string, accreditationId: string | null }[]} ledgers
@@ -355,12 +329,10 @@ const periodsForData = (data, schema, cadence) => {
 }
 
 /**
- * The distinct reporting periods a changed row restates. For an adjustment this
- * is the union of the new row's periods AND the previous row's periods, so the
- * period a load moved OUT of is included — mirroring live CPA's
- * closedPeriodRefsForRecord, which classifies both the new and the existing
- * record's data under the NEW row's schema (and skips a row with no schema).
- * Deduped by period identity so a same-period edit is counted once.
+ * The distinct periods a changed row restates: for an adjustment, the union of
+ * the new and previous rows' periods, so a moved-out period is included. Mirrors
+ * closedPeriodRefsForRecord (both classified under the new row's schema; a row
+ * with no schema is skipped). Deduped so a same-period edit counts once.
  *
  * @param {any} row - the changed (later-snapshot) row
  * @param {Map<string, any>} previousByRow - previous snapshot rows by identity
@@ -384,10 +356,10 @@ const restatedPeriods = (row, previousByRow) => {
 }
 
 /**
- * Whether a report's period had already closed when this upload landed (its
- * earliest submission predates the upload). Compared via localeCompare so the
- * operands of `<` are numbers: the submittedAt values are ISO-8601 UTC strings,
- * for which lexical order is chronological order.
+ * Whether the report's period had already closed when this upload landed (its
+ * earliest submission predates it). localeCompare keeps the `<` operands numeric
+ * — the submittedAt values are ISO-8601 UTC strings, whose lexical order is
+ * chronological.
  *
  * @param {SubmittedReport} report
  * @param {{ submittedAt: string }} upload
@@ -409,11 +381,10 @@ const changedRows = (current, previousIds) =>
   current.rows.filter((row) => !previousIds.has(row.id))
 
 /**
- * Live CPA (classifyByPeriodStatus) skips IGNORED (outside-accreditation) rows,
- * so they never become findings. A report period should never overlap
- * unaccredited time, so an IGNORED row folding into a reported closed period
- * should be impossible; such rows are routed to an invariant probe tally
- * (expected empty) rather than silently discarded.
+ * CPA (classifyByPeriodStatus) skips IGNORED (outside-accreditation) rows, so
+ * they never become findings. Since a report period never overlaps unaccredited
+ * time, an IGNORED row in a reported closed period should be impossible; such
+ * rows go to an invariant probe (expected empty) rather than being discarded.
  *
  * @param {any} row
  * @returns {boolean}
@@ -580,14 +551,11 @@ const dedupeByReportId = (findings) => {
 }
 
 /**
- * `ignoredInClosedPeriods` is an invariant probe: reports an IGNORED
- * (outside-accreditation) restatement folded into. It is expected to be empty,
- * because report periods never overlap unaccredited time; a non-empty result
- * flags a period that did, or a genuine CPA blind spot, and warrants review.
- *
- * `reportsMissingSubmittedAt` lists submitted reports with no submittedAt: a
- * data-integrity anomaly excluded from the scan (and so from `scanned`) and
- * surfaced for review rather than silently dropped.
+ * `ignoredInClosedPeriods` is an invariant probe (expected empty): reports an
+ * IGNORED (outside-accreditation) restatement folded into, which should not
+ * happen since report periods never overlap unaccredited time.
+ * `reportsMissingSubmittedAt` lists submitted reports with no submittedAt,
+ * excluded from `scanned` and surfaced rather than silently dropped.
  *
  * @param {{
  *   reportsRepository: any,
@@ -631,9 +599,9 @@ export const findPreCpaResubmissionReports = async ({
 }
 
 /**
- * Renders a finding as a single reviewable log line. The wording is
- * deliberately retrospective — it sizes accumulated divergence that live CPA
- * would now surface, it is not a prediction of what the next upload will flag.
+ * Renders a finding as one reviewable log line. Wording is deliberately
+ * retrospective: it sizes accumulated divergence, not a prediction of what the
+ * next upload will flag.
  *
  * @param {PreCpaResubmissionFinding} finding
  * @returns {string}
