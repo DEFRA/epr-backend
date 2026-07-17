@@ -34,6 +34,7 @@
     "skipLibCheck": true,
     "strict": false,
     "strictBindCallApply": true,
+    "strictFunctionTypes": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "target": "es2024"

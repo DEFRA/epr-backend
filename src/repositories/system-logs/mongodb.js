@@ -72,7 +72,16 @@ const performInsertMany = (db, logger) => async (systemLogs) => {
 
 const performFind =
   (db) =>
-  async ({ organisationId, userId, subCategory, limit, cursor, direction }) => {
+  async (
+    /** @type {import('./port.js').FindParams} */ {
+      organisationId,
+      userId,
+      subCategory,
+      limit,
+      cursor,
+      direction
+    }
+  ) => {
     const isPrev = direction === 'prev'
 
     const filter = {}

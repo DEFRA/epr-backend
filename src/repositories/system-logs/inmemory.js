@@ -26,7 +26,16 @@ const performInsertMany = (storage, state) => async (systemLogs) => {
 
 const performFind =
   (storage) =>
-  async ({ organisationId, userId, subCategory, limit, cursor, direction }) => {
+  async (
+    /** @type {import('./port.js').FindParams} */ {
+      organisationId,
+      userId,
+      subCategory,
+      limit,
+      cursor,
+      direction
+    }
+  ) => {
     const isPrev = direction === 'prev'
 
     let results = storage.filter((item) => {

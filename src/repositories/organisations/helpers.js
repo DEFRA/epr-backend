@@ -314,7 +314,13 @@ export const performFindAllForOverseasSitesAdminList = (db) => async () => {
 
 export const performFindPageForOrsAdminList =
   (db) =>
-  async ({ page, pageSize, registrationNumber }) => {
+  async (
+    /** @type {{ page: number, pageSize: number, registrationNumber?: string }} */ {
+      page,
+      pageSize,
+      registrationNumber
+    }
+  ) => {
     const skip = (page - 1) * pageSize
 
     const [result] = await db

@@ -23,7 +23,7 @@ const getUserRolesForStatus = (status) => {
 /**
  * @param {Organisation} updated
  * @param {'accreditations'|'registrations'} collectionKey
- * @param {(item: Accreditation|Registration) => SlimUser[]} extractAdditionalUsers
+ * @param {(item: any) => SlimUser[]} extractAdditionalUsers
  * @returns {SlimUser[]}
  */
 const collateItems = (updated, collectionKey, extractAdditionalUsers) => {

@@ -14,6 +14,7 @@ import {
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
+/** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/model.js').StoredSummaryLog} StoredSummaryLog */
 
 const FILE_PROCESSING_CATEGORY = 'file-processing'
@@ -93,14 +94,14 @@ const logParsingSummary = (logger, parsedData) => {
 export const createSummaryLogExtractor = ({ uploadsRepository }) => {
   return {
     /**
-     * @param {StoredSummaryLog} summaryLog
+     * @param {SummaryLog} summaryLog
      * @param {{ logger: TypedLogger }} options
      * @returns {Promise<ParsedSummaryLog>}
      */
     extract: async (summaryLog, { logger }) => {
       const {
         file: { uri }
-      } = summaryLog
+      } = /** @type {StoredSummaryLog} */ (summaryLog)
 
       const summaryLogBuffer = await uploadsRepository.findByLocation(uri)
 
