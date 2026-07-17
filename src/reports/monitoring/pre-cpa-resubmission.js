@@ -542,6 +542,8 @@ const findForRegistration = async ({
     organisationId,
     registrationId
   )
+  // A restatement can only happen with two or more summary logs: a lone upload
+  // must be the only one the reports are based on, so it falls outside CPA scope.
   if (logs.length < 2) {
     return { findings: [], ignored: [] }
   }
