@@ -97,7 +97,7 @@ const buildRowState = ({
   wasteRecordType = WASTE_RECORD_TYPE.RECEIVED,
   outcome = WASTE_BALANCE_OUTCOME.INCLUDED,
   // Registered-only uploads commit under a null accreditationId even for a
-  // registration that later accredits — the ledger the diagnostic must read.
+  // registration that later accredits -- the ledger the diagnostic must read.
   registeredOnly = false
 }) => ({
   id,
@@ -231,7 +231,7 @@ describe('findPreCpaResubmissionReports', () => {
         { id: 'sl-later', submittedAt: '2025-08-01T00:00:00.000Z' }
       ],
       rowStates: [
-        // The later upload changes a July row — no report submitted for July.
+        // The later upload changes a July row -- no report submitted for July.
         {
           id: 'rs-original',
           summaryLogIds: ['sl-original'],
@@ -265,7 +265,7 @@ describe('findPreCpaResubmissionReports', () => {
         { id: 'sl-reupload', submittedAt: '2025-08-01T00:00:00.000Z' }
       ],
       rowStates: [
-        // One doc whose membership spans both uploads — an unchanged re-commit.
+        // One doc whose membership spans both uploads -- an unchanged re-commit.
         {
           id: 'rs-shared',
           summaryLogIds: ['sl-original', 'sl-reupload'],
@@ -489,9 +489,9 @@ describe('findPreCpaResubmissionReports', () => {
   })
 
   it('keeps an IGNORED restatement out of findings but records it as an invariant-probe hit', async () => {
-    // The accreditation⊆report-period invariant means an IGNORED (outside-
+    // The accreditation subset of report-period invariant means an IGNORED (outside-
     // accreditation) row should never land in a reported closed period, so this
-    // input cannot arise in production — it exercises the probe branch that
+    // input cannot arise in production -- it exercises the probe branch that
     // would surface such an anomaly if the invariant were ever violated.
     const reg = {
       organisationId: newId(),
@@ -537,7 +537,7 @@ describe('findPreCpaResubmissionReports', () => {
       organisationId: newId(),
       registrationId: newId(),
       accreditationId: newId(),
-      // Report submitted 1 Sep — after the 1 Aug upload, so June was not closed
+      // Report submitted 1 Sep -- after the 1 Aug upload, so June was not closed
       // when that upload landed. The stale-report mechanism makes this the only
       // reachable ordering: a submitted report already reflects prior uploads.
       reports: [
@@ -829,7 +829,7 @@ describe('findPreCpaResubmissionReports', () => {
   it('flags the closed period a load moved OUT of when a later upload shifts its date', async () => {
     // Live CPA folds the previous row's dates into an adjustment, so a load
     // whose reporting date is corrected from June (closed) to July (open) still
-    // restates the closed June report — the period the load moved out of.
+    // restates the closed June report -- the period the load moved out of.
     const reg = {
       organisationId: newId(),
       registrationId: newId(),
@@ -1086,7 +1086,7 @@ describe('formatPreCpaResubmissionFinding', () => {
   it('renders a finding as a single retrospective log line', () => {
     expect(formatPreCpaResubmissionFinding(finding)).toBe(
       'Pre-CPA resubmission (retrospective): org org-1 / registration reg-1, ' +
-        'report report-1 (Jun 2025, monthly) — closed period restated by ' +
+        'report report-1 (Jun 2025, monthly) -- closed period restated by ' +
         'summary log sl-restating uploaded after the report was submitted ' +
         '2025-07-01T00:00:00.000Z'
     )
@@ -1099,7 +1099,7 @@ describe('formatPreCpaResubmissionFinding', () => {
         cadence: 'quarterly',
         period: 2
       })
-    ).toContain('report report-1 (Q2 2025, quarterly) —')
+    ).toContain('report report-1 (Q2 2025, quarterly) --')
   })
 })
 

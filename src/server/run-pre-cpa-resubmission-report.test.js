@@ -43,7 +43,7 @@ const rowState = ({ id, outcome = WASTE_BALANCE_OUTCOME.INCLUDED }) => ({
 
 /**
  * A single registration whose June report was submitted on 1 Jul, then a 1 Aug
- * upload restated the June row — the real finder drives this to one finding.
+ * upload restated the June row -- the real finder drives this to one finding.
  * `restatingOutcome: IGNORED` turns it into an invariant-probe hit instead.
  *
  * @param {{ restatingOutcome?: string }} [params]
@@ -108,7 +108,7 @@ const oneFindingApp = ({
 })
 
 /**
- * A single submitted June report whose stored submittedAt is missing — a data
+ * A single submitted June report whose stored submittedAt is missing -- a data
  * anomaly the real finder pulls out of sizing and surfaces for review.
  */
 const missingSubmittedAtApp = () => ({
@@ -209,7 +209,7 @@ describe('runPreCpaResubmissionReport', () => {
       message:
         'Pre-CPA resubmission sizing: scanned 0 submitted reports, 0 would ' +
         'require resubmission, across 0 organisations / 0 registrations. ' +
-        'Retrospective — not a prediction of the next upload.'
+        'Retrospective -- not a prediction of the next upload.'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -224,7 +224,7 @@ describe('runPreCpaResubmissionReport', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringContaining(
-        'report report-1 (Jun 2025, monthly) — closed period restated by ' +
+        'report report-1 (Jun 2025, monthly) -- closed period restated by ' +
           'summary log sl-restating'
       )
     })
@@ -232,7 +232,7 @@ describe('runPreCpaResubmissionReport', () => {
       message:
         'Pre-CPA resubmission sizing: scanned 1 submitted reports, 1 would ' +
         'require resubmission, across 1 organisations / 1 registrations. ' +
-        'Retrospective — not a prediction of the next upload.'
+        'Retrospective -- not a prediction of the next upload.'
     })
     expect(logger.warn).not.toHaveBeenCalled()
   })
@@ -248,12 +248,12 @@ describe('runPreCpaResubmissionReport', () => {
       message:
         'Pre-CPA resubmission sizing: scanned 1 submitted reports, 0 would ' +
         'require resubmission, across 0 organisations / 0 registrations. ' +
-        'Retrospective — not a prediction of the next upload.'
+        'Retrospective -- not a prediction of the next upload.'
     })
     expect(logger.warn).toHaveBeenCalledWith({
       message:
         'Invariant check: 1 IGNORED restatements fell in a closed reported ' +
-        'period (expected 0) — reports report-1'
+        'period (expected 0) -- reports report-1'
     })
   })
 
@@ -267,12 +267,12 @@ describe('runPreCpaResubmissionReport', () => {
       message:
         'Pre-CPA resubmission sizing: scanned 0 submitted reports, 0 would ' +
         'require resubmission, across 0 organisations / 0 registrations. ' +
-        'Retrospective — not a prediction of the next upload.'
+        'Retrospective -- not a prediction of the next upload.'
     })
     expect(logger.warn).toHaveBeenCalledWith({
       message:
         'Data integrity: 1 submitted reports missing a submittedAt were ' +
-        'skipped from sizing — reports report-1'
+        'skipped from sizing -- reports report-1'
     })
   })
 

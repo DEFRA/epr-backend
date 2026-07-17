@@ -23,7 +23,7 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 
 /**
  * Startup diagnostic (PAE-1747): retrospectively sizes the reports a later
- * summary-log upload restated in an already-closed period — the ones CPA
+ * summary-log upload restated in an already-closed period -- the ones CPA
  * (closed-period adjustments) would flag as needing resubmission once enabled.
  * Read-only: writes nothing, backfills no flags.
  *
@@ -33,7 +33,7 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
  * (ADR-0037) this diagnostic reads, but that rewrite is not yet scheduled and a
  * rough population size is needed sooner. So the rule is reconstructed here as a
  * faithful mirror of the live behaviour, accepting the residuals below, rather
- * than shared with it — retire this once CPA detection itself moves onto
+ * than shared with it -- retire this once CPA detection itself moves onto
  * row-states.
  *
  * It reads the `summary-log-row-states` collection (ADR-0037) and, per
@@ -122,7 +122,7 @@ const periodSlots = (periodicReports) =>
   )
 
 /**
- * The earliest submittedAt among submissions that carry one — the time the
+ * The earliest submittedAt among submissions that carry one -- the time the
  * period first closed. Taken by timestamp, not submissionNumber order: a
  * resubmission's number need not increase with its submission time, so the
  * lowest-numbered submission is not necessarily the earliest-submitted one.
@@ -219,7 +219,7 @@ const groupByRegistration = (submittedReports) => {
  * phase) and the current accreditation id (accredited phase), so a registration
  * that changed state is read under both. Returns null for a registration that
  * can no longer be looked up (deleted org/registration), skipping it. Only the
- * current accreditation is exposed, so earlier ids are not covered — residual 1.
+ * current accreditation is exposed, so earlier ids are not covered -- residual 1.
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {string} organisationId
@@ -286,7 +286,7 @@ const loadSubmittedLogTimeline = async (
  * template quarterly, any other monthly. The template proxies the accreditation
  * status CPA derives cadence from (a not-yet-approved registration uploads the
  * registered-only template and reports quarterly); it diverges only for an
- * accreditation cancelled while keeping its number — see residual 2.
+ * accreditation cancelled while keeping its number -- see residual 2.
  *
  * @param {SummaryLogRowState} row
  * @returns {string}
@@ -304,7 +304,7 @@ const cadenceForRow = (row) =>
  * log's snapshot without duplication. Merging the ledgers approximates the
  * registration-scoped state CPA diffs against, so a load adjusted across the
  * registered-only/accredited transition still pairs with its predecessor (within
- * the ledgers read — see residual 1).
+ * the ledgers read -- see residual 1).
  *
  * @param {SummaryLogRowStateRepository} summaryLogRowStateRepository
  * @param {WasteBalanceLedgerId[]} ledgers
@@ -339,7 +339,7 @@ const loadSnapshots = async (summaryLogRowStateRepository, ledgers, logs) => {
 const rowIdentityKey = (row) => `${row.wasteRecordType}:${row.rowId}`
 
 /**
- * Reporting-period refs one snapshot of a row's data falls in for a cadence —
+ * Reporting-period refs one snapshot of a row's data falls in for a cadence --
  * one per reporting date field that carries a value (a row can span two periods
  * for exporter tables).
  *
@@ -390,7 +390,7 @@ const restatedPeriods = (row, previousByRow) => {
 /**
  * Whether the report's period had already closed when this upload landed (its
  * earliest submission predates it). localeCompare keeps the `<` operands numeric
- * — the submittedAt values are ISO-8601 UTC strings, whose lexical order is
+ * -- the submittedAt values are ISO-8601 UTC strings, whose lexical order is
  * chronological.
  *
  * @param {SubmittedReport} report
@@ -468,7 +468,7 @@ const buildFinding = (report, current, organisationId, registrationId) => ({
  * restates a period whose report was already submitted before the upload. The
  * row's cadence (and so which cadence's report it maps to) is taken per row from
  * its processing type. IGNORED (outside-accreditation) rows are routed to a
- * separate probe tally rather than counted or discarded — see isIgnoredRow.
+ * separate probe tally rather than counted or discarded -- see isIgnoredRow.
  *
  * @param {{
  *   snapshots: { id: string, submittedAt: string, rows: SummaryLogRowState[] }[],
@@ -643,12 +643,12 @@ export const findPreCpaResubmissionReports = async ({
 export const formatPreCpaResubmissionFinding = (finding) =>
   `Pre-CPA resubmission (retrospective): org ${finding.organisationId} / ` +
   `registration ${finding.registrationId}, report ${finding.reportId} ` +
-  `(${formatPeriodLabel(finding.cadence, finding.period, finding.year)}, ${finding.cadence}) — ` +
+  `(${formatPeriodLabel(finding.cadence, finding.period, finding.year)}, ${finding.cadence}) -- ` +
   `closed period restated by summary log ${finding.restatingSummaryLogId} ` +
   `uploaded after the report was submitted ${finding.reportSubmittedAt}`
 
 /**
- * Distinct organisations and registrations a set of findings touches — the
+ * Distinct organisations and registrations a set of findings touches -- the
  * scale figures the summary log line reports.
  *
  * @param {{ organisationId: string, registrationId: string }[]} findings

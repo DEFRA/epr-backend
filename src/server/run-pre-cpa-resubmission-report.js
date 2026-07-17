@@ -11,7 +11,7 @@ const LOCK_NAME = 'pre-cpa-resubmission-report'
  * Logs the invariant probe result. `ignoredInClosedPeriods` is expected empty:
  * a report period should never overlap unaccredited time, so an IGNORED
  * (outside-accreditation) restatement folding into a reported closed period
- * signals an invariant breach or a CPA blind spot — surfaced with its report
+ * signals an invariant breach or a CPA blind spot -- surfaced with its report
  * ids for investigation rather than silently counted.
  *
  * @param {import('#reports/monitoring/pre-cpa-resubmission.js').PreCpaResubmissionFinding[]} ignored
@@ -27,7 +27,7 @@ const logInvariantProbe = (ignored) => {
   logger.warn({
     message:
       `Invariant check: ${ignored.length} IGNORED restatements fell in a ` +
-      `closed reported period (expected 0) — reports ` +
+      `closed reported period (expected 0) -- reports ` +
       `${ignored.map((finding) => finding.reportId).join(', ')}`
   })
 }
@@ -46,7 +46,7 @@ const logMissingSubmittedAt = (missing) => {
   logger.warn({
     message:
       `Data integrity: ${missing.length} submitted reports missing a ` +
-      `submittedAt were skipped from sizing — reports ` +
+      `submittedAt were skipped from sizing -- reports ` +
       `${missing.map((report) => report.reportId).join(', ')}`
   })
 }
@@ -83,7 +83,7 @@ const runReport = async (server) => {
       `Pre-CPA resubmission sizing: scanned ${scanned} submitted reports, ` +
       `${findings.length} would require resubmission, across ` +
       `${affectedOrganisations} organisations / ${affectedRegistrations} registrations. ` +
-      `Retrospective — not a prediction of the next upload.`
+      `Retrospective -- not a prediction of the next upload.`
   })
 
   logInvariantProbe(ignoredInClosedPeriods)
@@ -95,7 +95,7 @@ const runReport = async (server) => {
  * population of submitted reports live closed-period adjustments would now
  * surface as needing resubmission, logging the affected report ids for human
  * review. Runs under a cross-instance lock so a single pod per deploy executes
- * and logs it. Read-only — it writes nothing and backfills no flags.
+ * and logs it. Read-only -- it writes nothing and backfills no flags.
  *
  * Gated by the pre-cpa-resubmission-report feature flag: with it off this
  * returns before touching the locker or any repository.
