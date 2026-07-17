@@ -63,9 +63,15 @@ describe('sendEmail', () => {
   beforeEach(() => {
     mockSendEmail.mockResolvedValue({})
     config.get.mockImplementation((key) => {
-      if (key === 'govukNotifyApiKeyPath') return 'dummy-key'
-      if (key === 'isDevelopment') return false
-      if (key === 'audit.maxPayloadSizeBytes') return 1000000
+      if (key === 'govukNotifyApiKeyPath') {
+        return 'dummy-key'
+      }
+      if (key === 'isDevelopment') {
+        return false
+      }
+      if (key === 'audit.maxPayloadSizeBytes') {
+        return 1000000
+      }
       return null
     })
   })
@@ -77,7 +83,9 @@ describe('sendEmail', () => {
   it('initialises NotifyClient with key from getLocalSecret in development', async () => {
     vi.mocked(getLocalSecret).mockReturnValue('dev-secret-key')
     config.get.mockImplementation((key) => {
-      if (key === 'isDevelopment') return true
+      if (key === 'isDevelopment') {
+        return true
+      }
       return null
     })
     await sendEmail(templateId, emailAddress, personalisation)
@@ -86,8 +94,12 @@ describe('sendEmail', () => {
 
   it('initialises NotifyClient with key from config in production', async () => {
     config.get.mockImplementation((key) => {
-      if (key === 'isDevelopment') return false
-      if (key === 'govukNotifyApiKeyPath') return 'prod-config-key'
+      if (key === 'isDevelopment') {
+        return false
+      }
+      if (key === 'govukNotifyApiKeyPath') {
+        return 'prod-config-key'
+      }
       return null
     })
     await sendEmail(templateId, emailAddress, personalisation)
@@ -96,7 +108,9 @@ describe('sendEmail', () => {
 
   it('calls logger.warn if apiKey is not set in non-development', async () => {
     config.get.mockImplementation((key) => {
-      if (key === 'isDevelopment') return false
+      if (key === 'isDevelopment') {
+        return false
+      }
       return null
     })
     await sendEmail(templateId, emailAddress, personalisation)
@@ -113,7 +127,9 @@ describe('sendEmail', () => {
   it('calls logger.debug (not warn) if apiKey is not set in development', async () => {
     vi.mocked(getLocalSecret).mockReturnValue(null)
     config.get.mockImplementation((key) => {
-      if (key === 'isDevelopment') return true
+      if (key === 'isDevelopment') {
+        return true
+      }
       return null
     })
     await sendEmail(templateId, emailAddress, personalisation)
