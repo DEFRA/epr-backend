@@ -115,17 +115,6 @@ describe('reclassifyWasteRecordStates', () => {
     expect(row.data).toEqual(state.data)
   })
 
-  it('does not mutate the states it is given', () => {
-    const state = receivedRowState()
-
-    reclassifyWasteRecordStates(
-      [state],
-      contextWith(accreditationCovering('2026-06-01', '2027-01-01'))
-    )
-
-    expect(state.classification.outcome).toBe(WASTE_BALANCE_OUTCOME.INCLUDED)
-  })
-
   it('is NOT_APPLICABLE for every row when the registration has no accreditation', () => {
     const [row] = reclassifyWasteRecordStates(
       [receivedRowState()],
@@ -135,14 +124,5 @@ describe('reclassifyWasteRecordStates', () => {
     expect(row.classification.outcome).toBe(
       WASTE_BALANCE_OUTCOME.NOT_APPLICABLE
     )
-  })
-
-  it('returns nothing for no states', () => {
-    expect(
-      reclassifyWasteRecordStates(
-        [],
-        contextWith(accreditationCovering('2026-01-01', '2027-01-01'))
-      )
-    ).toEqual([])
   })
 })

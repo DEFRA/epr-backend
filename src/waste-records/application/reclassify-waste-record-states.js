@@ -37,11 +37,7 @@ export const reclassifyWasteRecordStates = (
   states.map((state) => ({
     ...state,
     classification: classifyRecordForWasteBalance(
-      /** @type {*} */ ({
-        rowId: state.rowId,
-        type: state.wasteRecordType,
-        data: state.data
-      }),
+      { type: state.wasteRecordType, data: state.data },
       processingType,
       accreditation,
       overseasSites

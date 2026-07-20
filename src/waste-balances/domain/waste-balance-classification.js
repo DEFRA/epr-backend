@@ -46,7 +46,7 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  * the row, so it arrives as context instead of being read back out of the row's
  * own data.
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @param {Pick<import('#domain/waste-records/model.js').WasteRecord, 'type' | 'data'>} record
  * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
