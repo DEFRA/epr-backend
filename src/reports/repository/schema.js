@@ -261,3 +261,30 @@ export const markSubmittedReportsRequiringResubmissionSchema = Joi.object({
   uploadedAt: Joi.string().isoDate().required(),
   periods: Joi.array().items(periodRefSchema).required()
 })
+
+export const markSubmittedReportRequiringResubmissionByOperatorSchema =
+  Joi.object({
+    organisationId: MONGO_ID_SCHEMA,
+    registrationId: MONGO_ID_SCHEMA,
+    year: YEAR_SCHEMA,
+    cadence: cadenceSchema,
+    period: periodSchema,
+    submissionNumber: Joi.number().integer().min(1).required(),
+    requestedBy: userSummarySchema,
+    requestedAt: Joi.string().isoDate().required()
+  })
+
+/**
+ * Shape of a report's `resubmissionRequired` field, mirroring `staleSchema`.
+ * A report can require resubmission for either or both reasons at once.
+ */
+export const resubmissionRequiredSchema = Joi.object({
+  closedPeriodRestated: Joi.object({
+    uploadedAt: Joi.string().isoDate().required(),
+    summaryLogId: Joi.string().required()
+  }).optional(),
+  operatorRequested: Joi.object({
+    requestedAt: Joi.string().isoDate().required(),
+    requestedBy: userSummarySchema
+  }).optional()
+})

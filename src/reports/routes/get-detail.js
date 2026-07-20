@@ -1,6 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
+import {
+  fetchOrGenerateReportForPeriod,
+  canRequestResubmission
+} from '#reports/application/report-service.js'
 import { periodParamsSchema, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
@@ -104,8 +107,31 @@ export const reportsGetDetail = {
       })
     }
 
+    const canRequestResubmissionFlag = !('diagnostics' in report)
+      ? canRequestResubmission(
+          await reportsRepository.findPeriodicReports({
+            organisationId,
+            registrationId
+          }),
+          {
+            status: report.status.currentStatus,
+            resubmissionRequired: report.resubmissionRequired,
+            year: report.year,
+            cadence:
+              /** @type {import('#reports/domain/cadence.js').Cadence} */ (
+                report.cadence
+              ),
+            period: report.period,
+            submissionNumber: report.submissionNumber
+          }
+        )
+      : false
+
     return h
-      .response(withRegistrationDetails(report, registration))
+      .response({
+        ...withRegistrationDetails(report, registration),
+        canRequestResubmission: canRequestResubmissionFlag
+      })
       .code(StatusCodes.OK)
   }
 }

@@ -9,6 +9,7 @@ import {
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
+  validateMarkSubmittedReportRequiringResubmissionByOperator,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -23,7 +24,6 @@ import {
   REPORT_STATUS,
   ACTIVE_REPORT_STATUSES
 } from '#root/reports/domain/report-status.js'
-import { RESUBMISSION_REASON } from '#root/reports/domain/resubmission.js'
 
 /**
  * @import {
@@ -553,11 +553,7 @@ const performMarkSubmittedReportsRequiringResubmission = async (
     return []
   }
 
-  const resubmissionRequired = {
-    uploadedAt,
-    reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-    summaryLogId
-  }
+  const closedPeriodRestated = { uploadedAt, summaryLogId }
 
   const submitted = await reportsCollection(db)
     .find(
@@ -596,11 +592,86 @@ const performMarkSubmittedReportsRequiringResubmission = async (
     readScope: scope,
     idempotencyKeyField: 'summaryLogId',
     idempotencyKeyValue: summaryLogId,
-    field: 'resubmissionRequired',
-    value: resubmissionRequired
+    field: 'resubmissionRequired.closedPeriodRestated',
+    value: closedPeriodRestated
   })
 
-  return flagged.map((report) => ({ ...report, resubmissionRequired }))
+  return flagged.map((report) => ({
+    ...report,
+    resubmissionRequired: { closedPeriodRestated }
+  }))
+}
+
+/**
+ * Flags the exact report identified by `submissionNumber` as requiring
+ * resubmission at the operator's own request. Returns `null` when nothing
+ * matched (the caller checks eligibility immediately before calling this).
+ *
+ * @param {Db} db
+ * @param {import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorParams} params
+ * @returns {Promise<import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>}
+ */
+const performMarkSubmittedReportRequiringResubmissionByOperator = async (
+  db,
+  params
+) => {
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    requestedBy,
+    requestedAt
+  } = validateMarkSubmittedReportRequiringResubmissionByOperator(params)
+
+  const operatorRequested = { requestedAt, requestedBy }
+
+  const doc = await reportsCollection(db).findOneAndUpdate(
+    {
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber,
+      'status.currentStatus': REPORT_STATUS.SUBMITTED,
+      'resubmissionRequired.operatorRequested': { $exists: false }
+    },
+    {
+      $set: { 'resubmissionRequired.operatorRequested': operatorRequested },
+      $inc: { version: 1 }
+    },
+    {
+      returnDocument: 'after',
+      projection: {
+        _id: 0,
+        id: 1,
+        year: 1,
+        cadence: 1,
+        period: 1,
+        submissionNumber: 1,
+        resubmissionRequired: 1
+      }
+    }
+  )
+
+  if (!doc) {
+    return null
+  }
+
+  return {
+    reportId: doc.id,
+    year: doc.year,
+    cadence: doc.cadence,
+    period: doc.period,
+    submissionNumber: doc.submissionNumber,
+    resubmissionRequired: {
+      ...doc.resubmissionRequired,
+      operatorRequested
+    }
+  }
 }
 
 /**
@@ -669,6 +740,8 @@ export const createReportsRepository = async (db) => {
       performMarkActiveReportsStaleForPrnCancellation(db, params),
     markSubmittedReportsRequiringResubmission: (params) =>
       performMarkSubmittedReportsRequiringResubmission(db, params),
+    markSubmittedReportRequiringResubmissionByOperator: (params) =>
+      performMarkSubmittedReportRequiringResubmissionByOperator(db, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
       performHasReportSubmittedSince(db, organisationId, registrationId, since)
   })
