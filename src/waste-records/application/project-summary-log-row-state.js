@@ -13,11 +13,11 @@ import { coerceStoredTonnages } from './stored-tonnage-coercion.js'
  * persists a row state goes through this seam and inherits the shape. The
  * rowId is a row reference, not a number; a string holding matches the insert
  * schema and the forward-write transformer regardless of how the source record
- * stored it. `processingType` is injected metadata describing the row, so it is
- * hoisted to a top-level field alongside the record rather than kept inside the
- * raw `data`; the redundant `ROW_ID` copy is dropped in favour of the top-level
- * `rowId`. The hoist happens on the projection output, after `classifyWasteRecord`
- * has read `data.processingType` to select its schema. The balance path keeps
+ * stored it. `processingType` names the template the row reports under
+ * rather than describing the load, so it is hoisted to a top-level field
+ * alongside the record rather than kept inside the raw `data`; the redundant
+ * `ROW_ID` copy is dropped in favour of the top-level
+ * `rowId`. The balance path keeps
  * `classifyWasteRecord` directly and stays at full precision, which the
  * cross-field reconciliation arithmetic requires.
  *
@@ -31,7 +31,12 @@ export const projectSummaryLogRowState = (
   accreditation,
   overseasSites
 ) => {
-  const classified = classifyWasteRecord(record, accreditation, overseasSites)
+  const classified = classifyWasteRecord(
+    record,
+    record.data?.processingType,
+    accreditation,
+    overseasSites
+  )
   const { ROW_ID: _ROW_ID, processingType, ...data } = classified.data
   return {
     ...classified,

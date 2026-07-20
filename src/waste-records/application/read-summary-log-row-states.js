@@ -24,7 +24,7 @@ import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-
  * @param {SummaryLogRowState} summaryLogRowState
  * @returns {WasteRecordState}
  */
-const toWasteRecordState = ({
+export const toWasteRecordState = ({
   rowId,
   wasteRecordType,
   data,

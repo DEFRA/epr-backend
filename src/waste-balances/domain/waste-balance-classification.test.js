@@ -21,7 +21,7 @@ const buildRecord = (overrides = {}) =>
   /** @type {*} */ ({
     rowId: 'row-1',
     type: 'EXPORTED',
-    data: { processingType: PROCESSING_TYPES.EXPORTER, tonnage: 100 },
+    data: { tonnage: 100 },
     ...overrides
   })
 
@@ -63,7 +63,12 @@ describe('classifyRecordForWasteBalance', () => {
     })
 
     expect(
-      classifyRecordForWasteBalance(buildRecord(), null, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        null,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
       reasons: [],
@@ -75,7 +80,12 @@ describe('classifyRecordForWasteBalance', () => {
     await setSchema(null)
 
     expect(
-      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        accreditation,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
       reasons: [],
@@ -92,7 +102,12 @@ describe('classifyRecordForWasteBalance', () => {
     })
 
     expect(
-      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        accreditation,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
       reasons: [{ code: 'MISSING_REQUIRED_FIELD', field: 'tonnage' }],
@@ -110,7 +125,12 @@ describe('classifyRecordForWasteBalance', () => {
     })
 
     expect(
-      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        accreditation,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
       reasons: [{ code: 'WITHIN_ACCREDITATION_PERIOD' }],
@@ -127,7 +147,12 @@ describe('classifyRecordForWasteBalance', () => {
     })
 
     expect(
-      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        accreditation,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.IGNORED,
       reasons: [{ code: 'PRN_ISSUED' }],
