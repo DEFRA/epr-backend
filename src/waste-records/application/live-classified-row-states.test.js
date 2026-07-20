@@ -285,6 +285,41 @@ describe('liveClassifiedRowStatesForRegistration', () => {
     })
   })
 
+  it('reads rows submitted under a since-cancelled accreditation as not applicable, rather than renaming their template', async () => {
+    const scenario = reprocessorAccreditedFrom('2026-01-01')
+    scenario.organisation.accreditations[0].statusHistory = [
+      ...approvedHistory,
+      { status: REG_ACC_STATUS.CANCELLED, updatedAt: '2026-05-01' }
+    ]
+
+    const [state] = await readLiveStates(scenario)
+
+    expect(state.classification).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+      reasons: [],
+      transactionAmount: 0
+    })
+  })
+
+  it('reads a registered-only partition under the registered-only template', async () => {
+    const scenario = reprocessorAccreditedFrom('2026-01-01')
+    scenario.ledgerId = { ...scenario.ledgerId, accreditationId: null }
+    scenario.organisation.registrations[0].accreditationId = undefined
+
+    const [state] = await readLiveStates({
+      ...scenario,
+      entries: [
+        rowStateEntry({
+          processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        })
+      ]
+    })
+
+    expect(state.classification.outcome).toBe(
+      WASTE_BALANCE_OUTCOME.NOT_APPLICABLE
+    )
+  })
+
   it('rejects a row state submitted under a template the registration does not report under', async () => {
     await expect(
       readLiveStates({

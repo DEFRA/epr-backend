@@ -20,13 +20,11 @@ import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-bala
  * It is the wrong answer for a question about the present: approving an
  * overseas site or amending an accreditation's validity period changes which
  * rows count, and nothing restates the stored reading until the operator
- * submits again — which, for an accreditation that has finished submitting for
- * the year, may be never. Reads that answer current-state questions call this
- * so that context changes show up without waiting for a submission.
+ * submits again. Reads that answer current-state questions call this so that
+ * context changes show up without waiting for a submission.
  *
  * The rows come back in the shape consumers already receive, so a consumer
  * moves from stamped to live readings by changing which function it calls.
- *
  *
  * @param {WasteRecordState[]} states
  * @param {ReclassificationContext} context

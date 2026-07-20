@@ -31,9 +31,9 @@ const WASTE_PROCESSING_TYPES_WITH_TEMPLATES = new Set(
  * properties name the template back.
  *
  * A registration without an accreditation reports under the registered-only
- * variant, which is why the accreditation is an input: the same reprocessor
- * reports under `REPROCESSOR_INPUT` once accredited and
- * `REPROCESSOR_REGISTERED_ONLY` before then. One registered-only template
+ * variant: the same reprocessor reports under `REPROCESSOR_INPUT` once
+ * accredited and `REPROCESSOR_REGISTERED_ONLY` before then. One registered-only
+ * template
  * serves both reprocessing types, so `reprocessingType` is only consulted for
  * an accredited reprocessor — and is required there, since without it no
  * template can be named.

@@ -13,10 +13,9 @@ import { reclassifyWasteRecordStates } from './reclassify-waste-record-states.js
 
 /**
  * A row state records the template it was submitted under, and the registration
- * names the template it reports under. The two describe the same thing, so they
- * cannot legitimately disagree — a disagreement means a row was written under a
- * registration other than the one it is being read for, and reclassifying it
- * against this registration's schema would quietly produce a wrong reading.
+ * names the template it reports under. The two describe the same thing, so a
+ * disagreement means a row is being read for a registration other than the one
+ * that wrote it, and reclassifying it here would produce a wrong reading.
  *
  * @param {SummaryLogRowState[]} rowStates
  * @param {ProcessingType} processingType
@@ -76,9 +75,12 @@ export const liveClassifiedRowStatesForRegistration = async ({
     organisationsRepository.findRegistrationById(organisationId, registrationId)
   ])
 
+  // A ledger carries an accreditationId only once the accreditation is
+  // numbered, and no later status change takes that id away, so the partition
+  // names the template its rows were submitted under.
   const accreditation = resolveAccreditation(registration, organisation)
   const processingType = processingTypeForRegistration(registration, {
-    accredited: accreditation !== null
+    accredited: accreditationId !== null
   })
 
   assertRowStatesReportUnder(rowStates, processingType)
