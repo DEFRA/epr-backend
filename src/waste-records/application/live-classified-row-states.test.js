@@ -320,14 +320,41 @@ describe('liveClassifiedRowStatesForRegistration', () => {
     )
   })
 
-  it('rejects a row state submitted under a template the registration does not report under', async () => {
-    await expect(
-      readLiveStates({
-        ...reprocessorAccreditedFrom('2026-01-01'),
-        entries: [rowStateEntry({ processingType: PROCESSING_TYPES.EXPORTER })]
-      })
-    ).rejects.toThrow(
-      /submitted under EXPORTER.*reports under REPROCESSOR_INPUT/
+  it('returns nothing when the submission committed no rows', async () => {
+    const states = await readLiveStates({
+      ...reprocessorAccreditedFrom('2026-01-01'),
+      entries: []
+    })
+
+    expect(states).toEqual([])
+  })
+
+  it('fails when the ledger names a registration the organisation does not hold', async () => {
+    const scenario = reprocessorAccreditedFrom('2026-01-01')
+    scenario.organisation.registrations = []
+
+    await expect(readLiveStates(scenario)).rejects.toThrow(
+      `Registration with id ${REGISTRATION_ID} not found`
+    )
+  })
+
+  it('reads rows under the template they were submitted under, not one derived from the registration', async () => {
+    const scenario = reprocessorAccreditedFrom('2026-01-01')
+    scenario.organisation.accreditations[0].statusHistory = [
+      { status: REG_ACC_STATUS.CREATED, updatedAt: '2024-01-01' }
+    ]
+
+    const [state] = await readLiveStates({
+      ...scenario,
+      entries: [
+        rowStateEntry({
+          processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        })
+      ]
+    })
+
+    expect(state.classification.outcome).toBe(
+      WASTE_BALANCE_OUTCOME.NOT_APPLICABLE
     )
   })
 })
