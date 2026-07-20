@@ -599,4 +599,32 @@ describe('buildCreditedTonnageReport', () => {
       data: []
     })
   })
+
+  it('excludes registered-only ledger entries (accreditationId null) without warning', async () => {
+    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
+      orgId: 500001
+    })
+    const registeredOnlyEntry = {
+      ledgerId: {
+        organisationId: 'org-registered-only',
+        registrationId: 'reg-registered-only',
+        accreditationId: null
+      },
+      summaryLogId: 'log-registered-only'
+    }
+
+    const { report, logger } = run({
+      organisations: [organisation],
+      entries: [ledgerEntry, registeredOnlyEntry],
+      rowStatesByAccreditationId: {
+        [accreditationId]: [receivedRow('2026-02-10', 100)]
+      }
+    })
+
+    const { data } = await report
+    expect(data.every((row) => row.accreditation.id === accreditationId)).toBe(
+      true
+    )
+    expect(logger.warn).not.toHaveBeenCalled()
+  })
 })

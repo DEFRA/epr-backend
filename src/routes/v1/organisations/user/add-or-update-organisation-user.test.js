@@ -266,16 +266,17 @@ describe('addOrUpdateOrganisationUser', () => {
 
   describe('when organisation has no users property', () => {
     test('should add user when users property is undefined', async () => {
-      mockOrganisation = {
-        id: new ObjectId().toString(),
-        version: 1
-        // users property is missing/undefined
-      }
+      mockOrganisation = /** @type {Organisation} */ (
+        /** @type {unknown} */ ({
+          id: new ObjectId().toString(),
+          version: 1
+          // users property is missing/undefined
+        })
+      )
 
       await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
-        // @ts-expect-error intentionally testing an organisation with no users property
         mockOrganisation
       )
 
@@ -298,16 +299,17 @@ describe('addOrUpdateOrganisationUser', () => {
     })
 
     test('should add user when users property is null', async () => {
-      mockOrganisation = {
-        id: new ObjectId().toString(),
-        version: 1,
-        users: null
-      }
+      mockOrganisation = /** @type {Organisation} */ (
+        /** @type {unknown} */ ({
+          id: new ObjectId().toString(),
+          version: 1,
+          users: null
+        })
+      )
 
       await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
-        // @ts-expect-error intentionally testing an organisation whose users property is null
         mockOrganisation
       )
 

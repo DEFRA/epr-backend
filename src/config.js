@@ -369,6 +369,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
+    },
+    preCpaResubmissionReport: {
+      doc: 'Feature Flag: Run the estate-wide pre-CPA resubmission sizing diagnostic on startup (PAE-1747)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_REPORT'
     }
   },
   formSubmissionOverrides: {

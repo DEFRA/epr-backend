@@ -16,6 +16,9 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
+ * @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
  */
 
 /**
@@ -151,7 +154,7 @@ const resolveAccreditation = async (
 
 /**
  * @param {object} params
- * @param {object} params.parsedData
+ * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
  * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
@@ -247,15 +250,15 @@ const calculateMetrics = (wasteRecords) => {
  * zero-delta — the submission is still recorded, it just moves no tonnage.
  *
  * @param {object} params
- * @param {object} params.summaryLog
+ * @param {{ file: { id: string }, organisationId: string, registrationId: string }} params.summaryLog
  * @param {string | undefined} params.accreditationId
  * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
- * @param {object} params.parsedData
+ * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
- * @param {object} params.organisationsRepository
+ * @param {OrganisationsRepository} params.organisationsRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
- * @param {object} params.wasteBalanceService
+ * @param {ReturnType<typeof createWasteBalanceService>} params.wasteBalanceService
  */
 const commitStateAndBalance = async ({
   summaryLog,

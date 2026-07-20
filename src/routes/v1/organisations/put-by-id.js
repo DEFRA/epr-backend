@@ -3,13 +3,15 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 
+/** @import { Organisation } from '#domain/organisations/model.js' */
+
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository */
 
 /**
- * @typedef {{version: number, updateFragment: object}} PutByIdPayload
+ * @typedef {{version: number, updateFragment: Partial<Organisation>}} PutByIdPayload
  */
 
 export const organisationsPutByIdPath = '/v1/organisations/{id}'

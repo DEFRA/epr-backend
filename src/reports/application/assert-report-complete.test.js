@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { assertReportComplete } from './assert-report-complete.js'
 
 /**
+ * @import { CdpBoom } from '#common/helpers/logging/cdp-boom.js'
  * @import { Report } from '#reports/repository/port.js'
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @typedef {Record<string, any>} SparseReport
@@ -159,7 +160,6 @@ describe('assertReportComplete', () => {
   })
 
   describe('code and event for indexed logging', () => {
-    /** @import { CdpBoom } from '#common/helpers/logging/cdp-boom.js' */
     /**
      * @param {SparseReport} report
      * @param {OperatorCategory} category

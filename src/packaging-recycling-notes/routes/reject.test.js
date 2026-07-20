@@ -15,6 +15,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { config } from '#root/config.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import {
   cognitoJwksUrl,
   setupAuthContext
@@ -74,7 +75,7 @@ let reportsRepository
  */
 const startServer = async (prn, { reports = new Map(), ledgerIds } = {}) => {
   ledgerRepository = createInMemoryLedgerRepository([
-    openingBalanceEvent(ledgerIds)
+    partialMock(openingBalanceEvent(ledgerIds))
   ])()
   const prnRepositoryFactory = createInMemoryPackagingRecyclingNotesRepository(
     prn ? [prn] : []
@@ -337,7 +338,9 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
   it('returns 500 with spec error format when the repository throws unexpectedly', async () => {
     // No in-memory adapter can simulate an infrastructure failure, so an
     // unexpected throw is injected directly to drive the handler's 500 mapping.
-    ledgerRepository = createInMemoryLedgerRepository([openingBalanceEvent()])()
+    ledgerRepository = createInMemoryLedgerRepository([
+      partialMock(openingBalanceEvent())
+    ])()
     server = await createTestServer({
       config: {
         packagingRecyclingNotesExternalApi: {

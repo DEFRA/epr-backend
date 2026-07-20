@@ -38,8 +38,8 @@
  * @property {string} supplierName
  * @property {string} facilityType
  * @property {string} supplierAddress
- * @property {string} supplierPhone
- * @property {string} supplierEmail
+ * @property {string | null} supplierPhone
+ * @property {string | null} supplierEmail
  * @property {number} tonnageReceived
  */
 
@@ -83,7 +83,7 @@
  * @property {number} issuedTonnage
  * @property {number | null} [totalRevenue]
  * @property {number | null} [averagePricePerTonne]
- * @property {number | null} freeTonnage
+ * @property {number | null} [freeTonnage]
  */
 
 /**
@@ -93,7 +93,7 @@
 
 /**
  * Provenance of a report: the summary log it was last (re)built from.
- * @typedef {{ summaryLogId: string, lastUploadedAt: string | null }} ReportSource
+ * @typedef {{ summaryLogId: string | null, lastUploadedAt: string | null }} ReportSource
  */
 
 /**

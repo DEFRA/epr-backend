@@ -18,6 +18,11 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { reportsGetDetailPath } from './get-detail.js'
 
+/**
+ * @import { Organisation } from '#domain/organisations/model.js'
+ * @import { Registration } from '#domain/organisations/registration.js'
+ */
+
 const SUMMARY_LOG_ID = 'sl-1'
 const SUBMITTED_AT = new Date('2026-03-31T09:00:00.000Z')
 
@@ -79,7 +84,9 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       wasteRecordOverrides = [],
       accreditationStatus
     ) => {
-      const registration = buildRegistration(registrationOverrides)
+      const registration = /** @type {Registration} */ (
+        buildRegistration(registrationOverrides)
+      )
       const org = buildOrganisationWithRegistration(
         registration,
         accreditationStatus
@@ -88,7 +95,9 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       // Use initial-org pattern to preserve accreditation statusHistory
       // (insert() overrides statusHistory to the default 'created' entry).
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([
+          /** @type {Organisation} */ (org)
+        ])
 
       const { ledgerRepository, summaryLogRowStatesRepository } =
         await seedRepositories(org, registration, wasteRecordOverrides)

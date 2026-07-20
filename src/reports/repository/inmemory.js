@@ -43,7 +43,7 @@ import {
 
 /**
  * Finds the active (non-submitted) report matching a specific period criteria.
- * @param {Map<string, object>} reports - A Map where values are report objects.
+ * @param {Map<string, Report>} reports - A Map where values are report objects.
  * @param {object} criteria - The unique identifiers for the report criteria.
  * @param {string} criteria.organisationId - The ID of the organization.
  * @param {string} criteria.registrationId - The ID of the registration.

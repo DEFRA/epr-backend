@@ -7,8 +7,6 @@ import {
 } from '#application/common/material-aggregation.js'
 import { getMonthNames } from '#common/helpers/date-formatter.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
-import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
-import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const PROCESSING_TYPE_FIELD = '$processingType'
@@ -272,32 +270,16 @@ const buildAggregationPipeline = (latestSubmittedSummaryLogIds) => [
   buildProjectionStage()
 ]
 
-const buildLatestSubmittedSummaryLogPipeline = () => [
-  { $match: { kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED } },
-  { $sort: { number: -1 } },
-  {
-    $group: {
-      _id: {
-        registrationId: '$registrationId',
-        accreditationId: '$accreditationId'
-      },
-      summaryLogId: { $first: '$payload.summaryLogId' }
-    }
-  }
-]
-
-const resolveLatestSubmittedSummaryLogIds = async (db) => {
-  const latestSubmitted = await db
-    .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
-    .aggregate(buildLatestSubmittedSummaryLogPipeline())
-    .toArray()
-
-  return latestSubmitted.map((submission) => submission.summaryLogId)
-}
-
-export const aggregateTonnageByMaterial = async (db) => {
-  const latestSubmittedSummaryLogIds =
-    await resolveLatestSubmittedSummaryLogIds(db)
+/**
+ * @param {import('mongodb').Db} db
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
+ */
+export const aggregateTonnageByMaterial = async (db, ledgerRepository) => {
+  const latestSubmitted =
+    await ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
+  const latestSubmittedSummaryLogIds = latestSubmitted.map(
+    (entry) => entry.summaryLogId
+  )
   const pipeline = buildAggregationPipeline(latestSubmittedSummaryLogIds)
 
   const results = await db

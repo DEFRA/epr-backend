@@ -15,9 +15,12 @@ vi.mock('#common/helpers/fetch-json.js', () => ({
 }))
 
 vi.mock('@aws-sdk/lib-storage', () => ({
-  Upload: vi.fn(function () {
-    this.done = mockUploadDone
-  })
+  Upload: vi.fn(
+    /** @this {{ done: typeof mockUploadDone }} */
+    function () {
+      this.done = mockUploadDone
+    }
+  )
 }))
 
 describe('createFormsFileUploadsRepository', () => {

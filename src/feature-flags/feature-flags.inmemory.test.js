@@ -54,4 +54,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(false)
   })
+
+  it('returns true when preCpaResubmissionReport flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      preCpaResubmissionReport: true
+    })
+    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(true)
+  })
+
+  it('returns false when preCpaResubmissionReport flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      preCpaResubmissionReport: false
+    })
+    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(false)
+  })
+
+  it('returns false when preCpaResubmissionReport flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(false)
+  })
 })

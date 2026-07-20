@@ -74,7 +74,6 @@
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
  * @property {(orgId: number) => Promise<Organisation|null>} findByOrgId - Find organisation by business orgId
  * @property {(id: string, version: number, registrationId: string, entries: Record<string, {overseasSiteId: string}>) => Promise<boolean>} replaceRegistrationOverseasSites - Replace a registration's overseasSites map with the given entries
- * @property {(version: number) => Promise<Organisation[]>} findAllBySchemaVersion - Find all organisations with a given schemaVersion
  */
 
 /**

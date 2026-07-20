@@ -26,6 +26,7 @@ import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repos
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 const VALID_FROM = '2025-01-01'
@@ -61,7 +62,7 @@ const buildTestOrg = (organisationId, registrationId) => {
   const accreditationId = 'acc-123'
   const testOrg = buildReadOrganisation({
     registrations: [
-      {
+      partialMock({
         id: registrationId,
         registrationNumber: 'REG-123',
         status: 'approved',
@@ -72,10 +73,10 @@ const buildTestOrg = (organisationId, registrationId) => {
         validFrom: VALID_FROM,
         validTo: VALID_TO,
         accreditationId
-      }
+      })
     ],
     accreditations: [
-      {
+      partialMock({
         id: accreditationId,
         accreditationNumber: 'ACC-123',
         material: 'paper',
@@ -84,7 +85,7 @@ const buildTestOrg = (organisationId, registrationId) => {
         submittedToRegulator: 'ea',
         validFrom: VALID_FROM,
         validTo: VALID_TO
-      }
+      })
     ]
   })
   testOrg.id = organisationId

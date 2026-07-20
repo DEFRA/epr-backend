@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainerRead } from '#test/inject-auth.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -82,7 +83,10 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       reprocessingType: 'input',
       material: 'plastic'
     })
-    const org = buildOrganisationWithRegistration(registration, 'approved')
+    const org = buildOrganisationWithRegistration(
+      partialMock(registration),
+      'approved'
+    )
     org.orgId = 500123
 
     const linkedRegistration = org.registrations[0]
@@ -117,18 +121,22 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     )
 
     const ledgerRepository = createInMemoryLedgerRepository([
-      buildLedgerEvent({
-        organisationId: org.id,
-        registrationId: linkedRegistration.id,
-        accreditationId: linkedAccreditation.id,
-        number: 1,
-        payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
-      })
+      partialMock(
+        buildLedgerEvent({
+          organisationId: org.id,
+          registrationId: linkedRegistration.id,
+          accreditationId: linkedAccreditation.id,
+          number: 1,
+          payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
+        })
+      )
     ])()
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([org]),
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
         ledgerRepository,
         summaryLogRowStatesRepository
       }
