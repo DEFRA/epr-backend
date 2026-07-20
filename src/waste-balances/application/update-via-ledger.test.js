@@ -13,6 +13,7 @@ import {
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -35,12 +36,23 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-const includingSchema = /** @type {*} */ ({
-  classifyForWasteBalance: (data) => ({
-    outcome: ROW_OUTCOME.INCLUDED,
-    reasons: [],
-    transactionAmount: data.tonnage
-  })
+const tonnageSchema = /** @type {*} */ ({
+  classifyForWasteBalance: (data) =>
+    data.tonnage === undefined
+      ? {
+          outcome: ROW_OUTCOME.EXCLUDED,
+          reasons: [
+            {
+              code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+              field: 'tonnage'
+            }
+          ]
+        }
+      : {
+          outcome: ROW_OUTCOME.INCLUDED,
+          reasons: [],
+          transactionAmount: data.tonnage
+        }
 })
 
 vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
@@ -93,8 +105,10 @@ const buildExporterRecord = ({
       data: {}
     }
   ],
-  data: { processingType: 'EXPORTER', tonnage },
-  excludedFromWasteBalance: false
+  data: {
+    processingType: 'EXPORTER',
+    ...(tonnage === undefined ? {} : { tonnage })
+  }
 })
 
 describe('performUpdateViaLedger', () => {
@@ -111,7 +125,7 @@ describe('performUpdateViaLedger', () => {
     ).commitSummaryLogSubmittedEvent
     const { findSchemaForProcessingType } =
       await import('#domain/summary-logs/table-schemas/index.js')
-    vi.mocked(findSchemaForProcessingType).mockReturnValue(includingSchema)
+    vi.mocked(findSchemaForProcessingType).mockReturnValue(tonnageSchema)
   })
 
   describe('first submission', () => {
@@ -188,13 +202,10 @@ describe('performUpdateViaLedger', () => {
   })
 
   describe('excluded records', () => {
-    it('skips records with excludedFromWasteBalance flag', async () => {
+    it('skips records the schema excludes', async () => {
       const records = [
         buildExporterRecord({ rowId: '1', tonnage: 100 }),
-        {
-          ...buildExporterRecord({ rowId: '2', tonnage: 50 }),
-          excludedFromWasteBalance: true
-        }
+        buildExporterRecord({ rowId: '2', tonnage: undefined })
       ]
 
       await performUpdateViaLedger({
@@ -218,10 +229,7 @@ describe('performUpdateViaLedger', () => {
       const records = [
         buildExporterRecord({ rowId: '1', tonnage: includedTonnages[0] }),
         buildExporterRecord({ rowId: '2', tonnage: includedTonnages[1] }),
-        {
-          ...buildExporterRecord({ rowId: '3', tonnage: 999 }),
-          excludedFromWasteBalance: true
-        },
+        buildExporterRecord({ rowId: '3', tonnage: undefined }),
         buildExporterRecord({ rowId: '4', tonnage: includedTonnages[2] })
       ]
 

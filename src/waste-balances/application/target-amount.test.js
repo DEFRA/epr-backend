@@ -20,7 +20,6 @@ const buildRecord = (overrides = {}) =>
     rowId: 'row-1',
     type: 'EXPORTED',
     data: { processingType: PROCESSING_TYPES.EXPORTER, tonnage: 100 },
-    excludedFromWasteBalance: false,
     ...overrides
   })
 
