@@ -380,10 +380,21 @@ describe('liveClassifiedRowStates', () => {
   })
 
   it('replaces each stamped classification with one derived from the given context', () => {
-    const [state] = liveClassifiedRowStates([rowStateEntry()], {
-      accreditation: accreditedThroughout,
-      overseasSites: {}
-    })
+    const [state] = liveClassifiedRowStates(
+      [
+        rowStateEntry({
+          classification: {
+            outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
+            reasons: [],
+            transactionAmount: 0
+          }
+        })
+      ],
+      {
+        accreditation: accreditedThroughout,
+        overseasSites: {}
+      }
+    )
 
     expect(state.classification).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
