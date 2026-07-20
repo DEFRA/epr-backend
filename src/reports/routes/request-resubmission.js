@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditReportRequestResubmission } from '#reports/application/audit.js'
-import { requestOperatorResubmission } from '#reports/application/report-service.js'
+import { requestOperatorResubmission } from '#reports/application/resubmission-service.js'
 import { extractChangedBy, periodParamsSchema } from './shared.js'
 
 export const reportsRequestResubmissionPath =
