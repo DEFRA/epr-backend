@@ -115,6 +115,26 @@ describe('reclassifyWasteRecordStates', () => {
     expect(row.data).toEqual(state.data)
   })
 
+  it('selects the table schema from the processing type it is given', () => {
+    const covering = accreditationCovering('2026-01-01', '2027-01-01')
+
+    const [underReprocessorInput] = reclassifyWasteRecordStates(
+      [receivedRowState()],
+      contextWith(covering)
+    )
+    const [underExporter] = reclassifyWasteRecordStates([receivedRowState()], {
+      ...contextWith(covering),
+      processingType: PROCESSING_TYPES.EXPORTER
+    })
+
+    expect(underReprocessorInput.classification.outcome).toBe(
+      WASTE_BALANCE_OUTCOME.INCLUDED
+    )
+    expect(underExporter.classification.outcome).toBe(
+      WASTE_BALANCE_OUTCOME.NOT_APPLICABLE
+    )
+  })
+
   it('is NOT_APPLICABLE for every row when the registration has no accreditation', () => {
     const [row] = reclassifyWasteRecordStates(
       [receivedRowState()],

@@ -76,32 +76,6 @@ describe('classifyRecordForWasteBalance', () => {
     })
   })
 
-  it('selects the table schema from the processing type it is given, not from the row data', async () => {
-    await setSchema({
-      classifyForWasteBalance: () => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: 100
-      })
-    })
-    const { findSchemaForProcessingType } =
-      await import('#domain/summary-logs/table-schemas/index.js')
-
-    classifyRecordForWasteBalance(
-      buildRecord({
-        data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT }
-      }),
-      PROCESSING_TYPES.EXPORTER,
-      accreditation,
-      overseasSites
-    )
-
-    expect(findSchemaForProcessingType).toHaveBeenCalledWith(
-      PROCESSING_TYPES.EXPORTER,
-      'EXPORTED'
-    )
-  })
-
   it('is NOT_APPLICABLE when the schema has no waste-balance classifier', async () => {
     await setSchema(null)
 

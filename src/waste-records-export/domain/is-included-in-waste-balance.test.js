@@ -72,40 +72,40 @@ describe('getWasteBalanceClassification', () => {
     it.each([
       [
         'no accreditation',
-        { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
         null,
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
         'registered-only processing type, accredited',
-        { processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY },
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
         accreditation,
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
         'registered-only processing type, unaccredited',
-        { processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY },
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
         null,
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
         'no schema for the processing type',
-        { processingType: 'NOT_A_REAL_TYPE' },
+        /** @type {*} */ ('NOT_A_REAL_TYPE'),
         accreditation,
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
         'schema has no classifyForWasteBalance',
-        { processingType: PROCESSING_TYPES.EXPORTER },
+        PROCESSING_TYPES.EXPORTER,
         accreditation,
         WASTE_RECORD_TYPE.SENT_ON
       ]
-    ])('%s', (_name, data, acc, type) => {
-      const record = buildWasteRecord({ type, data })
+    ])('%s', (_name, processingType, acc, type) => {
+      const record = buildWasteRecord({ type, data: {} })
       expect(
         getWasteBalanceClassification(
           record,
-          /** @type {*} */ (data.processingType),
+          processingType,
           acc,
           ORS_VALIDATION_DISABLED
         )
