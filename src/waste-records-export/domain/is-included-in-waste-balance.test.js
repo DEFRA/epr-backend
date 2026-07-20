@@ -103,7 +103,12 @@ describe('getWasteBalanceClassification', () => {
     ])('%s', (_name, data, acc, type) => {
       const record = buildWasteRecord({ type, data })
       expect(
-        getWasteBalanceClassification(record, acc, ORS_VALIDATION_DISABLED)
+        getWasteBalanceClassification(
+          record,
+          /** @type {*} */ (data.processingType),
+          acc,
+          ORS_VALIDATION_DISABLED
+        )
       ).toBeNull()
     })
 
@@ -113,7 +118,12 @@ describe('getWasteBalanceClassification', () => {
         data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT }
       })
       expect(
-        getWasteBalanceClassification(record, null, ORS_VALIDATION_DISABLED)
+        getWasteBalanceClassification(
+          record,
+          PROCESSING_TYPES.REPROCESSOR_INPUT,
+          null,
+          ORS_VALIDATION_DISABLED
+        )
       ).toBeNull()
     })
   })
@@ -125,6 +135,7 @@ describe('getWasteBalanceClassification', () => {
     })
     const result = getWasteBalanceClassification(
       record,
+      PROCESSING_TYPES.REPROCESSOR_INPUT,
       accreditation,
       ORS_VALIDATION_DISABLED
     )
@@ -140,6 +151,7 @@ describe('getWasteBalanceClassification', () => {
   it('returns included:true with tonnage when record is included', () => {
     const result = getWasteBalanceClassification(
       fullyFilledReprocessorRecord,
+      PROCESSING_TYPES.REPROCESSOR_INPUT,
       accreditation,
       ORS_VALIDATION_DISABLED
     )
@@ -149,6 +161,7 @@ describe('getWasteBalanceClassification', () => {
   it('returns included:false with exclusion reason when record is excluded', () => {
     const result = getWasteBalanceClassification(
       prnIssuedExporterRecord,
+      PROCESSING_TYPES.EXPORTER,
       accreditation,
       ORS_VALIDATION_DISABLED
     )
