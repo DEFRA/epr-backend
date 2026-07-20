@@ -724,7 +724,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           { accreditation, overseasSites: ORS_VALIDATION_DISABLED }
         )
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
-        expect(result.reasons).toHaveLength(22)
+        expect(result.reasons).toHaveLength(21)
       })
 
       it('returns EXCLUDED when required field is null', () => {

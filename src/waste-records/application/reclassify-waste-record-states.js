@@ -27,10 +27,6 @@ import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-bala
  * The rows come back in the shape consumers already receive, so a consumer
  * moves from stamped to live readings by changing which function it calls.
  *
- * The stored row state holds the row reference as the top-level `rowId`, having
- * dropped the `ROW_ID` copy from `data`. `ROW_ID` is a required waste-balance
- * field, so it is restored here from `rowId` — the inverse of that drop —
- * before the schema reads the row.
  *
  * @param {WasteRecordState[]} states
  * @param {ReclassificationContext} context
@@ -46,7 +42,7 @@ export const reclassifyWasteRecordStates = (
       /** @type {*} */ ({
         rowId: state.rowId,
         type: state.wasteRecordType,
-        data: { ...state.data, ROW_ID: state.rowId }
+        data: state.data
       }),
       processingType,
       accreditation,
