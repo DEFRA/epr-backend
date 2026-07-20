@@ -8,27 +8,26 @@ import { reclassifyWasteRecordStates } from './reclassify-waste-record-states.js
 
 /**
  * @import {WasteRecordState} from './read-summary-log-row-states.js'
- * @import {SummaryLogRowState} from '#waste-records/repository/schema.js'
+ * @import {SummaryLogRowStateEntry} from '#waste-records/repository/schema.js'
  */
 
 /**
  * Classify already-read row states against current rules and reference data
  * rather than the reading stamped when each row was submitted.
  *
- * The stored rows are the input, so a caller that has already resolved its own
- * head submission — a cross-partition report reading one head per partition —
- * shares this path without re-resolving it.
+ * Pure — the resolved context is the input, not the repositories it came from,
+ * so a caller reading many partitions loads the reference data once for the
+ * whole run instead of once per partition.
  *
- * @param {SummaryLogRowState[]} rowStates
+ * @param {SummaryLogRowStateEntry[]} rowStates
  * @param {Object} context
- * @param {import('#domain/organisations/registration.js').Registration} context.registration
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} context.accreditation
- * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} context.overseasSitesRepository
- * @returns {Promise<WasteRecordState[]>}
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} context.overseasSites
+ * @returns {WasteRecordState[]}
  */
-export const liveClassifiedRowStates = async (
+export const liveClassifiedRowStates = (
   rowStates,
-  { registration, accreditation, overseasSitesRepository }
+  { accreditation, overseasSites }
 ) => {
   if (rowStates.length === 0) {
     return []
@@ -37,16 +36,6 @@ export const liveClassifiedRowStates = async (
   // One summary log is one uploaded workbook, so every row in it reports under
   // that workbook's template, and the rows record which one.
   const [{ processingType }] = rowStates
-
-  const sites = await overseasSitesRepository.findByIds(
-    Object.values(registration.overseasSites ?? {}).map(
-      ({ overseasSiteId }) => overseasSiteId
-    )
-  )
-  const overseasSites = buildOverseasSitesContext(
-    registration,
-    new Map(sites.map((site) => [site.id, site]))
-  )
 
   return reclassifyWasteRecordStates(rowStates.map(toWasteRecordState), {
     processingType,
@@ -109,9 +98,15 @@ export const liveClassifiedRowStatesForRegistration = async ({
   // current pointer, so rows stay with the accreditation that credited them.
   const accreditation = resolveAccreditation({ accreditationId }, organisation)
 
-  return liveClassifiedRowStates(rowStates, {
+  const sites = await overseasSitesRepository.findByIds(
+    Object.values(registration.overseasSites ?? {}).map(
+      ({ overseasSiteId }) => overseasSiteId
+    )
+  )
+  const overseasSites = buildOverseasSitesContext(
     registration,
-    accreditation,
-    overseasSitesRepository
-  })
+    new Map(sites.map((site) => [site.id, site]))
+  )
+
+  return liveClassifiedRowStates(rowStates, { accreditation, overseasSites })
 }

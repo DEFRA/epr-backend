@@ -1,5 +1,6 @@
 import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.js'
 import { liveClassifiedRowStates } from '#waste-records/application/live-classified-row-states.js'
+import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
 import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
@@ -171,10 +172,13 @@ export const buildCreditedTonnageReport = async ({
     toMonth: /** @type {string} */ (monthKeyForDate(now, REPORT_TIME_ZONE))
   }
 
-  const [entries, organisations] = await Promise.all([
+  const [entries, organisations, allSites] = await Promise.all([
     ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
-    organisationsRepository.findAll()
+    organisationsRepository.findAll(),
+    overseasSitesRepository.findAll()
   ])
+
+  const sitesById = new Map(allSites.map((site) => [site.id, site]))
 
   // Credits only exist for accredited partitions; registered-only entries
   // (accreditationId null) carry zero-delta submissions and never appear in
@@ -214,10 +218,9 @@ export const buildCreditedTonnageReport = async ({
         ledgerId,
         summaryLogId
       )
-    const rowStates = await liveClassifiedRowStates(storedRowStates, {
-      registration,
+    const rowStates = liveClassifiedRowStates(storedRowStates, {
       accreditation,
-      overseasSitesRepository
+      overseasSites: buildOverseasSitesContext(registration, sitesById)
     })
 
     const { months, skippedRowCount } = creditedTonnageByMonth(

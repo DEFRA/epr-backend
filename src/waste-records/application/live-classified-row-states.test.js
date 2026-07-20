@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 
-import { liveClassifiedRowStatesForRegistration } from './live-classified-row-states.js'
+import {
+  liveClassifiedRowStates,
+  liveClassifiedRowStatesForRegistration
+} from './live-classified-row-states.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -332,6 +335,17 @@ describe('liveClassifiedRowStatesForRegistration', () => {
     expect(states).toEqual([])
   })
 
+  it('returns nothing for a submission with no rows even when the organisation no longer holds the registration', async () => {
+    const scenario = reprocessorAccreditedFrom('2026-01-01')
+    scenario.organisation.registrations = []
+
+    // A partition with nothing committed answers with nothing; it does not
+    // reach the registration lookup and turn into a 404.
+    await expect(readLiveStates({ ...scenario, entries: [] })).resolves.toEqual(
+      []
+    )
+  })
+
   it('fails when the ledger names a registration the organisation does not hold', async () => {
     const scenario = reprocessorAccreditedFrom('2026-01-01')
     scenario.organisation.registrations = []
@@ -354,5 +368,62 @@ describe('liveClassifiedRowStatesForRegistration', () => {
     expect(state.classification.outcome).toBe(
       WASTE_BALANCE_OUTCOME.NOT_APPLICABLE
     )
+  })
+})
+
+describe('liveClassifiedRowStates', () => {
+  const accreditedThroughout = partialMock({
+    id: ACCREDITATION_ID,
+    validFrom: '2026-01-01',
+    validTo: '2027-01-01',
+    statusHistory: approvedHistory
+  })
+
+  it('replaces each stamped classification with one derived from the given context', () => {
+    const [state] = liveClassifiedRowStates([rowStateEntry()], {
+      accreditation: accreditedThroughout,
+      overseasSites: {}
+    })
+
+    expect(state.classification).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: 9
+    })
+  })
+
+  it('withholds inclusion from a row the accreditation period does not cover', () => {
+    const [state] = liveClassifiedRowStates([rowStateEntry()], {
+      accreditation: partialMock({
+        ...accreditedThroughout,
+        validFrom: '2026-03-01'
+      }),
+      overseasSites: {}
+    })
+
+    expect(state.classification.outcome).toBe(WASTE_BALANCE_OUTCOME.IGNORED)
+  })
+
+  it('drops the storage artifacts, keeping the row to its domain content', () => {
+    const [state] = liveClassifiedRowStates([rowStateEntry()], {
+      accreditation: accreditedThroughout,
+      overseasSites: {}
+    })
+
+    expect(Object.keys(state).sort()).toEqual([
+      'classification',
+      'data',
+      'rowId',
+      'wasteRecordType'
+    ])
+  })
+
+  it('returns nothing when given no rows, so no template can be read from them', () => {
+    expect(
+      liveClassifiedRowStates([], {
+        accreditation: accreditedThroughout,
+        overseasSites: {}
+      })
+    ).toEqual([])
   })
 })

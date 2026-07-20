@@ -2,6 +2,7 @@ import { buildCreditedTonnageReport } from './credited-tonnage-report.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
   MATERIAL,
   GLASS_RECYCLING_PROCESS,
@@ -120,8 +121,14 @@ const STAMPED_EXCLUDED = {
   transactionAmount: 0
 }
 
-// A received row holding every field the waste-balance classifier reads, so it
-// classifies from its own content.
+/**
+ * A received row holding every field the waste-balance classifier reads, so it
+ * classifies from its own content.
+ *
+ * @param {string} date
+ * @param {number} tonnage
+ * @param {import('#waste-records/repository/schema.js').RowClassification} [stamped]
+ */
 const receivedRow = (date, tonnage, stamped = STAMPED_EXCLUDED) => ({
   rowId: `row-${date}-${tonnage}`,
   processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -144,8 +151,14 @@ const receivedRow = (date, tonnage, stamped = STAMPED_EXCLUDED) => ({
   classification: stamped
 })
 
-// An exported row, likewise complete. The report buckets it by the date the
-// overseas reprocessor received it.
+/**
+ * An exported row, likewise complete. The report buckets it by the date the
+ * overseas reprocessor received it.
+ *
+ * @param {string} dateReceivedByOsr
+ * @param {number} tonnage
+ * @param {import('#waste-records/repository/schema.js').RowClassification} [stamped]
+ */
 const exportedRow = (
   dateReceivedByOsr,
   tonnage,
@@ -179,6 +192,32 @@ const exportedRow = (
   }
 })
 
+/**
+ * An overseas reprocessing site. Omit `validFrom` for a site that is registered
+ * but not yet approved.
+ *
+ * @param {{ id: string, validFrom?: Date }} options
+ * @returns {import('#overseas-sites/repository/port.js').OverseasSite}
+ */
+const overseasSite = ({ id, validFrom }) => ({
+  id,
+  name: `Site ${id}`,
+  address: { line1: '1 Dock Road', townOrCity: 'Rotterdam' },
+  country: 'Netherlands',
+  createdAt: new Date('2025-01-01T00:00:00.000Z'),
+  updatedAt: new Date('2025-01-01T00:00:00.000Z'),
+  ...(validFrom && { validFrom })
+})
+
+/**
+ * @param {{
+ *   organisations: any[],
+ *   entries: any[],
+ *   rowStatesByAccreditationId?: Record<string, any[]>,
+ *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
+ *   now?: Date
+ * }} options
+ */
 const run = ({
   organisations,
   entries,
@@ -196,10 +235,8 @@ const run = ({
     ) => rowStatesByAccreditationId[ledgerId.accreditationId] ?? []
   }
   const organisationsRepository = { findAll: async () => organisations }
-  const overseasSitesRepository = {
-    findByIds: async (/** @type {string[]} */ ids) =>
-      overseasSites.filter((site) => ids.includes(site.id))
-  }
+  const overseasSitesRepository =
+    createInMemoryOverseasSitesRepository(overseasSites)()
 
   return {
     logger,
@@ -213,9 +250,7 @@ const run = ({
       organisationsRepository: /** @type {OrganisationsRepository} */ (
         /** @type {unknown} */ (organisationsRepository)
       ),
-      overseasSitesRepository: /** @type {OverseasSitesRepository} */ (
-        /** @type {unknown} */ (overseasSitesRepository)
-      ),
+      overseasSitesRepository,
       logger: /** @type {TypedLogger} */ (/** @type {unknown} */ (logger)),
       now
     })
@@ -761,7 +796,10 @@ describe('buildCreditedTonnageReport', () => {
         [accreditationId]: [exportedRow('2026-02-10', 60)]
       },
       overseasSites: [
-        { id: 'site-1', validFrom: new Date('2026-01-01T00:00:00.000Z') }
+        overseasSite({
+          id: 'site-1',
+          validFrom: new Date('2026-01-01T00:00:00.000Z')
+        })
       ]
     })
 
@@ -790,7 +828,7 @@ describe('buildCreditedTonnageReport', () => {
       rowStatesByAccreditationId: {
         [accreditationId]: [exportedRow('2026-02-10', 60, stampedIncluded(60))]
       },
-      overseasSites: [{ id: 'site-1', validFrom: null }]
+      overseasSites: [overseasSite({ id: 'site-1' })]
     })
 
     expect(
