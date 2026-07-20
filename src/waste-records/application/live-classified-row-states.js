@@ -8,7 +8,52 @@ import { reclassifyWasteRecordStates } from './reclassify-waste-record-states.js
 
 /**
  * @import {WasteRecordState} from './read-summary-log-row-states.js'
+ * @import {SummaryLogRowState} from '#waste-records/repository/schema.js'
  */
+
+/**
+ * Classify already-read row states against current rules and reference data
+ * rather than the reading stamped when each row was submitted.
+ *
+ * The stored rows are the input, so a caller that has already resolved its own
+ * head submission — a cross-partition report reading one head per partition —
+ * shares this path without re-resolving it.
+ *
+ * @param {SummaryLogRowState[]} rowStates
+ * @param {Object} context
+ * @param {import('#domain/organisations/registration.js').Registration} context.registration
+ * @param {import('#domain/organisations/accreditation.js').Accreditation | null} context.accreditation
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} context.overseasSitesRepository
+ * @returns {Promise<WasteRecordState[]>}
+ */
+export const liveClassifiedRowStates = async (
+  rowStates,
+  { registration, accreditation, overseasSitesRepository }
+) => {
+  if (rowStates.length === 0) {
+    return []
+  }
+
+  // One summary log is one uploaded workbook, so every row in it reports under
+  // that workbook's template, and the rows record which one.
+  const [{ processingType }] = rowStates
+
+  const sites = await overseasSitesRepository.findByIds(
+    Object.values(registration.overseasSites ?? {}).map(
+      ({ overseasSiteId }) => overseasSiteId
+    )
+  )
+  const overseasSites = buildOverseasSitesContext(
+    registration,
+    new Map(sites.map((site) => [site.id, site]))
+  )
+
+  return reclassifyWasteRecordStates(rowStates.map(toWasteRecordState), {
+    processingType,
+    accreditation,
+    overseasSites
+  })
+}
 
 /**
  * A registration's committed row states at its latest submission, classified
@@ -52,10 +97,6 @@ export const liveClassifiedRowStatesForRegistration = async ({
     return []
   }
 
-  // One summary log is one uploaded workbook, so every row in it reports under
-  // that workbook's template, and the rows record which one.
-  const [{ processingType }] = rowStates
-
   const organisation = await organisationsRepository.findById(organisationId)
   const registration = organisation.registrations?.find(
     (candidate) => candidate.id === registrationId
@@ -68,19 +109,9 @@ export const liveClassifiedRowStatesForRegistration = async ({
   // current pointer, so rows stay with the accreditation that credited them.
   const accreditation = resolveAccreditation({ accreditationId }, organisation)
 
-  const sites = await overseasSitesRepository.findByIds(
-    Object.values(registration.overseasSites ?? {}).map(
-      ({ overseasSiteId }) => overseasSiteId
-    )
-  )
-  const overseasSites = buildOverseasSitesContext(
+  return liveClassifiedRowStates(rowStates, {
     registration,
-    new Map(sites.map((site) => [site.id, site]))
-  )
-
-  return reclassifyWasteRecordStates(rowStates.map(toWasteRecordState), {
-    processingType,
     accreditation,
-    overseasSites
+    overseasSitesRepository
   })
 }

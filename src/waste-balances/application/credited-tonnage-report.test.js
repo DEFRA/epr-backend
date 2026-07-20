@@ -1,9 +1,11 @@
 import { buildCreditedTonnageReport } from './credited-tonnage-report.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
   MATERIAL,
   GLASS_RECYCLING_PROCESS,
+  REG_ACC_STATUS,
   WASTE_PROCESSING_TYPE,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -12,6 +14,7 @@ import {
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} LedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} RowStateRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
  */
 
@@ -22,6 +25,16 @@ const TEST_ORG_ID = 999999
 // A fixed clock: January 2026 → March 2026 is the report window.
 const NOW = new Date('2026-03-15T12:00:00.000Z')
 
+// The window every fixture accreditation is valid across, unless a test names
+// its own — wide enough to cover the whole report range.
+const ACCREDITED_FROM = '2026-01-01'
+const ACCREDITED_TO = '2026-12-31'
+
+const approvedHistory = [
+  { status: REG_ACC_STATUS.CREATED, updatedAt: '2025-11-01' },
+  { status: REG_ACC_STATUS.APPROVED, updatedAt: '2025-12-01' }
+]
+
 /**
  * @param {{
  *   orgId: number,
@@ -30,7 +43,10 @@ const NOW = new Date('2026-03-15T12:00:00.000Z')
  *   wasteProcessingType?: string,
  *   reprocessingType?: string,
  *   accreditationNumber?: string | null,
- *   status?: string
+ *   status?: string,
+ *   statusHistory?: { status: string, updatedAt: string }[],
+ *   validFrom?: string,
+ *   validTo?: string
  * }} options - pass `accreditationNumber: null` to omit it entirely
  */
 const makeAccreditation = ({
@@ -40,7 +56,10 @@ const makeAccreditation = ({
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType = REPROCESSING_TYPE.INPUT,
   accreditationNumber,
-  status = 'approved'
+  status = 'approved',
+  statusHistory = approvedHistory,
+  validFrom = ACCREDITED_FROM,
+  validTo = ACCREDITED_TO
 }) => {
   const id = `org-uuid-${orgId}`
   const registrationId = `reg-${orgId}`
@@ -56,6 +75,9 @@ const makeAccreditation = ({
   const accreditation = {
     id: accreditationId,
     status,
+    statusHistory,
+    validFrom,
+    validTo,
     material,
     wasteProcessingType,
     reprocessingType,
@@ -83,24 +105,85 @@ const makeAccreditation = ({
   }
 }
 
-const receivedRow = (
-  date,
-  tonnage,
-  { outcome = WASTE_BALANCE_OUTCOME.INCLUDED, transactionAmount = tonnage } = {}
-) => ({
+// The classification each fixture row carries from its submission. Every test
+// stamps the opposite of the answer the live context gives, so a report that
+// read the stamp instead of re-deriving cannot produce the expected figures.
+const stampedIncluded = (transactionAmount) => ({
+  outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+  reasons: [],
+  transactionAmount
+})
+
+const STAMPED_EXCLUDED = {
+  outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
+  reasons: [],
+  transactionAmount: 0
+}
+
+// A received row holding every field the waste-balance classifier reads, so it
+// classifies from its own content.
+const receivedRow = (date, tonnage, stamped = STAMPED_EXCLUDED) => ({
   rowId: `row-${date}-${tonnage}`,
+  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   data: {
     DATE_RECEIVED_FOR_REPROCESSING: date,
+    EWC_CODE: '15 01 02',
+    DESCRIPTION_WASTE: 'Plastic packaging',
+    WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+    GROSS_WEIGHT: tonnage + 1,
+    TARE_WEIGHT: 1,
+    PALLET_WEIGHT: 0,
+    NET_WEIGHT: tonnage,
+    BAILING_WIRE_PROTOCOL: 'No',
+    HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
+    WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+    RECYCLABLE_PROPORTION_PERCENTAGE: 100,
     TONNAGE_RECEIVED_FOR_RECYCLING: tonnage
   },
-  classification: { outcome, reasons: [], transactionAmount }
+  classification: stamped
+})
+
+// An exported row, likewise complete. The report buckets it by the date the
+// overseas reprocessor received it.
+const exportedRow = (
+  dateReceivedByOsr,
+  tonnage,
+  stamped = STAMPED_EXCLUDED
+) => ({
+  ...receivedRow(dateReceivedByOsr, tonnage, stamped),
+  processingType: PROCESSING_TYPES.EXPORTER,
+  wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+  data: {
+    DATE_RECEIVED_FOR_EXPORT: '2026-01-05',
+    EWC_CODE: '15 01 02',
+    DESCRIPTION_WASTE: 'Plastic packaging',
+    WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+    GROSS_WEIGHT: tonnage + 1,
+    TARE_WEIGHT: 1,
+    PALLET_WEIGHT: 0,
+    NET_WEIGHT: tonnage,
+    BAILING_WIRE_PROTOCOL: 'No',
+    HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
+    WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+    RECYCLABLE_PROPORTION_PERCENTAGE: 100,
+    TONNAGE_RECEIVED_FOR_EXPORT: tonnage,
+    TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: tonnage,
+    DATE_OF_EXPORT: '2026-01-20',
+    BASEL_EXPORT_CODE: 'B3010',
+    CUSTOMS_CODES: '391510',
+    CONTAINER_NUMBER: 'CN-001',
+    DATE_RECEIVED_BY_OSR: dateReceivedByOsr,
+    OSR_ID: '099',
+    DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'No'
+  }
 })
 
 const run = ({
   organisations,
   entries,
   rowStatesByAccreditationId = {},
+  overseasSites = [],
   now = NOW
 }) => {
   const logger = { info: vi.fn(), warn: vi.fn() }
@@ -113,6 +196,10 @@ const run = ({
     ) => rowStatesByAccreditationId[ledgerId.accreditationId] ?? []
   }
   const organisationsRepository = { findAll: async () => organisations }
+  const overseasSitesRepository = {
+    findByIds: async (/** @type {string[]} */ ids) =>
+      overseasSites.filter((site) => ids.includes(site.id))
+  }
 
   return {
     logger,
@@ -125,6 +212,9 @@ const run = ({
       ),
       organisationsRepository: /** @type {OrganisationsRepository} */ (
         /** @type {unknown} */ (organisationsRepository)
+      ),
+      overseasSitesRepository: /** @type {OverseasSitesRepository} */ (
+        /** @type {unknown} */ (overseasSitesRepository)
       ),
       logger: /** @type {TypedLogger} */ (/** @type {unknown} */ (logger)),
       now
@@ -597,6 +687,118 @@ describe('buildCreditedTonnageReport', () => {
     expect(await report).toEqual({
       meta: { generatedAt: NOW.toISOString() },
       data: []
+    })
+  })
+
+  it('credits a row the submission stamped as excluded once the accreditation period covers it', async () => {
+    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
+      orgId: 500001,
+      validFrom: '2026-02-01'
+    })
+
+    const { report } = run({
+      organisations: [organisation],
+      entries: [ledgerEntry],
+      rowStatesByAccreditationId: {
+        // Stamped EXCLUDED with a zero transaction amount when it was
+        // submitted; the widened period now covers it.
+        [accreditationId]: [receivedRow('2026-02-10', 100)]
+      }
+    })
+
+    expect(
+      (await report).data.find((row) => row.month === '2026-02')?.tonnage
+    ).toEqual({
+      totalCredited: 100,
+      eligibleForWasteBalance: 100,
+      sentOnDeductions: 0
+    })
+  })
+
+  it('stops crediting a row once the accreditation period no longer covers it', async () => {
+    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
+      orgId: 500001,
+      validFrom: '2026-03-01'
+    })
+
+    const { report } = run({
+      organisations: [organisation],
+      entries: [ledgerEntry],
+      rowStatesByAccreditationId: {
+        // Stamped INCLUDED for its full tonnage when it was submitted; the
+        // narrowed period no longer covers it.
+        [accreditationId]: [
+          receivedRow('2026-02-10', 100, stampedIncluded(100))
+        ]
+      }
+    })
+
+    // Gross tonnage is what the operator reported and does not move; only the
+    // balance-eligible figure follows the accreditation period.
+    expect(
+      (await report).data.find((row) => row.month === '2026-02')?.tonnage
+    ).toEqual({
+      totalCredited: 100,
+      eligibleForWasteBalance: 0,
+      sentOnDeductions: 0
+    })
+  })
+
+  it('credits an exported row once its overseas site approval covers the export date', async () => {
+    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
+      orgId: 500001,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+      reprocessingType: undefined
+    })
+    organisation.registrations[0].overseasSites = {
+      '099': { overseasSiteId: 'site-1' }
+    }
+
+    const { report } = run({
+      organisations: [organisation],
+      entries: [ledgerEntry],
+      rowStatesByAccreditationId: {
+        [accreditationId]: [exportedRow('2026-02-10', 60)]
+      },
+      overseasSites: [
+        { id: 'site-1', validFrom: new Date('2026-01-01T00:00:00.000Z') }
+      ]
+    })
+
+    expect(
+      (await report).data.find((row) => row.month === '2026-02')?.tonnage
+    ).toEqual({
+      totalCredited: 60,
+      eligibleForWasteBalance: 60,
+      sentOnDeductions: 0
+    })
+  })
+
+  it('withholds credit from an exported row whose overseas site is not yet approved', async () => {
+    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
+      orgId: 500001,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+      reprocessingType: undefined
+    })
+    organisation.registrations[0].overseasSites = {
+      '099': { overseasSiteId: 'site-1' }
+    }
+
+    const { report } = run({
+      organisations: [organisation],
+      entries: [ledgerEntry],
+      rowStatesByAccreditationId: {
+        [accreditationId]: [exportedRow('2026-02-10', 60, stampedIncluded(60))]
+      },
+      overseasSites: [{ id: 'site-1', validFrom: null }]
+    })
+
+    expect(
+      (await report).data.find((row) => row.month === '2026-02')?.tonnage
+    ).toEqual({
+      totalCredited: 60,
+      eligibleForWasteBalance: 0,
+      sentOnDeductions: 0
     })
   })
 
