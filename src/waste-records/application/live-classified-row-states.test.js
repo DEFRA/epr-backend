@@ -43,13 +43,15 @@ const approvedHistory = [
   { status: REG_ACC_STATUS.APPROVED, updatedAt: '2024-02-01' }
 ]
 
+/** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */
+const ACCREDITED_LEDGER_ID = {
+  organisationId: ORGANISATION_ID,
+  registrationId: REGISTRATION_ID,
+  accreditationId: ACCREDITATION_ID
+}
+
 const reprocessorAccreditedFrom = (validFrom) => ({
-  ledgerId:
-    /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */ ({
-      organisationId: ORGANISATION_ID,
-      registrationId: REGISTRATION_ID,
-      accreditationId: ACCREDITATION_ID
-    }),
+  ledgerId: { ...ACCREDITED_LEDGER_ID },
   organisation: partialMock({
     id: ORGANISATION_ID,
     orgId: 500001,
