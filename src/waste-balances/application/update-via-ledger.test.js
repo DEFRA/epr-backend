@@ -36,17 +36,15 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-const tonnageSchema = /** @type {*} */ ({
+// Excludes on a PRN having been issued rather than on absent data, so an
+// excluded row still carries a real tonnage — the amount the ledger must
+// withhold, and the shape every genuine exclusion reason takes.
+const prnAwareSchema = /** @type {*} */ ({
   classifyForWasteBalance: (data) =>
-    data.tonnage === undefined
+    data.prnIssued
       ? {
           outcome: ROW_OUTCOME.EXCLUDED,
-          reasons: [
-            {
-              code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
-              field: 'tonnage'
-            }
-          ]
+          reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
         }
       : {
           outcome: ROW_OUTCOME.INCLUDED,
@@ -88,6 +86,7 @@ const user = {
 const buildExporterRecord = ({
   rowId,
   tonnage,
+  prnIssued = false,
   versionId = `version-${rowId}`,
   summaryLogId = 'log-1'
 }) => ({
@@ -105,10 +104,7 @@ const buildExporterRecord = ({
       data: {}
     }
   ],
-  data: {
-    processingType: 'EXPORTER',
-    ...(tonnage === undefined ? {} : { tonnage })
-  }
+  data: { processingType: 'EXPORTER', tonnage, prnIssued }
 })
 
 describe('performUpdateViaLedger', () => {
@@ -125,7 +121,7 @@ describe('performUpdateViaLedger', () => {
     ).commitSummaryLogSubmittedEvent
     const { findSchemaForProcessingType } =
       await import('#domain/summary-logs/table-schemas/index.js')
-    vi.mocked(findSchemaForProcessingType).mockReturnValue(tonnageSchema)
+    vi.mocked(findSchemaForProcessingType).mockReturnValue(prnAwareSchema)
   })
 
   describe('first submission', () => {
@@ -205,7 +201,7 @@ describe('performUpdateViaLedger', () => {
     it('skips records the schema excludes', async () => {
       const records = [
         buildExporterRecord({ rowId: '1', tonnage: 100 }),
-        buildExporterRecord({ rowId: '2', tonnage: undefined })
+        buildExporterRecord({ rowId: '2', tonnage: 50, prnIssued: true })
       ]
 
       await performUpdateViaLedger({
@@ -229,7 +225,7 @@ describe('performUpdateViaLedger', () => {
       const records = [
         buildExporterRecord({ rowId: '1', tonnage: includedTonnages[0] }),
         buildExporterRecord({ rowId: '2', tonnage: includedTonnages[1] }),
-        buildExporterRecord({ rowId: '3', tonnage: undefined }),
+        buildExporterRecord({ rowId: '3', tonnage: 999, prnIssued: true }),
         buildExporterRecord({ rowId: '4', tonnage: includedTonnages[2] })
       ]
 

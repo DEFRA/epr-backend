@@ -14,7 +14,7 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  *
  * Records are classified against the same accreditation (or null) as the
  * balance path, so an accredited balance-type submission produces identical row
- * states whether it arrives here or, previously, through the balance path.
+ * states whichever path it arrives through.
  *
  * @param {Object} params
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
