@@ -68,7 +68,11 @@ export const liveClassifiedRowStatesForRegistration = async ({
   // current pointer, so rows stay with the accreditation that credited them.
   const accreditation = resolveAccreditation({ accreditationId }, organisation)
 
-  const sites = await overseasSitesRepository.findAll()
+  const sites = await overseasSitesRepository.findByIds(
+    Object.values(registration.overseasSites ?? {}).map(
+      ({ overseasSiteId }) => overseasSiteId
+    )
+  )
   const overseasSites = buildOverseasSitesContext(
     registration,
     new Map(sites.map((site) => [site.id, site]))

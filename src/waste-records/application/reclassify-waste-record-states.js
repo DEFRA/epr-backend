@@ -23,9 +23,6 @@ import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-bala
  * submits again. Reads that answer current-state questions call this so that
  * context changes show up without waiting for a submission.
  *
- * The rows come back in the shape consumers already receive, so a consumer
- * moves from stamped to live readings by changing which function it calls.
- *
  * @param {WasteRecordState[]} states
  * @param {ReclassificationContext} context
  * @returns {WasteRecordState[]}

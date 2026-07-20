@@ -44,11 +44,12 @@ const approvedHistory = [
 ]
 
 const reprocessorAccreditedFrom = (validFrom) => ({
-  ledgerId: {
-    organisationId: ORGANISATION_ID,
-    registrationId: REGISTRATION_ID,
-    accreditationId: ACCREDITATION_ID
-  },
+  ledgerId:
+    /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */ ({
+      organisationId: ORGANISATION_ID,
+      registrationId: REGISTRATION_ID,
+      accreditationId: ACCREDITATION_ID
+    }),
   organisation: partialMock({
     id: ORGANISATION_ID,
     orgId: 500001,
@@ -338,14 +339,9 @@ describe('liveClassifiedRowStatesForRegistration', () => {
     )
   })
 
-  it('reads rows under the template they were submitted under, not one derived from the registration', async () => {
-    const scenario = reprocessorAccreditedFrom('2026-01-01')
-    scenario.organisation.accreditations[0].statusHistory = [
-      { status: REG_ACC_STATUS.CREATED, updatedAt: '2024-01-01' }
-    ]
-
+  it('reads rows under the template they were submitted under, not one the registration would name', async () => {
     const [state] = await readLiveStates({
-      ...scenario,
+      ...reprocessorAccreditedFrom('2026-01-01'),
       entries: [
         rowStateEntry({
           processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY

@@ -115,7 +115,7 @@ describe('getWasteBalanceClassification', () => {
     it('the no-accreditation check takes precedence for an unaccredited incomplete row', () => {
       const record = buildWasteRecord({
         type: WASTE_RECORD_TYPE.RECEIVED,
-        data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT }
+        data: {}
       })
       expect(
         getWasteBalanceClassification(
