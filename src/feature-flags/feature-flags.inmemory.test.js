@@ -73,4 +73,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isPreCpaResubmissionReportEnabled()).toBe(false)
   })
+
+  it('returns true when preCpaResubmissionBackfill flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      preCpaResubmissionBackfill: true
+    })
+    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(true)
+  })
+
+  it('returns false when preCpaResubmissionBackfill flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      preCpaResubmissionBackfill: false
+    })
+    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(false)
+  })
+
+  it('returns false when preCpaResubmissionBackfill flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(false)
+  })
 })
