@@ -141,7 +141,7 @@ jobs:
         id: journey-branch
         run: |
           BRANCH="${{ github.head_ref }}"
-          if git ls-remote --heads https://github.com/DEFRA/epr-backend-journey-tests.git "$BRANCH" | grep -q .; then
+          if git ls-remote --heads https://github.com/DEFRA/epr-re-ex-journey-tests.git "$BRANCH" | grep -q .; then
             echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
           else
             echo "ref=main" >> "$GITHUB_OUTPUT"
@@ -158,12 +158,11 @@ jobs:
         run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
 
       - name: Run journey tests on ${{ steps.journey-branch.outputs.ref }}
-        uses: DEFRA/epr-backend-journey-tests/run-journey-tests@main
+        uses: DEFRA/epr-re-ex-journey-tests/run-journey-tests@main
         with:
           epr-backend: ${{github.sha}}
           branch: ${{ steps.journey-branch.outputs.ref }}
-          waste-record-states: ${{ matrix.waste-record-states }}
-          artifact-suffix: -waste-record-states-${{ matrix.waste-record-states }}
+          test-scope: all
 
       - name: Write journey test summary
         if: always()
