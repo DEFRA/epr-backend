@@ -6,14 +6,13 @@ import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-bala
 
 /**
  * @typedef {Object} ReclassificationContext
- * @property {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @property {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
  * @property {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  */
 
 /**
- * Re-derive a row's waste-balance classification against the given context, in
- * place of the classification stamped when the row was submitted.
+ * Derive a row state's waste-balance classification against the given context
+ * in place of the classification stamped when the row was submitted.
  *
  * A stamped classification records the reading that produced the credit its
  * submission committed, so it is the right answer for reproducing that credit.
@@ -23,18 +22,22 @@ import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-bala
  * submits again. Reads that answer current-state questions call this so that
  * context changes show up without waiting for a submission.
  *
- * @param {WasteRecordState} state
+ * The template the row reported under comes from the row itself, so rows
+ * classify independently of each other and of the registration's current
+ * processing type.
+ *
+ * @param {WasteRecordState} rowState
  * @param {ReclassificationContext} context
  * @returns {WasteRecordState}
  */
 export const reclassifyWasteRecordState = (
-  state,
-  { processingType, accreditation, overseasSites }
+  rowState,
+  { accreditation, overseasSites }
 ) => ({
-  ...state,
+  ...rowState,
   classification: classifyRecordForWasteBalance(
-    { type: state.wasteRecordType, data: state.data },
-    processingType,
+    { type: rowState.wasteRecordType, data: rowState.data },
+    rowState.processingType,
     accreditation,
     overseasSites
   )
@@ -43,9 +46,13 @@ export const reclassifyWasteRecordState = (
 /**
  * Reclassify a whole partition's row states against one shared context.
  *
- * @param {WasteRecordState[]} states
+ * Pure — the resolved context is the input, not the repositories it came from,
+ * so a caller reading many partitions loads the reference data once for the
+ * whole run instead of once per partition.
+ *
+ * @param {WasteRecordState[]} rowStates
  * @param {ReclassificationContext} context
  * @returns {WasteRecordState[]}
  */
-export const reclassifyWasteRecordStates = (states, context) =>
-  states.map((state) => reclassifyWasteRecordState(state, context))
+export const reclassifyWasteRecordStates = (rowStates, context) =>
+  rowStates.map((rowState) => reclassifyWasteRecordState(rowState, context))

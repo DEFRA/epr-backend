@@ -18,6 +18,7 @@ const accreditationCovering = (validFrom, validTo) =>
 
 const receivedRowState = (overrides = {}) => ({
   rowId: '1001',
+  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   data: {
     DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
@@ -47,7 +48,6 @@ const receivedRowState = (overrides = {}) => ({
  * @returns {import('./reclassify-waste-record-states.js').ReclassificationContext}
  */
 const contextWith = (accreditation) => ({
-  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
   accreditation,
   overseasSites: ORS_VALIDATION_DISABLED
 })
@@ -102,7 +102,7 @@ describe('reclassifyWasteRecordStates', () => {
     expect(row.classification.transactionAmount).toBe(9)
   })
 
-  it('carries the row identity, type and data through untouched', () => {
+  it('carries the row identity, type, template and data through untouched', () => {
     const state = receivedRowState()
 
     const [row] = reclassifyWasteRecordStates(
@@ -112,20 +112,21 @@ describe('reclassifyWasteRecordStates', () => {
 
     expect(row.rowId).toBe('1001')
     expect(row.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
+    expect(row.processingType).toBe(PROCESSING_TYPES.REPROCESSOR_INPUT)
     expect(row.data).toEqual(state.data)
   })
 
-  it('selects the table schema from the processing type it is given', () => {
+  it('selects the table schema from the processing type the row reports under', () => {
     const covering = accreditationCovering('2026-01-01', '2027-01-01')
 
     const [underReprocessorInput] = reclassifyWasteRecordStates(
       [receivedRowState()],
       contextWith(covering)
     )
-    const [underExporter] = reclassifyWasteRecordStates([receivedRowState()], {
-      ...contextWith(covering),
-      processingType: PROCESSING_TYPES.EXPORTER
-    })
+    const [underExporter] = reclassifyWasteRecordStates(
+      [receivedRowState({ processingType: PROCESSING_TYPES.EXPORTER })],
+      contextWith(covering)
+    )
 
     expect(underReprocessorInput.classification.outcome).toBe(
       WASTE_BALANCE_OUTCOME.INCLUDED

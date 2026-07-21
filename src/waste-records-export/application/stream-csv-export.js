@@ -6,8 +6,8 @@ import { resolveAccreditation } from '#domain/organisations/registration-utils.j
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-submitted-summary-log-id.js'
-import { toWasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
 import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
+import { toWasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
 import {
   buildHeaderRow,
   buildDataRow,
@@ -154,17 +154,13 @@ async function* streamRegistrationRows({
 
   const rowStatesSorted = [...rowStates].sort(sortRowStates)
 
-  // One summary log is one uploaded workbook, so every row in it reports under
-  // that workbook's template, and the rows record which one.
-  const [{ processingType }] = rowStatesSorted
-
   for (const rowState of rowStatesSorted) {
     // The waste-balance columns answer as of the same moment as the Accredited
     // and OSR columns beside them, which read the accreditation and the
     // registration's overseas sites as they stand at export time.
     const { classification } = reclassifyWasteRecordState(
       toWasteRecordState(rowState),
-      { processingType, accreditation, overseasSites }
+      { accreditation, overseasSites }
     )
 
     yield await encodeRow(
