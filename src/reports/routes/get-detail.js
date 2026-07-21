@@ -1,7 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
-import { canRequestResubmission } from '#reports/application/resubmission-service.js'
 import { periodParamsSchema, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
@@ -52,39 +51,6 @@ function warnIfWasteRecordsExcluded(
       action: 'fetch_or_generate_report',
       reason: `organisationId=${organisationId} registrationId=${registrationId} operatorCategory=${report.operatorCategory} wasteReceivedRecordsExcluded=${wasteReceivedRecordsExcluded}`
     }
-  })
-}
-
-/**
- * @param {ReportsRepository} reportsRepository
- * @param {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail | import('#reports/repository/port.js').Report} report
- * @param {string} organisationId
- * @param {string} registrationId
- */
-async function resolveCanRequestResubmission(
-  reportsRepository,
-  report,
-  organisationId,
-  registrationId
-) {
-  if ('diagnostics' in report) {
-    return false
-  }
-
-  const periodicReports = await reportsRepository.findPeriodicReports({
-    organisationId,
-    registrationId
-  })
-
-  return canRequestResubmission(periodicReports, {
-    status: report.status.currentStatus,
-    resubmissionRequired: report.resubmissionRequired,
-    year: report.year,
-    cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
-      report.cadence
-    ),
-    period: report.period,
-    submissionNumber: report.submissionNumber
   })
 }
 
@@ -155,17 +121,10 @@ export const reportsGetDetail = {
 
     warnIfWasteRecordsExcluded(request, report, organisationId, registrationId)
 
-    const canRequestResubmissionFlag = await resolveCanRequestResubmission(
-      reportsRepository,
-      report,
-      organisationId,
-      registrationId
-    )
-
     return h
       .response({
         ...withRegistrationDetails(report, registration),
-        canRequestResubmission: canRequestResubmissionFlag
+        canRequestResubmission: report.canRequestResubmission
       })
       .code(StatusCodes.OK)
   }

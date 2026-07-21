@@ -10,6 +10,7 @@ import {
   assertResubmissionAllowed,
   getValidatedPeriodInfo
 } from './create-report-validation.js'
+import { canRequestResubmission } from './resubmission-service.js'
 import { findReportIdBySubmissionNumber } from './submission-lookup.js'
 
 /**
@@ -146,7 +147,7 @@ function buildReportData(aggregated, registration) {
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
- * @returns {Promise<import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail>}
+ * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean }>}
  */
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
@@ -162,23 +163,40 @@ export async function fetchOrGenerateReportForPeriod({
   period,
   submissionNumber
 }) {
-  const storedReport = await fetchReportBySubmissionNumber(
-    reportsRepository,
+  const periodicReports = await reportsRepository.findPeriodicReports({
     organisationId,
-    registrationId,
+    registrationId
+  })
+
+  const currentReportId = findReportIdBySubmissionNumber(
+    periodicReports,
     year,
     cadence,
     period,
     submissionNumber
   )
 
+  const storedReport = currentReportId
+    ? await reportsRepository.findReportById(currentReportId)
+    : null
+
   if (storedReport) {
-    return storedReport
+    return {
+      ...storedReport,
+      canRequestResubmission: canRequestResubmission(periodicReports, {
+        status: storedReport.status.currentStatus,
+        resubmissionRequired: storedReport.resubmissionRequired,
+        year: storedReport.year,
+        cadence: /** @type {Cadence} */ (storedReport.cadence),
+        period: storedReport.period,
+        submissionNumber: storedReport.submissionNumber
+      })
+    }
   }
 
   const operatorCategory = getOperatorCategory(registration)
 
-  return getAggregatedReportDetail({
+  const aggregatedReportDetail = await getAggregatedReportDetail({
     ledgerRepository,
     summaryLogRowStateRepository,
     packagingRecyclingNotesRepository,
@@ -191,6 +209,8 @@ export async function fetchOrGenerateReportForPeriod({
     cadence,
     period
   })
+
+  return { ...aggregatedReportDetail, canRequestResubmission: false }
 }
 
 /**
