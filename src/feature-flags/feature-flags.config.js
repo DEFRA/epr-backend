@@ -13,5 +13,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isPreCpaResubmissionReportEnabled() {
     return config.get('featureFlags.preCpaResubmissionReport')
+  },
+  isPreCpaResubmissionBackfillEnabled() {
+    return config.get('featureFlags.preCpaResubmissionBackfill')
   }
 })

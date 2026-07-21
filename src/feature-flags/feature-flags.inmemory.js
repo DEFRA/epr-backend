@@ -14,5 +14,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isPreCpaResubmissionReportEnabled() {
     return flags.preCpaResubmissionReport ?? false
+  },
+  isPreCpaResubmissionBackfillEnabled() {
+    return flags.preCpaResubmissionBackfill ?? false
   }
 })
