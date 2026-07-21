@@ -357,6 +357,34 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       })
+
+      it('returns 409 when report is marked as requiring resubmission', async () => {
+        const { server, organisationId, registrationId, reportsRepository } =
+          await buildServerWithSubmittedReport()
+
+        const flagged =
+          await reportsRepository.markSubmittedReportRequiringResubmissionByOperator(
+            {
+              organisationId,
+              registrationId,
+              year: 2024,
+              cadence: 'monthly',
+              period: 1,
+              submissionNumber: 1,
+              requestedBy: DEFAULT_CHANGED_BY,
+              requestedAt: new Date().toISOString()
+            }
+          )
+        expect(flagged).not.toBeNull()
+
+        const response = await server.inject({
+          method: 'POST',
+          url: makeUrl(organisationId, registrationId),
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
     })
 
     describe('superseded submission', () => {
