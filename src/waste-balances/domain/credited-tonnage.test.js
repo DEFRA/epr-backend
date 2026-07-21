@@ -1,6 +1,5 @@
 import { creditedTonnageByMonth } from './credited-tonnage.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import {
   WASTE_PROCESSING_TYPE,
@@ -34,7 +33,6 @@ const notIncluded = (outcome) => ({
 const receivedRow = (rowId, date, tonnage, classification) => ({
   rowId,
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
   data: {
     DATE_RECEIVED_FOR_REPROCESSING: date,
     TONNAGE_RECEIVED_FOR_RECYCLING: tonnage
@@ -45,7 +43,6 @@ const receivedRow = (rowId, date, tonnage, classification) => ({
 const sentOnRow = (rowId, date, tonnage) => ({
   rowId,
   wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
-  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
   data: {
     DATE_LOAD_LEFT_SITE: date,
     TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: tonnage
@@ -56,7 +53,6 @@ const sentOnRow = (rowId, date, tonnage) => ({
 const processedRow = (rowId, date, tonnage, classification) => ({
   rowId,
   wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
-  processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT,
   data: {
     DATE_LOAD_LEFT_SITE: date,
     PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: tonnage
@@ -67,7 +63,6 @@ const processedRow = (rowId, date, tonnage, classification) => ({
 const exportedRow = (rowId, date, data, classification) => ({
   rowId,
   wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-  processingType: PROCESSING_TYPES.EXPORTER,
   data: { DATE_RECEIVED_BY_OSR: date, ...data },
   classification
 })

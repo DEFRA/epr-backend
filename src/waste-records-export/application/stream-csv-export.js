@@ -6,8 +6,8 @@ import { resolveAccreditation } from '#domain/organisations/registration-utils.j
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-submitted-summary-log-id.js'
-import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
 import { toWasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
+import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
 import {
   buildHeaderRow,
   buildDataRow,
