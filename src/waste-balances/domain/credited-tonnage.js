@@ -52,7 +52,7 @@ const YES = 'Yes'
  * @typedef {Object} MonthlyCreditedTonnage
  * @property {string} month - `YYYY-MM`
  * @property {number} totalCredited - gross tonnage on crediting rows, 2dp
- * @property {number} eligibleForWasteBalance - tonnage that credited the balance (persisted INCLUDED classification), 2dp
+ * @property {number} eligibleForWasteBalance - tonnage that credits the balance (INCLUDED classification), 2dp
  * @property {number} sentOnDeductions - sent-on tonnage, positive, reprocessor input only, 2dp
  */
 
@@ -194,9 +194,9 @@ const contributionFor = (rowState, processingType) => {
  *
  * Each contributing row lands in at most one month, bucketed by its
  * month-assignment date. Crediting rows add their tonnage column to
- * `totalCredited` gross — every row regardless of classification — and add the
- * persisted `classification.transactionAmount` to `eligibleForWasteBalance`
- * when the row's persisted outcome is `INCLUDED`. Sent-on rows on a
+ * `totalCredited` gross — every row regardless of classification — and add
+ * `classification.transactionAmount` to `eligibleForWasteBalance` when the
+ * row's outcome is `INCLUDED`. Sent-on rows on a
  * reprocessor-input accreditation add their tonnage to `sentOnDeductions`
  * as a positive number. Rows whose month-assignment date is missing,
  * unparseable, or outside the range are dropped and counted in
