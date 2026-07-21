@@ -252,12 +252,17 @@ const resolveLedgers = async (
 
 /**
  * Submitted upload timeline for a registration, oldest-first. Only 'submitted'
- * logs committed row states; failure-status logs are excluded.
+ * logs committed row states; failure-status logs are excluded. Row-state
+ * membership is written against the uploaded file's id (`summaryLog.file.id`),
+ * not the summary-log document's own `id`, so `fileId` is carried separately
+ * for the row-state lookup while `id` (the document id, matching what live CPA
+ * writes to `resubmissionRequired.closedPeriodRestated.summaryLogId`) is kept
+ * for finding output.
  *
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @returns {Promise<{ id: string, submittedAt: string }[]>}
+ * @returns {Promise<{ id: string, fileId: string, submittedAt: string }[]>}
  */
 const loadSubmittedLogTimeline = async (
   summaryLogsRepository,
@@ -276,6 +281,7 @@ const loadSubmittedLogTimeline = async (
     )
     .map(({ id, summaryLog }) => ({
       id,
+      fileId: summaryLog.file.id,
       submittedAt: /** @type {string} */ (summaryLog.submittedAt)
     }))
     .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))
@@ -308,8 +314,8 @@ const cadenceForRow = (row) =>
  *
  * @param {SummaryLogRowStateRepository} summaryLogRowStateRepository
  * @param {WasteBalanceLedgerId[]} ledgers
- * @param {{ id: string, submittedAt: string }[]} logs
- * @returns {Promise<{ id: string, submittedAt: string, rows: SummaryLogRowState[] }[]>}
+ * @param {{ id: string, fileId: string, submittedAt: string }[]} logs
+ * @returns {Promise<{ id: string, fileId: string, submittedAt: string, rows: SummaryLogRowState[] }[]>}
  */
 const loadSnapshots = async (summaryLogRowStateRepository, ledgers, logs) => {
   const snapshots = []
@@ -319,7 +325,7 @@ const loadSnapshots = async (summaryLogRowStateRepository, ledgers, logs) => {
       rows.push(
         ...(await summaryLogRowStateRepository.findRowStatesForSummaryLog(
           ledger,
-          log.id
+          log.fileId
         ))
       )
     }

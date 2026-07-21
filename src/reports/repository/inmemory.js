@@ -3,7 +3,6 @@ import {
   ACTIVE_REPORT_STATUSES,
   REPORT_STATUS
 } from '#reports/domain/report-status.js'
-import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
 import { periodKey } from '#reports/domain/period-key.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {
@@ -22,6 +21,7 @@ import {
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
+  validateMarkSubmittedReportRequiringResubmissionByOperator,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -469,16 +469,13 @@ const markSubmittedReportsRequiringResubmission = async (
     periods
   })
 
-  const resubmissionRequired = {
-    uploadedAt,
-    reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-    summaryLogId
-  }
+  const closedPeriodRestated = { uploadedAt, summaryLogId }
 
   const wantedPeriods = new Set(periods.map(periodKey))
 
   const alreadyHandled = (/** @type {Report} */ report) =>
-    report.resubmissionRequired?.summaryLogId === summaryLogId
+    report.resubmissionRequired?.closedPeriodRestated?.summaryLogId ===
+    summaryLogId
 
   const submitted = /** @type {Report[]} */ ([...reports.values()]).filter(
     (r) =>
@@ -495,7 +492,10 @@ const markSubmittedReportsRequiringResubmission = async (
   const persistResubmissionFlag = (/** @type {Report} */ report) =>
     reports.set(report.id, {
       ...report,
-      resubmissionRequired,
+      resubmissionRequired: {
+        ...report.resubmissionRequired,
+        closedPeriodRestated
+      },
       version: report.version + 1
     })
 
@@ -508,9 +508,87 @@ const markSubmittedReportsRequiringResubmission = async (
       cadence: report.cadence,
       period: report.period,
       submissionNumber: report.submissionNumber,
-      resubmissionRequired
+      resubmissionRequired: { closedPeriodRestated }
     })
   )
+}
+
+/**
+ * Whether `report` exactly matches the given org/reg/period/submissionNumber
+ * natural key, irrespective of status.
+ *
+ * @param {Object} report
+ * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number, submissionNumber: number }} key
+ * @returns {boolean}
+ */
+const isReportAtSubmissionSlot = (report, key) =>
+  isReportInPeriodSlot(report, key) &&
+  report.submissionNumber === key.submissionNumber
+
+/**
+ * Flags the exact report identified by `submissionNumber` as requiring
+ * resubmission at the operator's own request. Mirrors mongodb.js's
+ * conditional write, returning `null` when nothing matched.
+ *
+ * @param {Map<string, Object>} reports
+ * @param {import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorParams} params
+ * @returns {Promise<import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>}
+ */
+const markSubmittedReportRequiringResubmissionByOperator = async (
+  reports,
+  params
+) => {
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    requestedBy,
+    requestedAt
+  } = validateMarkSubmittedReportRequiringResubmissionByOperator(params)
+
+  const naturalKey = {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  }
+
+  const operatorRequested = { requestedAt, requestedBy }
+
+  const match = [...reports].find(([, r]) =>
+    isReportAtSubmissionSlot(r, naturalKey)
+  )
+
+  const isEligible =
+    match?.[1].status.currentStatus === REPORT_STATUS.SUBMITTED &&
+    !match[1].resubmissionRequired?.operatorRequested
+
+  if (!isEligible || !match) {
+    return null
+  }
+
+  const [id, report] = match
+
+  const updated = {
+    ...report,
+    resubmissionRequired: { ...report.resubmissionRequired, operatorRequested },
+    version: report.version + 1
+  }
+  reports.set(id, updated)
+
+  return structuredClone({
+    reportId: updated.id,
+    year: updated.year,
+    cadence: updated.cadence,
+    period: updated.period,
+    submissionNumber: updated.submissionNumber,
+    resubmissionRequired: updated.resubmissionRequired
+  })
 }
 
 /**
@@ -576,6 +654,8 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
       markActiveReportsStaleForPrnCancellation(reports, params),
     markSubmittedReportsRequiringResubmission: (params) =>
       markSubmittedReportsRequiringResubmission(reports, params),
+    markSubmittedReportRequiringResubmissionByOperator: (params) =>
+      markSubmittedReportRequiringResubmissionByOperator(reports, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
       hasReportSubmittedSince(reports, organisationId, registrationId, since)
   })

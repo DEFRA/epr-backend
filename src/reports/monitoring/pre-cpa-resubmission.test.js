@@ -154,7 +154,8 @@ const buildRepos = async (registrations) => {
         summaryLogFactory.submitted({
           organisationId: reg.organisationId,
           registrationId: reg.registrationId,
-          submittedAt: log.submittedAt
+          submittedAt: log.submittedAt,
+          file: { id: log.id }
         })
       )
     }

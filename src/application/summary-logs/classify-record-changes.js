@@ -1,6 +1,5 @@
 import { isDeepStrictEqual } from 'node:util'
 
-import { markExcludedRecords } from '#waste-balances/application/mark-excluded-records.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { RECORD_CHANGE } from './record-change.js'
 
@@ -13,9 +12,8 @@ import { RECORD_CHANGE } from './record-change.js'
 /**
  * How a current-upload row changed against the latest submitted summary log,
  * derived by the same comparison the row-state write deduplicates on: project
- * the row through the identical pipeline (mark excluded, then coerce and
- * classify) and compare its content and reading against the submitted row state
- * for the same row identity.
+ * the row through the identical pipeline and compare its content and reading
+ * against the submitted row state for the same row identity.
  *
  * A row with no submitted state is added. A row whose projected data and
  * classification both equal the submitted state is unchanged — the write folds
@@ -49,9 +47,8 @@ export const classifyRecordChanges = ({
       continue
     }
 
-    const [marked] = markExcludedRecords([record])
     const projected = projectSummaryLogRowState(
-      marked,
+      record,
       accreditation,
       overseasSites
     )

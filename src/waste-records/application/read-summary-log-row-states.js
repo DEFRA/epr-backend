@@ -6,13 +6,19 @@ import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-
 
 /**
  * A registration's committed waste-record state projected to its domain
- * content: the row's identity, type, coerced data and classification. The
- * storage artifacts — the cumulative `summaryLogIds` membership and the
- * storage `id` — and the redundant ledger identity stay behind the seam.
+ * content: the row's identity, type, the template it reported under, coerced
+ * data and classification. The storage artifacts — the cumulative
+ * `summaryLogIds` membership and the storage `id` — and the redundant ledger
+ * identity stay behind the seam.
+ *
+ * `processingType` is content, not an artifact: it is the template the row
+ * reported under, so a reader deciding what a row means needs it as much as it
+ * needs the row's data.
  *
  * @typedef {Object} WasteRecordState
  * @property {string} rowId
  * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
+ * @property {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @property {Record<string, any>} data
  * @property {import('#waste-records/repository/schema.js').RowClassification} classification
  */
@@ -24,14 +30,16 @@ import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-
  * @param {SummaryLogRowState} summaryLogRowState
  * @returns {WasteRecordState}
  */
-const toWasteRecordState = ({
+export const toWasteRecordState = ({
   rowId,
   wasteRecordType,
+  processingType,
   data,
   classification
 }) => ({
   rowId,
   wasteRecordType,
+  processingType,
   data,
   classification
 })

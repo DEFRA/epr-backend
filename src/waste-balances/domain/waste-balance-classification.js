@@ -36,37 +36,33 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
 /**
  * Classify a waste record for the waste balance. NOT_APPLICABLE takes
  * precedence: a record with no accreditation, or whose table schema has no
- * waste-balance classifier, is not-applicable regardless of whether it was
- * manually excluded. A manually excluded record with both an accreditation and
- * a classifier is EXCLUDED with no contribution. Otherwise the table schema's
- * classifier decides the outcome, and only an INCLUDED row contributes tonnage.
+ * waste-balance classifier, cannot yield a per-row decision at all. Otherwise
+ * the table schema's classifier decides the outcome — including whether the row
+ * holds the fields the balance needs to read it — and only an INCLUDED row
+ * contributes tonnage.
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * The processing type names the template the record reports under, and so
+ * selects the table schema. It is a property of the registration rather than of
+ * the row, so it arrives as context instead of being read back out of the row's
+ * own data.
+ *
+ * @param {Pick<import('#domain/waste-records/model.js').WasteRecord, 'type' | 'data'>} record
+ * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  * @returns {WasteBalanceClassification}
  */
 export const classifyRecordForWasteBalance = (
   record,
+  processingType,
   accreditation,
   overseasSites
 ) => {
-  const schema = findSchemaForProcessingType(
-    record.data?.processingType,
-    record.type
-  )
+  const schema = findSchemaForProcessingType(processingType, record.type)
 
   if (!accreditation || !schema?.classifyForWasteBalance) {
     return {
       outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
-      reasons: [],
-      transactionAmount: 0
-    }
-  }
-
-  if (record.excludedFromWasteBalance) {
-    return {
-      outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
       reasons: [],
       transactionAmount: 0
     }

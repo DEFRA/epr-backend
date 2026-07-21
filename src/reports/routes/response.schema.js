@@ -8,6 +8,7 @@ import {
   cadenceSchema,
   periodSchema,
   prnSchema,
+  resubmissionRequiredSchema,
   staleSchema
 } from '#reports/repository/schema.js'
 
@@ -57,6 +58,7 @@ export const reportsCalendarResponseSchema = Joi.object({
  */
 export const reportDetailResponseSchema = Joi.object({
   cadence: cadenceSchema.optional(),
+  canRequestResubmission: Joi.boolean().optional(),
   details: Joi.object({
     material: Joi.string().required(),
     site: Joi.object().unknown(true).allow(null).optional()
@@ -79,6 +81,7 @@ export const reportDetailResponseSchema = Joi.object({
   })
     .unknown(true)
     .required(),
+  resubmissionRequired: resubmissionRequiredSchema.optional(),
   source: Joi.object({
     lastUploadedAt: Joi.string().isoDate().allow(null),
     summaryLogId: Joi.string().allow(null)

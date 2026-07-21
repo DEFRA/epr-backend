@@ -8,6 +8,7 @@ import { testFindReportByIdBehaviour } from './contract/findReportById.contract.
 import { testMarkActiveReportsStaleForSummaryLogBehaviour } from './contract/markActiveReportsStaleForSummaryLog.contract.js'
 import { testMarkActiveReportsStaleForPrnCancellationBehaviour } from './contract/markActiveReportsStaleForPrnCancellation.contract.js'
 import { testMarkSubmittedReportsRequiringResubmissionBehaviour } from './contract/markSubmittedReportsRequiringResubmission.contract.js'
+import { testMarkSubmittedReportRequiringResubmissionByOperatorBehaviour } from './contract/markSubmittedReportRequiringResubmissionByOperator.contract.js'
 import { testHasReportSubmittedSinceBehaviour } from './contract/hasReportSubmittedSince.contract.js'
 
 export const testReportsRepositoryContract = (it) => {
@@ -21,5 +22,6 @@ export const testReportsRepositoryContract = (it) => {
   testMarkActiveReportsStaleForSummaryLogBehaviour(it)
   testMarkActiveReportsStaleForPrnCancellationBehaviour(it)
   testMarkSubmittedReportsRequiringResubmissionBehaviour(it)
+  testMarkSubmittedReportRequiringResubmissionByOperatorBehaviour(it)
   testHasReportSubmittedSinceBehaviour(it)
 }

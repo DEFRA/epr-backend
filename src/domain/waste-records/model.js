@@ -61,5 +61,4 @@ export const WASTE_RECORD_CHANGE = Object.freeze({
  * @property {WasteRecordType} type
  * @property {Object} data - Reporting fields only
  * @property {WasteRecordVersion[]} versions - Version history. createdAt/updatedAt derived from first/last version
- * @property {boolean} [excludedFromWasteBalance] - Set by markExcludedRecords when the row fails schema validation
  */

@@ -84,14 +84,16 @@ const oneFindingApp = ({
         id: 'sl-original',
         summaryLog: {
           status: 'submitted',
-          submittedAt: '2025-06-25T00:00:00.000Z'
+          submittedAt: '2025-06-25T00:00:00.000Z',
+          file: { id: 'sl-original' }
         }
       },
       {
         id: 'sl-restating',
         summaryLog: {
           status: 'submitted',
-          submittedAt: '2025-08-01T00:00:00.000Z'
+          submittedAt: '2025-08-01T00:00:00.000Z',
+          file: { id: 'sl-restating' }
         }
       }
     ])

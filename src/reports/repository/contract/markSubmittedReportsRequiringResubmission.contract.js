@@ -1,4 +1,3 @@
-import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
@@ -24,9 +23,10 @@ const period = (period, overrides = {}) => ({
 })
 
 const expectedResubmission = {
-  uploadedAt: UPLOADED_AT,
-  reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-  summaryLogId: SL_ID
+  closedPeriodRestated: {
+    uploadedAt: UPLOADED_AT,
+    summaryLogId: SL_ID
+  }
 }
 
 export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {

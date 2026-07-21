@@ -511,7 +511,6 @@ const recordValidationMetrics = async ({
  * @param {ValidationIssuesCollector} params.issues
  * @param {Loads | null} params.loads
  * @param {LoadsByReportingPeriod | null} params.loadsByReportingPeriod
- * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
  * @param {ExtractedMeta | undefined} params.meta
  * @param {SummaryLogStatus} params.status
  * @param {SummaryLog} params.summaryLog
@@ -523,7 +522,6 @@ const persistValidationResult = async ({
   issues,
   loads,
   loadsByReportingPeriod,
-  loadsByWasteRecordType,
   meta,
   status,
   summaryLog,
@@ -542,7 +540,6 @@ const persistValidationResult = async ({
     },
     ...(loads && { loads }),
     ...(loadsByReportingPeriod && { loadsByReportingPeriod }),
-    ...(loadsByWasteRecordType && { loadsByWasteRecordType }),
     ...(meta && { meta })
   })
 }
@@ -629,23 +626,21 @@ const classifyAndPersistResult = async ({
     registration
   })
 
-  const { loads, loadsByWasteRecordType, loadsByReportingPeriod } =
-    classifyLoads({
-      processingType,
-      status,
-      wasteBalanceRecords,
-      wasteRecords,
-      periodicReports,
-      overseasSites,
-      registration,
-      submittedRowStatesByKey
-    })
+  const { loads, loadsByReportingPeriod } = classifyLoads({
+    processingType,
+    status,
+    wasteBalanceRecords,
+    wasteRecords,
+    periodicReports,
+    overseasSites,
+    registration,
+    submittedRowStatesByKey
+  })
 
   await persistValidationResult({
     issues,
     loads,
     loadsByReportingPeriod,
-    loadsByWasteRecordType,
     meta,
     status,
     summaryLog,

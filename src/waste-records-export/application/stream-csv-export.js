@@ -6,6 +6,8 @@ import { resolveAccreditation } from '#domain/organisations/registration-utils.j
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-submitted-summary-log-id.js'
+import { toWasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
+import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
 import {
   buildHeaderRow,
   buildDataRow,
@@ -60,7 +62,7 @@ const sortRowStates = (a, b) => {
  * top-level field on the row state, is merged back onto the data both to select
  * the schema and to fill its metadata column.
  *
- * @param {SummaryLogRowState} rowState
+ * @param {Pick<SummaryLogRowState, 'data' | 'processingType' | 'wasteRecordType'>} rowState
  * @returns {Record<string, any>}
  */
 const coerceForExport = ({ data, processingType, wasteRecordType }) => {
@@ -139,6 +141,9 @@ async function* streamRegistrationRows({
       ledgerId,
       latestSummaryLogId
     )
+  if (rowStates.length === 0) {
+    return
+  }
 
   const summaryLogMap = await loadSummaryLogMap(
     summaryLogsRepository,
@@ -150,6 +155,14 @@ async function* streamRegistrationRows({
   const rowStatesSorted = [...rowStates].sort(sortRowStates)
 
   for (const rowState of rowStatesSorted) {
+    // The waste-balance columns answer as of the same moment as the Accredited
+    // and OSR columns beside them, which read the accreditation and the
+    // registration's overseas sites as they stand at export time.
+    const { classification } = reclassifyWasteRecordState(
+      toWasteRecordState(rowState),
+      { accreditation, overseasSites }
+    )
+
     yield await encodeRow(
       buildDataRow({
         org,
@@ -158,7 +171,7 @@ async function* streamRegistrationRows({
         data: coerceForExport(rowState),
         wasteRecordType: rowState.wasteRecordType,
         rowId: rowState.rowId,
-        classification: rowState.classification,
+        classification,
         summaryLogEntry,
         overseasSites,
         dataFieldColumns
