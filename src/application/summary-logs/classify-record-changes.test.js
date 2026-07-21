@@ -26,13 +26,14 @@ const buildWasteRecord = (
 
 /**
  * A submitted row state as the read model projects it — the write-path
- * projection minus the storage-only processingType/id fields.
+ * projection minus the storage-only id fields.
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @returns {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState}
  */
 const submittedStateOf = (record) => {
-  const { rowId, wasteRecordType, data, classification } =
+  const { rowId, wasteRecordType, processingType, data, classification } =
     projectSummaryLogRowState(record, null, overseasSites)
-  return { rowId, wasteRecordType, data, classification }
+  return { rowId, wasteRecordType, processingType, data, classification }
 }
 
 const key = (record) => `${record.type}:${record.rowId}`
