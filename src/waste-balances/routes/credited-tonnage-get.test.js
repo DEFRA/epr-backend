@@ -91,6 +91,8 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
 
     const linkedRegistration = org.registrations[0]
     const linkedAccreditation = org.accreditations[0]
+    linkedAccreditation.validFrom = '2026-01-01'
+    linkedAccreditation.validTo = '2026-12-31'
     const ledgerId = {
       organisationId: org.id,
       registrationId: linkedRegistration.id,
@@ -108,12 +110,25 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
           processingType: 'REPROCESSOR_INPUT',
           data: {
             DATE_RECEIVED_FOR_REPROCESSING: '2026-02-10',
+            EWC_CODE: '15 01 02',
+            DESCRIPTION_WASTE: 'Plastic packaging',
+            WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+            GROSS_WEIGHT: 101,
+            TARE_WEIGHT: 1,
+            PALLET_WEIGHT: 0,
+            NET_WEIGHT: 100,
+            BAILING_WIRE_PROTOCOL: 'No',
+            HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
+            WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+            RECYCLABLE_PROPORTION_PERCENTAGE: 100,
             TONNAGE_RECEIVED_FOR_RECYCLING: 100
           },
+          // Stamped as contributing nothing at submission; the report
+          // re-derives against the accreditation as it stands now.
           classification: {
-            outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+            outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
             reasons: [],
-            transactionAmount: 100
+            transactionAmount: 0
           }
         })
       ],
