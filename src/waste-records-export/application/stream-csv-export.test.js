@@ -597,6 +597,47 @@ describe('streamCsvExport', () => {
     expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
   })
 
+  it('gives each row of a summary log its own live outcome', async () => {
+    const { TONNAGE_RECEIVED_FOR_RECYCLING: _omitted, ...withoutTonnage } =
+      completeReceivedData()
+    const org = baseOrg({
+      accreditations: [approvedAccreditation()],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-1',
+          rows: [
+            receivedRowState({ rowId: '1001', data: completeReceivedData() }),
+            receivedRowState({ rowId: '1002', data: withoutTonnage })
+          ]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const included = out[1].trim().split(',')
+    const excluded = out[2].trim().split(',')
+    expect(included[METADATA_COL_INDEX['Row ID']]).toBe('1001')
+    expect(included[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
+      'true'
+    )
+    expect(Number(included[METADATA_COL_INDEX['Waste Balance Tonnage']])).toBe(
+      50.5
+    )
+    expect(excluded[METADATA_COL_INDEX['Row ID']]).toBe('1002')
+    expect(excluded[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
+      'false'
+    )
+    expect(
+      excluded[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]
+    ).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
+  })
+
   it('renders a row missing a waste-balance field as false with blank tonnage', async () => {
     const { TONNAGE_RECEIVED_FOR_RECYCLING: _omitted, ...withoutTonnage } =
       completeReceivedData()

@@ -7,7 +7,7 @@ import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-submitted-summary-log-id.js'
 import { toWasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
-import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
+import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
 import {
   buildHeaderRow,
   buildDataRow,
@@ -158,15 +158,15 @@ async function* streamRegistrationRows({
   // that workbook's template, and the rows record which one.
   const [{ processingType }] = rowStatesSorted
 
-  // The waste-balance columns answer as of the same moment as the Accredited
-  // and OSR columns beside them, which read the accreditation and the
-  // registration's overseas sites as they stand at export time.
-  const liveStates = reclassifyWasteRecordStates(
-    rowStatesSorted.map(toWasteRecordState),
-    { processingType, accreditation, overseasSites }
-  )
+  for (const rowState of rowStatesSorted) {
+    // The waste-balance columns answer as of the same moment as the Accredited
+    // and OSR columns beside them, which read the accreditation and the
+    // registration's overseas sites as they stand at export time.
+    const { classification } = reclassifyWasteRecordState(
+      toWasteRecordState(rowState),
+      { processingType, accreditation, overseasSites }
+    )
 
-  for (const [index, rowState] of rowStatesSorted.entries()) {
     yield await encodeRow(
       buildDataRow({
         org,
@@ -175,7 +175,7 @@ async function* streamRegistrationRows({
         data: coerceForExport(rowState),
         wasteRecordType: rowState.wasteRecordType,
         rowId: rowState.rowId,
-        classification: liveStates[index].classification,
+        classification,
         summaryLogEntry,
         overseasSites,
         dataFieldColumns
