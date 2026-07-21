@@ -23,6 +23,9 @@ import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-bala
  * submits again. Reads that answer current-state questions call this so that
  * context changes show up without waiting for a submission.
  *
+ * Returns one state per input, in the same order, so a caller may pair the
+ * results back to the states it passed in by position.
+ *
  * @param {WasteRecordState[]} states
  * @param {ReclassificationContext} context
  * @returns {WasteRecordState[]}
