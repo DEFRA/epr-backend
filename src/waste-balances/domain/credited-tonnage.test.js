@@ -92,7 +92,7 @@ describe('creditedTonnageByMonth', () => {
       })
     })
 
-    it('buckets reprocessor-input sent-on loads by DATE_LOAD_LEFT_SITE using TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON into sentOnDeductions as a positive number', () => {
+    it('buckets reprocessor-input sent-on loads by DATE_LOAD_LEFT_SITE into sentOnDeductions, flipping the debiting amount to a positive number', () => {
       const result = creditedTonnageByMonth(
         [sentOnRow('5000', '2026-03-01', 7.25)],
         REPROCESSOR_INPUT,
@@ -254,6 +254,23 @@ describe('creditedTonnageByMonth', () => {
             '2026-02-04',
             40,
             notIncluded(WASTE_BALANCE_OUTCOME.EXCLUDED)
+          )
+        ],
+        REPROCESSOR_INPUT,
+        RANGE
+      )
+
+      expect(monthFor(result, '2026-02').sentOnDeductions).toBe(0)
+    })
+
+    it('leaves a sent-on row on a registration with no accreditation out of sentOnDeductions', () => {
+      const result = creditedTonnageByMonth(
+        [
+          sentOnRow(
+            '5000',
+            '2026-02-04',
+            40,
+            notIncluded(WASTE_BALANCE_OUTCOME.NOT_APPLICABLE)
           )
         ],
         REPROCESSOR_INPUT,
@@ -524,6 +541,40 @@ describe('creditedTonnageByMonth', () => {
 
       expect(totalEligible).toBeCloseTo(totalTransactionAmount, 10)
       expect(totalEligible).toBe(69.12)
+    })
+
+    it('nets eligible against deductions to the total transactionAmount of a reprocessor-input mix of credits and sent-on loads', () => {
+      const rowStates = [
+        receivedRow('1000', '2026-01-10', 100, included(100)),
+        receivedRow(
+          '1001',
+          '2026-01-11',
+          70,
+          notIncluded(WASTE_BALANCE_OUTCOME.EXCLUDED)
+        ),
+        sentOnRow('5000', '2026-02-10', 12.34),
+        sentOnRow(
+          '5001',
+          '2026-03-10',
+          45,
+          notIncluded(WASTE_BALANCE_OUTCOME.IGNORED)
+        )
+      ]
+
+      const result = creditedTonnageByMonth(rowStates, REPROCESSOR_INPUT, RANGE)
+
+      const totalTransactionAmount = rowStates.reduce(
+        (sum, row) => sum + row.classification.transactionAmount,
+        0
+      )
+      const netMovement = result.months.reduce(
+        (sum, entry) =>
+          sum + entry.eligibleForWasteBalance - entry.sentOnDeductions,
+        0
+      )
+
+      expect(netMovement).toBeCloseTo(totalTransactionAmount, 10)
+      expect(netMovement).toBe(87.66)
     })
   })
 })
