@@ -13,7 +13,6 @@ import { classifyByPeriodStatus } from './period-status.js'
 import {
   countByValidity,
   countByWasteBalanceInclusion,
-  countByWasteRecordType,
   mergeLoads
 } from './load-counts.js'
 
@@ -54,7 +53,7 @@ export const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {Registration} [params.registration]
  * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
- * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
+ * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
  */
 export const classifyLoads = ({
   processingType,
@@ -70,7 +69,6 @@ export const classifyLoads = ({
   if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
     return {
       loads: null,
-      loadsByWasteRecordType: null,
       loadsByReportingPeriod: null
     }
   }
@@ -84,13 +82,6 @@ export const classifyLoads = ({
   )
 
   const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
-
-  const loadsByWasteRecordType = countByWasteRecordType({
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    tableSchemas
-  })
 
   /* v8 ignore start -- defensive guard: all three are always set when status is VALIDATED */
   const loadsByReportingPeriod =
@@ -112,7 +103,7 @@ export const classifyLoads = ({
       : null
   /* v8 ignore stop */
 
-  return { loads, loadsByWasteRecordType, loadsByReportingPeriod }
+  return { loads, loadsByReportingPeriod }
 }
 
 /**
