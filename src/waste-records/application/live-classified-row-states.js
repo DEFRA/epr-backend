@@ -8,7 +8,41 @@ import { reclassifyWasteRecordStates } from './reclassify-waste-record-states.js
 
 /**
  * @import {WasteRecordState} from './read-summary-log-row-states.js'
+ * @import {SummaryLogRowStateEntry} from '#waste-records/repository/schema.js'
  */
+
+/**
+ * Classify already-read row states against current rules and reference data
+ * rather than the reading stamped when each row was submitted.
+ *
+ * Pure — the resolved context is the input, not the repositories it came from,
+ * so a caller reading many partitions loads the reference data once for the
+ * whole run instead of once per partition.
+ *
+ * @param {SummaryLogRowStateEntry[]} rowStates
+ * @param {Object} context
+ * @param {import('#domain/organisations/accreditation.js').Accreditation | null} context.accreditation
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} context.overseasSites
+ * @returns {WasteRecordState[]}
+ */
+export const liveClassifiedRowStates = (
+  rowStates,
+  { accreditation, overseasSites }
+) => {
+  if (rowStates.length === 0) {
+    return []
+  }
+
+  // One summary log is one uploaded workbook, so every row in it reports under
+  // that workbook's template, and the rows record which one.
+  const [{ processingType }] = rowStates
+
+  return reclassifyWasteRecordStates(rowStates.map(toWasteRecordState), {
+    processingType,
+    accreditation,
+    overseasSites
+  })
+}
 
 /**
  * A registration's committed row states at its latest submission, classified
@@ -52,10 +86,6 @@ export const liveClassifiedRowStatesForRegistration = async ({
     return []
   }
 
-  // One summary log is one uploaded workbook, so every row in it reports under
-  // that workbook's template, and the rows record which one.
-  const [{ processingType }] = rowStates
-
   const organisation = await organisationsRepository.findById(organisationId)
   const registration = organisation.registrations?.find(
     (candidate) => candidate.id === registrationId
@@ -78,9 +108,5 @@ export const liveClassifiedRowStatesForRegistration = async ({
     new Map(sites.map((site) => [site.id, site]))
   )
 
-  return reclassifyWasteRecordStates(rowStates.map(toWasteRecordState), {
-    processingType,
-    accreditation,
-    overseasSites
-  })
+  return liveClassifiedRowStates(rowStates, { accreditation, overseasSites })
 }

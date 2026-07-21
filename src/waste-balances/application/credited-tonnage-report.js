@@ -1,5 +1,6 @@
 import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.js'
-import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
+import { liveClassifiedRowStates } from '#waste-records/application/live-classified-row-states.js'
+import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
 import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
@@ -9,6 +10,7 @@ import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} SummaryLogRowStateRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
@@ -136,17 +138,23 @@ const compareRows = (a, b) =>
  * accreditation's latest submitted summary log.
  *
  * The ledger query yields one entry per accredited partition with a submission,
- * so accreditations with no submission never appear. Each entry's row states
- * are read at that submission's head and aggregated by the pure domain
- * function; the organisation join attaches the external reference, accreditation
- * number, processing type and effective material, and drops test organisations.
- * Rows dropped for a bad month-assignment date are counted per accreditation in
- * a structured log line.
+ * so accreditations with no submission never appear. Each entry's row states are
+ * read at that submission's head, classified against today's accreditation and
+ * overseas-site data rather than the reading stamped at submission, and
+ * aggregated by the pure domain function; the organisation join attaches the
+ * external reference, accreditation number, processing type and effective
+ * material, and drops test organisations. Rows dropped for a bad
+ * month-assignment date are counted per accreditation in a structured log line.
+ *
+ * This report answers what an accreditation has credited as of now, so
+ * approving an overseas site or amending a validity period must move the
+ * figures without waiting for the operator to submit again.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {SummaryLogRowStateRepository} params.summaryLogRowStateRepository
  * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {TypedLogger} params.logger
  * @param {Date} params.now - clock reading supplied by the caller; the report's upper month bound
  * @returns {Promise<CreditedTonnageReport>}
@@ -155,6 +163,7 @@ export const buildCreditedTonnageReport = async ({
   ledgerRepository,
   summaryLogRowStateRepository,
   organisationsRepository,
+  overseasSitesRepository,
   logger,
   now
 }) => {
@@ -163,10 +172,13 @@ export const buildCreditedTonnageReport = async ({
     toMonth: /** @type {string} */ (monthKeyForDate(now, REPORT_TIME_ZONE))
   }
 
-  const [entries, organisations] = await Promise.all([
+  const [entries, organisations, allSites] = await Promise.all([
     ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
-    organisationsRepository.findAll()
+    organisationsRepository.findAll(),
+    overseasSitesRepository.findAll()
   ])
+
+  const sitesById = new Map(allSites.map((site) => [site.id, site]))
 
   // Credits only exist for accredited partitions; registered-only entries
   // (accreditationId null) carry zero-delta submissions and never appear in
@@ -201,11 +213,15 @@ export const buildCreditedTonnageReport = async ({
 
     const { organisation, registration, accreditation } = context
 
-    const rowStates = await wasteRecordStatesForHead(
-      summaryLogRowStateRepository,
-      ledgerId,
-      summaryLogId
-    )
+    const storedRowStates =
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        ledgerId,
+        summaryLogId
+      )
+    const rowStates = liveClassifiedRowStates(storedRowStates, {
+      accreditation,
+      overseasSites: buildOverseasSitesContext(registration, sitesById)
+    })
 
     const { months, skippedRowCount } = creditedTonnageByMonth(
       rowStates,
