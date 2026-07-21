@@ -1,5 +1,4 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { config } from '#root/config.js'
 import {
@@ -221,9 +220,10 @@ describe('onSummaryLogUploaded', () => {
 
     const updated = await reportsRepositoryFactory().findReportById(reportId)
     expect(updated.resubmissionRequired).toEqual({
-      uploadedAt: FIXED_NOW,
-      reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-      summaryLogId: DEFAULT_SL_ID
+      closedPeriodRestated: {
+        uploadedAt: FIXED_NOW,
+        summaryLogId: DEFAULT_SL_ID
+      }
     })
   })
 
@@ -251,8 +251,9 @@ describe('onSummaryLogUploaded', () => {
         reportsRequiringResubmission: expect.arrayContaining([
           expect.objectContaining({
             resubmissionRequired: expect.objectContaining({
-              reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-              summaryLogId: DEFAULT_SL_ID
+              closedPeriodRestated: expect.objectContaining({
+                summaryLogId: DEFAULT_SL_ID
+              })
             })
           })
         ])

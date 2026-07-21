@@ -37,11 +37,6 @@ import { RECORD_CHANGE, determineRecordStatus } from './record-change.js'
  * @property {LoadValidity} adjusted - Loads adjusted in this upload
  */
 
-/**
- * @typedef {{ wasteRecordType: string, sheetName: string } & Loads} LoadsByWasteRecordTypeEntry
- * @typedef {LoadsByWasteRecordTypeEntry[]} LoadsByWasteRecordType
- */
-
 const MAX_ROW_IDS = 100
 
 /**
@@ -185,52 +180,3 @@ export const mergeLoads = (validationResults, classificationResults) => ({
   },
   adjusted: { ...validationResults.adjusted, ...classificationResults.adjusted }
 })
-
-/**
- * Groups waste records by wasteRecordType and computes per-type load counts.
- * Uses a Map to guarantee unique wasteRecordType entries by construction.
- *
- * @param {Object} params
- * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records with tableName and wasteRecordType
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records only
- * @param {string} params.summaryLogId - The current summary log ID
- * @param {Object<string, { sheetName: string, wasteRecordType: string }>} params.tableSchemas - Table schemas keyed by table name
- * @returns {LoadsByWasteRecordType}
- */
-export const countByWasteRecordType = ({
-  wasteRecords,
-  wasteBalanceRecords,
-  summaryLogId,
-  tableSchemas
-}) => {
-  const wasteBalancesGroupedByType = Map.groupBy(
-    wasteBalanceRecords,
-    (wr) => wr.wasteRecordType
-  )
-  const wasteRecordsGroupedByType = Map.groupBy(
-    wasteRecords,
-    (wr) => wr.wasteRecordType
-  )
-
-  const expectedTypes = new Map(
-    Object.values(tableSchemas).map(({ wasteRecordType, sheetName }) => [
-      wasteRecordType,
-      sheetName
-    ])
-  )
-
-  return Array.from(expectedTypes.entries()).map(([type, sheetName]) => ({
-    wasteRecordType: type,
-    sheetName,
-    ...mergeLoads(
-      countByValidity({
-        wasteRecords: wasteRecordsGroupedByType.get(type) ?? [],
-        summaryLogId
-      }),
-      countByWasteBalanceInclusion({
-        wasteRecords: wasteBalancesGroupedByType.get(type) ?? [],
-        summaryLogId
-      })
-    )
-  }))
-}

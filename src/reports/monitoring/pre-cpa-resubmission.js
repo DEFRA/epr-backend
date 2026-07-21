@@ -256,7 +256,8 @@ const resolveLedgers = async (
  * membership is written against the uploaded file's id (`summaryLog.file.id`),
  * not the summary-log document's own `id`, so `fileId` is carried separately
  * for the row-state lookup while `id` (the document id, matching what live CPA
- * writes to `resubmissionRequired.summaryLogId`) is kept for finding output.
+ * writes to `resubmissionRequired.closedPeriodRestated.summaryLogId`) is kept
+ * for finding output.
  *
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {string} organisationId

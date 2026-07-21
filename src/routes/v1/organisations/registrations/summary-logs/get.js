@@ -55,9 +55,6 @@ export const summaryLogsGet = {
         loadsByReportingPeriod:
           summaryLog.loadsByReportingPeriod ?? emptyLoadsByReportingPeriod()
       }),
-      ...(summaryLog.loadsByWasteRecordType && {
-        loadsByWasteRecordType: summaryLog.loadsByWasteRecordType
-      }),
       ...extractResponseMetaFields(summaryLog.meta)
     }
 
