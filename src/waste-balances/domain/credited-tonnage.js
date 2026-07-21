@@ -53,7 +53,7 @@ const YES = 'Yes'
  * @property {string} month - `YYYY-MM`
  * @property {number} totalCredited - gross tonnage on crediting rows, 2dp
  * @property {number} eligibleForWasteBalance - tonnage that credited the balance (persisted INCLUDED classification), 2dp
- * @property {number} sentOnDeductions - sent-on tonnage, positive, reprocessor input only, 2dp
+ * @property {number} sentOnDeductions - tonnage that debited the balance on sent-on rows (persisted INCLUDED classification), positive, reprocessor input only, 2dp
  */
 
 /**
@@ -67,13 +67,14 @@ const YES = 'Yes'
  */
 
 /**
- * How a row contributes: which tonnage column feeds the gross figure, which
- * date buckets it into a month, and whether it credits or deducts.
+ * How a row contributes: which date buckets it into a month, and whether it
+ * credits or deducts. Only a crediting row names a tonnage column, because only
+ * the gross credited figure is read from the row's data — a deduction is taken
+ * from the classification's transaction amount instead.
  *
- * @typedef {Object} RowContribution
- * @property {string} dateField
- * @property {number} tonnage
- * @property {boolean} credits
+ * @typedef {{ dateField: string, credits: true, tonnage: number }} CreditingContribution
+ * @typedef {{ dateField: string, credits: false }} DeductingContribution
+ * @typedef {CreditingContribution | DeductingContribution} RowContribution
  */
 
 /**
@@ -181,7 +182,6 @@ const contributionFor = (rowState, processingType) => {
   if (wasteRecordType === WASTE_RECORD_TYPE.SENT_ON) {
     return {
       dateField: SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE,
-      tonnage: data[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON],
       credits: false
     }
   }
@@ -197,8 +197,10 @@ const contributionFor = (rowState, processingType) => {
  * `totalCredited` gross — every row regardless of classification — and add the
  * persisted `classification.transactionAmount` to `eligibleForWasteBalance`
  * when the row's persisted outcome is `INCLUDED`. Sent-on rows on a
- * reprocessor-input accreditation add their tonnage to `sentOnDeductions`
- * as a positive number. Rows whose month-assignment date is missing,
+ * reprocessor-input accreditation add the negation of that same amount to
+ * `sentOnDeductions`, so the report deducts what the balance was actually
+ * debited and a row the classification never applied deducts nothing. Rows
+ * whose month-assignment date is missing,
  * unparseable, or outside the range are dropped and counted in
  * `skippedRowCount`. Sums are decimal-safe to 2dp.
  *
@@ -240,11 +242,14 @@ export const creditedTonnageByMonth = (
       continue
     }
 
+    const includedInBalance =
+      rowState.classification.outcome === WASTE_BALANCE_OUTCOME.INCLUDED
+
     if (contribution.credits) {
       bucket.totalCredited = toNumber(
         addRounded(bucket.totalCredited, contribution.tonnage, 2)
       )
-      if (rowState.classification.outcome === WASTE_BALANCE_OUTCOME.INCLUDED) {
+      if (includedInBalance) {
         bucket.eligibleForWasteBalance = toNumber(
           addRounded(
             bucket.eligibleForWasteBalance,
@@ -253,9 +258,13 @@ export const creditedTonnageByMonth = (
           )
         )
       }
-    } else {
+    } else if (includedInBalance) {
       bucket.sentOnDeductions = toNumber(
-        addRounded(bucket.sentOnDeductions, contribution.tonnage, 2)
+        addRounded(
+          bucket.sentOnDeductions,
+          -rowState.classification.transactionAmount,
+          2
+        )
       )
     }
   }

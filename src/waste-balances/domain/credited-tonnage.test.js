@@ -40,14 +40,19 @@ const receivedRow = (rowId, date, tonnage, classification) => ({
   classification
 })
 
-const sentOnRow = (rowId, date, tonnage) => ({
+const sentOnRow = (
+  rowId,
+  date,
+  tonnage,
+  classification = included(-tonnage)
+) => ({
   rowId,
   wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
   data: {
     DATE_LOAD_LEFT_SITE: date,
     TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: tonnage
   },
-  classification: included(-tonnage)
+  classification
 })
 
 const processedRow = (rowId, date, tonnage, classification) => ({
@@ -220,6 +225,71 @@ describe('creditedTonnageByMonth', () => {
         totalCredited: 100,
         eligibleForWasteBalance: 90
       })
+    })
+  })
+
+  describe('deductions restricted to sent-on rows that debited the balance', () => {
+    it('leaves a sent-on row ignored for falling outside the accreditation period out of sentOnDeductions', () => {
+      const result = creditedTonnageByMonth(
+        [
+          sentOnRow(
+            '5000',
+            '2026-02-04',
+            40,
+            notIncluded(WASTE_BALANCE_OUTCOME.IGNORED)
+          )
+        ],
+        REPROCESSOR_INPUT,
+        RANGE
+      )
+
+      expect(monthFor(result, '2026-02').sentOnDeductions).toBe(0)
+    })
+
+    it('leaves a sent-on row excluded for missing waste-balance fields out of sentOnDeductions', () => {
+      const result = creditedTonnageByMonth(
+        [
+          sentOnRow(
+            '5000',
+            '2026-02-04',
+            40,
+            notIncluded(WASTE_BALANCE_OUTCOME.EXCLUDED)
+          )
+        ],
+        REPROCESSOR_INPUT,
+        RANGE
+      )
+
+      expect(monthFor(result, '2026-02').sentOnDeductions).toBe(0)
+    })
+
+    it('deducts only the INCLUDED rows when a month mixes debiting and ignored sent-on loads', () => {
+      const result = creditedTonnageByMonth(
+        [
+          sentOnRow('5000', '2026-02-04', 40),
+          sentOnRow(
+            '5001',
+            '2026-02-05',
+            25,
+            notIncluded(WASTE_BALANCE_OUTCOME.IGNORED)
+          ),
+          sentOnRow('5002', '2026-02-06', 10)
+        ],
+        REPROCESSOR_INPUT,
+        RANGE
+      )
+
+      expect(monthFor(result, '2026-02').sentOnDeductions).toBe(50)
+    })
+
+    it('reads the deduction from the persisted classification, not the tonnage column', () => {
+      const result = creditedTonnageByMonth(
+        [sentOnRow('5000', '2026-02-04', 40, included(-32.5))],
+        REPROCESSOR_INPUT,
+        RANGE
+      )
+
+      expect(monthFor(result, '2026-02').sentOnDeductions).toBe(32.5)
     })
   })
 
