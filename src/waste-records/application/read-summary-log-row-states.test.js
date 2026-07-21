@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
@@ -115,7 +116,7 @@ describe('summaryLogRowStatesForRegistration', () => {
     ])
   })
 
-  it('projects to domain content, dropping storage id, membership and ledger identity', async () => {
+  it('projects to domain content, keeping the template the row reported under and dropping storage id, membership and ledger identity', async () => {
     const summaryLogRowStateRepository =
       createInMemorySummaryLogRowStateRepository()()
     await summaryLogRowStateRepository.upsertSummaryLogRowStates(
@@ -136,6 +137,7 @@ describe('summaryLogRowStatesForRegistration', () => {
     expect(state).toEqual({
       rowId: 'row-1',
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+      processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
       data: { tonnage: 10 },
       classification: {
         outcome: ROW_OUTCOME.INCLUDED,

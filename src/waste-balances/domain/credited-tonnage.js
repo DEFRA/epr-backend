@@ -15,7 +15,16 @@ import { RECEIVED_LOADS_FIELDS as EXPORTER_RECEIVED_FIELDS } from '#domain/summa
 import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
 
 /**
- * @typedef {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState} WasteRecordState
+ * The part of a waste record state the aggregation reads: what the row is, its
+ * coerced data and the classification decided for it. Narrower than the full
+ * `WasteRecordState` so a caller can aggregate anything of that shape, and so
+ * the template a row reported under stays out of a calculation the
+ * accreditation governs.
+ *
+ * @typedef {Pick<import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState, 'wasteRecordType' | 'data' | 'classification'>} CreditableWasteRecordState
+ */
+
+/**
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#domain/organisations/model.js').ReprocessingType} ReprocessingType
  * @typedef {import('#domain/summary-logs/meta-fields.js').ProcessingType} ProcessingType
@@ -26,11 +35,12 @@ const YES = 'Yes'
 /**
  * The accreditation context the aggregation needs — the domain accreditation's
  * own processing-type fields, so the service can pass its accreditation shape
- * straight through. Which template a row belongs to cannot be told from the row
- * state alone (its processing type is dropped at the storage↔domain seam, and
- * the `sentOn`, `received` and `processed` tables each appear in more than one
- * template), so the caller supplies the accreditation's processing type and it
- * decides which rows credit, which deduct, and which contribute nothing.
+ * straight through. A row records the template it reported under, but that says
+ * which workbook it came from, not which table credits: the `sentOn`,
+ * `received` and `processed` tables each appear in more than one template. Which
+ * of them credits is a question about the accreditation, so the caller supplies
+ * the accreditation's processing type and it decides which rows credit, which
+ * deduct, and which contribute nothing.
  *
  * @typedef {Object} AccreditationContext
  * @property {WasteProcessingTypeValue} wasteProcessingType
@@ -128,7 +138,7 @@ const expandMonthRange = ({ fromMonth, toMonth }) => {
  * and deducts its `sentOn` rows (its `processed` rows are supplementary). Every
  * other row type under each accreditation contributes nothing.
  *
- * @param {WasteRecordState} rowState
+ * @param {CreditableWasteRecordState} rowState
  * @param {ProcessingType} processingType
  * @returns {RowContribution | null}
  */
@@ -202,7 +212,7 @@ const contributionFor = (rowState, processingType) => {
  * unparseable, or outside the range are dropped and counted in
  * `skippedRowCount`. Sums are decimal-safe to 2dp.
  *
- * @param {WasteRecordState[]} rowStates
+ * @param {CreditableWasteRecordState[]} rowStates
  * @param {AccreditationContext} accreditation
  * @param {MonthRange} monthRange
  * @returns {CreditedTonnageByMonth}

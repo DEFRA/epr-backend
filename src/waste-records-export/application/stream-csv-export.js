@@ -154,17 +154,13 @@ async function* streamRegistrationRows({
 
   const rowStatesSorted = [...rowStates].sort(sortRowStates)
 
-  // One summary log is one uploaded workbook, so every row in it reports under
-  // that workbook's template, and the rows record which one.
-  const [{ processingType }] = rowStatesSorted
-
   for (const rowState of rowStatesSorted) {
     // The waste-balance columns answer as of the same moment as the Accredited
     // and OSR columns beside them, which read the accreditation and the
     // registration's overseas sites as they stand at export time.
     const { classification } = reclassifyWasteRecordState(
       toWasteRecordState(rowState),
-      { processingType, accreditation, overseasSites }
+      { accreditation, overseasSites }
     )
 
     yield await encodeRow(
