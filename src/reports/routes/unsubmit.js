@@ -3,10 +3,8 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
-import {
-  fetchReportBySubmissionNumber,
-  isLatestSubmission
-} from '#reports/application/report-service.js'
+import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
+import { isLatestSubmission } from '#reports/application/resubmission-service.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT

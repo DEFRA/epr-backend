@@ -296,9 +296,10 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
       const slot = result.reports.monthly[DEFAULT_REPORT_PERIOD]
 
       expect(slot.current.resubmissionRequired).toEqual({
-        uploadedAt: '2026-06-01T12:00:00.000Z',
-        reason: 'closed_period_restated',
-        summaryLogId: 'sl-resub'
+        closedPeriodRestated: {
+          uploadedAt: '2026-06-01T12:00:00.000Z',
+          summaryLogId: 'sl-resub'
+        }
       })
     })
   })

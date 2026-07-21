@@ -29,6 +29,7 @@ const {
   auditReportDelete,
   auditMarkReportsStale,
   auditMarkReportsRequiringResubmission,
+  auditReportRequestResubmission,
   MARK_STALE_ACTION
 } = await import('./audit.js')
 
@@ -300,9 +301,10 @@ const prnCancelled = {
 
 /** @type {import('#reports/repository/port.js').ReportResubmissionRequired} */
 const resubmissionRequired = {
-  uploadedAt: '2025-06-01T12:00:00.000Z',
-  reason: 'closed_period_restated',
-  summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+  closedPeriodRestated: {
+    uploadedAt: '2025-06-01T12:00:00.000Z',
+    summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+  }
 }
 
 const flaggedReport = {
@@ -437,6 +439,54 @@ describe('auditReportCreate', () => {
         category: 'waste-reporting',
         subCategory: 'reports',
         action: 'create'
+      },
+      context: params
+    })
+  })
+})
+
+describe('auditReportRequestResubmission', () => {
+  const params = {
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    year: 2025,
+    cadence: 'quarterly',
+    period: 1,
+    submissionNumber: 2,
+    reportId: 'rep-1',
+    resubmissionRequired: {
+      operatorRequested: {
+        requestedAt: '2025-06-01T12:00:00.000Z',
+        requestedBy: { id: 'user-1', name: 'Alice', position: 'Officer' }
+      }
+    }
+  }
+
+  it('sends CDP audit event', async () => {
+    await auditReportRequestResubmission(createMockRequest(), params)
+
+    expect(mockAudit).toHaveBeenCalledWith({
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'reports',
+        action: 'request-resubmission'
+      },
+      context: params,
+      user
+    })
+  })
+
+  it('records system log', async () => {
+    await auditReportRequestResubmission(createMockRequest(), params)
+
+    const storedLog = await findStoredLog()
+    expect(storedLog).toEqual({
+      createdAt: new Date('2025-06-01T12:00:00.000Z'),
+      createdBy: user,
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'reports',
+        action: 'request-resubmission'
       },
       context: params
     })
