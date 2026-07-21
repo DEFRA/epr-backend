@@ -250,16 +250,21 @@ export const creditedTonnageByMonth = (
       bucket.totalCredited = toNumber(
         addRounded(bucket.totalCredited, contribution.tonnage, 2)
       )
-      if (includedInBalance) {
-        bucket.eligibleForWasteBalance = toNumber(
-          addRounded(
-            bucket.eligibleForWasteBalance,
-            rowState.classification.transactionAmount,
-            2
-          )
+    }
+
+    if (!includedInBalance) {
+      continue
+    }
+
+    if (contribution.credits) {
+      bucket.eligibleForWasteBalance = toNumber(
+        addRounded(
+          bucket.eligibleForWasteBalance,
+          rowState.classification.transactionAmount,
+          2
         )
-      }
-    } else if (includedInBalance) {
+      )
+    } else {
       bucket.sentOnDeductions = toNumber(
         addRounded(
           bucket.sentOnDeductions,
