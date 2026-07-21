@@ -807,7 +807,7 @@ describe('streamCsvExport', () => {
     expect(out[2].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('10')
   })
 
-  it('renders a stamped NOT_APPLICABLE classification as NA with blank reason and tonnage', async () => {
+  it('renders a row with no active accreditation as NA with blank reason and tonnage', async () => {
     const deps = await buildDeps({
       orgs: [baseOrg({ registrations: [baseRegistration()] })],
       seeds: [{ rows: [receivedRowState()] }]

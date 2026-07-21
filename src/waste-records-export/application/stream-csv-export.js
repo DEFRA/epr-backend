@@ -141,6 +141,9 @@ async function* streamRegistrationRows({
       ledgerId,
       latestSummaryLogId
     )
+  if (rowStates.length === 0) {
+    return
+  }
 
   const summaryLogMap = await loadSummaryLogMap(
     summaryLogsRepository,
@@ -150,34 +153,29 @@ async function* streamRegistrationRows({
   const summaryLogEntry = summaryLogMap.get(latestSummaryLogId) ?? null
 
   const rowStatesSorted = [...rowStates].sort(sortRowStates)
-  const [firstRowState] = rowStatesSorted
-  if (!firstRowState) {
-    return
-  }
 
   // One summary log is one uploaded workbook, so every row in it reports under
   // that workbook's template, and the rows record which one.
-  const { processingType } = firstRowState
+  const [{ processingType }] = rowStatesSorted
 
-  // The extract's other columns read the accreditation and overseas sites as
-  // they stand now, so its waste-balance columns have to be derived from the
-  // same context — a classification stamped at submission would contradict the
-  // Accredited and OSR columns beside it as soon as either changed.
+  // The waste-balance columns answer as of the same moment as the Accredited
+  // and OSR columns beside them, which read the accreditation and the
+  // registration's overseas sites as they stand at export time.
   const liveStates = reclassifyWasteRecordStates(
     rowStatesSorted.map(toWasteRecordState),
     { processingType, accreditation, overseasSites }
   )
 
-  for (const state of liveStates) {
+  for (const [index, rowState] of rowStatesSorted.entries()) {
     yield await encodeRow(
       buildDataRow({
         org,
         registration,
         accreditation,
-        data: coerceForExport({ ...state, processingType }),
-        wasteRecordType: state.wasteRecordType,
-        rowId: state.rowId,
-        classification: state.classification,
+        data: coerceForExport(rowState),
+        wasteRecordType: rowState.wasteRecordType,
+        rowId: rowState.rowId,
+        classification: liveStates[index].classification,
         summaryLogEntry,
         overseasSites,
         dataFieldColumns
