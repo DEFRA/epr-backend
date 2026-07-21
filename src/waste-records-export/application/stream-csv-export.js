@@ -6,6 +6,8 @@ import { resolveAccreditation } from '#domain/organisations/registration-utils.j
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-submitted-summary-log-id.js'
+import { toWasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
+import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
 import {
   buildHeaderRow,
   buildDataRow,
@@ -60,7 +62,7 @@ const sortRowStates = (a, b) => {
  * top-level field on the row state, is merged back onto the data both to select
  * the schema and to fill its metadata column.
  *
- * @param {SummaryLogRowState} rowState
+ * @param {Pick<SummaryLogRowState, 'data' | 'processingType' | 'wasteRecordType'>} rowState
  * @returns {Record<string, any>}
  */
 const coerceForExport = ({ data, processingType, wasteRecordType }) => {
@@ -148,17 +150,34 @@ async function* streamRegistrationRows({
   const summaryLogEntry = summaryLogMap.get(latestSummaryLogId) ?? null
 
   const rowStatesSorted = [...rowStates].sort(sortRowStates)
+  const [firstRowState] = rowStatesSorted
+  if (!firstRowState) {
+    return
+  }
 
-  for (const rowState of rowStatesSorted) {
+  // One summary log is one uploaded workbook, so every row in it reports under
+  // that workbook's template, and the rows record which one.
+  const { processingType } = firstRowState
+
+  // The extract's other columns read the accreditation and overseas sites as
+  // they stand now, so its waste-balance columns have to be derived from the
+  // same context — a classification stamped at submission would contradict the
+  // Accredited and OSR columns beside it as soon as either changed.
+  const liveStates = reclassifyWasteRecordStates(
+    rowStatesSorted.map(toWasteRecordState),
+    { processingType, accreditation, overseasSites }
+  )
+
+  for (const state of liveStates) {
     yield await encodeRow(
       buildDataRow({
         org,
         registration,
         accreditation,
-        data: coerceForExport(rowState),
-        wasteRecordType: rowState.wasteRecordType,
-        rowId: rowState.rowId,
-        classification: rowState.classification,
+        data: coerceForExport({ ...state, processingType }),
+        wasteRecordType: state.wasteRecordType,
+        rowId: state.rowId,
+        classification: state.classification,
         summaryLogEntry,
         overseasSites,
         dataFieldColumns
