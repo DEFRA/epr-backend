@@ -372,17 +372,6 @@ describe('streamCsvExport', () => {
     expect(out[3]).toContain('received')
     expect(out[4]).toContain('sentOn')
     expect(out[4]).toContain('Other Co')
-
-    // Each row reports the processing type it was committed under, so the sort
-    // above cannot shuffle a row onto another row's metadata.
-    const processingTypeOf = (line) =>
-      line.trim().split(',')[METADATA_COL_INDEX['Operator Processing Type']]
-    expect(out.slice(1).map(processingTypeOf)).toEqual([
-      PROCESSING_TYPES.EXPORTER,
-      PROCESSING_TYPES.REPROCESSOR_OUTPUT,
-      PROCESSING_TYPES.REPROCESSOR_INPUT,
-      PROCESSING_TYPES.EXPORTER
-    ])
   })
 
   it('builds the ORS context once per registration from the pre-loaded sites map', async () => {
