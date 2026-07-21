@@ -5,6 +5,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { isLatestSubmission } from '#reports/application/resubmission-service.js'
+import { isResubmissionRequired } from '#reports/domain/resubmission.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -60,6 +61,14 @@ export const reportsUnsubmit = {
     if (report.status.currentStatus !== REPORT_STATUS.SUBMITTED) {
       throw Boom.conflict(
         `Cannot unsubmit a report with status '${report.status.currentStatus}'`
+      )
+    }
+
+    // An operator has already been asked to resubmit this report. Unsubmitting
+    // it now would silently clear that outstanding requirement.
+    if (isResubmissionRequired(report.resubmissionRequired)) {
+      throw Boom.conflict(
+        `Cannot unsubmit submission ${submissionNumber}: it is marked as requiring resubmission`
       )
     }
 

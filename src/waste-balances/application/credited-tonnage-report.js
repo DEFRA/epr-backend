@@ -1,5 +1,6 @@
 import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.js'
-import { liveClassifiedRowStates } from '#waste-records/application/live-classified-row-states.js'
+import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
+import { toWasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
 import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
 import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
@@ -218,10 +219,13 @@ export const buildCreditedTonnageReport = async ({
         ledgerId,
         summaryLogId
       )
-    const rowStates = liveClassifiedRowStates(storedRowStates, {
-      accreditation,
-      overseasSites: buildOverseasSitesContext(registration, sitesById)
-    })
+    const rowStates = reclassifyWasteRecordStates(
+      storedRowStates.map(toWasteRecordState),
+      {
+        accreditation,
+        overseasSites: buildOverseasSitesContext(registration, sitesById)
+      }
+    )
 
     const { months, skippedRowCount } = creditedTonnageByMonth(
       rowStates,
