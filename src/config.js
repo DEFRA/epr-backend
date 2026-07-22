@@ -375,6 +375,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_REPORT'
+    },
+    preCpaResubmissionBackfill: {
+      doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768). Only takes effect when closedPeriodAdjustments is also enabled.',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
     }
   },
   formSubmissionOverrides: {

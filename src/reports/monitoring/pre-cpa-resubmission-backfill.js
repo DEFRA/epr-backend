@@ -7,25 +7,31 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { periodForDate } from '#reports/domain/period-for-date.js'
 import { periodKey } from '#reports/domain/period-key.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
+import { isResubmissionRequired } from '#reports/domain/resubmission.js'
+import { auditMarkReportsRequiringResubmission } from '#reports/application/audit.js'
 
 /**
  * @typedef {import('#reports/repository/port.js').PeriodicReport} PeriodicReport
  * @typedef {import('#reports/repository/port.js').ReportPerPeriod} ReportPerPeriod
  * @typedef {import('#reports/repository/port.js').ReportSummary} ReportSummary
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
+ * @typedef {import('#reports/repository/port.js').MarkSubmittedReportRequiringResubmissionResult} MarkSubmittedReportRequiringResubmissionResult
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowState} SummaryLogRowState
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} SummaryLogRowStateRepository
  * @typedef {import('#waste-records/repository/port.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  * @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository
  * @typedef {{ reportingDateFields: string[] }} TableSchema
  */
 
 /**
- * Startup diagnostic (PAE-1747): retrospectively sizes the reports a later
- * summary-log upload restated in an already-closed period -- the ones CPA
- * (closed-period adjustments) would flag as needing resubmission once enabled.
- * Read-only: writes nothing, backfills no flags.
+ * Startup diagnostic (PAE-1747) and backfill (PAE-1768): retrospectively finds
+ * the reports a later summary-log upload restated in an already-closed period
+ * -- the ones CPA (closed-period adjustments) would flag as needing
+ * resubmission once enabled. `findPreCpaResubmissionReports` itself is
+ * read-only; the backfill write path built on top of it lives in
+ * `run-pre-cpa-resubmission-backfill.js`, gated by its own feature flag.
  *
  * A deliberately one-off diagnostic that REIMPLEMENTS the CPA rule rather than
  * calling the live path. Live CPA derives resubmission from waste-records; the
@@ -65,6 +71,7 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
  * @property {number} period
  * @property {string} reportSubmittedAt
  * @property {string} restatingSummaryLogId
+ * @property {string} restatingSummaryLogUploadedAt
  */
 
 /**
@@ -139,10 +146,15 @@ const earliestSubmittedAtOf = (submissions) => {
 
 /**
  * Classifies one submitted period slot, attributing to its latest submitted
- * report (highest submissionNumber). Returns that report when it carries a
- * submittedAt; a missing one cannot be placed in the timeline (it fails every
- * gate comparison silently), so it is surfaced under `missing` for review. Null
- * when the period has no submitted submission.
+ * report (highest submissionNumber). A missing submittedAt is always
+ * surfaced under `missing` for review, even when the report is also already
+ * flagged, since it fails every gate comparison silently and is a
+ * data-integrity anomaly independent of the resubmission-required state.
+ * Otherwise, a report already requiring resubmission for any reason
+ * (CPA-flagged or operator-requested) is not a fresh gap -- it is already
+ * surfaced to operators -- so it is excluded entirely rather than
+ * re-counted or re-flagged. Null when the period has no submitted
+ * submission, is missing its submittedAt, or is already flagged.
  *
  * @param {{ pr: PeriodicReport, cadence: string, period: number, slot: ReportPerPeriod }} entry
  * @returns {{ report?: SubmittedReport, missing?: ReportIdentity } | null}
@@ -163,6 +175,9 @@ const classifySlot = ({ pr, cadence, period, slot }) => {
   }
   if (!attributed.submittedAt) {
     return { missing: identity }
+  }
+  if (isResubmissionRequired(attributed.resubmissionRequired)) {
+    return null
   }
   return {
     report: {
@@ -453,7 +468,7 @@ const closedRestatements = (row, previousByRow, reportByPeriodKey, current) => {
 
 /**
  * @param {SubmittedReport} report
- * @param {{ id: string }} current
+ * @param {{ id: string, submittedAt: string }} current
  * @param {string} organisationId
  * @param {string} registrationId
  * @returns {PreCpaResubmissionFinding}
@@ -466,7 +481,8 @@ const buildFinding = (report, current, organisationId, registrationId) => ({
   cadence: report.cadence,
   period: report.period,
   reportSubmittedAt: report.reportSubmittedAt,
-  restatingSummaryLogId: current.id
+  restatingSummaryLogId: current.id,
+  restatingSummaryLogUploadedAt: current.submittedAt
 })
 
 /**
@@ -651,7 +667,8 @@ export const formatPreCpaResubmissionFinding = (finding) =>
   `registration ${finding.registrationId}, report ${finding.reportId} ` +
   `(${formatPeriodLabel(finding.cadence, finding.period, finding.year)}, ${finding.cadence}) -- ` +
   `closed period restated by summary log ${finding.restatingSummaryLogId} ` +
-  `uploaded after the report was submitted ${finding.reportSubmittedAt}`
+  `uploaded ${finding.restatingSummaryLogUploadedAt}, after the report was ` +
+  `submitted ${finding.reportSubmittedAt}`
 
 /**
  * Distinct organisations and registrations a set of findings touches -- the
@@ -664,3 +681,157 @@ export const summarisePreCpaResubmissionFindings = (findings) => ({
   affectedOrganisations: new Set(findings.map((f) => f.organisationId)).size,
   affectedRegistrations: new Set(findings.map((f) => f.registrationId)).size
 })
+
+/**
+ * Groups findings by the exact key `markSubmittedReportsRequiringResubmission`
+ * writes under -- one org/registration/summaryLogId batch shares a single
+ * `uploadedAt` and periods list, mirroring how the live CPA event handler
+ * calls the same repository method per upload.
+ *
+ * @param {PreCpaResubmissionFinding[]} findings
+ * @returns {{
+ *   organisationId: string,
+ *   registrationId: string,
+ *   summaryLogId: string,
+ *   uploadedAt: string,
+ *   periods: import('#reports/domain/period-key.js').PeriodRef[],
+ *   expectedReportIds: Set<string>
+ * }[]}
+ */
+const groupFindingsBySummaryLog = (findings) => {
+  const groups = new Map()
+  for (const finding of findings) {
+    const key = `${finding.organisationId}::${finding.registrationId}::${finding.restatingSummaryLogId}`
+    const group = groups.get(key) ?? {
+      organisationId: finding.organisationId,
+      registrationId: finding.registrationId,
+      summaryLogId: finding.restatingSummaryLogId,
+      uploadedAt: finding.restatingSummaryLogUploadedAt,
+      periods: [],
+      expectedReportIds: new Set()
+    }
+    group.periods.push({
+      year: finding.year,
+      cadence: finding.cadence,
+      period: finding.period
+    })
+    group.expectedReportIds.add(finding.reportId)
+    groups.set(key, group)
+  }
+  return [...groups.values()]
+}
+
+/**
+ * `markSubmittedReportsRequiringResubmission` re-derives "the latest
+ * submitted report per period" itself at write time (mongodb-flagging.js),
+ * independently of which report the scan attributed the finding to. If a
+ * period was resubmitted in the window between the scan and this write, the
+ * two can diverge -- the write would then flag a newer report than the one
+ * the finding (and its log line) describe. `expectedReportIds` is the set
+ * the scan attributed each period in this group to; any flagged id outside
+ * it is surfaced here rather than silently trusted.
+ *
+ * @param {Set<string>} expectedReportIds
+ * @param {MarkSubmittedReportRequiringResubmissionResult[]} flaggedReports
+ * @returns {string[]}
+ */
+const unexpectedlyFlaggedReportIds = (expectedReportIds, flaggedReports) =>
+  flaggedReports
+    .map((report) => report.reportId)
+    .filter((reportId) => !expectedReportIds.has(reportId))
+
+/**
+ * Backfill (PAE-1768): retrospectively sets `resubmissionRequired.closedPeriodRestated`
+ * on every report `findPreCpaResubmissionReports` finds, using the same
+ * idempotent, already-audited write path the live CPA event handler uses
+ * (`markSubmittedReportsRequiringResubmission`) -- one call per
+ * org/registration/summaryLogId group, each flagging that group's periods'
+ * latest submitted reports as requiring resubmission at the upload that first
+ * made them stale. Findings already exclude any report that requires
+ * resubmission for any reason (see classifySlot), so this only ever adds
+ * `closedPeriodRestated` to reports that had nothing set.
+ *
+ * Each group's write and audit are isolated in their own try/catch: one
+ * group failing (a transient write error, say) is recorded in `failed`
+ * rather than aborting every other group's already-in-flight or
+ * not-yet-attempted work for this run.
+ *
+ * @param {{
+ *   reportsRepository: ReportsRepository,
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   systemLogsRepository: SystemLogsRepository
+ * }} deps
+ * @returns {Promise<{
+ *   findings: PreCpaResubmissionFinding[],
+ *   ignoredInClosedPeriods: PreCpaResubmissionFinding[],
+ *   reportsMissingSubmittedAt: ReportIdentity[],
+ *   flagged: MarkSubmittedReportRequiringResubmissionResult[],
+ *   unexpectedlyFlaggedReportIds: string[],
+ *   failed: Array<{ organisationId: string, registrationId: string, summaryLogId: string, error: Error }>
+ * }>}
+ */
+export const backfillPreCpaResubmissionReports = async ({
+  reportsRepository,
+  summaryLogsRepository,
+  summaryLogRowStateRepository,
+  organisationsRepository,
+  systemLogsRepository
+}) => {
+  const { findings, ignoredInClosedPeriods, reportsMissingSubmittedAt } =
+    await findPreCpaResubmissionReports({
+      reportsRepository,
+      summaryLogsRepository,
+      summaryLogRowStateRepository,
+      organisationsRepository
+    })
+
+  const flagged = []
+  const unexpected = []
+  const failed = []
+  for (const { expectedReportIds, ...group } of groupFindingsBySummaryLog(
+    findings
+  )) {
+    try {
+      const reportsRequiringResubmission =
+        await reportsRepository.markSubmittedReportsRequiringResubmission(group)
+
+      if (reportsRequiringResubmission.length === 0) {
+        continue
+      }
+
+      unexpected.push(
+        ...unexpectedlyFlaggedReportIds(
+          expectedReportIds,
+          reportsRequiringResubmission
+        )
+      )
+
+      flagged.push(...reportsRequiringResubmission)
+
+      await auditMarkReportsRequiringResubmission({
+        systemLogsRepository,
+        organisationId: group.organisationId,
+        registrationId: group.registrationId,
+        reportsRequiringResubmission
+      })
+    } catch (error) {
+      failed.push({
+        organisationId: group.organisationId,
+        registrationId: group.registrationId,
+        summaryLogId: group.summaryLogId,
+        error: /** @type {Error} */ (error)
+      })
+    }
+  }
+
+  return {
+    findings,
+    ignoredInClosedPeriods,
+    reportsMissingSubmittedAt,
+    flagged,
+    unexpectedlyFlaggedReportIds: unexpected,
+    failed
+  }
+}

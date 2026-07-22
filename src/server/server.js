@@ -47,7 +47,7 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
 import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
-import { runPreCpaResubmissionReport } from '#server/run-pre-cpa-resubmission-report.js'
+import { runPreCpaResubmissionBackfill } from '#server/run-pre-cpa-resubmission-backfill.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -227,7 +227,7 @@ async function createServer(options = {}) {
     runOrganisationValidationSweep(server)
     runDuplicateAccreditationLinkMigration(server)
     runStaleIssuedTonnageReport(server)
-    runPreCpaResubmissionReport(server)
+    runPreCpaResubmissionBackfill(server)
   })
 
   return server

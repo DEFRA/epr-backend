@@ -10,9 +10,10 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import {
   findPreCpaResubmissionReports,
+  backfillPreCpaResubmissionReports,
   formatPreCpaResubmissionFinding,
   summarisePreCpaResubmissionFindings
-} from './pre-cpa-resubmission.js'
+} from './pre-cpa-resubmission-backfill.js'
 
 const newId = () => new ObjectId().toHexString()
 
@@ -35,7 +36,8 @@ const buildStoredReport = ({
   period = 6,
   year = 2025,
   cadence = 'monthly',
-  currentStatus = 'submitted'
+  currentStatus = 'submitted',
+  resubmissionRequired
 }) => ({
   id: reportId,
   version: 1,
@@ -56,7 +58,8 @@ const buildStoredReport = ({
       ? { submitted: { at: submittedAt, by: ACTOR } }
       : {}),
     history: [{ status: currentStatus, at: submittedAt, by: ACTOR }]
-  }
+  },
+  ...(resubmissionRequired ? { resubmissionRequired } : {})
 })
 
 const buildOrganisationWithAccreditation = ({
@@ -214,9 +217,51 @@ describe('findPreCpaResubmissionReports', () => {
       cadence: 'monthly',
       period: 6,
       reportSubmittedAt: '2025-07-01T00:00:00.000Z',
-      restatingSummaryLogId: 'sl-restating'
+      restatingSummaryLogId: 'sl-restating',
+      restatingSummaryLogUploadedAt: '2025-08-01T00:00:00.000Z'
     })
     expect(ignoredInClosedPeriods).toEqual([])
+  })
+
+  it('excludes a report that already requires resubmission for any reason', async () => {
+    const reg = {
+      organisationId: newId(),
+      registrationId: newId(),
+      accreditationId: newId(),
+      reports: [
+        {
+          reportId: 'report-1',
+          submittedAt: '2025-07-01T00:00:00.000Z',
+          resubmissionRequired: {
+            operatorRequested: {
+              requestedAt: '2025-07-10T00:00:00.000Z',
+              requestedBy: { id: 'u2', name: 'Operator' }
+            }
+          }
+        }
+      ],
+      logs: [
+        { id: 'sl-original', submittedAt: '2025-06-25T00:00:00.000Z' },
+        { id: 'sl-restating', submittedAt: '2025-08-01T00:00:00.000Z' }
+      ],
+      rowStates: [
+        {
+          id: 'rs-original',
+          summaryLogIds: ['sl-original'],
+          dateReceived: '2025-06-15'
+        },
+        {
+          id: 'rs-restated',
+          summaryLogIds: ['sl-restating'],
+          dateReceived: '2025-06-15'
+        }
+      ]
+    }
+
+    const { scanned, findings } = await run(await buildRepos([reg]))
+
+    expect(scanned).toBe(0)
+    expect(findings).toEqual([])
   })
 
   it('does not flag when a later upload only changes a row in a still-open period', async () => {
@@ -1072,6 +1117,302 @@ describe('findPreCpaResubmissionReports', () => {
   })
 })
 
+describe('backfillPreCpaResubmissionReports', () => {
+  const buildSystemLogsRepository = () =>
+    /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ ({
+      insert: async () => {},
+      insertMany: async () => {},
+      find: async () => ({
+        systemLogs: [],
+        hasNext: false,
+        hasPrev: false,
+        nextCursor: null,
+        prevCursor: null
+      }),
+      findSummaryLogSubmitActors: async () => []
+    })
+
+  const singleFindingReg = () => ({
+    organisationId: newId(),
+    registrationId: newId(),
+    accreditationId: newId(),
+    reports: [
+      { reportId: 'report-1', submittedAt: '2025-07-01T00:00:00.000Z' }
+    ],
+    logs: [
+      { id: 'sl-original', submittedAt: '2025-06-25T00:00:00.000Z' },
+      { id: 'sl-restating', submittedAt: '2025-08-01T00:00:00.000Z' }
+    ],
+    rowStates: [
+      {
+        id: 'rs-original',
+        summaryLogIds: ['sl-original'],
+        dateReceived: '2025-06-15'
+      },
+      {
+        id: 'rs-restated',
+        summaryLogIds: ['sl-restating'],
+        dateReceived: '2025-06-15'
+      }
+    ]
+  })
+
+  it('flags every finding via the shared idempotent write path and returns them', async () => {
+    const reg = singleFindingReg()
+    const repos = await buildRepos([reg])
+
+    const { findings, flagged } = await backfillPreCpaResubmissionReports({
+      ...repos,
+      systemLogsRepository: buildSystemLogsRepository()
+    })
+
+    expect(findings).toHaveLength(1)
+    expect(flagged).toHaveLength(1)
+    expect(flagged[0]).toMatchObject({
+      reportId: 'report-1',
+      resubmissionRequired: {
+        closedPeriodRestated: {
+          uploadedAt: '2025-08-01T00:00:00.000Z',
+          summaryLogId: 'sl-restating'
+        }
+      }
+    })
+
+    // The flag persisted: excluded from a second scan (see the idempotent-run
+    // test below), not just returned from this call.
+  })
+
+  it('returns no-ops without re-flagging or erroring on a second run (idempotent)', async () => {
+    const reg = singleFindingReg()
+    const repos = await buildRepos([reg])
+    const systemLogsRepository = buildSystemLogsRepository()
+
+    await backfillPreCpaResubmissionReports({ ...repos, systemLogsRepository })
+    const second = await backfillPreCpaResubmissionReports({
+      ...repos,
+      systemLogsRepository
+    })
+
+    // Once flagged, classifySlot excludes the report from future findings too.
+    expect(second.findings).toEqual([])
+    expect(second.flagged).toEqual([])
+  })
+
+  it('is a no-op when there are no findings', async () => {
+    const repos = await buildRepos([])
+
+    const { findings, flagged } = await backfillPreCpaResubmissionReports({
+      ...repos,
+      systemLogsRepository: buildSystemLogsRepository()
+    })
+
+    expect(findings).toEqual([])
+    expect(flagged).toEqual([])
+  })
+
+  it('groups findings from the same registration and summary log into one write call', async () => {
+    const reg = {
+      organisationId: newId(),
+      registrationId: newId(),
+      accreditationId: newId(),
+      reports: [
+        {
+          reportId: 'report-may',
+          period: 5,
+          submittedAt: '2025-07-01T00:00:00.000Z'
+        },
+        {
+          reportId: 'report-jun',
+          period: 6,
+          submittedAt: '2025-07-01T00:00:00.000Z'
+        }
+      ],
+      logs: [
+        { id: 'sl-original', submittedAt: '2025-06-25T00:00:00.000Z' },
+        { id: 'sl-restating', submittedAt: '2025-08-01T00:00:00.000Z' }
+      ],
+      rowStates: [
+        {
+          id: 'rs-exp-original',
+          summaryLogIds: ['sl-original'],
+          processingType: PROCESSING_TYPES.EXPORTER,
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          data: {
+            DATE_RECEIVED_FOR_EXPORT: '2025-05-10',
+            DATE_OF_EXPORT: '2025-06-10'
+          }
+        },
+        {
+          id: 'rs-exp-restated',
+          summaryLogIds: ['sl-restating'],
+          processingType: PROCESSING_TYPES.EXPORTER,
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          data: {
+            DATE_RECEIVED_FOR_EXPORT: '2025-05-15',
+            DATE_OF_EXPORT: '2025-06-15'
+          }
+        }
+      ]
+    }
+    const repos = await buildRepos([reg])
+
+    const { findings, flagged } = await backfillPreCpaResubmissionReports({
+      ...repos,
+      systemLogsRepository: buildSystemLogsRepository()
+    })
+
+    expect(findings).toHaveLength(2)
+    expect(flagged).toHaveLength(2)
+    expect(new Set(flagged.map((f) => f.reportId))).toEqual(
+      new Set(['report-may', 'report-jun'])
+    )
+  })
+
+  it("surfaces the diagnostic scan's invariant probe and missing-submittedAt anomalies", async () => {
+    const reg = {
+      organisationId: newId(),
+      registrationId: newId(),
+      accreditationId: newId(),
+      reports: [{ reportId: 'report-1', submittedAt: undefined }],
+      logs: [
+        { id: 'sl-original', submittedAt: '2025-06-25T00:00:00.000Z' },
+        { id: 'sl-restating', submittedAt: '2025-08-01T00:00:00.000Z' }
+      ],
+      rowStates: [
+        {
+          id: 'rs-original',
+          summaryLogIds: ['sl-original'],
+          dateReceived: '2025-06-15'
+        },
+        {
+          id: 'rs-restated',
+          summaryLogIds: ['sl-restating'],
+          dateReceived: '2025-06-15'
+        }
+      ]
+    }
+    const repos = await buildRepos([reg])
+
+    const { findings, flagged, reportsMissingSubmittedAt } =
+      await backfillPreCpaResubmissionReports({
+        ...repos,
+        systemLogsRepository: buildSystemLogsRepository()
+      })
+
+    expect(findings).toEqual([])
+    expect(flagged).toEqual([])
+    expect(reportsMissingSubmittedAt).toHaveLength(1)
+    expect(reportsMissingSubmittedAt[0]).toMatchObject({ reportId: 'report-1' })
+  })
+
+  it('flags a report missing its submittedAt as an anomaly even when already flagged for resubmission', async () => {
+    const reg = {
+      ...singleFindingReg(),
+      reports: [
+        {
+          reportId: 'report-1',
+          submittedAt: undefined,
+          resubmissionRequired: {
+            operatorRequested: {
+              requestedAt: '2025-07-10T00:00:00.000Z',
+              requestedBy: { id: 'u2', name: 'Operator' }
+            }
+          }
+        }
+      ]
+    }
+    const repos = await buildRepos([reg])
+
+    const { findings, reportsMissingSubmittedAt } =
+      await backfillPreCpaResubmissionReports({
+        ...repos,
+        systemLogsRepository: buildSystemLogsRepository()
+      })
+
+    expect(findings).toEqual([])
+    expect(reportsMissingSubmittedAt).toHaveLength(1)
+    expect(reportsMissingSubmittedAt[0]).toMatchObject({ reportId: 'report-1' })
+  })
+
+  it('flags a group as unexpectedly-flagged when the write returns a reportId the scan did not attribute', async () => {
+    const reg = singleFindingReg()
+    const repos = await buildRepos([reg])
+    const realWrite =
+      repos.reportsRepository.markSubmittedReportsRequiringResubmission
+    repos.reportsRepository = {
+      ...repos.reportsRepository,
+      markSubmittedReportsRequiringResubmission: async (params) => {
+        const result = await realWrite(params)
+        return result.map((r) => ({ ...r, reportId: 'some-other-report' }))
+      }
+    }
+
+    const { unexpectedlyFlaggedReportIds, flagged } =
+      await backfillPreCpaResubmissionReports({
+        ...repos,
+        systemLogsRepository: buildSystemLogsRepository()
+      })
+
+    expect(flagged).toHaveLength(1)
+    expect(unexpectedlyFlaggedReportIds).toEqual(['some-other-report'])
+  })
+
+  it("isolates one group's write failure so other groups still get flagged", async () => {
+    const failingReg = singleFindingReg()
+    const okReg = {
+      organisationId: newId(),
+      registrationId: newId(),
+      accreditationId: newId(),
+      reports: [
+        { reportId: 'report-ok', submittedAt: '2025-07-01T00:00:00.000Z' }
+      ],
+      logs: [
+        { id: 'sl2-original', submittedAt: '2025-06-25T00:00:00.000Z' },
+        { id: 'sl2-restating', submittedAt: '2025-08-01T00:00:00.000Z' }
+      ],
+      rowStates: [
+        {
+          id: 'rs2-original',
+          summaryLogIds: ['sl2-original'],
+          dateReceived: '2025-06-15'
+        },
+        {
+          id: 'rs2-restated',
+          summaryLogIds: ['sl2-restating'],
+          dateReceived: '2025-06-15'
+        }
+      ]
+    }
+    const repos = await buildRepos([failingReg, okReg])
+    const realWrite =
+      repos.reportsRepository.markSubmittedReportsRequiringResubmission
+    repos.reportsRepository = {
+      ...repos.reportsRepository,
+      markSubmittedReportsRequiringResubmission: async (params) => {
+        if (params.organisationId === failingReg.organisationId) {
+          throw new Error('write failed')
+        }
+        return realWrite(params)
+      }
+    }
+
+    const { flagged, failed } = await backfillPreCpaResubmissionReports({
+      ...repos,
+      systemLogsRepository: buildSystemLogsRepository()
+    })
+
+    expect(flagged).toHaveLength(1)
+    expect(flagged[0]).toMatchObject({ reportId: 'report-ok' })
+    expect(failed).toHaveLength(1)
+    expect(failed[0]).toMatchObject({
+      organisationId: failingReg.organisationId,
+      registrationId: failingReg.registrationId,
+      summaryLogId: 'sl-restating'
+    })
+    expect(failed[0].error).toBeInstanceOf(Error)
+  })
+})
+
 describe('formatPreCpaResubmissionFinding', () => {
   const finding = {
     organisationId: 'org-1',
@@ -1081,15 +1422,16 @@ describe('formatPreCpaResubmissionFinding', () => {
     cadence: 'monthly',
     period: 6,
     reportSubmittedAt: '2025-07-01T00:00:00.000Z',
-    restatingSummaryLogId: 'sl-restating'
+    restatingSummaryLogId: 'sl-restating',
+    restatingSummaryLogUploadedAt: '2025-08-01T00:00:00.000Z'
   }
 
   it('renders a finding as a single retrospective log line', () => {
     expect(formatPreCpaResubmissionFinding(finding)).toBe(
       'Pre-CPA resubmission (retrospective): org org-1 / registration reg-1, ' +
         'report report-1 (Jun 2025, monthly) -- closed period restated by ' +
-        'summary log sl-restating uploaded after the report was submitted ' +
-        '2025-07-01T00:00:00.000Z'
+        'summary log sl-restating uploaded 2025-08-01T00:00:00.000Z, after ' +
+        'the report was submitted 2025-07-01T00:00:00.000Z'
     )
   })
 

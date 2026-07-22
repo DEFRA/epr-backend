@@ -26,4 +26,13 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.preCpaResubmissionReport'
     )
   })
+
+  it('returns true when preCpaResubmissionBackfill flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.preCpaResubmissionBackfill'
+    )
+  })
 })
