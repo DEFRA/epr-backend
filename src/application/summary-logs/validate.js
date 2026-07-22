@@ -14,6 +14,7 @@ import {
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
+import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   findSchemaForProcessingType,
@@ -49,12 +50,13 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
+/** @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js' */
+/** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
 /** @import {LoadsByReportingPeriod} from './period-status.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
  * @param {{
@@ -93,7 +95,6 @@ const extractSummaryLog = async ({
  * }} params
  * @returns {Promise<{
  *   wasteRecords: ValidatedWasteRecord[],
- *   existingRecordsMap: Map<string, WasteRecord>,
  *   issues: ValidationIssuesCollector
  * }>}
  */
@@ -137,7 +138,7 @@ const transformAndValidateData = async ({
   // Data business validation using waste records
   const issues = validateDataBusiness({ wasteRecords, existingWasteRecords })
 
-  return { wasteRecords, existingRecordsMap, issues }
+  return { wasteRecords, issues }
 }
 
 /**
@@ -184,7 +185,6 @@ const fetchRegistration = async ({
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {Registration} [registration] - Registration fetched during validation
- * @property {Map<string, WasteRecord>} [existingRecordsMap] - Existing records map for adjusted record lookup
  */
 
 /**
@@ -311,8 +311,6 @@ const performValidationChecks = async ({
   let meta
   /** @type {Registration | undefined} */
   let registration
-  /** @type {Map<string, WasteRecord> | undefined} */
-  let existingRecordsMap
 
   try {
     const parsed = await extractSummaryLog({
@@ -367,7 +365,6 @@ const performValidationChecks = async ({
     })
 
     wasteRecords = dataResult.wasteRecords
-    existingRecordsMap = dataResult.existingRecordsMap
 
     markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
 
@@ -381,7 +378,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, wasteRecords, meta, registration, existingRecordsMap }
+  return { issues, wasteRecords, meta, registration }
 }
 
 /**
@@ -548,6 +545,46 @@ const persistValidationResult = async ({
 }
 
 /**
+ * Loads the registration's row state at its latest submitted summary log, keyed
+ * by `${wasteRecordType}:${rowId}` — the baseline the check-page projections
+ * classify this upload's rows against.
+ *
+ * The accreditation is resolved the same way the submit path partitions the
+ * ledger — the summary log's own accreditationId when present, otherwise the
+ * registration's — so the read pivots on the same stream the write appended to.
+ *
+ * @param {{
+ *   ledgerRepository: WasteBalanceLedgerRepository,
+ *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   summaryLog: SubmittedSummaryLog,
+ *   registration: Registration | undefined
+ * }} params
+ * @returns {Promise<Map<string, import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState>>}
+ */
+const loadSubmittedRowStatesByKey = async ({
+  ledgerRepository,
+  summaryLogRowStateRepository,
+  summaryLog,
+  registration
+}) => {
+  const submittedRowStates = await summaryLogRowStatesForRegistration({
+    ledgerRepository,
+    summaryLogRowStateRepository,
+    organisationId: summaryLog.organisationId,
+    registrationId: summaryLog.registrationId,
+    accreditationId:
+      summaryLog.accreditationId ?? registration?.accreditationId ?? null
+  })
+
+  return new Map(
+    submittedRowStates.map((state) => [
+      `${state.wasteRecordType}:${state.rowId}`,
+      state
+    ])
+  )
+}
+
+/**
  * Fetches periodic reports, classifies loads, and persists the validation result.
  */
 const classifyAndPersistResult = async ({
@@ -558,10 +595,11 @@ const classifyAndPersistResult = async ({
   wasteBalanceRecords,
   wasteRecords,
   registration,
-  existingRecordsMap,
   meta,
   summaryLog,
   summaryLogsRepository,
+  summaryLogRowStateRepository,
+  ledgerRepository,
   version,
   reportsService,
   organisationsRepository,
@@ -581,16 +619,22 @@ const classifyAndPersistResult = async ({
     overseasSitesRepository
   })
 
+  const submittedRowStatesByKey = await loadSubmittedRowStatesByKey({
+    ledgerRepository,
+    summaryLogRowStateRepository,
+    summaryLog,
+    registration
+  })
+
   const { loads, loadsByReportingPeriod } = classifyLoads({
     processingType,
     status,
-    summaryLogId,
     wasteBalanceRecords,
     wasteRecords,
     periodicReports,
     overseasSites,
     registration,
-    existingRecordsMap
+    submittedRowStatesByKey
   })
 
   await persistValidationResult({
@@ -614,6 +658,8 @@ const classifyAndPersistResult = async ({
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   wasteRecordsRepository: WasteRecordsRepository,
+ *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
  *   overseasSitesRepository: OverseasSitesRepository,
  *   summaryLogExtractor: SummaryLogExtractor
@@ -625,6 +671,8 @@ export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
   wasteRecordsRepository,
+  summaryLogRowStateRepository,
+  ledgerRepository,
   reportsService,
   overseasSitesRepository,
   summaryLogExtractor
@@ -650,7 +698,7 @@ export const createSummaryLogsValidator = ({
     })
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta, registration, existingRecordsMap } =
+    const { issues, wasteRecords, meta, registration } =
       await performValidationChecks({
         summaryLogId,
         summaryLog,
@@ -689,10 +737,11 @@ export const createSummaryLogsValidator = ({
       wasteBalanceRecords,
       wasteRecords,
       registration,
-      existingRecordsMap,
       meta,
       summaryLog,
       summaryLogsRepository,
+      summaryLogRowStateRepository,
+      ledgerRepository,
       version,
       reportsService,
       organisationsRepository,

@@ -71,6 +71,7 @@ describe('Repeated uploads of identical data', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
 
       // Set up organisation with registration
+      const accreditationId = new ObjectId().toString()
       const testOrg = buildReadOrganisation({
         registrations: [
           partialMock({
@@ -85,15 +86,22 @@ describe('Repeated uploads of identical data', () => {
             submittedToRegulator: 'ea',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
-            accreditation: partialMock({
-              accreditationNumber: 'ACC-2025-001',
-              validFrom: VALID_FROM,
-              validTo: VALID_TO,
-              statusHistory: [
-                { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-                { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-              ]
-            })
+            accreditationId
+          })
+        ],
+        accreditations: [
+          partialMock({
+            id: accreditationId,
+            accreditationNumber: 'ACC-2025-001',
+            material: 'glass',
+            wasteProcessingType: 'reprocessor',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            submittedToRegulator: 'ea',
+            statusHistory: [
+              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            ]
           })
         ]
       })
@@ -239,10 +247,19 @@ describe('Repeated uploads of identical data', () => {
         createInMemoryWasteRecordsRepository()
       wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
+      // Validate reads and submit writes the same latest-submitted row states,
+      // so both paths must share one ledger and one row-state repository.
+      const ledgerRepository = createInMemoryLedgerRepository()()
+      const summaryLogRowStateRepository =
+        createInMemorySummaryLogRowStateRepository()()
+      const featureFlags = createInMemoryFeatureFlags()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        summaryLogRowStateRepository,
+        ledgerRepository,
         summaryLogExtractor,
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
@@ -256,11 +273,8 @@ describe('Repeated uploads of identical data', () => {
       const syncWasteRecords = syncFromSummaryLog({
         extractor: summaryLogExtractor,
         wasteRecordRepository: wasteRecordsRepository,
-        wasteBalanceService: createWasteBalanceService(
-          createInMemoryLedgerRepository()()
-        ),
-        summaryLogRowStateRepository:
-          createInMemorySummaryLogRowStateRepository()(),
+        wasteBalanceService: createWasteBalanceService(ledgerRepository),
+        summaryLogRowStateRepository,
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])
@@ -279,15 +293,16 @@ describe('Repeated uploads of identical data', () => {
               existing
             )
 
-          await syncWasteRecords(summaryLog)
+          await syncWasteRecords(summaryLog, {
+            id: 'test-user',
+            email: 'test-user@example.com'
+          })
 
           await summaryLogsRepository.update(summaryLogId, version, {
             status: SUMMARY_LOG_STATUS.SUBMITTED
           })
         }
       }
-
-      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {

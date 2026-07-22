@@ -10,11 +10,10 @@ import {
   MAX_VALIDATION_ISSUES,
   MAX_ACTUAL_LENGTH
 } from './validate.js'
-import {
-  createEmptyLoadCategory,
-  createEmptyLoadValidity
-} from './load-counts.js'
+import { createEmptyLoadValidity } from './load-counts.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 
@@ -182,11 +181,17 @@ describe('SummaryLogsValidator', () => {
   let summaryLogsRepository
   let organisationsRepository
   let wasteRecordsRepository
+  let summaryLogRowStateRepository
+  let ledgerRepository
   let validateSummaryLog
   let summaryLogId
   let summaryLog
 
   beforeEach(async () => {
+    ledgerRepository = createInMemoryLedgerRepository()()
+    summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+
     summaryLogExtractor = {
       extract: vi.fn().mockResolvedValue({
         meta: buildMeta(),
@@ -250,6 +255,8 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      summaryLogRowStateRepository,
+      ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
@@ -677,6 +684,8 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      summaryLogRowStateRepository,
+      ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
@@ -722,6 +731,8 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      summaryLogRowStateRepository,
+      ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
       }),
@@ -921,44 +932,6 @@ describe('SummaryLogsValidator', () => {
 
       expect(updateCall.loads).toBeUndefined()
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
-    })
-
-    it('classifies existing records as unchanged when data has not changed', async () => {
-      // Same row data used for both existing record and new upload
-      const rowData = buildReceivedLoadRow()
-
-      wasteRecordsRepository.findByRegistration.mockResolvedValue([
-        buildExistingWasteRecord(rowData)
-      ])
-
-      summaryLogExtractor.extract.mockResolvedValue(
-        buildExtractedData({
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
-              rows: [rowData]
-            })
-          }
-        })
-      )
-
-      await validateSummaryLog(summaryLogId)
-
-      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
-
-      // Note: ROW_ID for unchanged comes from existing record (string)
-      expect(updateCall.loads).toEqual({
-        added: createEmptyLoadValidity(),
-        unchanged: {
-          valid: { count: 1, rowIds: ['10000'] },
-          invalid: createEmptyLoadCategory(),
-          included: { count: 1, rowIds: ['10000'] },
-          excluded: createEmptyLoadCategory()
-        },
-        adjusted: createEmptyLoadValidity()
-      })
-
-      // Reset the mock for other tests
-      wasteRecordsRepository.findByRegistration.mockResolvedValue([])
     })
 
     it('sets IGNORED outcome for Reprocessor Input loads with dates outside accreditation range', async () => {
