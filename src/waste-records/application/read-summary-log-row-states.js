@@ -1,4 +1,4 @@
-import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-submitted-summary-log-id.js'
+import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 
 /**
  * @typedef {import('#waste-records/repository/schema.js').SummaryLogRowState} SummaryLogRowState
@@ -73,18 +73,31 @@ export const wasteRecordStatesForHead = async (
 }
 
 /**
- * Waste record states of a registration at its latest submitted summary log.
- * The head resolves in one stream lookup against the ledger; the row states
- * are then read back for that same ledger at that submission, projected to
- * their domain content.
+ * A registration's latest submitted summary log together with the row states
+ * that belong to it — the baseline a subsequent upload is judged against.
  *
- * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & {
+ * @typedef {Object} PreviousSubmission
+ * @property {{ summaryLogId: string, submittedAt: Date }} summaryLog
+ * @property {WasteRecordState[]} wasteRecordStates
+ */
+
+/**
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & {
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
  *   summaryLogRowStateRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository
- * }} context
- * @returns {Promise<WasteRecordState[]>}
+ * }} RegistrationRowStateContext
  */
-export const summaryLogRowStatesForRegistration = async ({
+
+/**
+ * The registration's latest submitted summary log and its row states, or null
+ * when the registration has never submitted. The summary log resolves from the
+ * ledger in one stream lookup; the row states are then read back for that same
+ * ledger at that submission, projected to their domain content.
+ *
+ * @param {RegistrationRowStateContext} context
+ * @returns {Promise<PreviousSubmission | null>}
+ */
+export const latestSubmittedSummaryLogRowStates = async ({
   ledgerRepository,
   summaryLogRowStateRepository,
   organisationId,
@@ -93,7 +106,27 @@ export const summaryLogRowStatesForRegistration = async ({
 }) => {
   const ledgerId = { organisationId, registrationId, accreditationId }
 
-  const head = await latestSubmittedSummaryLogId(ledgerRepository, ledgerId)
+  const summaryLog = await latestSubmittedSummaryLog(ledgerRepository, ledgerId)
 
-  return wasteRecordStatesForHead(summaryLogRowStateRepository, ledgerId, head)
+  if (summaryLog === null) {
+    return null
+  }
+
+  const wasteRecordStates = await wasteRecordStatesForHead(
+    summaryLogRowStateRepository,
+    ledgerId,
+    summaryLog.summaryLogId
+  )
+
+  return { summaryLog, wasteRecordStates }
 }
+
+/**
+ * Waste record states of a registration at its latest submitted summary log,
+ * or an empty array when it has never submitted.
+ *
+ * @param {RegistrationRowStateContext} context
+ * @returns {Promise<WasteRecordState[]>}
+ */
+export const summaryLogRowStatesForRegistration = async (context) =>
+  (await latestSubmittedSummaryLogRowStates(context))?.wasteRecordStates ?? []
