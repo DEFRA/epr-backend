@@ -10,10 +10,17 @@ import {
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {PreviousSubmission} from '#waste-records/application/read-summary-log-row-states.js' */
 
 /**
- * Validates that no rows from previous uploads have been removed
+ * @param {string} wasteRecordType
+ * @param {string} rowId
+ * @returns {string}
+ */
+const rowKey = (wasteRecordType, rowId) => `${wasteRecordType}:${rowId}`
+
+/**
+ * Validates that no rows from the previous submission have been removed
  *
  * This validation ensures data integrity across sequential summary log submissions.
  * Once a waste balance entry has been submitted, it cannot be removed in future uploads.
@@ -22,73 +29,56 @@ import {
  * - Updated (corrections to existing entries)
  * - Unchanged (carried forward as-is)
  *
- * Only applies to subsequent uploads (not first-time uploads).
- * Missing rows result in FATAL errors that block submission.
+ * The rows that must be carried forward are the row states of the registration's
+ * latest submitted summary log, and that summary log is the one the FATAL names.
+ * Only applies to subsequent uploads (not first-time uploads). Missing rows result
+ * in FATAL errors that block submission.
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste records from the current upload
- * @param {WasteRecord[] | null | undefined} params.existingWasteRecords - Existing waste records from previous uploads
+ * @param {PreviousSubmission | null} params.previousSubmission - The latest submitted summary log with its row states, or null when the registration has never submitted
  * @returns {ValidationIssuesCollector} Validation issues object
  */
-export const validateRowContinuity = ({
-  wasteRecords,
-  existingWasteRecords
-}) => {
+export const validateRowContinuity = ({ wasteRecords, previousSubmission }) => {
   const issues = createValidationIssues()
 
-  if (!existingWasteRecords || existingWasteRecords.length === 0) {
+  if (previousSubmission === null) {
     return issues
   }
 
-  const existingRowKeys = new Set(
-    existingWasteRecords.map((record) => `${record.type}:${record.rowId}`)
+  const { summaryLog, wasteRecordStates } = previousSubmission
+
+  const uploadedRowKeys = new Set(
+    wasteRecords.map(({ record }) => rowKey(record.type, String(record.rowId)))
   )
 
-  const existingRecordsMap = new Map(
-    existingWasteRecords.map((record) => [
-      `${record.type}:${record.rowId}`,
-      record
-    ])
+  const removedRowStates = wasteRecordStates.filter(
+    ({ wasteRecordType, rowId }) =>
+      !uploadedRowKeys.has(rowKey(wasteRecordType, rowId))
   )
 
-  const newRowKeys = new Set(
-    wasteRecords.map(({ record }) => `${record.type}:${record.rowId}`)
-  )
+  for (const { wasteRecordType, rowId } of removedRowStates) {
+    const match = findSchemaByWasteRecordType(
+      wasteRecordType,
+      PROCESSING_TYPE_TABLES
+    )
 
-  const missingRowKeys = [...existingRowKeys].filter(
-    (key) => !newRowKeys.has(key)
-  )
-
-  if (missingRowKeys.length > 0) {
-    for (const missingKey of missingRowKeys) {
-      const [type, rowId] = missingKey.split(':')
-      // Key came from existingRowKeys derived from same source as map, so guaranteed to exist
-      const originalRecord = /** @type {WasteRecord} */ (
-        existingRecordsMap.get(missingKey)
-      )
-
-      const lastVersion =
-        originalRecord.versions[originalRecord.versions.length - 1]
-
-      const match = findSchemaByWasteRecordType(type, PROCESSING_TYPE_TABLES)
-
-      issues.addFatal(
-        VALIDATION_CATEGORY.BUSINESS,
-        `Row '${rowId}' from a previous summary log submission cannot be removed. All previously submitted rows must be included in subsequent uploads.`,
-        VALIDATION_CODE.SEQUENTIAL_ROW_REMOVED,
-        {
-          location: {
-            sheet: match?.schema.sheetName ?? 'Unknown',
-            table: match?.tableName ?? 'Unknown',
-            rowId
-          },
-          previousSummaryLog: {
-            id: lastVersion.summaryLog.id,
-            submittedAt: lastVersion.createdAt
-          }
+    issues.addFatal(
+      VALIDATION_CATEGORY.BUSINESS,
+      `Row '${rowId}' from a previous summary log submission cannot be removed. All previously submitted rows must be included in subsequent uploads.`,
+      VALIDATION_CODE.SEQUENTIAL_ROW_REMOVED,
+      {
+        location: {
+          sheet: match?.schema.sheetName ?? 'Unknown',
+          table: match?.tableName ?? 'Unknown',
+          rowId
+        },
+        previousSummaryLog: {
+          id: summaryLog.summaryLogId,
+          submittedAt: summaryLog.submittedAt.toISOString()
         }
-      )
-    }
+      }
+    )
   }
 
   return issues

@@ -11,7 +11,10 @@ import {
 } from '#waste-records/repository/test-data.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
-import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
+import {
+  latestSubmittedSummaryLogRowStates,
+  summaryLogRowStatesForRegistration
+} from './read-summary-log-row-states.js'
 
 /**
  * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
@@ -20,13 +23,15 @@ import { summaryLogRowStatesForRegistration } from './read-summary-log-row-state
 /**
  * @param {number} number
  * @param {string} summaryLogId
+ * @param {Date} [submittedAt]
  * @returns {LedgerEvent}
  */
-const submissionEvent = (number, summaryLogId) =>
+const submissionEvent = (number, summaryLogId, submittedAt) =>
   partialMock(
     buildLedgerEvent({
       number,
-      payload: { summaryLogId, creditTotal: number * 10 }
+      payload: { summaryLogId, creditTotal: number * 10 },
+      ...(submittedAt && { createdAt: submittedAt })
     })
   )
 
@@ -144,6 +149,65 @@ describe('summaryLogRowStatesForRegistration', () => {
         reasons: [],
         transactionAmount: 10
       }
+    })
+  })
+})
+
+describe('latestSubmittedSummaryLogRowStates', () => {
+  it('returns null when the stream has no submission', async () => {
+    const previousSubmission = await latestSubmittedSummaryLogRowStates({
+      ledgerRepository: createInMemoryLedgerRepository()(),
+      summaryLogRowStateRepository:
+        createInMemorySummaryLogRowStateRepository()(),
+      ...registration
+    })
+
+    expect(previousSubmission).toBeNull()
+  })
+
+  it('names the latest submitted summary log with when it was submitted and its row states', async () => {
+    const summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+      DEFAULT_LEDGER_ID,
+      [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
+      'log-1'
+    )
+    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+      DEFAULT_LEDGER_ID,
+      [
+        buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } }),
+        buildSummaryLogRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })
+      ],
+      'log-2'
+    )
+
+    const submittedAt = new Date('2026-02-20T09:30:00.000Z')
+    const ledgerRepository = createInMemoryLedgerRepository([
+      submissionEvent(1, 'log-1', new Date('2026-01-15T10:00:00.000Z')),
+      submissionEvent(2, 'log-2', submittedAt)
+    ])()
+
+    const previousSubmission = await latestSubmittedSummaryLogRowStates({
+      ledgerRepository,
+      summaryLogRowStateRepository,
+      ...registration
+    })
+
+    expect(previousSubmission?.summaryLog).toEqual({
+      summaryLogId: 'log-2',
+      submittedAt
+    })
+
+    const dataByRowId = Object.fromEntries(
+      (previousSubmission?.wasteRecordStates ?? []).map((state) => [
+        state.rowId,
+        state.data
+      ])
+    )
+    expect(dataByRowId).toEqual({
+      'row-1': { tonnage: 99 },
+      'row-2': { tonnage: 20 }
     })
   })
 })
