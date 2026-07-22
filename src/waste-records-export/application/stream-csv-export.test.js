@@ -764,6 +764,175 @@ describe('streamCsvExport', () => {
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
   })
 
+  it('exports rows from every ledger partition, not just the current accreditation', async () => {
+    // A registration that submitted under acc-old before moving to acc-new
+    // holds two independently valid summary logs, one per ledger partition.
+    const org = baseOrg({
+      accreditations: [
+        approvedAccreditation({
+          id: 'acc-old',
+          accreditationNumber: 'ACC-OLD'
+        }),
+        approvedAccreditation({ id: 'acc-new', accreditationNumber: 'ACC-NEW' })
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-new' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-old',
+          summaryLogId: 'sl-old',
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          accreditationId: 'acc-new',
+          summaryLogId: 'sl-new',
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(3)
+    const rowIds = out
+      .slice(1)
+      .map((line) => line.trim().split(',')[METADATA_COL_INDEX['Row ID']])
+    expect(rowIds).toContain('1001')
+    expect(rowIds).toContain('2002')
+  })
+
+  it('renders each partition against its own accreditation, not the current link', async () => {
+    const org = baseOrg({
+      accreditations: [
+        approvedAccreditation({
+          id: 'acc-old',
+          accreditationNumber: 'ACC-OLD'
+        }),
+        approvedAccreditation({ id: 'acc-new', accreditationNumber: 'ACC-NEW' })
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-new' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-old',
+          summaryLogId: 'sl-old',
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          accreditationId: 'acc-new',
+          summaryLogId: 'sl-new',
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(3)
+    const byRowId = new Map(
+      out.slice(1).map((line) => {
+        const cells = line.trim().split(',')
+        return [cells[METADATA_COL_INDEX['Row ID']], cells]
+      })
+    )
+    expect(
+      byRowId.get('1001')[METADATA_COL_INDEX['Accreditation Number']]
+    ).toBe('ACC-OLD')
+    expect(
+      byRowId.get('2002')[METADATA_COL_INDEX['Accreditation Number']]
+    ).toBe('ACC-NEW')
+  })
+
+  it('exports a registered-only period alongside an accredited one, as Accredited "No"', async () => {
+    const org = baseOrg({
+      accreditations: [approvedAccreditation()],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: null,
+          summaryLogId: 'sl-registered-only',
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          accreditationId: 'acc-1',
+          summaryLogId: 'sl-accredited',
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(3)
+    const byRowId = new Map(
+      out.slice(1).map((line) => {
+        const cells = line.trim().split(',')
+        return [cells[METADATA_COL_INDEX['Row ID']], cells]
+      })
+    )
+    expect(byRowId.get('1001')[METADATA_COL_INDEX['Accredited']]).toBe('No')
+    expect(
+      byRowId.get('1001')[METADATA_COL_INDEX['Accreditation Number']]
+    ).toBe('')
+    expect(byRowId.get('2002')[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
+    expect(
+      byRowId.get('2002')[METADATA_COL_INDEX['Accreditation Number']]
+    ).toBe('ACC-777')
+  })
+
+  it("orders a registration's partitions registered-only first, then by accreditation id", async () => {
+    const org = baseOrg({
+      accreditations: [
+        approvedAccreditation({ id: 'acc-a' }),
+        approvedAccreditation({ id: 'acc-b' })
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-b' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-b',
+          summaryLogId: 'sl-b',
+          rows: [receivedRowState({ rowId: '3003' })]
+        },
+        {
+          accreditationId: null,
+          summaryLogId: 'sl-null',
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          accreditationId: 'acc-a',
+          summaryLogId: 'sl-a',
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(4)
+    const rowIds = out
+      .slice(1)
+      .map((line) => line.trim().split(',')[METADATA_COL_INDEX['Row ID']])
+    expect(rowIds).toEqual(['1001', '2002', '3003'])
+  })
+
   it('iterates organisations and registrations sorted by id for deterministic output', async () => {
     const orgB = baseOrg({
       id: 'org-b',
