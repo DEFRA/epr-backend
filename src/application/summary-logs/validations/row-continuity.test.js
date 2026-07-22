@@ -295,6 +295,28 @@ describe('validateRowContinuity', () => {
       expect(fatals[0]?.context?.location?.sheet).toBe('Received')
     })
 
+    it('treats the same rowId under a different waste record type as a distinct row', () => {
+      const result = validateRowContinuity({
+        wasteRecords: [
+          createValidatedWasteRecord({
+            rowId: 'row-1',
+            type: WASTE_RECORD_TYPE.RECEIVED
+          })
+        ],
+        previousSubmission: createPreviousSubmission([
+          createWasteRecordState('row-1', WASTE_RECORD_TYPE.PROCESSED)
+        ])
+      })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0]?.context?.location?.rowId).toBe('row-1')
+      expect(fatals[0]?.context?.location?.sheet).toBe('Processed')
+    })
+
     it('correctly maps different waste record types to sheets and tables from the schema registry', () => {
       const testCases = [
         {

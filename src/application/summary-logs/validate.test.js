@@ -2126,8 +2126,9 @@ describe('SummaryLogsValidator', () => {
         })
       )
 
-      // The legacy waste-records collection still feeds the transform's
-      // change/version reconciliation during the ADR-0037 transition.
+      // The transform's change/version reconciliation reads the waste-records
+      // collection; the continuity check reads submitted row states. This test
+      // seeds both so the truncation assertion exercises the real transform.
       wasteRecordsRepository.findByRegistration.mockResolvedValue([
         buildExistingWasteRecord(buildReceivedLoadRow({ ROW_ID: 10000 }))
       ])

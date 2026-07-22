@@ -49,7 +49,7 @@ export const validateRowContinuity = ({ wasteRecords, previousSubmission }) => {
   const { summaryLog, wasteRecordStates } = previousSubmission
 
   const uploadedRowKeys = new Set(
-    wasteRecords.map(({ record }) => rowKey(record.type, String(record.rowId)))
+    wasteRecords.map(({ record }) => rowKey(record.type, record.rowId))
   )
 
   const removedRowStates = wasteRecordStates.filter(
