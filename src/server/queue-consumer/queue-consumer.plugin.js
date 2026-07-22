@@ -24,6 +24,7 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository,
  *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository,
+ *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
  *   wasteBalanceService: ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>,
  *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
  *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
@@ -47,6 +48,7 @@ function buildConsumerDeps(server, { config }) {
     organisationsRepository,
     wasteRecordsRepository,
     summaryLogRowStatesRepository,
+    ledgerRepository,
     wasteBalanceService,
     reportsRepository,
     systemLogsRepository
@@ -65,6 +67,7 @@ function buildConsumerDeps(server, { config }) {
     organisationsRepository,
     wasteRecordsRepository,
     summaryLogRowStatesRepository,
+    ledgerRepository,
     wasteBalanceService,
     reportsService: createReportsService(reportsRepository),
     summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
