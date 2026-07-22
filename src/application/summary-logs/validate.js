@@ -13,11 +13,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
-import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
-import {
-  latestSubmittedSummaryLogRowStates,
-  summaryLogRowStatesForRegistration
-} from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   findSchemaForProcessingType,
@@ -32,11 +28,12 @@ import {
   resolveOverseasSitesContext
 } from './classify-and-persist.js'
 import { logValidationIssues } from './validate-issue-logging.js'
-import { validateDataBusiness } from './validations/data-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { capIssuesForStorage } from './cap-issues-for-storage.js'
+import { transformAndValidateData } from './transform-and-validate-data.js'
+import { ledgerIdFor } from './ledger-id.js'
 
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
 export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
@@ -55,7 +52,6 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 /** @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
-/** @import {PreviousSubmission} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
@@ -88,75 +84,6 @@ const extractSummaryLog = async ({
   })
 
   return parsed
-}
-
-/**
- * The accreditation the ledger reads pivot on — the summary log's own
- * accreditationId when present, otherwise the registration's — so a read pivots
- * on the same stream the submit path appended to.
- *
- * @param {SubmittedSummaryLog} summaryLog
- * @param {Registration | undefined} registration
- * @returns {string | null}
- */
-const ledgerAccreditationId = (summaryLog, registration) =>
-  summaryLog.accreditationId ?? registration?.accreditationId ?? null
-
-/**
- * @param {{
- *   summaryLogId: string,
- *   summaryLog: SubmittedSummaryLog,
- *   validatedData: ValidatedSummaryLog,
- *   wasteRecordsRepository: WasteRecordsRepository,
- *   previousSubmission: PreviousSubmission | null
- * }} params
- * @returns {Promise<{
- *   wasteRecords: ValidatedWasteRecord[],
- *   issues: ValidationIssuesCollector
- * }>}
- */
-const transformAndValidateData = async ({
-  summaryLogId,
-  summaryLog,
-  validatedData,
-  wasteRecordsRepository,
-  previousSubmission
-}) => {
-  // Fetch existing records and build lookup map for transformation
-  const existingWasteRecords = await wasteRecordsRepository.findByRegistration(
-    summaryLog.organisationId,
-    summaryLog.registrationId
-  )
-
-  const existingRecordsMap = new Map(
-    existingWasteRecords.map((record) => [
-      `${record.type}:${record.rowId}`,
-      record
-    ])
-  )
-
-  // Transform validated rows into waste records (issues flow through)
-  // Timestamp is required but won't be persisted during validation
-  /** @type {ValidatedWasteRecord[]} */
-  const wasteRecords = transformFromSummaryLog(
-    validatedData,
-    {
-      summaryLog: {
-        id: summaryLogId,
-        uri: summaryLog.file.uri
-      },
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
-      accreditationId: summaryLog.accreditationId,
-      timestamp: new Date().toISOString()
-    },
-    existingRecordsMap
-  )
-
-  // Data business validation using waste records
-  const issues = validateDataBusiness({ wasteRecords, previousSubmission })
-
-  return { wasteRecords, issues }
 }
 
 /**
@@ -379,20 +306,14 @@ const performValidationChecks = async ({
       return { issues, wasteRecords, meta, registration }
     }
 
-    const previousSubmission = await latestSubmittedSummaryLogRowStates({
-      ledgerRepository,
-      summaryLogRowStateRepository,
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
-      accreditationId: ledgerAccreditationId(summaryLog, registration)
-    })
-
     const dataResult = await transformAndValidateData({
       summaryLogId,
       summaryLog,
       validatedData,
+      registration,
       wasteRecordsRepository,
-      previousSubmission
+      summaryLogRowStateRepository,
+      ledgerRepository
     })
 
     wasteRecords = dataResult.wasteRecords
@@ -580,10 +501,6 @@ const persistValidationResult = async ({
  * by `${wasteRecordType}:${rowId}` — the baseline the check-page projections
  * classify this upload's rows against.
  *
- * The accreditation is resolved the same way the submit path partitions the
- * ledger — the summary log's own accreditationId when present, otherwise the
- * registration's — so the read pivots on the same stream the write appended to.
- *
  * @param {{
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
@@ -599,11 +516,9 @@ const loadSubmittedRowStatesByKey = async ({
   registration
 }) => {
   const submittedRowStates = await summaryLogRowStatesForRegistration({
+    ...ledgerIdFor(summaryLog, registration),
     ledgerRepository,
-    summaryLogRowStateRepository,
-    organisationId: summaryLog.organisationId,
-    registrationId: summaryLog.registrationId,
-    accreditationId: ledgerAccreditationId(summaryLog, registration)
+    summaryLogRowStateRepository
   })
 
   return new Map(
