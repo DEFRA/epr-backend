@@ -1,4 +1,9 @@
-import { add, toDecimal, toNumber } from '#common/helpers/decimal-utils.js'
+import { toNumber } from '#common/helpers/decimal-utils.js'
+import {
+  ZERO_TONNAGE,
+  addTonnage,
+  toRoundedTonnage
+} from '#common/helpers/rounded-tonnage.js'
 import {
   formatAddress,
   groupAndSum,
@@ -29,8 +34,8 @@ export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
   )
 
   const totalTonnageDecimal = validEntries.reduce(
-    (acc, { data }) => add(acc, data[tonnageField]),
-    toDecimal(0)
+    (acc, { data }) => addTonnage(acc, toRoundedTonnage(data[tonnageField])),
+    ZERO_TONNAGE
   )
 
   const suppliers = groupAndSum(
@@ -53,7 +58,7 @@ export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
       supplierPhone: data.SUPPLIER_PHONE_NUMBER ?? null,
       supplierEmail: data.SUPPLIER_EMAIL ?? null
     }),
-    ({ data }) => data[tonnageField]
+    ({ data }) => toRoundedTonnage(data[tonnageField])
   ).map(({ tonnageDecimal, ...rest }) => ({
     ...rest,
     tonnageReceived: toNumber(tonnageDecimal)

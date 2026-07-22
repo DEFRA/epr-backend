@@ -8,6 +8,7 @@ import {
   toNumber
 } from '#common/helpers/decimal-utils.js'
 import { coerceStoredTonnages } from '#waste-records/application/stored-tonnage-coercion.js'
+import { toRoundedTonnage } from '#common/helpers/rounded-tonnage.js'
 import { groupAndSum } from './helpers.js'
 
 /**
@@ -44,7 +45,7 @@ describe('report aggregation reconciles with the waste balance', () => {
       storedTonnages.map((tonnage) => ({ tonnage })),
       () => 'one-group',
       () => ({}),
-      ({ tonnage }) => tonnage
+      ({ tonnage }) => toRoundedTonnage(tonnage)
     )
 
     expect(toNumber(group.tonnageDecimal)).toBe(wasteBalanceTotal)

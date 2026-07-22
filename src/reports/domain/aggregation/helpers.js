@@ -1,4 +1,5 @@
-import { add, isZero, toDecimal } from '#common/helpers/decimal-utils.js'
+import { isZero } from '#common/helpers/decimal-utils.js'
+import { addTonnage } from '#common/helpers/rounded-tonnage.js'
 
 /**
  * Returns true when a field value is 'yes' (case-insensitive, trimmed).
@@ -38,7 +39,7 @@ export function formatAddress(address, postcode) {
  * @param {T[]} items
  * @param {(item: T) => string} getKey
  * @param {(item: T) => object} getFields
- * @param {(item: T) => number} getTonnage
+ * @param {(item: T) => import('#common/helpers/rounded-tonnage.js').RoundedTonnage} getTonnage
  */
 export function groupAndSum(items, getKey, getFields, getTonnage) {
   const map = new Map()
@@ -49,11 +50,11 @@ export function groupAndSum(items, getKey, getFields, getTonnage) {
 
     if (map.has(key)) {
       const group = map.get(key)
-      group.tonnageDecimal = add(group.tonnageDecimal, tonnage)
+      group.tonnageDecimal = addTonnage(group.tonnageDecimal, tonnage)
     } else {
       map.set(key, {
         ...getFields(item),
-        tonnageDecimal: add(toDecimal(0), tonnage)
+        tonnageDecimal: tonnage
       })
     }
   }

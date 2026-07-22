@@ -72,11 +72,11 @@ const buildReceivedEntry = (overrides = {}) =>
     data: {
       SUPPLIER_NAME: 'Supplier A',
       ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Reprocessor',
-      TONNAGE_RECEIVED_FOR_RECYCLING: '100',
+      TONNAGE_RECEIVED_FOR_RECYCLING: 100,
       DATE_RECEIVED_FOR_REPROCESSING: '2024-01-10',
       FINAL_DESTINATION_NAME: 'Dest A',
       FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
-      TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: '50',
+      TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50,
       DATE_LOAD_LEFT_SITE: '2024-01-12',
       ...overrides
     }

@@ -1,4 +1,9 @@
-import { add, toDecimal, toNumber } from '#common/helpers/decimal-utils.js'
+import { toNumber } from '#common/helpers/decimal-utils.js'
+import {
+  ZERO_TONNAGE,
+  addTonnage,
+  toRoundedTonnage
+} from '#common/helpers/rounded-tonnage.js'
 import {
   formatAddress,
   groupAndSum,
@@ -14,20 +19,20 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @param {ReportableWasteRecordState[]} validEntries
  */
 function sumByFacilityType(validEntries) {
-  let toReprocessorDecimal = toDecimal(0)
-  let toExporterDecimal = toDecimal(0)
-  let toAnotherSiteDecimal = toDecimal(0)
+  let toReprocessorDecimal = ZERO_TONNAGE
+  let toExporterDecimal = ZERO_TONNAGE
+  let toAnotherSiteDecimal = ZERO_TONNAGE
 
   for (const { data } of validEntries) {
-    const tonnage = data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
+    const tonnage = toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
     const facilityType = data.FINAL_DESTINATION_FACILITY_TYPE
 
     if (facilityType === 'Reprocessor') {
-      toReprocessorDecimal = add(toReprocessorDecimal, tonnage)
+      toReprocessorDecimal = addTonnage(toReprocessorDecimal, tonnage)
     } else if (facilityType === 'Exporter') {
-      toExporterDecimal = add(toExporterDecimal, tonnage)
+      toExporterDecimal = addTonnage(toExporterDecimal, tonnage)
     } else {
-      toAnotherSiteDecimal = add(toAnotherSiteDecimal, tonnage)
+      toAnotherSiteDecimal = addTonnage(toAnotherSiteDecimal, tonnage)
     }
   }
 
@@ -70,7 +75,7 @@ export function aggregateWasteSentOn(wasteSentOnRecords) {
         data.FINAL_DESTINATION_POSTCODE
       )
     }),
-    ({ data }) => data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
+    ({ data }) => toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
   ).map(({ tonnageDecimal, ...rest }) => ({
     ...rest,
     tonnageSentOn: toNumber(tonnageDecimal)
