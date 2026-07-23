@@ -1,18 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
-import {
-  WASTE_RECORD_TYPE,
-  VERSION_STATUS
-} from '#domain/waste-records/model.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
-import {
-  buildVersionData,
-  toWasteRecordVersions
-} from '#repositories/waste-records/contract/test-data.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -20,21 +12,72 @@ const TEST_WEIGHT_100_5 = 100.5
 const TEST_WEIGHT_200_75 = 200.75
 const TEST_WEIGHT_250_5 = 250.5
 
+const RECEIVED_HEADERS = [
+  'ROW_ID',
+  'DATE_RECEIVED_FOR_REPROCESSING',
+  FIELD_GROSS_WEIGHT
+]
+
 const TEST_USER = {
   id: 'test-user',
   email: 'test@example.com',
   scope: ['some-scope']
 }
 
+const LEDGER_ID = {
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  accreditationId: null
+}
+
+const summaryLogFor = (fileId, accreditationId) => ({
+  file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  ...(accreditationId && { accreditationId })
+})
+
+const reprocessorInput = (rows) =>
+  /** @type {any} */ ({
+    meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+    data: {
+      RECEIVED_LOADS_FOR_REPROCESSING: {
+        location: { sheet: 'Sheet1', row: 1, column: 'A' },
+        headers: RECEIVED_HEADERS,
+        rows
+      }
+    }
+  })
+
+const exporterInput = (rows) =>
+  /** @type {any} */ ({
+    meta: { PROCESSING_TYPE: { value: 'EXPORTER' } },
+    data: {
+      RECEIVED_LOADS_FOR_EXPORT: {
+        location: { sheet: 'Sheet1', row: 1, column: 'A' },
+        headers: RECEIVED_HEADERS,
+        rows
+      }
+    }
+  })
+
+const extractorFor = (fileId, parsed) =>
+  createInMemorySummaryLogExtractor({ [fileId]: /** @type {any} */ (parsed) })
+
+const receivedRow = (rowNumber, rowId, date, weight) => ({
+  rowNumber,
+  values: [rowId, date, weight]
+})
+
 describe('syncFromSummaryLog', () => {
-  let wasteRecordRepository
   let wasteBalanceService
   let organisationsRepository
   let overseasSitesRepository
   let summaryLogRowStateRepository
+  let ledgerRepository
 
   beforeEach(() => {
-    wasteRecordRepository = createInMemoryWasteRecordsRepository()()
+    ledgerRepository = createInMemoryLedgerRepository()()
     summaryLogRowStateRepository =
       createInMemorySummaryLogRowStateRepository()()
     wasteBalanceService = {
@@ -54,635 +97,77 @@ describe('syncFromSummaryLog', () => {
     }
   })
 
-  it('extracts, transforms, and saves waste records from summary log', async () => {
-    const fileId = 'test-file-123'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
+  const makeSync = (overrides = {}) =>
+    /** @type {any} */ (syncFromSummaryLog)({
+      wasteBalanceService,
+      organisationsRepository,
+      overseasSitesRepository,
+      summaryLogRowStateRepository,
+      ledgerRepository,
+      ...overrides
+    })
 
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
+  it('commits the submission rows as row states', async () => {
+    const fileId = 'file-commit'
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: reprocessorInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5),
+        receivedRow(3, 'row-456', '2025-01-16', TEST_WEIGHT_200_75)
+      ])
+    })
+
+    await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+
+    const rowStates =
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        LEDGER_ID,
+        fileId
+      )
+    expect(rowStates.map((state) => state.rowId).sort()).toEqual([
+      'row-123',
+      'row-456'
+    ])
+    expect(
+      rowStates.every(
+        (state) => state.wasteRecordType === WASTE_RECORD_TYPE.RECEIVED
+      )
+    ).toBe(true)
+  })
+
+  it('passes through tables that have no schema', async () => {
+    const fileId = 'file-no-schema'
+    const extractor = extractorFor(fileId, {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+      data: {
+        UNKNOWN_TABLE: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: ['SOMETHING'],
+          rows: [{ rowNumber: 2, values: ['ignored'] }]
         }
-      },
+      }
+    })
+
+    await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+
+    const rowStates =
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        LEDGER_ID,
+        fileId
+      )
+    expect(rowStates).toEqual([])
+  })
+
+  it('excludes null and EPR-marker headers when building row data', async () => {
+    const fileId = 'file-marker-headers'
+    const extractor = extractorFor(fileId, {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: [
             'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            },
-            {
-              rowNumber: 3,
-              values: ['row-456', '2025-01-16', TEST_WEIGHT_200_75]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
-
-    // Verify records were saved
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    expect(savedRecords).toHaveLength(2)
-    expect(savedRecords[0]).toMatchObject({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: 'row-123',
-      type: WASTE_RECORD_TYPE.RECEIVED
-    })
-    expect(savedRecords[1]).toMatchObject({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: 'row-456',
-      type: WASTE_RECORD_TYPE.RECEIVED
-    })
-  })
-
-  it('fetches accreditationId from registration if missing in summary log', async () => {
-    const fileId = 'test-file-accred'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-      // accreditationId missing
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-1', '2025-01-15', 100]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const accreditation = {
-      id: 'accred-123',
-      validFrom: '2023-01-01',
-      validTo: '2023-12-31'
-    }
-
-    organisationsRepository = {
-      findRegistrationById: vi.fn().mockResolvedValue({
-        id: 'reg-1',
-        accreditationId: 'accred-123'
-      }),
-      findAccreditationById: vi.fn().mockResolvedValue(accreditation)
-    }
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
-
-    expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
-      'org-1',
-      'reg-1'
-    )
-
-    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
-      expect.any(Array),
-      {
-        user: TEST_USER,
-        accreditation,
-        overseasSites: ORS_VALIDATION_DISABLED,
-        summaryLogId: expect.any(String)
-      }
-    )
-  })
-
-  it('updates existing waste records when rowId already exists', async () => {
-    // First, save an initial record
-    const initialData = {
-      DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5,
-      processingType: 'REPROCESSOR_INPUT'
-    }
-
-    const { version, data } = buildVersionData({
-      summaryLogId: 'test-file-initial',
-      summaryLogUri: 's3://bucket/key',
-      createdAt: '2025-01-15T10:00:00.000Z',
-      status: VERSION_STATUS.CREATED,
-      versionData: initialData,
-      currentData: initialData
-    })
-
-    const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
-      received: {
-        'row-123': { version, data }
-      }
-    })
-
-    await wasteRecordRepository.appendVersions(
-      'org-1',
-      'reg-1',
-      wasteRecordVersions
-    )
-
-    const fileId = 'test-file-456'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-2'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-123', '2025-01-20', TEST_WEIGHT_250_5]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
-
-    // Verify record was updated
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    expect(savedRecords).toHaveLength(1)
-    expect(savedRecords[0].versions).toHaveLength(2)
-    expect(savedRecords[0].versions[1].status).toBe(VERSION_STATUS.UPDATED)
-    expect(savedRecords[0].data[FIELD_GROSS_WEIGHT]).toBe(TEST_WEIGHT_250_5)
-  })
-
-  it('should not create new version when row data is unchanged', async () => {
-    // First, save an initial record
-    const initialData = {
-      DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5,
-      processingType: 'REPROCESSOR_INPUT'
-    }
-
-    const { version, data } = buildVersionData({
-      summaryLogId: 'test-file-initial',
-      summaryLogUri: 's3://bucket/key',
-      createdAt: '2025-01-15T10:00:00.000Z',
-      status: VERSION_STATUS.CREATED,
-      versionData: initialData,
-      currentData: initialData
-    })
-
-    const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
-      received: {
-        'row-123': { version, data }
-      }
-    })
-
-    await wasteRecordRepository.appendVersions(
-      'org-1',
-      'reg-1',
-      wasteRecordVersions
-    )
-
-    // Submit the same data again
-    const fileId = 'test-file-unchanged'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-unchanged'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            // Exact same data as existing record
-            {
-              rowNumber: 2,
-              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
-
-    // Verify no new version was created
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    expect(savedRecords).toHaveLength(1)
-    expect(savedRecords[0].versions).toHaveLength(1) // Still only 1 version
-    expect(savedRecords[0].versions[0].status).toBe(VERSION_STATUS.CREATED)
-  })
-
-  it('should create UPDATED version with delta when single field changes', async () => {
-    // First, save an initial record
-    const initialData = {
-      DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5,
-      processingType: 'REPROCESSOR_INPUT'
-    }
-
-    const { version, data } = buildVersionData({
-      summaryLogId: 'test-file-initial',
-      summaryLogUri: 's3://bucket/key',
-      createdAt: '2025-01-15T10:00:00.000Z',
-      status: VERSION_STATUS.CREATED,
-      versionData: initialData,
-      currentData: initialData
-    })
-
-    const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
-      received: {
-        'row-123': { version, data }
-      }
-    })
-
-    await wasteRecordRepository.appendVersions(
-      'org-1',
-      'reg-1',
-      wasteRecordVersions
-    )
-
-    // Submit with only GROSS_WEIGHT changed
-    const fileId = 'test-file-delta'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-delta'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_200_75]
-            } // Only weight changed
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
-
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    expect(savedRecords).toHaveLength(1)
-    expect(savedRecords[0].versions).toHaveLength(2)
-
-    // Second version should have UPDATED status
-    const updatedVersion = savedRecords[0].versions[1]
-    expect(updatedVersion.status).toBe(VERSION_STATUS.UPDATED)
-
-    // UPDATED version should contain only the changed field (delta)
-    expect(updatedVersion.data).toEqual({
-      GROSS_WEIGHT: TEST_WEIGHT_200_75
-    })
-
-    // Top-level data should reflect current state
-    expect(savedRecords[0].data[FIELD_GROSS_WEIGHT]).toBe(TEST_WEIGHT_200_75)
-  })
-
-  it('should include all changed fields in UPDATED version delta', async () => {
-    // First, save an initial record
-    const initialData = {
-      DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5,
-      processingType: 'REPROCESSOR_INPUT'
-    }
-
-    const { version, data } = buildVersionData({
-      summaryLogId: 'test-file-initial',
-      summaryLogUri: 's3://bucket/key',
-      createdAt: '2025-01-15T10:00:00.000Z',
-      status: VERSION_STATUS.CREATED,
-      versionData: initialData,
-      currentData: initialData
-    })
-
-    const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
-      received: {
-        'row-123': { version, data }
-      }
-    })
-
-    await wasteRecordRepository.appendVersions(
-      'org-1',
-      'reg-1',
-      wasteRecordVersions
-    )
-
-    // Submit with both date and weight changed
-    const fileId = 'test-file-multi-delta'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-multi'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-123', '2025-01-20', TEST_WEIGHT_250_5]
-            } // Both date and weight changed
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
-
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    expect(savedRecords).toHaveLength(1)
-    expect(savedRecords[0].versions).toHaveLength(2)
-
-    // Second version should contain both changed fields
-    const updatedVersion = savedRecords[0].versions[1]
-    expect(updatedVersion.status).toBe(VERSION_STATUS.UPDATED)
-    expect(updatedVersion.data).toEqual({
-      DATE_RECEIVED_FOR_REPROCESSING: '2025-01-20',
-      GROSS_WEIGHT: TEST_WEIGHT_250_5
-    })
-
-    // ROW_ID shouldn't be in delta as it didn't change
-    expect(updatedVersion.data).not.toHaveProperty('ROW_ID')
-  })
-
-  it('filters template rows with null or header-text ROW_ID during transformation', async () => {
-    const fileId = 'test-file-template-rows'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-template'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            // Template row: header description text in ROW_ID
-            {
-              rowNumber: 2,
-              values: [
-                'Row ID (auto-generated)',
-                'Date description',
-                'Weight description'
-              ]
-            },
-            // Real data row
-            {
-              rowNumber: 3,
-              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            },
-            // Template row: null ROW_ID (empty pre-populated row)
-            {
-              rowNumber: 4,
-              values: [null, null, null]
-            },
-            // Another real data row
-            {
-              rowNumber: 5,
-              values: ['row-456', '2025-01-16', TEST_WEIGHT_200_75]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
-
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    // Only the two real data rows should be saved
-    expect(savedRecords).toHaveLength(2)
-    expect(savedRecords[0].rowId).toBe('row-123')
-    expect(savedRecords[1].rowId).toBe('row-456')
-  })
-
-  it('handles headers with null values and EPR markers', async () => {
-    const fileId = 'test-file-markers'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-markers'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
+            '__EPR_META_MARKER',
             null,
-            'EPR:TABLE_START',
             'DATE_RECEIVED_FOR_REPROCESSING',
             FIELD_GROSS_WEIGHT
           ],
@@ -690,9 +175,9 @@ describe('syncFromSummaryLog', () => {
             {
               rowNumber: 2,
               values: [
-                'row-789',
-                'ignored',
-                'also-ignored',
+                'row-123',
+                'marker-value',
+                'null-column-value',
                 TEST_DATE_2025_01_15,
                 TEST_WEIGHT_100_5
               ]
@@ -700,220 +185,109 @@ describe('syncFromSummaryLog', () => {
           ]
         }
       }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
     })
 
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
+    await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
 
-    await sync(summaryLog, TEST_USER)
-
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
+    const rowStates =
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        LEDGER_ID,
+        fileId
+      )
+    expect(rowStates).toHaveLength(1)
+    expect(Object.keys(rowStates[0].data)).toEqual(
+      expect.arrayContaining([
+        'DATE_RECEIVED_FOR_REPROCESSING',
+        FIELD_GROSS_WEIGHT
+      ])
     )
-    expect(savedRecords).toHaveLength(1)
-    expect(savedRecords[0].rowId).toBe('row-789')
+    expect(rowStates[0].data).not.toHaveProperty('__EPR_META_MARKER')
   })
 
-  it('skips tables without schemas', async () => {
-    const fileId = 'test-file-unknown-table'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-unknown'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        UNKNOWN_TABLE: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['SOME_FIELD'],
-          rows: [{ rowNumber: 2, values: ['some-value'] }]
-        },
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 10, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 11,
-              values: ['row-999', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
+  it('skips the waste balance calculation for an accredited non-balance processing type', async () => {
+    const fileId = 'file-accredited-non-balance'
+    const extractor = extractorFor(fileId, {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' } },
+      data: {}
     })
 
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
+    await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
 
-    await sync(summaryLog, TEST_USER)
-
-    // Only the known table should have been processed
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    expect(savedRecords).toHaveLength(1)
-    expect(savedRecords[0].rowId).toBe('row-999')
+    expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
+    expect(
+      wasteBalanceService.commitSummaryLogSubmittedEvent
+    ).not.toHaveBeenCalled()
   })
 
-  it('all records from same sync have identical timestamps', async () => {
-    const fileId = 'test-file-timestamps'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-timestamps'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
+  it('carries the user name into a registered-only submitted event', async () => {
+    const fileId = 'file-reg-only-named'
+    const extractor = extractorFor(fileId, {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' } },
+      data: {}
+    })
+    const namedUser = { ...TEST_USER, name: 'Jane Reprocessor' }
 
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-001', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            },
-            {
-              rowNumber: 3,
-              values: ['row-002', '2025-01-16', TEST_WEIGHT_200_75]
-            },
-            {
-              rowNumber: 4,
-              values: ['row-003', '2025-01-17', TEST_WEIGHT_250_5]
-            }
-          ]
-        }
-      }
-    }
+    await makeSync({ extractor })(summaryLogFor(fileId), namedUser)
 
+    expect(
+      wasteBalanceService.commitSummaryLogSubmittedEvent
+    ).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Object),
+      expect.objectContaining({
+        id: namedUser.id,
+        name: 'Jane Reprocessor',
+        email: namedUser.email
+      })
+    )
+  })
+
+  it('does not depend on the legacy waste-records repository', () => {
+    expect(() => makeSync({ extractor: { extract: vi.fn() } })).not.toThrow()
+    expect(makeSync({ extractor: { extract: vi.fn() } })).toBeInstanceOf(
+      Function
+    )
+  })
+
+  it('filters template rows with null or header-text ROW_ID', async () => {
+    const fileId = 'file-template'
     const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
+      [fileId]: reprocessorInput([
+        receivedRow(
+          2,
+          'Row ID (auto-generated)',
+          'Date description',
+          'Weight description'
+        ),
+        receivedRow(3, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5),
+        receivedRow(4, null, null, null),
+        receivedRow(5, 'row-456', '2025-01-16', TEST_WEIGHT_200_75)
+      ])
     })
 
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
+    await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
 
-    await sync(summaryLog, TEST_USER)
-
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    expect(savedRecords).toHaveLength(3)
-
-    // All records should have identical timestamps
-    const timestamps = savedRecords.map((r) => r.versions[0].createdAt)
-    expect(timestamps[0]).toBe(timestamps[1])
-    expect(timestamps[1]).toBe(timestamps[2])
-
-    // Timestamp should be a valid ISO string
-    expect(timestamps[0]).toMatch(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
-    )
+    const rowStates =
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        LEDGER_ID,
+        fileId
+      )
+    expect(rowStates.map((state) => state.rowId).sort()).toEqual([
+      'row-123',
+      'row-456'
+    ])
   })
 
   it('updates waste balances when accreditationId is present', async () => {
-    const fileId = 'test-file-wb'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1'
-    }
+    const fileId = 'file-wb'
+    const extractor = extractorFor(
+      fileId,
+      exporterInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
 
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'EXPORTER'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_EXPORT: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
+    await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
 
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -930,993 +304,151 @@ describe('syncFromSummaryLog', () => {
           validTo: '2023-12-31'
         },
         overseasSites: {},
-        summaryLogId: expect.any(String)
+        summaryLogId: fileId
       }
     )
   })
 
   it('resolves overseas sites for exporter waste balance validation', async () => {
-    const fileId = 'test-file-ors'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'EXPORTER'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_EXPORT: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
+    const fileId = 'file-ors'
+    const extractor = extractorFor(
+      fileId,
+      exporterInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
 
     const validFrom = new Date('2024-01-01')
-    const overseasSitesRepository = {
+    overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa', validFrom }])
     }
-
     organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
-      overseasSites: {
-        '001': { overseasSiteId: 'site-aaa' }
-      }
+      overseasSites: { '001': { overseasSiteId: 'site-aaa' } }
     })
 
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
+    await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
 
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.any(Array),
-      {
-        user: TEST_USER,
-        accreditation: {
-          id: 'acc-default',
-          validFrom: '2023-01-01',
-          validTo: '2023-12-31'
-        },
-        overseasSites: { '001': { validFrom } },
-        summaryLogId: expect.any(String)
-      }
+      expect.objectContaining({
+        overseasSites: { '001': { validFrom } }
+      })
     )
   })
 
-  it('skips waste balance update for registered-only processing types', async () => {
-    const fileId = 'test-file-no-wb'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_REGISTERED_ONLY'
-        }
-      },
+  it('commits a zero-delta event for registered-only submissions', async () => {
+    const fileId = 'file-reg-only'
+    const extractor = extractorFor(fileId, {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' } },
       data: {}
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
     })
 
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await sync(summaryLog, TEST_USER)
+    await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
 
     expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
+    expect(
+      wasteBalanceService.commitSummaryLogSubmittedEvent
+    ).toHaveBeenCalledWith(
+      {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: null
+      },
+      { summaryLogId: fileId, creditTotal: 0 },
+      expect.objectContaining({ id: TEST_USER.id, email: TEST_USER.email })
+    )
   })
 
   it('throws when accreditationId exists but accreditation is not found', async () => {
-    const fileId = 'test-file-no-accred'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-missing'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'EXPORTER'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_EXPORT: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
+    const fileId = 'file-no-accred'
+    const extractor = extractorFor(
+      fileId,
+      exporterInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
     organisationsRepository.findAccreditationById.mockResolvedValue(null)
 
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    await expect(sync(summaryLog, TEST_USER)).rejects.toThrow(
-      'Accreditation not found: acc-missing'
-    )
+    await expect(
+      makeSync({ extractor })(summaryLogFor(fileId, 'acc-missing'), TEST_USER)
+    ).rejects.toThrow('Accreditation not found: acc-missing')
   })
 
-  it('does not update accreditationId if registration is not found', async () => {
-    const summaryLog = {
-      file: { id: 'file-1', uri: 's3://bucket/key' },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-      // accreditationId is missing
-    }
-
-    const extractor = {
-      extract: vi.fn().mockResolvedValue({
-        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
-        data: {}
-      })
-    }
-
-    const organisationsRepository = {
-      findRegistrationById: vi.fn().mockResolvedValue(null),
-      findAccreditationById: vi.fn()
-    }
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
+  it('resolves accreditationId from the registration when absent on the summary log', async () => {
+    const fileId = 'file-resolve-accred'
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: reprocessorInput([])
     })
 
-    await sync(summaryLog, TEST_USER)
+    await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
 
     expect(organisationsRepository.findRegistrationById).toHaveBeenCalled()
   })
 
-  describe('return value', () => {
-    it('returns counts of created and updated waste records', async () => {
-      const fileId = 'test-file-counts'
-      const summaryLog = {
-        file: {
-          id: fileId,
-          uri: 's3://test-bucket/test-key'
-        },
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
-
-      /** @type {any} */ const parsedData = {
-        meta: {
-          PROCESSING_TYPE: {
-            value: 'REPROCESSOR_INPUT'
-          }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Sheet1', row: 1, column: 'A' },
-            headers: [
-              'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              FIELD_GROSS_WEIGHT
-            ],
-            rows: [
-              {
-                rowNumber: 2,
-                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-              },
-              {
-                rowNumber: 3,
-                values: ['row-456', '2025-01-16', TEST_WEIGHT_200_75]
-              }
-            ]
-          }
-        }
-      }
-
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: parsedData
-      })
-
-      const sync = /** @type {any} */ (syncFromSummaryLog)({
+  describe('return value (created/updated counts against the committed head)', () => {
+    const realBalanceSync = (extractor) =>
+      makeSync({
         extractor,
-        wasteRecordRepository,
-        wasteBalanceService,
-        organisationsRepository,
-        overseasSitesRepository,
-        summaryLogRowStateRepository
+        wasteBalanceService: createWasteBalanceService(ledgerRepository)
       })
 
-      const result = await sync(summaryLog, TEST_USER)
-
-      expect(result).toEqual({
-        created: 2,
-        updated: 0
-      })
-    })
-
-    it('returns correct counts when updating existing records', async () => {
-      // First, create an initial record
-      const initialData = {
-        DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-        GROSS_WEIGHT: TEST_WEIGHT_100_5,
-        processingType: 'REPROCESSOR_INPUT'
-      }
-
-      const { version, data } = buildVersionData({
-        summaryLogId: 'test-file-initial',
-        summaryLogUri: 's3://bucket/key',
-        createdAt: '2025-01-15T10:00:00.000Z',
-        status: VERSION_STATUS.CREATED,
-        versionData: initialData,
-        currentData: initialData
+    it('counts every row as created on a first submission', async () => {
+      const fileId = 'file-first'
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: reprocessorInput([
+          receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5),
+          receivedRow(3, 'row-456', '2025-01-16', TEST_WEIGHT_200_75)
+        ])
       })
 
-      const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
-        received: {
-          'row-123': { version, data }
-        }
-      })
-
-      await wasteRecordRepository.appendVersions(
-        'org-1',
-        'reg-1',
-        wasteRecordVersions
+      const result = await realBalanceSync(extractor)(
+        summaryLogFor(fileId),
+        TEST_USER
       )
 
-      // Now submit with one updated and one new
-      const fileId = 'test-file-mixed'
-      const summaryLog = {
-        file: {
-          id: fileId,
-          uri: 's3://test-bucket/test-key-mixed'
-        },
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
-
-      /** @type {any} */ const parsedData = {
-        meta: {
-          PROCESSING_TYPE: {
-            value: 'REPROCESSOR_INPUT'
-          }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Sheet1', row: 1, column: 'A' },
-            headers: [
-              'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              FIELD_GROSS_WEIGHT
-            ],
-            rows: [
-              // Updated record (weight changed)
-              {
-                rowNumber: 2,
-                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_200_75]
-              },
-              // New record
-              {
-                rowNumber: 3,
-                values: ['row-456', '2025-01-16', TEST_WEIGHT_250_5]
-              }
-            ]
-          }
-        }
-      }
-
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: parsedData
-      })
-
-      const sync = /** @type {any} */ (syncFromSummaryLog)({
-        extractor,
-        wasteRecordRepository,
-        wasteBalanceService,
-        organisationsRepository,
-        overseasSitesRepository,
-        summaryLogRowStateRepository
-      })
-
-      const result = await sync(summaryLog, TEST_USER)
-
-      expect(result).toEqual({
-        created: 1,
-        updated: 1
-      })
+      expect(result).toEqual({ created: 2, updated: 0 })
     })
 
-    it('does not count unchanged records', async () => {
-      // First, create an initial record
-      const initialData = {
-        DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-        GROSS_WEIGHT: TEST_WEIGHT_100_5,
-        processingType: 'REPROCESSOR_INPUT'
-      }
-
-      const { version, data } = buildVersionData({
-        summaryLogId: 'test-file-initial',
-        summaryLogUri: 's3://bucket/key',
-        createdAt: '2025-01-15T10:00:00.000Z',
-        status: VERSION_STATUS.CREATED,
-        versionData: initialData,
-        currentData: initialData
+    it('counts a changed row as updated and a fresh row as created', async () => {
+      const firstFile = 'file-initial'
+      const secondFile = 'file-mixed'
+      const extractor = createInMemorySummaryLogExtractor({
+        [firstFile]: reprocessorInput([
+          receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+        ]),
+        [secondFile]: reprocessorInput([
+          receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_200_75),
+          receivedRow(3, 'row-456', '2025-01-16', TEST_WEIGHT_250_5)
+        ])
       })
 
-      const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
-        received: {
-          'row-123': { version, data }
-        }
-      })
-
-      await wasteRecordRepository.appendVersions(
-        'org-1',
-        'reg-1',
-        wasteRecordVersions
+      await realBalanceSync(extractor)(summaryLogFor(firstFile), TEST_USER)
+      const result = await realBalanceSync(extractor)(
+        summaryLogFor(secondFile),
+        TEST_USER
       )
 
-      // Submit same data (unchanged)
-      const fileId = 'test-file-unchanged-counts'
-      const summaryLog = {
-        file: {
-          id: fileId,
-          uri: 's3://test-bucket/test-key-unchanged'
-        },
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
+      expect(result).toEqual({ created: 1, updated: 1 })
+    })
 
-      /** @type {any} */ const parsedData = {
-        meta: {
-          PROCESSING_TYPE: {
-            value: 'REPROCESSOR_INPUT'
-          }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Sheet1', row: 1, column: 'A' },
-            headers: [
-              'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              FIELD_GROSS_WEIGHT
-            ],
-            rows: [
-              // Same data as existing
-              {
-                rowNumber: 2,
-                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-              }
-            ]
-          }
-        }
-      }
-
+    it('does not count unchanged rows', async () => {
+      const firstFile = 'file-initial-unchanged'
+      const secondFile = 'file-unchanged'
+      const rows = [
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ]
       const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: parsedData
+        [firstFile]: reprocessorInput(rows),
+        [secondFile]: reprocessorInput(rows)
       })
 
-      const sync = /** @type {any} */ (syncFromSummaryLog)({
-        extractor,
-        wasteRecordRepository,
-        wasteBalanceService,
-        organisationsRepository,
-        overseasSitesRepository,
-        summaryLogRowStateRepository
-      })
-
-      const result = await sync(summaryLog, TEST_USER)
-
-      expect(result).toEqual({
-        created: 0,
-        updated: 0
-      })
-    })
-  })
-
-  it('persists registered-only received and sent-on rows as waste records', async () => {
-    const fileId = 'test-file-registered-only'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-registered-only'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Received', row: 7, column: 'A' },
-          headers: ['ROW_ID', 'MONTH_RECEIVED_FOR_REPROCESSING', 'NET_WEIGHT'],
-          rows: [{ rowNumber: 8, values: [1000, '2025-01-01', 10.5] }]
-        },
-        SENT_ON_LOADS: {
-          location: { sheet: 'Sent on', row: 7, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_LOAD_LEFT_SITE',
-            'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
-          ],
-          rows: [{ rowNumber: 8, values: [5000, '2025-03-01', 5.0] }]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    const result = await sync(summaryLog, TEST_USER)
-
-    expect(result).toEqual({ created: 2, updated: 0 })
-
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    expect(savedRecords).toHaveLength(2)
-
-    const received = savedRecords.find(
-      (r) => r.type === WASTE_RECORD_TYPE.RECEIVED
-    )
-    expect(received).toMatchObject({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: '1000',
-      type: WASTE_RECORD_TYPE.RECEIVED
-    })
-    expect(received.data.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
-    expect(received.data.MONTH_RECEIVED_FOR_REPROCESSING).toBe('2025-01')
-
-    const sentOn = savedRecords.find(
-      (r) => r.type === WASTE_RECORD_TYPE.SENT_ON
-    )
-    expect(sentOn).toMatchObject({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: '5000',
-      type: WASTE_RECORD_TYPE.SENT_ON
-    })
-    expect(sentOn.data.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
-  })
-
-  it('persists exporter registered-only received, exported, and sent-on rows as waste records', async () => {
-    const fileId = 'test-file-exporter-registered-only'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key-exporter-registered-only'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_EXPORT: {
-          location: {
-            sheet: 'Received (section 1)',
-            row: 7,
-            column: 'A'
-          },
-          headers: ['ROW_ID', 'MONTH_RECEIVED_FOR_EXPORT', 'NET_WEIGHT'],
-          rows: [{ rowNumber: 8, values: [1000, '2025-01-01', 10.5] }]
-        },
-        LOADS_EXPORTED: {
-          location: {
-            sheet: 'Exported (sections 2 and 3)',
-            row: 7,
-            column: 'A'
-          },
-          headers: [
-            'ROW_ID',
-            'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
-            'DATE_OF_EXPORT'
-          ],
-          rows: [{ rowNumber: 8, values: [2000, 5.0, '2025-03-01'] }]
-        },
-        SENT_ON_LOADS: {
-          location: {
-            sheet: 'Sent on (section 4)',
-            row: 7,
-            column: 'A'
-          },
-          headers: [
-            'ROW_ID',
-            'DATE_LOAD_LEFT_SITE',
-            'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
-          ],
-          rows: [{ rowNumber: 8, values: [4000, '2025-03-01', 3.0] }]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
-      summaryLogRowStateRepository
-    })
-
-    const result = await sync(summaryLog, TEST_USER)
-
-    expect(result).toEqual({ created: 3, updated: 0 })
-
-    const savedRecords = await wasteRecordRepository.findByRegistration(
-      'org-1',
-      'reg-1'
-    )
-    expect(savedRecords).toHaveLength(3)
-
-    const received = savedRecords.find(
-      (r) => r.type === WASTE_RECORD_TYPE.RECEIVED
-    )
-    expect(received).toMatchObject({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: '1000',
-      type: WASTE_RECORD_TYPE.RECEIVED
-    })
-    expect(received.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
-    expect(received.data.MONTH_RECEIVED_FOR_EXPORT).toBe('2025-01')
-
-    const exported = savedRecords.find(
-      (r) => r.type === WASTE_RECORD_TYPE.EXPORTED
-    )
-    expect(exported).toMatchObject({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: '2000',
-      type: WASTE_RECORD_TYPE.EXPORTED
-    })
-    expect(exported.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
-
-    const sentOn = savedRecords.find(
-      (r) => r.type === WASTE_RECORD_TYPE.SENT_ON
-    )
-    expect(sentOn).toMatchObject({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: '4000',
-      type: WASTE_RECORD_TYPE.SENT_ON
-    })
-    expect(sentOn.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
-  })
-
-  describe('committed summary-log row states (forward path)', () => {
-    const syncWith = (extractor) =>
-      /** @type {any} */ (syncFromSummaryLog)({
-        extractor,
-        wasteRecordRepository,
-        wasteBalanceService,
-        organisationsRepository,
-        overseasSitesRepository,
-        summaryLogRowStateRepository
-      })
-
-    const ledgerIdFor = (summaryLog) => ({
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
-      accreditationId: summaryLog.accreditationId ?? null
-    })
-
-    const reprocessorRegisteredOnlyData = {
-      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' } },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Received', row: 7, column: 'A' },
-          headers: ['ROW_ID', 'MONTH_RECEIVED_FOR_REPROCESSING', 'NET_WEIGHT'],
-          rows: [{ rowNumber: 8, values: [1000, '2025-01-01', 10.5] }]
-        },
-        SENT_ON_LOADS: {
-          location: { sheet: 'Sent on', row: 7, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_LOAD_LEFT_SITE',
-            'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
-          ],
-          rows: [{ rowNumber: 8, values: [5000, '2025-03-01', 5.0] }]
-        }
-      }
-    }
-
-    it('writes committed row states for a registered-only submission, on the registered-only ledger', async () => {
-      const fileId = 'file-reg-only-states'
-      const summaryLog = {
-        file: { id: fileId, uri: 's3://bucket/reg-only' },
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: /** @type {any} */ (reprocessorRegisteredOnlyData)
-      })
-
-      await syncWith(extractor)(summaryLog, TEST_USER)
-
-      const committed =
-        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
-          ledgerIdFor(summaryLog),
-          fileId
-        )
-      expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1000', '5000'])
-      expect(committed.every((doc) => doc.accreditationId === null)).toBe(true)
-      const received = committed.find((doc) => doc.rowId === '1000')
-      expect(received).toMatchObject({
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-        classification: {
-          outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
-          reasons: [],
-          transactionAmount: 0
-        },
-        summaryLogIds: [fileId]
-      })
-      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
-    })
-
-    it('writes committed row states for an exporter registered-only submission', async () => {
-      const fileId = 'file-exporter-reg-only-states'
-      const summaryLog = {
-        file: { id: fileId, uri: 's3://bucket/exporter-reg-only' },
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
-      /** @type {any} */ const parsedData = {
-        meta: { PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' } },
-        data: {
-          RECEIVED_LOADS_FOR_EXPORT: {
-            location: { sheet: 'Received (section 1)', row: 7, column: 'A' },
-            headers: ['ROW_ID', 'MONTH_RECEIVED_FOR_EXPORT', 'NET_WEIGHT'],
-            rows: [{ rowNumber: 8, values: [1000, '2025-01-01', 10.5] }]
-          },
-          LOADS_EXPORTED: {
-            location: {
-              sheet: 'Exported (sections 2 and 3)',
-              row: 7,
-              column: 'A'
-            },
-            headers: [
-              'ROW_ID',
-              'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
-              'DATE_OF_EXPORT'
-            ],
-            rows: [{ rowNumber: 8, values: [2000, 5.0, '2025-03-01'] }]
-          }
-        }
-      }
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: parsedData
-      })
-
-      await syncWith(extractor)(summaryLog, TEST_USER)
-
-      const committed =
-        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
-          ledgerIdFor(summaryLog),
-          fileId
-        )
-      expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1000', '2000'])
-      expect(committed.every((doc) => doc.accreditationId === null)).toBe(true)
-    })
-
-    it('writes committed row states for a no-accreditation balance-type submission, on the registered-only ledger and balance skipped', async () => {
-      const fileId = 'file-no-accred-states'
-      const summaryLog = {
-        file: { id: fileId, uri: 's3://bucket/no-accred' },
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-        // no accreditationId; registration carries none either
-      }
-      /** @type {any} */ const parsedData = {
-        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Sheet1', row: 1, column: 'A' },
-            headers: [
-              'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              FIELD_GROSS_WEIGHT
-            ],
-            rows: [
-              {
-                rowNumber: 2,
-                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-              }
-            ]
-          }
-        }
-      }
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: parsedData
-      })
-
-      await syncWith(extractor)(summaryLog, TEST_USER)
-
-      const committed =
-        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
-          ledgerIdFor(summaryLog),
-          fileId
-        )
-      expect(committed).toHaveLength(1)
-      expect(committed[0]).toMatchObject({
-        rowId: 'row-123',
-        accreditationId: null,
-        summaryLogIds: [fileId]
-      })
-      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
-    })
-
-    it('writes committed row states for an accredited submission and still updates the balance', async () => {
-      const fileId = 'file-accredited-states'
-      const summaryLog = {
-        file: { id: fileId, uri: 's3://bucket/accredited' },
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1'
-      }
-      organisationsRepository.findAccreditationById = vi
-        .fn()
-        .mockResolvedValue({
-          id: 'acc-1',
-          validFrom: '2023-01-01',
-          validTo: '2030-12-31'
-        })
-      /** @type {any} */ const parsedData = {
-        meta: { PROCESSING_TYPE: { value: 'EXPORTER' } },
-        data: {
-          RECEIVED_LOADS_FOR_EXPORT: {
-            location: { sheet: 'Sheet1', row: 1, column: 'A' },
-            headers: [
-              'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              FIELD_GROSS_WEIGHT
-            ],
-            rows: [
-              {
-                rowNumber: 2,
-                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-              }
-            ]
-          }
-        }
-      }
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: parsedData
-      })
-
-      await syncWith(extractor)(summaryLog, TEST_USER)
-
-      const committed =
-        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
-          ledgerIdFor(summaryLog),
-          fileId
-        )
-      expect(committed).toHaveLength(1)
-      expect(committed[0]).toMatchObject({
-        rowId: 'row-123',
-        accreditationId: 'acc-1'
-      })
-      expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalled()
-    })
-  })
-
-  describe('registered-only summary-log submitted event (forward path)', () => {
-    const regOnlyData = {
-      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            }
-          ]
-        }
-      }
-    }
-
-    const syncWith = (extractor) =>
-      /** @type {any} */ (syncFromSummaryLog)({
-        extractor,
-        wasteRecordRepository,
-        wasteBalanceService,
-        organisationsRepository,
-        overseasSitesRepository,
-        summaryLogRowStateRepository
-      })
-
-    it('emits a zero-delta summary-log submitted event for a reg-only submission', async () => {
-      const fileId = 'file-reg-only'
-      const summaryLog = {
-        file: { id: fileId, uri: 's3://bucket/reg-only' },
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: /** @type {any} */ (regOnlyData)
-      })
-
-      await syncWith(extractor)(summaryLog, TEST_USER)
-
-      expect(
-        wasteBalanceService.commitSummaryLogSubmittedEvent
-      ).toHaveBeenCalledWith(
-        {
-          registrationId: 'reg-1',
-          accreditationId: null,
-          organisationId: 'org-1'
-        },
-        { summaryLogId: fileId, creditTotal: 0 },
-        { id: TEST_USER.id, email: TEST_USER.email }
+      await realBalanceSync(extractor)(summaryLogFor(firstFile), TEST_USER)
+      const result = await realBalanceSync(extractor)(
+        summaryLogFor(secondFile),
+        TEST_USER
       )
-      expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
-    })
 
-    it('includes the user name in createdBy when the user has one', async () => {
-      const fileId = 'file-named-user'
-      const summaryLog = {
-        file: { id: fileId, uri: 's3://bucket/named-user' },
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: /** @type {any} */ (regOnlyData)
-      })
-      const namedUser = { ...TEST_USER, name: 'Reg User' }
-
-      await syncWith(extractor)(summaryLog, namedUser)
-
-      expect(
-        wasteBalanceService.commitSummaryLogSubmittedEvent
-      ).toHaveBeenCalledWith(
-        {
-          registrationId: 'reg-1',
-          accreditationId: null,
-          organisationId: 'org-1'
-        },
-        { summaryLogId: fileId, creditTotal: 0 },
-        { id: namedUser.id, name: 'Reg User', email: namedUser.email }
-      )
-    })
-
-    it('does not emit a reg-only event for an accredited submission', async () => {
-      const fileId = 'file-accredited'
-      const summaryLog = {
-        file: { id: fileId, uri: 's3://bucket/accredited' },
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1'
-      }
-      organisationsRepository.findAccreditationById = vi
-        .fn()
-        .mockResolvedValue({
-          id: 'acc-1',
-          validFrom: '2023-01-01',
-          validTo: '2030-12-31'
-        })
-      const extractor = createInMemorySummaryLogExtractor({
-        [fileId]: /** @type {any} */ ({
-          meta: { PROCESSING_TYPE: { value: 'EXPORTER' } },
-          data: {
-            RECEIVED_LOADS_FOR_EXPORT: {
-              location: { sheet: 'Sheet1', row: 1, column: 'A' },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                FIELD_GROSS_WEIGHT
-              ],
-              rows: [
-                {
-                  rowNumber: 2,
-                  values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-                }
-              ]
-            }
-          }
-        })
-      })
-
-      await syncWith(extractor)(summaryLog, TEST_USER)
-
-      expect(
-        wasteBalanceService.commitSummaryLogSubmittedEvent
-      ).not.toHaveBeenCalled()
+      expect(result).toEqual({ created: 0, updated: 0 })
     })
   })
 })

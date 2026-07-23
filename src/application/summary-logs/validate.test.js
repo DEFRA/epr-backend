@@ -293,7 +293,6 @@ describe('SummaryLogsValidator', () => {
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
-      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
       summaryLogRowStateRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
@@ -722,7 +721,6 @@ describe('SummaryLogsValidator', () => {
       logger,
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
-      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
       summaryLogRowStateRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
@@ -769,7 +767,6 @@ describe('SummaryLogsValidator', () => {
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
-      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
       summaryLogRowStateRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({

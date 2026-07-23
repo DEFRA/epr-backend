@@ -1,6 +1,9 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { resolveOverseasSites } from './resolve-overseas-sites.js'
 import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
+import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
+import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
 import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
@@ -10,19 +13,18 @@ import {
   SKIP_HEADER_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { WASTE_RECORD_CHANGE } from '#domain/waste-records/model.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
  * @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
  */
 
 /**
  * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
+ * @typedef {import('./transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord
  */
 
 /**
@@ -186,62 +188,62 @@ const updateWasteBalances = async ({
   }
 }
 
-const transformToWasteRecords = (
-  preparedData,
-  summaryLog,
-  accreditationId,
-  timestamp,
-  existingRecords
-) => {
-  const summaryLogContext = {
-    summaryLog: {
-      id: summaryLog.file.id,
-      uri: summaryLog.file.uri
-    },
-    organisationId: summaryLog.organisationId,
-    registrationId: summaryLog.registrationId,
-    accreditationId,
-    timestamp
-  }
+/**
+ * Counts how the submission's rows changed against the registration's latest
+ * committed submission — the same comparison the check-page classification
+ * runs — for observability metrics. Added rows count as created, adjusted rows
+ * as updated; unchanged rows do not count. Reads the committed head before the
+ * commit, so it reflects the previous submission.
+ *
+ * @param {object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @returns {Promise<{ created: number, updated: number }>}
+ */
+const countRecordChanges = async ({
+  wasteRecords,
+  accreditation,
+  overseasSites,
+  ledgerId,
+  ledgerRepository,
+  summaryLogRowStateRepository
+}) => {
+  const previousRowStates = await summaryLogRowStatesForRegistration({
+    ...ledgerId,
+    ledgerRepository,
+    summaryLogRowStateRepository
+  })
 
-  return transformFromSummaryLog(
-    preparedData,
-    summaryLogContext,
-    existingRecords
+  const submittedRowStatesByKey = new Map(
+    previousRowStates.map((state) => [
+      `${state.wasteRecordType}:${state.rowId}`,
+      state
+    ])
   )
-}
 
-const prepareWasteRecordVersions = (wasteRecords) => {
-  const wasteRecordVersions = new Map()
-  for (const { record } of wasteRecords) {
-    if (!wasteRecordVersions.has(record.type)) {
-      wasteRecordVersions.set(record.type, new Map())
-    }
+  const recordChanges = classifyRecordChanges({
+    wasteRecords,
+    submittedRowStatesByKey,
+    accreditation,
+    overseasSites
+  })
 
-    // Get the latest version (last in array) and its data
-    const latestVersion = record.versions[record.versions.length - 1]
-    wasteRecordVersions.get(record.type).set(record.rowId, {
-      version: latestVersion,
-      data: record.data
-    })
+  const changes = [...recordChanges.values()]
+  return {
+    created: changes.filter((change) => change === RECORD_CHANGE.ADDED).length,
+    updated: changes.filter((change) => change === RECORD_CHANGE.ADJUSTED)
+      .length
   }
-  return wasteRecordVersions
-}
-
-const calculateMetrics = (wasteRecords) => {
-  const created = wasteRecords.filter(
-    (wr) => wr.change === WASTE_RECORD_CHANGE.CREATED
-  ).length
-  const updated = wasteRecords.filter(
-    (wr) => wr.change === WASTE_RECORD_CHANGE.UPDATED
-  ).length
-
-  return { created, updated }
 }
 
 /**
- * Resolves the accreditation (when one exists, any status) and commits the
- * per-row state for every submission (keyed by accreditation existence).
+ * Commits the per-row state for every submission (keyed by accreditation
+ * existence) and, for an accredited balance-bearing submission, its waste
+ * balance.
  *
  * Every submission records a summary-log-submitted event marking that the
  * summary log was submitted. For an accredited submission that event also
@@ -252,33 +254,25 @@ const calculateMetrics = (wasteRecords) => {
  * @param {object} params
  * @param {{ file: { id: string }, organisationId: string, registrationId: string }} params.summaryLog
  * @param {string | undefined} params.accreditationId
- * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
+ * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
+ * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
- * @param {OrganisationsRepository} params.organisationsRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
  * @param {ReturnType<typeof createWasteBalanceService>} params.wasteBalanceService
  */
 const commitStateAndBalance = async ({
   summaryLog,
   accreditationId,
+  accreditation,
   wasteRecords,
   overseasSites,
   parsedData,
   user,
-  organisationsRepository,
   summaryLogRowStateRepository,
   wasteBalanceService
 }) => {
-  const accreditation = accreditationId
-    ? await resolveAccreditation(
-        organisationsRepository,
-        summaryLog.organisationId,
-        accreditationId
-      )
-    : null
-
   await writeSummaryLogRowStates({
     summaryLogRowStateRepository,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
@@ -292,7 +286,7 @@ const commitStateAndBalance = async ({
     summaryLogId: summaryLog.file.id
   })
 
-  if (accreditationId) {
+  if (accreditation) {
     await updateWasteBalances({
       parsedData,
       accreditation,
@@ -320,26 +314,28 @@ const commitStateAndBalance = async ({
 }
 
 /**
- * Orchestrates the extraction, transformation, and persistence of waste records from a summary log
+ * Orchestrates the extraction, transformation, and persistence of a summary log
+ * submission: it commits the per-row state to the row-state collection and,
+ * for accredited balance-bearing submissions, the waste balance.
  *
  * @param {Object} dependencies - The service dependencies
  * @param {Object} dependencies.extractor - The summary log extractor
- * @param {Object} dependencies.wasteRecordRepository - The waste record repository
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} dependencies.wasteBalanceService - The waste balance application service
  * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} dependencies.summaryLogRowStateRepository - The summary-log row states repository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} dependencies.ledgerRepository - The ledger repository, read to classify created/updated against the committed head
  * @param {TypedLogger} dependencies.logger - Logger forwarded to extractor for trace correlation
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
   const {
     extractor,
-    wasteRecordRepository,
     wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
     summaryLogRowStateRepository,
+    ledgerRepository,
     logger
   } = dependencies
 
@@ -355,53 +351,25 @@ export const syncFromSummaryLog = (dependencies) => {
    * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
    */
   return async (summaryLog, user) => {
-    const timestamp = new Date().toISOString()
-
     // 1. Extract/parse the summary log
     const parsedData = await extractor.extract(summaryLog, { logger })
 
     // 2. Extract row IDs for transformation
     const preparedData = prepareRowsForTransformation(parsedData)
 
-    // 3. Load all existing waste records for this org/reg
-    const existingRecordsArray = await wasteRecordRepository.findByRegistration(
-      summaryLog.organisationId,
-      summaryLog.registrationId
-    )
-
     const accreditationId = await resolveAccreditationId(
       summaryLog,
       organisationsRepository
     )
 
-    // 4. Convert to Map keyed by type:rowId for efficient lookup
-    const existingRecords = new Map(
-      existingRecordsArray.map((record) => [
-        `${record.type}:${record.rowId}`,
-        record
-      ])
-    )
+    // 3. Transform to waste records
+    const wasteRecords = transformFromSummaryLog(preparedData, {
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      accreditationId
+    })
 
-    // 5. Transform to waste records
-    const wasteRecords = transformToWasteRecords(
-      preparedData,
-      summaryLog,
-      accreditationId,
-      timestamp,
-      existingRecords
-    )
-
-    // 6. Convert waste records to wasteRecordVersions Map structure
-    const wasteRecordVersions = prepareWasteRecordVersions(wasteRecords)
-
-    // 7. Append versions
-    await wasteRecordRepository.appendVersions(
-      summaryLog.organisationId,
-      summaryLog.registrationId,
-      wasteRecordVersions
-    )
-
-    // 8. Resolve overseas sites for exporter ORS validation (VAL014)
+    // 4. Resolve overseas sites for exporter ORS validation (VAL014)
     const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
     const overseasSites =
       processingType === PROCESSING_TYPES.EXPORTER
@@ -413,22 +381,42 @@ export const syncFromSummaryLog = (dependencies) => {
           )
         : ORS_VALIDATION_DISABLED
 
-    // 9. Commit per-row state for every submission and the balance for
+    const accreditation = accreditationId
+      ? await resolveAccreditation(
+          organisationsRepository,
+          summaryLog.organisationId,
+          accreditationId
+        )
+      : null
+
+    // 5. Classify created/updated against the committed head, before committing
+    const metrics = await countRecordChanges({
+      wasteRecords,
+      accreditation,
+      overseasSites,
+      ledgerId: {
+        organisationId: summaryLog.organisationId,
+        registrationId: summaryLog.registrationId,
+        accreditationId: accreditationId ?? null
+      },
+      ledgerRepository,
+      summaryLogRowStateRepository
+    })
+
+    // 6. Commit per-row state for every submission and the balance for
     // accredited balance-bearing ones.
     await commitStateAndBalance({
       summaryLog,
       accreditationId,
+      accreditation,
       wasteRecords,
       overseasSites,
       parsedData,
       user,
-      organisationsRepository,
       summaryLogRowStateRepository,
       wasteBalanceService
     })
 
-    // 10. Count created/updated records for metrics
-    // The change property is set by transformFromSummaryLog
-    return calculateMetrics(wasteRecords)
+    return metrics
   }
 }

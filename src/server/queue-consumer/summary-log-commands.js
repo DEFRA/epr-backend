@@ -16,7 +16,6 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
 /** @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} SummaryLogRowStateRepository */
 /** @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository */
 /** @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService */
@@ -29,7 +28,6 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {TypedLogger} logger
  * @property {SummaryLogsRepository} summaryLogsRepository
  * @property {OrganisationsRepository} organisationsRepository
- * @property {WasteRecordsRepository} wasteRecordsRepository
  * @property {SummaryLogRowStateRepository} summaryLogRowStatesRepository
  * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {WasteBalanceService} wasteBalanceService
@@ -86,7 +84,6 @@ export const summaryLogCommandHandlers = [
         logger,
         summaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         reportsService,
@@ -98,7 +95,6 @@ export const summaryLogCommandHandlers = [
         logger,
         summaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
         summaryLogRowStateRepository: summaryLogRowStatesRepository,
         ledgerRepository,
         reportsService,
