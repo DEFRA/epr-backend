@@ -24,7 +24,8 @@ export const creditedTonnageGet = {
    * @param {HapiRequest & {
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository,
-   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository
+   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository
    * }} request
    * @param {HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
@@ -34,6 +35,7 @@ export const creditedTonnageGet = {
       ledgerRepository,
       summaryLogRowStatesRepository,
       organisationsRepository,
+      overseasSitesRepository,
       logger
     } = request
 
@@ -41,6 +43,7 @@ export const creditedTonnageGet = {
       ledgerRepository,
       summaryLogRowStateRepository: summaryLogRowStatesRepository,
       organisationsRepository,
+      overseasSitesRepository,
       logger,
       now: new Date()
     })

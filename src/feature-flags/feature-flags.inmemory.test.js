@@ -17,25 +17,6 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isDevEndpointsEnabled()).toBe(false)
   })
 
-  it('returns true when fixDuplicateAccreditationLinks flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      fixDuplicateAccreditationLinks: true
-    })
-    expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(true)
-  })
-
-  it('returns false when fixDuplicateAccreditationLinks flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      fixDuplicateAccreditationLinks: false
-    })
-    expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(false)
-  })
-
-  it('returns false when fixDuplicateAccreditationLinks flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isFixDuplicateAccreditationLinksEnabled()).toBe(false)
-  })
-
   it('returns true when staleIssuedTonnageReport flag is enabled', () => {
     const flags = createInMemoryFeatureFlags({
       staleIssuedTonnageReport: true
@@ -53,5 +34,43 @@ describe('createInMemoryFeatureFlags', () => {
   it('returns false when staleIssuedTonnageReport flag is not provided', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(false)
+  })
+
+  it('returns true when preCpaResubmissionReport flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      preCpaResubmissionReport: true
+    })
+    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(true)
+  })
+
+  it('returns false when preCpaResubmissionReport flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      preCpaResubmissionReport: false
+    })
+    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(false)
+  })
+
+  it('returns false when preCpaResubmissionReport flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(false)
+  })
+
+  it('returns true when preCpaResubmissionBackfill flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      preCpaResubmissionBackfill: true
+    })
+    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(true)
+  })
+
+  it('returns false when preCpaResubmissionBackfill flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      preCpaResubmissionBackfill: false
+    })
+    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(false)
+  })
+
+  it('returns false when preCpaResubmissionBackfill flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(false)
   })
 })

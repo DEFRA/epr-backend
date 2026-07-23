@@ -3,6 +3,10 @@
  */
 
 /**
+ * @typedef {typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON[keyof typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON]} ResubmissionIneligibleReason
+ */
+
+/**
  * @typedef {Object} UserSummary
  * @property {string} id
  * @property {string} [name]
@@ -115,7 +119,20 @@
  */
 
 /**
- * @typedef {{ uploadedAt: string, reason: ResubmissionReason, summaryLogId: string }} ReportResubmissionRequired
+ * @typedef {{ uploadedAt: string, summaryLogId: string }} ResubmissionClosedPeriodRestated
+ */
+
+/**
+ * @typedef {{ requestedAt: string, requestedBy: UserSummary }} ResubmissionOperatorRequested
+ */
+
+/**
+ * A report can require resubmission for either or both reasons at once,
+ * mirroring {@link ReportStale}.
+ * @typedef {{
+ *   closedPeriodRestated?: ResubmissionClosedPeriodRestated,
+ *   operatorRequested?: ResubmissionOperatorRequested
+ * }} ReportResubmissionRequired
  */
 
 /**
@@ -166,6 +183,37 @@
  *   submissionNumber: number,
  *   resubmissionRequired: ReportResubmissionRequired
  * }} MarkSubmittedReportRequiringResubmissionResult
+ */
+
+/**
+ * Parameters for
+ * {@link ReportsRepository.markSubmittedReportRequiringResubmissionByOperator}.
+ * Unlike the batch, summary-log-triggered method above, this targets exactly
+ * one report (identified by its natural key including `submissionNumber`),
+ * since an operator's request has no summary log to key a batch off.
+ * @typedef {{
+ *   organisationId: string,
+ *   registrationId: string,
+ *   year: number,
+ *   cadence: string,
+ *   period: number,
+ *   submissionNumber: number,
+ *   requestedBy: UserSummary,
+ *   requestedAt: string
+ * }} MarkSubmittedReportRequiringResubmissionByOperatorParams
+ */
+
+/**
+ * Fields needed to audit a resubmission transition, mirroring
+ * {@link MarkSubmittedReportRequiringResubmissionResult}.
+ * @typedef {{
+ *   reportId: string,
+ *   year: number,
+ *   cadence: string,
+ *   period: number,
+ *   submissionNumber: number,
+ *   resubmissionRequired: ReportResubmissionRequired
+ * }} MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult
  */
 
 /**
@@ -334,6 +382,11 @@
  *   For each given period, flags the latest submitted report as requiring resubmission,
  *   skipping any report already flagged from `summaryLogId` or built from it.
  *   Returns the per-report details for auditing.
+ * @property {(params: MarkSubmittedReportRequiringResubmissionByOperatorParams) => Promise<MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>} markSubmittedReportRequiringResubmissionByOperator
+ *   Flags the exact report identified by `submissionNumber` as requiring
+ *   resubmission at the operator's own request, conditional on it still
+ *   being `submitted` and not already flagged this way. Returns `null` when
+ *   the write matched nothing.
  * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
  *   Returns true when any report for the org/reg was submitted strictly after
  *   `since` (a canonical ISO timestamp, as produced by toISOString throughout),
@@ -346,7 +399,6 @@
  */
 
 /**
- * @import { ResubmissionReason } from '#reports/domain/resubmission.js'
  * @import { PeriodRef } from '#reports/domain/period-key.js'
  */
 

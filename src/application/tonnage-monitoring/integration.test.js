@@ -1,6 +1,6 @@
 import { describe, beforeEach, afterEach, expect, vi } from 'vitest'
-import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { MongoClient, ObjectId } from 'mongodb'
+import { ObjectId } from 'mongodb'
+import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { aggregateTonnageByMaterial } from './aggregate-tonnage.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -16,16 +16,7 @@ import {
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
-const DATABASE_NAME = 'epr-backend'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
-
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  }
-})
 
 const createOrganisation = (id, registrations) => ({
   _id: new ObjectId(id),

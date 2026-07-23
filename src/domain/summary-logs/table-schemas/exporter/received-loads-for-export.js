@@ -52,8 +52,7 @@ import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-field
  * - INTERIM_SITE_ID (only required when DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE == Yes)
  * - TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR (conditional, same as above)
  */
-const WASTE_BALANCE_FIELDS = [
-  FIELDS.ROW_ID,
+const WASTE_BALANCE_CONTENT_FIELDS = [
   FIELDS.DATE_RECEIVED_FOR_EXPORT,
   FIELDS.EWC_CODE,
   FIELDS.DESCRIPTION_WASTE,
@@ -76,6 +75,8 @@ const WASTE_BALANCE_FIELDS = [
   FIELDS.OSR_ID,
   FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
 ]
+
+const WASTE_BALANCE_FIELDS = [FIELDS.ROW_ID, ...WASTE_BALANCE_CONTENT_FIELDS]
 
 /**
  * Supplementary fields - present in template but not required for waste balance.
@@ -204,7 +205,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
   ) => {
     const missingResult = checkRequiredFields(
       data,
-      WASTE_BALANCE_FIELDS,
+      WASTE_BALANCE_CONTENT_FIELDS,
       RECEIVED_LOADS_FOR_EXPORT.unfilledValues
     )
     if (missingResult) {

@@ -1,19 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
-import {
-  WASTE_RECORD_TYPE,
-  VERSION_STATUS
-} from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
-const SUMMARY_LOG_ID = 'summary-log-1'
-const SUMMARY_LOG_URI = 's3://bucket/key'
-const SUBMISSION_TIMESTAMP = '2025-01-15T14:30:00.000Z'
 const FIRST_ROW_ID = 'row-123'
 const FIRST_DATE = '2025-01-15'
 const FIRST_WEIGHT = 100.5
 const SECOND_WEIGHT = 200.75
-const UPDATED_DATE = '2025-01-20'
-const UPDATED_WEIGHT = 250.5
 
 /**
  * Creates a validated row structure as expected by transformFromSummaryLog
@@ -65,25 +57,45 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const summaryLogContext = {
-      summaryLog: {
-        id: SUMMARY_LOG_ID,
-        uri: SUMMARY_LOG_URI
-      },
+    const result = transformFromSummaryLog(parsedData, {
       organisationId: 'org-1',
-      registrationId: 'reg-1',
-      timestamp: SUBMISSION_TIMESTAMP
-    }
-
-    const result = transformFromSummaryLog(
-      parsedData,
-      summaryLogContext,
-      new Map()
-    )
+      registrationId: 'reg-1'
+    })
 
     expect(result).toHaveLength(2)
     expectValidWasteRecord(result[0], FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT)
     expectValidWasteRecord(result[1], 'row-456', '2025-01-16', SECOND_WEIGHT)
+  })
+
+  it('transforms rows into records without version history', () => {
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: RECEIVED_LOADS_HEADERS,
+          rows: [
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID
+            )
+          ]
+        }
+      }
+    }
+
+    const result = transformFromSummaryLog(parsedData, {
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    })
+
+    expect(result[0].record).not.toHaveProperty('versions')
+    expect(result[0]).not.toHaveProperty('change')
   })
 
   it('returns empty array when no RECEIVED_LOADS data present', () => {
@@ -96,21 +108,10 @@ describe('transformFromSummaryLog', () => {
       data: {}
     }
 
-    const summaryLogContext = {
-      summaryLog: {
-        id: SUMMARY_LOG_ID,
-        uri: SUMMARY_LOG_URI
-      },
+    const result = transformFromSummaryLog(parsedData, {
       organisationId: 'org-1',
-      registrationId: 'reg-1',
-      timestamp: SUBMISSION_TIMESTAMP
-    }
-
-    const result = transformFromSummaryLog(
-      parsedData,
-      summaryLogContext,
-      new Map()
-    )
+      registrationId: 'reg-1'
+    })
 
     expect(result).toEqual([])
   })
@@ -132,27 +133,16 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const summaryLogContext = {
-      summaryLog: {
-        id: SUMMARY_LOG_ID,
-        uri: SUMMARY_LOG_URI
-      },
+    const result = transformFromSummaryLog(parsedData, {
       organisationId: 'org-1',
       registrationId: 'reg-1',
-      accreditationId: 'acc-1',
-      timestamp: SUBMISSION_TIMESTAMP
-    }
-
-    const result = transformFromSummaryLog(
-      parsedData,
-      summaryLogContext,
-      new Map()
-    )
+      accreditationId: 'acc-1'
+    })
 
     expect(result[0].record.accreditationId).toBe('acc-1')
   })
 
-  it('adds new version to existing waste record when rowId already exists', () => {
+  it('omits accreditationId when not provided', () => {
     /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
@@ -166,7 +156,7 @@ describe('transformFromSummaryLog', () => {
           rows: [
             createRow(
               RECEIVED_LOADS_HEADERS,
-              [FIRST_ROW_ID, UPDATED_DATE, UPDATED_WEIGHT],
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
               FIRST_ROW_ID
             )
           ]
@@ -174,51 +164,12 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const summaryLogContext = {
-      summaryLog: {
-        id: 'summary-log-2',
-        uri: 's3://bucket/key2'
-      },
+    const result = transformFromSummaryLog(parsedData, {
       organisationId: 'org-1',
-      registrationId: 'reg-1',
-      timestamp: SUBMISSION_TIMESTAMP
-    }
-
-    const existingWasteRecord = createExistingWasteRecord()
-    /** @type {any} */ const existingRecords = new Map([
-      [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
-    ])
-
-    const result = transformFromSummaryLog(
-      parsedData,
-      summaryLogContext,
-      existingRecords
-    )
-
-    expect(result).toHaveLength(1)
-    const { record } = result[0]
-    expect(record.versions).toHaveLength(2)
-    expect(record.versions[0]).toMatchObject({
-      status: VERSION_STATUS.CREATED,
-      summaryLog: {
-        id: SUMMARY_LOG_ID,
-        uri: SUMMARY_LOG_URI
-      }
+      registrationId: 'reg-1'
     })
-    expect(record.versions[1]).toMatchObject({
-      status: VERSION_STATUS.UPDATED,
-      summaryLog: {
-        id: 'summary-log-2',
-        uri: 's3://bucket/key2'
-      },
-      data: {
-        DATE_RECEIVED_FOR_REPROCESSING: UPDATED_DATE,
-        GROSS_WEIGHT: UPDATED_WEIGHT
-      }
-    })
-    // Verify ROW_ID is not in the delta (it's an immutable identifier)
-    expect(record.versions[1].data).not.toHaveProperty('ROW_ID')
-    expect(record.versions[1].createdAt).toBe(SUBMISSION_TIMESTAMP)
+
+    expect(result[0].record).not.toHaveProperty('accreditationId')
   })
 
   it('throws error for unknown processing type', () => {
@@ -231,18 +182,11 @@ describe('transformFromSummaryLog', () => {
       data: {}
     }
 
-    const summaryLogContext = {
-      summaryLog: {
-        id: SUMMARY_LOG_ID,
-        uri: SUMMARY_LOG_URI
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      timestamp: SUBMISSION_TIMESTAMP
-    }
-
     expect(() =>
-      transformFromSummaryLog(parsedData, summaryLogContext, new Map())
+      transformFromSummaryLog(parsedData, {
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      })
     ).toThrow('Unknown PROCESSING_TYPE: UNKNOWN_TYPE')
   })
 
@@ -264,264 +208,12 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const summaryLogContext = {
-      summaryLog: {
-        id: SUMMARY_LOG_ID,
-        uri: SUMMARY_LOG_URI
-      },
+    const result = transformFromSummaryLog(parsedData, {
       organisationId: 'org-1',
-      registrationId: 'reg-1',
-      timestamp: SUBMISSION_TIMESTAMP
-    }
-
-    const result = transformFromSummaryLog(
-      parsedData,
-      summaryLogContext,
-      new Map()
-    )
+      registrationId: 'reg-1'
+    })
 
     expect(result).toEqual([])
-  })
-
-  it('uses timestamp from context for all waste record versions', () => {
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: RECEIVED_LOADS_HEADERS,
-          rows: [
-            createRow(
-              RECEIVED_LOADS_HEADERS,
-              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
-              FIRST_ROW_ID
-            ),
-            createRow(
-              RECEIVED_LOADS_HEADERS,
-              ['row-456', '2025-01-16', SECOND_WEIGHT],
-              'row-456'
-            ),
-            createRow(
-              RECEIVED_LOADS_HEADERS,
-              ['row-789', '2025-01-17', 300],
-              'row-789'
-            )
-          ]
-        }
-      }
-    }
-
-    const summaryLogContext = {
-      summaryLog: {
-        id: SUMMARY_LOG_ID,
-        uri: SUMMARY_LOG_URI
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      timestamp: SUBMISSION_TIMESTAMP
-    }
-
-    const result = transformFromSummaryLog(
-      parsedData,
-      summaryLogContext,
-      new Map()
-    )
-
-    expect(result).toHaveLength(3)
-    // All versions should have the exact same timestamp from context
-    for (const { record } of result) {
-      expect(record.versions[0].createdAt).toBe(SUBMISSION_TIMESTAMP)
-    }
-  })
-
-  it('uses timestamp from context when updating existing records', () => {
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: RECEIVED_LOADS_HEADERS,
-          rows: [
-            createRow(
-              RECEIVED_LOADS_HEADERS,
-              [FIRST_ROW_ID, UPDATED_DATE, UPDATED_WEIGHT],
-              FIRST_ROW_ID
-            )
-          ]
-        }
-      }
-    }
-
-    const summaryLogContext = {
-      summaryLog: {
-        id: 'summary-log-2',
-        uri: 's3://bucket/key2'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      timestamp: SUBMISSION_TIMESTAMP
-    }
-
-    const existingWasteRecord = createExistingWasteRecord()
-    /** @type {any} */ const existingRecords = new Map([
-      [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
-    ])
-
-    const result = transformFromSummaryLog(
-      parsedData,
-      summaryLogContext,
-      existingRecords
-    )
-
-    expect(result).toHaveLength(1)
-    const { record } = result[0]
-    // The new version (second one) should use the timestamp from context
-    expect(record.versions[1].createdAt).toBe(SUBMISSION_TIMESTAMP)
-  })
-
-  describe('change property', () => {
-    it('returns change: created for new waste records', () => {
-      /** @type {any} */ const parsedData = {
-        meta: {
-          PROCESSING_TYPE: {
-            value: 'REPROCESSOR_INPUT'
-          }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Sheet1', row: 1, column: 'A' },
-            headers: RECEIVED_LOADS_HEADERS,
-            rows: [
-              createRow(
-                RECEIVED_LOADS_HEADERS,
-                [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
-                FIRST_ROW_ID
-              )
-            ]
-          }
-        }
-      }
-
-      const summaryLogContext = {
-        summaryLog: {
-          id: SUMMARY_LOG_ID,
-          uri: SUMMARY_LOG_URI
-        },
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        timestamp: SUBMISSION_TIMESTAMP
-      }
-
-      const result = transformFromSummaryLog(
-        parsedData,
-        summaryLogContext,
-        new Map()
-      )
-
-      expect(result[0].change).toBe('created')
-    })
-
-    it('returns change: updated when existing record has changes', () => {
-      /** @type {any} */ const parsedData = {
-        meta: {
-          PROCESSING_TYPE: {
-            value: 'REPROCESSOR_INPUT'
-          }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Sheet1', row: 1, column: 'A' },
-            headers: RECEIVED_LOADS_HEADERS,
-            rows: [
-              createRow(
-                RECEIVED_LOADS_HEADERS,
-                [FIRST_ROW_ID, UPDATED_DATE, UPDATED_WEIGHT],
-                FIRST_ROW_ID
-              )
-            ]
-          }
-        }
-      }
-
-      const summaryLogContext = {
-        summaryLog: {
-          id: 'summary-log-2',
-          uri: 's3://bucket/key2'
-        },
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        timestamp: SUBMISSION_TIMESTAMP
-      }
-
-      const existingWasteRecord = createExistingWasteRecord()
-      /** @type {any} */ const existingRecords = new Map([
-        [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
-      ])
-
-      const result = transformFromSummaryLog(
-        parsedData,
-        summaryLogContext,
-        existingRecords
-      )
-
-      expect(result[0].change).toBe('updated')
-    })
-
-    it('returns change: unchanged when existing record has no changes', () => {
-      /** @type {any} */ const parsedData = {
-        meta: {
-          PROCESSING_TYPE: {
-            value: 'REPROCESSOR_INPUT'
-          }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Sheet1', row: 1, column: 'A' },
-            headers: RECEIVED_LOADS_HEADERS,
-            rows: [
-              createRow(
-                RECEIVED_LOADS_HEADERS,
-                [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT], // Same as existing
-                FIRST_ROW_ID
-              )
-            ]
-          }
-        }
-      }
-
-      const summaryLogContext = {
-        summaryLog: {
-          id: 'summary-log-2',
-          uri: 's3://bucket/key2'
-        },
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        timestamp: SUBMISSION_TIMESTAMP
-      }
-
-      const existingWasteRecord = createExistingWasteRecord()
-      /** @type {any} */ const existingRecords = new Map([
-        [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
-      ])
-
-      const result = transformFromSummaryLog(
-        parsedData,
-        summaryLogContext,
-        existingRecords
-      )
-
-      expect(result[0].change).toBe('unchanged')
-      // Should not add a new version
-      expect(result[0].record.versions).toHaveLength(1)
-    })
   })
 
   describe('REPROCESSOR_INPUT.REPROCESSED_LOADS', () => {
@@ -554,21 +246,10 @@ describe('transformFromSummaryLog', () => {
         }
       }
 
-      const summaryLogContext = {
-        summaryLog: {
-          id: SUMMARY_LOG_ID,
-          uri: SUMMARY_LOG_URI
-        },
+      const result = transformFromSummaryLog(parsedData, {
         organisationId: 'org-1',
-        registrationId: 'reg-1',
-        timestamp: SUBMISSION_TIMESTAMP
-      }
-
-      const result = transformFromSummaryLog(
-        parsedData,
-        summaryLogContext,
-        new Map()
-      )
+        registrationId: 'reg-1'
+      })
 
       expect(result).toHaveLength(1)
       const { record } = result[0]
@@ -585,6 +266,44 @@ describe('transformFromSummaryLog', () => {
           processingType: 'REPROCESSOR_INPUT'
         }
       })
+    })
+  })
+
+  describe('EXPORTER_REGISTERED_ONLY.RECEIVED_LOADS_FOR_EXPORT', () => {
+    const RECEIVED_FOR_EXPORT_HEADERS = [
+      'ROW_ID',
+      'MONTH_RECEIVED_FOR_EXPORT',
+      'NET_WEIGHT'
+    ]
+
+    it('slices the month value to year-month granularity', () => {
+      /** @type {any} */ const parsedData = {
+        meta: {
+          PROCESSING_TYPE: {
+            value: 'EXPORTER_REGISTERED_ONLY'
+          }
+        },
+        data: {
+          RECEIVED_LOADS_FOR_EXPORT: {
+            location: { sheet: 'Sheet1', row: 1, column: 'A' },
+            headers: RECEIVED_FOR_EXPORT_HEADERS,
+            rows: [
+              createRow(
+                RECEIVED_FOR_EXPORT_HEADERS,
+                ['5001', '2026-03-01', 10.5],
+                '5001'
+              )
+            ]
+          }
+        }
+      }
+
+      const result = transformFromSummaryLog(parsedData, {
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      })
+
+      expect(result[0].record.data.MONTH_RECEIVED_FOR_EXPORT).toBe('2026-03')
     })
   })
 
@@ -618,21 +337,10 @@ describe('transformFromSummaryLog', () => {
         }
       }
 
-      const summaryLogContext = {
-        summaryLog: {
-          id: SUMMARY_LOG_ID,
-          uri: SUMMARY_LOG_URI
-        },
+      const result = transformFromSummaryLog(parsedData, {
         organisationId: 'org-1',
-        registrationId: 'reg-1',
-        timestamp: SUBMISSION_TIMESTAMP
-      }
-
-      const result = transformFromSummaryLog(
-        parsedData,
-        summaryLogContext,
-        new Map()
-      )
+        registrationId: 'reg-1'
+      })
 
       expect(result).toHaveLength(1)
       const { record } = result[0]
@@ -653,37 +361,6 @@ describe('transformFromSummaryLog', () => {
   })
 })
 
-function createExistingWasteRecord() {
-  return {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    rowId: FIRST_ROW_ID,
-    type: WASTE_RECORD_TYPE.RECEIVED,
-    data: {
-      ROW_ID: FIRST_ROW_ID,
-      DATE_RECEIVED_FOR_REPROCESSING: FIRST_DATE,
-      GROSS_WEIGHT: FIRST_WEIGHT,
-      processingType: 'REPROCESSOR_INPUT'
-    },
-    versions: [
-      {
-        createdAt: '2025-01-15T10:00:00.000Z',
-        status: VERSION_STATUS.CREATED,
-        summaryLog: {
-          id: SUMMARY_LOG_ID,
-          uri: SUMMARY_LOG_URI
-        },
-        data: {
-          ROW_ID: FIRST_ROW_ID,
-          DATE_RECEIVED_FOR_REPROCESSING: FIRST_DATE,
-          GROSS_WEIGHT: FIRST_WEIGHT,
-          processingType: 'REPROCESSOR_INPUT'
-        }
-      }
-    ]
-  }
-}
-
 function expectValidWasteRecord(result, rowId, dateReceived, grossWeight) {
   const { record, issues } = result
 
@@ -699,19 +376,4 @@ function expectValidWasteRecord(result, rowId, dateReceived, grossWeight) {
       GROSS_WEIGHT: grossWeight
     }
   })
-
-  expect(record.versions).toHaveLength(1)
-  expect(record.versions[0]).toMatchObject({
-    status: VERSION_STATUS.CREATED,
-    summaryLog: {
-      id: SUMMARY_LOG_ID,
-      uri: SUMMARY_LOG_URI
-    },
-    data: {
-      ROW_ID: rowId,
-      DATE_RECEIVED_FOR_REPROCESSING: dateReceived,
-      GROSS_WEIGHT: grossWeight
-    }
-  })
-  expect(record.versions[0].createdAt).toBe(SUBMISSION_TIMESTAMP)
 }

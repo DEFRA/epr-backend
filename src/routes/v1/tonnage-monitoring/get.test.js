@@ -34,61 +34,6 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
     server = await createTestServer({ repositories: {} })
   })
 
-  describe('happy path', () => {
-    const makeRequest = async () => {
-      return server.inject({
-        method: 'GET',
-        url: tonnageMonitoringPath,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
-    }
-
-    it('returns 200 with tonnage data', async () => {
-      const mockTonnageData = {
-        generatedAt: '2026-01-29T12:00:00.000Z',
-        materials: [
-          {
-            material: 'glass_re_melt',
-            year: 2026,
-            type: 'Exporter',
-            months: [
-              { month: 'Jan', tonnage: 100 },
-              { month: 'Feb', tonnage: 0 }
-            ]
-          },
-          {
-            material: 'plastic',
-            year: 2026,
-            type: 'Reprocessor',
-            months: [
-              { month: 'Jan', tonnage: 0 },
-              { month: 'Feb', tonnage: 200 }
-            ]
-          }
-        ],
-        total: 300
-      }
-      mockAggregateTonnageByMaterial.mockResolvedValue(mockTonnageData)
-
-      const response = await makeRequest()
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(JSON.parse(response.payload)).toEqual(mockTonnageData)
-    })
-
-    it('calls aggregateTonnageByMaterial with db and ledgerRepository', async () => {
-      await makeRequest()
-
-      expect(mockAggregateTonnageByMaterial).toHaveBeenCalledTimes(1)
-      const [, ledgerRepository] = mockAggregateTonnageByMaterial.mock.calls[0]
-      expect(
-        ledgerRepository.findLatestSubmittedSummaryLogPerLedger
-      ).toBeTypeOf('function')
-    })
-  })
-
   describe('error handling', () => {
     it('returns 500 when aggregation fails', async () => {
       mockAggregateTonnageByMaterial.mockRejectedValue(

@@ -56,15 +56,74 @@ const naClassification = () => ({
   transactionAmount: 0
 })
 
-// A committed row-state entry (upsert shape). Defaults to an NA-outcome
-// reprocessor received row — inclusion is now read from the stamped
-// classification rather than recomputed, so tests set the outcome directly.
+// A committed row-state entry (upsert shape). Defaults to a reprocessor
+// received row whose data cannot classify — the export re-derives inclusion
+// from the row's data and the current context, so a row that should classify
+// carries `completeReceivedData` instead.
 const receivedRowState = (overrides = {}) => ({
   rowId: '1001',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
   data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01' },
   classification: naClassification(),
+  ...overrides
+})
+
+// Every field the reprocessor-input received schema needs to reach a per-row
+// waste-balance outcome, so the only thing left deciding the outcome is the
+// accreditation the export resolves at read time.
+const completeReceivedData = (overrides = {}) => ({
+  DATE_RECEIVED_FOR_REPROCESSING: '2026-06-15',
+  EWC_CODE: '03 03 08',
+  DESCRIPTION_WASTE: 'Paper - other',
+  WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+  GROSS_WEIGHT: 100,
+  TARE_WEIGHT: 5,
+  PALLET_WEIGHT: 5,
+  NET_WEIGHT: 90,
+  BAILING_WIRE_PROTOCOL: 'No',
+  HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'AAIG percentage',
+  WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+  RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+  TONNAGE_RECEIVED_FOR_RECYCLING: 50.5,
+  ...overrides
+})
+
+// The exporter equivalent of `completeReceivedData` — everything the
+// received-loads-for-export schema needs before the overseas site's approval
+// date is what decides the outcome.
+const completeExportedData = (overrides = {}) => ({
+  DATE_RECEIVED_FOR_EXPORT: '2026-06-01',
+  EWC_CODE: '03 03 08',
+  DESCRIPTION_WASTE: 'Paper - other',
+  WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+  GROSS_WEIGHT: 100,
+  TARE_WEIGHT: 5,
+  PALLET_WEIGHT: 5,
+  NET_WEIGHT: 90,
+  BAILING_WIRE_PROTOCOL: 'No',
+  HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'AAIG percentage',
+  WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+  RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+  TONNAGE_RECEIVED_FOR_EXPORT: 72,
+  TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 60.5,
+  DATE_OF_EXPORT: '2026-06-15',
+  BASEL_EXPORT_CODE: 'B1010',
+  CUSTOMS_CODES: 'HS123',
+  CONTAINER_NUMBER: 'CONT001',
+  DATE_RECEIVED_BY_OSR: '2026-06-20',
+  OSR_ID: '001',
+  DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'No',
+  ...overrides
+})
+
+const approvedAccreditation = (overrides = {}) => ({
+  id: 'acc-1',
+  status: 'approved',
+  accreditationNumber: 'ACC-777',
+  validFrom: '2026-01-01',
+  validTo: '2026-12-31',
+  statusHistory: [],
   ...overrides
 })
 
@@ -317,15 +376,7 @@ describe('streamCsvExport', () => {
 
   it('builds the ORS context once per registration from the pre-loaded sites map', async () => {
     const org = baseOrg({
-      accreditations: [
-        {
-          id: 'acc-1',
-          status: 'approved',
-          validFrom: '2026-01-01',
-          validTo: '2026-12-31',
-          statusHistory: []
-        }
-      ],
+      accreditations: [approvedAccreditation()],
       registrations: [
         baseRegistration({
           accreditation: null,
@@ -347,12 +398,8 @@ describe('streamCsvExport', () => {
               rowId: '4001',
               wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
               processingType: PROCESSING_TYPES.EXPORTER,
-              data: { OSR_ID: '001', DATE_OF_EXPORT: '2026-03-01' },
-              classification: {
-                outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
-                reasons: [],
-                transactionAmount: 9
-              }
+              data: completeExportedData(),
+              classification: naClassification()
             }
           ]
         }
@@ -365,6 +412,48 @@ describe('streamCsvExport', () => {
     expect(findAll).toHaveBeenCalledTimes(1)
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
+  })
+
+  it('excludes an exported row whose overseas site is not yet approved on the export date', async () => {
+    const org = baseOrg({
+      accreditations: [approvedAccreditation()],
+      registrations: [
+        baseRegistration({
+          accreditation: null,
+          accreditationId: 'acc-1',
+          overseasSites: { '001': { overseasSiteId: 'site-a' } }
+        })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      sites: [{ id: 'site-a', validFrom: new Date('2026-09-01') }],
+      seeds: [
+        {
+          accreditationId: 'acc-1',
+          rows: [
+            {
+              rowId: '4001',
+              wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+              processingType: PROCESSING_TYPES.EXPORTER,
+              data: completeExportedData(),
+              classification: {
+                outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+                reasons: [],
+                transactionAmount: 60.5
+              }
+            }
+          ]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
+    expect(
+      cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]
+    ).toContain('ORS_NOT_APPROVED')
   })
 
   it('populates the derived OSR columns from the approved overseas site matched by OSR_ID', async () => {
@@ -420,15 +509,23 @@ describe('streamCsvExport', () => {
     expect(cells[header.indexOf(OSR_NAME_REVISED)]).toBe('')
   })
 
-  it('renders a stamped EXCLUDED classification as false with its reason and blank tonnage', async () => {
+  it('includes a row the stamped classification ignored once the accreditation covers its date', async () => {
+    const org = baseOrg({
+      accreditations: [approvedAccreditation()],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
     const deps = await buildDeps({
-      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      orgs: [org],
       seeds: [
         {
+          accreditationId: 'acc-1',
           rows: [
             receivedRowState({
+              data: completeReceivedData(),
               classification: {
-                outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
+                outcome: WASTE_BALANCE_OUTCOME.IGNORED,
                 reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }],
                 transactionAmount: 0
               }
@@ -440,6 +537,48 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
+    expect(Number(cells[METADATA_COL_INDEX['Waste Balance Tonnage']])).toBe(
+      50.5
+    )
+  })
+
+  it('ignores a row the stamped classification included once the accreditation no longer covers its date', async () => {
+    const org = baseOrg({
+      accreditations: [
+        approvedAccreditation({
+          validFrom: '2026-01-01',
+          validTo: '2026-03-31'
+        })
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-1',
+          rows: [
+            receivedRowState({
+              data: completeReceivedData(),
+              classification: {
+                outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+                reasons: [],
+                transactionAmount: 50.5
+              }
+            })
+          ]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
     expect(
       cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]
@@ -447,25 +586,89 @@ describe('streamCsvExport', () => {
     expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
   })
 
-  it('renders a stamped EXCLUDED reason with a field as "code: field"', async () => {
+  it('gives each row of a summary log its own live outcome', async () => {
+    const { TONNAGE_RECEIVED_FOR_RECYCLING: _omitted, ...withoutTonnage } =
+      completeReceivedData()
+    const org = baseOrg({
+      accreditations: [approvedAccreditation()],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
     const deps = await buildDeps({
-      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      orgs: [org],
       seeds: [
         {
+          accreditationId: 'acc-1',
           rows: [
-            receivedRowState({
-              classification: {
-                outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
-                reasons: [
-                  {
-                    code: 'MISSING_REQUIRED_FIELD',
-                    field: 'TONNAGE_RECEIVED_FOR_RECYCLING'
-                  }
-                ],
-                transactionAmount: 0
-              }
-            })
+            receivedRowState({ rowId: '1001', data: completeReceivedData() }),
+            receivedRowState({ rowId: '1002', data: withoutTonnage })
           ]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const included = out[1].trim().split(',')
+    const excluded = out[2].trim().split(',')
+    expect(included[METADATA_COL_INDEX['Row ID']]).toBe('1001')
+    expect(included[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
+      'true'
+    )
+    expect(Number(included[METADATA_COL_INDEX['Waste Balance Tonnage']])).toBe(
+      50.5
+    )
+    expect(excluded[METADATA_COL_INDEX['Row ID']]).toBe('1002')
+    expect(excluded[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
+      'false'
+    )
+    expect(
+      excluded[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]
+    ).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
+  })
+
+  it('renders a row missing a waste-balance field as false with blank tonnage', async () => {
+    const { TONNAGE_RECEIVED_FOR_RECYCLING: _omitted, ...withoutTonnage } =
+      completeReceivedData()
+    const deps = await buildDeps({
+      orgs: [
+        baseOrg({
+          accreditations: [approvedAccreditation()],
+          registrations: [
+            baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+          ]
+        })
+      ],
+      seeds: [
+        {
+          accreditationId: 'acc-1',
+          rows: [receivedRowState({ data: withoutTonnage })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('false')
+    expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
+  })
+
+  it('renders an exclusion reason that names a field as "code: field"', async () => {
+    const { TONNAGE_RECEIVED_FOR_RECYCLING: _omitted, ...withoutTonnage } =
+      completeReceivedData()
+    const deps = await buildDeps({
+      orgs: [
+        baseOrg({
+          accreditations: [approvedAccreditation()],
+          registrations: [
+            baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+          ]
+        })
+      ],
+      seeds: [
+        {
+          accreditationId: 'acc-1',
+          rows: [receivedRowState({ data: withoutTonnage })]
         }
       ]
     })
@@ -476,20 +679,20 @@ describe('streamCsvExport', () => {
     )
   })
 
-  it('renders a stamped INCLUDED classification as true with its tonnage and blank reason', async () => {
+  it('renders an included row as true with its tonnage and blank reason', async () => {
     const deps = await buildDeps({
-      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      orgs: [
+        baseOrg({
+          accreditations: [approvedAccreditation()],
+          registrations: [
+            baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+          ]
+        })
+      ],
       seeds: [
         {
-          rows: [
-            receivedRowState({
-              classification: {
-                outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
-                reasons: [],
-                transactionAmount: 9
-              }
-            })
-          ]
+          accreditationId: 'acc-1',
+          rows: [receivedRowState({ data: completeReceivedData() })]
         }
       ]
     })
@@ -498,7 +701,9 @@ describe('streamCsvExport', () => {
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
     expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
-    expect(Number(cells[METADATA_COL_INDEX['Waste Balance Tonnage']])).toBe(9)
+    expect(Number(cells[METADATA_COL_INDEX['Waste Balance Tonnage']])).toBe(
+      50.5
+    )
   })
 
   it('reads Accredited "Yes" with the number for a suspended accreditation', async () => {
@@ -557,6 +762,175 @@ describe('streamCsvExport', () => {
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Accredited']]).toBe('No')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+  })
+
+  it('exports rows from every ledger partition, not just the current accreditation', async () => {
+    // A registration that submitted under acc-old before moving to acc-new
+    // holds two independently valid summary logs, one per ledger partition.
+    const org = baseOrg({
+      accreditations: [
+        approvedAccreditation({
+          id: 'acc-old',
+          accreditationNumber: 'ACC-OLD'
+        }),
+        approvedAccreditation({ id: 'acc-new', accreditationNumber: 'ACC-NEW' })
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-new' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-old',
+          summaryLogId: 'sl-old',
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          accreditationId: 'acc-new',
+          summaryLogId: 'sl-new',
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(3)
+    const rowIds = out
+      .slice(1)
+      .map((line) => line.trim().split(',')[METADATA_COL_INDEX['Row ID']])
+    expect(rowIds).toContain('1001')
+    expect(rowIds).toContain('2002')
+  })
+
+  it('renders each partition against its own accreditation, not the current link', async () => {
+    const org = baseOrg({
+      accreditations: [
+        approvedAccreditation({
+          id: 'acc-old',
+          accreditationNumber: 'ACC-OLD'
+        }),
+        approvedAccreditation({ id: 'acc-new', accreditationNumber: 'ACC-NEW' })
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-new' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-old',
+          summaryLogId: 'sl-old',
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          accreditationId: 'acc-new',
+          summaryLogId: 'sl-new',
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(3)
+    const byRowId = new Map(
+      out.slice(1).map((line) => {
+        const cells = line.trim().split(',')
+        return [cells[METADATA_COL_INDEX['Row ID']], cells]
+      })
+    )
+    expect(
+      byRowId.get('1001')[METADATA_COL_INDEX['Accreditation Number']]
+    ).toBe('ACC-OLD')
+    expect(
+      byRowId.get('2002')[METADATA_COL_INDEX['Accreditation Number']]
+    ).toBe('ACC-NEW')
+  })
+
+  it('exports a registered-only period alongside an accredited one, as Accredited "No"', async () => {
+    const org = baseOrg({
+      accreditations: [approvedAccreditation()],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: null,
+          summaryLogId: 'sl-registered-only',
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          accreditationId: 'acc-1',
+          summaryLogId: 'sl-accredited',
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(3)
+    const byRowId = new Map(
+      out.slice(1).map((line) => {
+        const cells = line.trim().split(',')
+        return [cells[METADATA_COL_INDEX['Row ID']], cells]
+      })
+    )
+    expect(byRowId.get('1001')[METADATA_COL_INDEX['Accredited']]).toBe('No')
+    expect(
+      byRowId.get('1001')[METADATA_COL_INDEX['Accreditation Number']]
+    ).toBe('')
+    expect(byRowId.get('2002')[METADATA_COL_INDEX['Accredited']]).toBe('Yes')
+    expect(
+      byRowId.get('2002')[METADATA_COL_INDEX['Accreditation Number']]
+    ).toBe('ACC-777')
+  })
+
+  it("orders a registration's partitions registered-only first, then by accreditation id", async () => {
+    const org = baseOrg({
+      accreditations: [
+        approvedAccreditation({ id: 'acc-a' }),
+        approvedAccreditation({ id: 'acc-b' })
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-b' })
+      ]
+    })
+    const deps = await buildDeps({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-b',
+          summaryLogId: 'sl-b',
+          rows: [receivedRowState({ rowId: '3003' })]
+        },
+        {
+          accreditationId: null,
+          summaryLogId: 'sl-null',
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          accreditationId: 'acc-a',
+          summaryLogId: 'sl-a',
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(4)
+    const rowIds = out
+      .slice(1)
+      .map((line) => line.trim().split(',')[METADATA_COL_INDEX['Row ID']])
+    expect(rowIds).toEqual(['1001', '2002', '3003'])
   })
 
   it('iterates organisations and registrations sorted by id for deterministic output', async () => {
@@ -643,7 +1017,7 @@ describe('streamCsvExport', () => {
     expect(out[2].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('10')
   })
 
-  it('renders a stamped NOT_APPLICABLE classification as NA with blank reason and tonnage', async () => {
+  it('renders a row with no active accreditation as NA with blank reason and tonnage', async () => {
     const deps = await buildDeps({
       orgs: [baseOrg({ registrations: [baseRegistration()] })],
       seeds: [{ rows: [receivedRowState()] }]
@@ -654,6 +1028,16 @@ describe('streamCsvExport', () => {
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
     expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe('')
     expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
+  })
+
+  it('contributes no rows for a submitted summary log that committed none', async () => {
+    const deps = await buildDeps({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [{ rows: [] }]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    expect(out).toHaveLength(1) // header only
   })
 
   it('contributes no rows for a registration with no submitted summary log', async () => {

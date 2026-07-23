@@ -11,7 +11,8 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -381,12 +382,12 @@ describe('Advanced validation scenarios', () => {
         }
       })
 
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
+        summaryLogRowStateRepository:
+          createInMemorySummaryLogRowStateRepository()(),
+        ledgerRepository: createInMemoryLedgerRepository()(),
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         summaryLogExtractor,
         logger: mockLogger,
@@ -567,12 +568,12 @@ describe('Advanced validation scenarios', () => {
         }
       })
 
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
+        summaryLogRowStateRepository:
+          createInMemorySummaryLogRowStateRepository()(),
+        ledgerRepository: createInMemoryLedgerRepository()(),
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         summaryLogExtractor,
         logger: mockLogger,

@@ -13,6 +13,7 @@ import {
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -35,12 +36,21 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-const includingSchema = /** @type {*} */ ({
-  classifyForWasteBalance: (data) => ({
-    outcome: ROW_OUTCOME.INCLUDED,
-    reasons: [],
-    transactionAmount: data.tonnage
-  })
+// Excludes on a PRN having been issued rather than on absent data, so an
+// excluded row still carries a real tonnage — the amount the ledger must
+// withhold, and the shape every genuine exclusion reason takes.
+const prnAwareSchema = /** @type {*} */ ({
+  classifyForWasteBalance: (data) =>
+    data.prnIssued
+      ? {
+          outcome: ROW_OUTCOME.EXCLUDED,
+          reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
+        }
+      : {
+          outcome: ROW_OUTCOME.INCLUDED,
+          reasons: [],
+          transactionAmount: data.tonnage
+        }
 })
 
 vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
@@ -76,6 +86,7 @@ const user = {
 const buildExporterRecord = ({
   rowId,
   tonnage,
+  prnIssued = false,
   versionId = `version-${rowId}`,
   summaryLogId = 'log-1'
 }) => ({
@@ -93,8 +104,7 @@ const buildExporterRecord = ({
       data: {}
     }
   ],
-  data: { processingType: 'EXPORTER', tonnage },
-  excludedFromWasteBalance: false
+  data: { processingType: 'EXPORTER', tonnage, prnIssued }
 })
 
 describe('performUpdateViaLedger', () => {
@@ -111,7 +121,7 @@ describe('performUpdateViaLedger', () => {
     ).commitSummaryLogSubmittedEvent
     const { findSchemaForProcessingType } =
       await import('#domain/summary-logs/table-schemas/index.js')
-    vi.mocked(findSchemaForProcessingType).mockReturnValue(includingSchema)
+    vi.mocked(findSchemaForProcessingType).mockReturnValue(prnAwareSchema)
   })
 
   describe('first submission', () => {
@@ -188,13 +198,10 @@ describe('performUpdateViaLedger', () => {
   })
 
   describe('excluded records', () => {
-    it('skips records with excludedFromWasteBalance flag', async () => {
+    it('skips records the schema excludes', async () => {
       const records = [
         buildExporterRecord({ rowId: '1', tonnage: 100 }),
-        {
-          ...buildExporterRecord({ rowId: '2', tonnage: 50 }),
-          excludedFromWasteBalance: true
-        }
+        buildExporterRecord({ rowId: '2', tonnage: 50, prnIssued: true })
       ]
 
       await performUpdateViaLedger({
@@ -218,10 +225,7 @@ describe('performUpdateViaLedger', () => {
       const records = [
         buildExporterRecord({ rowId: '1', tonnage: includedTonnages[0] }),
         buildExporterRecord({ rowId: '2', tonnage: includedTonnages[1] }),
-        {
-          ...buildExporterRecord({ rowId: '3', tonnage: 999 }),
-          excludedFromWasteBalance: true
-        },
+        buildExporterRecord({ rowId: '3', tonnage: 999, prnIssued: true }),
         buildExporterRecord({ rowId: '4', tonnage: includedTonnages[2] })
       ]
 

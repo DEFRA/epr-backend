@@ -167,7 +167,7 @@ const buildWasteBalanceCells = (classification) => {
  * @property {Record<string, any>} data - Coerced committed row data, carrying `processingType`.
  * @property {WasteRecordType} wasteRecordType
  * @property {string} rowId
- * @property {RowClassification} classification - The row's stamped waste-balance classification.
+ * @property {RowClassification} classification - The row's waste-balance classification.
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
  * @property {Record<string, import('./overseas-sites-context.js').OverseasSiteContextEntry>} [overseasSites]
  * @property {string[]} dataFieldColumns
@@ -179,9 +179,9 @@ const buildWasteBalanceCells = (classification) => {
  * numbers so they serialise unquoted; string cells are formula-injection
  * sanitised.
  *
- * Inclusion, reasons and tonnage come from the classification stamped on the
- * row state when its summary log was submitted — not recomputed — so the export
- * reflects exactly what counted toward the waste balance at submission.
+ * Inclusion, reasons and tonnage are rendered from the classification the
+ * caller supplies; which reading that is — the one stamped at submission or one
+ * derived against current context — is the caller's decision.
  *
  * The derived OSR columns (OSR_COUNTRY_REVISED / OSR_NAME_REVISED) sit at the
  * end of the metadata prefix and are looked up from the approved
