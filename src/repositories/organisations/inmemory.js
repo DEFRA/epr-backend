@@ -1,4 +1,5 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import { FindPageParams, OrganisationsRepositoryFactory } from './port.js' */
 
 import Boom from '@hapi/boom'
 import {
@@ -158,9 +159,7 @@ const performFindAllBySchemaVersion = (staleCache) => async (schemaVersion) => {
 
 const performFindPage =
   (staleCache) =>
-  async (
-    /** @type {import('./port.js').FindPageParams} */ { search, page, pageSize }
-  ) => {
+  async (/** @type {FindPageParams} */ { search, page, pageSize }) => {
     const trimmedSearch = (search ?? '').trim()
 
     let matches = structuredClone(staleCache)
@@ -386,7 +385,7 @@ const performFindAccreditationById =
  * Uses aggressive retry settings optimized for setImmediate() sync timing.
  *
  * @param {Organisation[]} [initialOrganisations=[]]
- * @returns {import('./port.js').OrganisationsRepositoryFactory}
+ * @returns {OrganisationsRepositoryFactory}
  */
 export const createInMemoryOrganisationsRepository = (
   initialOrganisations = []

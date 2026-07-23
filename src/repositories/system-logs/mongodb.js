@@ -5,6 +5,9 @@ import {
 } from '#root/auditing/summary-logs.js'
 import { buildPage } from './pagination.js'
 
+/** @import { Collection, Db } from 'mongodb' */
+/** @import { FindParams, SystemLogActor, SystemLogsRepositoryFactory } from './port.js' */
+
 export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 
 /**
@@ -13,7 +16,7 @@ export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
  * absent. A machine actor is returned untouched.
  *
  * @param {any} createdBy
- * @returns {import('./port.js').SystemLogActor}
+ * @returns {SystemLogActor}
  */
 const normaliseActorRole = (createdBy) =>
   'email' in createdBy && !('role' in createdBy)
@@ -24,8 +27,8 @@ const normaliseActorRole = (createdBy) =>
  * Ensures the collection exists with required indexes.
  * Safe to call multiple times - MongoDB createIndex is idempotent.
  *
- * @param {import('mongodb').Db} db
- * @returns {Promise<import('mongodb').Collection>}
+ * @param {Db} db
+ * @returns {Promise<Collection>}
  */
 async function ensureCollection(db) {
   const collection = db.collection(SYSTEM_LOGS_COLLECTION_NAME)
@@ -73,7 +76,7 @@ const performInsertMany = (db, logger) => async (systemLogs) => {
 const performFind =
   (db) =>
   async (
-    /** @type {import('./port.js').FindParams} */ {
+    /** @type {FindParams} */ {
       organisationId,
       userId,
       subCategory,
@@ -154,8 +157,8 @@ const performFindSummaryLogSubmitActors = (db) => async (summaryLogIds) => {
 }
 
 /**
- * @param {import('mongodb').Db} db - MongoDB database instance
- * @returns {Promise<import('./port.js').SystemLogsRepositoryFactory>}
+ * @param {Db} db - MongoDB database instance
+ * @returns {Promise<SystemLogsRepositoryFactory>}
  */
 export const createSystemLogsRepository = async (db) => {
   await ensureCollection(db)
