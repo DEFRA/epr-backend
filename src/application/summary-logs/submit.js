@@ -21,7 +21,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
- * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
+ * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
  * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
  */
@@ -31,8 +31,8 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {TypedLogger} logger
  * @property {SummaryLogsRepository} summaryLogsRepository
  * @property {OrganisationsRepository} organisationsRepository
- * @property {WasteRecordsRepository} wasteRecordsRepository
  * @property {SummaryLogRowStateRepository} summaryLogRowStatesRepository
+ * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {ReturnType<typeof createWasteBalanceService>} wasteBalanceService
  * @property {ReportsService} reportsService
  * @property {SummaryLogExtractor} summaryLogExtractor
@@ -96,8 +96,8 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     logger,
     summaryLogsRepository,
     organisationsRepository,
-    wasteRecordsRepository,
     summaryLogRowStatesRepository,
+    ledgerRepository,
     wasteBalanceService,
     summaryLogExtractor,
     overseasSitesRepository,
@@ -124,11 +124,11 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
 
   const sync = syncFromSummaryLog({
     extractor: summaryLogExtractor,
-    wasteRecordRepository: wasteRecordsRepository,
     wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
     summaryLogRowStateRepository: summaryLogRowStatesRepository,
+    ledgerRepository,
     logger
   })
 

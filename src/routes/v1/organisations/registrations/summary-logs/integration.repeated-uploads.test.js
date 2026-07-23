@@ -5,6 +5,7 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
+import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -60,7 +61,9 @@ describe('Repeated uploads of identical data', () => {
     const secondFileId = 'file-second-upload'
 
     let server
-    let wasteRecordsRepository
+    let summaryLogRowStateRepository
+    let ledgerRepository
+    let accreditationId
     let secondUploadResponse
 
     beforeEach(async () => {
@@ -71,7 +74,7 @@ describe('Repeated uploads of identical data', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
 
       // Set up organisation with registration
-      const accreditationId = new ObjectId().toString()
+      accreditationId = new ObjectId().toString()
       const testOrg = buildReadOrganisation({
         registrations: [
           partialMock({
@@ -245,19 +248,17 @@ describe('Repeated uploads of identical data', () => {
 
       const wasteRecordsRepositoryFactory =
         createInMemoryWasteRecordsRepository()
-      wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
       // Validate reads and submit writes the same latest-submitted row states,
       // so both paths must share one ledger and one row-state repository.
-      const ledgerRepository = createInMemoryLedgerRepository()()
-      const summaryLogRowStateRepository =
+      ledgerRepository = createInMemoryLedgerRepository()()
+      summaryLogRowStateRepository =
         createInMemorySummaryLogRowStateRepository()()
       const featureFlags = createInMemoryFeatureFlags()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
         summaryLogRowStateRepository,
         ledgerRepository,
         summaryLogExtractor,
@@ -272,9 +273,9 @@ describe('Repeated uploads of identical data', () => {
 
       const syncWasteRecords = syncFromSummaryLog({
         extractor: summaryLogExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStateRepository,
+        ledgerRepository,
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])
@@ -404,17 +405,21 @@ describe('Repeated uploads of identical data', () => {
     })
 
     it(
-      'should not create additional waste record versions on second submission',
+      'does not duplicate committed row states on a repeated identical submission',
       { timeout: 60000 },
       async () => {
-        // Get waste records before second submission
-        const recordsBefore = await wasteRecordsRepository.findByRegistration(
+        const ledgerId = {
           organisationId,
-          registrationId
-        )
-        const versionCountsBefore = recordsBefore.map((r) => r.versions.length)
+          registrationId,
+          accreditationId
+        }
 
-        // Submit the second upload
+        const committedBefore = await summaryLogRowStatesForRegistration({
+          ...ledgerId,
+          ledgerRepository,
+          summaryLogRowStateRepository
+        })
+
         await server.inject({
           method: 'POST',
           url: buildSubmitUrl(
@@ -433,15 +438,18 @@ describe('Repeated uploads of identical data', () => {
           { waitWhile: SUMMARY_LOG_STATUS.SUBMITTING }
         )
 
-        // Get waste records after second submission
-        const recordsAfter = await wasteRecordsRepository.findByRegistration(
-          organisationId,
-          registrationId
-        )
-        const versionCountsAfter = recordsAfter.map((r) => r.versions.length)
+        const committedAfter = await summaryLogRowStatesForRegistration({
+          ...ledgerId,
+          ledgerRepository,
+          summaryLogRowStateRepository
+        })
 
-        // Version counts should be unchanged (no new versions created)
-        expect(versionCountsAfter).toEqual(versionCountsBefore)
+        const rowIdsBefore = committedBefore.map((state) => state.rowId).sort()
+        const rowIdsAfter = committedAfter.map((state) => state.rowId).sort()
+
+        expect(rowIdsBefore.length).toBeGreaterThan(0)
+        expect(rowIdsAfter).toEqual(rowIdsBefore)
+        expect(new Set(rowIdsAfter).size).toBe(rowIdsAfter.length)
       }
     )
   })
