@@ -1,7 +1,6 @@
 /**
  * @typedef {Object} FeatureFlags
  * @property {() => boolean} isDevEndpointsEnabled
- * @property {() => boolean} isFixDuplicateAccreditationLinksEnabled
  * @property {() => boolean} isStaleIssuedTonnageReportEnabled
  * @property {() => boolean} isPreCpaResubmissionReportEnabled
  * @property {() => boolean} isPreCpaResubmissionBackfillEnabled
@@ -10,7 +9,6 @@
 /**
  * @typedef {Object} FeatureFlagOverrides
  * @property {boolean} [devEndpoints]
- * @property {boolean} [fixDuplicateAccreditationLinks]
  * @property {boolean} [staleIssuedTonnageReport]
  * @property {boolean} [preCpaResubmissionReport]
  * @property {boolean} [preCpaResubmissionBackfill]

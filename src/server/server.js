@@ -45,7 +45,6 @@ import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
-import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
 import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
 import { runPreCpaResubmissionBackfill } from '#server/run-pre-cpa-resubmission-backfill.js'
 
@@ -225,7 +224,6 @@ async function createServer(options = {}) {
   server.ext('onPostStart', () => {
     runFormsDataMigration(server)
     runOrganisationValidationSweep(server)
-    runDuplicateAccreditationLinkMigration(server)
     runStaleIssuedTonnageReport(server)
     runPreCpaResubmissionBackfill(server)
   })

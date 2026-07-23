@@ -6,9 +6,6 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
   },
-  isFixDuplicateAccreditationLinksEnabled() {
-    return flags.fixDuplicateAccreditationLinks ?? false
-  },
   isStaleIssuedTonnageReportEnabled() {
     return flags.staleIssuedTonnageReport ?? false
   },

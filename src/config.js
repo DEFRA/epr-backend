@@ -358,12 +358,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    fixDuplicateAccreditationLinks: {
-      doc: 'Feature Flag: Fix duplicate accreditation links in existing organisation data on startup',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_FIX_DUPLICATE_ACCREDITATION_LINKS'
-    },
     staleIssuedTonnageReport: {
       doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
       format: Boolean,
