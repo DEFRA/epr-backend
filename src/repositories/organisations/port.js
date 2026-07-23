@@ -60,7 +60,7 @@
  */
 
 /**
- * @typedef {{ page: number, pageSize: number, registrationNumber?: string }} FindPageForOrsAdminListParams
+ * @typedef {{ page: number, pageSize: number, registrationNumber?: string }} FindPageForOverseasSitesAdminListParams
  */
 
 /**
@@ -71,7 +71,7 @@
  * @property {(schemaVersion: number) => Promise<Organisation[]>} findAllBySchemaVersion - Find all organisations with a specific schema version
  * @property {(params: FindPageParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} findPage - Paginated organisations query with optional case-insensitive substring search on companyDetails.name; results sorted alphabetically by name
  * @property {() => Promise<OrganisationsOverseasSitesAdminListItem[]>} [findAllForOverseasSitesAdminList] - Lightweight projection for ORS admin list endpoint
- * @property {(params: FindPageForOrsAdminListParams) => Promise<OrganisationsOverseasSitesAdminListPage>} [findPageForOverseasSitesAdminList] - Paginated ORS admin list query optimized for MongoDB-backed reads
+ * @property {(params: FindPageForOverseasSitesAdminListParams) => Promise<OrganisationsOverseasSitesAdminListPage>} [findPageForOverseasSitesAdminList] - Paginated ORS admin list query optimized for MongoDB-backed reads
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID

@@ -19,6 +19,7 @@ import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
 /** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { FindPageForOverseasSitesAdminListParams } from './port.js' */
 
 export const createStatusHistoryEntry = (status) => ({
   status,
@@ -315,7 +316,7 @@ export const performFindAllForOverseasSitesAdminList = (db) => async () => {
 export const performFindPageForOrsAdminList =
   (db) =>
   async (
-    /** @type {import('./port.js').FindPageForOrsAdminListParams} */ {
+    /** @type {FindPageForOverseasSitesAdminListParams} */ {
       page,
       pageSize,
       registrationNumber
