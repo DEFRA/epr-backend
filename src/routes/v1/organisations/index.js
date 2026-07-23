@@ -1,6 +1,7 @@
 export { organisationsGetAll } from './get.js'
 export { organisationsGetById } from './get-by-id.js'
 export { organisationsPutById } from './put-by-id.js'
+export { accreditationSuspend } from './accreditation-suspend.js'
 export { organisationsLink } from './link.js'
 export { organisationsUnlink } from './unlink.js'
 export { organisationsOverviewGet } from './overview/get.js'
