@@ -73,7 +73,7 @@ const buildOrgWithAccreditationStatus = (status) => {
 const suspendUrl = ({ organisationId, registrationId, accreditationId }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/suspend`
 
-describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/suspend', () => {
+describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/suspend', () => {
   setupAuthContext()
   let server
 
@@ -121,7 +121,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const ctx = await seedOrg('approved')
 
       const response = await server.inject({
-        method: 'POST',
+        method: 'PATCH',
         url: suspendUrl(ctx),
         headers: { Authorization: `Bearer ${validToken}` }
       })
@@ -134,7 +134,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const ctx = await seedOrg('approved')
 
       await server.inject({
-        method: 'POST',
+        method: 'PATCH',
         url: suspendUrl(ctx),
         headers: { Authorization: `Bearer ${validToken}` }
       })
@@ -175,7 +175,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
 
       await server.inject({
-        method: 'POST',
+        method: 'PATCH',
         url: suspendUrl(ctx),
         headers: { Authorization: `Bearer ${validToken}` }
       })
@@ -200,7 +200,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const start = new Date()
 
       const response = await server.inject({
-        method: 'POST',
+        method: 'PATCH',
         url: suspendUrl(ctx),
         headers: { Authorization: `Bearer ${validToken}` }
       })
@@ -250,7 +250,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         const ctx = await seedOrg(status)
 
         const response = await server.inject({
-          method: 'POST',
+          method: 'PATCH',
           url: suspendUrl(ctx),
           headers: { Authorization: `Bearer ${validToken}` }
         })
@@ -270,7 +270,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const nonExistentOrgId = new ObjectId().toString()
 
       const response = await server.inject({
-        method: 'POST',
+        method: 'PATCH',
         url: suspendUrl({ ...ctx, organisationId: nonExistentOrgId }),
         headers: { Authorization: `Bearer ${validToken}` }
       })
@@ -283,7 +283,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const nonExistentAccreditationId = new ObjectId().toString()
 
       const response = await server.inject({
-        method: 'POST',
+        method: 'PATCH',
         url: suspendUrl({
           ...ctx,
           accreditationId: nonExistentAccreditationId
@@ -342,7 +342,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       })
 
       const suspendResponse = await integrationServer.inject({
-        method: 'POST',
+        method: 'PATCH',
         url: suspendUrl({
           organisationId: fixture.id,
           registrationId: registration.id,
@@ -371,7 +371,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     makeRequest: async () => {
       const ctx = await seedOrg('approved')
       return {
-        method: 'POST',
+        method: 'PATCH',
         url: suspendUrl(ctx)
       }
     }
@@ -382,7 +382,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     makeRequest: async () => {
       const ctx = await seedOrg('approved')
       return {
-        method: 'POST',
+        method: 'PATCH',
         url: suspendUrl(ctx)
       }
     }

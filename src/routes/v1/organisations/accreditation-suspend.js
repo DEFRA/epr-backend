@@ -12,7 +12,7 @@ export const accreditationSuspendPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/suspend'
 
 export const accreditationSuspend = {
-  method: 'POST',
+  method: 'PATCH',
   path: accreditationSuspendPath,
   options: {
     auth: {
