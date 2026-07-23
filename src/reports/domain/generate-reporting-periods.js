@@ -1,5 +1,6 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
 import { MONTHS_PER_PERIOD } from './cadence.js'
+import { filterPeriodsFromDate } from './filter-periods-from-date.js'
 
 /**
  * @import { Cadence } from './cadence.js'
@@ -47,18 +48,29 @@ export function generateAllPeriodsForYear(cadence, year) {
 }
 
 /**
- * Generates reporting periods for a given year and cadence,
- * filtered to only include periods that have ended.
+ * Generates reporting periods for a given year and cadence, filtered to periods
+ * that have ended and, when `fromDate` is supplied, bounded to those not ending
+ * before it (the accreditation `validFrom` front trim). Bounding lives here so
+ * every caller — operator calendar, admin export, compliance — is consistent.
+ * A `toDate` bound (registration/accreditation `validTo`) is a future extension.
  *
  * @param {Cadence} cadence
  * @param {number} year
  * @param {Date} [now] - Current date (defaults to new Date(), injectable for testing)
+ * @param {string | null} [fromDate] - ISO `YYYY-MM-DD` lower bound; periods ending before it are dropped
  * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report: null}>}
  */
-export function generateReportingPeriods(cadence, year, now = new Date()) {
-  return generateAllPeriodsForYear(cadence, year).filter((p) => {
+export function generateReportingPeriods(
+  cadence,
+  year,
+  now = new Date(),
+  fromDate = null
+) {
+  const ended = generateAllPeriodsForYear(cadence, year).filter((p) => {
     const dayAfterEnd = new Date(p.endDate)
     dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1)
     return dayAfterEnd <= now
   })
+
+  return fromDate ? filterPeriodsFromDate(ended, fromDate) : ended
 }

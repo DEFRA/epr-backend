@@ -1,8 +1,16 @@
 import Joi from 'joi'
 
+import { tonnage } from '#common/validation/tonnage-schema.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  cadenceSchema,
+  periodSchema,
+  prnSchema,
+  resubmissionRequiredSchema,
+  staleSchema
+} from '#reports/repository/schema.js'
 
 const userSummarySchema = Joi.object({
   id: Joi.string().required(),
@@ -40,3 +48,55 @@ export const reportsCalendarResponseSchema = Joi.object({
     .required(),
   reportingPeriods: Joi.array().items(reportingPeriodSchema).required()
 })
+
+/**
+ * Response contract for the report-detail GET/POST, shared by every reports page
+ * in the frontend. Validates the sections the frontend consumes - notably `prn`,
+ * whose `issuedTonnage`/`freeTonnage` are whole numbers via the shared tonnage
+ * schema - and tolerates backend-internal fields (id, status, diagnostics,
+ * version, stale, ...) that vary between stored and computed reports.
+ */
+export const reportDetailResponseSchema = Joi.object({
+  cadence: cadenceSchema.optional(),
+  canRequestResubmission: Joi.boolean().optional(),
+  details: Joi.object({
+    material: Joi.string().required(),
+    site: Joi.object().unknown(true).allow(null).optional()
+  }).required(),
+  dueDate: Joi.string().isoDate().optional(),
+  endDate: Joi.string().isoDate().optional(),
+  exportActivity: Joi.object({
+    overseasSites: Joi.array().required(),
+    totalTonnageExported: tonnage().required(),
+    unapprovedOverseasSites: Joi.array().required()
+  })
+    .unknown(true)
+    .optional(),
+  operatorCategory: Joi.string().optional(),
+  period: periodSchema.optional(),
+  prn: prnSchema.allow(null),
+  recyclingActivity: Joi.object({
+    suppliers: Joi.array().required(),
+    totalTonnageReceived: tonnage().required()
+  })
+    .unknown(true)
+    .required(),
+  resubmissionRequired: resubmissionRequiredSchema.optional(),
+  source: Joi.object({
+    lastUploadedAt: Joi.string().isoDate().allow(null),
+    summaryLogId: Joi.string().allow(null)
+  })
+    .unknown(true)
+    .required(),
+  stale: staleSchema.optional(),
+  startDate: Joi.string().isoDate().optional(),
+  wasteSent: Joi.object({
+    finalDestinations: Joi.array().required(),
+    tonnageSentToAnotherSite: tonnage().required(),
+    tonnageSentToExporter: tonnage().required(),
+    tonnageSentToReprocessor: tonnage().required()
+  })
+    .unknown(true)
+    .required(),
+  year: Joi.number().optional()
+}).unknown(true)

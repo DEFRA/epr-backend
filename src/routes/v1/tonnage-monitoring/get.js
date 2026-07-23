@@ -29,10 +29,10 @@ export const getTonnageMonitoring = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { db, logger } = request
+    const { db, ledgerRepository, logger } = request
 
     try {
-      const result = await aggregateTonnageByMaterial(db)
+      const result = await aggregateTonnageByMaterial(db, ledgerRepository)
 
       logger.info({
         message: 'Tonnage monitoring data retrieved successfully',

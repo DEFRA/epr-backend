@@ -13,7 +13,7 @@ import {
 } from '#common/enums/index.js'
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
-import organisationFixture from '#data/fixtures/organisation.json'
+import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }
 import { it } from '#vite/fixtures/server-with-mock-db.js'
 
 const mockAudit = vi.fn()
@@ -303,7 +303,7 @@ describe(`${url} route`, { timeout: 10000 }, () => {
 
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('Notify API failed')
-    sendEmail.mockRejectedValueOnce(error)
+    vi.mocked(sendEmail).mockRejectedValueOnce(error)
 
     const response = await server.inject({
       method: 'POST',

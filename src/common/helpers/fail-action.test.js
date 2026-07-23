@@ -2,22 +2,36 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
+import { assertPresent } from '#test/type-helpers.js'
 import { failAction } from './fail-action.js'
 import { config } from '#root/config.js'
+
+/**
+ * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { Mock } from 'vitest'
+ *
+ * @typedef {HapiRequest & { logger: { warn: Mock } }} MockRequest
+ * @typedef {Error & { isJoi: boolean, details: object[] }} JoiLikeError
+ */
 
 describe('#fail-action', () => {
   afterEach(() => {
     config.reset('cdpEnvironment')
   })
 
-  const createMockRequest = () => ({
-    logger: {
-      warn: vi.fn()
-    }
-  })
+  const createMockRequest = () =>
+    /** @type {MockRequest} */ (
+      /** @type {unknown} */ ({
+        logger: {
+          warn: vi.fn()
+        }
+      })
+    )
 
   const createJoiValidationError = () => {
-    const error = new Error('"redirectUrl" is required')
+    const error = /** @type {JoiLikeError} */ (
+      new Error('"redirectUrl" is required')
+    )
     error.isJoi = true
     error.details = [
       {
@@ -63,6 +77,7 @@ describe('#fail-action', () => {
         { email: sensitiveEmail, age: sensitiveAge, country: sensitiveCountry },
         { abortEarly: false }
       )
+      assertPresent(joiError)
 
       const mockRequest = createMockRequest()
 
@@ -117,7 +132,9 @@ describe('#fail-action', () => {
 
     test('caps validation error messages at 5 in non-prod environment', () => {
       const mockRequest = createMockRequest()
-      const joiError = new Error('Validation failed')
+      const joiError = /** @type {JoiLikeError} */ (
+        new Error('Validation failed')
+      )
       joiError.isJoi = true
       joiError.details = Array.from({ length: 8 }, (_, i) => ({
         message: `"field${i}" is required`,
@@ -226,7 +243,9 @@ describe('#fail-action', () => {
 
     test('handles string errors', () => {
       const mockRequest = createMockRequest()
-      const stringError = 'Something terrible has happened!'
+      const stringError = /** @type {Error} */ (
+        /** @type {unknown} */ ('Something terrible has happened!')
+      )
 
       expect(() => failAction(mockRequest, {}, stringError)).toThrow()
 
@@ -246,10 +265,14 @@ describe('#fail-action (production)', () => {
   })
 
   test('does NOT include Joi details in message in production', () => {
-    const mockRequest = {
-      logger: { warn: vi.fn() }
-    }
-    const joiError = new Error('"redirectUrl" is required')
+    const mockRequest = /** @type {MockRequest} */ (
+      /** @type {unknown} */ ({
+        logger: { warn: vi.fn() }
+      })
+    )
+    const joiError = /** @type {JoiLikeError} */ (
+      new Error('"redirectUrl" is required')
+    )
     joiError.isJoi = true
     joiError.details = [{ message: '"redirectUrl" is required' }]
 

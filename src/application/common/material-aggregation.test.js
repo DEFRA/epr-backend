@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { assertPresent } from '#test/type-helpers.js'
 import { Decimal128 } from 'mongodb'
 import {
   buildEffectiveMaterialStages,
@@ -6,6 +7,23 @@ import {
   formatTonnageMonitoringResults
 } from './material-aggregation.js'
 import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
+
+/**
+ * `formatMaterialResults` keys the metric dynamically (`totalTonnage` /
+ * `availableAmount`), so the returned entries can't be statically typed. This
+ * narrows a looked-up entry to the metric fields the tests assert on.
+ *
+ * @param {Array<{ material: string }>} materials
+ * @param {string} material
+ * @returns {{ totalTonnage: number, availableAmount: number }}
+ */
+const findMaterial = (materials, material) => {
+  const found = materials.find((m) => m.material === material)
+  assertPresent(found)
+  return /** @type {{ totalTonnage: number, availableAmount: number }} */ (
+    /** @type {unknown} */ (found)
+  )
+}
 
 describe('material-aggregation', () => {
   describe('buildEffectiveMaterialStages', () => {
@@ -33,7 +51,7 @@ describe('material-aggregation', () => {
       const stages = buildEffectiveMaterialStages()
       const matchStage = stages[1]
 
-      expect(matchStage.$match.orgId).toHaveProperty('$nin')
+      expect(matchStage?.$match?.orgId).toHaveProperty('$nin')
     })
 
     it('should filter out null materials', () => {
@@ -48,7 +66,7 @@ describe('material-aggregation', () => {
       const effectiveMaterialStage = stages[3]
 
       expect(
-        effectiveMaterialStage.$addFields.effectiveMaterial.$cond
+        effectiveMaterialStage?.$addFields?.effectiveMaterial?.$cond
       ).toBeDefined()
     })
   })
@@ -62,8 +80,8 @@ describe('material-aggregation', () => {
 
       const { materials } = formatMaterialResults(results, 'totalTonnage')
 
-      const plastic = materials.find((m) => m.material === 'plastic')
-      const paper = materials.find((m) => m.material === 'paper')
+      const plastic = findMaterial(materials, 'plastic')
+      const paper = findMaterial(materials, 'paper')
 
       expect(plastic.totalTonnage).toBe(100)
       expect(paper.totalTonnage).toBe(200)
@@ -74,7 +92,7 @@ describe('material-aggregation', () => {
 
       const { materials } = formatMaterialResults(results, 'availableAmount')
 
-      const wood = materials.find((m) => m.material === 'wood')
+      const wood = findMaterial(materials, 'wood')
       expect(wood.availableAmount).toBe(0)
     })
 
@@ -116,8 +134,8 @@ describe('material-aggregation', () => {
         'totalTonnage'
       )
 
-      const aluminium = materials.find((m) => m.material === 'aluminium')
-      const plastic = materials.find((m) => m.material === 'plastic')
+      const aluminium = findMaterial(materials, 'aluminium')
+      const plastic = findMaterial(materials, 'plastic')
 
       expect(aluminium.totalTonnage).toBe(1.25)
       expect(plastic.totalTonnage).toBe(2.75)
@@ -194,7 +212,8 @@ describe('material-aggregation', () => {
       const plasticExporter = result.materials.find(
         (m) => m.material === 'plastic' && m.type === 'Exporter'
       )
-      expect(plasticExporter).toBeDefined()
+      assertPresent(plasticExporter)
+
       expect(plasticExporter.year).toBe(2026)
       expect(plasticExporter.months).toHaveLength(1)
 
@@ -204,6 +223,8 @@ describe('material-aggregation', () => {
       const aluminiumExporter = result.materials.find(
         (m) => m.material === 'aluminium' && m.type === 'Exporter'
       )
+      assertPresent(aluminiumExporter)
+
       aluminiumExporter.months.forEach((m) => {
         expect(m.tonnage).toBe(0)
       })
@@ -245,6 +266,8 @@ describe('material-aggregation', () => {
       const plasticExporter = result.materials.find(
         (m) => m.material === 'plastic' && m.type === 'Exporter'
       )
+      assertPresent(plasticExporter)
+
       expect(plasticExporter.months).toEqual([
         { month: 'Jan', tonnage: 100 },
         { month: 'Feb', tonnage: 0 }
@@ -253,6 +276,8 @@ describe('material-aggregation', () => {
       const aluminiumReprocessor = result.materials.find(
         (m) => m.material === 'aluminium' && m.type === 'Reprocessor'
       )
+      assertPresent(aluminiumReprocessor)
+
       expect(aluminiumReprocessor.months).toEqual([
         { month: 'Jan', tonnage: 0 },
         { month: 'Feb', tonnage: 50 }

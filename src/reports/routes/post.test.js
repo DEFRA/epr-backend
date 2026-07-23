@@ -2,10 +2,15 @@ import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   REPORT_STATUS,
@@ -37,6 +42,49 @@ describe(`POST ${reportsPostPath}`, () => {
   const makeUrl = (orgId, regId, year, cadence, period, submissionNumber) =>
     `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}`
 
+  const SUMMARY_LOG_ID = 'sl-1'
+  const SUBMITTED_AT = new Date('2024-01-15T00:00:00.000Z')
+
+  /**
+   * Seeds the summary-log row states and the waste balance ledger so the report
+   * routes resolve one committed row at the latest submitted summary log for the
+   * registration.
+   */
+  const seedRepositories = async (org, registration) => {
+    const accreditationId = registration.accreditationId ?? null
+    const ledgerId = {
+      organisationId: org.id,
+      registrationId: registration.id,
+      accreditationId
+    }
+    const summaryLogRowStatesRepository =
+      createInMemorySummaryLogRowStateRepository()()
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
+      ledgerId,
+      [
+        buildSummaryLogRowStateEntry({
+          rowId: 'row-0',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          data: {}
+        })
+      ],
+      SUMMARY_LOG_ID
+    )
+    const ledgerRepository = createInMemoryLedgerRepository([
+      partialMock(
+        buildLedgerEvent({
+          organisationId: org.id,
+          registrationId: registration.id,
+          accreditationId,
+          number: 1,
+          createdAt: SUBMITTED_AT,
+          payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
+        })
+      )
+    ])()
+    return { ledgerRepository, summaryLogRowStatesRepository }
+  }
+
   const createServer = async (registrationOverrides = {}) => {
     const registration = buildRegistration(registrationOverrides)
     const org = buildOrganisation({ registrations: [registration] })
@@ -46,27 +94,15 @@ describe(`POST ${reportsPostPath}`, () => {
     const organisationsRepository = organisationsRepositoryFactory()
     await organisationsRepository.insert(org)
 
-    const wasteRecordsRepositoryFactory = createInMemoryWasteRecordsRepository([
-      {
-        id: new ObjectId().toString(),
-        organisationId: org.id,
-        registrationId: registration.id,
-        type: 'received',
-        data: {},
-        versions: [
-          {
-            createdAt: '2024-01-15T00:00:00.000Z',
-            summaryLog: { id: 'sl-1' }
-          }
-        ]
-      }
-    ])
+    const { ledgerRepository, summaryLogRowStatesRepository } =
+      await seedRepositories(org, registration)
     const reportsRepositoryFactory = createInMemoryReportsRepository()
 
     const server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
-        wasteRecordsRepository: wasteRecordsRepositoryFactory,
+        ledgerRepository,
+        summaryLogRowStatesRepository,
         reportsRepository: reportsRepositoryFactory
       },
       featureFlags: createInMemoryFeatureFlags()
@@ -273,14 +309,16 @@ describe(`POST ${reportsPostPath}`, () => {
       wasteProcessingType: 'reprocessor',
       accreditationId
     })
-    const org = buildOrganisationWithRegistration(registration, 'approved')
+    const org = buildOrganisationWithRegistration(
+      partialMock(registration),
+      'approved'
+    )
     const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository([org])
+      createInMemoryOrganisationsRepository([partialMock(org)])
 
     const server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
-        wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
         reportsRepository: createInMemoryReportsRepository()
       },
       featureFlags: createInMemoryFeatureFlags()
@@ -587,8 +625,21 @@ describe(`POST ${reportsPostPath}`, () => {
     const accreditationId = new ObjectId().toString()
     const issuedAt = new Date('2025-01-15T00:00:00.000Z')
 
+    const registration = buildRegistration({
+      wasteProcessingType: 'reprocessor',
+      accreditationId
+    })
+    const org = buildOrganisationWithRegistration(
+      partialMock(registration),
+      'approved'
+    )
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([partialMock(org)])
+
     const prn = {
       ...buildAwaitingAcceptancePrn({
+        organisation: { id: org.id, name: 'Test Organisation' },
+        registrationId: registration.id,
         accreditation: {
           id: accreditationId,
           accreditationNumber: 'ACC-TEST-001',
@@ -612,32 +663,14 @@ describe(`POST ${reportsPostPath}`, () => {
       id: new ObjectId().toString()
     }
 
-    const registration = buildRegistration({
-      wasteProcessingType: 'reprocessor',
-      accreditationId
-    })
-    const org = buildOrganisationWithRegistration(registration, 'approved')
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository([org])
+    const { ledgerRepository, summaryLogRowStatesRepository } =
+      await seedRepositories(org, registration)
 
     const server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
-        wasteRecordsRepository: createInMemoryWasteRecordsRepository([
-          {
-            id: new ObjectId().toString(),
-            organisationId: org.id,
-            registrationId: registration.id,
-            type: 'received',
-            data: {},
-            versions: [
-              {
-                createdAt: '2024-01-15T00:00:00.000Z',
-                summaryLog: { id: 'sl-1' }
-              }
-            ]
-          }
-        ]),
+        ledgerRepository,
+        summaryLogRowStatesRepository,
         reportsRepository: createInMemoryReportsRepository(),
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository([prn])

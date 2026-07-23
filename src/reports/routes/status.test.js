@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
@@ -68,7 +69,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         ...(accreditationId && { accreditationId })
       })
       const org = buildOrganisationWithRegistration(
-        registration,
+        partialMock(registration),
         accreditationStatus
       )
       return { org, registration }
@@ -85,7 +86,7 @@ describe(`POST ${reportsStatusPath}`, () => {
       )
 
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([partialMock(org)])
 
       const reportsRepositoryFactory = createInMemoryReportsRepository()
       const reportsRepository = reportsRepositoryFactory()
@@ -133,7 +134,7 @@ describe(`POST ${reportsStatusPath}`, () => {
       )
 
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([partialMock(org)])
 
       const server = await createTestServer({
         repositories: {
@@ -693,7 +694,7 @@ describe(`POST ${reportsStatusPath}`, () => {
             accreditationId: undefined
           })
 
-        await reportsRepository.markActiveReportsStale(
+        await reportsRepository.markActiveReportsStaleForSummaryLog(
           organisationId,
           registrationId,
           'sl-new',
@@ -708,7 +709,9 @@ describe(`POST ${reportsStatusPath}`, () => {
         )
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
+        expect(JSON.parse(response.payload).code).toEqual([
+          'summary_log_changed'
+        ])
       })
     })
   })

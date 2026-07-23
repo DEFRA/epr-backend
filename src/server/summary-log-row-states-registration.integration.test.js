@@ -4,7 +4,6 @@ import { randomUUID } from 'node:crypto'
 
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
-import { SUMMARY_LOG_ROW_STATES_BACKFILL_WATERMARKS_COLLECTION_NAME } from '#waste-records/backfill/watermark/mongodb.js'
 
 vi.mock(
   '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
@@ -39,113 +38,41 @@ const bootServer = async () => {
 describe('summary-log-row-states repository registration', () => {
   setupAuthContext()
 
+  let server
+
   beforeAll(async () => {
     await startMongo()
+    server = await bootServer()
   })
 
   afterAll(async () => {
+    await server.db.dropDatabase()
+    await server.stop()
     await teardownMongo()
   })
 
-  describe('while every row-state flag is off', () => {
-    let server
-
-    beforeAll(async () => {
-      delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES
-      delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL
-      server = await bootServer()
-    })
-
-    afterAll(async () => {
-      await server.db.dropDatabase()
-      await server.stop()
-    })
-
-    it('constructs no row-state repository', () => {
-      expect(server.app.summaryLogRowStatesRepository).toBeUndefined()
-    })
-
-    it('constructs no backfill watermark repository', () => {
-      expect(
-        server.app.summaryLogRowStatesBackfillWatermarkRepository
-      ).toBeUndefined()
-    })
-
-    it('creates no row-state collection or indexes', async () => {
-      const collections = await server.db
-        .listCollections({ name: SUMMARY_LOG_ROW_STATES_COLLECTION_NAME })
-        .toArray()
-
-      expect(collections).toHaveLength(0)
-    })
-
-    it('creates no backfill watermark collection', async () => {
-      const collections = await server.db
-        .listCollections({
-          name: SUMMARY_LOG_ROW_STATES_BACKFILL_WATERMARKS_COLLECTION_NAME
-        })
-        .toArray()
-
-      expect(collections).toHaveLength(0)
-    })
+  it('constructs the row-state repository', () => {
+    expect(server.app.summaryLogRowStatesRepository).toBeDefined()
   })
 
-  describe('once the switch-on flag is flipped', () => {
-    let server
+  it('creates the empty collection with its three indexes', async () => {
+    const indexes = await server.db
+      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
+      .listIndexes()
+      .toArray()
 
-    beforeAll(async () => {
-      process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES = 'true'
-      delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL
-      server = await bootServer()
-    })
+    const indexesByName = Object.fromEntries(
+      indexes.map((index) => [index.name, index])
+    )
 
-    afterAll(async () => {
-      await server.db.dropDatabase()
-      await server.stop()
-      delete process.env.FEATURE_FLAG_SUMMARY_LOG_ROW_STATES
-    })
+    expect(indexesByName).toHaveProperty('summary_log_membership')
+    expect(indexesByName).toHaveProperty('row_history')
+    expect(indexesByName.summary_log_row_state_identity.unique).toBe(true)
 
-    it('constructs the row-state repository', () => {
-      expect(server.app.summaryLogRowStatesRepository).toBeDefined()
-    })
+    const documentCount = await server.db
+      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
+      .countDocuments()
 
-    it('constructs the backfill watermark repository', () => {
-      expect(
-        server.app.summaryLogRowStatesBackfillWatermarkRepository
-      ).toBeDefined()
-    })
-
-    it('creates the backfill watermark collection with its unique registration index', async () => {
-      const indexes = await server.db
-        .collection(SUMMARY_LOG_ROW_STATES_BACKFILL_WATERMARKS_COLLECTION_NAME)
-        .listIndexes()
-        .toArray()
-
-      const registrationIdentity = indexes.find(
-        (index) => index.name === 'registration_identity'
-      )
-      expect(registrationIdentity.unique).toBe(true)
-    })
-
-    it('creates the empty collection with its three indexes', async () => {
-      const indexes = await server.db
-        .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-        .listIndexes()
-        .toArray()
-
-      const indexesByName = Object.fromEntries(
-        indexes.map((index) => [index.name, index])
-      )
-
-      expect(indexesByName).toHaveProperty('summary_log_membership')
-      expect(indexesByName).toHaveProperty('row_history')
-      expect(indexesByName.summary_log_row_state_identity.unique).toBe(true)
-
-      const documentCount = await server.db
-        .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-        .countDocuments()
-
-      expect(documentCount).toBe(0)
-    })
+    expect(documentCount).toBe(0)
   })
 })

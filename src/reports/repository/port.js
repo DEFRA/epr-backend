@@ -3,6 +3,10 @@
  */
 
 /**
+ * @typedef {typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON[keyof typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON]} ResubmissionIneligibleReason
+ */
+
+/**
  * @typedef {Object} UserSummary
  * @property {string} id
  * @property {string} [name]
@@ -38,8 +42,8 @@
  * @property {string} supplierName
  * @property {string} facilityType
  * @property {string} supplierAddress
- * @property {string} supplierPhone
- * @property {string} supplierEmail
+ * @property {string | null} supplierPhone
+ * @property {string | null} supplierEmail
  * @property {number} tonnageReceived
  */
 
@@ -83,7 +87,7 @@
  * @property {number} issuedTonnage
  * @property {number | null} [totalRevenue]
  * @property {number | null} [averagePricePerTonne]
- * @property {number | null} freeTonnage
+ * @property {number | null} [freeTonnage]
  */
 
 /**
@@ -93,19 +97,46 @@
 
 /**
  * Provenance of a report: the summary log it was last (re)built from.
- * @typedef {{ summaryLogId: string, lastUploadedAt: string | null }} ReportSource
+ * @typedef {{ summaryLogId: string | null, lastUploadedAt: string | null }} ReportSource
  */
 
 /**
- * @typedef {{ uploadedAt: string, reason: StaleReason, summaryLogId?: string }} ReportStale
+ * @typedef {{ uploadedAt: string, summaryLogId: string }} StaleSummaryLogChanged
  */
 
 /**
- * @typedef {{ uploadedAt: string, reason: ResubmissionReason, summaryLogId: string }} ReportResubmissionRequired
+ * @typedef {{ occurredAt: string, prnId: string }} StalePrnCancelled
  */
 
 /**
- * Per-report result returned by {@link ReportsRepository.markActiveReportsStale}.
+ * A report can be stale for either or both independent reasons at once, each
+ * carrying its own provenance. Presence of a named field is the reason code
+ * — see {@link staleReasons} in `#reports/domain/stale.js`.
+ * @typedef {{
+ *   summaryLogChanged?: StaleSummaryLogChanged,
+ *   prnCancelled?: StalePrnCancelled
+ * }} ReportStale
+ */
+
+/**
+ * @typedef {{ uploadedAt: string, summaryLogId: string }} ResubmissionClosedPeriodRestated
+ */
+
+/**
+ * @typedef {{ requestedAt: string, requestedBy: UserSummary }} ResubmissionOperatorRequested
+ */
+
+/**
+ * A report can require resubmission for either or both reasons at once,
+ * mirroring {@link ReportStale}.
+ * @typedef {{
+ *   closedPeriodRestated?: ResubmissionClosedPeriodRestated,
+ *   operatorRequested?: ResubmissionOperatorRequested
+ * }} ReportResubmissionRequired
+ */
+
+/**
+ * Per-report result returned by {@link ReportsRepository.markActiveReportsStaleForSummaryLog}.
  * Contains the fields needed to audit the stale transition.
  *
  * @typedef {Object} MarkReportStaleResult
@@ -115,6 +146,18 @@
  * @property {number} period
  * @property {number} submissionNumber
  * @property {ReportStale} stale
+ */
+
+/**
+ * Parameters for {@link ReportsRepository.markActiveReportsStaleForPrnCancellation}.
+ * @typedef {Object} MarkActiveReportsStaleForPrnCancellationParams
+ * @property {string} organisationId - MongoDB ObjectId hex string
+ * @property {string} registrationId - MongoDB ObjectId hex string
+ * @property {number} year
+ * @property {string} cadence - 'monthly' or 'quarterly'
+ * @property {number} period
+ * @property {string} prnId
+ * @property {string} occurredAt
  */
 
 /**
@@ -143,6 +186,37 @@
  */
 
 /**
+ * Parameters for
+ * {@link ReportsRepository.markSubmittedReportRequiringResubmissionByOperator}.
+ * Unlike the batch, summary-log-triggered method above, this targets exactly
+ * one report (identified by its natural key including `submissionNumber`),
+ * since an operator's request has no summary log to key a batch off.
+ * @typedef {{
+ *   organisationId: string,
+ *   registrationId: string,
+ *   year: number,
+ *   cadence: string,
+ *   period: number,
+ *   submissionNumber: number,
+ *   requestedBy: UserSummary,
+ *   requestedAt: string
+ * }} MarkSubmittedReportRequiringResubmissionByOperatorParams
+ */
+
+/**
+ * Fields needed to audit a resubmission transition, mirroring
+ * {@link MarkSubmittedReportRequiringResubmissionResult}.
+ * @typedef {{
+ *   reportId: string,
+ *   year: number,
+ *   cadence: string,
+ *   period: number,
+ *   submissionNumber: number,
+ *   resubmissionRequired: ReportResubmissionRequired
+ * }} MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult
+ */
+
+/**
  * @typedef {Object} Report
  * @property {string} id
  * @property {number} version
@@ -153,9 +227,9 @@
  * @property {number} year
  * @property {string} cadence
  * @property {number} period
- * @property {string} startDate
- * @property {string} endDate
- * @property {string} dueDate
+ * @property {string} startDate - Bare calendar date (YYYY-MM-DD)
+ * @property {string} endDate - Bare calendar date (YYYY-MM-DD)
+ * @property {string} dueDate - Bare calendar date (YYYY-MM-DD)
  * @property {ReportStatusObject} status
  * @property {string} [material]
  * @property {string} [wasteProcessingType]
@@ -194,9 +268,11 @@
 
 /**
  * @typedef {Object} ReportPerPeriod
- * @property {string} startDate - ISO date string
- * @property {string} endDate - ISO date string
- * @property {string} dueDate - ISO date string
+ * @property {string} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
+ *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive
+ *   a concrete instant.
+ * @property {string} endDate - Bare calendar date (YYYY-MM-DD), no timezone.
+ * @property {string} dueDate - Bare calendar date (YYYY-MM-DD), no timezone.
  * @property {ReportSummary|null} current
  * @property {ReportSummary[]} previousSubmissions
  */
@@ -229,9 +305,11 @@
  * @property {number} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
- * @property {string} startDate - ISO date string
- * @property {string} endDate - ISO date string
- * @property {string} dueDate - ISO date string
+ * @property {string} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
+ *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive
+ *   a concrete instant.
+ * @property {string} endDate - Bare calendar date (YYYY-MM-DD), no timezone.
+ * @property {string} dueDate - Bare calendar date (YYYY-MM-DD), no timezone.
  * @property {UserSummary} changedBy
  * @property {number} submissionNumber
  * @property {string} [material]
@@ -289,14 +367,26 @@
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
- * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStale
+ * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
  *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
  *   skipping any report already built from `summaryLogId` or already stale from it.
+ *   Sets `stale.summaryLogChanged`, leaving `stale.prnCancelled` untouched if present.
  *   Returns the per-report stale details for auditing.
+ * @property {(params: MarkActiveReportsStaleForPrnCancellationParams) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForPrnCancellation
+ *   Marks the active (in_progress / ready_to_submit) report for the given org/reg/period
+ *   as stale for a PRN cancellation, skipping it if already flagged for this `prnId`.
+ *   Sets `stale.prnCancelled`, leaving `stale.summaryLogChanged` untouched if present.
+ *   Returns the per-report stale details for auditing (empty array if no active report
+ *   exists for the period).
  * @property {(params: MarkSubmittedReportsRequiringResubmissionParams) => Promise<MarkSubmittedReportRequiringResubmissionResult[]>} markSubmittedReportsRequiringResubmission
  *   For each given period, flags the latest submitted report as requiring resubmission,
  *   skipping any report already flagged from `summaryLogId` or built from it.
  *   Returns the per-report details for auditing.
+ * @property {(params: MarkSubmittedReportRequiringResubmissionByOperatorParams) => Promise<MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>} markSubmittedReportRequiringResubmissionByOperator
+ *   Flags the exact report identified by `submissionNumber` as requiring
+ *   resubmission at the operator's own request, conditional on it still
+ *   being `submitted` and not already flagged this way. Returns `null` when
+ *   the write matched nothing.
  * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
  *   Returns true when any report for the org/reg was submitted strictly after
  *   `since` (a canonical ISO timestamp, as produced by toISOString throughout),
@@ -309,8 +399,6 @@
  */
 
 /**
- * @import { StaleReason } from '#reports/domain/stale.js'
- * @import { ResubmissionReason } from '#reports/domain/resubmission.js'
  * @import { PeriodRef } from '#reports/domain/period-key.js'
  */
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { assertPresent } from '#test/type-helpers.js'
 import {
   CLASSIFICATION_REASON,
-  checkRequiredFields,
-  createDateOnlyClassifier
+  checkRequiredFields
 } from './classify-helpers.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 
@@ -77,21 +77,21 @@ describe('classify-helpers', () => {
     it('treats null as unfilled', () => {
       const data = { FIELD_A: null }
       const result = checkRequiredFields(data, ['FIELD_A'], {})
-      expect(result).not.toBeNull()
+      assertPresent(result)
       expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
     })
 
     it('treats empty string as unfilled', () => {
       const data = { FIELD_A: '' }
       const result = checkRequiredFields(data, ['FIELD_A'], {})
-      expect(result).not.toBeNull()
+      assertPresent(result)
       expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
     })
 
     it('treats undefined as unfilled', () => {
       const data = { FIELD_A: undefined }
       const result = checkRequiredFields(data, ['FIELD_A'], {})
-      expect(result).not.toBeNull()
+      assertPresent(result)
       expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
     })
 
@@ -99,7 +99,7 @@ describe('classify-helpers', () => {
       const data = { DROPDOWN: 'Choose option' }
       const unfilledValues = { DROPDOWN: ['Choose option'] }
       const result = checkRequiredFields(data, ['DROPDOWN'], unfilledValues)
-      expect(result).not.toBeNull()
+      assertPresent(result)
       expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
     })
 
@@ -113,140 +113,6 @@ describe('classify-helpers', () => {
       const data = {}
       const result = checkRequiredFields(data, [], {})
       expect(result).toBeNull()
-    })
-  })
-
-  describe('createDateOnlyClassifier', () => {
-    const accreditation = {
-      validFrom: new Date('2024-01-01'),
-      validTo: new Date('2024-12-31'),
-      statusHistory: [
-        { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-        { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-      ]
-    }
-
-    it('returns IGNORED when date is outside accreditation period', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = { MY_DATE: new Date('2023-06-15') }
-
-      const result = classify(data, { accreditation })
-
-      expect(result).toEqual({
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
-      })
-    })
-
-    it('returns EXCLUDED when date is within accreditation period', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = { MY_DATE: new Date('2024-06-15') }
-
-      const result = classify(data, { accreditation })
-
-      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
-    })
-
-    it('returns EXCLUDED when date field is not present', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = {}
-
-      const result = classify(data, { accreditation })
-
-      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
-    })
-
-    it('returns EXCLUDED when date field is null', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = { MY_DATE: null }
-
-      const result = classify(data, { accreditation })
-
-      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
-    })
-
-    it('returns EXCLUDED when date field is empty string', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = { MY_DATE: '' }
-
-      const result = classify(data, { accreditation })
-
-      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
-    })
-
-    it('returns EXCLUDED when accreditation is undefined (accreditation check passes)', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = { MY_DATE: new Date('2024-06-15') }
-
-      const result = classify(data, { accreditation: undefined })
-
-      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
-    })
-
-    it('returns EXCLUDED when accreditation is null (accreditation check passes)', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = { MY_DATE: new Date('2024-06-15') }
-
-      const result = classify(data, { accreditation: null })
-
-      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
-    })
-
-    it('returns IGNORED when accreditation was suspended before the row date', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = { MY_DATE: new Date('2024-06-15') }
-
-      const result = classify(data, {
-        accreditation: {
-          validFrom: new Date('2024-01-01'),
-          validTo: new Date('2024-12-31'),
-          statusHistory: [
-            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' }
-          ]
-        }
-      })
-
-      expect(result).toEqual({
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
-      })
-    })
-
-    it('returns EXCLUDED when accreditation was suspended then re-approved before the row date', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = { MY_DATE: new Date('2024-06-15') }
-
-      const result = classify(data, {
-        accreditation: {
-          validFrom: new Date('2024-01-01'),
-          validTo: new Date('2024-12-31'),
-          statusHistory: [
-            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-04-01T00:00:00.000Z' }
-          ]
-        }
-      })
-
-      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
-    })
-
-    it('returns EXCLUDED when date is within range and not suspended (empty statusHistory)', () => {
-      const classify = createDateOnlyClassifier('MY_DATE')
-      const data = { MY_DATE: new Date('2024-06-15') }
-
-      const result = classify(data, {
-        accreditation: {
-          validFrom: new Date('2024-01-01'),
-          validTo: new Date('2024-12-31'),
-          statusHistory: []
-        }
-      })
-
-      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
   })
 })

@@ -3,22 +3,16 @@
  * @returns {import('./feature-flags.port.js').FeatureFlags}
  */
 export const createInMemoryFeatureFlags = (flags = {}) => ({
-  isCopyFormFilesToS3Enabled() {
-    return flags.copyFormFilesToS3 ?? false
-  },
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
   },
-  isSummaryLogRowStatesEnabled() {
-    return flags.summaryLogRowStates ?? false
+  isStaleIssuedTonnageReportEnabled() {
+    return flags.staleIssuedTonnageReport ?? false
   },
-  isSummaryLogRowStatesBackfillEnabled() {
-    return flags.summaryLogRowStatesBackfill ?? false
+  isPreCpaResubmissionReportEnabled() {
+    return flags.preCpaResubmissionReport ?? false
   },
-  isSummaryLogRowStatesDiscrepancyReportEnabled() {
-    return flags.summaryLogRowStatesDiscrepancyReport ?? false
-  },
-  isRegisteredOnlySubmittedEventsEnabled() {
-    return flags.registeredOnlySubmittedEvents ?? false
+  isPreCpaResubmissionBackfillEnabled() {
+    return flags.preCpaResubmissionBackfill ?? false
   }
 })

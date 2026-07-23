@@ -226,18 +226,26 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           [entry],
           'log-1'
         )
+        const otherLedgerId = {
+          organisationId: 'org-1',
+          registrationId: 'reg-2',
+          accreditationId: 'acc-1'
+        }
         await repository.upsertSummaryLogRowStates(
-          {
-            organisationId: 'org-1',
-            registrationId: 'reg-2',
-            accreditationId: 'acc-1'
-          },
+          otherLedgerId,
           [entry],
           'log-2'
         )
 
-        expect(await repository.findBySummaryLogId('log-1')).toHaveLength(1)
-        expect(await repository.findBySummaryLogId('log-2')).toHaveLength(1)
+        expect(
+          await repository.findRowStatesForSummaryLog(
+            DEFAULT_LEDGER_ID,
+            'log-1'
+          )
+        ).toHaveLength(1)
+        expect(
+          await repository.findRowStatesForSummaryLog(otherLedgerId, 'log-2')
+        ).toHaveLength(1)
       })
 
       it('keeps waste-record types of the same rowId isolated when deduping', async () => {
@@ -258,7 +266,12 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           'log-1'
         )
 
-        expect(await repository.findBySummaryLogId('log-1')).toHaveLength(2)
+        expect(
+          await repository.findRowStatesForSummaryLog(
+            DEFAULT_LEDGER_ID,
+            'log-1'
+          )
+        ).toHaveLength(2)
       })
     })
 
@@ -366,7 +379,10 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         returned.data.tonnage = 999
         returned.summaryLogIds.push('log-injected')
 
-        const [stored] = await repository.findBySummaryLogId('log-1')
+        const [stored] = await repository.findRowStatesForSummaryLog(
+          DEFAULT_LEDGER_ID,
+          'log-1'
+        )
         expect(stored.data.tonnage).toBe(10)
         expect(stored.summaryLogIds).toEqual(['log-1'])
       })

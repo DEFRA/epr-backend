@@ -223,7 +223,16 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
       it('returns EXCLUDED with all missing fields listed', () => {
         const result = schema.classifyForWasteBalance({}, { accreditation })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
-        expect(result.reasons).toHaveLength(3)
+        expect(result.reasons).toEqual([
+          {
+            code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+            field: 'DATE_LOAD_LEFT_SITE'
+          },
+          {
+            code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+            field: 'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
+          }
+        ])
       })
     })
 

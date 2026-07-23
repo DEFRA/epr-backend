@@ -1,17 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
+import { asStoredRowStates } from './as-stored-row-states-test-helpers.js'
 import wasteRecordsAccreditedJson from './test-data/exporter-accredited.json' with { type: 'json' }
 import wasteRecordsRegisteredOnlyJson from './test-data/exporter-reg-only.json' with { type: 'json' }
 
-const wasteRecordsAccredited =
-  /** @type {import('#domain/waste-records/model.js').WasteRecord[]} */ (
-    /** @type {unknown} */ (wasteRecordsAccreditedJson)
-  )
-const wasteRecordsRegisteredOnly =
-  /** @type {import('#domain/waste-records/model.js').WasteRecord[]} */ (
-    /** @type {unknown} */ (wasteRecordsRegisteredOnlyJson)
-  )
+const wasteRecordsAccredited = asStoredRowStates(wasteRecordsAccreditedJson)
+const wasteRecordsRegisteredOnly = asStoredRowStates(
+  wasteRecordsRegisteredOnlyJson
+)
 
 describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', () => {
   const orsDetailsMap = new Map([
@@ -39,7 +36,11 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
       cadence: 'monthly',
       year: 2026,
       period: 1,
-      orsDetailsMap
+      orsDetailsMap,
+      source: {
+        lastUploadedAt: '2026-04-02T11:31:06.440Z',
+        summaryLogId: 'dccebb57-da7a-4d50-9f17-2984f6c9fb22'
+      }
     })
 
     expect(result).toEqual({
@@ -140,7 +141,11 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
       operatorCategory: 'EXPORTER',
       cadence: 'monthly',
       year: 2026,
-      period: 2
+      period: 2,
+      source: {
+        lastUploadedAt: '2026-04-02T11:31:06.440Z',
+        summaryLogId: 'dccebb57-da7a-4d50-9f17-2984f6c9fb22'
+      }
     })
 
     expect(result).toEqual({
@@ -207,7 +212,11 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
       cadence: 'quarterly',
       year: 2026,
       period: 1,
-      orsDetailsMap
+      orsDetailsMap,
+      source: {
+        lastUploadedAt: '2026-04-02T12:11:42.889Z',
+        summaryLogId: '98c1e68c-05c6-4b1d-bdca-59727d302c1b'
+      }
     })
 
     expect(result).toEqual({

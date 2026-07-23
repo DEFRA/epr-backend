@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -17,6 +18,7 @@ import {
 import { reportsGetPath } from './get.js'
 
 /**
+ * @import { Registration } from '#domain/organisations/registration.js'
  * @import { TestServer } from '#test/create-test-server.js'
  */
 
@@ -35,7 +37,9 @@ describe(`GET ${reportsGetPath}`, () => {
       reportsRepositoryFactory,
       accreditationStatus
     ) => {
-      const registration = buildRegistration(registrationOverrides)
+      const registration = /** @type {Registration} */ (
+        buildRegistration(registrationOverrides)
+      )
       const org = buildOrganisationWithRegistration(
         registration,
         accreditationStatus
@@ -44,7 +48,7 @@ describe(`GET ${reportsGetPath}`, () => {
       // Use initial-org pattern to preserve accreditation statusHistory
       // (insert() overrides statusHistory to the default 'created' entry).
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([partialMock(org)])
 
       const server = await createTestServer({
         repositories: {
@@ -285,6 +289,115 @@ describe(`GET ${reportsGetPath}`, () => {
       })
     })
 
+    describe('monthly obligations trimmed to accreditation validFrom (PAE-1737)', () => {
+      // Fix "now" so ended-period maths is deterministic: Jun 10 2026 means
+      // monthly periods Jan-May have ended and June is still in progress.
+      beforeAll(() => {
+        vi.useFakeTimers({
+          now: new Date('2026-06-10T12:00:00Z'),
+          toFake: ['Date']
+        })
+      })
+
+      afterAll(() => {
+        vi.useRealTimers()
+      })
+
+      const buildAccreditedServer = async (
+        /** @type {{ validFrom: string, status?: 'approved' | 'suspended' }} */ {
+          validFrom,
+          status = 'approved'
+        }
+      ) => {
+        const registration = /** @type {Registration} */ (
+          buildRegistration({
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          })
+        )
+        const org = buildOrganisationWithRegistration(registration, status)
+        org.accreditations[0].validFrom = validFrom
+
+        const server = await createTestServer({
+          repositories: {
+            organisationsRepository: createInMemoryOrganisationsRepository([
+              partialMock(org)
+            ])
+          },
+          featureFlags: createInMemoryFeatureFlags({})
+        })
+
+        return {
+          server,
+          organisationId: org.id,
+          registrationId: registration.id
+        }
+      }
+
+      const periodsFor = async ({ server, organisationId, registrationId }) => {
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        return JSON.parse(response.payload).reportingPeriods.map(
+          (p) => p.period
+        )
+      }
+
+      it('drops monthly periods that ended before the accreditation validFrom', async () => {
+        const ctx = await buildAccreditedServer({ validFrom: '2026-03-15' })
+
+        expect(await periodsFor(ctx)).toEqual([3, 4, 5])
+      })
+
+      it('includes the period containing the accreditation validFrom', async () => {
+        const ctx = await buildAccreditedServer({ validFrom: '2026-03-15' })
+
+        expect(await periodsFor(ctx)).toContain(3)
+      })
+
+      it('keeps every ended period when validFrom is 1 January', async () => {
+        const ctx = await buildAccreditedServer({ validFrom: '2026-01-01' })
+
+        expect(await periodsFor(ctx)).toEqual([1, 2, 3, 4, 5])
+      })
+
+      it('trims a suspended accreditation the same way', async () => {
+        const ctx = await buildAccreditedServer({
+          validFrom: '2026-03-15',
+          status: 'suspended'
+        })
+
+        expect(await periodsFor(ctx)).toEqual([3, 4, 5])
+      })
+
+      it('does not trim a registered-only (quarterly) operator', async () => {
+        const registration = /** @type {Registration} */ (
+          buildRegistration({
+            wasteProcessingType: 'exporter',
+            accreditationId: undefined
+          })
+        )
+        const org = buildOrganisationWithRegistration(registration)
+        const server = await createTestServer({
+          repositories: {
+            organisationsRepository: createInMemoryOrganisationsRepository([
+              partialMock(org)
+            ])
+          },
+          featureFlags: createInMemoryFeatureFlags({})
+        })
+
+        const response = await makeRequest(server, org.id, registration.id)
+        const payload = JSON.parse(response.payload)
+
+        // Q1 is the only ended quarter at Jun 10; unaffected by the trim.
+        expect(payload.cadence).toBe('quarterly')
+        expect(payload.reportingPeriods.map((p) => p.period)).toEqual([1])
+      })
+    })
+
     describe('registration with unapproved accreditation', () => {
       it.each(['created', 'rejected', 'cancelled'])(
         'returns quarterly cadence when linked accreditation status is %s',
@@ -462,6 +575,13 @@ describe(`GET ${reportsGetPath}`, () => {
           (p) => p.period === 1
         )
         expect(januaryItems).toHaveLength(2)
+
+        // previousSubmissions is a feed-only projection: the merged period here
+        // carries previous submissions, but the calendar items must not leak it
+        // (the strict response schema would reject it).
+        for (const item of januaryItems) {
+          expect(item).not.toHaveProperty('previousSubmissions')
+        }
 
         const original = januaryItems.find(
           (p) => p.periodStatus === 'submitted'

@@ -17,6 +17,9 @@ import {
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
+/** @import { WithId } from 'mongodb' */
+/** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+
 export const createStatusHistoryEntry = (status) => ({
   status,
   updatedAt: new Date()
@@ -75,10 +78,12 @@ export const updateStatusHistoryForItems = (existingItems, itemUpdates) => {
 }
 
 export const mapDocumentWithCurrentStatuses = (org) => {
-  const normalised = normaliseOrganisationFromDb(org)
+  const normalised = /** @type {WithId<Omit<Organisation, 'id'>>} */ (
+    normaliseOrganisationFromDb(org)
+  )
   const { _id, ...rest } = normalised
 
-  rest.status = getCurrentStatus(rest)
+  rest.status = /** @type {OrganisationStatus} */ (getCurrentStatus(rest))
 
   for (const item of rest.registrations) {
     item.status = getCurrentStatus(item)

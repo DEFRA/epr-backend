@@ -1,8 +1,10 @@
 import { validateDataBusiness } from './data-business.js'
-import {
-  VERSION_STATUS,
-  WASTE_RECORD_TYPE
-} from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+
+/** @import { ValidatedWasteRecord } from '#application/waste-records/transform-from-summary-log.js' */
+/** @import { PreviousSubmission, WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js' */
 
 describe('validateDataBusiness', () => {
   /**
@@ -10,84 +12,66 @@ describe('validateDataBusiness', () => {
    * @param {Object} options
    * @param {string} options.rowId - The row ID
    * @param {string} [options.type] - The waste record type
-   * @param {Array} [options.issues] - Validation issues
-   * @returns {{ record: Object, issues: Array }}
+   * @returns {ValidatedWasteRecord}
    */
   const createValidatedWasteRecord = ({
     rowId,
-    type = WASTE_RECORD_TYPE.RECEIVED,
-    issues = []
-  }) => ({
-    record: {
-      organisationId: 'org-456',
-      registrationId: 'reg-789',
-      accreditationId: 'acc-111',
-      rowId,
-      type,
-      data: {
-        ROW_ID: rowId,
-        DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
-        GROSS_WEIGHT: 100
-      },
-      versions: [
-        {
-          createdAt: new Date().toISOString(),
-          status: VERSION_STATUS.CREATED,
-          summaryLog: {
-            id: 'current-summary-log-id',
-            uri: 's3://bucket/current-file.xlsx'
-          },
+    type = WASTE_RECORD_TYPE.RECEIVED
+  }) =>
+    /** @type {ValidatedWasteRecord} */ (
+      /** @type {unknown} */ ({
+        record: {
+          organisationId: 'org-456',
+          registrationId: 'reg-789',
+          accreditationId: 'acc-111',
+          rowId,
+          type,
           data: {
             ROW_ID: rowId,
             DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
             GROSS_WEIGHT: 100
-          }
-        }
-      ]
-    },
-    issues
-  })
+          },
+          versions: []
+        },
+        issues: []
+      })
+    )
 
   /**
-   * Creates an existing waste record for testing
-   * @param {string} rowId - The row ID
-   * @returns {Object} Waste record
+   * @param {string} rowId
+   * @returns {WasteRecordState}
    */
-  const createWasteRecord = (rowId) => ({
-    organisationId: 'org-456',
-    registrationId: 'reg-789',
-    accreditationId: 'acc-111',
+  const createWasteRecordState = (rowId) => ({
     rowId,
-    type: WASTE_RECORD_TYPE.RECEIVED,
+    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
     data: {
-      ROW_ID: rowId,
       DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
       GROSS_WEIGHT: 100
     },
-    versions: [
-      {
-        createdAt: '2024-01-15T10:00:00.000Z',
-        status: VERSION_STATUS.CREATED,
-        summaryLog: {
-          id: 'previous-summary-log-id',
-          uri: 's3://bucket/previous-file.xlsx'
-        },
-        data: {
-          ROW_ID: rowId,
-          DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
-          GROSS_WEIGHT: 100
-        }
-      }
-    ]
+    classification: {
+      outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: 100
+    }
+  })
+
+  /**
+   * @param {WasteRecordState[]} wasteRecordStates
+   * @returns {PreviousSubmission}
+   */
+  const createPreviousSubmission = (wasteRecordStates) => ({
+    summaryLog: {
+      summaryLogId: 'previous-summary-log-id',
+      submittedAt: new Date('2024-01-15T10:00:00.000Z')
+    },
+    wasteRecordStates
   })
 
   it('returns valid result when validators pass', () => {
-    const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
-    const existingWasteRecords = []
-
     const result = validateDataBusiness({
-      wasteRecords,
-      existingWasteRecords
+      wasteRecords: [createValidatedWasteRecord({ rowId: 'row-1' })],
+      previousSubmission: null
     })
 
     expect(result.isValid()).toBe(true)
@@ -96,17 +80,12 @@ describe('validateDataBusiness', () => {
   })
 
   it('returns invalid result when validators fail', () => {
-    const wasteRecords = [
-      createValidatedWasteRecord({ rowId: 'row-2' }) // row-1 is missing
-    ]
-    const existingWasteRecords = [
-      createWasteRecord('row-1'),
-      createWasteRecord('row-2')
-    ]
-
     const result = validateDataBusiness({
-      wasteRecords,
-      existingWasteRecords
+      wasteRecords: [createValidatedWasteRecord({ rowId: 'row-2' })],
+      previousSubmission: createPreviousSubmission([
+        createWasteRecordState('row-1'),
+        createWasteRecordState('row-2')
+      ])
     })
 
     expect(result.isValid()).toBe(false)

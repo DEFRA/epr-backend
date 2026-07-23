@@ -4,7 +4,6 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -27,6 +26,7 @@ import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repos
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 const VALID_FROM = '2025-01-01'
@@ -62,7 +62,7 @@ const buildTestOrg = (organisationId, registrationId) => {
   const accreditationId = 'acc-123'
   const testOrg = buildReadOrganisation({
     registrations: [
-      {
+      partialMock({
         id: registrationId,
         registrationNumber: 'REG-123',
         status: 'approved',
@@ -73,10 +73,10 @@ const buildTestOrg = (organisationId, registrationId) => {
         validFrom: VALID_FROM,
         validTo: VALID_TO,
         accreditationId
-      }
+      })
     ],
     accreditations: [
-      {
+      partialMock({
         id: accreditationId,
         accreditationNumber: 'ACC-123',
         material: 'paper',
@@ -85,7 +85,7 @@ const buildTestOrg = (organisationId, registrationId) => {
         submittedToRegulator: 'ea',
         validFrom: VALID_FROM,
         validTo: VALID_TO
-      }
+      })
     ]
   })
   testOrg.id = organisationId
@@ -133,7 +133,6 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     wasteBalanceService: createWasteBalanceService(
       createInMemoryLedgerRepository()()
     ),
-    featureFlags: createInMemoryFeatureFlags(),
     summaryLogExtractor,
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsService: createReportsService(reportsRepository),

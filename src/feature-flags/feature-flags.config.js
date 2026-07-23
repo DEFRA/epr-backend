@@ -5,19 +5,13 @@ export const createConfigFeatureFlags = (config) => ({
   isDevEndpointsEnabled() {
     return config.get('featureFlags.devEndpoints')
   },
-  isCopyFormFilesToS3Enabled() {
-    return config.get('featureFlags.copyFormFilesToS3')
+  isStaleIssuedTonnageReportEnabled() {
+    return config.get('featureFlags.staleIssuedTonnageReport')
   },
-  isSummaryLogRowStatesEnabled() {
-    return config.get('featureFlags.summaryLogRowStates')
+  isPreCpaResubmissionReportEnabled() {
+    return config.get('featureFlags.preCpaResubmissionReport')
   },
-  isSummaryLogRowStatesBackfillEnabled() {
-    return config.get('featureFlags.summaryLogRowStatesBackfill')
-  },
-  isSummaryLogRowStatesDiscrepancyReportEnabled() {
-    return config.get('featureFlags.summaryLogRowStatesDiscrepancyReport')
-  },
-  isRegisteredOnlySubmittedEventsEnabled() {
-    return config.get('featureFlags.registeredOnlySubmittedEvents')
+  isPreCpaResubmissionBackfillEnabled() {
+    return config.get('featureFlags.preCpaResubmissionBackfill')
   }
 })

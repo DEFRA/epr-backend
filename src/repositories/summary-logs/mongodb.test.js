@@ -8,9 +8,9 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { summaryLogFactory } from './contract/test-data.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
+import { partialMock } from '#test/type-helpers.js'
 
 /**
- * @import { S3Client } from '@aws-sdk/client-s3'
  * @import { SummaryLogsS3Config } from './mongodb.js'
  * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
  * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
@@ -28,7 +28,7 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
 
 /** @type {SummaryLogsS3Config} */
 const mockS3Config = {
-  s3Client: /** @type {S3Client} */ (/** @type {unknown} */ ({})),
+  s3Client: partialMock({}),
   preSignedUrlExpiry: SIXTY_SECONDS
 }
 

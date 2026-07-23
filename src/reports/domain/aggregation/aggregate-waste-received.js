@@ -1,14 +1,13 @@
+import { toNumber } from '#common/helpers/decimal-utils.js'
 import {
-  addRounded,
-  roundToTwoDecimalPlaces,
-  toDecimal,
-  toNumber
-} from '#common/helpers/decimal-utils.js'
+  ZERO_TONNAGE,
+  addTonnage,
+  toRoundedTonnage
+} from '#common/helpers/rounded-tonnage.js'
 import {
   formatAddress,
   groupAndSum,
-  isTonnageGreaterThanZero,
-  TONNAGE_DECIMAL_PLACES
+  isTonnageGreaterThanZero
 } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
@@ -20,19 +19,23 @@ const WASTE_RECEIVED_TYPES = new Set([
 const isWasteReceivedType = (type) => WASTE_RECEIVED_TYPES.has(type)
 
 /**
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteReceivedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} wasteReceivedRecords
  * @param {string} tonnageField
  */
 export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
-  const validEntries = wasteReceivedRecords.filter(({ type, data }) => {
-    const tonnage = toNumber(data[tonnageField])
-    return isWasteReceivedType(type) && isTonnageGreaterThanZero(tonnage)
-  })
+  const validEntries = wasteReceivedRecords.filter(
+    ({ wasteRecordType, data }) => {
+      const tonnage = toNumber(data[tonnageField])
+      return (
+        isWasteReceivedType(wasteRecordType) &&
+        isTonnageGreaterThanZero(tonnage)
+      )
+    }
+  )
 
   const totalTonnageDecimal = validEntries.reduce(
-    (acc, { data }) =>
-      addRounded(acc, data[tonnageField], TONNAGE_DECIMAL_PLACES),
-    toDecimal(0)
+    (acc, { data }) => addTonnage(acc, toRoundedTonnage(data[tonnageField])),
+    ZERO_TONNAGE
   )
 
   const suppliers = groupAndSum(
@@ -55,15 +58,15 @@ export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
       supplierPhone: data.SUPPLIER_PHONE_NUMBER ?? null,
       supplierEmail: data.SUPPLIER_EMAIL ?? null
     }),
-    ({ data }) => data[tonnageField]
+    ({ data }) => toRoundedTonnage(data[tonnageField])
   ).map(({ tonnageDecimal, ...rest }) => ({
     ...rest,
-    tonnageReceived: roundToTwoDecimalPlaces(tonnageDecimal)
+    tonnageReceived: toNumber(tonnageDecimal)
   }))
 
   return {
     suppliers,
-    totalTonnageReceived: roundToTwoDecimalPlaces(totalTonnageDecimal),
+    totalTonnageReceived: toNumber(totalTonnageDecimal),
     tonnageRecycled: null,
     tonnageNotRecycled: null
   }

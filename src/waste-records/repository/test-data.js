@@ -1,4 +1,5 @@
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
@@ -12,7 +13,7 @@ export const buildSummaryLogRowState = (overrides = {}) => ({
   accreditationId: 'acc-1',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   rowId: 'row-1',
-  processingType: 'REPROCESSOR_INPUT',
+  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
   data: { supplierName: 'Acme', tonnage: 10 },
   classification: {
     outcome: ROW_OUTCOME.INCLUDED,
@@ -31,7 +32,7 @@ export const buildSummaryLogRowState = (overrides = {}) => ({
 export const buildSummaryLogRowStateEntry = (overrides = {}) => ({
   rowId: 'row-1',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-  processingType: 'REPROCESSOR_INPUT',
+  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
   data: { supplierName: 'Acme', tonnage: 10 },
   classification: {
     outcome: ROW_OUTCOME.INCLUDED,

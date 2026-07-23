@@ -29,6 +29,7 @@ import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/ind
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'
+import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
@@ -38,7 +39,9 @@ import { createInMemoryLedgerRepositoryPlugin } from '#waste-balances/repository
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
 
-/** @import { Lifecycle } from '@hapi/hapi' */
+/** @import { Lifecycle, Plugin } from '@hapi/hapi' */
+/** @import { Db } from 'mongodb' */
+/** @import { FeatureFlags } from '#common/hapi-types.js' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
 /** @import { Mock } from 'vitest' */
 
@@ -55,7 +58,8 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
 /**
  * @typedef {{
  *   config?: Record<string, any>
- *   featureFlags?: object
+ *   db?: Db
+ *   featureFlags?: FeatureFlags
  *   repositories?: object
  *   workers?: object
  *   dlqService?: import('#plugins/dlq-admin.js').DlqService
@@ -87,6 +91,21 @@ function createRepositoryPlugin(name, repositoryOrFactory) {
     }
   }
 }
+
+/**
+ * Decorates `server` and `request` with a real Mongo `Db`, for route tests that
+ * exercise raw `request.db` access instead of a repository.
+ *
+ * @param {Db} db
+ * @returns {Plugin<void>}
+ */
+const createDbPlugin = (db) => ({
+  name: 'test-db',
+  register: (server) => {
+    server.decorate('server', 'db', db)
+    server.decorate('request', 'db', db)
+  }
+})
 
 const repositoryConfigs = [
   {
@@ -276,11 +295,13 @@ export async function createTestServer(options = {}) {
         : [],
       options.repositories ?? {}
     ),
+    prnEventsPlugin,
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
     {
       plugin: mockDlqAdminPlugin,
       options: { dlqService: options.dlqService }
     },
+    ...(options.db ? [createDbPlugin(options.db)] : []),
     router
   ]
 

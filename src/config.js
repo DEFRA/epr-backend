@@ -352,41 +352,29 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_CLOSED_PERIOD_ADJUSTMENTS'
     },
-    copyFormFilesToS3: {
-      doc: 'Feature Flag: Copy form files to S3 on startup',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
-    },
     devEndpoints: {
       doc: 'Feature Flag: Enable development endpoints',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    summaryLogRowStates: {
-      doc: 'Feature Flag: Persist summary-log row states on summary-log submission (ADR-0037)',
+    staleIssuedTonnageReport: {
+      doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES'
+      env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
     },
-    summaryLogRowStatesBackfill: {
-      doc: 'Feature Flag: Run the estate-wide summary-log-row-state reconstruction backfill on startup (ADR-0037)',
+    preCpaResubmissionReport: {
+      doc: 'Feature Flag: Run the estate-wide pre-CPA resubmission sizing diagnostic on startup (PAE-1747)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_BACKFILL'
+      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_REPORT'
     },
-    summaryLogRowStatesDiscrepancyReport: {
-      doc: 'Feature Flag: Run the estate-wide summary-log-row-state reconciliation discrepancy diagnostic on startup (ADR-0037)',
+    preCpaResubmissionBackfill: {
+      doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768). Only takes effect when closedPeriodAdjustments is also enabled.',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_SUMMARY_LOG_ROW_STATES_DISCREPANCY_REPORT'
-    },
-    registeredOnlySubmittedEvents: {
-      doc: 'Feature Flag: Emit zero-delta summary-log-submitted events for registered-only (null-accreditation) streams (ADR-0031)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_REGISTERED_ONLY_SUBMITTED_EVENTS'
+      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
     }
   },
   formSubmissionOverrides: {
@@ -493,12 +481,6 @@ const baseConfig = {
       default:
         'https://forms-submission-api.auth.eu-west-2.amazoncognito.com/oauth2/token',
       env: 'FORMS_SUBMISSION_EXTERNAL_API_COGNITO_TOKEN_URL'
-    },
-    copyFilesUploadedFromDate: {
-      doc: 'Only copy form files uploaded after this date (ISO 8601 format)',
-      format: String,
-      default: '2025-11-19T00:00:00.000Z',
-      env: 'COPY_FILES_UPLOADED_FROM_DATE'
     }
   },
   summaryLogReport: {

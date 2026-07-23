@@ -2,6 +2,8 @@ import { StatusCodes } from 'http-status-codes'
 
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
 import { periodParamsSchema, withRegistrationDetails } from './shared.js'
+import { reportDetailResponseSchema } from './response.schema.js'
+import { reportResponseFailAction } from './response-fail-action.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
@@ -9,7 +11,8 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
- * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
+ * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
+ * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
@@ -17,6 +20,39 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 
 export const reportsGetDetailPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
+
+/**
+ * @param {HapiRequest} request
+ * @param {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail | import('#reports/repository/port.js').Report} report
+ * @param {string} organisationId
+ * @param {string} registrationId
+ */
+function warnIfWasteRecordsExcluded(
+  request,
+  report,
+  organisationId,
+  registrationId
+) {
+  // The 'diagnostics' in report check acts as a type discriminator:
+  // fetchOrGenerateReportForPeriod returns Report | AggregatedReportDetail,
+  // and only AggregatedReportDetail carries diagnostics (and operatorCategory).
+  if (
+    !('diagnostics' in report) ||
+    report.diagnostics.wasteReceivedRecordsExcluded === 0
+  ) {
+    return
+  }
+
+  const { wasteReceivedRecordsExcluded } = report.diagnostics
+  request.logger.warn({
+    message:
+      'Waste records excluded from report due to mismatched date field — possible registered-only to accredited transition (ADR 0030)',
+    event: {
+      action: 'fetch_or_generate_report',
+      reason: `organisationId=${organisationId} registrationId=${registrationId} operatorCategory=${report.operatorCategory} wasteReceivedRecordsExcluded=${wasteReceivedRecordsExcluded}`
+    }
+  })
+}
 
 export const reportsGetDetail = {
   method: 'GET',
@@ -26,13 +62,18 @@ export const reportsGetDetail = {
     tags: ['api'],
     validate: {
       params: periodParamsSchema
+    },
+    response: {
+      schema: reportDetailResponseSchema,
+      failAction: reportResponseFailAction
     }
   },
   /**
    * @param {HapiRequest & {
    *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
-   *   wasteRecordsRepository: WasteRecordsRepository,
+   *   ledgerRepository: WasteBalanceLedgerRepository,
+   *   summaryLogRowStatesRepository: SummaryLogRowStateRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   reportsRepository: ReportsRepository,
    *   overseasSitesRepository: OverseasSitesRepository
@@ -42,7 +83,8 @@ export const reportsGetDetail = {
   handler: async (request, h) => {
     const {
       organisationsRepository,
-      wasteRecordsRepository,
+      ledgerRepository,
+      summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository,
       reportsRepository,
       overseasSitesRepository,
@@ -64,7 +106,8 @@ export const reportsGetDetail = {
 
     const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,
-      wasteRecordsRepository,
+      ledgerRepository,
+      summaryLogRowStateRepository: summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository,
       overseasSitesRepository,
       organisationId,
@@ -76,26 +119,13 @@ export const reportsGetDetail = {
       submissionNumber
     })
 
-    // The 'diagnostics' in report check acts as a type discriminator:
-    // fetchOrGenerateReportForPeriod returns Report | AggregatedReportDetail,
-    // and only AggregatedReportDetail carries diagnostics (and operatorCategory).
-    if (
-      'diagnostics' in report &&
-      report.diagnostics.wasteReceivedRecordsExcluded > 0
-    ) {
-      const { wasteReceivedRecordsExcluded } = report.diagnostics
-      request.logger.warn({
-        message:
-          'Waste records excluded from report due to mismatched date field — possible registered-only to accredited transition (ADR 0030)',
-        event: {
-          action: 'fetch_or_generate_report',
-          reason: `organisationId=${organisationId} registrationId=${registrationId} operatorCategory=${report.operatorCategory} wasteReceivedRecordsExcluded=${wasteReceivedRecordsExcluded}`
-        }
-      })
-    }
+    warnIfWasteRecordsExcluded(request, report, organisationId, registrationId)
 
     return h
-      .response(withRegistrationDetails(report, registration))
+      .response({
+        ...withRegistrationDetails(report, registration),
+        canRequestResubmission: report.canRequestResubmission
+      })
       .code(StatusCodes.OK)
   }
 }

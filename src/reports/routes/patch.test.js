@@ -14,6 +14,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
+import { partialMock } from '#test/type-helpers.js'
 import { reportsPatchPath, buildUpdatedPrn } from './patch.js'
 
 describe(`PATCH ${reportsPatchPath}`, () => {
@@ -635,10 +636,13 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         wasteProcessingType: 'exporter',
         accreditationId
       })
-      const org = buildOrganisationWithRegistration(registration, 'approved')
+      const org = buildOrganisationWithRegistration(
+        partialMock(registration),
+        'approved'
+      )
 
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([partialMock(org)])
 
       const reportsRepositoryFactory = createInMemoryReportsRepository()
       const reportsRepository = reportsRepositoryFactory()
@@ -901,7 +905,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           accreditationId: undefined
         })
 
-      await reportsRepository.markActiveReportsStale(
+      await reportsRepository.markActiveReportsStaleForSummaryLog(
         organisationId,
         registrationId,
         'sl-new',
@@ -916,7 +920,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       )
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
+      expect(JSON.parse(response.payload).code).toEqual(['summary_log_changed'])
     })
   })
 })

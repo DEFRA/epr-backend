@@ -1,5 +1,5 @@
 {
-  "extends": "./jsconfig.typecheck.json",
+  "extends": "./jsconfig.typecheck.base.json",
   "compilerOptions": {
     "types": ["vitest/globals"]
   },

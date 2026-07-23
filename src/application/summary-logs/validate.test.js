@@ -10,13 +10,51 @@ import {
   MAX_VALIDATION_ISSUES,
   MAX_ACTUAL_LENGTH
 } from './validate.js'
-import {
-  createEmptyLoadCategory,
-  createEmptyLoadValidity
-} from './load-counts.js'
+import { createEmptyLoadValidity } from './load-counts.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
+/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+
+/**
+ * Seed a submitted summary log for a ledger: its row states and the
+ * SUMMARY_LOG_SUBMITTED ledger event that resolves it as the head.
+ *
+ * @param {Object} params
+ * @param {WasteBalanceLedgerId} params.ledgerId
+ * @param {string} params.summaryLogId
+ * @param {number} params.number - the submission's ledger position
+ * @param {Array<{ rowId: string, wasteRecordType?: string }>} params.rows
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ */
+const seedSubmittedSummaryLog = async ({
+  ledgerId,
+  summaryLogId,
+  number,
+  rows,
+  summaryLogRowStateRepository,
+  ledgerRepository
+}) => {
+  await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    ledgerId,
+    rows.map((row) => buildSummaryLogRowStateEntry(row)),
+    summaryLogId
+  )
+  await ledgerRepository.appendEvents([
+    buildLedgerEvent({
+      ...ledgerId,
+      number,
+      kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+      payload: { summaryLogId, creditTotal: 0 }
+    })
+  ])
+}
 
 // ============================================================================
 // Test Builders
@@ -182,11 +220,17 @@ describe('SummaryLogsValidator', () => {
   let summaryLogsRepository
   let organisationsRepository
   let wasteRecordsRepository
+  let summaryLogRowStateRepository
+  let ledgerRepository
   let validateSummaryLog
   let summaryLogId
   let summaryLog
 
   beforeEach(async () => {
+    ledgerRepository = createInMemoryLedgerRepository()()
+    summaryLogRowStateRepository =
+      createInMemorySummaryLogRowStateRepository()()
+
     summaryLogExtractor = {
       extract: vi.fn().mockResolvedValue({
         meta: buildMeta(),
@@ -250,6 +294,8 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      summaryLogRowStateRepository,
+      ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
@@ -677,6 +723,8 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      summaryLogRowStateRepository,
+      ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
@@ -722,6 +770,8 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      summaryLogRowStateRepository,
+      ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
       }),
@@ -921,44 +971,6 @@ describe('SummaryLogsValidator', () => {
 
       expect(updateCall.loads).toBeUndefined()
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
-    })
-
-    it('classifies existing records as unchanged when data has not changed', async () => {
-      // Same row data used for both existing record and new upload
-      const rowData = buildReceivedLoadRow()
-
-      wasteRecordsRepository.findByRegistration.mockResolvedValue([
-        buildExistingWasteRecord(rowData)
-      ])
-
-      summaryLogExtractor.extract.mockResolvedValue(
-        buildExtractedData({
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
-              rows: [rowData]
-            })
-          }
-        })
-      )
-
-      await validateSummaryLog(summaryLogId)
-
-      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
-
-      // Note: ROW_ID for unchanged comes from existing record (string)
-      expect(updateCall.loads).toEqual({
-        added: createEmptyLoadValidity(),
-        unchanged: {
-          valid: { count: 1, rowIds: ['10000'] },
-          invalid: createEmptyLoadCategory(),
-          included: { count: 1, rowIds: ['10000'] },
-          excluded: createEmptyLoadCategory()
-        },
-        adjusted: createEmptyLoadValidity()
-      })
-
-      // Reset the mock for other tests
-      wasteRecordsRepository.findByRegistration.mockResolvedValue([])
     })
 
     it('sets IGNORED outcome for Reprocessor Input loads with dates outside accreditation range', async () => {
@@ -1227,33 +1239,81 @@ describe('SummaryLogsValidator', () => {
       // (per PAE-659 AC03: "has all mandatory fields completed")
       const buildRow = (rowId, exportDate, receivedDate = '2025-01-01') =>
         headers.map((h) => {
-          if (h === 'ROW_ID') return rowId
-          if (h === 'DATE_OF_EXPORT') return exportDate
-          if (h === 'DATE_RECEIVED_FOR_EXPORT') return receivedDate
-          if (h === 'EWC_CODE') return '03 03 08'
-          if (h === 'DESCRIPTION_WASTE') return 'Paper - other'
-          if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') return 'No'
-          if (h === 'GROSS_WEIGHT') return 100
-          if (h === 'TARE_WEIGHT') return 0
-          if (h === 'PALLET_WEIGHT') return 0
-          if (h === 'NET_WEIGHT') return 100
-          if (h === 'BAILING_WIRE_PROTOCOL') return 'No'
+          if (h === 'ROW_ID') {
+            return rowId
+          }
+          if (h === 'DATE_OF_EXPORT') {
+            return exportDate
+          }
+          if (h === 'DATE_RECEIVED_FOR_EXPORT') {
+            return receivedDate
+          }
+          if (h === 'EWC_CODE') {
+            return '03 03 08'
+          }
+          if (h === 'DESCRIPTION_WASTE') {
+            return 'Paper - other'
+          }
+          if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') {
+            return 'No'
+          }
+          if (h === 'GROSS_WEIGHT') {
+            return 100
+          }
+          if (h === 'TARE_WEIGHT') {
+            return 0
+          }
+          if (h === 'PALLET_WEIGHT') {
+            return 0
+          }
+          if (h === 'NET_WEIGHT') {
+            return 100
+          }
+          if (h === 'BAILING_WIRE_PROTOCOL') {
+            return 'No'
+          }
           if (h === 'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION') {
             return 'Actual weight (100%)'
           }
-          if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') return 0
-          if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') return 1
-          if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') return 100
-          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED') return 100
-          if (h === 'BASEL_EXPORT_CODE') return 'B3020'
-          if (h === 'CUSTOMS_CODES') return '123456'
-          if (h === 'CONTAINER_NUMBER') return 'CONT123'
-          if (h === 'DATE_RECEIVED_BY_OSR') return '2025-01-15'
-          if (h === 'OSR_ID') return 100
-          if (h === 'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE') return 'No'
-          if (h === 'INTERIM_SITE_ID') return 100
-          if (h === 'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR') return 0
-          if (h === 'EXPORT_CONTROLS') return 'Article 18 (Green list)'
+          if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') {
+            return 0
+          }
+          if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') {
+            return 1
+          }
+          if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') {
+            return 100
+          }
+          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED') {
+            return 100
+          }
+          if (h === 'BASEL_EXPORT_CODE') {
+            return 'B3020'
+          }
+          if (h === 'CUSTOMS_CODES') {
+            return '123456'
+          }
+          if (h === 'CONTAINER_NUMBER') {
+            return 'CONT123'
+          }
+          if (h === 'DATE_RECEIVED_BY_OSR') {
+            return '2025-01-15'
+          }
+          if (h === 'OSR_ID') {
+            return 100
+          }
+          if (h === 'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE') {
+            return 'No'
+          }
+          if (h === 'INTERIM_SITE_ID') {
+            return 100
+          }
+          if (h === 'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR') {
+            return 0
+          }
+          if (h === 'EXPORT_CONTROLS') {
+            return 'Article 18 (Green list)'
+          }
           return ''
         })
 
@@ -1678,10 +1738,18 @@ describe('SummaryLogsValidator', () => {
 
       const buildRow = (rowId) =>
         headers.map((h) => {
-          if (h === 'ROW_ID') return rowId
-          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON') return 10
-          if (h === 'EWC_CODE') return '03 03 08'
-          if (h === 'DESCRIPTION_WASTE') return 'Aluminium - other'
+          if (h === 'ROW_ID') {
+            return rowId
+          }
+          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON') {
+            return 10
+          }
+          if (h === 'EWC_CODE') {
+            return '03 03 08'
+          }
+          if (h === 'DESCRIPTION_WASTE') {
+            return 'Aluminium - other'
+          }
           return ''
         })
 
@@ -2058,12 +2126,28 @@ describe('SummaryLogsValidator', () => {
         })
       )
 
-      // An existing waste record whose ROW_ID is NOT in the current upload
+      // The transform's change/version reconciliation reads the waste-records
+      // collection; the continuity check reads submitted row states. This test
+      // seeds both so the truncation assertion exercises the real transform.
+      wasteRecordsRepository.findByRegistration.mockResolvedValue([
+        buildExistingWasteRecord(buildReceivedLoadRow({ ROW_ID: 10000 }))
+      ])
+
+      // A previously submitted row whose ROW_ID is NOT in the current upload
       // triggers a fatal SEQUENTIAL_ROW_REMOVED error during data-business
       // validation — appended AFTER the 130+ non-fatal data-syntax issues.
-      wasteRecordsRepository.findByRegistration.mockResolvedValue([
-        buildExistingWasteRecord(buildReceivedLoadRow({ ROW_ID: 99999 }))
-      ])
+      await seedSubmittedSummaryLog({
+        ledgerId: {
+          organisationId: 'org-123',
+          registrationId: 'reg-123',
+          accreditationId: null
+        },
+        summaryLogId: 'previous-summary-log',
+        number: 1,
+        rows: [{ rowId: '99999' }],
+        summaryLogRowStateRepository,
+        ledgerRepository
+      })
 
       await validateSummaryLog(summaryLogId)
 
@@ -2083,6 +2167,98 @@ describe('SummaryLogsValidator', () => {
 
       // Status should be invalid (the fatal was detected pre-cap)
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+    })
+  })
+
+  describe('row continuity across submitted summary logs', () => {
+    const sequentialRowRemovedFatal = () => {
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      return updateCall.validation.issues.find(
+        (issue) => issue.code === 'SEQUENTIAL_ROW_REMOVED'
+      )
+    }
+
+    it('rejects an upload that drops a row the latest submission carried, naming that submission', async () => {
+      await seedSubmittedSummaryLog({
+        ledgerId: {
+          organisationId: 'org-123',
+          registrationId: 'reg-123',
+          accreditationId: null
+        },
+        summaryLogId: 'previous-log',
+        number: 1,
+        rows: [{ rowId: 'A' }],
+        summaryLogRowStateRepository,
+        ledgerRepository
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      const fatal = sequentialRowRemovedFatal()
+      expect(fatal).toBeDefined()
+      expect(fatal.context.location.rowId).toBe('A')
+      expect(fatal.context.previousSummaryLog.id).toBe('previous-log')
+    })
+
+    it('resolves the previous submission on the accreditation the summary log was uploaded against', async () => {
+      summaryLog.accreditationId = 'acc-1'
+
+      await seedSubmittedSummaryLog({
+        ledgerId: {
+          organisationId: 'org-123',
+          registrationId: 'reg-123',
+          accreditationId: 'acc-1'
+        },
+        summaryLogId: 'previous-log',
+        number: 1,
+        rows: [{ rowId: 'A' }],
+        summaryLogRowStateRepository,
+        ledgerRepository
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      const fatal = sequentialRowRemovedFatal()
+      expect(fatal).toBeDefined()
+      expect(fatal.context.previousSummaryLog.id).toBe('previous-log')
+    })
+
+    it('names the latest submission, not the one that first wrote the row', async () => {
+      const ledgerId = {
+        organisationId: 'org-123',
+        registrationId: 'reg-123',
+        accreditationId: null
+      }
+      await seedSubmittedSummaryLog({
+        ledgerId,
+        summaryLogId: 'log-1',
+        number: 1,
+        rows: [{ rowId: 'A' }],
+        summaryLogRowStateRepository,
+        ledgerRepository
+      })
+      await seedSubmittedSummaryLog({
+        ledgerId,
+        summaryLogId: 'log-2',
+        number: 2,
+        rows: [{ rowId: 'A' }],
+        summaryLogRowStateRepository,
+        ledgerRepository
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      const fatal = sequentialRowRemovedFatal()
+      expect(fatal).toBeDefined()
+      expect(fatal.context.previousSummaryLog.id).toBe('log-2')
+    })
+
+    it('accepts an upload when the registration has never submitted', async () => {
+      await validateSummaryLog(summaryLogId)
+
+      expect(sequentialRowRemovedFatal()).toBeUndefined()
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
     })
   })
 })

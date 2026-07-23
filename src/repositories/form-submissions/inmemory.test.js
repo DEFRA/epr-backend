@@ -7,76 +7,102 @@ import {
   buildOrganisation
 } from './contract/test-data.js'
 
-const it = base.extend({
-  // eslint-disable-next-line no-empty-pattern
-  accreditations: async ({}, use) => {
-    const data = []
-    await use(data)
-  },
+/**
+ * @import { TestAPI } from 'vitest'
+ * @import { FormSubmissionsRepositoryFactory } from './port.js'
+ *
+ * @typedef {{
+ *   accreditations: ReturnType<typeof buildAccreditation>[]
+ *   registrations: ReturnType<typeof buildRegistration>[]
+ *   organisations: ReturnType<typeof buildOrganisation>[]
+ *   formSubmissionsRepository: FormSubmissionsRepositoryFactory
+ *   seedAccreditations: (overrides?: Parameters<typeof buildAccreditation>[0][]) => Promise<ReturnType<typeof buildAccreditation>[]>
+ *   seedRegistrations: (overrides?: Parameters<typeof buildRegistration>[0][]) => Promise<ReturnType<typeof buildRegistration>[]>
+ *   seedOrganisations: (overrides?: Parameters<typeof buildOrganisation>[0][]) => Promise<ReturnType<typeof buildOrganisation>[]>
+ * }} Fixtures
+ */
 
-  // eslint-disable-next-line no-empty-pattern
-  registrations: async ({}, use) => {
-    const data = []
-    await use(data)
-  },
+const it = /** @type {TestAPI<Fixtures>} */ (
+  base.extend({
+    // eslint-disable-next-line no-empty-pattern
+    accreditations: async ({}, use) => {
+      /** @type {ReturnType<typeof buildAccreditation>[]} */
+      const data = []
+      await use(data)
+    },
 
-  // eslint-disable-next-line no-empty-pattern
-  organisations: async ({}, use) => {
-    const data = []
-    await use(data)
-  },
+    // eslint-disable-next-line no-empty-pattern
+    registrations: async ({}, use) => {
+      /** @type {ReturnType<typeof buildRegistration>[]} */
+      const data = []
+      await use(data)
+    },
 
-  formSubmissionsRepository: async (
-    { accreditations, registrations, organisations },
-    use
-  ) => {
-    // Return a factory-like function that creates a fresh repository with current state
-    const factory = () =>
-      createFormSubmissionsRepository(
-        accreditations,
-        registrations,
-        organisations
-      )()
-    await use(factory)
-  },
+    // eslint-disable-next-line no-empty-pattern
+    organisations: async ({}, use) => {
+      /** @type {ReturnType<typeof buildOrganisation>[]} */
+      const data = []
+      await use(data)
+    },
 
-  seedAccreditations: async ({ accreditations }, use) => {
-    await use(async (overrides) => {
-      const testData = overrides
-        ? overrides.map((override) => buildAccreditation(override))
-        : [buildAccreditation(), buildAccreditation(), buildAccreditation()]
-      accreditations.push(...testData)
-      return testData
-    })
-  },
+    formSubmissionsRepository: async (
+      { accreditations, registrations, organisations },
+      use
+    ) => {
+      // Return a factory-like function that creates a fresh repository with current state
+      const factory = () =>
+        createFormSubmissionsRepository(
+          accreditations,
+          registrations,
+          organisations
+        )()
+      await use(factory)
+    },
 
-  seedRegistrations: async ({ registrations }, use) => {
-    await use(async (overrides) => {
-      const testData = overrides
-        ? overrides.map((override) => buildRegistration(override))
-        : [buildRegistration(), buildRegistration(), buildRegistration()]
-      registrations.push(...testData)
-      return testData
-    })
-  },
+    seedAccreditations: async ({ accreditations }, use) => {
+      await use(async (overrides) => {
+        const testData = overrides
+          ? overrides.map((override) => buildAccreditation(override))
+          : [buildAccreditation(), buildAccreditation(), buildAccreditation()]
+        accreditations.push(...testData)
+        return testData
+      })
+    },
 
-  seedOrganisations: async ({ organisations }, use) => {
-    await use(async (overrides) => {
-      const testData = overrides
-        ? overrides.map((override) => buildOrganisation(override))
-        : [buildOrganisation(), buildOrganisation(), buildOrganisation()]
-      organisations.push(...testData)
-      return testData
-    })
-  }
-})
+    seedRegistrations: async ({ registrations }, use) => {
+      await use(async (overrides) => {
+        const testData = overrides
+          ? overrides.map((override) => buildRegistration(override))
+          : [buildRegistration(), buildRegistration(), buildRegistration()]
+        registrations.push(...testData)
+        return testData
+      })
+    },
+
+    seedOrganisations: async ({ organisations }, use) => {
+      await use(async (overrides) => {
+        const testData = overrides
+          ? overrides.map((override) => buildOrganisation(override))
+          : [buildOrganisation(), buildOrganisation(), buildOrganisation()]
+        organisations.push(...testData)
+        return testData
+      })
+    }
+  })
+)
 
 describe('In-memory form submissions repository', () => {
-  beforeEach(async ({ accreditations, registrations, organisations }) => {
-    accreditations.length = 0
-    registrations.length = 0
-    organisations.length = 0
-  })
+  beforeEach(
+    /** @param {Fixtures} fixture */ async ({
+      accreditations,
+      registrations,
+      organisations
+    }) => {
+      accreditations.length = 0
+      registrations.length = 0
+      organisations.length = 0
+    }
+  )
 
   it('should create repository instance', async ({
     formSubmissionsRepository

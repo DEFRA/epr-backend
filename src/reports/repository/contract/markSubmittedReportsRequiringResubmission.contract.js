@@ -1,4 +1,3 @@
-import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
@@ -24,9 +23,10 @@ const period = (period, overrides = {}) => ({
 })
 
 const expectedResubmission = {
-  uploadedAt: UPLOADED_AT,
-  reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-  summaryLogId: SL_ID
+  closedPeriodRestated: {
+    uploadedAt: UPLOADED_AT,
+    summaryLogId: SL_ID
+  }
 }
 
 export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
@@ -124,21 +124,6 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
 
       const second = await callMark()
       expect(second).toEqual([])
-    })
-
-    it('skips the whole period when its latest submission was built from the given summaryLogId', async () => {
-      await createAndSubmitReport(repository, {
-        submissionNumber: 1,
-        source: { summaryLogId: 'sl-other', lastUploadedAt: UPLOADED_AT }
-      })
-      await createAndSubmitReport(repository, {
-        submissionNumber: 2,
-        source: { summaryLogId: 'sl-1', lastUploadedAt: UPLOADED_AT }
-      })
-
-      const flagged = await callMark({ summaryLogId: 'sl-1' })
-
-      expect(flagged).toEqual([])
     })
 
     it('returns [] when no submitted reports exist in the given periods', async () => {

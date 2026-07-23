@@ -15,6 +15,7 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import {
   setupAuthContext,
   cognitoJwksUrl
@@ -161,12 +162,14 @@ describe('external PRN transition read-side fold', () => {
     await startServer({
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       events: [
-        buildLedgerEvent({
-          registrationId: REG_ID,
-          accreditationId: ACC_ID,
-          organisationId: ORG_ID,
-          number: 1
-        })
+        partialMock(
+          buildLedgerEvent({
+            registrationId: REG_ID,
+            accreditationId: ACC_ID,
+            organisationId: ORG_ID,
+            number: 1
+          })
+        )
       ]
     })
 
@@ -178,7 +181,11 @@ describe('external PRN transition read-side fold', () => {
 
     expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-    const latest = await ledgerRepository.findLatestInLedger(REG_ID, ACC_ID)
+    const latest = await ledgerRepository.findLatestInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
     expect(latest.kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
     expect(latest.createdBy).toEqual({
       id: externalApiClientId,

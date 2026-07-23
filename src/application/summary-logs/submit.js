@@ -12,23 +12,43 @@ import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
 /**
+ * @import { TypedLogger } from '#common/hapi-types.js'
+ * @import { SummaryLogExtractor } from '#domain/summary-logs/extractor/port.js'
+ * @import { SummaryLog } from '#domain/summary-logs/model.js'
+ * @import { SubmitUser } from '#domain/summary-logs/worker/port.js'
+ * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
+ * @import { ReportsService } from '#reports/application/report-service.js'
  * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
+ * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
+ * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+ * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
  */
 
 /**
  * @typedef {object} SubmitDependencies
- * @property {object} logger
- * @property {object} summaryLogsRepository
- * @property {object} organisationsRepository
- * @property {object} wasteRecordsRepository
- * @property {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} summaryLogRowStatesRepository
- * @property {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} wasteBalanceService
- * @property {import('#feature-flags/feature-flags.port.js').FeatureFlags} featureFlags
- * @property {import('#reports/application/report-service.js').ReportsService} reportsService
- * @property {object} summaryLogExtractor
- * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
- * @property {import('#domain/summary-logs/worker/port.js').SubmitUser} user
+ * @property {TypedLogger} logger
+ * @property {SummaryLogsRepository} summaryLogsRepository
+ * @property {OrganisationsRepository} organisationsRepository
+ * @property {WasteRecordsRepository} wasteRecordsRepository
+ * @property {SummaryLogRowStateRepository} summaryLogRowStatesRepository
+ * @property {ReturnType<typeof createWasteBalanceService>} wasteBalanceService
+ * @property {ReportsService} reportsService
+ * @property {SummaryLogExtractor} summaryLogExtractor
+ * @property {OverseasSitesRepository} overseasSitesRepository
+ * @property {SubmitUser} user
  * @property {OnSummaryLogUploaded} onSummaryLogUploaded
+ */
+
+/**
+ * A summary log that has reached SUBMITTING status: validation has linked it to a
+ * registration and stamped its creation time, so these fields are always present.
+ * @typedef {SummaryLog & {
+ *   createdAt: string
+ *   organisationId: string
+ *   registrationId: string
+ * }} SubmittableSummaryLog
  */
 
 /**
@@ -37,9 +57,9 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * after the operator confirmed the preview. Deliberately blunt: it fires on any
  * submission, not only periods this log touches. See PAE-1686.
  *
- * @param {object} summaryLog
+ * @param {SubmittableSummaryLog} summaryLog
  * @param {string} summaryLogId
- * @param {import('#reports/application/report-service.js').ReportsService} reportsService
+ * @param {ReportsService} reportsService
  * @returns {Promise<void>}
  */
 const assertNoReportSubmittedSinceCreation = async (
@@ -67,7 +87,7 @@ const assertNoReportSubmittedSinceCreation = async (
  *
  * @param {string} summaryLogId
  * @param {number} version
- * @param {object} summaryLog
+ * @param {SubmittableSummaryLog} summaryLog
  * @param {SubmitDependencies} deps
  * @returns {Promise<void>}
  */
@@ -79,7 +99,6 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     wasteRecordsRepository,
     summaryLogRowStatesRepository,
     wasteBalanceService,
-    featureFlags,
     summaryLogExtractor,
     overseasSitesRepository,
     user,
@@ -110,7 +129,6 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     organisationsRepository,
     overseasSitesRepository,
     summaryLogRowStateRepository: summaryLogRowStatesRepository,
-    featureFlags,
     logger
   })
 
@@ -173,11 +191,13 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     )
   }
 
+  const submittableLog = /** @type {SubmittableSummaryLog} */ (summaryLog)
+
   await assertNoReportSubmittedSinceCreation(
-    summaryLog,
+    submittableLog,
     summaryLogId,
     reportsService
   )
 
-  await syncAndFinalise(summaryLogId, version, summaryLog, deps)
+  await syncAndFinalise(summaryLogId, version, submittableLog, deps)
 }

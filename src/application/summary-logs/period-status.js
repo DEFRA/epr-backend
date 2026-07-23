@@ -1,5 +1,7 @@
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+import { getTargetAmount } from '#waste-balances/application/target-amount.js'
 import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { periodForDate } from '#reports/domain/period-for-date.js'
 import { periodKey } from '#reports/domain/period-key.js'
@@ -7,7 +9,7 @@ import {
   buildSubmittedPeriods,
   isDateInSubmittedPeriod
 } from '#reports/domain/submitted-periods.js'
-import { RECORD_CHANGE, determineRecordStatus } from './record-change.js'
+import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
 
 /** Internal reporting-period status. Not serialised: mapped to output keys via PERIOD_TO_KEY. */
 const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
@@ -16,7 +18,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {PROCESSING_TYPE_TABLES} from '#domain/summary-logs/table-schemas/index.js' */
@@ -178,7 +180,7 @@ const closedPeriodRefsFor = (
  * @param {ValidatedWasteRecord['record']} record
  * @param {RecordChange} status
  * @param {TableSchema} schema
- * @param {Map<string, WasteRecord>} existingRecordsMap
+ * @param {Map<string, WasteRecordState>} submittedRowStatesByKey
  * @param {Set<string>} submittedPeriods
  * @param {Cadence} cadence
  * @returns {PeriodRef[]}
@@ -187,7 +189,7 @@ const closedPeriodRefsForRecord = (
   record,
   status,
   schema,
-  existingRecordsMap,
+  submittedRowStatesByKey,
   submittedPeriods,
   cadence
 ) => {
@@ -196,7 +198,7 @@ const closedPeriodRefsForRecord = (
       ? [record.data]
       : [
           record.data,
-          existingRecordsMap.get(`${record.type}:${record.rowId}`)?.data
+          submittedRowStatesByKey.get(`${record.type}:${record.rowId}`)?.data
         ]
 
   return changedData
@@ -217,18 +219,35 @@ const closedPeriodRefsForRecord = (
  * exclusion reason codes. Code-only and deduped: a row missing several fields
  * yields a single MISSING_REQUIRED_FIELD code, and an included row yields [].
  *
- * @param {import('#domain/summary-logs/table-schemas/index.js').TableSchema | null} schema
+ * A table with no classifyForWasteBalance never contributes to the balance by
+ * design (eg Processed on a reprocessor input template, or Sent on for an
+ * exporter). Such rows carry an explicit by-design code so their
+ * exclusionReasons stay unambiguous: separate from rows evaluated and excluded
+ * for a data reason (which carry that reason's code), and from included
+ * zero-tonnage rows (which keep []).
+ *
+ * @param {import('#domain/summary-logs/table-schemas/index.js').TableSchema} schema
  * @param {Record<string, any>} data
  * @param {ClassificationContext} context
  * @returns {{ transactionAmount: number, exclusionReasons: string[] }}
  */
-const classifyRow = (schema, data, context) => {
-  const result = schema?.classifyForWasteBalance?.(data, context)
+const classifyRowForWasteBalance = (schema, data, context) => {
+  const classify = schema.classifyForWasteBalance
+  if (!classify) {
+    return {
+      transactionAmount: 0,
+      exclusionReasons: [
+        CLASSIFICATION_REASON.TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE
+      ]
+    }
+  }
+
+  const result = classify(data, context)
   const transactionAmount =
-    result?.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
-  const exclusionReasons = result?.reasons
-    ? [...new Set(result.reasons.map((reason) => reason.code))]
-    : []
+    result.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
+  // Every result carries a reasons array (empty for an included row), so the
+  // dedup collapses to [] naturally without a guard.
+  const exclusionReasons = [...new Set(result.reasons.map((r) => r.code))]
   return { transactionAmount, exclusionReasons }
 }
 
@@ -360,7 +379,7 @@ const reduceEntries = (entries) => {
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord} params.wasteRecord
- * @param {Map<string, WasteRecord>} params.existingRecordsMap
+ * @param {Map<string, WasteRecordState>} params.submittedRowStatesByKey
  * @param {TableSchema} params.schema
  * @param {Set<string>} params.submittedPeriods
  * @param {Cadence} params.cadence
@@ -369,7 +388,7 @@ const reduceEntries = (entries) => {
  */
 const classifyAdjustedWasteRecord = ({
   wasteRecord,
-  existingRecordsMap,
+  submittedRowStatesByKey,
   schema,
   submittedPeriods,
   cadence,
@@ -385,7 +404,7 @@ const classifyAdjustedWasteRecord = ({
     cadence
   )
   const existingKey = `${record.type}:${record.rowId}`
-  const existing = existingRecordsMap.get(existingKey)
+  const existing = submittedRowStatesByKey.get(existingKey)
   const oldPeriod = existing
     ? classifyPeriodStatus(
         existing.data,
@@ -401,14 +420,12 @@ const classifyAdjustedWasteRecord = ({
 
   // Reasons come from the current row, so both legs (including the old-period
   // reversal) reflect what the operator is uploading now.
-  const { transactionAmount: newAmount, exclusionReasons } = classifyRow(
-    schema,
-    record.data,
-    context
-  )
-  const oldAmount = existing
-    ? classifyRow(schema, existing.data, context).transactionAmount
-    : 0
+  const { transactionAmount: newAmount, exclusionReasons } =
+    classifyRowForWasteBalance(schema, record.data, context)
+  // The old contribution is the amount stamped on the submitted row state — the
+  // figure already applied to the waste balance — not a re-derivation from its
+  // stored data, whose projection drops fields the classifier reads.
+  const oldAmount = existing ? getTargetAmount(existing.classification) : 0
 
   return classifyAdjustedRecord({
     oldPeriod,
@@ -431,20 +448,20 @@ const classifyAdjustedWasteRecord = ({
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {Map<string, WasteRecord>} params.existingRecordsMap
+ * @param {Map<string, WasteRecordState>} params.submittedRowStatesByKey
+ * @param {Map<string, RecordChange>} params.recordChanges
  * @param {PeriodicReport[]} params.periodicReports
  * @param {Cadence} params.cadence
- * @param {string} params.summaryLogId
  * @param {ProcessingTypeSchemas} params.tableSchemas
  * @param {ClassificationContext} params.classificationContext
  * @returns {LoadsByReportingPeriod}
  */
 export const classifyByPeriodStatus = ({
   wasteRecords,
-  existingRecordsMap,
+  submittedRowStatesByKey,
+  recordChanges,
   periodicReports,
   cadence,
-  summaryLogId,
   tableSchemas,
   classificationContext
 }) => {
@@ -458,7 +475,7 @@ export const classifyByPeriodStatus = ({
 
   for (const wasteRecord of wasteRecords) {
     const { record, outcome } = wasteRecord
-    const status = determineRecordStatus(record, summaryLogId)
+    const status = recordChangeFor(recordChanges, record)
     const schema = tableSchemas[wasteRecord.tableName]
 
     if (
@@ -473,7 +490,7 @@ export const classifyByPeriodStatus = ({
       record,
       status,
       schema,
-      existingRecordsMap,
+      submittedRowStatesByKey,
       submittedPeriods,
       cadence
     ).forEach((ref) => closedPeriodsByKey.set(periodKey(ref), ref))
@@ -486,11 +503,8 @@ export const classifyByPeriodStatus = ({
         cadence
       )
       if (period) {
-        const { transactionAmount, exclusionReasons } = classifyRow(
-          schema,
-          record.data,
-          classificationContext
-        )
+        const { transactionAmount, exclusionReasons } =
+          classifyRowForWasteBalance(schema, record.data, classificationContext)
         entries.push(
           ...classifyAddedRecord({
             period,
@@ -507,7 +521,7 @@ export const classifyByPeriodStatus = ({
       entries.push(
         ...classifyAdjustedWasteRecord({
           wasteRecord,
-          existingRecordsMap,
+          submittedRowStatesByKey,
           schema,
           submittedPeriods,
           cadence,

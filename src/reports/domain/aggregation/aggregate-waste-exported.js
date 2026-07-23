@@ -1,10 +1,10 @@
+import { toNumber } from '#common/helpers/decimal-utils.js'
 import {
-  addRounded,
-  toDecimal,
-  roundToTwoDecimalPlaces,
-  toNumber
-} from '#common/helpers/decimal-utils.js'
-import { groupAndSum, isYes, TONNAGE_DECIMAL_PLACES } from './helpers.js'
+  ZERO_TONNAGE,
+  addTonnage,
+  toRoundedTonnage
+} from '#common/helpers/rounded-tonnage.js'
+import { groupAndSum, isYes } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { isDateInRange } from './filter-records-by-date.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
@@ -18,7 +18,7 @@ const zeroPadOrsId = (orsId) => String(orsId).padStart(ORS_ID_DIGITS, ZERO)
 const summariseTonnage = (grouped) =>
   grouped.map(({ tonnageDecimal, ...rest }) => ({
     ...rest,
-    tonnageExported: roundToTwoDecimalPlaces(tonnageDecimal)
+    tonnageExported: toNumber(tonnageDecimal)
   }))
 
 const generateOverseasSiteSummaries = (
@@ -45,7 +45,7 @@ const generateOverseasSiteSummaries = (
   }
 
   const getTonnage = ({ data }) =>
-    toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
+    toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
 
   const overseasSites = summariseTonnage(
     groupAndSum(
@@ -81,17 +81,18 @@ const generateOverseasSiteSummaries = (
 }
 
 function getTonnageRepatriated(repatriatedRecords) {
-  return roundToTwoDecimalPlaces(
+  return toNumber(
     repatriatedRecords
-      .filter(({ type }) => type === WASTE_RECORD_TYPE.EXPORTED)
+      .filter(
+        ({ wasteRecordType }) => wasteRecordType === WASTE_RECORD_TYPE.EXPORTED
+      )
       .reduce(
         (sum, { data }) =>
-          addRounded(
+          addTonnage(
             sum,
-            toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED),
-            TONNAGE_DECIMAL_PLACES
+            toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
           ),
-        toDecimal(0)
+        ZERO_TONNAGE
       )
   )
 }
@@ -101,75 +102,67 @@ function calculateTonnageReceivedNotExported(
   startDate,
   endDate
 ) {
-  return roundToTwoDecimalPlaces(
+  return toNumber(
     wasteReceivedRecords
       .filter(
         ({ data }) => !isDateInRange(data.DATE_OF_EXPORT, startDate, endDate)
       )
       .reduce(
         (sum, { data }) =>
-          addRounded(
-            sum,
-            toNumber(data.TONNAGE_RECEIVED_FOR_EXPORT),
-            TONNAGE_DECIMAL_PLACES
-          ),
-        toDecimal(0)
+          addTonnage(sum, toRoundedTonnage(data.TONNAGE_RECEIVED_FOR_EXPORT)),
+        ZERO_TONNAGE
       )
   )
 }
 
 /**
- * Sum refused, stopped, and refused-or-stopped export tonnages, rounding each
- * row to 2dp before adding (round-each-then-sum).
+ * Sum refused, stopped, and refused-or-stopped export tonnages. The row
+ * tonnages are pre-rounded 2dp row-state values, so the sums are exact.
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} exportedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} exportedRecords
  * @returns {{ tonnageRefusedAtDestination: number, tonnageStoppedDuringExport: number, totalTonnageRefusedOrStopped: number }}
  */
 function calculateRefusedAndStoppedTonnages(exportedRecords) {
   const { refusedDecimal, stoppedDecimal, refusedOrStoppedDecimal } =
     exportedRecords.reduce(
       (acc, { data }) => {
-        const tonnage = toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
+        const tonnage = toRoundedTonnage(
+          data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+        )
         const refused = isYes(data.WAS_THE_WASTE_REFUSED)
         const stopped = isYes(data.WAS_THE_WASTE_STOPPED)
         return {
           refusedDecimal: refused
-            ? addRounded(acc.refusedDecimal, tonnage, TONNAGE_DECIMAL_PLACES)
+            ? addTonnage(acc.refusedDecimal, tonnage)
             : acc.refusedDecimal,
           stoppedDecimal: stopped
-            ? addRounded(acc.stoppedDecimal, tonnage, TONNAGE_DECIMAL_PLACES)
+            ? addTonnage(acc.stoppedDecimal, tonnage)
             : acc.stoppedDecimal,
           refusedOrStoppedDecimal:
             refused || stopped
-              ? addRounded(
-                  acc.refusedOrStoppedDecimal,
-                  tonnage,
-                  TONNAGE_DECIMAL_PLACES
-                )
+              ? addTonnage(acc.refusedOrStoppedDecimal, tonnage)
               : acc.refusedOrStoppedDecimal
         }
       },
       {
-        refusedDecimal: toDecimal(0),
-        stoppedDecimal: toDecimal(0),
-        refusedOrStoppedDecimal: toDecimal(0)
+        refusedDecimal: ZERO_TONNAGE,
+        stoppedDecimal: ZERO_TONNAGE,
+        refusedOrStoppedDecimal: ZERO_TONNAGE
       }
     )
 
   return {
-    tonnageRefusedAtDestination: roundToTwoDecimalPlaces(refusedDecimal),
-    tonnageStoppedDuringExport: roundToTwoDecimalPlaces(stoppedDecimal),
-    totalTonnageRefusedOrStopped: roundToTwoDecimalPlaces(
-      refusedOrStoppedDecimal
-    )
+    tonnageRefusedAtDestination: toNumber(refusedDecimal),
+    tonnageStoppedDuringExport: toNumber(stoppedDecimal),
+    totalTonnageRefusedOrStopped: toNumber(refusedOrStoppedDecimal)
   }
 }
 
 /**
  * @param {object} params
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteExportedRecords
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.repatriatedRecords
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteReceivedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteExportedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.repatriatedRecords
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteReceivedRecords
  * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
  * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
  * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]
@@ -185,21 +178,18 @@ export function aggregateWasteExported({
   operatorCategory
 }) {
   const exportedRecords = wasteExportedRecords.filter(
-    ({ type }) => type === WASTE_RECORD_TYPE.EXPORTED
+    ({ wasteRecordType }) => wasteRecordType === WASTE_RECORD_TYPE.EXPORTED
   )
 
   const totalTonnageExportedDecimal = exportedRecords.reduce(
     (sum, { data }) =>
-      addRounded(
+      addTonnage(
         sum,
-        toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED),
-        TONNAGE_DECIMAL_PLACES
+        toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
       ),
-    toDecimal(0)
+    ZERO_TONNAGE
   )
-  const totalTonnageExported = roundToTwoDecimalPlaces(
-    totalTonnageExportedDecimal
-  )
+  const totalTonnageExported = toNumber(totalTonnageExportedDecimal)
   const {
     tonnageRefusedAtDestination,
     tonnageStoppedDuringExport,

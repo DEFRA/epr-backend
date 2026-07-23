@@ -1,17 +1,24 @@
-import { badRequest, conflict } from '#common/helpers/logging/cdp-boom.js'
 import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
+import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
+import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
-import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import { errorCodes } from '#reports/enums/error-codes.js'
-import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
+import {
+  assertNoExistingReport,
+  assertResubmissionAllowed,
+  getValidatedPeriodInfo
+} from './create-report-validation.js'
+import { canRequestResubmission } from './resubmission-service.js'
+import { findReportIdBySubmissionNumber } from './submission-lookup.js'
 
 /**
- * @import { PeriodicReport } from '#reports/repository/port.js'
+ * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 
 /**
@@ -38,67 +45,6 @@ export const createReportsService = (reportsRepository) => ({
 
   findPeriodicReports: (params) => reportsRepository.findPeriodicReports(params)
 })
-
-/**
- * Finds the submission summary for a specific submission number within periodic
- * reports, checking both the current slot and previous submissions.
- * @param {PeriodicReport[]} periodicReports
- * @param {number} year
- * @param {Cadence} cadence
- * @param {number} period
- * @param {number} submissionNumber
- * @returns {import('#reports/repository/port.js').ReportSummary | null}
- */
-function findSubmissionByNumber(
-  periodicReports,
-  year,
-  cadence,
-  period,
-  submissionNumber
-) {
-  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
-    cadence
-  ]?.[period]
-  if (!slot) {
-    return null
-  }
-  if (slot.current?.submissionNumber === submissionNumber) {
-    return slot.current
-  }
-  return (
-    slot.previousSubmissions?.find(
-      (s) => s.submissionNumber === submissionNumber
-    ) ?? null
-  )
-}
-
-/**
- * Finds the report ID for a specific submission number within periodic reports,
- * checking both the current slot and previous submissions.
- * @param {PeriodicReport[]} periodicReports
- * @param {number} year
- * @param {Cadence} cadence
- * @param {number} period
- * @param {number} submissionNumber
- * @returns {string|null}
- */
-function findReportIdBySubmissionNumber(
-  periodicReports,
-  year,
-  cadence,
-  period,
-  submissionNumber
-) {
-  return (
-    findSubmissionByNumber(
-      periodicReports,
-      year,
-      cadence,
-      period,
-      submissionNumber
-    )?.id ?? null
-  )
-}
 
 /**
  * Looks up a stored report for a specific period and submission number.
@@ -142,7 +88,7 @@ export async function fetchReportBySubmissionNumber(
 
 /**
  * Formats a site address object into a single-line string.
- * @param {object|undefined} address
+ * @param {RegistrationAddress|undefined} address
  * @returns {string|undefined}
  */
 function formatSiteAddress(address) {
@@ -155,189 +101,19 @@ function formatSiteAddress(address) {
 }
 
 /**
- * @typedef {{ period: number, startDate: string, endDate: string, dueDate: string }} PeriodInfo
+ * @typedef {Pick<AggregatedReportDetail, 'source' | 'recyclingActivity' | 'exportActivity' | 'wasteSent'> & {
+ *   material: string,
+ *   wasteProcessingType: string,
+ *   siteAddress: string | undefined,
+ *   prn: { issuedTonnage: number } | null | undefined
+ * }} ReportData
  */
-
-/**
- * Throws a 400 Boom with `output.payload.invalidPeriod` if the period isn't
- * in the cadence's valid range for the year.
- *
- * @param {number} period
- * @param {Cadence} cadence
- * @param {PeriodInfo[]} allPeriods
- * @returns {PeriodInfo}
- */
-const assertValidPeriod = (period, cadence, allPeriods) => {
-  const periodInfo = allPeriods.find((p) => p.period === period)
-  if (!periodInfo) {
-    const validPeriods = allPeriods.map((p) => p.period)
-    throw badRequest(
-      `Invalid period ${period} for cadence ${cadence}`,
-      errorCodes.invalidPeriod,
-      {
-        event: {
-          action: 'create_report',
-          reason: `actual=${period} cadence=${cadence} validPeriods=[${validPeriods.join(',')}]`
-        },
-        payload: { invalidPeriod: { actual: period, cadence, validPeriods } }
-      }
-    )
-  }
-  return periodInfo
-}
-
-/**
- * Throws a 400 Boom with `output.payload.periodNotEnded` if the period's
- * end date has not yet passed.
- *
- * @param {PeriodInfo} periodInfo
- * @param {number} period
- * @param {Cadence} cadence
- * @returns {void}
- */
-const assertPeriodEnded = (periodInfo, period, cadence) => {
-  const dayAfterEnd = new Date(periodInfo.endDate)
-  dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1)
-  if (dayAfterEnd > new Date()) {
-    const earliestSubmissionDate = dayAfterEnd.toISOString()
-    throw badRequest(
-      `Cannot create report for period ${period} — period has not yet ended`,
-      errorCodes.periodNotEnded,
-      {
-        event: {
-          action: 'create_report',
-          reason: `period=${period} cadence=${cadence} endDate=${periodInfo.endDate} earliestSubmissionDate=${earliestSubmissionDate}`
-        },
-        payload: {
-          periodNotEnded: {
-            period,
-            cadence,
-            endDate: periodInfo.endDate,
-            earliestSubmissionDate
-          }
-        }
-      }
-    )
-  }
-}
-
-/**
- * Throws a 409 Boom with `output.payload.existingReport` if a report for the
- * same period already exists.
- *
- * @param {PeriodicReport[]} periodicReports
- * @param {number} year
- * @param {Cadence} cadence
- * @param {number} period
- * @returns {void}
- */
-const assertNoExistingReport = (
-  periodicReports,
-  year,
-  cadence,
-  period,
-  submissionNumber
-) => {
-  const id = findReportIdBySubmissionNumber(
-    periodicReports,
-    year,
-    cadence,
-    period,
-    submissionNumber
-  )
-  if (id) {
-    throw conflict(
-      `Report already exists for ${cadence} period ${period} of ${year}`,
-      errorCodes.reportAlreadyExists,
-      {
-        event: {
-          action: 'create_report',
-          reason: `cadence=${cadence} period=${period} year=${year}`,
-          reference: id
-        },
-        payload: { existingReport: { id, cadence, period, year } }
-      }
-    )
-  }
-}
-
-/**
- * Throws a 409 Boom when creating a resubmission (submissionNumber > 1) is not
- * allowed. A resubmission requires the closed-period-adjustments feature flag
- * to be on and the previous submission to be a submitted report flagged as
- * requiring resubmission. The flag is checked first, then the block rule; each
- * failure carries a distinct `reason` so the frontend can tell them apart from
- * the duplicate-period conflict.
- *
- * @param {PeriodicReport[]} periodicReports
- * @param {number} year
- * @param {Cadence} cadence
- * @param {number} period
- * @param {number} submissionNumber
- * @returns {void}
- */
-const assertResubmissionAllowed = (
-  periodicReports,
-  year,
-  cadence,
-  period,
-  submissionNumber
-) => {
-  if (submissionNumber <= 1) {
-    return
-  }
-
-  const reject = (reason) =>
-    conflict(
-      `Resubmission ${submissionNumber} not permitted for ${cadence} period ${period} of ${year}`,
-      reason,
-      {
-        event: {
-          action: 'create_report',
-          reason: `cadence=${cadence} period=${period} year=${year} submissionNumber=${submissionNumber} rejected=${reason}`
-        },
-        payload: { reason }
-      }
-    )
-
-  if (!isClosedPeriodAdjustmentsEnabled()) {
-    throw reject(errorCodes.resubmissionFeatureDisabled)
-  }
-
-  const previous = findSubmissionByNumber(
-    periodicReports,
-    year,
-    cadence,
-    period,
-    submissionNumber - 1
-  )
-  const permitted =
-    previous?.status === REPORT_STATUS.SUBMITTED &&
-    Boolean(previous?.resubmissionRequired)
-  if (!permitted) {
-    throw reject(errorCodes.resubmissionNotPermitted)
-  }
-}
-
-/**
- * Validates that a period exists for the given cadence and has ended.
- * @param {Cadence} cadence
- * @param {number} year
- * @param {number} period
- * @returns {{ startDate: string, endDate: string, dueDate: string }}
- */
-function getValidatedPeriodInfo(cadence, year, period) {
-  const allPeriods = generateAllPeriodsForYear(cadence, year)
-  const periodInfo = assertValidPeriod(period, cadence, allPeriods)
-  assertPeriodEnded(periodInfo, period, cadence)
-  return periodInfo
-}
 
 /**
  * Extracts the report-specific fields from aggregated data and registration.
- * @param {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn?: { issuedTonnage: number } | null }} aggregated
- * @param {object} registration
- * @returns {object}
+ * @param {AggregatedReportDetail & { prn?: { issuedTonnage: number } | null }} aggregated
+ * @param {Registration} registration
+ * @returns {ReportData}
  */
 function buildReportData(aggregated, registration) {
   const { recyclingActivity, exportActivity, wasteSent, prn, source } =
@@ -360,21 +136,23 @@ function buildReportData(aggregated, registration) {
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {object} params.wasteRecordsRepository
- * @param {object} params.packagingRecyclingNotesRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {object} params.registration
+ * @param {Registration} params.registration
  * @param {number} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
- * @returns {Promise<import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail>}
+ * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean }>}
  */
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
-  wasteRecordsRepository,
+  ledgerRepository,
+  summaryLogRowStateRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   organisationId,
@@ -385,75 +163,138 @@ export async function fetchOrGenerateReportForPeriod({
   period,
   submissionNumber
 }) {
-  const storedReport = await fetchReportBySubmissionNumber(
-    reportsRepository,
+  const periodicReports = await reportsRepository.findPeriodicReports({
     organisationId,
-    registrationId,
+    registrationId
+  })
+
+  const currentReportId = findReportIdBySubmissionNumber(
+    periodicReports,
     year,
     cadence,
     period,
     submissionNumber
   )
 
+  const storedReport = currentReportId
+    ? await reportsRepository.findReportById(currentReportId)
+    : null
+
   if (storedReport) {
-    return storedReport
+    return {
+      ...storedReport,
+      canRequestResubmission: canRequestResubmission(periodicReports, {
+        status: storedReport.status.currentStatus,
+        resubmissionRequired: storedReport.resubmissionRequired,
+        year: storedReport.year,
+        cadence: /** @type {Cadence} */ (storedReport.cadence),
+        period: storedReport.period,
+        submissionNumber: storedReport.submissionNumber
+      })
+    }
   }
 
   const operatorCategory = getOperatorCategory(registration)
-  const wasteRecords = await wasteRecordsRepository.findByRegistration(
-    organisationId,
-    registrationId
-  )
 
-  return getAggregatedReportDetail({
+  const aggregatedReportDetail = await getAggregatedReportDetail({
+    ledgerRepository,
+    summaryLogRowStateRepository,
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
-    wasteRecords,
     operatorCategory,
+    organisationId,
+    registrationId,
     registration,
     year,
     cadence,
     period
   })
+
+  return { ...aggregatedReportDetail, canRequestResubmission: false }
 }
 
 /**
- * Aggregates waste records into a report and appends issued PRN tonnage.
+ * The report source — which submission produced the current state, and when
+ * it was submitted. A ledger with no submission yet has a null source.
+ *
+ * @param {{ summaryLogId: string, submittedAt: Date } | null} latestSubmission
+ * @returns {{ summaryLogId: string|null, lastUploadedAt: string|null }}
+ */
+function toSource(latestSubmission) {
+  return latestSubmission === null
+    ? { summaryLogId: null, lastUploadedAt: null }
+    : {
+        summaryLogId: latestSubmission.summaryLogId,
+        lastUploadedAt: latestSubmission.submittedAt.toISOString()
+      }
+}
+
+/**
+ * Aggregates a registration's waste-record states at its latest submitted
+ * summary log into a report and appends issued PRN tonnage.
  * @param {object} params
- * @param {object} params.packagingRecyclingNotesRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {string} params.operatorCategory
- * @param {object} params.registration
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {Registration} params.registration
  * @param {number} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | null }>}
  */
 async function getAggregatedReportDetail({
+  ledgerRepository,
+  summaryLogRowStateRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
-  wasteRecords,
   operatorCategory,
+  organisationId,
+  registrationId,
   registration,
   year,
   cadence,
   period
 }) {
+  const accreditationId = registration.accreditationId ?? null
+  const ledgerId = { organisationId, registrationId, accreditationId }
+
+  // One head resolution serves both reads: the row states and the source
+  // metadata must describe the same submission, so a submission committing
+  // mid-read cannot skew them apart.
+  const latestSubmission = await latestSubmittedSummaryLog(
+    ledgerRepository,
+    ledgerId
+  )
+
+  const wasteRecordStates = await wasteRecordStatesForHead(
+    summaryLogRowStateRepository,
+    ledgerId,
+    latestSubmission === null ? null : latestSubmission.summaryLogId
+  )
+
+  const source = toSource(latestSubmission)
+
   const orsDetailsMap = await getOrsDetailsMap(
     overseasSitesRepository,
     registration.overseasSites
   )
 
-  const aggregatedReportDetail = aggregateReportDetail(wasteRecords, {
+  const aggregatedReportDetail = aggregateReportDetail(wasteRecordStates, {
     operatorCategory,
     cadence,
     year,
     period,
+    source,
     orsDetailsMap
   })
 
   const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
+    organisationId,
+    registrationId,
     accreditationId: registration.accreditationId,
     startDate: aggregatedReportDetail.startDate,
     endDate: aggregatedReportDetail.endDate
@@ -468,12 +309,13 @@ async function getAggregatedReportDetail({
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {object} params.wasteRecordsRepository
- * @param {object} params.packagingRecyclingNotesRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {object} params.registration
+ * @param {Registration} params.registration
  * @param {number} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -483,7 +325,8 @@ async function getAggregatedReportDetail({
  */
 export async function createReportForPeriod({
   reportsRepository,
-  wasteRecordsRepository,
+  ledgerRepository,
+  summaryLogRowStateRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   organisationId,
@@ -526,16 +369,15 @@ export async function createReportForPeriod({
   )
 
   const operatorCategory = getOperatorCategory(registration)
-  const wasteRecords = await wasteRecordsRepository.findByRegistration(
-    organisationId,
-    registrationId
-  )
 
   const aggregatedReportData = await getAggregatedReportDetail({
+    ledgerRepository,
+    summaryLogRowStateRepository,
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
-    wasteRecords,
     operatorCategory,
+    organisationId,
+    registrationId,
     registration,
     year,
     cadence,

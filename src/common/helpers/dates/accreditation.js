@@ -1,4 +1,5 @@
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
 /**
  * Checks if all dates are accredited
@@ -18,7 +19,7 @@ export function isAccreditedAtDates(dates, accreditation) {
   return dates.every(
     (date) =>
       isWithinAccreditationDateRange(date, { validFrom, validTo }) &&
-      !isSuspendedAtDate(date, sortedHistory)
+      !isSuspendedOrCancelledAtDate(date, sortedHistory)
   )
 }
 
@@ -50,17 +51,25 @@ export function isWithinAccreditationDateRange(date, accreditation) {
 }
 
 /**
- * Checks if an accreditation was suspended at a given date by examining the
- * status history. Finds the most recent status change on or before the date
- * and checks if it was 'suspended'.
+ * Checks whether an accreditation was suspended or cancelled at a given date by
+ * examining the status history. Finds the most recent status change on or before
+ * the date and checks whether that status excludes the date from the
+ * accreditation period.
+ *
+ * Suspension is temporary and cancellation is terminal, but both take effect
+ * from their status-history `updatedAt`, so a date before the change is
+ * unaffected and still counts. The validity window itself (validFrom/validTo)
+ * is never altered by these transitions.
  *
  * @param {string|Date} date - The date to check
  * @param {{ updatedAt: number; status: string; }[]} statusHistory - Accreditation status history in descending date order
- * @returns {boolean} True if the accreditation was suspended at the given date
+ * @returns {boolean} True if the accreditation was suspended or cancelled at the given date
  */
-export function isSuspendedAtDate(date, statusHistory) {
+export function isSuspendedOrCancelledAtDate(date, statusHistory) {
+  const status = statusHistory.find(
+    (entry) => entry.updatedAt <= new Date(date).getTime()
+  )?.status
   return (
-    statusHistory.find((entry) => entry.updatedAt <= new Date(date).getTime())
-      ?.status === 'suspended'
+    status === REG_ACC_STATUS.SUSPENDED || status === REG_ACC_STATUS.CANCELLED
   )
 }

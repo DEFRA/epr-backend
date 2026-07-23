@@ -9,6 +9,7 @@ import {
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from './parse-forms-data.js'
+import { assertPresent } from '#test/type-helpers.js'
 import { ORGANISATION } from '../organisation/form-field-constants.js'
 import { REGISTRATION } from '../registration/form-field-constants.js'
 import { ACCREDITATION } from '../accreditation/form-field-constants.js'
@@ -16,7 +17,7 @@ import registeredLtdPartnership from '#data/fixtures/ea/organisation/registered-
 import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.json' with { type: 'json' }
 import exporterRegistration from '#data/fixtures/ea/registration/exporter.json' with { type: 'json' }
 import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json' with { type: 'json' }
-import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-no-partnership.json'
+import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-no-partnership.json' with { type: 'json' }
 
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -646,6 +647,7 @@ describe('retrieveFileUploadDetails', () => {
 describe('extractTimestamp', () => {
   it('should extract timestamp from raw form submission as Date object', () => {
     const result = extractTimestamp(registeredLtdPartnership.rawSubmissionData)
+    assertPresent(result)
 
     expect(result).toBeInstanceOf(Date)
     expect(result.toISOString()).toBe('2025-10-08T16:14:15.390Z')
@@ -679,6 +681,7 @@ describe('extractTimestamp', () => {
     }
 
     const result = extractTimestamp(mockData)
+    assertPresent(result)
 
     expect(result).toBeInstanceOf(Date)
     expect(result.getFullYear()).toBe(2025)
@@ -689,7 +692,11 @@ describe('extractTimestamp', () => {
 
 describe('extractAgencyCodeFromName', () => {
   it('should return undefined when definition name is null', () => {
-    expect(extractAgencyCodeFromName(null)).toBeUndefined()
+    expect(
+      extractAgencyCodeFromName(
+        /** @type {string} */ (/** @type {unknown} */ (null))
+      )
+    ).toBeUndefined()
   })
 
   it('should extract EA from definition name', () => {

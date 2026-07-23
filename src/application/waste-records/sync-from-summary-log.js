@@ -16,6 +16,9 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
+ * @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
  */
 
 /**
@@ -151,7 +154,7 @@ const resolveAccreditation = async (
 
 /**
  * @param {object} params
- * @param {object} params.parsedData
+ * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
  * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
@@ -238,27 +241,24 @@ const calculateMetrics = (wasteRecords) => {
 
 /**
  * Resolves the accreditation (when one exists, any status) and commits the
- * per-row state for every submission (flag-gated, keyed by accreditation
- * existence).
+ * per-row state for every submission (keyed by accreditation existence).
  *
  * Every submission records a summary-log-submitted event marking that the
  * summary log was submitted. For an accredited submission that event also
  * carries the waste-balance delta (written via updateWasteBalances). A
  * registered-only / no-accreditation submission has no balance, so its event is
- * zero-delta — the submission is still recorded, it just moves no tonnage. That
- * zero-delta emission is flag-gated.
+ * zero-delta — the submission is still recorded, it just moves no tonnage.
  *
  * @param {object} params
- * @param {object} params.summaryLog
+ * @param {{ file: { id: string }, organisationId: string, registrationId: string }} params.summaryLog
  * @param {string | undefined} params.accreditationId
  * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
- * @param {object} params.parsedData
+ * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
- * @param {object} params.organisationsRepository
+ * @param {OrganisationsRepository} params.organisationsRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
- * @param {object} params.wasteBalanceService
+ * @param {ReturnType<typeof createWasteBalanceService>} params.wasteBalanceService
  */
 const commitStateAndBalance = async ({
   summaryLog,
@@ -269,7 +269,6 @@ const commitStateAndBalance = async ({
   user,
   organisationsRepository,
   summaryLogRowStateRepository,
-  featureFlags,
   wasteBalanceService
 }) => {
   const accreditation = accreditationId
@@ -282,7 +281,6 @@ const commitStateAndBalance = async ({
 
   await writeSummaryLogRowStates({
     summaryLogRowStateRepository,
-    featureFlags,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
     accreditation,
     ledgerId: {
@@ -304,7 +302,7 @@ const commitStateAndBalance = async ({
       overseasSites,
       summaryLogId: summaryLog.file.id
     })
-  } else if (featureFlags?.isRegisteredOnlySubmittedEventsEnabled()) {
+  } else {
     await wasteBalanceService.commitSummaryLogSubmittedEvent(
       {
         registrationId: summaryLog.registrationId,
@@ -318,9 +316,6 @@ const commitStateAndBalance = async ({
         email: user.email
       }
     )
-  } else {
-    // Registered-only submission with the flag off: its summary-log-submitted
-    // event is not recorded yet.
   }
 }
 
@@ -334,7 +329,6 @@ const commitStateAndBalance = async ({
  * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} dependencies.summaryLogRowStateRepository - The summary-log row states repository
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags] - Feature flags gating the row-state write
  * @param {TypedLogger} dependencies.logger - Logger forwarded to extractor for trace correlation
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
@@ -346,7 +340,6 @@ export const syncFromSummaryLog = (dependencies) => {
     organisationsRepository,
     overseasSitesRepository,
     summaryLogRowStateRepository,
-    featureFlags,
     logger
   } = dependencies
 
@@ -431,7 +424,6 @@ export const syncFromSummaryLog = (dependencies) => {
       user,
       organisationsRepository,
       summaryLogRowStateRepository,
-      featureFlags,
       wasteBalanceService
     })
 

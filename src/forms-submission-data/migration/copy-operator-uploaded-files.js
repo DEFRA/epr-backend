@@ -1,5 +1,9 @@
 import { logger } from '#common/helpers/logging/logger.js'
 
+/**
+ * @import { RegulatorValue } from '#domain/organisations/model.js'
+ */
+
 function extractFilesFromSubmission(submission) {
   const regulator = submission.submittedToRegulator
   return [
@@ -15,7 +19,7 @@ function extractFilesFromSubmission(submission) {
  *
  * @param {Array} registrations - Transformed registration objects
  * @param {Array} accreditations - Transformed accreditation objects
- * @param {object} formsFileUploadsRepository
+ * @param {{ copyFormFileToS3: (params: { fileId: string, regulator: RegulatorValue }) => Promise<void> }} formsFileUploadsRepository
  */
 export async function copyOperatorUploadedFiles(
   registrations,

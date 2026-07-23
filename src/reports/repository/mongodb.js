@@ -6,49 +6,39 @@ import {
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
-  validateMarkActiveReportsStale,
-  validateMarkSubmittedReportsRequiringResubmission,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
 import {
   transformToPeriodicReports,
   groupAsPeriodicReports,
-  latestSubmissionPerPeriod,
+  mapReport,
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
+import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
+import { reportsCollection } from './mongodb-collection.js'
 import {
-  REPORT_STATUS,
-  ACTIVE_REPORT_STATUSES
-} from '#root/reports/domain/report-status.js'
-import { STALE_REASON } from '#root/reports/domain/stale.js'
-import { RESUBMISSION_REASON } from '#root/reports/domain/resubmission.js'
+  performMarkActiveReportsStaleForSummaryLog,
+  performMarkActiveReportsStaleForPrnCancellation,
+  performMarkSubmittedReportsRequiringResubmission,
+  performMarkSubmittedReportRequiringResubmissionByOperator
+} from './mongodb-flagging.js'
 
 /**
  * @import {
  *   CreateReportParams,
  *   DeleteReportParams,
  *   FindPeriodicReportsParams,
- *   MarkSubmittedReportRequiringResubmissionResult,
- *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
  *   Report,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
  * } from './port.js'
- * @import { Collection, Db } from 'mongodb'
+ * @import { Db } from 'mongodb'
  */
 
-const REPORTS_COLLECTION = 'reports'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
-
-/**
- * @param {Db} db
- * @returns {Collection<Report>}
- */
-const reportsCollection = (db) =>
-  /** @type {Collection<Report>} */ (db.collection(REPORTS_COLLECTION))
 
 /**
  * Resolves a failed findOneAndUpdate into a 404 (report missing) or 409 (version mismatch).
@@ -182,7 +172,7 @@ const performUpdateReport = async (db, params) => {
   }
 
   const { _id, ...report } = doc
-  return report
+  return mapReport(report)
 }
 
 /**
@@ -222,7 +212,7 @@ const performUpdateReportStatus = async (db, params) => {
   }
 
   const { _id, ...report } = doc
-  return report
+  return mapReport(report)
 }
 
 /**
@@ -237,7 +227,7 @@ const performFindReportById = async (db, reportId) => {
     throw Boom.notFound(`Report not found: ${reportId}`)
   }
   const { _id, ...report } = doc
-  return report
+  return mapReport(report)
 }
 
 /**
@@ -361,186 +351,6 @@ const performFindAllPeriodicReports = async (db) => {
 }
 
 /**
- * Atomically flags the reports matched by `selectFilter` with a summary-log
- * marker, then returns the flagged reports (sans marker) for auditing. The
- * `$ne` guards plus the modifiedCount gate make a redelivered or concurrent
- * submit of the same log a no-op (no double-flag, version over-increment, or
- * duplicate audit). The stale and resubmission marks differ only in how they
- * select candidate reports.
- *
- * @param {Db} db
- * @param {{
- *   selectFilter: object,
- *   readScope: object,
- *   summaryLogId: string,
- *   field: string,
- *   value: object
- * }} params
- * @returns {Promise<Array<{ reportId: string, year: number, cadence: string, period: number, submissionNumber: number }>>}
- */
-const flagReportsBySummaryLog = async (
-  db,
-  { selectFilter, readScope, summaryLogId, field, value }
-) => {
-  const { modifiedCount } = await reportsCollection(db).updateMany(
-    {
-      ...selectFilter,
-      [`${field}.summaryLogId`]: { $ne: summaryLogId },
-      'source.summaryLogId': { $ne: summaryLogId }
-    },
-    { $set: { [field]: value }, $inc: { version: 1 } }
-  )
-
-  if (modifiedCount === 0) {
-    return []
-  }
-
-  const flaggedDocs = await reportsCollection(db)
-    .find(
-      { ...readScope, [`${field}.summaryLogId`]: summaryLogId },
-      {
-        projection: {
-          _id: 0,
-          id: 1,
-          year: 1,
-          cadence: 1,
-          period: 1,
-          submissionNumber: 1
-        }
-      }
-    )
-    .toArray()
-
-  return flaggedDocs.map((doc) => ({
-    reportId: doc.id,
-    year: doc.year,
-    cadence: doc.cadence,
-    period: doc.period,
-    submissionNumber: doc.submissionNumber
-  }))
-}
-
-/**
- * Bulk-marks all active reports not sourced from `summaryLogId` as stale.
- * Skips reports already stale from this SL (retry-safe) and reports built from it (already current).
- *
- * @param {Db} db
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {string} summaryLogId
- * @param {string} uploadedAt
- * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
- */
-const performMarkActiveReportsStale = async (
-  db,
-  organisationId,
-  registrationId,
-  summaryLogId,
-  uploadedAt
-) => {
-  validateMarkActiveReportsStale({
-    organisationId,
-    registrationId,
-    summaryLogId,
-    uploadedAt
-  })
-
-  const stale = {
-    uploadedAt,
-    reason: STALE_REASON.SUMMARY_LOG_CHANGED,
-    summaryLogId
-  }
-
-  const flagged = await flagReportsBySummaryLog(db, {
-    selectFilter: {
-      organisationId,
-      registrationId,
-      'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] }
-    },
-    readScope: { organisationId, registrationId },
-    summaryLogId,
-    field: 'stale',
-    value: stale
-  })
-
-  return flagged.map((report) => ({ ...report, stale }))
-}
-
-/**
- * For each given period, flags the latest submitted report as requiring
- * resubmission. Skips a period whose latest submitted report is already flagged
- * from this `summaryLogId` or was itself built from it (retry-safe).
- *
- * @param {Db} db
- * @param {MarkSubmittedReportsRequiringResubmissionParams} params
- * @returns {Promise<MarkSubmittedReportRequiringResubmissionResult[]>}
- */
-const performMarkSubmittedReportsRequiringResubmission = async (
-  db,
-  { organisationId, registrationId, summaryLogId, uploadedAt, periods }
-) => {
-  validateMarkSubmittedReportsRequiringResubmission({
-    organisationId,
-    registrationId,
-    summaryLogId,
-    uploadedAt,
-    periods
-  })
-
-  if (periods.length === 0) {
-    return []
-  }
-
-  const resubmissionRequired = {
-    uploadedAt,
-    reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-    summaryLogId
-  }
-
-  const submitted = await reportsCollection(db)
-    .find(
-      {
-        organisationId,
-        registrationId,
-        'status.currentStatus': REPORT_STATUS.SUBMITTED,
-        $or: periods.map(({ year, cadence, period }) => ({
-          year,
-          cadence,
-          period
-        }))
-      },
-      {
-        projection: {
-          _id: 0,
-          id: 1,
-          year: 1,
-          cadence: 1,
-          period: 1,
-          submissionNumber: 1
-        }
-      }
-    )
-    .toArray()
-
-  const flaggedIds = latestSubmissionPerPeriod(submitted).map((doc) => doc.id)
-
-  if (flaggedIds.length === 0) {
-    return []
-  }
-
-  const scope = { id: { $in: flaggedIds } }
-  const flagged = await flagReportsBySummaryLog(db, {
-    selectFilter: scope,
-    readScope: scope,
-    summaryLogId,
-    field: 'resubmissionRequired',
-    value: resubmissionRequired
-  })
-
-  return flagged.map((report) => ({ ...report, resubmissionRequired }))
-}
-
-/**
  * Returns true when any report for the org/reg was submitted strictly after
  * `since`. SUBMITTED is terminal and each submission is a distinct document, so
  * the denormalised `status.submitted` slot is the single submission instant and
@@ -589,21 +399,25 @@ export const createReportsRepository = async (db) => {
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
     findAllPeriodicReports: () => performFindAllPeriodicReports(db),
     findReportById: (reportId) => performFindReportById(db, reportId),
-    markActiveReportsStale: (
+    markActiveReportsStaleForSummaryLog: (
       organisationId,
       registrationId,
       summaryLogId,
       uploadedAt
     ) =>
-      performMarkActiveReportsStale(
+      performMarkActiveReportsStaleForSummaryLog(
         db,
         organisationId,
         registrationId,
         summaryLogId,
         uploadedAt
       ),
+    markActiveReportsStaleForPrnCancellation: (params) =>
+      performMarkActiveReportsStaleForPrnCancellation(db, params),
     markSubmittedReportsRequiringResubmission: (params) =>
       performMarkSubmittedReportsRequiringResubmission(db, params),
+    markSubmittedReportRequiringResubmissionByOperator: (params) =>
+      performMarkSubmittedReportRequiringResubmissionByOperator(db, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
       performHasReportSubmittedSince(db, organisationId, registrationId, since)
   })

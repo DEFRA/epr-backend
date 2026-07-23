@@ -7,7 +7,10 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  WASTE_PROCESSING_TYPE,
+  REG_ACC_STATUS
+} from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
@@ -128,6 +131,36 @@ const buildResponse = (prn, { wasteProcessingType }) => ({
   wasteProcessingType
 })
 
+/**
+ * Maps an error thrown while creating a PRN to the appropriate Boom response.
+ * @param {{ isBoom?: boolean, message?: string }} error
+ * @param {{ error: (details: object) => void }} logger
+ * @returns {never}
+ */
+const throwCreatePrnError = (error, logger) => {
+  if (error.isBoom) {
+    throw error
+  }
+
+  logger.error({
+    err: error,
+    message: `Failure on ${packagingRecyclingNotesCreatePath}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+    },
+    http: {
+      response: {
+        status_code: StatusCodes.INTERNAL_SERVER_ERROR
+      }
+    }
+  })
+
+  throw Boom.badImplementation(
+    `Failure on ${packagingRecyclingNotesCreatePath}`
+  )
+}
+
 export const packagingRecyclingNotesCreate = {
   method: 'POST',
   path: packagingRecyclingNotesCreatePath,
@@ -167,6 +200,10 @@ export const packagingRecyclingNotesCreate = {
         organisationsRepository.findById(organisationId)
       ])
 
+      if (accreditation.status === REG_ACC_STATUS.CANCELLED) {
+        throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
+      }
+
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
@@ -202,27 +239,7 @@ export const packagingRecyclingNotesCreate = {
         .response(buildResponse(prn, accreditation))
         .code(StatusCodes.CREATED)
     } catch (error) {
-      if (error.isBoom) {
-        throw error
-      }
-
-      logger.error({
-        err: error,
-        message: `Failure on ${packagingRecyclingNotesCreatePath}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-        },
-        http: {
-          response: {
-            status_code: StatusCodes.INTERNAL_SERVER_ERROR
-          }
-        }
-      })
-
-      throw Boom.badImplementation(
-        `Failure on ${packagingRecyclingNotesCreatePath}`
-      )
+      throwCreatePrnError(error, logger)
     }
   }
 }

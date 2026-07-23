@@ -21,6 +21,7 @@ import {
   orsImportsRepositoryPlugin,
   overseasSitesRepositoryPlugin
 } from '#overseas-sites/index.js'
+import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
@@ -39,15 +40,13 @@ import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-m
 import { mongoWasteBalanceServicePlugin } from '#waste-balances/repository/mongodb.plugin.js'
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
 import { mongoSummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/mongodb.plugin.js'
-import { mongoSummaryLogRowStatesBackfillWatermarkRepositoryPlugin } from '#waste-records/backfill/watermark/mongodb.plugin.js'
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
-import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
-import { runBackfillSummaryLogRowStates } from '#server/run-backfill-summary-log-row-states.js'
-import { runWasteRecordStateDiscrepancyReport } from '#server/run-waste-record-state-discrepancy-report.js'
+import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
+import { runPreCpaResubmissionBackfill } from '#server/run-pre-cpa-resubmission-backfill.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -112,10 +111,6 @@ function getSwaggerPlugins() {
   ]
 }
 
-export const shouldRegisterSummaryLogRowStates = (config) =>
-  config.get('featureFlags.summaryLogRowStates') ||
-  config.get('featureFlags.summaryLogRowStatesBackfill')
-
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
@@ -139,23 +134,11 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
-    orsImportsRepositoryPlugin
+    orsImportsRepositoryPlugin,
+    mongoSummaryLogRowStatesRepositoryPlugin
   ]
 
-  // Defer row-state repository construction (and thus ensureSummaryLogRowStatesCollection
-  // creating the collection + indexes) until a row-state flag is on, so nothing
-  // is built ahead of the ADR-0037 switch-on. Register for either flag: the
-  // backfill sweep and the forward-write path both need the repository, and the
-  // flip choreography can leave the backfill flag off by the time forward writes
-  // begin.
-  if (shouldRegisterSummaryLogRowStates(config)) {
-    plugins.push(
-      mongoSummaryLogRowStatesRepositoryPlugin,
-      mongoSummaryLogRowStatesBackfillWatermarkRepositoryPlugin
-    )
-  }
-
-  plugins.push(mongoReportsRepositoryPlugin)
+  plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)
 
   /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
   if (config.get('featureFlags.devEndpoints')) {
@@ -240,10 +223,9 @@ async function createServer(options = {}) {
 
   server.ext('onPostStart', () => {
     runFormsDataMigration(server)
-    copyFormFilesToS3(server)
     runOrganisationValidationSweep(server)
-    runBackfillSummaryLogRowStates(server)
-    runWasteRecordStateDiscrepancyReport(server)
+    runStaleIssuedTonnageReport(server)
+    runPreCpaResubmissionBackfill(server)
   })
 
   return server

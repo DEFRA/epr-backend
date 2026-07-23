@@ -7,6 +7,7 @@ import {
   purgeQueue,
   receiveMessages
 } from './sqs-client.js'
+import { assertPresent } from '#test/type-helpers.js'
 
 const TEST_TIMEOUT = 30000
 
@@ -135,10 +136,10 @@ describe('SQS client DLQ helpers', () => {
         )
 
         const messages = await receiveMessages(sqsClient, dlqUrl)
+        const { sentTimestamp } = messages[0]
+        assertPresent(sentTimestamp)
 
-        expect(new Date(messages[0].sentTimestamp).toISOString()).toBe(
-          messages[0].sentTimestamp
-        )
+        expect(new Date(sentTimestamp).toISOString()).toBe(sentTimestamp)
       }
     )
 

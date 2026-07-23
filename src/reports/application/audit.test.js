@@ -3,7 +3,19 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
+/**
+ * @import { Report } from '#reports/repository/port.js'
+ */
+
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+
+/**
+ * Casts a deliberately-partial report fixture to the full {@link Report} type.
+ * The audit functions only read `status.currentStatus`.
+ * @param {unknown} value
+ * @returns {Report}
+ */
+const asReport = (value) => /** @type {Report} */ (value)
 
 const mockAudit = vi.fn()
 
@@ -16,7 +28,9 @@ const {
   auditReportCreate,
   auditReportDelete,
   auditMarkReportsStale,
-  auditMarkReportsRequiringResubmission
+  auditMarkReportsRequiringResubmission,
+  auditReportRequestResubmission,
+  MARK_STALE_ACTION
 } = await import('./audit.js')
 
 const mockInsert = vi.fn()
@@ -66,16 +80,16 @@ describe('auditReportStatusTransition', () => {
     period: 1,
     submissionNumber: 1,
     reportId: 'rep-1',
-    previous: {
+    previous: asReport({
       id: 'rep-1',
       version: 1,
       status: { currentStatus: 'in_progress' }
-    },
-    next: {
+    }),
+    next: asReport({
       id: 'rep-1',
       version: 2,
       status: { currentStatus: 'ready_to_submit' }
-    }
+    })
   }
 
   it('sends CDP audit event', async () => {
@@ -118,18 +132,18 @@ describe('auditReportStatusTransition', () => {
       period: 1,
       submissionNumber: 1,
       reportId: 'rep-1',
-      previous: {
+      previous: asReport({
         id: 'rep-1',
         version: 1,
         status: { currentStatus: 'in_progress' },
         veryLongString
-      },
-      next: {
+      }),
+      next: asReport({
         id: 'rep-1',
         version: 2,
         status: { currentStatus: 'ready_to_submit' },
         veryLongString
-      }
+      })
     }
 
     await auditReportStatusTransition(createMockRequest(), oversizedParams)
@@ -174,11 +188,11 @@ describe('auditReportDelete', () => {
     period: 1,
     submissionNumber: 1,
     reportId: 'rep-1',
-    previous: {
+    previous: asReport({
       id: 'rep-1',
       version: 1,
       status: { currentStatus: 'in_progress' }
-    }
+    })
   }
 
   it('sends CDP audit event with action: delete', async () => {
@@ -221,12 +235,12 @@ describe('auditReportDelete', () => {
       period: 1,
       submissionNumber: 1,
       reportId: 'rep-1',
-      previous: {
+      previous: asReport({
         id: 'rep-1',
         version: 1,
         status: { currentStatus: 'in_progress' },
         veryLongString
-      }
+      })
     }
 
     await auditReportDelete(createMockRequest(), oversizedParams)
@@ -275,18 +289,22 @@ const buildSystemLogsRepository = (
     })
   )
 
-/** @type {import('#reports/repository/port.js').ReportStale} */
-const stale = {
+const summaryLogChanged = {
   uploadedAt: '2025-06-01T12:00:00.000Z',
-  reason: 'summary_log_changed',
   summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+}
+
+const prnCancelled = {
+  occurredAt: '2025-06-01T12:00:00.000Z',
+  prnId: 'prn-id-00000000-0000-0000-0000-000000000001'
 }
 
 /** @type {import('#reports/repository/port.js').ReportResubmissionRequired} */
 const resubmissionRequired = {
-  uploadedAt: '2025-06-01T12:00:00.000Z',
-  reason: 'closed_period_restated',
-  summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+  closedPeriodRestated: {
+    uploadedAt: '2025-06-01T12:00:00.000Z',
+    summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+  }
 }
 
 const flaggedReport = {
@@ -299,16 +317,33 @@ const flaggedReport = {
 
 describe.each([
   {
-    name: 'auditMarkReportsStale',
-    action: 'mark-stale',
+    name: 'auditMarkReportsStale (summary log)',
+    action: MARK_STALE_ACTION.SUMMARY_LOG_CHANGED,
     field: 'stale',
-    flag: stale,
+    flag: { summaryLogChanged },
     run: (/** @type {SystemLogsRepository} */ systemLogsRepository) =>
       auditMarkReportsStale({
         systemLogsRepository,
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        reportsMarkedStale: [{ ...flaggedReport, stale }]
+        reportsMarkedStale: [
+          { ...flaggedReport, stale: { summaryLogChanged } }
+        ],
+        action: MARK_STALE_ACTION.SUMMARY_LOG_CHANGED
+      })
+  },
+  {
+    name: 'auditMarkReportsStale (PRN cancelled)',
+    action: MARK_STALE_ACTION.PRN_CANCELLED,
+    field: 'stale',
+    flag: { prnCancelled },
+    run: (/** @type {SystemLogsRepository} */ systemLogsRepository) =>
+      auditMarkReportsStale({
+        systemLogsRepository,
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        reportsMarkedStale: [{ ...flaggedReport, stale: { prnCancelled } }],
+        action: MARK_STALE_ACTION.PRN_CANCELLED
       })
   },
   {
@@ -404,6 +439,54 @@ describe('auditReportCreate', () => {
         category: 'waste-reporting',
         subCategory: 'reports',
         action: 'create'
+      },
+      context: params
+    })
+  })
+})
+
+describe('auditReportRequestResubmission', () => {
+  const params = {
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    year: 2025,
+    cadence: 'quarterly',
+    period: 1,
+    submissionNumber: 2,
+    reportId: 'rep-1',
+    resubmissionRequired: {
+      operatorRequested: {
+        requestedAt: '2025-06-01T12:00:00.000Z',
+        requestedBy: { id: 'user-1', name: 'Alice', position: 'Officer' }
+      }
+    }
+  }
+
+  it('sends CDP audit event', async () => {
+    await auditReportRequestResubmission(createMockRequest(), params)
+
+    expect(mockAudit).toHaveBeenCalledWith({
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'reports',
+        action: 'request-resubmission'
+      },
+      context: params,
+      user
+    })
+  })
+
+  it('records system log', async () => {
+    await auditReportRequestResubmission(createMockRequest(), params)
+
+    const storedLog = await findStoredLog()
+    expect(storedLog).toEqual({
+      createdAt: new Date('2025-06-01T12:00:00.000Z'),
+      createdBy: user,
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'reports',
+        action: 'request-resubmission'
       },
       context: params
     })

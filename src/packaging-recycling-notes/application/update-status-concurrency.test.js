@@ -4,7 +4,7 @@ import {
   PRN_STATUS,
   PRN_ACTOR
 } from '#packaging-recycling-notes/domain/model.js'
-import { REGULATOR } from '#domain/organisations/model.js'
+import { REGULATOR, REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
@@ -118,6 +118,7 @@ const buildOrganisationsRepository = () =>
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
     /** @type {unknown} */ ({
       findAccreditationById: vi.fn().mockResolvedValue({
+        status: REG_ACC_STATUS.APPROVED,
         submittedToRegulator: REGULATOR.EA
       })
     })
@@ -151,7 +152,11 @@ const expectOneWinsOneStreamConflict = async (
   expect(rejected).toHaveLength(1)
   expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
 
-  const latest = await ledgerRepository.findLatestInLedger(REG_ID, ACC_ID)
+  const latest = await ledgerRepository.findLatestInLedger({
+    organisationId: ORG_ID,
+    registrationId: REG_ID,
+    accreditationId: ACC_ID
+  })
   expect(latest?.number).toBe(COMMITTED_EVENT_NUMBER)
 
   const prn = await prnRepository.findById(PRN_ID)
@@ -175,6 +180,7 @@ describe('updatePrnStatus concurrency', () => {
         prnRepository,
         ledgerRepository,
         organisationsRepository,
+        prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
         organisationId: ORG_ID,
@@ -213,6 +219,7 @@ describe('updatePrnStatus concurrency', () => {
         prnRepository,
         ledgerRepository,
         organisationsRepository,
+        prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
         organisationId: ORG_ID,
@@ -252,6 +259,7 @@ describe('updatePrnStatus concurrency', () => {
         prnRepository,
         ledgerRepository,
         organisationsRepository,
+        prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
         organisationId: ORG_ID,

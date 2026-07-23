@@ -1,4 +1,4 @@
-import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
+import { latestSubmittedSummaryLog } from './latest-submitted-summary-log.js'
 
 /**
  * Resolve the `summaryLogId` of the most recent submitted summary log for a
@@ -6,24 +6,14 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
  * `null` when the ledger has no summary-log submission yet.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
- * @param {{ registrationId: string, accreditationId: string | null }} ledgerId
+ * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
  * @returns {Promise<string | null>}
  */
 export const latestSubmittedSummaryLogId = async (
   ledgerRepository,
-  { registrationId, accreditationId }
+  ledgerId
 ) => {
-  const latest = await ledgerRepository.findLatestInLedgerByKind(
-    registrationId,
-    accreditationId,
-    LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
-  )
+  const latest = await latestSubmittedSummaryLog(ledgerRepository, ledgerId)
 
-  if (latest === null) {
-    return null
-  }
-
-  return /** @type {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload} */ (
-    latest.payload
-  ).summaryLogId
+  return latest === null ? null : latest.summaryLogId
 }

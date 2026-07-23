@@ -1,4 +1,5 @@
 import { toDecimal } from '#common/helpers/decimal-utils.js'
+import { tonnage, wholeTonnage } from '#common/validation/tonnage-schema.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
@@ -17,6 +18,13 @@ const YEAR_SCHEMA = Joi.number()
   .required()
 const MONGO_ID_LENGTH = 24
 const MONGO_ID_SCHEMA = Joi.string().hex().length(MONGO_ID_LENGTH).required()
+
+const CALENDAR_DATE_SCHEMA = Joi.string()
+  .pattern(/^\d{4}-\d{2}-\d{2}$/)
+  .required()
+  .messages({
+    'string.pattern.base': 'must be a bare YYYY-MM-DD date, not a full datetime'
+  })
 
 export const cadenceSchema = Joi.string()
   .valid(...Object.values(CADENCE))
@@ -49,23 +57,20 @@ export const maxTwoDecimalPlaces = (value, helpers) => {
 // manual-entry fields are populated by the user via the reporting journey.
 export const prnManualFields = {
   totalRevenue: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
-  freeTonnage: Joi.number().integer().min(0).allow(null)
+  freeTonnage: wholeTonnage().allow(null)
 }
 
 export const recyclingManualFields = {
-  tonnageRecycled: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
-  tonnageNotRecycled: Joi.number()
-    .min(0)
-    .allow(null)
-    .custom(maxTwoDecimalPlaces)
+  tonnageRecycled: tonnage().allow(null).custom(maxTwoDecimalPlaces),
+  tonnageNotRecycled: tonnage().allow(null).custom(maxTwoDecimalPlaces)
 }
 
 export const exportManualFields = {
-  tonnageReceivedNotExported: Joi.number().min(0).allow(null)
+  tonnageReceivedNotExported: tonnage().allow(null)
 }
 
 export const prnSchema = Joi.object({
-  issuedTonnage: Joi.number().min(0).required(),
+  issuedTonnage: wholeTonnage().required(),
   averagePricePerTonne: Joi.number().min(0).allow(null),
   ...prnManualFields
 }).optional()
@@ -76,12 +81,12 @@ const supplierSchema = Joi.object({
   supplierAddress: Joi.string().allow(null).optional(),
   supplierPhone: Joi.string().allow(null).optional(),
   supplierEmail: Joi.string().allow(null).optional(),
-  tonnageReceived: Joi.number().min(0).required()
+  tonnageReceived: tonnage().required()
 })
 
 export const recyclingActivitySchema = Joi.object({
   suppliers: Joi.array().items(supplierSchema).required(),
-  totalTonnageReceived: Joi.number().min(0).required(),
+  totalTonnageReceived: tonnage().required(),
   ...recyclingManualFields
 }).required()
 
@@ -89,13 +94,13 @@ const overseasSiteSchema = Joi.object({
   orsId: Joi.string().required(),
   siteName: Joi.string().allow(null).required(),
   country: Joi.string().allow(null).required(),
-  tonnageExported: Joi.number().min(0).required(),
+  tonnageExported: tonnage().required(),
   approved: Joi.boolean().required()
 })
 
 const unapprovedOverseasSiteSchema = Joi.object({
   orsId: Joi.string().required(),
-  tonnageExported: Joi.number().min(0).required()
+  tonnageExported: tonnage().required()
 })
 
 export const exportActivitySchema = Joi.object({
@@ -103,11 +108,11 @@ export const exportActivitySchema = Joi.object({
   unapprovedOverseasSites: Joi.array()
     .items(unapprovedOverseasSiteSchema)
     .required(),
-  totalTonnageExported: Joi.number().min(0).required(),
-  tonnageRefusedAtDestination: Joi.number().min(0).required(),
-  tonnageStoppedDuringExport: Joi.number().min(0).required(),
-  totalTonnageRefusedOrStopped: Joi.number().min(0).required(),
-  tonnageRepatriated: Joi.number().min(0).required(),
+  totalTonnageExported: tonnage().required(),
+  tonnageRefusedAtDestination: tonnage().required(),
+  tonnageStoppedDuringExport: tonnage().required(),
+  totalTonnageRefusedOrStopped: tonnage().required(),
+  tonnageRepatriated: tonnage().required(),
   ...exportManualFields
 }).optional()
 
@@ -115,15 +120,33 @@ const finalDestinationSchema = Joi.object({
   recipientName: Joi.string().allow(null).optional(),
   facilityType: Joi.string().allow(null).optional(),
   address: Joi.string().allow(null).optional(),
-  tonnageSentOn: Joi.number().min(0).required()
+  tonnageSentOn: tonnage().required()
 })
 
 const wasteSentSchema = Joi.object({
-  tonnageSentToReprocessor: Joi.number().min(0).required(),
-  tonnageSentToExporter: Joi.number().min(0).required(),
-  tonnageSentToAnotherSite: Joi.number().min(0).required(),
+  tonnageSentToReprocessor: tonnage().required(),
+  tonnageSentToExporter: tonnage().required(),
+  tonnageSentToAnotherSite: tonnage().required(),
   finalDestinations: Joi.array().items(finalDestinationSchema).required()
 }).required()
+
+/**
+ * Shape of a report's `stale` field. A report can be stale for either or
+ * both independent reasons at once; presence of a named field is the reason
+ * code (see `staleReasons` in `#reports/domain/stale.js`). Not part of
+ * `createReportSchema` — a report is never created already-stale, this field
+ * is only ever set by the mark-stale repository operations after creation.
+ */
+export const staleSchema = Joi.object({
+  summaryLogChanged: Joi.object({
+    uploadedAt: Joi.string().isoDate().required(),
+    summaryLogId: Joi.string().required()
+  }).optional(),
+  prnCancelled: Joi.object({
+    occurredAt: Joi.string().isoDate().required(),
+    prnId: Joi.string().required()
+  }).optional()
+})
 
 const reportDataFieldsSchema = {
   source: Joi.object({
@@ -143,9 +166,9 @@ export const createReportSchema = Joi.object({
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,
-  startDate: Joi.string().isoDate().required(),
-  endDate: Joi.string().isoDate().required(),
-  dueDate: Joi.string().isoDate().required(),
+  startDate: CALENDAR_DATE_SCHEMA,
+  endDate: CALENDAR_DATE_SCHEMA,
+  dueDate: CALENDAR_DATE_SCHEMA,
   material: Joi.string()
     .valid(...TONNAGE_MONITORING_MATERIALS)
     .required(),
@@ -162,20 +185,13 @@ const updatableFieldsSchema = Joi.object({
   supportingInformation: Joi.string().allow(''),
   prn: prnSchema.fork('issuedTonnage', (s) => s.optional()),
   exportActivity: Joi.object({
-    tonnageReceivedNotExported: Joi.number()
-      .min(0)
+    tonnageReceivedNotExported: tonnage()
       .allow(null)
       .custom(maxTwoDecimalPlaces)
   }),
   recyclingActivity: Joi.object({
-    tonnageRecycled: Joi.number()
-      .min(0)
-      .allow(null)
-      .custom(maxTwoDecimalPlaces),
-    tonnageNotRecycled: Joi.number()
-      .min(0)
-      .allow(null)
-      .custom(maxTwoDecimalPlaces)
+    tonnageRecycled: tonnage().allow(null).custom(maxTwoDecimalPlaces),
+    tonnageNotRecycled: tonnage().allow(null).custom(maxTwoDecimalPlaces)
   }).unknown(true)
 })
   .min(1)
@@ -228,10 +244,47 @@ export const markActiveReportsStaleSchema = Joi.object({
   uploadedAt: Joi.string().isoDate().required()
 })
 
+export const markActiveReportsStaleForPrnCancellationSchema = Joi.object({
+  organisationId: MONGO_ID_SCHEMA,
+  registrationId: MONGO_ID_SCHEMA,
+  year: YEAR_SCHEMA,
+  cadence: cadenceSchema,
+  period: periodSchema,
+  prnId: Joi.string().required(),
+  occurredAt: Joi.string().isoDate().required()
+})
+
 export const markSubmittedReportsRequiringResubmissionSchema = Joi.object({
   organisationId: MONGO_ID_SCHEMA,
   registrationId: MONGO_ID_SCHEMA,
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required(),
   periods: Joi.array().items(periodRefSchema).required()
+})
+
+export const markSubmittedReportRequiringResubmissionByOperatorSchema =
+  Joi.object({
+    organisationId: MONGO_ID_SCHEMA,
+    registrationId: MONGO_ID_SCHEMA,
+    year: YEAR_SCHEMA,
+    cadence: cadenceSchema,
+    period: periodSchema,
+    submissionNumber: Joi.number().integer().min(1).required(),
+    requestedBy: userSummarySchema,
+    requestedAt: Joi.string().isoDate().required()
+  })
+
+/**
+ * Shape of a report's `resubmissionRequired` field, mirroring `staleSchema`.
+ * A report can require resubmission for either or both reasons at once.
+ */
+export const resubmissionRequiredSchema = Joi.object({
+  closedPeriodRestated: Joi.object({
+    uploadedAt: Joi.string().isoDate().required(),
+    summaryLogId: Joi.string().required()
+  }).optional(),
+  operatorRequested: Joi.object({
+    requestedAt: Joi.string().isoDate().required(),
+    requestedBy: userSummarySchema
+  }).optional()
 })

@@ -2,18 +2,30 @@ import { describe, expect, it } from 'vitest'
 import { PRN_STATUS } from '../domain/model.js'
 import { getIssuedTonnage } from './get-issued-tonnage.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '../repository/inmemory.plugin.js'
-import { buildPrn } from '../repository/contract/test-data.js'
+import {
+  buildPrn,
+  underAccreditation
+} from '../repository/contract/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { assertPresent } from '#test/type-helpers.js'
+
+/**
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ */
 
 const PERIOD_START = '2025-01-01'
 const PERIOD_END = '2025-12-31'
 const IN_PERIOD = new Date('2025-06-15T12:00:00Z')
 const ACTOR = { id: 'u', name: 'U' }
 
-const ACCREDITATION_ID = 'acc-123'
+const ACCREDITATION = {
+  organisationId: 'org-123',
+  registrationId: 'reg-123',
+  accreditationId: 'acc-123'
+}
 
 const defaultParams = {
-  accreditationId: ACCREDITATION_ID,
+  ...ACCREDITATION,
   startDate: PERIOD_START,
   endDate: PERIOD_END
 }
@@ -26,25 +38,15 @@ function createRepo() {
  * Creates a draft PRN then transitions it to awaiting_acceptance,
  * populating the issued slot at the given timestamp.
  *
- * @param {object} repo
+ * @param {PackagingRecyclingNotesRepository} repo
  * @param {{ tonnage: number, issuedAt?: Date }} options
  */
 async function issuePrn(repo, { tonnage, issuedAt = IN_PERIOD }) {
   const draft = await repo.create(
-    buildPrn({
-      tonnage,
-      accreditation: {
-        id: ACCREDITATION_ID,
-        accreditationNumber: 'ACC-001',
-        accreditationYear: 2026,
-        material: 'plastic',
-        submittedToRegulator: 'ea',
-        siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-      }
-    })
+    buildPrn(underAccreditation(ACCREDITATION, { tonnage }))
   )
 
-  return repo.updateStatus({
+  const issued = await repo.updateStatus({
     id: draft.id,
     version: draft.version,
     status: PRN_STATUS.AWAITING_ACCEPTANCE,
@@ -52,17 +54,21 @@ async function issuePrn(repo, { tonnage, issuedAt = IN_PERIOD }) {
     updatedBy: ACTOR,
     operation: { slot: 'issued', at: issuedAt, by: ACTOR }
   })
+
+  assertPresent(issued)
+  return issued
 }
 
 /**
  * Transitions an issued PRN to accepted, populating the accepted slot.
  *
- * @param {object} repo
+ * @param {PackagingRecyclingNotesRepository} repo
  * @param {string} id
  * @param {{ acceptedAt?: Date }} options
  */
 async function acceptPrn(repo, id, { acceptedAt = IN_PERIOD } = {}) {
   const current = await repo.findById(id)
+  assertPresent(current)
   return repo.updateStatus({
     id,
     version: current.version,
@@ -76,11 +82,12 @@ async function acceptPrn(repo, id, { acceptedAt = IN_PERIOD } = {}) {
 /**
  * Transitions an issued PRN to awaiting_cancellation.
  *
- * @param {object} repo
+ * @param {PackagingRecyclingNotesRepository} repo
  * @param {string} id
  */
 async function requestCancelPrn(repo, id) {
   const current = await repo.findById(id)
+  assertPresent(current)
   return repo.updateStatus({
     id,
     version: current.version,
@@ -94,11 +101,12 @@ async function requestCancelPrn(repo, id) {
  * Transitions a PRN awaiting cancellation to cancelled, populating the
  * cancelled slot.
  *
- * @param {object} repo
+ * @param {PackagingRecyclingNotesRepository} repo
  * @param {string} id
  */
 async function cancelPrn(repo, id) {
   const current = await repo.findById(id)
+  assertPresent(current)
   return repo.updateStatus({
     id,
     version: current.version,
@@ -148,17 +156,7 @@ describe('getIssuedTonnage', () => {
   it('excludes PRN with no qualifying slot timestamps in period', async () => {
     const repo = createRepo()
     await repo.create(
-      buildPrn({
-        tonnage: 100,
-        accreditation: {
-          id: ACCREDITATION_ID,
-          accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
-          material: 'plastic',
-          submittedToRegulator: 'ea',
-          siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-        }
-      })
+      buildPrn(underAccreditation(ACCREDITATION, { tonnage: 100 }))
     )
 
     const result = await getIssuedTonnage(repo, defaultParams)

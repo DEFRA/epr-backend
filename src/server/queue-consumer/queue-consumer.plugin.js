@@ -10,6 +10,8 @@ import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
 import { orsImportCommandHandlers } from './ors-import-commands.js'
 
+/** @import { Consumer } from 'sqs-consumer' */
+
 /**
  * @typedef {Object} CommandQueueConsumerPluginOptions
  * @property {{get: (key: string) => string}} config
@@ -22,6 +24,7 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository,
  *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository,
+ *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
  *   wasteBalanceService: ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>,
  *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
  *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
@@ -45,12 +48,11 @@ function buildConsumerDeps(server, { config }) {
     organisationsRepository,
     wasteRecordsRepository,
     summaryLogRowStatesRepository,
+    ledgerRepository,
     wasteBalanceService,
     reportsRepository,
     systemLogsRepository
   } = /** @type {QueueConsumerRepositories} */ (server.app)
-
-  const { featureFlags } = server
 
   const onSummaryLogUploaded = createOnSummaryLogUploaded({
     reportsRepository,
@@ -65,8 +67,8 @@ function buildConsumerDeps(server, { config }) {
     organisationsRepository,
     wasteRecordsRepository,
     summaryLogRowStatesRepository,
+    ledgerRepository,
     wasteBalanceService,
-    featureFlags,
     reportsService: createReportsService(reportsRepository),
     summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
     onSummaryLogUploaded
@@ -92,6 +94,7 @@ export const commandQueueConsumerPlugin = {
   ) => {
     const { sqsClient, queueName, uploadsRepository, ...baseDeps } =
       buildConsumerDeps(server, options)
+    /** @type {Consumer | null} */
     let consumer = null
 
     server.events.on('start', async () => {

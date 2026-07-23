@@ -11,7 +11,7 @@ import { siteKey } from '#formsubmission/parsing-common/site.js'
  *   material: string;
  *   site?: object;
  *   reprocessingType?: string;
- *   glassRecyclingProcess?: string[];
+ *   glassRecyclingProcess?: string[] | null;
  * }} RegAccKeyFields
  */
 

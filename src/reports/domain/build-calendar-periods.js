@@ -1,6 +1,7 @@
 import { derivePeriodStatus } from './derive-period-status.js'
 import { PERIOD_STATUS } from './period-status.js'
 import { REPORT_STATUS } from './report-status.js'
+import { isResubmissionRequired } from './resubmission.js'
 
 /**
  * @import { MergedPeriod } from './merge-reporting-periods.js'
@@ -50,10 +51,15 @@ const latestSubmitted = (current, previousSubmissions) =>
  * @returns {CalendarPeriod[]}
  */
 export const buildCalendarPeriods = (mergedPeriods) =>
+  // previousSubmissions is a feed-only projection, not part of a calendar item,
+  // so it is dropped here rather than spread through.
   mergedPeriods.flatMap(({ previousSubmissions = [], ...period }) => {
     const flaggedSubmitted = latestSubmitted(period.report, previousSubmissions)
 
-    if (!flaggedSubmitted?.resubmissionRequired) {
+    if (
+      !flaggedSubmitted ||
+      !isResubmissionRequired(flaggedSubmitted.resubmissionRequired)
+    ) {
       return [{ ...period, periodStatus: derivePeriodStatus(period) }]
     }
 

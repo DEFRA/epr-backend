@@ -12,7 +12,6 @@ import {
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
 import { currentWasteBalance } from './current-waste-balance.js'
-import { markExcludedRecords } from './mark-excluded-records.js'
 import { performUpdateViaLedger } from './update-via-ledger.js'
 import { validateAccreditationId } from '../repository/validation.js'
 
@@ -220,14 +219,12 @@ export const createWasteBalanceService = (
       wasteRecords,
       { user, accreditation, overseasSites, summaryLogId }
     ) => {
-      const annotatedRecords = markExcludedRecords(wasteRecords)
-
-      if (annotatedRecords.length === 0) {
+      if (wasteRecords.length === 0) {
         return
       }
 
       await performUpdateViaLedger({
-        wasteRecords: annotatedRecords,
+        wasteRecords,
         accreditation: {
           ...accreditation,
           id: validateAccreditationId(accreditation.id)
@@ -249,20 +246,26 @@ export const createWasteBalanceService = (
 
     /**
      * The PRN's ledger events after a watermark: the catch-up tail a read
-     * projection folds onto a fetched PRN to bring it current.
+     * projection folds onto a fetched PRN to bring it current. This is a ledger
+     * read that happens to be about a PRN, so it names its ledger in full and
+     * the `prnId` selects within it.
      *
-     * @param {{ registrationId: string, accreditationId: string, prnId: string, afterEventNumber: number }} params
+     * @param {{ organisationId: string, registrationId: string, accreditationId: string, prnId: string, afterEventNumber: number }} params
      * @returns {Promise<import('../repository/ledger-port.js').LedgerEvent[]>}
      */
     prnCatchupEvents: async ({
+      organisationId,
       registrationId,
       accreditationId,
       prnId,
       afterEventNumber
     }) =>
       ledgerRepository.findEventsByPrnIdAfter(
-        registrationId,
-        validateAccreditationId(accreditationId),
+        {
+          organisationId,
+          registrationId,
+          accreditationId: validateAccreditationId(accreditationId)
+        },
         prnId,
         afterEventNumber
       )

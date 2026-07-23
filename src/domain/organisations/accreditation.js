@@ -1,9 +1,13 @@
-/** @import {RegAccStatus, User} from '#domain/organisations/model.js' */
+/** @import {GlassRecyclingProcess, RegAccStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
+ * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
+ * getStatusHistoryDateTimes normalises string inputs via `new Date(...)`, so the
+ * consumer contract genuinely accepts either.
+ *
  * @typedef {{
- *  status: 'created'|'approved'|'suspended';
- *  updatedAt: string;
+ *  status: RegAccStatus;
+ *  updatedAt: Date | string;
  * }} StatusHistoryEntry
  */
 
@@ -45,8 +49,11 @@
 /**
  * @typedef {{ id: string } & StatusHistory & {
  *  formSubmission: { id: string; time: Date };
+ *  glassRecyclingProcess?: GlassRecyclingProcess[] | null;
  *  material: string;
+ *  orsFileUploads?: object[];
  *  prnIssuance: PrnIssuance;
+ *  reprocessingType?: ReprocessingType;
  *  site?: AccreditationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;

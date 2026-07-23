@@ -43,7 +43,7 @@ describe('validateMaterialType', () => {
       'Invalid summary log: registration has invalid material'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.actual).toBe('invalid-material')
+    expect(fatals[0].context?.actual).toBe('invalid-material')
   })
 
   it('returns fatal business error when materials do not match', () => {
@@ -75,14 +75,14 @@ describe('validateMaterialType', () => {
       'Material does not match registration material'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.location).toEqual({
+    expect(fatals[0].context?.location).toEqual({
       sheet: 'Cover',
       row: 8,
       column: 'B',
       field: 'MATERIAL'
     })
-    expect(fatals[0].context.expected).toBe('aluminium')
-    expect(fatals[0].context.actual).toBe('plastic')
+    expect(fatals[0].context?.expected).toBe('aluminium')
+    expect(fatals[0].context?.actual).toBe('plastic')
   })
 
   it.each([
@@ -343,7 +343,7 @@ describe('validateMaterialType', () => {
 
     expect(result.isFatal()).toBe(true)
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals[0].context.location).toEqual({
+    expect(fatals[0].context?.location).toEqual({
       field: 'MATERIAL' // Only field is set when location is missing
     })
   })
@@ -372,8 +372,8 @@ describe('validateMaterialType', () => {
       expect(fatals).toHaveLength(1)
       expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
       expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-      expect(fatals[0].context.actual).toBe('Choose material')
-      expect(fatals[0].context.location).toEqual({
+      expect(fatals[0].context?.actual).toBe('Choose material')
+      expect(fatals[0].context?.location).toEqual({
         sheet: 'Cover',
         row: 8,
         column: 'B',
@@ -440,7 +440,7 @@ describe('validateMaterialType', () => {
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
       expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
-      expect(fatals[0].context.actual).toBe('NotARealMaterial')
+      expect(fatals[0].context?.actual).toBe('NotARealMaterial')
     })
   })
 })

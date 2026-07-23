@@ -72,71 +72,86 @@ describe('getWasteBalanceClassification', () => {
     it.each([
       [
         'no accreditation',
-        { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
         null,
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
         'registered-only processing type, accredited',
-        { processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY },
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
         accreditation,
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
         'registered-only processing type, unaccredited',
-        { processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY },
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
         null,
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
         'no schema for the processing type',
-        { processingType: 'NOT_A_REAL_TYPE' },
+        /** @type {*} */ ('NOT_A_REAL_TYPE'),
         accreditation,
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
         'schema has no classifyForWasteBalance',
-        { processingType: PROCESSING_TYPES.EXPORTER },
+        PROCESSING_TYPES.EXPORTER,
         accreditation,
         WASTE_RECORD_TYPE.SENT_ON
       ]
-    ])('%s', (_name, data, acc, type) => {
-      const record = buildWasteRecord({ type, data })
+    ])('%s', (_name, processingType, acc, type) => {
+      const record = buildWasteRecord({ type, data: {} })
       expect(
-        getWasteBalanceClassification(record, acc, ORS_VALIDATION_DISABLED)
+        getWasteBalanceClassification(
+          record,
+          processingType,
+          acc,
+          ORS_VALIDATION_DISABLED
+        )
       ).toBeNull()
     })
 
-    it('the no-accreditation check takes precedence over excludedFromWasteBalance for an unaccredited invalid row', () => {
+    it('the no-accreditation check takes precedence for an unaccredited incomplete row', () => {
       const record = buildWasteRecord({
         type: WASTE_RECORD_TYPE.RECEIVED,
-        data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
-        excludedFromWasteBalance: true
+        data: {}
       })
       expect(
-        getWasteBalanceClassification(record, null, ORS_VALIDATION_DISABLED)
+        getWasteBalanceClassification(
+          record,
+          PROCESSING_TYPES.REPROCESSOR_INPUT,
+          null,
+          ORS_VALIDATION_DISABLED
+        )
       ).toBeNull()
     })
   })
 
-  it('returns included:false and empty reasons when record is manually excluded', () => {
+  it('returns included:false naming the missing fields when the row is incomplete', () => {
     const record = buildWasteRecord({
       type: WASTE_RECORD_TYPE.RECEIVED,
-      data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
-      excludedFromWasteBalance: true
+      data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT }
     })
-    expect(
-      getWasteBalanceClassification(
-        record,
-        accreditation,
-        ORS_VALIDATION_DISABLED
-      )
-    ).toEqual({ included: false, reasons: [], tonnage: null })
+    const result = getWasteBalanceClassification(
+      record,
+      PROCESSING_TYPES.REPROCESSOR_INPUT,
+      accreditation,
+      ORS_VALIDATION_DISABLED
+    )
+
+    expect(result?.included).toBe(false)
+    expect(result?.tonnage).toBeNull()
+    expect(result?.reasons).toContainEqual({
+      code: 'MISSING_REQUIRED_FIELD',
+      field: 'TONNAGE_RECEIVED_FOR_RECYCLING'
+    })
   })
 
   it('returns included:true with tonnage when record is included', () => {
     const result = getWasteBalanceClassification(
       fullyFilledReprocessorRecord,
+      PROCESSING_TYPES.REPROCESSOR_INPUT,
       accreditation,
       ORS_VALIDATION_DISABLED
     )
@@ -146,6 +161,7 @@ describe('getWasteBalanceClassification', () => {
   it('returns included:false with exclusion reason when record is excluded', () => {
     const result = getWasteBalanceClassification(
       prnIssuedExporterRecord,
+      PROCESSING_TYPES.EXPORTER,
       accreditation,
       ORS_VALIDATION_DISABLED
     )

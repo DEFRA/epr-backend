@@ -1,5 +1,7 @@
 import Joi from 'joi'
 
+import { wholeTonnage } from '#common/validation/tonnage-schema.js'
+
 const POSITIVE_INTEGER = 1
 const MAX_NOTES_LENGTH = 200
 
@@ -10,7 +12,7 @@ export const packagingRecyclingNotesCreatePayloadSchema = Joi.object({
     tradingName: Joi.string().empty(Joi.valid(null, '')).optional(),
     registrationType: Joi.string().optional()
   }).required(),
-  tonnage: Joi.number().integer().min(POSITIVE_INTEGER).required(),
+  tonnage: wholeTonnage().min(POSITIVE_INTEGER).required(),
   notes: Joi.string().max(MAX_NOTES_LENGTH).allow('').optional()
 }).messages({
   'any.required': '{#label} is required',

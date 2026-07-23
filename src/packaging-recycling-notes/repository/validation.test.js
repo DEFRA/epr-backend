@@ -12,7 +12,11 @@ describe('validatePrnInsert', () => {
   })
 
   it('strips unknown fields', () => {
-    const data = buildValidPrnInsert({ bogus: 'field' })
+    const data = buildValidPrnInsert(
+      /** @type {Parameters<typeof buildValidPrnInsert>[0]} */ (
+        /** @type {unknown} */ ({ bogus: 'field' })
+      )
+    )
     const result = validatePrnInsert(data)
     expect(result.bogus).toBeUndefined()
   })
@@ -40,7 +44,7 @@ describe('validatePrnInsert', () => {
 
   it('throws Boom.badData for invalid data', () => {
     const data = buildValidPrnInsert()
-    delete data.organisation
+    delete (/** @type {Record<string, unknown>} */ (data).organisation)
 
     let thrownError
     try {
@@ -56,9 +60,9 @@ describe('validatePrnInsert', () => {
 
   it('reports all validation errors, not just the first', () => {
     const data = buildValidPrnInsert()
-    delete data.organisation
-    delete data.accreditation
-    delete data.tonnage
+    delete (/** @type {Record<string, unknown>} */ (data).organisation)
+    delete (/** @type {Record<string, unknown>} */ (data).accreditation)
+    delete (/** @type {Record<string, unknown>} */ (data).tonnage)
 
     let thrownError
     try {
@@ -103,7 +107,7 @@ describe('validatePrnRead', () => {
 
   it('throws Boom.badImplementation for invalid read data', () => {
     const data = buildReadDocument()
-    delete data.id
+    delete (/** @type {Record<string, unknown>} */ (data).id)
 
     let thrownError
     try {
@@ -119,7 +123,7 @@ describe('validatePrnRead', () => {
 
   it('includes the document id in the error message', () => {
     const data = buildReadDocument({ id: 'abc-123' })
-    delete data.organisation
+    delete (/** @type {Record<string, unknown>} */ (data).organisation)
 
     let thrownError
     try {
@@ -133,9 +137,9 @@ describe('validatePrnRead', () => {
 
   it('reports all validation errors, not just the first', () => {
     const data = buildReadDocument()
-    delete data.id
-    delete data.organisation
-    delete data.tonnage
+    delete (/** @type {Record<string, unknown>} */ (data).id)
+    delete (/** @type {Record<string, unknown>} */ (data).organisation)
+    delete (/** @type {Record<string, unknown>} */ (data).tonnage)
 
     let thrownError
     try {

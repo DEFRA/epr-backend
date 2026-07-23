@@ -10,7 +10,8 @@ import {
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import {
  *   MarkReportStaleResult,
- *   MarkSubmittedReportRequiringResubmissionResult
+ *   MarkSubmittedReportRequiringResubmissionResult,
+ *   Report
  * } from '#reports/repository/port.js'
  */
 
@@ -26,6 +27,16 @@ const AUDIT_CATEGORY = 'waste-reporting'
 const AUDIT_SUB_CATEGORY = 'reports'
 
 /**
+ * `action` values for {@link auditMarkReportsStale}'s two callers — both
+ * target the report's `stale` field, distinguished only by which trigger
+ * fired.
+ */
+export const MARK_STALE_ACTION = Object.freeze({
+  SUMMARY_LOG_CHANGED: 'mark-stale-sl-upload',
+  PRN_CANCELLED: 'mark-stale-prn-cancelled'
+})
+
+/**
  * Audits a report status transition via CDP audit and system logs.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
@@ -36,8 +47,8 @@ const AUDIT_SUB_CATEGORY = 'reports'
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId
- * @param {object} params.previous
- * @param {object} params.next
+ * @param {Report} params.previous
+ * @param {Report} params.next
  */
 export async function auditReportStatusTransition(request, params) {
   const {
@@ -107,7 +118,7 @@ export async function auditReportStatusTransition(request, params) {
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId
- * @param {object} params.previous
+ * @param {Report} params.previous
  */
 export async function auditReportDelete(request, params) {
   const {
@@ -208,25 +219,33 @@ async function auditReportFlagTransition({
 }
 
 /**
- * Audits a bulk markActiveReportsStale operation.
+ * Audits a bulk mark-stale operation against the report's `stale` field.
+ * `action` (one of {@link MARK_STALE_ACTION}) distinguishes which trigger
+ * fired: `MARK_STALE_ACTION.SUMMARY_LOG_CHANGED` with `reportsMarkedStale[].stale`
+ * set to `{ summaryLogChanged }`; `MARK_STALE_ACTION.PRN_CANCELLED` with
+ * `reportsMarkedStale[].stale` set to `{ prnCancelled }`. Each result's
+ * `stale` already carries only the sub-key that trigger set (never both), so
+ * the audit payload naturally records just what changed.
  * @param {{
  *   systemLogsRepository: SystemLogsRepository,
  *   organisationId: string,
  *   registrationId: string,
- *   reportsMarkedStale: MarkReportStaleResult[]
+ *   reportsMarkedStale: MarkReportStaleResult[],
+ *   action: string
  * }} params
  */
 export async function auditMarkReportsStale({
   systemLogsRepository,
   organisationId,
   registrationId,
-  reportsMarkedStale
+  reportsMarkedStale,
+  action
 }) {
   await auditReportFlagTransition({
     systemLogsRepository,
     organisationId,
     registrationId,
-    action: 'mark-stale',
+    action,
     field: 'stale',
     results: reportsMarkedStale
   })
@@ -297,6 +316,56 @@ export async function auditReportCreate(request, params) {
       submissionNumber,
       reportId,
       createdAt
+    },
+    user: extractUserDetails(request)
+  }
+
+  safeAudit(payload)
+  await recordSystemLog(request, payload)
+}
+
+/**
+ * Audits an operator's own request for resubmission. Request-bound like
+ * {@link auditReportCreate}, not the system/batch shape
+ * {@link auditMarkReportsRequiringResubmission} uses.
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
+ * @param {object} params
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {number} params.year
+ * @param {string} params.cadence
+ * @param {number} params.period
+ * @param {number} params.submissionNumber
+ * @param {string} params.reportId
+ * @param {import('#reports/repository/port.js').ReportResubmissionRequired} params.resubmissionRequired
+ */
+export async function auditReportRequestResubmission(request, params) {
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    reportId,
+    resubmissionRequired
+  } = params
+
+  const payload = {
+    event: {
+      category: AUDIT_CATEGORY,
+      subCategory: AUDIT_SUB_CATEGORY,
+      action: 'request-resubmission'
+    },
+    context: {
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber,
+      reportId,
+      resubmissionRequired
     },
     user: extractUserDetails(request)
   }

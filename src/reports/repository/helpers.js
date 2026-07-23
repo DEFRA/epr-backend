@@ -1,9 +1,58 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { periodKey } from '#reports/domain/period-key.js'
+import { legacyStaleKeys, normaliseStale } from '#reports/domain/stale.js'
+import { logger } from '#common/helpers/logging/logger.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
 import { randomUUID } from 'node:crypto'
+
+const BARE_DATE_LENGTH = 10
+
+/**
+ * Normalises a report's `stale` field to the current nested shape on read.
+ * Logs at info when the document still carries the legacy flat shape, so the
+ * number of un-migrated documents is observable — the back-compat branch in
+ * `normaliseStale` is safe to remove once this stops firing (PAE-1755). Info,
+ * not warn: old documents are expected, so this must not raise alerts.
+ *
+ * @template {{ id?: string, stale?: Record<string, unknown> }} T
+ * @param {T} report
+ * @returns {T}
+ */
+export const mapReport = (report) => {
+  if (!report.stale) {
+    return report
+  }
+  const strippedKeys = legacyStaleKeys(report.stale)
+  if (strippedKeys.length > 0) {
+    logger.info({
+      message: 'Normalised legacy stale shape on report read',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.LEGACY_STALE_SHAPE_NORMALISED,
+        reason: `reportId=${report.id} strippedKeys=${strippedKeys.join(',')}`
+      }
+    })
+  }
+  return { ...report, stale: normaliseStale(report.stale) }
+}
+
+/**
+ * Only reports persisted before the bare-date schema fix carry a full ISO
+ * datetime here (historical Joi coercion); new reports are already bare, so
+ * this only does work for the old-shape case. Safe to delete once no
+ * pre-fix reports remain.
+ * @param {string} dateString
+ * @returns {string}
+ */
+const backCompatCalendarDate = (dateString) =>
+  dateString.length > BARE_DATE_LENGTH ? calendarDate(dateString) : dateString
 
 /**
  * Picks the latest submission (highest submissionNumber) per reporting period
@@ -112,9 +161,9 @@ export const groupAsPeriodicReports = (
     )
     const { startDate, endDate, dueDate } = first
     return {
-      startDate,
-      endDate,
-      dueDate,
+      startDate: backCompatCalendarDate(startDate),
+      endDate: backCompatCalendarDate(endDate),
+      dueDate: backCompatCalendarDate(dueDate),
       current: toSubmission(first),
       previousSubmissions: rest.map(toSubmission)
     }

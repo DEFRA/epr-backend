@@ -58,6 +58,16 @@ describe('loadsByReportingPeriod population at validate time', () => {
     }
   })
 
+  /**
+   * A summary log's cover-sheet metadata. Which cells are present varies by
+   * processing type — a registered-only cover sheet carries no accreditation.
+   *
+   * @typedef {Record<string, { value: unknown, location: { sheet: string, row: number, column: string } }>} SummaryLogMeta
+   */
+
+  /**
+   * @param {SummaryLogMeta} [meta]
+   */
   const upload = async (
     env,
     summaryLogId,
@@ -89,7 +99,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     )
   }
 
-  const getLoadsByReportingPeriod = async (env, summaryLogId) => {
+  const getCheckPage = async (env, summaryLogId) => {
     const { server, organisationId, registrationId } = env
 
     const response = await server.inject({
@@ -98,8 +108,11 @@ describe('loadsByReportingPeriod population at validate time', () => {
       ...asOperator()
     })
 
-    return JSON.parse(response.payload).loadsByReportingPeriod
+    return JSON.parse(response.payload)
   }
+
+  const getLoadsByReportingPeriod = async (env, summaryLogId) =>
+    (await getCheckPage(env, summaryLogId)).loadsByReportingPeriod
 
   const uploadAndValidate = async (
     env,
@@ -142,9 +155,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
       year: 2025,
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January,
-      startDate: '2025-01-01T00:00:00.000Z',
-      endDate: '2025-01-31T00:00:00.000Z',
-      dueDate: '2025-02-20T00:00:00.000Z'
+      startDate: '2025-01-01',
+      endDate: '2025-01-31',
+      dueDate: '2025-02-20'
     })
 
   const emptyChange = () => ({
@@ -707,9 +720,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
       year: 2025,
       cadence: 'quarterly',
       period: QUARTERLY_PERIODS.Q1,
-      startDate: '2025-01-01T00:00:00.000Z',
-      endDate: '2025-03-31T00:00:00.000Z',
-      dueDate: '2025-05-20T00:00:00.000Z'
+      startDate: '2025-01-01',
+      endDate: '2025-03-31',
+      dueDate: '2025-05-20'
     })
 
     const loadsByReportingPeriod = await uploadAndValidate(
@@ -737,6 +750,58 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
     ).toBe(0)
+  })
+
+  // A registered-only submission has no accreditation, so its row states are
+  // reachable only through the summary-log-submitted event on the unaccredited
+  // ledger stream. Re-uploading identical rows must resolve that submission as
+  // the baseline and classify every row unchanged; a baseline that fails to
+  // resolve reports the rows as freshly added instead.
+  it('resolves a registered-only submission as the baseline for a re-upload', async () => {
+    const organisationId = new ObjectId().toString()
+    const registrationId = new ObjectId().toString()
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      accredited: false,
+      organisationId,
+      registrationId
+    })
+
+    const registeredOnlyRows = createRegisteredOnlyUploadData([
+      { rowId: 1001, month: '2025-01-01' },
+      { rowId: 1002, month: '2025-04-01' }
+    ])
+
+    await upload(
+      env,
+      'sl-registered-only-original',
+      'file-registered-only-original',
+      registeredOnlyRows,
+      registeredOnlyMeta
+    )
+    await submitAndPoll(env, 'sl-registered-only-original')
+
+    await upload(
+      env,
+      'sl-registered-only-reupload',
+      'file-registered-only-reupload',
+      registeredOnlyRows,
+      registeredOnlyMeta
+    )
+    const { loadsByReportingPeriod, loads } = await getCheckPage(
+      env,
+      'sl-registered-only-reupload'
+    )
+
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.nonBalanceAffecting.count
+    ).toBe(0)
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.adjusted.nonBalanceAffecting.count
+    ).toBe(0)
+    expect(loads.added.valid.count).toBe(0)
+    expect(loads.adjusted.valid.count).toBe(0)
+    expect(loads.unchanged.valid.count).toBe(2)
   })
 
   it('includes loadsByReportingPeriod on the GET response after submit', async () => {

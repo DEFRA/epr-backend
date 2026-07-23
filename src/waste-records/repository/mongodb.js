@@ -148,6 +148,21 @@ const identityKey = (fields) =>
   ])
 
 /**
+ * The row states a ledger holds at one summary log — the filter behind both
+ * the read model's query and the write path's read-back. A row state belongs
+ * to the ledger that wrote it, so the summary log alone does not identify it.
+ *
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {string} summaryLogId
+ */
+const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
+  organisationId: ledgerId.organisationId,
+  registrationId: ledgerId.registrationId,
+  accreditationId: ledgerId.accreditationId,
+  summaryLogIds: summaryLogId
+})
+
+/**
  * @param {SummaryLogRowStateInsert} candidate
  * @param {string} contentHash
  * @param {string} summaryLogId
@@ -218,7 +233,7 @@ const performUpsertSummaryLogRowStates =
     )
 
     const committed = await collection
-      .find({ summaryLogIds: summaryLogId })
+      .find(buildSummaryLogFilter(ledgerId, summaryLogId))
       .toArray()
     const committedByIdentity = new Map(
       committed.map((doc) => [identityKey(doc), doc])
@@ -235,15 +250,16 @@ const performUpsertSummaryLogRowStates =
 
 /**
  * @param {Collection} collection
- * @returns {(summaryLogId: string) => Promise<SummaryLogRowState[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<SummaryLogRowState[]>}
  */
-const performFindBySummaryLogId = (collection) => async (summaryLogId) => {
-  const docs = await collection
-    .find({ summaryLogIds: summaryLogId })
-    .sort({ _id: 1 })
-    .toArray()
-  return docs.map(toSummaryLogRowState)
-}
+const performFindRowStatesForSummaryLog =
+  (collection) => async (ledgerId, summaryLogId) => {
+    const docs = await collection
+      .find(buildSummaryLogFilter(ledgerId, summaryLogId))
+      .sort({ _id: 1 })
+      .toArray()
+    return docs.map(toSummaryLogRowState)
+  }
 
 /**
  * @param {Collection} collection
@@ -260,6 +276,26 @@ const performFindRowHistory =
   }
 
 /**
+ * The union of keys observed on `data` across every state document, computed
+ * server-side so the CSV export composes its dynamic header without pulling any
+ * document into memory. Cost scales with the count of distinct field names
+ * (typically <200) rather than the document count.
+ *
+ * @param {Collection} collection
+ * @returns {() => Promise<string[]>}
+ */
+const performFindDistinctDataKeys = (collection) => async () => {
+  const docs = await collection
+    .aggregate([
+      { $project: { kv: { $objectToArray: '$data' } } },
+      { $unwind: '$kv' },
+      { $group: { _id: '$kv.k' } }
+    ])
+    .toArray()
+  return docs.map((doc) => /** @type {string} */ (doc._id))
+}
+
+/**
  * Creates a MongoDB-backed summary-log row state repository.
  *
  * @param {Db} db
@@ -270,7 +306,8 @@ export const createMongoSummaryLogRowStateRepository = async (db) => {
 
   return () => ({
     upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
-    findBySummaryLogId: performFindBySummaryLogId(collection),
-    findRowHistory: performFindRowHistory(collection)
+    findRowStatesForSummaryLog: performFindRowStatesForSummaryLog(collection),
+    findRowHistory: performFindRowHistory(collection),
+    findDistinctDataKeys: performFindDistinctDataKeys(collection)
   })
 }

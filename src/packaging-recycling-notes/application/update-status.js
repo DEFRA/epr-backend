@@ -6,9 +6,10 @@ import {
   prnCommandFor
 } from './update-status-balance-effects.js'
 import {
+  CANCELLED_PRN_STATUSES,
   PRN_STATUS,
   validateTransition,
-  assertAccreditationNotSuspended
+  assertAccreditationCanIssue
 } from '#packaging-recycling-notes/domain/model.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
@@ -24,27 +25,56 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ * @typedef {import('#reports/application/prn-cancellation-events.js').OnPrnCancelled} OnPrnCancelled
  */
+
+/**
+ * Raises the `onCancelled` PRN event for any transition into a cancelled status, so interested domains (e.g. reports) can react; a no-op otherwise.
+ *
+ * @param {{ onCancelled: OnPrnCancelled }} prnEvents
+ * @param {PrnStatus} newStatus
+ * @param {PackagingRecyclingNote} updatedPrn
+ */
+async function notifyPrnCancelled(prnEvents, newStatus, updatedPrn) {
+  if (!CANCELLED_PRN_STATUSES.has(newStatus)) {
+    return
+  }
+
+  const issued =
+    /** @type {import('#packaging-recycling-notes/domain/model.js').BusinessOperation} */ (
+      updatedPrn.status.issued
+    )
+
+  await prnEvents.onCancelled({
+    organisationId: updatedPrn.organisation.id,
+    registrationId: updatedPrn.registrationId,
+    prnId: updatedPrn.id,
+    issuedAt: new Date(issued.at).toISOString()
+  })
+}
 
 /**
  * The shared context handed to each write path. The ledger path and the
  * no-balance-effect discard write consume different subsets.
  *
- * @typedef {Object} PrnWriteContext
- * @property {PackagingRecyclingNotesRepository} prnRepository
- * @property {OrganisationsRepository} organisationsRepository
- * @property {WasteBalanceService} service
- * @property {import('#common/hapi-types.js').TypedLogger} logger
- * @property {PackagingRecyclingNote} prn
- * @property {import('#packaging-recycling-notes/repository/port.js').UpdateStatusParams} updateParams
- * @property {PrnStatus} newStatus
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string} accreditationId
- * @property {{ id: string; name: string; email?: string }} user
- * @property {PrnStatus} currentStatus
- * @property {Date} now
- * @property {string} id
+ * The identity is an accreditation's, not a registration's: this path runs only
+ * for accredited streams, so `accreditationId` is narrowed to non-null — the
+ * same intersection `applyPrnBalanceCommand` takes as its `ledgerId`.
+ *
+ * @typedef {WasteBalanceLedgerId & { accreditationId: string } & {
+ *   prnRepository: PackagingRecyclingNotesRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   service: WasteBalanceService,
+ *   logger: import('#common/hapi-types.js').TypedLogger,
+ *   prn: PackagingRecyclingNote,
+ *   updateParams: import('#packaging-recycling-notes/repository/port.js').UpdateStatusParams,
+ *   newStatus: PrnStatus,
+ *   user: { id: string, name: string, email?: string },
+ *   currentStatus: PrnStatus,
+ *   now: Date,
+ *   id: string
+ * }} PrnWriteContext
  */
 
 /**
@@ -112,16 +142,16 @@ async function performStreamWrite({
   id,
   user
 }) {
-  // The suspension check is hoisted ahead of the stream append so a suspended
-  // accreditation is never debited. The fetched accreditation is reused to
-  // stamp the PRN number on the issuance path.
+  // The issuable check is hoisted ahead of the stream append so a suspended or
+  // cancelled accreditation is never debited. The fetched accreditation is
+  // reused to stamp the PRN number on the issuance path.
   let accreditation
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     accreditation = await organisationsRepository.findAccreditationById(
       organisationId,
       accreditationId
     )
-    assertAccreditationNotSuspended(accreditation)
+    assertAccreditationCanIssue(accreditation)
   }
 
   const ledgerEvents = await applyPrnBalanceCommand(service, logger, {
@@ -202,6 +232,7 @@ const performDiscardWrite = async ({ prnRepository, updateParams }) => {
  * @param {PackagingRecyclingNotesRepository} params.prnRepository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {{ onCancelled: OnPrnCancelled }} params.prnEvents
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {string} params.id
  * @param {string} params.organisationId
@@ -218,6 +249,7 @@ export async function updatePrnStatus({
   prnRepository,
   ledgerRepository,
   organisationsRepository,
+  prnEvents,
   logger,
   id,
   organisationId,
@@ -229,6 +261,77 @@ export async function updatePrnStatus({
   providedPrn,
   updatedAt
 }) {
+  const prn = await resolvePrnForUpdate({
+    prnRepository,
+    id,
+    organisationId,
+    accreditationId,
+    providedPrn
+  })
+
+  const currentStatus = prn.status.currentStatus
+  validateTransition(currentStatus, newStatus, actor)
+
+  const ctx = buildWriteContext({
+    prnRepository,
+    ledgerRepository,
+    organisationsRepository,
+    logger,
+    prn,
+    currentStatus,
+    newStatus,
+    organisationId,
+    registrationId,
+    accreditationId,
+    user,
+    id,
+    updatedAt
+  })
+
+  const updatedPrn =
+    currentStatus === PRN_STATUS.DRAFT && newStatus === PRN_STATUS.DISCARDED
+      ? await performDiscardWrite(ctx)
+      : await performLedgerWrite(ctx)
+
+  await prnMetrics.recordStatusTransition({
+    fromStatus: currentStatus,
+    toStatus: newStatus,
+    material: prn.accreditation.material,
+    isExport: prn.isExport
+  })
+
+  try {
+    await notifyPrnCancelled(prnEvents, newStatus, updatedPrn)
+  } catch (error) {
+    // Best-effort: the PRN transition is already committed, so don't fail the caller for a stale-notification error.
+    logger.error({
+      err: error,
+      message: `PRN-cancellation notification failed for ${updatedPrn.id}; PRN status is already committed`
+    })
+  }
+
+  return updatedPrn
+}
+
+/**
+ * Fetches (or reuses) the PRN under update and asserts it belongs to the
+ * caller's organisation/accreditation.
+ *
+ * @param {Object} params
+ * @param {PackagingRecyclingNotesRepository} params.prnRepository
+ * @param {string} params.id
+ * @param {string} params.organisationId
+ * @param {string} params.accreditationId
+ * @param {PackagingRecyclingNote} [params.providedPrn]
+ * @returns {Promise<PackagingRecyclingNote>}
+ */
+async function resolvePrnForUpdate({
+  prnRepository,
+  id,
+  organisationId,
+  accreditationId,
+  providedPrn
+}) {
   const prn = providedPrn ?? (await prnRepository.findById(id))
 
   if (
@@ -239,9 +342,44 @@ export async function updatePrnStatus({
     throw Boom.notFound(`PRN not found: ${id}`)
   }
 
-  const currentStatus = prn.status.currentStatus
-  validateTransition(currentStatus, newStatus, actor)
+  return prn
+}
 
+/**
+ * Builds the shared write context (`PrnWriteContext`) handed to
+ * `performDiscardWrite`/`performLedgerWrite`.
+ *
+ * @param {Object} params
+ * @param {PackagingRecyclingNotesRepository} params.prnRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {import('#common/hapi-types.js').TypedLogger} params.logger
+ * @param {PackagingRecyclingNote} params.prn
+ * @param {PrnStatus} params.currentStatus
+ * @param {PrnStatus} params.newStatus
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {string} params.accreditationId
+ * @param {{ id: string; name: string; email?: string }} params.user
+ * @param {string} params.id
+ * @param {Date} [params.updatedAt]
+ * @returns {PrnWriteContext}
+ */
+function buildWriteContext({
+  prnRepository,
+  ledgerRepository,
+  organisationsRepository,
+  logger,
+  prn,
+  currentStatus,
+  newStatus,
+  organisationId,
+  registrationId,
+  accreditationId,
+  user,
+  id,
+  updatedAt
+}) {
   const now = updatedAt ?? new Date()
   const updateParams = {
     id,
@@ -252,7 +390,7 @@ export async function updatePrnStatus({
     lastAppliedEventNumber: prn.lastAppliedEventNumber
   }
 
-  const ctx = {
+  return {
     prnRepository,
     organisationsRepository,
     service: createWasteBalanceService(ledgerRepository),
@@ -268,18 +406,4 @@ export async function updatePrnStatus({
     now,
     id
   }
-
-  const updatedPrn =
-    currentStatus === PRN_STATUS.DRAFT && newStatus === PRN_STATUS.DISCARDED
-      ? await performDiscardWrite(ctx)
-      : await performLedgerWrite(ctx)
-
-  await prnMetrics.recordStatusTransition({
-    fromStatus: currentStatus,
-    toStatus: newStatus,
-    material: prn.accreditation.material,
-    isExport: prn.isExport
-  })
-
-  return updatedPrn
 }

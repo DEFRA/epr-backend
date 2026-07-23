@@ -3,13 +3,12 @@ import {
   ACTIVE_REPORT_STATUSES,
   REPORT_STATUS
 } from '#reports/domain/report-status.js'
-import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
 import { periodKey } from '#reports/domain/period-key.js'
-import { STALE_REASON } from '#reports/domain/stale.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {
   groupAsPeriodicReports,
   latestSubmissionPerPeriod,
+  mapReport,
   prepareCreateReportParams,
   transformToPeriodicReports
 } from '#root/reports/repository/helpers.js'
@@ -20,7 +19,9 @@ import {
   validateFindPeriodicReports,
   validateFindReportById,
   validateMarkActiveReportsStale,
+  validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
+  validateMarkSubmittedReportRequiringResubmissionByOperator,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -42,7 +43,7 @@ import {
 
 /**
  * Finds the active (non-submitted) report matching a specific period criteria.
- * @param {Map<string, object>} reports - A Map where values are report objects.
+ * @param {Map<string, Report>} reports - A Map where values are report objects.
  * @param {object} criteria - The unique identifiers for the report criteria.
  * @param {string} criteria.organisationId - The ID of the organization.
  * @param {string} criteria.registrationId - The ID of the registration.
@@ -148,7 +149,7 @@ const updateReport = async (reports, params) => {
     }
   }
   reports.set(reportId, updated)
-  return structuredClone(updated)
+  return mapReport(structuredClone(updated))
 }
 
 /**
@@ -192,7 +193,7 @@ const updateReportStatus = async (reports, params) => {
   }
 
   reports.set(reportId, updated)
-  return structuredClone(updated)
+  return mapReport(structuredClone(updated))
 }
 
 /**
@@ -243,7 +244,7 @@ const findReportById = async (reports, reportId) => {
   if (!report) {
     throw Boom.notFound(`Report not found: ${validatedId}`)
   }
-  return structuredClone(report)
+  return mapReport(structuredClone(report))
 }
 
 /**
@@ -284,7 +285,7 @@ const findAllPeriodicReports = async (reports) => {
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
-const markActiveReportsStale = async (
+const markActiveReportsStaleForSummaryLog = async (
   reports,
   organisationId,
   registrationId,
@@ -298,11 +299,7 @@ const markActiveReportsStale = async (
     uploadedAt
   })
 
-  const stale = {
-    uploadedAt,
-    reason: STALE_REASON.SUMMARY_LOG_CHANGED,
-    summaryLogId
-  }
+  const summaryLogChanged = { uploadedAt, summaryLogId }
 
   let modifiedCount = 0
 
@@ -311,10 +308,14 @@ const markActiveReportsStale = async (
       report.organisationId === organisationId &&
       report.registrationId === registrationId &&
       ACTIVE_REPORT_STATUSES.has(report.status.currentStatus) &&
-      report.stale?.summaryLogId !== summaryLogId &&
+      !report.stale?.summaryLogChanged &&
       report.source?.summaryLogId !== summaryLogId
     ) {
-      reports.set(id, { ...report, stale, version: report.version + 1 })
+      reports.set(id, {
+        ...report,
+        stale: { ...report.stale, summaryLogChanged },
+        version: report.version + 1
+      })
       modifiedCount++
     }
   }
@@ -328,7 +329,7 @@ const markActiveReportsStale = async (
       (r) =>
         r.organisationId === organisationId &&
         r.registrationId === registrationId &&
-        r.stale?.summaryLogId === summaryLogId
+        r.stale?.summaryLogChanged?.summaryLogId === summaryLogId
     )
     .map((r) =>
       structuredClone({
@@ -337,7 +338,116 @@ const markActiveReportsStale = async (
         cadence: r.cadence,
         period: r.period,
         submissionNumber: r.submissionNumber,
-        stale: r.stale
+        stale: { summaryLogChanged: r.stale.summaryLogChanged }
+      })
+    )
+}
+
+/**
+ * Whether `report` occupies the given org/reg/period slot, irrespective of
+ * status.
+ *
+ * @param {Object} report
+ * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number }} slot
+ * @returns {boolean}
+ */
+const isReportInPeriodSlot = (report, slot) =>
+  report.organisationId === slot.organisationId &&
+  report.registrationId === slot.registrationId &&
+  report.year === slot.year &&
+  report.cadence === slot.cadence &&
+  report.period === slot.period
+
+/**
+ * Whether `report` is active and not yet flagged stale for a PRN
+ * cancellation (first cancellation wins; later ones are no-ops here).
+ *
+ * @param {Object} report
+ * @returns {boolean}
+ */
+const isUnflaggedForPrnCancellation = (report) =>
+  ACTIVE_REPORT_STATUSES.has(report.status.currentStatus) &&
+  !report.stale?.prnCancelled
+
+/**
+ * Whether `report` is the active report matching the given org/reg/period
+ * slot and not yet flagged stale for a PRN cancellation.
+ *
+ * @param {Object} report
+ * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number }} criteria
+ * @returns {boolean}
+ */
+const isActiveReportForPrnCancellationSlot = (report, criteria) =>
+  isReportInPeriodSlot(report, criteria) &&
+  isUnflaggedForPrnCancellation(report)
+
+/**
+ * Marks the active (in_progress / ready_to_submit) report for the given
+ * org/reg/period as stale for a PRN cancellation. Skips it if already
+ * flagged for this `prnId` (retry-safe). At most one active report can match
+ * — reporting periods don't overlap, and only one active draft can exist per
+ * period — so this returns zero or one result.
+ *
+ * @param {Map<string, Object>} reports
+ * @param {import('./port.js').MarkActiveReportsStaleForPrnCancellationParams} params
+ * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
+ */
+const markActiveReportsStaleForPrnCancellation = async (reports, params) => {
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    prnId,
+    occurredAt
+  } = validateMarkActiveReportsStaleForPrnCancellation(params)
+
+  const prnCancelled = { occurredAt, prnId }
+
+  let modifiedCount = 0
+
+  for (const [id, report] of reports) {
+    if (
+      isActiveReportForPrnCancellationSlot(report, {
+        organisationId,
+        registrationId,
+        year,
+        cadence,
+        period
+      })
+    ) {
+      reports.set(id, {
+        ...report,
+        stale: { ...report.stale, prnCancelled },
+        version: report.version + 1
+      })
+      modifiedCount++
+    }
+  }
+
+  if (modifiedCount === 0) {
+    return []
+  }
+
+  return [...reports.values()]
+    .filter(
+      (r) =>
+        r.organisationId === organisationId &&
+        r.registrationId === registrationId &&
+        r.year === year &&
+        r.cadence === cadence &&
+        r.period === period &&
+        r.stale?.prnCancelled?.prnId === prnId
+    )
+    .map((r) =>
+      structuredClone({
+        reportId: r.id,
+        year: r.year,
+        cadence: r.cadence,
+        period: r.period,
+        submissionNumber: r.submissionNumber,
+        stale: { prnCancelled: r.stale.prnCancelled }
       })
     )
 }
@@ -359,17 +469,13 @@ const markSubmittedReportsRequiringResubmission = async (
     periods
   })
 
-  const resubmissionRequired = {
-    uploadedAt,
-    reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-    summaryLogId
-  }
+  const closedPeriodRestated = { uploadedAt, summaryLogId }
 
   const wantedPeriods = new Set(periods.map(periodKey))
 
   const alreadyHandled = (/** @type {Report} */ report) =>
-    report.resubmissionRequired?.summaryLogId === summaryLogId ||
-    report.source?.summaryLogId === summaryLogId
+    report.resubmissionRequired?.closedPeriodRestated?.summaryLogId ===
+    summaryLogId
 
   const submitted = /** @type {Report[]} */ ([...reports.values()]).filter(
     (r) =>
@@ -386,7 +492,10 @@ const markSubmittedReportsRequiringResubmission = async (
   const persistResubmissionFlag = (/** @type {Report} */ report) =>
     reports.set(report.id, {
       ...report,
-      resubmissionRequired,
+      resubmissionRequired: {
+        ...report.resubmissionRequired,
+        closedPeriodRestated
+      },
       version: report.version + 1
     })
 
@@ -399,9 +508,87 @@ const markSubmittedReportsRequiringResubmission = async (
       cadence: report.cadence,
       period: report.period,
       submissionNumber: report.submissionNumber,
-      resubmissionRequired
+      resubmissionRequired: { closedPeriodRestated }
     })
   )
+}
+
+/**
+ * Whether `report` exactly matches the given org/reg/period/submissionNumber
+ * natural key, irrespective of status.
+ *
+ * @param {Object} report
+ * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number, submissionNumber: number }} key
+ * @returns {boolean}
+ */
+const isReportAtSubmissionSlot = (report, key) =>
+  isReportInPeriodSlot(report, key) &&
+  report.submissionNumber === key.submissionNumber
+
+/**
+ * Flags the exact report identified by `submissionNumber` as requiring
+ * resubmission at the operator's own request. Mirrors mongodb.js's
+ * conditional write, returning `null` when nothing matched.
+ *
+ * @param {Map<string, Object>} reports
+ * @param {import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorParams} params
+ * @returns {Promise<import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>}
+ */
+const markSubmittedReportRequiringResubmissionByOperator = async (
+  reports,
+  params
+) => {
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    requestedBy,
+    requestedAt
+  } = validateMarkSubmittedReportRequiringResubmissionByOperator(params)
+
+  const naturalKey = {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  }
+
+  const operatorRequested = { requestedAt, requestedBy }
+
+  const match = [...reports].find(([, r]) =>
+    isReportAtSubmissionSlot(r, naturalKey)
+  )
+
+  const isEligible =
+    match?.[1].status.currentStatus === REPORT_STATUS.SUBMITTED &&
+    !match[1].resubmissionRequired?.operatorRequested
+
+  if (!isEligible || !match) {
+    return null
+  }
+
+  const [id, report] = match
+
+  const updated = {
+    ...report,
+    resubmissionRequired: { ...report.resubmissionRequired, operatorRequested },
+    version: report.version + 1
+  }
+  reports.set(id, updated)
+
+  return structuredClone({
+    reportId: updated.id,
+    year: updated.year,
+    cadence: updated.cadence,
+    period: updated.period,
+    submissionNumber: updated.submissionNumber,
+    resubmissionRequired: updated.resubmissionRequired
+  })
 }
 
 /**
@@ -450,21 +637,25 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     findReportById: (reportId) => findReportById(reports, reportId),
     findPeriodicReports: (params) => findPeriodicReports(reports, params),
     findAllPeriodicReports: () => findAllPeriodicReports(reports),
-    markActiveReportsStale: (
+    markActiveReportsStaleForSummaryLog: (
       organisationId,
       registrationId,
       summaryLogId,
       uploadedAt
     ) =>
-      markActiveReportsStale(
+      markActiveReportsStaleForSummaryLog(
         reports,
         organisationId,
         registrationId,
         summaryLogId,
         uploadedAt
       ),
+    markActiveReportsStaleForPrnCancellation: (params) =>
+      markActiveReportsStaleForPrnCancellation(reports, params),
     markSubmittedReportsRequiringResubmission: (params) =>
       markSubmittedReportsRequiringResubmission(reports, params),
+    markSubmittedReportRequiringResubmissionByOperator: (params) =>
+      markSubmittedReportRequiringResubmissionByOperator(reports, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
       hasReportSubmittedSince(reports, organisationId, registrationId, since)
   })

@@ -7,11 +7,13 @@ import {
   findPeriodicReportsSchema,
   findReportByIdSchema,
   markActiveReportsStaleSchema,
-  markSubmittedReportsRequiringResubmissionSchema
+  markActiveReportsStaleForPrnCancellationSchema,
+  markSubmittedReportsRequiringResubmissionSchema,
+  markSubmittedReportRequiringResubmissionByOperatorSchema
 } from './schema.js'
 
 /**
- * @import { MarkSubmittedReportsRequiringResubmissionParams } from './port.js'
+ * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams } from './port.js'
  */
 
 /**
@@ -20,7 +22,8 @@ import {
  */
 export const validateCreateReport = (params) => {
   const { error, value } = createReportSchema.validate(params, {
-    abortEarly: false
+    abortEarly: false,
+    convert: false
   })
 
   if (error) {
@@ -125,12 +128,48 @@ export const validateMarkActiveReportsStale = (params) => {
 }
 
 /**
+ * @param {import('./port.js').MarkActiveReportsStaleForPrnCancellationParams} params
+ * @returns {import('./port.js').MarkActiveReportsStaleForPrnCancellationParams}
+ */
+export const validateMarkActiveReportsStaleForPrnCancellation = (params) => {
+  const { error, value } =
+    markActiveReportsStaleForPrnCancellationSchema.validate(params, {
+      abortEarly: false
+    })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
  * @param {MarkSubmittedReportsRequiringResubmissionParams} params
  * @returns {MarkSubmittedReportsRequiringResubmissionParams}
  */
 export const validateMarkSubmittedReportsRequiringResubmission = (params) => {
   const { error, value } =
     markSubmittedReportsRequiringResubmissionSchema.validate(params, {
+      abortEarly: false
+    })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
+ * @param {MarkSubmittedReportRequiringResubmissionByOperatorParams} params
+ * @returns {MarkSubmittedReportRequiringResubmissionByOperatorParams}
+ */
+export const validateMarkSubmittedReportRequiringResubmissionByOperator = (
+  params
+) => {
+  const { error, value } =
+    markSubmittedReportRequiringResubmissionByOperatorSchema.validate(params, {
       abortEarly: false
     })
 
