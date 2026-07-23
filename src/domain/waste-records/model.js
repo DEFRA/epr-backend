@@ -19,16 +19,6 @@ export const VERSION_STATUS = Object.freeze({
  * @typedef {typeof VERSION_STATUS[keyof typeof VERSION_STATUS]} VersionStatus
  */
 
-export const WASTE_RECORD_CHANGE = Object.freeze({
-  CREATED: 'created',
-  UPDATED: 'updated',
-  UNCHANGED: 'unchanged'
-})
-
-/**
- * @typedef {typeof WASTE_RECORD_CHANGE[keyof typeof WASTE_RECORD_CHANGE]} WasteRecordChange
- */
-
 /**
  * @typedef {Object} SummaryLogReference
  * @property {string} id - Summary log ID
@@ -60,5 +50,5 @@ export const WASTE_RECORD_CHANGE = Object.freeze({
  * @property {string} rowId - The waste record row identifier
  * @property {WasteRecordType} type
  * @property {Object} data - Reporting fields only
- * @property {WasteRecordVersion[]} versions - Version history. createdAt/updatedAt derived from first/last version
+ * @property {WasteRecordVersion[]} [versions] - Legacy version history, present only on records read from the legacy waste-records collection; absent on freshly transformed records
  */

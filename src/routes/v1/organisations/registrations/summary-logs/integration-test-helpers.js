@@ -479,7 +479,6 @@ export const createTestInfrastructure = async (
     { ...testOrg, status: 'active' }
   ])()
   const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
-  const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
   const overseasSitesRepository = createInMemoryOverseasSitesRepository([])()
   const ledgerRepository = createInMemoryLedgerRepository()()
   const summaryLogRowStateRepository =
@@ -488,7 +487,6 @@ export const createTestInfrastructure = async (
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
-    wasteRecordsRepository,
     summaryLogRowStateRepository,
     ledgerRepository,
     reportsService: /** @type {any} */ ({
@@ -609,7 +607,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
-    wasteRecordsRepository,
     summaryLogRowStateRepository,
     ledgerRepository,
     reportsService: createReportsService(reportsRepository),
@@ -620,11 +617,11 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
-    wasteRecordRepository: wasteRecordsRepository,
     wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
     summaryLogRowStateRepository,
+    ledgerRepository,
     logger: mockLogger
   })
 

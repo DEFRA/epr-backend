@@ -49,7 +49,6 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
-/** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 /** @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
@@ -228,13 +227,11 @@ const markIgnoredByDateRange = (
  * Converts any exceptions to fatal technical issues.
  *
  * @param {{
- *   summaryLogId: string,
  *   summaryLog: SubmittedSummaryLog,
  *   loggingContext: string,
  *   logger: TypedLogger,
  *   summaryLogExtractor: SummaryLogExtractor,
  *   organisationsRepository: OrganisationsRepository,
- *   wasteRecordsRepository: WasteRecordsRepository,
  *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   validateDataSyntax: (parsed: ParsedSummaryLog) => { issues: ValidationIssuesCollector, validatedData: ValidatedSummaryLog }
@@ -242,13 +239,11 @@ const markIgnoredByDateRange = (
  * @returns {Promise<ValidationResult>}
  */
 const performValidationChecks = async ({
-  summaryLogId,
   summaryLog,
   loggingContext,
   logger,
   summaryLogExtractor,
   organisationsRepository,
-  wasteRecordsRepository,
   summaryLogRowStateRepository,
   ledgerRepository,
   validateDataSyntax
@@ -307,11 +302,9 @@ const performValidationChecks = async ({
     }
 
     const dataResult = await transformAndValidateData({
-      summaryLogId,
       summaryLog,
       validatedData,
       registration,
-      wasteRecordsRepository,
       summaryLogRowStateRepository,
       ledgerRepository
     })
@@ -602,7 +595,6 @@ const classifyAndPersistResult = async ({
  *   logger: TypedLogger,
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationsRepository: OrganisationsRepository,
- *   wasteRecordsRepository: WasteRecordsRepository,
  *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
@@ -615,7 +607,6 @@ export const createSummaryLogsValidator = ({
   logger,
   summaryLogsRepository,
   organisationsRepository,
-  wasteRecordsRepository,
   summaryLogRowStateRepository,
   ledgerRepository,
   reportsService,
@@ -645,13 +636,11 @@ export const createSummaryLogsValidator = ({
     const validationStart = Date.now()
     const { issues, wasteRecords, meta, registration } =
       await performValidationChecks({
-        summaryLogId,
         summaryLog,
         loggingContext,
         logger,
         summaryLogExtractor,
         organisationsRepository,
-        wasteRecordsRepository,
         summaryLogRowStateRepository,
         ledgerRepository,
         validateDataSyntax

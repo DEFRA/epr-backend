@@ -130,7 +130,6 @@ describe('SummaryLogsValidator integration', () => {
       logger,
       summaryLogsRepository,
       organisationsRepository,
-      wasteRecordsRepository,
       summaryLogRowStateRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
