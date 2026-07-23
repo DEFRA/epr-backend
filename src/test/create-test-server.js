@@ -242,13 +242,13 @@ function attachLoggerMocks(testServer) {
 
   testServer.ext('onRequest', (request, h) => {
     vi.spyOn(request.logger, 'info').mockImplementation(
-      testServer.loggerMocks.info
+      /** @type {(...args: unknown[]) => void} */ (testServer.loggerMocks.info)
     )
     vi.spyOn(request.logger, 'error').mockImplementation(
-      testServer.loggerMocks.error
+      /** @type {(...args: unknown[]) => void} */ (testServer.loggerMocks.error)
     )
     vi.spyOn(request.logger, 'warn').mockImplementation(
-      testServer.loggerMocks.warn
+      /** @type {(...args: unknown[]) => void} */ (testServer.loggerMocks.warn)
     )
     return h.continue
   })
