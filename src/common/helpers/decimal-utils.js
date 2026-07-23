@@ -59,16 +59,6 @@ export function toNumber(value) {
 }
 
 /**
- * Convert a numeric value to a canonical decimal string using Decimal.js.
- *
- * @param {DecimalValue} value
- * @returns {string}
- */
-export function toDecimalString(value) {
-  return toDecimal(value).toString()
-}
-
-/**
  * Round a value to two decimal places using half-up rounding.
  *
  * @param {DecimalValue|null|undefined} value - Value to round

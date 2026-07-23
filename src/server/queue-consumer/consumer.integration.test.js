@@ -66,7 +66,6 @@ describe('SQS command queue consumer integration', () => {
   let logger
   let summaryLogsRepository
   let organisationsRepository
-  let wasteRecordsRepository
   let wasteBalanceService
   let summaryLogExtractor
 
@@ -80,7 +79,6 @@ describe('SQS command queue consumer integration', () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     organisationsRepository = {}
-    wasteRecordsRepository = {}
     wasteBalanceService = {}
 
     // Mock extractor - not used in these tests but required by consumer
@@ -100,7 +98,6 @@ describe('SQS command queue consumer integration', () => {
         logger,
         summaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
         wasteBalanceService,
         summaryLogExtractor
       },
@@ -146,7 +143,6 @@ describe('SQS command queue consumer integration', () => {
               logger,
               summaryLogsRepository,
               organisationsRepository,
-              wasteRecordsRepository,
               wasteBalanceService,
               summaryLogExtractor
             },
@@ -221,7 +217,6 @@ describe('SQS command queue consumer integration', () => {
                 logger,
                 summaryLogsRepository,
                 organisationsRepository,
-                wasteRecordsRepository,
                 wasteBalanceService,
                 summaryLogExtractor,
                 user
@@ -616,7 +611,6 @@ describe('SQS command queue consumer integration', () => {
             logger,
             summaryLogsRepository,
             organisationsRepository,
-            wasteRecordsRepository,
             wasteBalanceService,
             summaryLogExtractor
           },

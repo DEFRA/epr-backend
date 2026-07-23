@@ -38,7 +38,6 @@ import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mon
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
 import { mongoWasteBalanceServicePlugin } from '#waste-balances/repository/mongodb.plugin.js'
-import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
 import { mongoSummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/mongodb.plugin.js'
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
@@ -125,7 +124,6 @@ function getProductionPlugins(config) {
     },
     mongoSummaryLogsRepositoryPlugin,
     mongoFormSubmissionsRepositoryPlugin,
-    mongoWasteRecordsRepositoryPlugin,
     mongoLedgerRepositoryPlugin,
     mongoWasteBalanceServicePlugin,
     mongoSystemLogsRepositoryPlugin,

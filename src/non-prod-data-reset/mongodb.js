@@ -17,7 +17,6 @@ const COLLECTIONS = {
   ACCREDITATION: 'accreditation',
   PACKAGING_RECYCLING_NOTES: 'packaging-recycling-notes',
   REPORTS: 'reports',
-  WASTE_RECORDS: 'waste-records',
   SUMMARY_LOGS: 'summary-logs',
   OVERSEAS_SITES: 'overseas-sites',
   SYSTEM_LOGS: 'system-logs',
@@ -30,7 +29,6 @@ const EMPTY_COUNTS = Object.freeze({
   'waste-balance-events': 0,
   'summary-log-row-states': 0,
   reports: 0,
-  'waste-records': 0,
   'summary-logs': 0,
   'overseas-sites': 0,
   'system-logs': 0,
@@ -98,11 +96,6 @@ const buildCascadeSteps = (orgId, mongoIdHex, { overseasSiteIds }) => [
   {
     label: 'reports',
     collection: COLLECTIONS.REPORTS,
-    filter: { organisationId: mongoIdHex }
-  },
-  {
-    label: 'waste-records',
-    collection: COLLECTIONS.WASTE_RECORDS,
     filter: { organisationId: mongoIdHex }
   },
   {

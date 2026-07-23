@@ -4,7 +4,6 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
@@ -64,7 +63,6 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         organisationsRepository: createInMemoryOrganisationsRepository([
           partialMock(org)
         ]),
-        wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
         reportsRepository: reportsRepositoryFactory
       }
     })
@@ -112,7 +110,6 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         organisationsRepository: createInMemoryOrganisationsRepository([
           partialMock(org)
         ]),
-        wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
         reportsRepository: reportsRepositoryFactory
       }
     })
@@ -156,7 +153,6 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         organisationsRepository: createInMemoryOrganisationsRepository([
           partialMock(org)
         ]),
-        wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
         reportsRepository: reportsRepositoryFactory
       }
     })
@@ -318,7 +314,6 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
             organisationsRepository: createInMemoryOrganisationsRepository([
               partialMock(org)
             ]),
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
             reportsRepository: createInMemoryReportsRepository()
           }
         })
@@ -471,7 +466,6 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
             organisationsRepository: createInMemoryOrganisationsRepository([
               partialMock(org)
             ]),
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
             reportsRepository: reportsRepositoryFactory
           }
         })
