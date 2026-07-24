@@ -36,7 +36,6 @@ import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
 import { createInMemoryWasteBalanceServicePlugin } from '#waste-balances/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-inmemory.plugin.js'
-import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
 
 /** @import { Lifecycle, Plugin } from '@hapi/hapi' */
@@ -119,10 +118,6 @@ const repositoryConfigs = [
   {
     name: 'formSubmissionsRepository',
     createDefault: createInMemoryFormSubmissionsRepositoryPlugin
-  },
-  {
-    name: 'wasteRecordsRepository',
-    createDefault: createInMemoryWasteRecordsRepositoryPlugin
   },
   {
     name: 'summaryLogRowStatesRepository',
@@ -242,13 +237,13 @@ function attachLoggerMocks(testServer) {
 
   testServer.ext('onRequest', (request, h) => {
     vi.spyOn(request.logger, 'info').mockImplementation(
-      testServer.loggerMocks.info
+      /** @type {(...args: unknown[]) => void} */ (testServer.loggerMocks.info)
     )
     vi.spyOn(request.logger, 'error').mockImplementation(
-      testServer.loggerMocks.error
+      /** @type {(...args: unknown[]) => void} */ (testServer.loggerMocks.error)
     )
     vi.spyOn(request.logger, 'warn').mockImplementation(
-      testServer.loggerMocks.warn
+      /** @type {(...args: unknown[]) => void} */ (testServer.loggerMocks.warn)
     )
     return h.continue
   })

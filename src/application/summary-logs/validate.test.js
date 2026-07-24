@@ -157,32 +157,6 @@ const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
   data
 })
 
-const buildExistingWasteRecord = (rowData, overrides = {}) => {
-  const dataWithProcessingType = {
-    ...rowData,
-    processingType: 'REPROCESSOR_INPUT'
-  }
-  return {
-    type: 'received',
-    rowId: String(rowData.ROW_ID),
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    data: dataWithProcessingType,
-    versions: [
-      {
-        createdAt: '2025-01-01T00:00:00.000Z',
-        status: 'created',
-        summaryLog: {
-          id: 'previous-summary-log',
-          uri: 's3://bucket/old-key'
-        },
-        data: dataWithProcessingType
-      }
-    ],
-    ...overrides
-  }
-}
-
 // ============================================================================
 
 const mockLoggerInfo = vi.fn()
@@ -219,7 +193,6 @@ describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
   let summaryLogsRepository
   let organisationsRepository
-  let wasteRecordsRepository
   let summaryLogRowStateRepository
   let ledgerRepository
   let validateSummaryLog
@@ -257,10 +230,6 @@ describe('SummaryLogsValidator', () => {
           ]
         }
       })
-    }
-
-    wasteRecordsRepository = {
-      findByRegistration: vi.fn().mockResolvedValue([])
     }
 
     summaryLogId = 'summary-log-123'
@@ -913,9 +882,6 @@ describe('SummaryLogsValidator', () => {
           code: 'HEADER_REQUIRED'
         })
       )
-
-      // Should NOT fetch existing waste records (Level 4 transform didn't run)
-      expect(wasteRecordsRepository.findByRegistration).not.toHaveBeenCalled()
     })
   })
 
@@ -2122,13 +2088,6 @@ describe('SummaryLogsValidator', () => {
           }
         })
       )
-
-      // The transform's change/version reconciliation reads the waste-records
-      // collection; the continuity check reads submitted row states. This test
-      // seeds both so the truncation assertion exercises the real transform.
-      wasteRecordsRepository.findByRegistration.mockResolvedValue([
-        buildExistingWasteRecord(buildReceivedLoadRow({ ROW_ID: 10000 }))
-      ])
 
       // A previously submitted row whose ROW_ID is NOT in the current upload
       // triggers a fatal SEQUENTIAL_ROW_REMOVED error during data-business

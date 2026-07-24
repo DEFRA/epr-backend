@@ -6,18 +6,10 @@ import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
 
 /**
  * @import { Collection } from 'mongodb'
- * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
  */
 
 const PRODUCTION = () => true
 const NON_PRODUCTION = () => false
-
-/** @type {WasteRecordsRepository} */
-const mockWasteRecordsRepository = {
-  appendVersions: vi.fn(async () => {}),
-  findByRegistration: vi.fn(async () => []),
-  findDistinctDataKeys: vi.fn(async () => [])
-}
 
 describe('createSeedData', () => {
   it('does not create seed data in production', async () => {
@@ -27,8 +19,7 @@ describe('createSeedData', () => {
     await createSeedData(
       mockDb,
       PRODUCTION,
-      createInMemoryOrganisationsRepository()(),
-      mockWasteRecordsRepository
+      createInMemoryOrganisationsRepository()()
     )
     expect(insertions).toHaveLength(0)
   })
@@ -43,8 +34,7 @@ describe('createSeedData', () => {
       await createSeedData(
         mockDb,
         NON_PRODUCTION,
-        createInMemoryOrganisationsRepository()(),
-        mockWasteRecordsRepository
+        createInMemoryOrganisationsRepository()()
       )
 
       expect(insertions.map((insertion) => insertion.collectionName)).toContain(
@@ -61,12 +51,7 @@ describe('createSeedData', () => {
     const repository = createInMemoryOrganisationsRepository()()
     const spy = vi.spyOn(repository, 'insert')
 
-    await createSeedData(
-      mockDb,
-      NON_PRODUCTION,
-      repository,
-      mockWasteRecordsRepository
-    )
+    await createSeedData(mockDb, NON_PRODUCTION, repository)
 
     expect(spy).toHaveBeenCalled()
   })
@@ -81,8 +66,7 @@ describe('createSeedData', () => {
       await createSeedData(
         mockDb,
         NON_PRODUCTION,
-        createInMemoryOrganisationsRepository()(),
-        mockWasteRecordsRepository
+        createInMemoryOrganisationsRepository()()
       )
 
       expect(
@@ -104,29 +88,9 @@ describe('createSeedData', () => {
     const repository = createInMemoryOrganisationsRepository()()
     const spy = vi.spyOn(repository, 'insert')
 
-    await createSeedData(
-      mockDb,
-      NON_PRODUCTION,
-      repository,
-      mockWasteRecordsRepository
-    )
+    await createSeedData(mockDb, NON_PRODUCTION, repository)
 
     expect(spy).not.toHaveBeenCalled()
-  })
-
-  it('creates waste records seed data using repository', async () => {
-    const { mockDb } = createMockDb({
-      countDocuments: async () => 0
-    })
-
-    await createSeedData(
-      mockDb,
-      NON_PRODUCTION,
-      createInMemoryOrganisationsRepository()(),
-      mockWasteRecordsRepository
-    )
-
-    expect(mockWasteRecordsRepository.appendVersions).toHaveBeenCalled()
   })
 })
 

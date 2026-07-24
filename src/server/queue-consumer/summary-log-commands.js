@@ -64,9 +64,9 @@ const userSchema = Joi.object({
  * @typedef {object} CommandHandler
  * @property {string} command - The command string (e.g. 'validate', 'submit')
  * @property {import('joi').ObjectSchema} payloadSchema - Validates everything except 'command'
- * @property {(payload: object, deps: object) => Promise<void>} execute - Runs the command
- * @property {(payload: object, deps: object) => Promise<void>} onFailure - Marks as failed on terminal error
- * @property {(payload: object) => string} describe - Returns logging context
+ * @property {(payload: any, deps: any) => Promise<void>} execute - Runs the command
+ * @property {(payload: any, deps: any) => Promise<void>} onFailure - Marks as failed on terminal error
+ * @property {(payload: any) => string} describe - Returns logging context
  */
 
 /** @type {CommandHandler[]} */

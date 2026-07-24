@@ -3,7 +3,6 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   createMockOrganisationsRepository,
   createMockSummaryLogsRepository,
-  createMockWasteRecordsRepository,
   createMockSystemLogsRepository,
   createMockFormSubmissionsRepository,
   createMockPackagingRecyclingNotesRepository,
@@ -46,10 +45,6 @@ describe('mock-repositories', () => {
         'transitionToSubmittingExclusive',
         'getDownloadUrl'
       ]
-    },
-    createMockWasteRecordsRepository: {
-      build: createMockWasteRecordsRepository,
-      methods: ['findByRegistration', 'appendVersions', 'findDistinctDataKeys']
     },
     createMockSystemLogsRepository: {
       build: createMockSystemLogsRepository,

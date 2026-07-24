@@ -15,7 +15,6 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 
@@ -121,7 +120,6 @@ describe('SummaryLogsValidator integration', () => {
     const extractor =
       summaryLogExtractor || createExtractor(summaryLog.file.id, metadata, data)
 
-    const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
     const ledgerRepository = createInMemoryLedgerRepository()()
     const summaryLogRowStateRepository =
       createInMemorySummaryLogRowStateRepository()()
@@ -149,8 +147,7 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogId,
       updated,
       summaryLog,
-      testOrg,
-      wasteRecordsRepository
+      testOrg
     }
   }
 
@@ -589,7 +586,7 @@ describe('SummaryLogsValidator integration', () => {
     })
 
     it('should validate successfully with data rows present', async () => {
-      const { updated, testOrg, wasteRecordsRepository } = await runValidation({
+      const { updated } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-789',
         metadata: registeredOnlyMetadata,
@@ -661,12 +658,6 @@ describe('SummaryLogsValidator integration', () => {
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
       expect(updated.summaryLog.validation.issues).toEqual([])
-
-      const wasteRecords = await wasteRecordsRepository.findByRegistration(
-        testOrg.id,
-        testOrg.registrations[0].id
-      )
-      expect(wasteRecords).toEqual([])
     })
   })
 
