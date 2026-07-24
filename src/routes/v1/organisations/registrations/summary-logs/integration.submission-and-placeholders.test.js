@@ -21,7 +21,6 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -358,9 +357,6 @@ describe('Submission and placeholder tests', () => {
         [secondFileId]: { meta: sharedMeta, data: secondUploadData }
       })
 
-      const wasteRecordsRepositoryFactory =
-        createInMemoryWasteRecordsRepository()
-
       // Validate reads and submit writes the same latest-submitted row states,
       // so both paths must share one ledger and one row-state repository.
       ledgerRepository = createInMemoryLedgerRepository()()
@@ -424,7 +420,6 @@ describe('Submission and placeholder tests', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          wasteRecordsRepository: wasteRecordsRepositoryFactory,
           organisationsRepository: () => organisationsRepository,
           systemLogsRepository: createSystemLogsRepository()
         },

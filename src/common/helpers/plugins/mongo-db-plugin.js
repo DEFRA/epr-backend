@@ -1,6 +1,5 @@
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { isProductionEnvironment } from '#root/config.js'
 import { LockManager } from 'mongo-locks'
 import {
@@ -43,14 +42,11 @@ export const mongoDbPlugin = {
 
       const organisationsRepositoryFactory =
         await createOrganisationsRepository(db)
-      const wasteRecordsRepositoryFactory =
-        await createWasteRecordsRepository(db)
 
       await createSeedData(
         db,
         isProductionEnvironment,
-        organisationsRepositoryFactory(),
-        wasteRecordsRepositoryFactory()
+        organisationsRepositoryFactory()
       )
 
       server.logger.info({

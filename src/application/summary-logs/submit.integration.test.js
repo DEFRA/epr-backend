@@ -21,7 +21,6 @@ import {
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -110,7 +109,6 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
   const organisationsRepository = createInMemoryOrganisationsRepository([
     buildTestOrg(organisationId, registrationId)
   ])()
-  const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
 
   const summaryLog = summaryLogFactory.submitting({
     organisationId,
@@ -130,7 +128,6 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     logger,
     summaryLogsRepository,
     organisationsRepository,
-    wasteRecordsRepository,
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStateRepository()(),
     ledgerRepository,
@@ -147,8 +144,7 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     summaryLogId,
     organisationId,
     registrationId,
-    summaryLogsRepository,
-    wasteRecordsRepository
+    summaryLogsRepository
   }
 }
 
@@ -160,7 +156,6 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       organisationId,
       registrationId,
-      wasteRecordsRepository,
       summaryLogsRepository
     } = await setupSubmit({
       reportsRepository,
@@ -177,12 +172,6 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     await expect(submitSummaryLog(summaryLogId, deps)).rejects.toBeInstanceOf(
       PermanentError
     )
-
-    const wasteRecords = await wasteRecordsRepository.findByRegistration(
-      organisationId,
-      registrationId
-    )
-    expect(wasteRecords).toEqual([])
 
     // The guard throws before any write, so the log is untouched at version 1.
     const { summaryLog, version } = await waitForVersion(

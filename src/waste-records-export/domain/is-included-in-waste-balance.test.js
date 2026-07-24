@@ -2,10 +2,25 @@ import { getWasteBalanceClassification } from './is-included-in-waste-balance.js
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { buildWasteRecord } from '#repositories/waste-records/contract/test-data.js'
 import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 /** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
+
+/**
+ * @param {{ type?: import('#domain/waste-records/model.js').WasteRecordType, data?: object }} [overrides]
+ */
+const buildWasteRecord = ({
+  type = WASTE_RECORD_TYPE.RECEIVED,
+  data = {},
+  ...overrides
+} = {}) => ({
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  rowId: '1001',
+  type,
+  data,
+  ...overrides
+})
 
 const accreditation = /** @type {Accreditation} */ (
   /** @type {unknown} */ (

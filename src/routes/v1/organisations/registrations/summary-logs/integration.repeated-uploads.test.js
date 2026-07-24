@@ -14,7 +14,6 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -246,9 +245,6 @@ describe('Repeated uploads of identical data', () => {
         [secondFileId]: { meta: sharedMeta, data: identicalUploadData }
       })
 
-      const wasteRecordsRepositoryFactory =
-        createInMemoryWasteRecordsRepository()
-
       // Validate reads and submit writes the same latest-submitted row states,
       // so both paths must share one ledger and one row-state repository.
       ledgerRepository = createInMemoryLedgerRepository()()
@@ -309,7 +305,6 @@ describe('Repeated uploads of identical data', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          wasteRecordsRepository: wasteRecordsRepositoryFactory,
           organisationsRepository: () => organisationsRepository
         },
         workers: {
