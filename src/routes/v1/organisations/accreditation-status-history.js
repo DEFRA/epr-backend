@@ -27,7 +27,12 @@ export const accreditationStatusHistory = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{ status: RegAccStatus }> & {
+   * @param {import('#common/hapi-types.js').HapiRequest<{
+   *    fromStatus: RegAccStatus,
+   *    toStatus: RegAccStatus,
+   *    appliesFrom?: string,
+   *    accreditationNumber?: string
+   * }> & {
    *    organisationsRepository: OrganisationsRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string, accreditationId: string }
@@ -38,7 +43,8 @@ export const accreditationStatusHistory = {
   handler: async (request, h) => {
     const { organisationsRepository } = request
     const { organisationId, registrationId, accreditationId } = request.params
-    const { status } = request.payload
+    const { fromStatus, toStatus, appliesFrom, accreditationNumber } =
+      request.payload
 
     const initial = await organisationsRepository.findById(organisationId)
 
@@ -58,11 +64,35 @@ export const accreditationStatusHistory = {
       )
     }
 
+    if (accreditation.status !== fromStatus) {
+      throw Boom.badData(
+        `Cannot transition accreditation from ${fromStatus}: its status is ${accreditation.status}`
+      )
+    }
+
     // Route-level check is required, not belt-and-braces: the repository's
     // assertAndHandleItemStateTransition skips validation when the status is
     // unchanged, so suspended -> suspended via replace() would otherwise be a
     // silent no-op instead of the required 422.
-    assertRegAccStatusTransitionValid(accreditation.status, status)
+    assertRegAccStatusTransitionValid(fromStatus, toStatus)
+
+    // Granting issues the accreditation number, which must not already be in
+    // use by any accreditation in any organisation.
+    if (accreditationNumber) {
+      const holder =
+        await organisationsRepository.findByAccreditationNumber(
+          accreditationNumber
+        )
+      if (holder) {
+        throw Boom.badData(
+          `Accreditation number ${accreditationNumber} is already in use`
+        )
+      }
+    }
+
+    const grantFields = accreditationNumber
+      ? { accreditationNumber, validFrom: appliesFrom }
+      : {}
 
     const { id, version, ...orgFields } = initial
 
@@ -73,7 +103,11 @@ export const accreditationStatusHistory = {
         acc.id === accreditationId
           ? // The transition assert above guarantees the requested status is
             // reachable from the current one, so the result is a valid item.
-            /** @type {typeof acc} */ ({ ...acc, status })
+            /** @type {typeof acc} */ ({
+              ...acc,
+              status: toStatus,
+              ...grantFields
+            })
           : acc
       )
     }
@@ -82,6 +116,6 @@ export const accreditationStatusHistory = {
     const updated = await organisationsRepository.findById(id, version + 1)
     await auditOrganisationUpdate(request, id, initial, updated)
 
-    return h.response({ status }).code(StatusCodes.OK)
+    return h.response({ status: toStatus }).code(StatusCodes.OK)
   }
 }

@@ -34,15 +34,16 @@ vi.mock('@defra/cdp-auditing', () => ({
  * accreditation whose statusHistory ends in the given status, plus an
  * unrelated second (unlinked, 'created') accreditation used to assert that
  * changing the target's status leaves other accreditations untouched.
- * The linked registration is 'created' by default; reinstating the
+ * The linked registration is 'created' by default; approving the
  * accreditation requires an approved registration, so tests opt in via
- * registrationStatus.
+ * registrationStatus. accreditationOverrides lets grant tests shape the
+ * target accreditation (e.g. no number yet).
  * @param {string} status
- * @param {{ registrationStatus?: string }} [options]
+ * @param {{ registrationStatus?: string, accreditationOverrides?: object }} [options]
  */
 const buildOrgWithAccreditationStatus = (
   status,
-  { registrationStatus = 'created' } = {}
+  { registrationStatus = 'created', accreditationOverrides = {} } = {}
 ) => {
   const accreditationId = new ObjectId().toString()
   const registration = buildRegistration({
@@ -77,7 +78,8 @@ const buildOrgWithAccreditationStatus = (
               { status: 'created', updatedAt: '2024-01-01' },
               { status, updatedAt: '2024-02-01' }
             ]
-      )
+      ),
+    ...accreditationOverrides
   })
   const otherAccreditation = buildAccreditation()
 
@@ -98,17 +100,24 @@ const statusHistoryUrl = ({
 }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/status-history`
 
-const suspendPayload = { status: 'suspended' }
-const reinstatePayload = { status: 'approved' }
+const suspendPayload = { fromStatus: 'approved', toStatus: 'suspended' }
+const reinstatePayload = { fromStatus: 'suspended', toStatus: 'approved' }
+const grantPayload = {
+  fromStatus: 'created',
+  toStatus: 'approved',
+  appliesFrom: '2026-08-01',
+  accreditationNumber: 'ACC999999'
+}
 
 describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history', () => {
   setupAuthContext()
   let server
 
-  const seedOrg = async (status, options) => {
-    const fixture = buildOrgWithAccreditationStatus(status, options)
+  const seedOrg = async (status, options = {}) => {
+    const { extraOrgs = [], ...builderOptions } = options
+    const fixture = buildOrgWithAccreditationStatus(status, builderOptions)
     const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository([fixture])
+      createInMemoryOrganisationsRepository([fixture, ...extraOrgs])
 
     server = await createTestServer({
       repositories: {
@@ -275,9 +284,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     })
   })
 
-  describe('invalid status transitions', () => {
+  describe('fromStatus mismatch', () => {
     it.each(['created', 'suspended', 'rejected', 'cancelled'])(
-      'returns 422 when the accreditation is currently %s',
+      'returns 422 when suspending an accreditation that is currently %s',
       async (status) => {
         const ctx = await seedOrg(status)
 
@@ -291,7 +300,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
         const body = JSON.parse(response.payload)
         expect(body.message).toMatch(
-          new RegExp(`Cannot transition .* from ${status} to suspended`)
+          new RegExp(
+            `Cannot transition accreditation from approved: its status is ${status}`
+          )
         )
       }
     )
@@ -358,10 +369,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
     })
 
-    // Not exhaustive over statuses: the map also allows created -> approved
-    // (grant) and cancelled -> approved (reinstate after cancellation), which
-    // are separate stories exercised through the same endpoint.
-    it.each(['approved', 'rejected'])(
+    it.each(['approved', 'rejected', 'created'])(
       'returns 422 when the accreditation is currently %s',
       async (status) => {
         const ctx = await seedOrg(status, { registrationStatus: 'approved' })
@@ -376,19 +384,182 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
         const body = JSON.parse(response.payload)
         expect(body.message).toMatch(
-          new RegExp(`Cannot transition .* from ${status} to approved`)
+          new RegExp(
+            `Cannot transition accreditation from suspended: its status is ${status}`
+          )
         )
       }
     )
   })
 
+  describe('granting a created accreditation', () => {
+    // A created accreditation has no number or validFrom yet; validTo is
+    // owned by the application data and must already be present.
+    const ungrantedAccreditation = {
+      accreditationNumber: null,
+      validFrom: null,
+      validTo: '2026-12-31'
+    }
+
+    const buildOrgHoldingNumber = (accreditationNumber) =>
+      /** @type {import('#domain/organisations/model.js').Organisation} */ (
+        /** @type {unknown} */ (
+          buildOrganisation({
+            accreditations: [buildAccreditation({ accreditationNumber })]
+          })
+        )
+      )
+
+    it('grants the accreditation, issuing the number and setting validFrom to appliesFrom', async () => {
+      const ctx = await seedOrg('created', {
+        registrationStatus: 'approved',
+        accreditationOverrides: ungrantedAccreditation
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: grantPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({ status: 'approved' })
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const updatedOrg = JSON.parse(getResponse.payload)
+      const accreditation = updatedOrg.accreditations.find(
+        (a) => a.id === ctx.accreditationId
+      )
+
+      expect(accreditation.status).toBe('approved')
+      expect(accreditation.accreditationNumber).toBe('ACC999999')
+      expect(accreditation.validFrom).toBe('2026-08-01')
+      expect(accreditation.validTo).toBe('2026-12-31')
+      expect(accreditation.statusHistory.map((e) => e.status)).toEqual([
+        'created',
+        'approved'
+      ])
+    })
+
+    it('returns 422 when the accreditation number is already in use by another organisation', async () => {
+      const ctx = await seedOrg('created', {
+        registrationStatus: 'approved',
+        accreditationOverrides: ungrantedAccreditation,
+        extraOrgs: [buildOrgHoldingNumber('ACC555555')]
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: { ...grantPayload, accreditationNumber: 'ACC555555' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /Accreditation number ACC555555 is already in use/
+      )
+    })
+
+    it('returns 422 when the linked registration is not approved', async () => {
+      const ctx = await seedOrg('created', {
+        accreditationOverrides: ungrantedAccreditation
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: grantPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /approved but not linked to an approved registration/
+      )
+    })
+
+    it('returns 422 when the accreditation has no validTo, which granting does not set', async () => {
+      const ctx = await seedOrg('created', {
+        registrationStatus: 'approved',
+        accreditationOverrides: { ...ungrantedAccreditation, validTo: null }
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: grantPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(/validTo/)
+    })
+
+    it('returns 422 when the accreditation is not currently created', async () => {
+      const ctx = await seedOrg('suspended', { registrationStatus: 'approved' })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: grantPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /Cannot transition accreditation from created: its status is suspended/
+      )
+    })
+  })
+
   describe('payload validation', () => {
     it.each([
       ['payload is missing', undefined],
-      ['status is missing', {}],
-      ['status is not a supported transition target', { status: 'cancelled' }],
-      ['status is not a known status', { status: 'nonsense' }],
-      ['payload has unexpected fields', { status: 'suspended', reason: 'x' }]
+      ['payload is empty', {}],
+      ['payload uses the old status-only shape', { status: 'suspended' }],
+      [
+        'the from/to pair is not a supported transition',
+        { fromStatus: 'suspended', toStatus: 'cancelled' }
+      ],
+      [
+        'toStatus is not a known status',
+        { fromStatus: 'approved', toStatus: 'nonsense' }
+      ],
+      ['payload has unexpected fields', { ...suspendPayload, reason: 'x' }],
+      [
+        'a non-grant transition carries grant fields',
+        {
+          ...reinstatePayload,
+          appliesFrom: '2026-08-01',
+          accreditationNumber: 'ACC999999'
+        }
+      ],
+      [
+        'a grant is missing appliesFrom',
+        { ...grantPayload, appliesFrom: undefined }
+      ],
+      [
+        'a grant is missing the accreditation number',
+        { ...grantPayload, accreditationNumber: undefined }
+      ],
+      [
+        'a grant has an invalid appliesFrom date',
+        { ...grantPayload, appliesFrom: '2026-13-45' }
+      ],
+      [
+        'a grant has an empty accreditation number',
+        { ...grantPayload, accreditationNumber: ' ' }
+      ]
     ])('returns 422 when %s', async (_label, payload) => {
       const ctx = await seedOrg('approved')
 

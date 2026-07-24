@@ -24,6 +24,7 @@ describe('mock-repositories', () => {
         'findByIds',
         'findById',
         'findByLinkedDefraOrgId',
+        'findByAccreditationNumber',
         'findAllLinked',
         'findAllLinkableForUser',
         'findRegistrationById',
