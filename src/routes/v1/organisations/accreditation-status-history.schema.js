@@ -9,7 +9,7 @@ import { REG_ACC_STATUS } from '#domain/organisations/model.js'
  * suspended -> approved (reinstate) because granting requires the
  * accreditation number, which is set on first approval.
  */
-const suspendedSchema = Joi.object({
+const approvedToSuspendedSchema = Joi.object({
   status: Joi.string().valid(REG_ACC_STATUS.SUSPENDED).required()
 })
 
@@ -18,5 +18,5 @@ const suspendedToApprovedSchema = Joi.object({
 })
 
 export const accreditationStatusHistoryPayloadSchema = Joi.alternatives()
-  .try(suspendedSchema, suspendedToApprovedSchema)
+  .try(approvedToSuspendedSchema, suspendedToApprovedSchema)
   .required()
