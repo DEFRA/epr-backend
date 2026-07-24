@@ -435,6 +435,39 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
+
+    it('returns 404 when the registration does not exist on the organisation', async () => {
+      const ctx = await seedOrg('approved')
+      const nonExistentRegistrationId = new ObjectId().toString()
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl({
+          ...ctx,
+          registrationId: nonExistentRegistrationId
+        }),
+        payload: suspendPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 404 when the accreditation is not linked to the registration', async () => {
+      const ctx = await seedOrg('approved')
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl({
+          ...ctx,
+          accreditationId: ctx.otherAccreditationId
+        }),
+        payload: suspendPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
   })
 
   describe('downstream effect: PRN issuance', () => {
