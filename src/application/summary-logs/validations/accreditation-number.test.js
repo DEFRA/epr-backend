@@ -180,6 +180,33 @@ describe('validateAccreditationNumber', () => {
     })
   })
 
+  it('returns no issues when accreditation numbers match even though the accreditation is suspended', () => {
+    const registration = {
+      id: 'reg-123',
+      accreditation: {
+        id: 'acc-123',
+        accreditationNumber: '12345678',
+        status: 'suspended'
+      }
+    }
+    const parsed = {
+      meta: {
+        ACCREDITATION_NUMBER: {
+          value: '12345678'
+        }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(false)
+    expect(issues.getAllIssues()).toHaveLength(0)
+  })
+
   it('returns no issues when registration has no accreditation and spreadsheet is blank', () => {
     const registration = {
       id: 'reg-123'
