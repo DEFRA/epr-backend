@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
@@ -36,16 +37,26 @@ export const accreditationStatusHistory = {
    */
   handler: async (request, h) => {
     const { organisationsRepository } = request
-    const { organisationId, accreditationId } = request.params
+    const { organisationId, registrationId, accreditationId } = request.params
     const { status } = request.payload
 
-    const [accreditation, initial] = await Promise.all([
-      organisationsRepository.findAccreditationById(
-        organisationId,
-        accreditationId
-      ),
-      organisationsRepository.findById(organisationId)
-    ])
+    const initial = await organisationsRepository.findById(organisationId)
+
+    const accreditation = initial.accreditations.find(
+      (acc) => acc.id === accreditationId
+    )
+    if (!accreditation) {
+      throw Boom.notFound(`Accreditation with id ${accreditationId} not found`)
+    }
+
+    const registration = initial.registrations.find(
+      (reg) => reg.id === registrationId
+    )
+    if (registration?.accreditationId !== accreditationId) {
+      throw Boom.notFound(
+        `Accreditation with id ${accreditationId} not found on registration ${registrationId}`
+      )
+    }
 
     // Route-level check is required, not belt-and-braces: the repository's
     // assertAndHandleItemStateTransition skips validation when the status is
