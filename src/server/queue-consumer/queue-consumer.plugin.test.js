@@ -43,7 +43,6 @@ describe('commandQueueConsumerPlugin', () => {
       app: {
         summaryLogsRepository: {},
         organisationsRepository: {},
-        wasteRecordsRepository: {},
         wasteBalanceService: {},
         uploadsRepository: {},
         reportsRepository: {},
@@ -103,7 +102,6 @@ describe('commandQueueConsumerPlugin', () => {
         [
           'summaryLogsRepository',
           'organisationsRepository',
-          'wasteRecordsRepository',
           'wasteBalanceService',
           'uploadsRepository',
           'reportsRepository',
@@ -175,7 +173,6 @@ describe('commandQueueConsumerPlugin', () => {
           logger: server.logger,
           summaryLogsRepository: server.app.summaryLogsRepository,
           organisationsRepository: server.app.organisationsRepository,
-          wasteRecordsRepository: server.app.wasteRecordsRepository,
           wasteBalanceService: server.app.wasteBalanceService,
           reportsService: expect.objectContaining({
             hasReportSubmittedSince: expect.any(Function),

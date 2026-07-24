@@ -7,6 +7,7 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
+import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS,
@@ -71,7 +72,9 @@ describe('Submission and placeholder tests', () => {
     const secondSummaryLogId = 'summary-submit-test-2'
     const secondFileId = 'file-submit-456'
     const secondFilename = 'waste-data-2.xlsx'
-    let wasteRecordsRepository
+    let summaryLogRowStateRepository
+    let ledgerRepository
+    let accreditationId
     let submitResponse
     let server
 
@@ -81,7 +84,7 @@ describe('Submission and placeholder tests', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-      const accreditationId = new ObjectId().toString()
+      accreditationId = new ObjectId().toString()
       const testOrg = buildReadOrganisation({
         registrations: [
           partialMock({
@@ -357,19 +360,17 @@ describe('Submission and placeholder tests', () => {
 
       const wasteRecordsRepositoryFactory =
         createInMemoryWasteRecordsRepository()
-      wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
       // Validate reads and submit writes the same latest-submitted row states,
       // so both paths must share one ledger and one row-state repository.
-      const ledgerRepository = createInMemoryLedgerRepository()()
-      const summaryLogRowStateRepository =
+      ledgerRepository = createInMemoryLedgerRepository()()
+      summaryLogRowStateRepository =
         createInMemorySummaryLogRowStateRepository()()
       const featureFlags = createInMemoryFeatureFlags()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
         summaryLogRowStateRepository,
         ledgerRepository,
         summaryLogExtractor: validationExtractor,
@@ -382,9 +383,9 @@ describe('Submission and placeholder tests', () => {
 
       const syncWasteRecords = syncFromSummaryLog({
         extractor: transformationExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStateRepository,
+        ledgerRepository,
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])
@@ -483,15 +484,19 @@ describe('Submission and placeholder tests', () => {
       expect(submitResponse.statusCode).toBe(200)
     })
 
-    it('should create waste records from summary log data', async () => {
-      const wasteRecords = await wasteRecordsRepository.findByRegistration(
+    it('should commit the submission rows as row states', async () => {
+      const rowStates = await summaryLogRowStatesForRegistration({
         organisationId,
-        registrationId
-      )
+        registrationId,
+        accreditationId,
+        ledgerRepository,
+        summaryLogRowStateRepository
+      })
 
-      expect(wasteRecords).toHaveLength(2)
-      expect(wasteRecords[0].rowId).toBe('1001')
-      expect(wasteRecords[1].rowId).toBe('1002')
+      expect(rowStates.map((state) => state.rowId).sort()).toEqual([
+        '1001',
+        '1002'
+      ])
     })
 
     it('should update summary log status to SUBMITTED', async () => {
@@ -801,12 +806,9 @@ describe('Submission and placeholder tests', () => {
         uploadsRepository
       })
 
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
         summaryLogRowStateRepository:
           createInMemorySummaryLogRowStateRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),

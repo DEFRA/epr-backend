@@ -25,6 +25,7 @@ import { createInMemoryWasteRecordsRepository } from '#repositories/waste-record
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
@@ -123,6 +124,8 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     [summaryLog.file.id]: { meta: META, data: RECEIVED_DATA }
   })
 
+  const ledgerRepository = createInMemoryLedgerRepository()()
+
   const deps = {
     logger,
     summaryLogsRepository,
@@ -130,9 +133,8 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     wasteRecordsRepository,
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStateRepository()(),
-    wasteBalanceService: createWasteBalanceService(
-      createInMemoryLedgerRepository()()
-    ),
+    ledgerRepository,
+    wasteBalanceService: createWasteBalanceService(ledgerRepository),
     summaryLogExtractor,
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsService: createReportsService(reportsRepository),
@@ -199,7 +201,6 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       organisationId,
       registrationId,
-      wasteRecordsRepository,
       summaryLogsRepository
     } = await setupSubmit({ reportsRepository })
 
@@ -211,12 +212,17 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
     await submitSummaryLog(summaryLogId, deps)
 
-    const wasteRecords = await wasteRecordsRepository.findByRegistration(
+    const rowStates = await summaryLogRowStatesForRegistration({
       organisationId,
-      registrationId
-    )
-    expect(wasteRecords).toHaveLength(2)
-    expect(wasteRecords.map((record) => record.rowId)).toEqual(['1001', '1002'])
+      registrationId,
+      accreditationId: 'acc-123',
+      ledgerRepository: deps.ledgerRepository,
+      summaryLogRowStateRepository: deps.summaryLogRowStatesRepository
+    })
+    expect(rowStates.map((state) => state.rowId).sort()).toEqual([
+      '1001',
+      '1002'
+    ])
 
     const { summaryLog } = await waitForVersion(
       summaryLogsRepository,

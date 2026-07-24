@@ -3,10 +3,7 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
-import {
-  WASTE_RECORD_CHANGE,
-  WASTE_RECORD_TYPE
-} from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
@@ -39,12 +36,10 @@ describe('validateRowContinuity', () => {
         ROW_ID: rowId,
         DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
         GROSS_WEIGHT: 100
-      },
-      versions: []
+      }
     },
     issues: [],
     outcome: ROW_OUTCOME.INCLUDED,
-    change: WASTE_RECORD_CHANGE.CREATED,
     tableName: 'RECEIVED_LOADS_FOR_REPROCESSING',
     wasteRecordType: type
   })
