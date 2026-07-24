@@ -70,10 +70,16 @@ const buildOrgWithAccreditationStatus = (status) => {
   )
 }
 
-const suspendUrl = ({ organisationId, registrationId, accreditationId }) =>
-  `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/suspend`
+const statusHistoryUrl = ({
+  organisationId,
+  registrationId,
+  accreditationId
+}) =>
+  `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/status-history`
 
-describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/suspend', () => {
+const suspendPayload = { status: 'suspended' }
+
+describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history', () => {
   setupAuthContext()
   let server
 
@@ -121,8 +127,9 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
       const ctx = await seedOrg('approved')
 
       const response = await server.inject({
-        method: 'PATCH',
-        url: suspendUrl(ctx),
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: suspendPayload,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -134,8 +141,9 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
       const ctx = await seedOrg('approved')
 
       await server.inject({
-        method: 'PATCH',
-        url: suspendUrl(ctx),
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: suspendPayload,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -175,8 +183,9 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
       )
 
       await server.inject({
-        method: 'PATCH',
-        url: suspendUrl(ctx),
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: suspendPayload,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -200,8 +209,9 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
       const start = new Date()
 
       const response = await server.inject({
-        method: 'PATCH',
-        url: suspendUrl(ctx),
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: suspendPayload,
         headers: { Authorization: `Bearer ${validToken}` }
       })
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -250,8 +260,9 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
         const ctx = await seedOrg(status)
 
         const response = await server.inject({
-          method: 'PATCH',
-          url: suspendUrl(ctx),
+          method: 'POST',
+          url: statusHistoryUrl(ctx),
+          payload: suspendPayload,
           headers: { Authorization: `Bearer ${validToken}` }
         })
 
@@ -264,14 +275,37 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
     )
   })
 
+  describe('payload validation', () => {
+    it.each([
+      ['payload is missing', undefined],
+      ['status is missing', {}],
+      ['status is not a supported transition target', { status: 'approved' }],
+      ['status is not a known status', { status: 'nonsense' }],
+      ['payload has unexpected fields', { status: 'suspended', reason: 'x' }]
+    ])('returns 422 when %s', async (_label, payload) => {
+      const ctx = await seedOrg('approved')
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      // The server-level failAction maps Joi validation errors to 422
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
   describe('not found cases', () => {
     it('returns 404 when the organisation does not exist', async () => {
       const ctx = await seedOrg('approved')
       const nonExistentOrgId = new ObjectId().toString()
 
       const response = await server.inject({
-        method: 'PATCH',
-        url: suspendUrl({ ...ctx, organisationId: nonExistentOrgId }),
+        method: 'POST',
+        url: statusHistoryUrl({ ...ctx, organisationId: nonExistentOrgId }),
+        payload: suspendPayload,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -283,11 +317,12 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
       const nonExistentAccreditationId = new ObjectId().toString()
 
       const response = await server.inject({
-        method: 'PATCH',
-        url: suspendUrl({
+        method: 'POST',
+        url: statusHistoryUrl({
           ...ctx,
           accreditationId: nonExistentAccreditationId
         }),
+        payload: suspendPayload,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -342,12 +377,13 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
       })
 
       const suspendResponse = await integrationServer.inject({
-        method: 'PATCH',
-        url: suspendUrl({
+        method: 'POST',
+        url: statusHistoryUrl({
           organisationId: fixture.id,
           registrationId: registration.id,
           accreditationId
         }),
+        payload: suspendPayload,
         ...asServiceMaintainerWrite()
       })
       expect(suspendResponse.statusCode).toBe(StatusCodes.OK)
@@ -371,8 +407,9 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
     makeRequest: async () => {
       const ctx = await seedOrg('approved')
       return {
-        method: 'PATCH',
-        url: suspendUrl(ctx)
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: suspendPayload
       }
     }
   })
@@ -382,8 +419,9 @@ describe('PATCH /v1/organisations/{organisationId}/registrations/{registrationId
     makeRequest: async () => {
       const ctx = await seedOrg('approved')
       return {
-        method: 'PATCH',
-        url: suspendUrl(ctx)
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: suspendPayload
       }
     }
   })
