@@ -252,6 +252,21 @@ const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
   return mapDocumentWithCurrentStatuses(structuredClone(found))
 }
 
+const performFindByAccreditationNumber =
+  (staleCache) => async (accreditationNumber) => {
+    const found = staleCache.find((org) =>
+      org.accreditations.some(
+        (acc) => acc.accreditationNumber === accreditationNumber
+      )
+    )
+
+    if (!found) {
+      return null
+    }
+
+    return mapDocumentWithCurrentStatuses(structuredClone(found))
+  }
+
 const caseInsensitiveEquals = (a, b) =>
   a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
 
@@ -418,6 +433,7 @@ export const createInMemoryOrganisationsRepository = (
       findById,
       findByIds: performFindByIds(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
+      findByAccreditationNumber: performFindByAccreditationNumber(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
       findByOrgId: performFindByOrgId(staleCache),
       replaceRegistrationOverseasSites: performReplaceRegistrationOverseasSites(
