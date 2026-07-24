@@ -47,7 +47,6 @@ describe('createCommandQueueConsumer', () => {
   let logger
   let summaryLogsRepository
   let organisationsRepository
-  let wasteRecordsRepository
   let wasteBalanceService
   let reportsRepository
   let summaryLogExtractor
@@ -78,7 +77,6 @@ describe('createCommandQueueConsumer', () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     organisationsRepository = {}
-    wasteRecordsRepository = {}
     wasteBalanceService = {}
     reportsRepository = createInMemoryReportsRepository()()
     summaryLogExtractor = {}
@@ -126,7 +124,6 @@ describe('createCommandQueueConsumer', () => {
         logger,
         summaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
         wasteBalanceService,
         reportsService: createReportsService(reportsRepository),
         summaryLogExtractor,
@@ -145,7 +142,6 @@ describe('createCommandQueueConsumer', () => {
             logger,
             summaryLogsRepository,
             organisationsRepository,
-            wasteRecordsRepository,
             wasteBalanceService,
             summaryLogExtractor
           },

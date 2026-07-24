@@ -11,7 +11,6 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
@@ -543,9 +542,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     { ...testOrg, status: 'active' }
   ])()
 
-  const wasteRecordsRepositoryFactory = createInMemoryWasteRecordsRepository()
-  const wasteRecordsRepository = wasteRecordsRepositoryFactory()
-
   const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
   const ledgerRepository = createInMemoryLedgerRepository()()
@@ -636,7 +632,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       uploadsRepository,
       ledgerRepository: () => ledgerRepository,
       wasteBalanceService: () => wasteBalanceService,
-      wasteRecordsRepository: () => wasteRecordsRepository,
       packagingRecyclingNotesRepository: () =>
         packagingRecyclingNotesRepository,
       organisationsRepository: () => organisationsRepository
@@ -655,7 +650,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     server,
     summaryLogsRepository,
     wasteBalanceService,
-    wasteRecordsRepository,
     packagingRecyclingNotesRepository,
     organisationsRepository,
     overseasSitesRepository,
