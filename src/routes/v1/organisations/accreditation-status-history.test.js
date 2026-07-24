@@ -11,6 +11,9 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { asOperator, asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
@@ -30,14 +33,32 @@ vi.mock('@defra/cdp-auditing', () => ({
  * Builds an organisation with a registration linked to a target
  * accreditation whose statusHistory ends in the given status, plus an
  * unrelated second (unlinked, 'created') accreditation used to assert that
- * suspending the target leaves other accreditations untouched.
+ * changing the target's status leaves other accreditations untouched.
+ * The linked registration is 'created' by default; reinstating the
+ * accreditation requires an approved registration, so tests opt in via
+ * registrationStatus.
  * @param {string} status
+ * @param {{ registrationStatus?: string }} [options]
  */
-const buildOrgWithAccreditationStatus = (status) => {
+const buildOrgWithAccreditationStatus = (
+  status,
+  { registrationStatus = 'created' } = {}
+) => {
   const accreditationId = new ObjectId().toString()
   const registration = buildRegistration({
     accreditationId,
-    reprocessingType: 'input'
+    reprocessingType: 'input',
+    ...(registrationStatus === 'approved' && {
+      // registrationNumber/validFrom/validTo are required once a
+      // registration has been approved or suspended.
+      registrationNumber: 'REG123456',
+      validFrom: '2024-01-01',
+      validTo: '2025-01-01',
+      statusHistory: [
+        { status: 'created', updatedAt: '2024-01-01' },
+        { status: 'approved', updatedAt: '2024-01-15' }
+      ]
+    })
   })
   const accreditation = buildAccreditation({
     id: accreditationId,
@@ -78,13 +99,14 @@ const statusHistoryUrl = ({
   `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/status-history`
 
 const suspendPayload = { status: 'suspended' }
+const reinstatePayload = { status: 'approved' }
 
 describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history', () => {
   setupAuthContext()
   let server
 
-  const seedOrg = async (status) => {
-    const fixture = buildOrgWithAccreditationStatus(status)
+  const seedOrg = async (status, options) => {
+    const fixture = buildOrgWithAccreditationStatus(status, options)
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([fixture])
 
@@ -275,11 +297,96 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     )
   })
 
+  describe('reinstating a suspended accreditation', () => {
+    it('reinstates a suspended accreditation and returns 200 with { status: "approved" }', async () => {
+      const ctx = await seedOrg('suspended', { registrationStatus: 'approved' })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: reinstatePayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({ status: 'approved' })
+    })
+
+    it('appends an approved statusHistory entry, preserving the suspension gap', async () => {
+      const ctx = await seedOrg('suspended', { registrationStatus: 'approved' })
+
+      await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: reinstatePayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const updatedOrg = JSON.parse(getResponse.payload)
+      const accreditation = updatedOrg.accreditations.find(
+        (a) => a.id === ctx.accreditationId
+      )
+
+      expect(accreditation.status).toBe('approved')
+      expect(accreditation.statusHistory.map((e) => e.status)).toEqual([
+        'created',
+        'suspended',
+        'approved'
+      ])
+    })
+
+    it('returns 422 when the linked registration is not approved', async () => {
+      const ctx = await seedOrg('suspended')
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: reinstatePayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /approved but not linked to an approved registration/
+      )
+    })
+
+    // Not exhaustive over statuses: the map also allows created -> approved
+    // (grant) and cancelled -> approved (reinstate after cancellation), which
+    // are separate stories exercised through the same endpoint.
+    it.each(['approved', 'rejected'])(
+      'returns 422 when the accreditation is currently %s',
+      async (status) => {
+        const ctx = await seedOrg(status, { registrationStatus: 'approved' })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: statusHistoryUrl(ctx),
+          payload: reinstatePayload,
+          headers: { Authorization: `Bearer ${validToken}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        const body = JSON.parse(response.payload)
+        expect(body.message).toMatch(
+          new RegExp(`Cannot transition .* from ${status} to approved`)
+        )
+      }
+    )
+  })
+
   describe('payload validation', () => {
     it.each([
       ['payload is missing', undefined],
       ['status is missing', {}],
-      ['status is not a supported transition target', { status: 'approved' }],
+      ['status is not a supported transition target', { status: 'cancelled' }],
       ['status is not a known status', { status: 'nonsense' }],
       ['payload has unexpected fields', { status: 'suspended', reason: 'x' }]
     ])('returns 422 when %s', async (_label, payload) => {
@@ -432,6 +539,93 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(issueResponse.payload).toContain(
         'Cannot issue a PRN on a suspended accreditation'
       )
+    })
+
+    it('permits issuing a PRN again once the accreditation has been reinstated through this endpoint', async () => {
+      const fixture = buildOrgWithAccreditationStatus('suspended', {
+        registrationStatus: 'approved'
+      })
+      const registration = fixture.registrations[0]
+      const accreditationId = /** @type {string} */ (
+        registration.accreditationId
+      )
+      const prnId = new ObjectId().toHexString()
+
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository([
+          /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+            /** @type {unknown} */ (
+              buildAwaitingAuthorisationPrn({
+                id: prnId,
+                organisation: { id: fixture.id, name: 'Test Organisation' },
+                registrationId: registration.id,
+                accreditation:
+                  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['accreditation']} */ ({
+                    id: accreditationId,
+                    accreditationYear: 2026
+                  })
+              })
+            )
+          )
+        ])({
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn(),
+          trace: vi.fn(),
+          fatal: vi.fn(),
+          child: vi.fn()
+        })
+
+      // A ledger holding enough balance for the PRN's tonnage, so the issue
+      // succeeds once the suspension is lifted.
+      const ledgerRepository = createInMemoryLedgerRepository([
+        partialMock(
+          buildLedgerEvent({
+            organisationId: fixture.id,
+            registrationId: registration.id,
+            accreditationId,
+            number: 1,
+            payload: { summaryLogId: 'log-1', creditTotal: 500 },
+            openingBalance: { amount: 0, availableAmount: 0 },
+            closingBalance: { amount: 500, availableAmount: 500 }
+          })
+        )
+      ])()
+
+      const integrationServer = await createTestServer({
+        repositories: {
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            fixture
+          ]),
+          systemLogsRepository: createSystemLogsRepository(),
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository,
+          ledgerRepository: () => ledgerRepository
+        },
+        featureFlags: createInMemoryFeatureFlags()
+      })
+
+      const reinstateResponse = await integrationServer.inject({
+        method: 'POST',
+        url: statusHistoryUrl({
+          organisationId: fixture.id,
+          registrationId: registration.id,
+          accreditationId
+        }),
+        payload: reinstatePayload,
+        ...asServiceMaintainerWrite()
+      })
+      expect(reinstateResponse.statusCode).toBe(StatusCodes.OK)
+
+      const issueResponse = await integrationServer.inject({
+        method: 'POST',
+        url: `/v1/organisations/${fixture.id}/registrations/${registration.id}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+        ...asOperator(),
+        payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+      })
+
+      expect(issueResponse.statusCode).toBe(StatusCodes.OK)
     })
   })
 
