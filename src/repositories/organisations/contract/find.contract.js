@@ -6,7 +6,7 @@ import {
 } from './test-data.js'
 import {
   ORGANISATION_STATUS,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
@@ -52,7 +52,7 @@ export const testFindBehaviour = (it) => {
           wasteProcessingTypes: orgData.wasteProcessingTypes,
           reprocessingNations: orgData.reprocessingNations,
           businessType: orgData.businessType,
-          status: REG_ACC_STATUS.CREATED,
+          status: ORGANISATION_STATUS.CREATED,
           submittedToRegulator: orgData.submittedToRegulator,
           submitterContactDetails: orgData.submitterContactDetails,
           companyDetails: orgData.companyDetails
@@ -274,11 +274,11 @@ export const testFindBehaviour = (it) => {
       const approveOrg = async (org) => {
         const inserted = await repository.findById(org.id)
         const updatePayload = prepareOrgUpdate(inserted, {
-          status: REG_ACC_STATUS.APPROVED,
+          status: ORGANISATION_STATUS.APPROVED,
           registrations: [
             {
               ...inserted.registrations[0],
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -442,7 +442,7 @@ export const testFindBehaviour = (it) => {
         const result =
           await repository.findAllLinkableForUser(INITIAL_USER_EMAIL)
 
-        expect(result[0].status).toBe(REG_ACC_STATUS.APPROVED)
+        expect(result[0].status).toBe(ORGANISATION_STATUS.APPROVED)
       })
     })
   })

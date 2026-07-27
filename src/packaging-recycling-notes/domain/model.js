@@ -1,4 +1,4 @@
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 export const PRN_NUMBER_MAX_LENGTH = 20
 
@@ -134,8 +134,8 @@ export class AccreditationStatusError extends Error {
 export function assertAccreditationCanIssue(accreditation) {
   const status = accreditation?.status
   if (
-    status === REG_ACC_STATUS.SUSPENDED ||
-    status === REG_ACC_STATUS.CANCELLED
+    status === ACCREDITATION_STATUS.SUSPENDED ||
+    status === ACCREDITATION_STATUS.CANCELLED
   ) {
     throw new AccreditationStatusError('issue', status)
   }

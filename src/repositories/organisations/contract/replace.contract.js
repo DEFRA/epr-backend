@@ -1,6 +1,7 @@
 import {
+  ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
@@ -186,7 +187,7 @@ export const testReplaceBehaviour = (it) => {
 
         expect(actualReg).toMatchObject(expectedReg)
         expect(actualStatusHistory).toHaveLength(1)
-        expect(actualStatusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
+        expect(actualStatusHistory[0].status).toBe(REGISTRATION_STATUS.CREATED)
       })
 
       it('adds new accreditation', async () => {
@@ -221,7 +222,7 @@ export const testReplaceBehaviour = (it) => {
         const { statusHistory: actualStatusHistory, ...actualAcc } = addedAcc
         expect(actualAcc).toMatchObject(expectedAcc)
         expect(actualStatusHistory).toHaveLength(1)
-        expect(actualStatusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
+        expect(actualStatusHistory[0].status).toBe(ACCREDITATION_STATUS.CREATED)
       })
 
       it('removes registration and accreditation', async () => {
@@ -305,15 +306,17 @@ export const testReplaceBehaviour = (it) => {
         await repository.insert(organisation)
 
         const updatePayload = prepareOrgUpdate(organisation, {
-          status: REG_ACC_STATUS.REJECTED
+          status: ORGANISATION_STATUS.REJECTED
         })
         await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
-        expect(result.status).toBe(REG_ACC_STATUS.REJECTED)
+        expect(result.status).toBe(ORGANISATION_STATUS.REJECTED)
         expect(result.statusHistory).toHaveLength(2)
-        expect(result.statusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
-        expect(result.statusHistory[1].status).toBe(REG_ACC_STATUS.REJECTED)
+        expect(result.statusHistory[0].status).toBe(ORGANISATION_STATUS.CREATED)
+        expect(result.statusHistory[1].status).toBe(
+          ORGANISATION_STATUS.REJECTED
+        )
         expect(result.statusHistory[1].updatedAt).toBeInstanceOf(Date)
       })
 
@@ -327,9 +330,9 @@ export const testReplaceBehaviour = (it) => {
         await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
-        expect(result.status).toBe(REG_ACC_STATUS.CREATED)
+        expect(result.status).toBe(ORGANISATION_STATUS.CREATED)
         expect(result.statusHistory).toHaveLength(1)
-        expect(result.statusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
+        expect(result.statusHistory[0].status).toBe(ORGANISATION_STATUS.CREATED)
       })
 
       it('preserves all existing statusHistory entries when organisation status changes', async () => {
@@ -337,21 +340,23 @@ export const testReplaceBehaviour = (it) => {
         await repository.insert(organisation)
 
         const orgUpdate1 = prepareOrgUpdate(organisation, {
-          status: REG_ACC_STATUS.REJECTED
+          status: ORGANISATION_STATUS.REJECTED
         })
         await repository.replace(organisation.id, 1, orgUpdate1)
 
         const orgUpdate2 = prepareOrgUpdate(organisation, {
-          status: REG_ACC_STATUS.CREATED
+          status: ORGANISATION_STATUS.CREATED
         })
         await repository.replace(organisation.id, 2, orgUpdate2)
 
         const result = await repository.findById(organisation.id, 3)
-        expect(result.status).toBe(REG_ACC_STATUS.CREATED)
+        expect(result.status).toBe(ORGANISATION_STATUS.CREATED)
         expect(result.statusHistory).toHaveLength(3)
-        expect(result.statusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
-        expect(result.statusHistory[1].status).toBe(REG_ACC_STATUS.REJECTED)
-        expect(result.statusHistory[2].status).toBe(REG_ACC_STATUS.CREATED)
+        expect(result.statusHistory[0].status).toBe(ORGANISATION_STATUS.CREATED)
+        expect(result.statusHistory[1].status).toBe(
+          ORGANISATION_STATUS.REJECTED
+        )
+        expect(result.statusHistory[2].status).toBe(ORGANISATION_STATUS.CREATED)
       })
 
       it('adds new statusHistory entry to registration when status changes', async () => {
@@ -360,7 +365,7 @@ export const testReplaceBehaviour = (it) => {
 
         const registrationToUpdate = {
           ...organisation.registrations[0],
-          status: REG_ACC_STATUS.REJECTED,
+          status: REGISTRATION_STATUS.REJECTED,
           reprocessingType: REPROCESSING_TYPE.INPUT
         }
         const updatePayload = prepareOrgUpdate(organisation, {
@@ -378,10 +383,14 @@ export const testReplaceBehaviour = (it) => {
         const updatedReg = result.registrations.find(
           (r) => r.id === registrationToUpdate.id
         )
-        expect(updatedReg.status).toBe(REG_ACC_STATUS.REJECTED)
+        expect(updatedReg.status).toBe(REGISTRATION_STATUS.REJECTED)
         expect(updatedReg.statusHistory).toHaveLength(2)
-        expect(updatedReg.statusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
-        expect(updatedReg.statusHistory[1].status).toBe(REG_ACC_STATUS.REJECTED)
+        expect(updatedReg.statusHistory[0].status).toBe(
+          REGISTRATION_STATUS.CREATED
+        )
+        expect(updatedReg.statusHistory[1].status).toBe(
+          REGISTRATION_STATUS.REJECTED
+        )
         expect(updatedReg.statusHistory[1].updatedAt).toBeInstanceOf(Date)
       })
 
@@ -395,7 +404,7 @@ export const testReplaceBehaviour = (it) => {
           registrations: [
             {
               ...organisation.registrations[0],
-              status: REG_ACC_STATUS.REJECTED,
+              status: REGISTRATION_STATUS.REJECTED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -413,18 +422,27 @@ export const testReplaceBehaviour = (it) => {
 
         const orgUpdate2 = prepareOrgUpdate(organisation, {
           registrations: [
-            { ...organisation.registrations[0], status: REG_ACC_STATUS.CREATED }
+            {
+              ...organisation.registrations[0],
+              status: REGISTRATION_STATUS.CREATED
+            }
           ]
         })
         await repository.replace(organisation.id, 2, orgUpdate2)
 
         const result = await repository.findById(organisation.id, 3)
         const updatedReg = result.registrations.find((r) => r.id === regId)
-        expect(updatedReg.status).toBe(REG_ACC_STATUS.CREATED)
+        expect(updatedReg.status).toBe(REGISTRATION_STATUS.CREATED)
         expect(updatedReg.statusHistory).toHaveLength(3)
-        expect(updatedReg.statusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
-        expect(updatedReg.statusHistory[1].status).toBe(REG_ACC_STATUS.REJECTED)
-        expect(updatedReg.statusHistory[2].status).toBe(REG_ACC_STATUS.CREATED)
+        expect(updatedReg.statusHistory[0].status).toBe(
+          REGISTRATION_STATUS.CREATED
+        )
+        expect(updatedReg.statusHistory[1].status).toBe(
+          REGISTRATION_STATUS.REJECTED
+        )
+        expect(updatedReg.statusHistory[2].status).toBe(
+          REGISTRATION_STATUS.CREATED
+        )
       })
 
       it('adds new statusHistory entry to accreditation when status changes', async () => {
@@ -433,7 +451,7 @@ export const testReplaceBehaviour = (it) => {
 
         const accreditationToUpdate = {
           ...organisation.accreditations[0],
-          status: REG_ACC_STATUS.REJECTED
+          status: ACCREDITATION_STATUS.REJECTED
         }
         const updatePayload = prepareOrgUpdate(organisation, {
           accreditations: [accreditationToUpdate]
@@ -444,10 +462,14 @@ export const testReplaceBehaviour = (it) => {
         const updatedAcc = result.accreditations.find(
           (a) => a.id === accreditationToUpdate.id
         )
-        expect(updatedAcc.status).toBe(REG_ACC_STATUS.REJECTED)
+        expect(updatedAcc.status).toBe(ACCREDITATION_STATUS.REJECTED)
         expect(updatedAcc.statusHistory).toHaveLength(2)
-        expect(updatedAcc.statusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
-        expect(updatedAcc.statusHistory[1].status).toBe(REG_ACC_STATUS.REJECTED)
+        expect(updatedAcc.statusHistory[0].status).toBe(
+          ACCREDITATION_STATUS.CREATED
+        )
+        expect(updatedAcc.statusHistory[1].status).toBe(
+          ACCREDITATION_STATUS.REJECTED
+        )
         expect(updatedAcc.statusHistory[1].updatedAt).toBeInstanceOf(Date)
       })
 
@@ -461,7 +483,7 @@ export const testReplaceBehaviour = (it) => {
           accreditations: [
             {
               ...organisation.accreditations[0],
-              status: REG_ACC_STATUS.REJECTED,
+              status: ACCREDITATION_STATUS.REJECTED,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],
@@ -478,7 +500,7 @@ export const testReplaceBehaviour = (it) => {
           accreditations: [
             {
               ...organisation.accreditations[0],
-              status: REG_ACC_STATUS.CREATED,
+              status: ACCREDITATION_STATUS.CREATED,
               accreditationNumber: 'ACC12345'
             }
           ]
@@ -487,11 +509,17 @@ export const testReplaceBehaviour = (it) => {
 
         const result = await repository.findById(organisation.id, 3)
         const updatedAcc = result.accreditations.find((a) => a.id === accId)
-        expect(updatedAcc.status).toBe(REG_ACC_STATUS.CREATED)
+        expect(updatedAcc.status).toBe(ACCREDITATION_STATUS.CREATED)
         expect(updatedAcc.statusHistory).toHaveLength(3)
-        expect(updatedAcc.statusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
-        expect(updatedAcc.statusHistory[1].status).toBe(REG_ACC_STATUS.REJECTED)
-        expect(updatedAcc.statusHistory[2].status).toBe(REG_ACC_STATUS.CREATED)
+        expect(updatedAcc.statusHistory[0].status).toBe(
+          ACCREDITATION_STATUS.CREATED
+        )
+        expect(updatedAcc.statusHistory[1].status).toBe(
+          ACCREDITATION_STATUS.REJECTED
+        )
+        expect(updatedAcc.statusHistory[2].status).toBe(
+          ACCREDITATION_STATUS.CREATED
+        )
       })
 
       it('rejects invalid status value', async () => {
@@ -518,7 +546,7 @@ export const testReplaceBehaviour = (it) => {
             registrations: [
               {
                 ...organisation.registrations[0],
-                status: REG_ACC_STATUS.APPROVED,
+                status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG12345',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
@@ -536,7 +564,7 @@ export const testReplaceBehaviour = (it) => {
 
           const result = await repository.findById(organisation.id, 2)
 
-          expect(result.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(result.status).toBe(ORGANISATION_STATUS.APPROVED)
           expect(result.users).toBeDefined()
           expect(result.users).toHaveLength(2)
           expect(result.users[0]).toStrictEqual({
@@ -559,11 +587,11 @@ export const testReplaceBehaviour = (it) => {
 
           const org1 = await repository.findById(organisation.id)
           const orgUpdate1 = prepareOrgUpdate(org1, {
-            status: REG_ACC_STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             registrations: [
               {
                 ...organisation.registrations[0],
-                status: REG_ACC_STATUS.APPROVED,
+                status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG12345',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
@@ -589,7 +617,7 @@ export const testReplaceBehaviour = (it) => {
 
           const registration = {
             ...organisation.registrations[1],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -684,7 +712,7 @@ export const testReplaceBehaviour = (it) => {
             registrations: [
               {
                 ...registration,
-                status: REG_ACC_STATUS.APPROVED,
+                status: REGISTRATION_STATUS.APPROVED,
                 cbduNumber: 'CBDU12345',
                 registrationNumber: 'REG123',
                 validFrom: VALID_FROM,
@@ -706,7 +734,7 @@ export const testReplaceBehaviour = (it) => {
             (r) => r.id === registration.id
           )
 
-          expect(updatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(updatedReg.status).toBe(REGISTRATION_STATUS.APPROVED)
           expect(result.users).toEqual([
             {
               fullName: 'John Doe',
@@ -752,7 +780,7 @@ export const testReplaceBehaviour = (it) => {
             registrations: [
               {
                 ...reg1,
-                status: REG_ACC_STATUS.APPROVED,
+                status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
@@ -760,7 +788,7 @@ export const testReplaceBehaviour = (it) => {
               },
               {
                 ...reg2,
-                status: REG_ACC_STATUS.CREATED
+                status: REGISTRATION_STATUS.CREATED
               }
             ],
             accreditations: [
@@ -776,8 +804,8 @@ export const testReplaceBehaviour = (it) => {
           const updatedReg1 = result.registrations.find((r) => r.id === reg1.id)
           const updatedReg2 = result.registrations.find((r) => r.id === reg2.id)
 
-          expect(updatedReg1.status).toBe(REG_ACC_STATUS.APPROVED)
-          expect(updatedReg2.status).toBe(REG_ACC_STATUS.CREATED)
+          expect(updatedReg1.status).toBe(REGISTRATION_STATUS.APPROVED)
+          expect(updatedReg2.status).toBe(REGISTRATION_STATUS.CREATED)
           expect(result.users).toEqual([
             {
               fullName: 'Anakin Skywalker',
@@ -837,7 +865,7 @@ export const testReplaceBehaviour = (it) => {
             registrations: [
               {
                 ...registration,
-                status: REG_ACC_STATUS.APPROVED,
+                status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
@@ -847,7 +875,7 @@ export const testReplaceBehaviour = (it) => {
             accreditations: [
               {
                 ...accreditation,
-                status: REG_ACC_STATUS.APPROVED,
+                status: ACCREDITATION_STATUS.APPROVED,
                 accreditationNumber: 'ACC123',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
@@ -862,7 +890,7 @@ export const testReplaceBehaviour = (it) => {
             (a) => a.id === accreditation.id
           )
 
-          expect(updatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(updatedAcc.status).toBe(ACCREDITATION_STATUS.APPROVED)
           expect(result.users).toEqual([
             {
               fullName: 'Alice Cooper',
@@ -910,7 +938,7 @@ export const testReplaceBehaviour = (it) => {
             registrations: [
               {
                 ...registration,
-                status: REG_ACC_STATUS.APPROVED,
+                status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
@@ -920,7 +948,7 @@ export const testReplaceBehaviour = (it) => {
             accreditations: [
               {
                 ...acc1,
-                status: REG_ACC_STATUS.APPROVED,
+                status: ACCREDITATION_STATUS.APPROVED,
                 accreditationNumber: 'ACC123',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
@@ -939,8 +967,8 @@ export const testReplaceBehaviour = (it) => {
             (a) => a.id === acc2.id
           )
 
-          expect(updatedAcc1.status).toBe(REG_ACC_STATUS.APPROVED)
-          expect(updatedAcc2.status).toBe(REG_ACC_STATUS.CREATED)
+          expect(updatedAcc1.status).toBe(ACCREDITATION_STATUS.APPROVED)
+          expect(updatedAcc2.status).toBe(ACCREDITATION_STATUS.CREATED)
           expect(result.users).toEqual([
             {
               fullName: 'Anakin Skywalker',

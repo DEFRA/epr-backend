@@ -28,8 +28,8 @@ import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
-/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
-/** @import { Material, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { StatusHistoryEntry, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+/** @import { Material, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
@@ -715,7 +715,7 @@ const buildComplexTestOrg = ({
     id: registrationId,
     registrationNumber: 'REG-123',
     status: /** @type {'approved'} */ ('approved'),
-    statusHistory: /** @type {StatusHistoryEntry[]} */ ([
+    statusHistory: /** @type {StatusHistoryEntryOf<RegistrationStatus>[]} */ ([
       { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
       { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
     ]),

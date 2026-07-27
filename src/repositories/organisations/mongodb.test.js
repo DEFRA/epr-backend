@@ -1,6 +1,7 @@
 import {
+  ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
-  REG_ACC_STATUS
+  REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -220,13 +221,13 @@ describe('MongoDB organisations repository', () => {
           registrations: [
             {
               ...organisation.registrations[0],
-              status: REG_ACC_STATUS.REJECTED
+              status: REGISTRATION_STATUS.REJECTED
             }
           ],
           accreditations: [
             {
               ...organisation.accreditations[0],
-              status: REG_ACC_STATUS.REJECTED
+              status: ACCREDITATION_STATUS.REJECTED
             }
           ]
         })

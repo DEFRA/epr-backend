@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { assertPresent } from '#test/type-helpers.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
+  ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
-  REG_ACC_STATUS
+  REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import {
   createEprOrganisationScenarios,
@@ -104,12 +105,12 @@ describe('seed-scenarios', () => {
       expect(approvedOrg.status).toBe(ORGANISATION_STATUS.APPROVED)
       expect(
         approvedOrg.registrations.some(
-          (r) => r.status === REG_ACC_STATUS.APPROVED
+          (r) => r.status === REGISTRATION_STATUS.APPROVED
         )
       ).toBe(true)
       expect(
         approvedOrg.accreditations.some(
-          (a) => a.status === REG_ACC_STATUS.APPROVED
+          (a) => a.status === ACCREDITATION_STATUS.APPROVED
         )
       ).toBe(true)
       // Users are collated automatically by the repository when status changes
@@ -135,12 +136,12 @@ describe('seed-scenarios', () => {
       expect(activeOrg.users.length).toBeGreaterThan(0)
       expect(
         activeOrg.registrations.some(
-          (r) => r.status === REG_ACC_STATUS.APPROVED
+          (r) => r.status === REGISTRATION_STATUS.APPROVED
         )
       ).toBe(true)
       expect(
         activeOrg.accreditations.some(
-          (a) => a.status === REG_ACC_STATUS.APPROVED
+          (a) => a.status === ACCREDITATION_STATUS.APPROVED
         )
       ).toBe(true)
     })
@@ -158,11 +159,13 @@ describe('seed-scenarios', () => {
 
       expect(mixedOrg.status).toBe(ORGANISATION_STATUS.ACTIVE)
       expect(
-        mixedOrg.registrations.some((r) => r.status === REG_ACC_STATUS.APPROVED)
+        mixedOrg.registrations.some(
+          (r) => r.status === REGISTRATION_STATUS.APPROVED
+        )
       ).toBe(true)
       expect(
         mixedOrg.accreditations.some(
-          (a) => a.status === REG_ACC_STATUS.SUSPENDED
+          (a) => a.status === ACCREDITATION_STATUS.SUSPENDED
         )
       ).toBe(true)
     })

@@ -1,6 +1,7 @@
 import assert from 'node:assert'
 import {
-  REG_ACC_STATUS,
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
@@ -37,7 +38,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             registrations: [
               {
                 ...orgData.registrations[0],
-                status: REG_ACC_STATUS.SUSPENDED,
+                status: ACCREDITATION_STATUS.SUSPENDED,
                 registrationNumber: 'REG12345',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
@@ -88,7 +89,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           // Link registrations to accreditations and approve both
           const approvedReg1 = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG1',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -98,7 +99,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
 
           const approvedReg2 = {
             ...inserted.registrations[1],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG2',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -108,7 +109,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           // Approve the two accreditations we're linking to
           const approvedAcc1 = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: 'ACC1',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -117,7 +118,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
 
           const approvedAcc2 = {
             ...inserted.accreditations[2],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: 'ACC2',
             validFrom: VALID_FROM,
             validTo: VALID_TO
@@ -141,10 +142,16 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           accreditation2 = afterApproval.accreditations[2]
 
           // Verify initial state - both registrations and accreditations are APPROVED
-          assert.strictEqual(registration1.status, REG_ACC_STATUS.APPROVED)
-          assert.strictEqual(registration2.status, REG_ACC_STATUS.APPROVED)
-          assert.strictEqual(accreditation1.status, REG_ACC_STATUS.APPROVED)
-          assert.strictEqual(accreditation2.status, REG_ACC_STATUS.APPROVED)
+          assert.strictEqual(registration1.status, REGISTRATION_STATUS.APPROVED)
+          assert.strictEqual(registration2.status, REGISTRATION_STATUS.APPROVED)
+          assert.strictEqual(
+            accreditation1.status,
+            ACCREDITATION_STATUS.APPROVED
+          )
+          assert.strictEqual(
+            accreditation2.status,
+            ACCREDITATION_STATUS.APPROVED
+          )
         })
 
         it('rejects transition from APPROVED to SUSPENDED (registrations cannot be suspended)', async () => {
@@ -152,7 +159,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             registrations: [
               {
                 ...registration1,
-                status: REG_ACC_STATUS.SUSPENDED
+                status: ACCREDITATION_STATUS.SUSPENDED
               }
             ]
           })
@@ -181,8 +188,8 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           const unchangedAcc = result.accreditations.find(
             (a) => a.id === accreditation1.id
           )
-          expect(unchangedReg.status).toBe(REG_ACC_STATUS.APPROVED)
-          expect(unchangedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(unchangedReg.status).toBe(REGISTRATION_STATUS.APPROVED)
+          expect(unchangedAcc.status).toBe(ACCREDITATION_STATUS.APPROVED)
         })
 
         it('allows direct transition from APPROVED to CANCELLED', async () => {
@@ -190,7 +197,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             registrations: [
               {
                 ...registration1,
-                status: REG_ACC_STATUS.CANCELLED
+                status: REGISTRATION_STATUS.CANCELLED
               }
             ]
           })
@@ -202,13 +209,13 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             (r) => r.id === registration1.id
           )
 
-          expect(updatedReg.status).toBe(REG_ACC_STATUS.CANCELLED)
+          expect(updatedReg.status).toBe(REGISTRATION_STATUS.CANCELLED)
         })
 
         it('force-cancels the linked APPROVED accreditation when the registration is cancelled', async () => {
           const cancelledRegistration = {
             ...registration1,
-            status: REG_ACC_STATUS.CANCELLED
+            status: REGISTRATION_STATUS.CANCELLED
           }
 
           await repository.replace(
@@ -235,15 +242,15 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
 
           // The accreditation is force-cancelled from APPROVED — the cascade
           // bypasses the accreditation's suspended-first rule (Scenario 5)
-          expect(finalReg1.status).toBe(REG_ACC_STATUS.CANCELLED)
-          expect(finalAcc1.status).toBe(REG_ACC_STATUS.CANCELLED)
+          expect(finalReg1.status).toBe(REGISTRATION_STATUS.CANCELLED)
+          expect(finalAcc1.status).toBe(ACCREDITATION_STATUS.CANCELLED)
           expect(finalAcc1.statusHistory.at(-1)).toMatchObject({
-            status: REG_ACC_STATUS.CANCELLED
+            status: ACCREDITATION_STATUS.CANCELLED
           })
 
           // Verify registration2 and accreditation2 remain APPROVED
-          expect(finalReg2.status).toBe(REG_ACC_STATUS.APPROVED)
-          expect(finalAcc2.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(finalReg2.status).toBe(REGISTRATION_STATUS.APPROVED)
+          expect(finalAcc2.status).toBe(ACCREDITATION_STATUS.APPROVED)
         })
 
         it('cascades cancellation to the linked SUSPENDED accreditation when the registration is cancelled', async () => {
@@ -254,7 +261,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             2,
             prepareOrgUpdate(afterApproval, {
               accreditations: [
-                { ...accreditation1, status: REG_ACC_STATUS.SUSPENDED }
+                { ...accreditation1, status: ACCREDITATION_STATUS.SUSPENDED }
               ]
             })
           )
@@ -266,7 +273,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             3,
             prepareOrgUpdate(afterSuspension, {
               registrations: [
-                { ...registration1, status: REG_ACC_STATUS.CANCELLED }
+                { ...registration1, status: REGISTRATION_STATUS.CANCELLED }
               ]
             })
           )
@@ -279,8 +286,8 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             (a) => a.id === accreditation1.id
           )
 
-          expect(finalReg1.status).toBe(REG_ACC_STATUS.CANCELLED)
-          expect(finalAcc1.status).toBe(REG_ACC_STATUS.CANCELLED)
+          expect(finalReg1.status).toBe(REGISTRATION_STATUS.CANCELLED)
+          expect(finalAcc1.status).toBe(ACCREDITATION_STATUS.CANCELLED)
         })
 
         it('allows transition from CANCELLED to APPROVED (reinstatement)', async () => {
@@ -290,7 +297,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             2,
             prepareOrgUpdate(afterApproval, {
               registrations: [
-                { ...registration1, status: REG_ACC_STATUS.CANCELLED }
+                { ...registration1, status: REGISTRATION_STATUS.CANCELLED }
               ]
             })
           )
@@ -309,7 +316,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             3,
             prepareOrgUpdate(afterCancellation, {
               registrations: [
-                { ...cancelledReg, status: REG_ACC_STATUS.APPROVED }
+                { ...cancelledReg, status: REGISTRATION_STATUS.APPROVED }
               ]
             })
           )
@@ -319,7 +326,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             (r) => r.id === registration1.id
           )
 
-          expect(reinstatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(reinstatedReg.status).toBe(REGISTRATION_STATUS.APPROVED)
         })
 
         it('leaves a CREATED linked accreditation untouched when the registration is cancelled', async () => {
@@ -332,7 +339,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
 
           const approvedReg = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -358,7 +365,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           const linkedReg = afterApprovalOfReg.registrations[0]
           assert.strictEqual(
             afterApprovalOfReg.accreditations[0].status,
-            REG_ACC_STATUS.CREATED
+            ACCREDITATION_STATUS.CREATED
           )
 
           await repository.replace(
@@ -366,7 +373,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             2,
             prepareOrgUpdate(afterApprovalOfReg, {
               registrations: [
-                { ...linkedReg, status: REG_ACC_STATUS.CANCELLED }
+                { ...linkedReg, status: REGISTRATION_STATUS.CANCELLED }
               ]
             })
           )
@@ -376,9 +383,9 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             (a) => a.id === inserted.accreditations[0].id
           )
 
-          expect(untouchedAcc.status).toBe(REG_ACC_STATUS.CREATED)
+          expect(untouchedAcc.status).toBe(ACCREDITATION_STATUS.CREATED)
           expect(untouchedAcc.statusHistory.map((h) => h.status)).not.toContain(
-            REG_ACC_STATUS.CANCELLED
+            ACCREDITATION_STATUS.CANCELLED
           )
         })
 
@@ -389,7 +396,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             2,
             prepareOrgUpdate(afterApproval, {
               registrations: [
-                { ...registration1, status: REG_ACC_STATUS.CANCELLED }
+                { ...registration1, status: REGISTRATION_STATUS.CANCELLED }
               ]
             })
           )
@@ -408,7 +415,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             3,
             prepareOrgUpdate(afterCancellation, {
               registrations: [
-                { ...cancelledReg, status: REG_ACC_STATUS.APPROVED }
+                { ...cancelledReg, status: REGISTRATION_STATUS.APPROVED }
               ]
             })
           )
@@ -421,8 +428,8 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             (a) => a.id === accreditation1.id
           )
 
-          expect(reinstatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
-          expect(linkedAcc.status).toBe(REG_ACC_STATUS.CANCELLED)
+          expect(reinstatedReg.status).toBe(REGISTRATION_STATUS.APPROVED)
+          expect(linkedAcc.status).toBe(ACCREDITATION_STATUS.CANCELLED)
         })
       })
     })
@@ -437,7 +444,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             accreditations: [
               {
                 ...orgData.accreditations[0],
-                status: REG_ACC_STATUS.SUSPENDED,
+                status: ACCREDITATION_STATUS.SUSPENDED,
                 accreditationNumber: 'ACC12345',
                 validFrom: VALID_FROM,
                 validTo: VALID_TO,
@@ -460,7 +467,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
               statusCode: 422,
               payload: {
                 message: expect.stringContaining(
-                  `Cannot transition accreditation status from ${REG_ACC_STATUS.CREATED} to ${REG_ACC_STATUS.SUSPENDED}`
+                  `Cannot transition accreditation status from ${ACCREDITATION_STATUS.CREATED} to ${ACCREDITATION_STATUS.SUSPENDED}`
                 )
               }
             }
@@ -481,7 +488,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           // Approve registration and accreditation
           const approvedRegistration = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -490,7 +497,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
 
           const approvedAccreditation = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -510,13 +517,16 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           accreditation = afterApproval.accreditations[0]
 
           // Verify initial state
-          assert.strictEqual(accreditation.status, REG_ACC_STATUS.APPROVED)
+          assert.strictEqual(
+            accreditation.status,
+            ACCREDITATION_STATUS.APPROVED
+          )
         })
 
         it('allows transition from APPROVED to SUSPENDED', async () => {
           const suspendedAccreditation = {
             ...accreditation,
-            status: REG_ACC_STATUS.SUSPENDED
+            status: ACCREDITATION_STATUS.SUSPENDED
           }
 
           await repository.replace(
@@ -532,7 +542,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             (a) => a.id === accreditation.id
           )
 
-          expect(updatedAcc.status).toBe(REG_ACC_STATUS.SUSPENDED)
+          expect(updatedAcc.status).toBe(ACCREDITATION_STATUS.SUSPENDED)
         })
 
         it('rejects transition from APPROVED to CANCELLED', async () => {
@@ -540,7 +550,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             accreditations: [
               {
                 ...accreditation,
-                status: REG_ACC_STATUS.CANCELLED
+                status: ACCREDITATION_STATUS.CANCELLED
               }
             ]
           })
@@ -553,7 +563,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
               statusCode: 422,
               payload: {
                 message: expect.stringContaining(
-                  `Cannot transition accreditation status from ${REG_ACC_STATUS.APPROVED} to ${REG_ACC_STATUS.CANCELLED}`
+                  `Cannot transition accreditation status from ${ACCREDITATION_STATUS.APPROVED} to ${ACCREDITATION_STATUS.CANCELLED}`
                 )
               }
             }
@@ -564,7 +574,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           // First suspend
           const suspendedAccreditation = {
             ...accreditation,
-            status: REG_ACC_STATUS.SUSPENDED
+            status: ACCREDITATION_STATUS.SUSPENDED
           }
 
           await repository.replace(
@@ -578,7 +588,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           // Now cancel
           const cancelledAccreditation = {
             ...accreditation,
-            status: REG_ACC_STATUS.CANCELLED
+            status: ACCREDITATION_STATUS.CANCELLED
           }
 
           await repository.replace(
@@ -594,7 +604,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             (a) => a.id === accreditation.id
           )
 
-          expect(updatedAcc.status).toBe(REG_ACC_STATUS.CANCELLED)
+          expect(updatedAcc.status).toBe(ACCREDITATION_STATUS.CANCELLED)
         })
 
         it('allows transition from CANCELLED to APPROVED (reinstatement)', async () => {
@@ -604,7 +614,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             2,
             prepareOrgUpdate(afterApproval, {
               accreditations: [
-                { ...accreditation, status: REG_ACC_STATUS.SUSPENDED }
+                { ...accreditation, status: ACCREDITATION_STATUS.SUSPENDED }
               ]
             })
           )
@@ -613,7 +623,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             3,
             prepareOrgUpdate(afterApproval, {
               accreditations: [
-                { ...accreditation, status: REG_ACC_STATUS.CANCELLED }
+                { ...accreditation, status: ACCREDITATION_STATUS.CANCELLED }
               ]
             })
           )
@@ -632,7 +642,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             4,
             prepareOrgUpdate(afterCancellation, {
               accreditations: [
-                { ...cancelledAcc, status: REG_ACC_STATUS.APPROVED }
+                { ...cancelledAcc, status: ACCREDITATION_STATUS.APPROVED }
               ]
             })
           )
@@ -642,7 +652,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             (a) => a.id === accreditation.id
           )
 
-          expect(reinstatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(reinstatedAcc.status).toBe(ACCREDITATION_STATUS.APPROVED)
         })
 
         it('keeps the accreditation CANCELLED when reinstatement is attempted while the linked registration is cancelled', async () => {
@@ -654,7 +664,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             2,
             prepareOrgUpdate(afterApproval, {
               registrations: [
-                { ...registration, status: REG_ACC_STATUS.CANCELLED }
+                { ...registration, status: REGISTRATION_STATUS.CANCELLED }
               ]
             })
           )
@@ -675,7 +685,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             3,
             prepareOrgUpdate(afterCancellation, {
               accreditations: [
-                { ...cancelledAcc, status: REG_ACC_STATUS.APPROVED }
+                { ...cancelledAcc, status: ACCREDITATION_STATUS.APPROVED }
               ]
             })
           )
@@ -685,7 +695,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             (a) => a.id === accreditation.id
           )
 
-          expect(heldAcc.status).toBe(REG_ACC_STATUS.CANCELLED)
+          expect(heldAcc.status).toBe(ACCREDITATION_STATUS.CANCELLED)
         })
 
         it('rejects transition from CANCELLED to APPROVED when no approved registration is linked', async () => {
@@ -696,7 +706,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             2,
             prepareOrgUpdate(afterApproval, {
               accreditations: [
-                { ...accreditation, status: REG_ACC_STATUS.SUSPENDED }
+                { ...accreditation, status: ACCREDITATION_STATUS.SUSPENDED }
               ]
             })
           )
@@ -705,7 +715,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             3,
             prepareOrgUpdate(afterApproval, {
               accreditations: [
-                { ...accreditation, status: REG_ACC_STATUS.CANCELLED }
+                { ...accreditation, status: ACCREDITATION_STATUS.CANCELLED }
               ]
             })
           )
@@ -720,7 +730,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             4,
             prepareOrgUpdate(afterAccCancellation, {
               registrations: [
-                { ...registration, status: REG_ACC_STATUS.CREATED }
+                { ...registration, status: REGISTRATION_STATUS.CREATED }
               ]
             })
           )
@@ -737,7 +747,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
               5,
               prepareOrgUpdate(afterRevert, {
                 accreditations: [
-                  { ...cancelledAcc, status: REG_ACC_STATUS.APPROVED }
+                  { ...cancelledAcc, status: ACCREDITATION_STATUS.APPROVED }
                 ]
               })
             )

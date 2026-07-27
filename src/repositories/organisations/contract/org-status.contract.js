@@ -1,6 +1,6 @@
 import {
   ORGANISATION_STATUS,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
@@ -81,7 +81,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -106,7 +106,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -147,7 +147,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -177,7 +177,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -202,7 +202,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -232,7 +232,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -266,7 +266,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
               validTo: VALID_TO,

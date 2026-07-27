@@ -8,7 +8,7 @@ import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmissi
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import {
   ORGANISATION_STATUS,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
@@ -37,7 +37,7 @@ async function buildRegisteredOnlyOrg(orgRepo) {
   const approvedRegistrations = [
     {
       ...org.registrations[0],
-      status: REG_ACC_STATUS.APPROVED,
+      status: REGISTRATION_STATUS.APPROVED,
       registrationNumber: 'REG1',
       reprocessingType: REPROCESSING_TYPE.INPUT,
       validFrom: VALID_FROM,

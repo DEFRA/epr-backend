@@ -8,8 +8,9 @@ import {
   getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
 import {
+  ACCREDITATION_STATUS,
   MATERIAL,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -39,7 +40,7 @@ describe('transform', () => {
 
   const createTestRegistration = (overrides = {}) => {
     return buildRegistration({
-      status: REG_ACC_STATUS.APPROVED,
+      status: REGISTRATION_STATUS.APPROVED,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
       material: MATERIAL.PLASTIC,
       registrationNumber: 'R12345678PL',
@@ -52,7 +53,7 @@ describe('transform', () => {
 
   const createTestAccreditation = (overrides = {}) => {
     const id = new ObjectId().toString()
-    const status = overrides.status || REG_ACC_STATUS.APPROVED
+    const status = overrides.status || ACCREDITATION_STATUS.APPROVED
     return buildAccreditation({
       id,
       status,
@@ -67,7 +68,7 @@ describe('transform', () => {
         signatories: []
       },
       statusHistory: [
-        { status: REG_ACC_STATUS.CREATED, updatedAt: CREATED_DATE },
+        { status: ACCREDITATION_STATUS.CREATED, updatedAt: CREATED_DATE },
         { status, updatedAt: TODAY }
       ],
       ...overrides
@@ -177,11 +178,11 @@ describe('transform', () => {
 
   it.each([
     {
-      status: REG_ACC_STATUS.APPROVED,
+      status: REGISTRATION_STATUS.APPROVED,
       expectedStatus: 'Approved'
     },
     {
-      status: REG_ACC_STATUS.CANCELLED,
+      status: REGISTRATION_STATUS.CANCELLED,
       expectedStatus: 'Cancelled'
     }
   ])(
@@ -217,21 +218,21 @@ describe('transform', () => {
 
   it.each([
     {
-      status: REG_ACC_STATUS.APPROVED,
+      status: ACCREDITATION_STATUS.APPROVED,
       expectedStatus: 'Approved',
       accreditationNumber: 'A123456PL',
       tonnageBand: 'up_to_10000',
       expectedTonnageBand: 'Up to 10,000 tonnes'
     },
     {
-      status: REG_ACC_STATUS.SUSPENDED,
+      status: ACCREDITATION_STATUS.SUSPENDED,
       expectedStatus: 'Suspended',
       accreditationNumber: 'A234567PL',
       tonnageBand: 'up_to_5000',
       expectedTonnageBand: 'Up to 5,000 tonnes'
     },
     {
-      status: REG_ACC_STATUS.CANCELLED,
+      status: ACCREDITATION_STATUS.CANCELLED,
       expectedStatus: 'Cancelled',
       accreditationNumber: 'A345678PL',
       tonnageBand: 'up_to_500',
@@ -298,7 +299,7 @@ describe('transform', () => {
       registrations: [
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'R11111111PL',
             validFrom: VALID_FROM,
             validTo: VALID_TO
@@ -306,13 +307,13 @@ describe('transform', () => {
         ),
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.CREATED,
+            status: REGISTRATION_STATUS.CREATED,
             registrationNumber: 'R22222222PL'
           })
         ),
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.REJECTED,
+            status: REGISTRATION_STATUS.REJECTED,
             registrationNumber: 'R33333333PL'
           })
         )
@@ -337,7 +338,7 @@ describe('transform', () => {
       registrations: [
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'R11111111PL',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -357,7 +358,7 @@ describe('transform', () => {
       accreditations: [
         buildAccreditation({
           id: accreditationId.toString(),
-          status: REG_ACC_STATUS.CREATED,
+          status: ACCREDITATION_STATUS.CREATED,
           accreditationNumber: 'A999999PL'
         })
       ]
@@ -408,7 +409,7 @@ describe('transform', () => {
       registrations: [
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.PLASTIC,
             registrationNumber: 'R11111111PL',
@@ -425,7 +426,7 @@ describe('transform', () => {
         ),
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.PAPER,
             registrationNumber: 'R22222222PL',
@@ -442,7 +443,7 @@ describe('transform', () => {
         ),
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.CREATED,
+            status: REGISTRATION_STATUS.CREATED,
             material: MATERIAL.STEEL,
             registrationNumber: 'R33333333PL'
           })
@@ -461,7 +462,7 @@ describe('transform', () => {
       registrations: [
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.ALUMINIUM,
             registrationNumber: 'R44444444AL',
@@ -642,7 +643,7 @@ describe('transform', () => {
       registrations: [
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'R99999999PL',
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.PLASTIC,
@@ -664,7 +665,7 @@ describe('transform', () => {
       registrations: [
         partialMock(
           buildRegistration({
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'R50000100PL',
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.PLASTIC,

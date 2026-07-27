@@ -2,7 +2,7 @@ import Joi from 'joi'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
-  REG_ACC_STATUS,
+  ACCREDITATION_STATUS,
   REGULATOR,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
@@ -56,11 +56,11 @@ export const accreditationSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
     .valid(
-      REG_ACC_STATUS.CREATED,
-      REG_ACC_STATUS.APPROVED,
-      REG_ACC_STATUS.CANCELLED,
-      REG_ACC_STATUS.REJECTED,
-      REG_ACC_STATUS.SUSPENDED
+      ACCREDITATION_STATUS.CREATED,
+      ACCREDITATION_STATUS.APPROVED,
+      ACCREDITATION_STATUS.CANCELLED,
+      ACCREDITATION_STATUS.REJECTED,
+      ACCREDITATION_STATUS.SUSPENDED
     )
     .forbidden(),
   validFrom: dateRequiredWhenApprovedOrSuspended(),

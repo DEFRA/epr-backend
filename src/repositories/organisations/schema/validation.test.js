@@ -6,8 +6,9 @@ import {
   validateStatusHistory
 } from './validation.js'
 import {
+  ACCREDITATION_STATUS,
   MATERIAL,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -28,7 +29,7 @@ describe('validateStatusHistory', () => {
   })
 
   it('throws badImplementation when statusHistory item missing updatedAt', () => {
-    const statusHistory = [{ status: REG_ACC_STATUS.CREATED }]
+    const statusHistory = [{ status: REGISTRATION_STATUS.CREATED }]
 
     expect(() => validateStatusHistory(statusHistory)).toThrow(
       /Invalid statusHistory.*updatedAt.*is required.*This is a system error/
@@ -38,7 +39,7 @@ describe('validateStatusHistory', () => {
   it('validates statusHistory with optional updatedBy field', () => {
     const statusHistory = [
       {
-        status: REG_ACC_STATUS.CREATED,
+        status: REGISTRATION_STATUS.CREATED,
         updatedAt: new Date(),
         updatedBy: new ObjectId().toString()
       }
@@ -648,7 +649,7 @@ describe('organisationJSONSchemaOverrides', () => {
   describe('fixRegistration', () => {
     it('allows null for optional registration number', () => {
       const registration = buildRegistration({
-        status: REG_ACC_STATUS.CREATED,
+        status: REGISTRATION_STATUS.CREATED,
         registrationNumber: null,
         material: MATERIAL.ALUMINIUM,
         wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
@@ -667,7 +668,7 @@ describe('organisationJSONSchemaOverrides', () => {
 
     it('allows missing registration number when status is APPROVED', () => {
       const registration = buildRegistration({
-        status: REG_ACC_STATUS.APPROVED,
+        status: REGISTRATION_STATUS.APPROVED,
         registrationNumber: undefined,
         material: MATERIAL.ALUMINIUM,
         wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
@@ -748,7 +749,7 @@ describe('organisationJSONSchemaOverrides', () => {
       const accreditation = buildAccreditation(
         /** @type {Parameters<typeof buildAccreditation>[0]} */ (
           /** @type {unknown} */ ({
-            status: REG_ACC_STATUS.CREATED,
+            status: ACCREDITATION_STATUS.CREATED,
             accreditationNumber: null,
             material: MATERIAL.ALUMINIUM,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
