@@ -52,7 +52,7 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber: string;
- *  status: Extract<RegAccStatus, 'approved'|'suspended'>;
+ *  status: Extract<RegAccStatus, 'approved'>;
  *  validFrom: string;
  *  validTo: string;
  * }} RegistrationApproved
@@ -70,6 +70,18 @@
 
 /**
  * @typedef {RegistrationApproved | RegistrationOther} Registration
+ */
+
+/**
+ * A registration that appears in regulator reports: approved, or cancelled
+ * after approval. A cancelled registration was previously approved, so it
+ * carries its registration number and validity dates.
+ * @typedef {RegistrationBase & {
+ *  registrationNumber: string;
+ *  status: Extract<RegAccStatus, 'approved'|'cancelled'>;
+ *  validFrom: string;
+ *  validTo: string;
+ * }} ReportableRegistration
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

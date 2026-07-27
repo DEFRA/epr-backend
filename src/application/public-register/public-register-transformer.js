@@ -20,7 +20,15 @@ import chunk from 'lodash.chunk'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { config } from '#root/config.js'
 
-const INCLUDED_STATUSES = new Set([
+// A registration's own status can never be suspended (suspension is an
+// accreditation-only concept), so suspended is excluded here.
+const REGISTRATION_INCLUDED_STATUSES = new Set([
+  REG_ACC_STATUS.APPROVED,
+  REG_ACC_STATUS.CANCELLED
+])
+
+// Cancelled and suspended accreditations remain on the public register (BR-E8).
+const ACCREDITATION_INCLUDED_STATUSES = new Set([
   REG_ACC_STATUS.APPROVED,
   REG_ACC_STATUS.SUSPENDED,
   REG_ACC_STATUS.CANCELLED
@@ -92,13 +100,18 @@ function getLinkedAccreditation(registration, accreditations) {
   return registration.accreditationId
     ? accreditations.find(
         (acc) =>
-          acc.id === registration.accreditationId && isInPublishableState(acc)
+          acc.id === registration.accreditationId &&
+          isAccreditationInPublishableState(acc)
       )
     : null
 }
 
-function isInPublishableState(item) {
-  return INCLUDED_STATUSES.has(item.status)
+function isRegistrationInPublishableState(item) {
+  return REGISTRATION_INCLUDED_STATUSES.has(item.status)
+}
+
+function isAccreditationInPublishableState(item) {
+  return ACCREDITATION_INCLUDED_STATUSES.has(item.status)
 }
 
 function isTestOrg(org) {
@@ -115,22 +128,24 @@ function processBatch(batch, reportComplianceData) {
   return batch
     .filter((org) => !isTestOrg(org))
     .flatMap((org) =>
-      org.registrations.filter(isInPublishableState).map((registration) => {
-        const accreditation = getLinkedAccreditation(
-          registration,
-          org.accreditations
-        )
-        const entry = entries.get(registration.id)
-        const reportComplianceFields = entry
-          ? buildReportComplianceFields(periods, entry)
-          : {}
-        return transformRegAcc(
-          org,
-          registration,
-          accreditation,
-          reportComplianceFields
-        )
-      })
+      org.registrations
+        .filter(isRegistrationInPublishableState)
+        .map((registration) => {
+          const accreditation = getLinkedAccreditation(
+            registration,
+            org.accreditations
+          )
+          const entry = entries.get(registration.id)
+          const reportComplianceFields = entry
+            ? buildReportComplianceFields(periods, entry)
+            : {}
+          return transformRegAcc(
+            org,
+            registration,
+            accreditation,
+            reportComplianceFields
+          )
+        })
     )
 }
 

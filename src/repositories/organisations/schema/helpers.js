@@ -84,6 +84,9 @@ export const requiredForWasteExemptionAndReprocessor = (schema) =>
     otherwise: Joi.forbidden()
   })
 
+// Accreditations require their number and validity dates while approved or
+// suspended; registrations cannot be suspended (PAE-1705), so their variant
+// requires the fields when approved only.
 export const requiredWhenApprovedOrSuspended = {
   switch: [
     { is: REG_ACC_STATUS.APPROVED, then: Joi.required().invalid(null) },
@@ -92,8 +95,17 @@ export const requiredWhenApprovedOrSuspended = {
   otherwise: Joi.optional().allow(null)
 }
 
+export const requiredWhenApproved = {
+  is: REG_ACC_STATUS.APPROVED,
+  then: Joi.required().invalid(null),
+  otherwise: Joi.optional().allow(null)
+}
+
 export const dateRequiredWhenApprovedOrSuspended = () =>
   isoDateString().when('status', requiredWhenApprovedOrSuspended).default(null)
+
+export const dateRequiredWhenApproved = () =>
+  isoDateString().when('status', requiredWhenApproved).default(null)
 
 function findAccreditationsWithoutApprovedRegistration(
   accreditations,

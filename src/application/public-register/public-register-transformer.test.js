@@ -181,10 +181,6 @@ describe('transform', () => {
       expectedStatus: 'Approved'
     },
     {
-      status: REG_ACC_STATUS.SUSPENDED,
-      expectedStatus: 'Suspended'
-    },
-    {
       status: REG_ACC_STATUS.CANCELLED,
       expectedStatus: 'Cancelled'
     }

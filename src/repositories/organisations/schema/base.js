@@ -9,7 +9,6 @@ import {
 } from '#domain/organisations/model.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
-import { requiredWhenApprovedOrSuspended } from '#repositories/organisations/schema/helpers.js'
 
 export const idSchema = Joi.string()
   .required()
@@ -114,14 +113,15 @@ export const formFileUploadSchema = Joi.object({
   s3Uri: Joi.string().optional()
 })
 
-export const reprocessingTypeSchema = Joi.when('wasteProcessingType', {
-  is: WASTE_PROCESSING_TYPE.REPROCESSOR,
-  then: Joi.string()
-    .valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
-    .when('status', requiredWhenApprovedOrSuspended)
-    .default(null),
-  otherwise: Joi.forbidden()
-})
+export const makeReprocessingTypeSchema = (requiredWhen) =>
+  Joi.when('wasteProcessingType', {
+    is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+    then: Joi.string()
+      .valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
+      .when('status', requiredWhen)
+      .default(null),
+    otherwise: Joi.forbidden()
+  })
 
 export const formSubmissionSchema = Joi.object({
   id: idSchema.required(),

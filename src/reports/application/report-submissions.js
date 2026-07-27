@@ -1,5 +1,5 @@
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { RegistrationApproved } from '#domain/organisations/registration.js' */
+/** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
 
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -133,7 +133,7 @@ function buildTonnageFields(report) {
 
 /**
  * @param {Organisation} org
- * @param {RegistrationApproved} registration
+ * @param {ReportableRegistration} registration
  * @param {string} cadence
  * @param {MergedPeriod} mergedPeriod
  * @param {string} accreditationNumber
@@ -241,7 +241,7 @@ async function buildSubmissionRows(
 }
 
 /**
- * Generates a flat list of report submission rows across all approved/suspended
+ * Generates a flat list of report submission rows across all approved/cancelled
  * registrations for all organisations.
  *
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository

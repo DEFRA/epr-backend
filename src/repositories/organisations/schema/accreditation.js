@@ -11,7 +11,7 @@ import {
   formFileUploadSchema,
   formSubmissionSchema,
   idSchema,
-  reprocessingTypeSchema,
+  makeReprocessingTypeSchema,
   userSchema
 } from './base.js'
 import {
@@ -68,7 +68,7 @@ export const accreditationSchema = Joi.object({
   accreditationNumber: Joi.string()
     .when('status', requiredWhenApprovedOrSuspended)
     .default(null),
-  reprocessingType: reprocessingTypeSchema,
+  reprocessingType: makeReprocessingTypeSchema(requiredWhenApprovedOrSuspended),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),

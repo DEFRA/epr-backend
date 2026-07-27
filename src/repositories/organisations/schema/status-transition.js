@@ -1,14 +1,13 @@
 import Boom from '@hapi/boom'
-import {
-  assertOrgStatusTransitionValid,
-  assertRegAccStatusTransitionValid
-} from '#domain/organisations/status.js'
+import { assertOrgStatusTransitionValid } from '#domain/organisations/status.js'
 import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS
 } from '#domain/organisations/model.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Organisation, RegAccStatus} from '#domain/organisations/model.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
 /**
  * @param {Organisation} existing
@@ -66,36 +65,76 @@ export const assertOrgStatusTransition = (existing, updated) => {
   }
 }
 
-export const assertAndHandleItemStateTransition = (existing, updated) => {
+/**
+ * @param {{ status: string }} existing
+ * @param {{ status?: string }} updated
+ * @param {(fromStatus: string, toStatus: string) => void} assertStatusTransitionValid
+ * @returns {void}
+ */
+export const assertAndHandleItemStateTransition = (
+  existing,
+  updated,
+  assertStatusTransitionValid
+) => {
   // If no status change requested (undefined or same), skip validation
   if (!updated.status || existing.status === updated.status) {
     return
   }
-  assertRegAccStatusTransitionValid(existing.status, updated.status)
+  assertStatusTransitionValid(existing.status, updated.status)
 }
 
-const isRegistrationCancelledOrSuspended = (registration) => {
-  return [REG_ACC_STATUS.SUSPENDED, REG_ACC_STATUS.CANCELLED].includes(
-    registration.status
-  )
-}
+const isRegistrationCancelled = (registration) =>
+  registration.status === REG_ACC_STATUS.CANCELLED
 
+// Only a live accreditation is force-cancelled by the cascade. The check runs
+// against the incoming payload status so that an attempt to reinstate a
+// cascade-cancelled accreditation (payload approved, registration still
+// cancelled) is also caught and held at cancelled.
+const CASCADEABLE_ACC_STATUSES = /** @type {Set<RegAccStatus>} */ (
+  new Set([REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.SUSPENDED])
+)
+
+/**
+ * Cancelling a registration force-cancels its linked accreditation, whether
+ * that accreditation is approved or suspended (PAE-1705 Scenario 5). An
+ * accreditation that was never live (created or rejected) is left untouched.
+ * The returned cascadeCancelledIds mark the force-cancelled accreditations as
+ * system-driven changes, exempt from the accreditation transition table —
+ * which deliberately has no direct approved -> cancelled arc for user-driven
+ * updates (ADR 0042).
+ * @param {Registration[]} registrations
+ * @param {Accreditation[]} accreditations
+ * @returns {{ accreditations: Accreditation[], cascadeCancelledIds: Set<string> }}
+ */
 export const applyRegistrationStatusToLinkedAccreditations = (
   registrations,
   accreditations
 ) => {
-  const statusUpdates = new Map()
+  /** @type {Set<string>} */
+  const linkedToCancelledRegistration = new Set()
 
   for (const reg of registrations) {
-    if (reg.accreditationId && isRegistrationCancelledOrSuspended(reg)) {
-      statusUpdates.set(reg.accreditationId, reg.status)
+    if (reg.accreditationId && isRegistrationCancelled(reg)) {
+      linkedToCancelledRegistration.add(reg.accreditationId)
     }
   }
 
-  return accreditations.map((acc) => {
-    if (statusUpdates.has(acc.id)) {
-      return { ...acc, status: statusUpdates.get(acc.id) }
+  /** @type {Set<string>} */
+  const cascadeCancelledIds = new Set()
+
+  const updatedAccreditations = accreditations.map((acc) => {
+    if (
+      linkedToCancelledRegistration.has(acc.id) &&
+      CASCADEABLE_ACC_STATUSES.has(acc.status)
+    ) {
+      cascadeCancelledIds.add(acc.id)
+      return /** @type {Accreditation} */ ({
+        ...acc,
+        status: REG_ACC_STATUS.CANCELLED
+      })
     }
     return acc
   })
+
+  return { accreditations: updatedAccreditations, cascadeCancelledIds }
 }
