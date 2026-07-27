@@ -1,5 +1,5 @@
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 /**
  * Checks if all dates are accredited
@@ -70,6 +70,7 @@ export function isSuspendedOrCancelledAtDate(date, statusHistory) {
     (entry) => entry.updatedAt <= new Date(date).getTime()
   )?.status
   return (
-    status === REG_ACC_STATUS.SUSPENDED || status === REG_ACC_STATUS.CANCELLED
+    status === ACCREDITATION_STATUS.SUSPENDED ||
+    status === ACCREDITATION_STATUS.CANCELLED
   )
 }

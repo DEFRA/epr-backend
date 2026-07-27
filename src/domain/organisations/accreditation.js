@@ -1,20 +1,30 @@
-/** @import {GlassRecyclingProcess, RegAccStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
+/** @import {AccreditationStatus, GlassRecyclingProcess, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
  * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
  * getStatusHistoryDateTimes normalises string inputs via `new Date(...)`, so the
  * consumer contract genuinely accepts either.
  *
+ * @template {string} S
  * @typedef {{
- *  status: RegAccStatus;
+ *  status: S;
  *  updatedAt: Date | string;
- * }} StatusHistoryEntry
+ * }} StatusHistoryEntryOf
  */
 
 /**
+ * @typedef {StatusHistoryEntryOf<AccreditationStatus>} StatusHistoryEntry
+ */
+
+/**
+ * @template {string} S
  * @typedef {{
- *  statusHistory: StatusHistoryEntry[];
- * }} StatusHistory
+ *  statusHistory: StatusHistoryEntryOf<S>[];
+ * }} StatusHistoryOf
+ */
+
+/**
+ * @typedef {StatusHistoryOf<AccreditationStatus>} StatusHistory
  */
 
 /**
@@ -64,7 +74,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber: string;
- *  status: Extract<RegAccStatus, 'approved'|'suspended'>;
+ *  status: Extract<AccreditationStatus, 'approved'|'suspended'>;
  *  validFrom: string;
  *  validTo: string
  * }} AccreditationApproved
@@ -73,7 +83,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber?: string;
- *  status: Extract<RegAccStatus, 'created'|'rejected'|'cancelled'>;
+ *  status: Extract<AccreditationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string
  * }} AccreditationOther

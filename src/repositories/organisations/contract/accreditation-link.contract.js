@@ -1,7 +1,7 @@
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -40,12 +40,12 @@ export const testAccreditationLinkValidation = (it) => {
           registrations: [
             {
               ...organisation.registrations[0],
-              status: REG_ACC_STATUS.CREATED,
+              status: REGISTRATION_STATUS.CREATED,
               accreditationId
             },
             {
               ...organisation.registrations[1],
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG123',
               validFrom: VALID_FROM,
               validTo: VALID_TO,

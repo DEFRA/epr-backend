@@ -6,7 +6,10 @@ import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS
+} from '#domain/organisations/model.js'
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 
@@ -541,7 +544,7 @@ describe('generateReportSubmissions (edge cases)', () => {
       ],
       registrations: [
         buildRegistrationMock({
-          status: REG_ACC_STATUS.APPROVED,
+          status: REGISTRATION_STATUS.APPROVED,
           accreditationId: 'acc-1'
         })
       ]
@@ -562,7 +565,7 @@ describe('generateReportSubmissions (edge cases)', () => {
       accreditations: [
         {
           id: 'acc-1',
-          status: REG_ACC_STATUS.SUSPENDED,
+          status: ACCREDITATION_STATUS.SUSPENDED,
           accreditationNumber: 'ACC-999'
         }
       ],

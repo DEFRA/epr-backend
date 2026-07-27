@@ -1,11 +1,12 @@
 import Boom from '@hapi/boom'
 import { assertOrgStatusTransitionValid } from '#domain/organisations/status.js'
 import {
+  ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
-  REG_ACC_STATUS
+  REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 
-/** @import {Organisation, RegAccStatus} from '#domain/organisations/model.js' */
+/** @import {AccreditationStatus, Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
@@ -15,7 +16,7 @@ import {
  */
 const requireApprovedRegistration = (existing) => {
   const hasApproved = existing.registrations.some(
-    (reg) => reg.status === REG_ACC_STATUS.APPROVED
+    (reg) => reg.status === REGISTRATION_STATUS.APPROVED
   )
 
   if (!hasApproved) {
@@ -84,14 +85,14 @@ export const assertAndHandleItemStateTransition = (
 }
 
 const isRegistrationCancelled = (registration) =>
-  registration.status === REG_ACC_STATUS.CANCELLED
+  registration.status === REGISTRATION_STATUS.CANCELLED
 
 // Only a live accreditation is force-cancelled by the cascade. The check runs
 // against the incoming payload status so that an attempt to reinstate a
 // cascade-cancelled accreditation (payload approved, registration still
 // cancelled) is also caught and held at cancelled.
-const CASCADEABLE_ACC_STATUSES = /** @type {Set<RegAccStatus>} */ (
-  new Set([REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.SUSPENDED])
+const CASCADEABLE_ACC_STATUSES = /** @type {Set<AccreditationStatus>} */ (
+  new Set([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])
 )
 
 /**
@@ -130,7 +131,7 @@ export const applyRegistrationStatusToLinkedAccreditations = (
       cascadeCancelledIds.add(acc.id)
       return /** @type {Accreditation} */ ({
         ...acc,
-        status: REG_ACC_STATUS.CANCELLED
+        status: ACCREDITATION_STATUS.CANCELLED
       })
     }
     return acc

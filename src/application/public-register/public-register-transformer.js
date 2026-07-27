@@ -6,7 +6,10 @@
 /** @import {PublicRegisterRow} from './types.js' */
 /** @import {ReportComplianceData} from '#reports/application/report-compliance.js' */
 
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS
+} from '#domain/organisations/model.js'
 import {
   capitalize,
   formatAddress,
@@ -23,15 +26,15 @@ import { config } from '#root/config.js'
 // A registration's own status can never be suspended (suspension is an
 // accreditation-only concept), so suspended is excluded here.
 const REGISTRATION_INCLUDED_STATUSES = new Set([
-  REG_ACC_STATUS.APPROVED,
-  REG_ACC_STATUS.CANCELLED
+  REGISTRATION_STATUS.APPROVED,
+  REGISTRATION_STATUS.CANCELLED
 ])
 
 // Cancelled and suspended accreditations remain on the public register (BR-E8).
 const ACCREDITATION_INCLUDED_STATUSES = new Set([
-  REG_ACC_STATUS.APPROVED,
-  REG_ACC_STATUS.SUSPENDED,
-  REG_ACC_STATUS.CANCELLED
+  ACCREDITATION_STATUS.APPROVED,
+  ACCREDITATION_STATUS.SUSPENDED,
+  ACCREDITATION_STATUS.CANCELLED
 ])
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)

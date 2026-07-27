@@ -1,6 +1,7 @@
 import {
+  ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
@@ -37,7 +38,7 @@ export async function buildApprovedOrg(
   const approvedAccreditations = [
     {
       ...org.accreditations[0],
-      status: REG_ACC_STATUS.APPROVED,
+      status: ACCREDITATION_STATUS.APPROVED,
       accreditationNumber: org.accreditations[0].accreditationNumber || 'ACC1',
       validFrom: VALID_FROM,
       reprocessingType: REPROCESSING_TYPE.INPUT,
@@ -47,7 +48,7 @@ export async function buildApprovedOrg(
 
   const approvedRegistrations = [
     Object.assign({}, org.registrations[0], {
-      status: REG_ACC_STATUS.APPROVED,
+      status: REGISTRATION_STATUS.APPROVED,
       cbduNumber:
         /** @type {RegistrationOther} */ (org.registrations[0]).cbduNumber ||
         'CBDU123456',

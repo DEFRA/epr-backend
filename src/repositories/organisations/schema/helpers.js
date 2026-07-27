@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import {
-  REG_ACC_STATUS,
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -89,14 +90,14 @@ export const requiredForWasteExemptionAndReprocessor = (schema) =>
 // requires the fields when approved only.
 export const requiredWhenApprovedOrSuspended = {
   switch: [
-    { is: REG_ACC_STATUS.APPROVED, then: Joi.required().invalid(null) },
-    { is: REG_ACC_STATUS.SUSPENDED, then: Joi.required().invalid(null) }
+    { is: ACCREDITATION_STATUS.APPROVED, then: Joi.required().invalid(null) },
+    { is: ACCREDITATION_STATUS.SUSPENDED, then: Joi.required().invalid(null) }
   ],
   otherwise: Joi.optional().allow(null)
 }
 
 export const requiredWhenApproved = {
-  is: REG_ACC_STATUS.APPROVED,
+  is: REGISTRATION_STATUS.APPROVED,
   then: Joi.required().invalid(null),
   otherwise: Joi.optional().allow(null)
 }
@@ -112,12 +113,12 @@ function findAccreditationsWithoutApprovedRegistration(
   registrations
 ) {
   return accreditations
-    .filter((acc) => acc.status === REG_ACC_STATUS.APPROVED)
+    .filter((acc) => acc.status === ACCREDITATION_STATUS.APPROVED)
     .filter((acc) => {
       const hasApprovedRegistration = registrations.some(
         (reg) =>
           reg.accreditationId === acc.id &&
-          reg.status === REG_ACC_STATUS.APPROVED &&
+          reg.status === REGISTRATION_STATUS.APPROVED &&
           isAccreditationForRegistration(acc, reg)
       )
       return !hasApprovedRegistration
@@ -130,7 +131,7 @@ function findAccreditationsWithoutApprovedRegistration(
  */
 function findDuplicateApprovals(items) {
   const grouped = Object.groupBy(
-    items.filter((item) => item.status === REG_ACC_STATUS.APPROVED),
+    items.filter((item) => item.status === REGISTRATION_STATUS.APPROVED),
     (item) => getRegAccKey(item)
   )
 

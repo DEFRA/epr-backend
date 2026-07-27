@@ -9,7 +9,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   WASTE_PROCESSING_TYPE,
-  REG_ACC_STATUS
+  ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
@@ -200,7 +200,7 @@ export const packagingRecyclingNotesCreate = {
         organisationsRepository.findById(organisationId)
       ])
 
-      if (accreditation.status === REG_ACC_STATUS.CANCELLED) {
+      if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
         throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
       }
 

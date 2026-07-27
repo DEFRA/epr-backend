@@ -1,8 +1,9 @@
 import {
+  ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
   PARTNER_TYPE,
   PARTNERSHIP_TYPE,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REPROCESSING_TYPE,
   USER_ROLES,
   WASTE_PROCESSING_TYPE
@@ -64,20 +65,32 @@ export const linkedDefraOrganisationSchema = Joi.object({
   linkedAt: Joi.date().iso().required()
 })
 
-export const statusHistoryItemSchema = Joi.object({
-  status: Joi.string()
-    .valid(
-      REG_ACC_STATUS.CREATED,
-      REG_ACC_STATUS.APPROVED,
-      ORGANISATION_STATUS.ACTIVE,
-      REG_ACC_STATUS.CANCELLED,
-      REG_ACC_STATUS.REJECTED,
-      REG_ACC_STATUS.SUSPENDED
-    )
-    .required(),
-  updatedAt: Joi.date().iso().required(),
-  updatedBy: idSchema.optional()
-})
+const makeStatusHistoryItemSchema = (statuses) =>
+  Joi.object({
+    status: Joi.string()
+      .valid(...statuses)
+      .required(),
+    updatedAt: Joi.date().iso().required(),
+    updatedBy: idSchema.optional()
+  })
+
+// Generic item schema: validateStatusHistory guards server-computed histories
+// for organisations, registrations and accreditations alike, so this accepts
+// the union of all three status sets.
+export const statusHistoryItemSchema = makeStatusHistoryItemSchema([
+  ...Object.values(ACCREDITATION_STATUS),
+  ORGANISATION_STATUS.ACTIVE
+])
+
+// A registration can never have held suspended (PAE-1705); the admin raw-JSON
+// editor derives its per-entity schemas from these.
+export const registrationStatusHistoryItemSchema = makeStatusHistoryItemSchema(
+  Object.values(REGISTRATION_STATUS)
+)
+
+export const accreditationStatusHistoryItemSchema = makeStatusHistoryItemSchema(
+  Object.values(ACCREDITATION_STATUS)
+)
 
 export const companyDetailsSchema = Joi.object({
   name: Joi.string().required(),

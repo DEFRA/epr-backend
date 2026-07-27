@@ -9,9 +9,9 @@ import {
   uppercaseString
 } from './formatters.js'
 import {
+  ACCREDITATION_STATUS,
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
-  REG_ACC_STATUS,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -61,8 +61,8 @@ describe('formatters', () => {
 
   describe('capitalize', () => {
     it('should capitalize first letter and lowercase the rest', () => {
-      expect(capitalize(REG_ACC_STATUS.APPROVED)).toBe('Approved')
-      expect(capitalize(REG_ACC_STATUS.SUSPENDED)).toBe('Suspended')
+      expect(capitalize(ACCREDITATION_STATUS.APPROVED)).toBe('Approved')
+      expect(capitalize(ACCREDITATION_STATUS.SUSPENDED)).toBe('Suspended')
       expect(capitalize(REGULATOR.EA)).toBe('Ea')
       expect(capitalize(REGULATOR.SEPA)).toBe('Sepa')
       expect(capitalize(WASTE_PROCESSING_TYPE.REPROCESSOR)).toBe('Reprocessor')

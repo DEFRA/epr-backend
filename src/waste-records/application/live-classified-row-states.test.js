@@ -5,7 +5,7 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
-  REG_ACC_STATUS,
+  ACCREDITATION_STATUS,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -39,8 +39,8 @@ const REGISTRATION_ID = '6a5e271fe01bc18f22a9941c'
 const ACCREDITATION_ID = '6a5e271fe01bc18f22a99419'
 
 const approvedHistory = [
-  { status: REG_ACC_STATUS.CREATED, updatedAt: '2024-01-01' },
-  { status: REG_ACC_STATUS.APPROVED, updatedAt: '2024-02-01' }
+  { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2024-01-01' },
+  { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2024-02-01' }
 ]
 
 /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */
@@ -293,7 +293,7 @@ describe('liveClassifiedRowStatesForRegistration', () => {
     const scenario = reprocessorAccreditedFrom('2026-01-01')
     scenario.organisation.accreditations[0].statusHistory = [
       ...approvedHistory,
-      { status: REG_ACC_STATUS.CANCELLED, updatedAt: '2026-05-01' }
+      { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-05-01' }
     ]
 
     const [state] = await readLiveStates(scenario)

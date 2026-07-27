@@ -1,20 +1,25 @@
-import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
+import { REGISTRATION_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {CollatedUser, Organisation, RegAccStatus, UserRoles} from '#domain/organisations/model.js' */
+/** @import {CollatedUser, Organisation, RegOrAccStatus, UserRoles} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 
 /** @typedef {Pick<CollatedUser, 'fullName'|'email'|'roles'>} SlimUser */
 
 /**
- * get user roles for the provided status
+ * get user roles for the provided status. Generic over registrations and
+ * accreditations; the compared values (created/approved) are common to both,
+ * so the registration constants are used.
  *
- * @param {RegAccStatus} status
+ * @param {RegOrAccStatus} status
  * @returns {UserRoles[]}
  */
 const getUserRolesForStatus = (status) => {
-  if (status === REG_ACC_STATUS.CREATED || status === REG_ACC_STATUS.APPROVED) {
+  if (
+    status === REGISTRATION_STATUS.CREATED ||
+    status === REGISTRATION_STATUS.APPROVED
+  ) {
     return [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
   }
   return [USER_ROLES.STANDARD]
@@ -34,7 +39,7 @@ const collateItems = (updated, collectionKey, extractAdditionalUsers) => {
   for (const item of updated[collectionKey]) {
     const itemStatus = getCurrentStatus(item)
 
-    if (itemStatus === REG_ACC_STATUS.APPROVED) {
+    if (itemStatus === REGISTRATION_STATUS.APPROVED) {
       users.push(
         {
           fullName: item.submitterContactDetails.fullName,
