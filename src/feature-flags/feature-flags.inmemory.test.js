@@ -73,4 +73,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(false)
   })
+
+  it('returns true when dropWasteRecordsCollection flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      dropWasteRecordsCollection: true
+    })
+    expect(flags.isDropWasteRecordsCollectionEnabled()).toBe(true)
+  })
+
+  it('returns false when dropWasteRecordsCollection flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      dropWasteRecordsCollection: false
+    })
+    expect(flags.isDropWasteRecordsCollectionEnabled()).toBe(false)
+  })
+
+  it('returns false when dropWasteRecordsCollection flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isDropWasteRecordsCollectionEnabled()).toBe(false)
+  })
 })

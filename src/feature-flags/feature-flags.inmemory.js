@@ -14,5 +14,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isPreCpaResubmissionBackfillEnabled() {
     return flags.preCpaResubmissionBackfill ?? false
+  },
+  isDropWasteRecordsCollectionEnabled() {
+    return flags.dropWasteRecordsCollection ?? false
   }
 })
