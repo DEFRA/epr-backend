@@ -19,7 +19,7 @@ const wasteRecordsCollectionExists = async (db) => {
  * @param {import('mongodb').Db} db
  * @param {boolean} isDryRun
  */
-const dropWasteRecordsCollection = async (db, isDryRun) => {
+const dropOrReportWasteRecordsCollection = async (db, isDryRun) => {
   if (!(await wasteRecordsCollectionExists(db))) {
     logger.info({
       message: `Waste records collection drop: ${COLLECTION_WASTE_RECORDS} is already absent, nothing to drop`
@@ -29,7 +29,7 @@ const dropWasteRecordsCollection = async (db, isDryRun) => {
 
   const documents = await db
     .collection(COLLECTION_WASTE_RECORDS)
-    .countDocuments()
+    .estimatedDocumentCount()
 
   if (isDryRun) {
     logger.info({
@@ -40,8 +40,19 @@ const dropWasteRecordsCollection = async (db, isDryRun) => {
 
   await db.dropCollection(COLLECTION_WASTE_RECORDS)
 
+  // Mongo recreates a collection on first insert, so documents in a collection
+  // nothing should be writing to means a writer survives somewhere and the
+  // drop will not stick. Warn so that boot is distinguishable from the
+  // expected empty one.
+  if (documents > 0) {
+    logger.warn({
+      message: `Waste records collection drop: dropped ${COLLECTION_WASTE_RECORDS}, which held ${documents} documents — anything still writing to it will recreate it`
+    })
+    return
+  }
+
   logger.info({
-    message: `Waste records collection drop: dropped ${COLLECTION_WASTE_RECORDS}, which held ${documents} documents`
+    message: `Waste records collection drop: dropped empty ${COLLECTION_WASTE_RECORDS}`
   })
 }
 
@@ -69,7 +80,7 @@ export const runWasteRecordsCollectionDrop = async (server) => {
       return
     }
     try {
-      await dropWasteRecordsCollection(server.db, isDryRun)
+      await dropOrReportWasteRecordsCollection(server.db, isDryRun)
     } finally {
       await lock.free()
     }

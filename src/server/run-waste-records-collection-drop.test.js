@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, vi, beforeEach } from 'vitest'
-import { MongoClient } from 'mongodb'
 
-import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { it as mongoClientIt } from '#vite/fixtures/mongo-client.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { runWasteRecordsCollectionDrop } from './run-waste-records-collection-drop.js'
 
@@ -18,14 +17,18 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
  * @typedef {{ database: import('mongodb').Db }} DatabaseFixture
  */
 
+/**
+ * These assertions are on the whole set of collection names in the database,
+ * so each test needs a database of its own rather than the shared fixture's
+ * single named one — otherwise a collection seeded by one test is visible to
+ * the next.
+ */
 const it = /** @type {import('vitest').TestAPI<DatabaseFixture>} */ (
-  mongoIt.extend({
-    database: async ({ db }, use) => {
-      const client = await MongoClient.connect(db)
-      const database = client.db(`epr-backend-test-${randomUUID()}`)
+  mongoClientIt.extend({
+    database: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(`epr-backend-test-${randomUUID()}`)
       await use(database)
       await database.dropDatabase()
-      await client.close()
     }
   })
 )
@@ -65,10 +68,32 @@ describe('runWasteRecordsCollectionDrop', () => {
     await runWasteRecordsCollectionDrop(buildServer(database))
 
     expect(await collectionNames(database)).not.toContain('waste-records')
-    expect(logger.info).toHaveBeenCalledWith({
+    expect(logger.error).not.toHaveBeenCalled()
+  })
+
+  it('warns when the dropped collection still held documents, because a surviving writer would recreate it', async ({
+    database
+  }) => {
+    await seedWasteRecords(database, 3)
+
+    await runWasteRecordsCollectionDrop(buildServer(database))
+
+    expect(logger.warn).toHaveBeenCalledWith({
       message:
-        'Waste records collection drop: dropped waste-records, which held 3 documents'
+        'Waste records collection drop: dropped waste-records, which held 3 documents — anything still writing to it will recreate it'
     })
+  })
+
+  it('drops an empty collection without warning', async ({ database }) => {
+    await database.createCollection('waste-records')
+
+    await runWasteRecordsCollectionDrop(buildServer(database))
+
+    expect(await collectionNames(database)).not.toContain('waste-records')
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Waste records collection drop: dropped empty waste-records'
+    })
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.error).not.toHaveBeenCalled()
   })
 
@@ -94,6 +119,20 @@ describe('runWasteRecordsCollectionDrop', () => {
     database
   }) => {
     await runWasteRecordsCollectionDrop(buildServer(database))
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Waste records collection drop: waste-records is already absent, nothing to drop'
+    })
+    expect(logger.error).not.toHaveBeenCalled()
+  })
+
+  it('reports the collection as absent when the flag is off and it has already gone', async ({
+    database
+  }) => {
+    await runWasteRecordsCollectionDrop(
+      buildServer(database, { dropEnabled: false })
+    )
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -152,15 +191,22 @@ describe('runWasteRecordsCollectionDrop', () => {
     expect(logger.error).not.toHaveBeenCalled()
   })
 
+  // A real Mongo cannot be made to fail the drop, so this is the one case that
+  // needs a stub. It answers only for 'waste-records' so the test still fails
+  // if the production code ever names a different collection.
   it('releases the lock and logs an error when the drop itself fails', async () => {
     const error = new Error('not authorised to drop')
     const lock = { free: vi.fn().mockResolvedValue(undefined) }
     const db = {
-      listCollections: () => ({
-        toArray: async () => [{ name: 'waste-records' }]
+      listCollections: ({ name }) => ({
+        toArray: async () => (name === 'waste-records' ? [{ name }] : [])
       }),
-      collection: () => ({ countDocuments: async () => 1 }),
-      dropCollection: async () => {
+      collection: (name) => ({
+        estimatedDocumentCount: async () =>
+          name === 'waste-records' ? 1 : undefined
+      }),
+      dropCollection: async (name) => {
+        expect(name).toBe('waste-records')
         throw error
       }
     }
