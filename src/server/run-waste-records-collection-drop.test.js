@@ -185,26 +185,29 @@ describe('runWasteRecordsCollectionDrop', () => {
   })
 
   // A real Mongo cannot be made to fail the drop, so this is the one case that
-  // needs a stub. It answers only for 'waste-records' so the test still fails
-  // if the production code ever names a different collection.
+  // needs a stub. The names it was asked about are asserted afterwards, so the
+  // test still fails if the production code ever targets a different
+  // collection.
   it('logs an error when the drop itself fails', async () => {
     const error = new Error('not authorised to drop')
+    const listed = []
+    const dropped = []
     const db = {
-      listCollections: ({ name }) => ({
-        toArray: async () => (name === 'waste-records' ? [{ name }] : [])
-      }),
-      collection: (name) => ({
-        estimatedDocumentCount: async () =>
-          name === 'waste-records' ? 1 : undefined
-      }),
+      listCollections: ({ name }) => {
+        listed.push(name)
+        return { toArray: async () => [{ name }] }
+      },
+      collection: () => ({ estimatedDocumentCount: async () => 1 }),
       dropCollection: async (name) => {
-        expect(name).toBe('waste-records')
+        dropped.push(name)
         throw error
       }
     }
 
     await runWasteRecordsCollectionDrop(buildServer(db))
 
+    expect(listed).toEqual(['waste-records'])
+    expect(dropped).toEqual(['waste-records'])
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
       message: 'Failed to run waste records collection drop'
