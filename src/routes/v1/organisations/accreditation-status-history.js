@@ -27,12 +27,15 @@ export const accreditationStatusHistory = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{
-   *    fromStatus: RegAccStatus,
-   *    toStatus: RegAccStatus,
-   *    appliesFrom?: string,
-   *    accreditationNumber?: string
-   * }> & {
+   * @param {import('#common/hapi-types.js').HapiRequest<
+   *    { fromStatus: RegAccStatus, toStatus: RegAccStatus } |
+   *    {
+   *      fromStatus: RegAccStatus,
+   *      toStatus: RegAccStatus,
+   *      appliesFrom: string,
+   *      accreditationNumber: string
+   *    }
+   * > & {
    *    organisationsRepository: OrganisationsRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string, accreditationId: string }
@@ -43,8 +46,12 @@ export const accreditationStatusHistory = {
   handler: async (request, h) => {
     const { organisationsRepository } = request
     const { organisationId, registrationId, accreditationId } = request.params
-    const { fromStatus, toStatus, appliesFrom, accreditationNumber } =
-      request.payload
+    const payload = request.payload
+    const { fromStatus, toStatus } = payload
+
+    // The created -> approved arm of the payload schema requires both grant
+    // fields; the other arms forbid them.
+    const grant = 'accreditationNumber' in payload ? payload : undefined
 
     const initial = await organisationsRepository.findById(organisationId)
 
@@ -76,14 +83,17 @@ export const accreditationStatusHistory = {
     // silent no-op instead of the required 422.
     assertRegAccStatusTransitionValid(fromStatus, toStatus)
 
-    if (accreditationNumber) {
+    if (grant) {
       // Granting sets validFrom to appliesFrom but leaves validTo (owned by
       // the application data) untouched, so reject a window that would be
       // inverted. When validTo is absent the replace below 422s via the
       // schema guard requiring it on approved accreditations.
-      if (accreditation.validTo && appliesFrom > accreditation.validTo) {
+      if (
+        accreditation.validTo &&
+        new Date(grant.appliesFrom) > new Date(accreditation.validTo)
+      ) {
         throw Boom.badData(
-          `Cannot grant accreditation: appliesFrom ${appliesFrom} is after validTo ${accreditation.validTo}`
+          `Cannot grant accreditation: appliesFrom ${grant.appliesFrom} is after validTo ${accreditation.validTo}`
         )
       }
 
@@ -92,19 +102,21 @@ export const accreditationStatusHistory = {
       // This uniqueness is enforced here only: there is no unique index on
       // accreditations.accreditationNumber, so concurrent grants of the same
       // number are not blocked by the database.
-      const holder =
-        await organisationsRepository.findByAccreditationNumber(
-          accreditationNumber
-        )
+      const holder = await organisationsRepository.findByAccreditationNumber(
+        grant.accreditationNumber
+      )
       if (holder) {
         throw Boom.badData(
-          `Accreditation number ${accreditationNumber} is already in use`
+          `Accreditation number ${grant.accreditationNumber} is already in use`
         )
       }
     }
 
-    const grantFields = accreditationNumber
-      ? { accreditationNumber, validFrom: appliesFrom }
+    const grantFields = grant
+      ? {
+          accreditationNumber: grant.accreditationNumber,
+          validFrom: grant.appliesFrom
+        }
       : {}
 
     const { id, version, ...orgFields } = initial
