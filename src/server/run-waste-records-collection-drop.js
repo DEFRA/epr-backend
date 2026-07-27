@@ -1,6 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
 
-const LOCK_NAME = 'waste-records-collection-drop'
 const COLLECTION_WASTE_RECORDS = 'waste-records'
 
 /**
@@ -40,10 +39,10 @@ const dropOrReportWasteRecordsCollection = async (db, isDryRun) => {
 
   await db.dropCollection(COLLECTION_WASTE_RECORDS)
 
-  // Mongo recreates a collection on first insert, so documents in a collection
+  // Mongo recreates a collection on first insert, so finding documents in one
   // nothing should be writing to means a writer survives somewhere and the
-  // drop will not stick. Warn so that boot is distinguishable from the
-  // expected empty one.
+  // drop will not stick. Warn so that boot stands out from the expected
+  // empty one.
   if (documents > 0) {
     logger.warn({
       message: `Waste records collection drop: dropped ${COLLECTION_WASTE_RECORDS}, which held ${documents} documents — anything still writing to it will recreate it`
@@ -58,8 +57,9 @@ const dropOrReportWasteRecordsCollection = async (db, isDryRun) => {
 
 /**
  * Startup migration that removes the decommissioned `waste-records`
- * collection. Idempotent: a boot that finds it already gone logs and returns.
- * Runs under a cross-instance lock so a single pod per deploy performs it.
+ * collection. Idempotent, and needs no cross-instance lock: dropping an absent
+ * collection succeeds and counting one returns zero, so every pod in a deploy
+ * can run it concurrently without erroring.
  *
  * Gated by the drop-waste-records-collection feature flag. With the flag off
  * it runs as a dry run — reporting whether the collection is still present in
@@ -72,18 +72,7 @@ export const runWasteRecordsCollectionDrop = async (server) => {
   const isDryRun = !server.featureFlags.isDropWasteRecordsCollectionEnabled()
 
   try {
-    const lock = await server.locker.lock(LOCK_NAME)
-    if (!lock) {
-      logger.info({
-        message: 'Unable to obtain lock, skipping waste records collection drop'
-      })
-      return
-    }
-    try {
-      await dropOrReportWasteRecordsCollection(server.db, isDryRun)
-    } finally {
-      await lock.free()
-    }
+    await dropOrReportWasteRecordsCollection(server.db, isDryRun)
   } catch (error) {
     logger.error({
       err: error,

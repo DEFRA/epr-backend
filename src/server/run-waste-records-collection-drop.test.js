@@ -33,18 +33,11 @@ const it = /** @type {import('vitest').TestAPI<DatabaseFixture>} */ (
   })
 )
 
-const buildServer = (
-  db,
-  {
-    lock = { free: vi.fn().mockResolvedValue(undefined) },
-    dropEnabled = true
-  } = {}
-) => ({
+const buildServer = (db, { dropEnabled = true } = {}) => ({
   db,
   featureFlags: {
     isDropWasteRecordsCollectionEnabled: () => dropEnabled
-  },
-  locker: { lock: vi.fn().mockResolvedValue(lock) }
+  }
 })
 
 const collectionNames = async (db) =>
@@ -158,45 +151,26 @@ describe('runWasteRecordsCollectionDrop', () => {
     expect(logger.error).not.toHaveBeenCalled()
   })
 
-  it('acquires a lock scoped to the drop and releases it afterwards', async ({
+  it('tolerates every pod in a deploy running it at once', async ({
     database
   }) => {
-    const lock = { free: vi.fn().mockResolvedValue(undefined) }
-    const server = buildServer(database, { lock })
+    await seedWasteRecords(database, 4)
 
-    await runWasteRecordsCollectionDrop(server)
-
-    expect(server.locker.lock).toHaveBeenCalledWith(
-      'waste-records-collection-drop'
+    await Promise.all(
+      Array.from({ length: 5 }, () =>
+        runWasteRecordsCollectionDrop(buildServer(database))
+      )
     )
-    expect(lock.free).toHaveBeenCalled()
-  })
 
-  it('leaves the collection alone when the lock is held by another instance', async ({
-    database
-  }) => {
-    await seedWasteRecords(database, 1)
-    const server = {
-      db: database,
-      featureFlags: { isDropWasteRecordsCollectionEnabled: () => true },
-      locker: { lock: vi.fn().mockResolvedValue(null) }
-    }
-
-    await runWasteRecordsCollectionDrop(server)
-
-    expect(await collectionNames(database)).toContain('waste-records')
-    expect(logger.info).toHaveBeenCalledWith({
-      message: 'Unable to obtain lock, skipping waste records collection drop'
-    })
+    expect(await collectionNames(database)).not.toContain('waste-records')
     expect(logger.error).not.toHaveBeenCalled()
   })
 
   // A real Mongo cannot be made to fail the drop, so this is the one case that
   // needs a stub. It answers only for 'waste-records' so the test still fails
   // if the production code ever names a different collection.
-  it('releases the lock and logs an error when the drop itself fails', async () => {
+  it('logs an error when the drop itself fails', async () => {
     const error = new Error('not authorised to drop')
-    const lock = { free: vi.fn().mockResolvedValue(undefined) }
     const db = {
       listCollections: ({ name }) => ({
         toArray: async () => (name === 'waste-records' ? [{ name }] : [])
@@ -211,23 +185,7 @@ describe('runWasteRecordsCollectionDrop', () => {
       }
     }
 
-    await runWasteRecordsCollectionDrop(buildServer(db, { lock }))
-
-    expect(logger.error).toHaveBeenCalledWith({
-      err: error,
-      message: 'Failed to run waste records collection drop'
-    })
-    expect(lock.free).toHaveBeenCalled()
-  })
-
-  it('tolerates the locker itself throwing', async ({ database }) => {
-    const error = new Error('locker unavailable')
-
-    await runWasteRecordsCollectionDrop({
-      db: database,
-      featureFlags: { isDropWasteRecordsCollectionEnabled: () => true },
-      locker: { lock: vi.fn().mockRejectedValue(error) }
-    })
+    await runWasteRecordsCollectionDrop(buildServer(db))
 
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
