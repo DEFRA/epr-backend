@@ -322,6 +322,66 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           expect(reinstatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
         })
 
+        it('leaves a CREATED linked accreditation untouched when the registration is cancelled', async () => {
+          // A registration can be approved while its accreditation application
+          // is still pending — the cascade must not cancel a never-live
+          // accreditation
+          const orgData = buildOrganisation()
+          await repository.insert(orgData)
+          const inserted = await repository.findById(orgData.id)
+
+          const approvedReg = {
+            ...inserted.registrations[0],
+            status: REG_ACC_STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            reprocessingType: REPROCESSING_TYPE.INPUT,
+            accreditationId: inserted.accreditations[0].id
+          }
+
+          await repository.replace(
+            orgData.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              registrations: [approvedReg],
+              accreditations: [
+                {
+                  ...inserted.accreditations[0],
+                  reprocessingType: REPROCESSING_TYPE.INPUT
+                }
+              ]
+            })
+          )
+
+          const afterApprovalOfReg = await repository.findById(orgData.id, 2)
+          const linkedReg = afterApprovalOfReg.registrations[0]
+          assert.strictEqual(
+            afterApprovalOfReg.accreditations[0].status,
+            REG_ACC_STATUS.CREATED
+          )
+
+          await repository.replace(
+            orgData.id,
+            2,
+            prepareOrgUpdate(afterApprovalOfReg, {
+              registrations: [
+                { ...linkedReg, status: REG_ACC_STATUS.CANCELLED }
+              ]
+            })
+          )
+
+          const result = await repository.findById(orgData.id, 3)
+          const untouchedAcc = result.accreditations.find(
+            (a) => a.id === inserted.accreditations[0].id
+          )
+
+          expect(untouchedAcc.status).toBe(REG_ACC_STATUS.CREATED)
+          expect(untouchedAcc.statusHistory.map((h) => h.status)).not.toContain(
+            REG_ACC_STATUS.CANCELLED
+          )
+        })
+
         it('does not reinstate the cascade-cancelled accreditation when the registration is reinstated', async () => {
           // Cancel directly — the cancellation force-cancels accreditation1
           await repository.replace(

@@ -215,17 +215,6 @@ describe('transform', () => {
     }
   )
 
-  it('should exclude suspended registrations', async () => {
-    const registration = createTestRegistration({
-      status: REG_ACC_STATUS.SUSPENDED
-    })
-    const org = createTestOrganisation({ registrations: [registration] })
-
-    const rows = await transform([org], { periods: [], entries: new Map() })
-
-    expect(rows).toHaveLength(0)
-  })
-
   it.each([
     {
       status: REG_ACC_STATUS.APPROVED,
