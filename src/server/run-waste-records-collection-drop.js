@@ -26,11 +26,15 @@ const dropOrReportWasteRecordsCollection = async (db, isDryRun) => {
     return
   }
 
-  const documents = await db
-    .collection(COLLECTION_WASTE_RECORDS)
-    .estimatedDocumentCount()
-
+  // The count is only worth reporting while the collection survives, where it
+  // says how much is about to be deleted. Counting on the drop path instead
+  // would race a concurrent pod's drop and report zero for a collection that
+  // held data.
   if (isDryRun) {
+    const documents = await db
+      .collection(COLLECTION_WASTE_RECORDS)
+      .estimatedDocumentCount()
+
     logger.info({
       message: `Waste records collection drop: ${COLLECTION_WASTE_RECORDS} is still present with ${documents} documents; leaving it in place because the drop is not enabled`
     })
@@ -39,19 +43,12 @@ const dropOrReportWasteRecordsCollection = async (db, isDryRun) => {
 
   await db.dropCollection(COLLECTION_WASTE_RECORDS)
 
-  // Mongo recreates a collection on first insert, so finding documents in one
-  // nothing should be writing to means a writer survives somewhere and the
-  // drop will not stick. Warn so that boot stands out from the expected
-  // empty one.
-  if (documents > 0) {
-    logger.warn({
-      message: `Waste records collection drop: dropped ${COLLECTION_WASTE_RECORDS}, which held ${documents} documents — anything still writing to it will recreate it`
-    })
-    return
-  }
-
-  logger.info({
-    message: `Waste records collection drop: dropped empty ${COLLECTION_WASTE_RECORDS}`
+  // Mongo recreates a collection on first insert, so only the first enabled
+  // boot in an environment should find this one still here. Warn rather than
+  // inform: a recurrence on a later deploy means a writer survives somewhere
+  // and the drop will not stick.
+  logger.warn({
+    message: `Waste records collection drop: dropped ${COLLECTION_WASTE_RECORDS}; expected once per environment, so a recurrence on a later deploy means something is still writing to it`
   })
 }
 
@@ -64,7 +61,8 @@ const dropOrReportWasteRecordsCollection = async (db, isDryRun) => {
  * Gated by the drop-waste-records-collection feature flag. With the flag off
  * it runs as a dry run — reporting whether the collection is still present in
  * this environment and how many documents it holds — so the size of what is
- * about to be deleted is known before the flag is turned on.
+ * about to be deleted is known before the flag is turned on. Running per pod
+ * rather than per deploy, that report repeats once per pod on every boot.
  *
  * @param {Object} server - Hapi server instance
  */

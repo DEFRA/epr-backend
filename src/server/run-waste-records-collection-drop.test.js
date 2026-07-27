@@ -64,7 +64,7 @@ describe('runWasteRecordsCollectionDrop', () => {
     expect(logger.error).not.toHaveBeenCalled()
   })
 
-  it('warns when the dropped collection still held documents, because a surviving writer would recreate it', async ({
+  it('warns whenever it finds the collection to drop, because only the first enabled boot should', async ({
     database
   }) => {
     await seedWasteRecords(database, 3)
@@ -73,20 +73,18 @@ describe('runWasteRecordsCollectionDrop', () => {
 
     expect(logger.warn).toHaveBeenCalledWith({
       message:
-        'Waste records collection drop: dropped waste-records, which held 3 documents — anything still writing to it will recreate it'
+        'Waste records collection drop: dropped waste-records; expected once per environment, so a recurrence on a later deploy means something is still writing to it'
     })
   })
 
-  it('drops an empty collection without warning', async ({ database }) => {
+  it('drops the collection when it exists but is empty', async ({
+    database
+  }) => {
     await database.createCollection('waste-records')
 
     await runWasteRecordsCollectionDrop(buildServer(database))
 
     expect(await collectionNames(database)).not.toContain('waste-records')
-    expect(logger.info).toHaveBeenCalledWith({
-      message: 'Waste records collection drop: dropped empty waste-records'
-    })
-    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.error).not.toHaveBeenCalled()
   })
 
@@ -151,7 +149,7 @@ describe('runWasteRecordsCollectionDrop', () => {
     expect(logger.error).not.toHaveBeenCalled()
   })
 
-  it('tolerates every pod in a deploy running it at once', async ({
+  it('tolerates every pod in a deploy running it at once, logging nothing misleading', async ({
     database
   }) => {
     await seedWasteRecords(database, 4)
@@ -164,6 +162,26 @@ describe('runWasteRecordsCollectionDrop', () => {
 
     expect(await collectionNames(database)).not.toContain('waste-records')
     expect(logger.error).not.toHaveBeenCalled()
+
+    // Whichever pods raced, every line each of them logged has to be true of
+    // what it actually saw: it either dropped the collection or found it gone.
+    // A filtered-out undefined message would fail the length assertion below,
+    // so this narrows to strings without weakening what is checked.
+    const logged = [
+      ...vi.mocked(logger.warn).mock.calls,
+      ...vi.mocked(logger.info).mock.calls
+    ].flatMap(([{ message }]) => (message === undefined ? [] : [message]))
+    expect(logged).toHaveLength(5)
+    expect(
+      logged.filter((message) => message.includes('dropped waste-records'))
+    ).not.toHaveLength(0)
+    expect(
+      logged.every(
+        (message) =>
+          message.includes('dropped waste-records') ||
+          message.includes('is already absent')
+      )
+    ).toBe(true)
   })
 
   // A real Mongo cannot be made to fail the drop, so this is the one case that
