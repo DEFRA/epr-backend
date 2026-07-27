@@ -46,6 +46,7 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
 import { runPreCpaResubmissionBackfill } from '#server/run-pre-cpa-resubmission-backfill.js'
+import { runWasteRecordsCollectionDrop } from '#server/run-waste-records-collection-drop.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -224,6 +225,7 @@ async function createServer(options = {}) {
     runOrganisationValidationSweep(server)
     runStaleIssuedTonnageReport(server)
     runPreCpaResubmissionBackfill(server)
+    runWasteRecordsCollectionDrop(server)
   })
 
   return server
