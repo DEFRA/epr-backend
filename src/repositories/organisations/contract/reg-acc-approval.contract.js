@@ -900,7 +900,7 @@ export const testRegAccApprovalValidation = (it) => {
           expect(updatedReg.validTo).toBe(VALID_TO)
         })
 
-        it('rejects update when registration status changes to suspended without registrationNumber', async () => {
+        it('rejects update when registration status changes to suspended (not an allowed registration status)', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
           const inserted = await repository.findById(organisation.id)
@@ -908,9 +908,10 @@ export const testRegAccApprovalValidation = (it) => {
           const registrationToUpdate = {
             ...inserted.registrations[0],
             status: REG_ACC_STATUS.SUSPENDED,
-            registrationNumber: null,
+            registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
-            validTo: VALID_TO
+            validTo: VALID_TO,
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await expect(
@@ -922,7 +923,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.registrationNumber:.*contains an invalid value/
+            /Invalid organisation data: registrations\.0\.status/
           )
         })
       })
@@ -1399,61 +1400,7 @@ export const testRegAccApprovalValidation = (it) => {
           )
         })
 
-        it('rejects update when registration status changes to suspended without validFrom', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const registrationToUpdate = {
-            ...inserted.registrations[0],
-            status: REG_ACC_STATUS.SUSPENDED,
-            registrationNumber: 'REG12345',
-            validFrom: null,
-            validTo: VALID_TO,
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-
-          await expect(
-            repository.replace(
-              organisation.id,
-              1,
-              prepareOrgUpdate(inserted, {
-                registrations: [registrationToUpdate]
-              })
-            )
-          ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.validFrom:.*contains an invalid value/
-          )
-        })
-
-        it('rejects update when registration status changes to suspended without validTo', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const registrationToUpdate = {
-            ...inserted.registrations[0],
-            status: REG_ACC_STATUS.SUSPENDED,
-            registrationNumber: 'REG12345',
-            validFrom: VALID_FROM,
-            validTo: null,
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-
-          await expect(
-            repository.replace(
-              organisation.id,
-              1,
-              prepareOrgUpdate(inserted, {
-                registrations: [registrationToUpdate]
-              })
-            )
-          ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.validTo:.*contains an invalid value/
-          )
-        })
-
-        it('allows update when registration status is not approved or suspended without validFrom and validTo', async () => {
+        it('allows update when registration status is not approved without validFrom and validTo', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
           const inserted = await repository.findById(organisation.id)

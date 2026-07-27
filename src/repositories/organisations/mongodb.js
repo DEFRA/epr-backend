@@ -310,6 +310,19 @@ const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   return mapDocumentWithCurrentStatuses(doc)
 }
 
+const performFindByAccreditationNumber =
+  (db) => async (accreditationNumber) => {
+    const doc = await db
+      .collection(COLLECTION_NAME)
+      .findOne({ 'accreditations.accreditationNumber': accreditationNumber })
+
+    if (!doc) {
+      return null
+    }
+
+    return mapDocumentWithCurrentStatuses(doc)
+  }
+
 const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db
     .collection(COLLECTION_NAME)
@@ -468,6 +481,7 @@ export const createOrganisationsRepository = async (
       findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
+      findByAccreditationNumber: performFindByAccreditationNumber(db),
       findAllLinkableForUser: performFindAllLinkableForUser(db),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),

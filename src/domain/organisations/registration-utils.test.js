@@ -80,29 +80,20 @@ describe('getReportableRegistrations', () => {
     expect(result[0].registration.status).toBe('approved')
   })
 
-  it('includes suspended registrations', () => {
-    const org = buildOrg({ registrations: [buildReg({ status: 'suspended' })] })
-
-    expect(getReportableRegistrations([org])).toHaveLength(1)
-  })
-
   it('includes cancelled registrations', () => {
     const org = buildOrg({ registrations: [buildReg({ status: 'cancelled' })] })
 
     expect(getReportableRegistrations([org])).toHaveLength(1)
   })
 
-  it('excludes created registrations', () => {
-    const org = buildOrg({ registrations: [buildReg({ status: 'created' })] })
+  it.each(['suspended', 'created', 'rejected'])(
+    'excludes %s registrations',
+    (status) => {
+      const org = buildOrg({ registrations: [buildReg({ status })] })
 
-    expect(getReportableRegistrations([org])).toHaveLength(0)
-  })
-
-  it('excludes rejected registrations', () => {
-    const org = buildOrg({ registrations: [buildReg({ status: 'rejected' })] })
-
-    expect(getReportableRegistrations([org])).toHaveLength(0)
-  })
+      expect(getReportableRegistrations([org])).toHaveLength(0)
+    }
+  )
 
   it('excludes test organisations by orgId', () => {
     const testOrg = buildOrg({

@@ -9,6 +9,7 @@ import {
   isAccreditationForRegistration
 } from '#formsubmission/submission-keys.js'
 import Boom from '@hapi/boom'
+import { isoDateString } from '#common/validation/iso-date-schema.js'
 
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {RegistrationOrAccreditation} from '#domain/organisations/model.js' */
@@ -83,6 +84,9 @@ export const requiredForWasteExemptionAndReprocessor = (schema) =>
     otherwise: Joi.forbidden()
   })
 
+// Accreditations require their number and validity dates while approved or
+// suspended; registrations cannot be suspended (PAE-1705), so their variant
+// requires the fields when approved only.
 export const requiredWhenApprovedOrSuspended = {
   switch: [
     { is: REG_ACC_STATUS.APPROVED, then: Joi.required().invalid(null) },
@@ -91,19 +95,17 @@ export const requiredWhenApprovedOrSuspended = {
   otherwise: Joi.optional().allow(null)
 }
 
+export const requiredWhenApproved = {
+  is: REG_ACC_STATUS.APPROVED,
+  then: Joi.required().invalid(null),
+  otherwise: Joi.optional().allow(null)
+}
+
 export const dateRequiredWhenApprovedOrSuspended = () =>
-  Joi.string()
-    .pattern(/^\d{4}-\d{2}-\d{2}$/)
-    .custom((value, helpers) => {
-      const date = new Date(value + 'T00:00:00.000Z')
-      if (Number.isNaN(date.getTime())) {
-        return helpers.error('string.pattern.base')
-      }
-      return value
-    })
-    .messages({ 'string.pattern.base': 'Date must be in YYYY-MM-DD format' })
-    .when('status', requiredWhenApprovedOrSuspended)
-    .default(null)
+  isoDateString().when('status', requiredWhenApprovedOrSuspended).default(null)
+
+export const dateRequiredWhenApproved = () =>
+  isoDateString().when('status', requiredWhenApproved).default(null)
 
 function findAccreditationsWithoutApprovedRegistration(
   accreditations,
