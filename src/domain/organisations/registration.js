@@ -52,7 +52,7 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber: string;
- *  status: Extract<RegAccStatus, 'approved'|'suspended'>;
+ *  status: Extract<RegAccStatus, 'approved'>;
  *  validFrom: string;
  *  validTo: string;
  * }} RegistrationApproved

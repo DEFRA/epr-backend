@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
-import { assertRegAccStatusTransitionValid } from '#domain/organisations/status.js'
+import { assertAccreditationStatusTransitionValid } from '#domain/organisations/status.js'
 import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -81,7 +81,7 @@ export const accreditationStatusHistory = {
     // assertAndHandleItemStateTransition skips validation when the status is
     // unchanged, so suspended -> suspended via replace() would otherwise be a
     // silent no-op instead of the required 422.
-    assertRegAccStatusTransitionValid(fromStatus, toStatus)
+    assertAccreditationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
       // Granting sets validFrom to appliesFrom but leaves validTo (owned by
