@@ -8,11 +8,7 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 const REPORTABLE_STATUSES = /** @type {Set<RegAccStatus>} */ (
-  new Set([
-    REG_ACC_STATUS.APPROVED,
-    REG_ACC_STATUS.SUSPENDED,
-    REG_ACC_STATUS.CANCELLED
-  ])
+  new Set([REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.CANCELLED])
 )
 
 const ACTIVE_ACCREDITATION_STATUSES = /** @type {Set<RegAccStatus>} */ (
@@ -20,7 +16,7 @@ const ACTIVE_ACCREDITATION_STATUSES = /** @type {Set<RegAccStatus>} */ (
 )
 
 /**
- * Returns all reportable (approved/suspended/cancelled) registrations across all non-test organisations.
+ * Returns all reportable (approved/cancelled) registrations across all non-test organisations.
  *
  * @param {Organisation[]} orgs
  * @returns {Array<{ org: Organisation, registration: RegistrationApproved }>}

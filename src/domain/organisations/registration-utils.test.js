@@ -80,10 +80,10 @@ describe('getReportableRegistrations', () => {
     expect(result[0].registration.status).toBe('approved')
   })
 
-  it('includes suspended registrations', () => {
+  it('excludes suspended registrations', () => {
     const org = buildOrg({ registrations: [buildReg({ status: 'suspended' })] })
 
-    expect(getReportableRegistrations([org])).toHaveLength(1)
+    expect(getReportableRegistrations([org])).toHaveLength(0)
   })
 
   it('includes cancelled registrations', () => {

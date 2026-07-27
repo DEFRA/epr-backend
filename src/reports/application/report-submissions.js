@@ -241,7 +241,7 @@ async function buildSubmissionRows(
 }
 
 /**
- * Generates a flat list of report submission rows across all approved/suspended
+ * Generates a flat list of report submission rows across all approved/cancelled
  * registrations for all organisations.
  *
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
