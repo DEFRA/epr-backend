@@ -23,14 +23,11 @@ const dropOrReportWasteRecordsCollection = async (db, isDryRun) => {
     logger.info({
       message: `Waste records collection drop: ${COLLECTION_WASTE_RECORDS} is already absent, nothing to drop`
     })
-    return
-  }
-
-  // The count is only worth reporting while the collection survives, where it
-  // says how much is about to be deleted. Counting on the drop path instead
-  // would race a concurrent pod's drop and report zero for a collection that
-  // held data.
-  if (isDryRun) {
+  } else if (isDryRun) {
+    // The count is only worth reporting while the collection survives, where it
+    // says how much is about to be deleted. Counting on the drop path instead
+    // would race a concurrent pod's drop and report zero for a collection that
+    // held data.
     const documents = await db
       .collection(COLLECTION_WASTE_RECORDS)
       .estimatedDocumentCount()
@@ -38,18 +35,17 @@ const dropOrReportWasteRecordsCollection = async (db, isDryRun) => {
     logger.info({
       message: `Waste records collection drop: ${COLLECTION_WASTE_RECORDS} is still present with ${documents} documents; leaving it in place because the drop is not enabled`
     })
-    return
+  } else {
+    await db.dropCollection(COLLECTION_WASTE_RECORDS)
+
+    // Mongo recreates a collection on first insert, so only the first enabled
+    // boot in an environment should find this one still here. Warn rather than
+    // inform: a recurrence on a later deploy means a writer survives somewhere
+    // and the drop will not stick.
+    logger.warn({
+      message: `Waste records collection drop: dropped ${COLLECTION_WASTE_RECORDS}; expected once per environment, so a recurrence on a later deploy means something is still writing to it`
+    })
   }
-
-  await db.dropCollection(COLLECTION_WASTE_RECORDS)
-
-  // Mongo recreates a collection on first insert, so only the first enabled
-  // boot in an environment should find this one still here. Warn rather than
-  // inform: a recurrence on a later deploy means a writer survives somewhere
-  // and the drop will not stick.
-  logger.warn({
-    message: `Waste records collection drop: dropped ${COLLECTION_WASTE_RECORDS}; expected once per environment, so a recurrence on a later deploy means something is still writing to it`
-  })
 }
 
 /**
