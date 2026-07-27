@@ -102,6 +102,11 @@ const statusHistoryUrl = ({
 
 const suspendPayload = { fromStatus: 'approved', toStatus: 'suspended' }
 const reinstatePayload = { fromStatus: 'suspended', toStatus: 'approved' }
+const cancelPayload = { fromStatus: 'suspended', toStatus: 'cancelled' }
+const reinstateAfterAppealPayload = {
+  fromStatus: 'cancelled',
+  toStatus: 'approved'
+}
 const grantPayload = {
   fromStatus: 'created',
   toStatus: 'approved',
@@ -392,6 +397,157 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     )
   })
 
+  describe('cancelling a suspended accreditation', () => {
+    it('cancels a suspended accreditation and returns 200 with { status: "cancelled" }', async () => {
+      const ctx = await seedOrg('suspended')
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: cancelPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({ status: 'cancelled' })
+    })
+
+    it('appends a cancelled statusHistory entry, preserving earlier entries', async () => {
+      const ctx = await seedOrg('suspended')
+
+      await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: cancelPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const updatedOrg = JSON.parse(getResponse.payload)
+      const accreditation = updatedOrg.accreditations.find(
+        (a) => a.id === ctx.accreditationId
+      )
+
+      expect(accreditation.status).toBe('cancelled')
+      expect(accreditation.statusHistory.map((e) => e.status)).toEqual([
+        'created',
+        'suspended',
+        'cancelled'
+      ])
+    })
+
+    it.each(['approved', 'created', 'rejected', 'cancelled'])(
+      'returns 422 when cancelling an accreditation that is currently %s',
+      async (status) => {
+        const ctx = await seedOrg(status)
+
+        const response = await server.inject({
+          method: 'POST',
+          url: statusHistoryUrl(ctx),
+          payload: cancelPayload,
+          headers: { Authorization: `Bearer ${validToken}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        const body = JSON.parse(response.payload)
+        expect(body.message).toMatch(
+          new RegExp(
+            `Cannot transition accreditation from suspended: its status is ${status}`
+          )
+        )
+      }
+    )
+  })
+
+  describe('reinstating a cancelled accreditation after a successful appeal', () => {
+    it('reinstates a cancelled accreditation and returns 200 with { status: "approved" }', async () => {
+      const ctx = await seedOrg('cancelled', { registrationStatus: 'approved' })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: reinstateAfterAppealPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({ status: 'approved' })
+    })
+
+    it('appends an approved statusHistory entry, preserving the cancelled gap', async () => {
+      const ctx = await seedOrg('cancelled', { registrationStatus: 'approved' })
+
+      await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: reinstateAfterAppealPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const updatedOrg = JSON.parse(getResponse.payload)
+      const accreditation = updatedOrg.accreditations.find(
+        (a) => a.id === ctx.accreditationId
+      )
+
+      expect(accreditation.status).toBe('approved')
+      expect(accreditation.statusHistory.map((e) => e.status)).toEqual([
+        'created',
+        'cancelled',
+        'approved'
+      ])
+    })
+
+    it('returns 422 when the linked registration is not approved', async () => {
+      const ctx = await seedOrg('cancelled')
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: reinstateAfterAppealPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /approved but not linked to an approved registration/
+      )
+    })
+
+    it.each(['approved', 'created', 'rejected', 'suspended'])(
+      'returns 422 when the accreditation is currently %s',
+      async (status) => {
+        const ctx = await seedOrg(status, { registrationStatus: 'approved' })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: statusHistoryUrl(ctx),
+          payload: reinstateAfterAppealPayload,
+          headers: { Authorization: `Bearer ${validToken}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        const body = JSON.parse(response.payload)
+        expect(body.message).toMatch(
+          new RegExp(
+            `Cannot transition accreditation from cancelled: its status is ${status}`
+          )
+        )
+      }
+    )
+  })
+
   describe('granting a created accreditation', () => {
     // A created accreditation has no number or validFrom yet; validTo is
     // owned by the application data and must already be present.
@@ -548,8 +704,15 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       ['payload is empty', {}],
       ['payload uses the old status-only shape', { status: 'suspended' }],
       [
+        // Direct approved -> cancelled is deliberately unsupported: an
+        // accreditation reaches cancelled only via suspended (PAE-1624, ADR
+        // 0042). The registration-cancellation cascade is the sole exception.
+        'the from/to pair is a direct approved to cancelled (suspend first)',
+        { fromStatus: 'approved', toStatus: 'cancelled' }
+      ],
+      [
         'the from/to pair is not a supported transition',
-        { fromStatus: 'suspended', toStatus: 'cancelled' }
+        { fromStatus: 'cancelled', toStatus: 'suspended' }
       ],
       [
         'toStatus is not a known status',
@@ -809,6 +972,163 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           accreditationId
         }),
         payload: reinstatePayload,
+        ...asServiceMaintainerWrite()
+      })
+      expect(reinstateResponse.statusCode).toBe(StatusCodes.OK)
+
+      const issueResponse = await integrationServer.inject({
+        method: 'POST',
+        url: `/v1/organisations/${fixture.id}/registrations/${registration.id}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+        ...asOperator(),
+        payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+      })
+
+      expect(issueResponse.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('refuses to issue a PRN once the accreditation has been cancelled through this endpoint', async () => {
+      const fixture = buildOrgWithAccreditationStatus('suspended')
+      const registration = fixture.registrations[0]
+      const accreditationId = /** @type {string} */ (
+        registration.accreditationId
+      )
+      const prnId = new ObjectId().toHexString()
+
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository([
+          /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+            /** @type {unknown} */ (
+              buildAwaitingAuthorisationPrn({
+                id: prnId,
+                organisation: { id: fixture.id, name: 'Test Organisation' },
+                registrationId: registration.id,
+                accreditation:
+                  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['accreditation']} */ ({
+                    id: accreditationId
+                  })
+              })
+            )
+          )
+        ])({
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn(),
+          trace: vi.fn(),
+          fatal: vi.fn(),
+          child: vi.fn()
+        })
+
+      const integrationServer = await createTestServer({
+        repositories: {
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            fixture
+          ]),
+          systemLogsRepository: createSystemLogsRepository(),
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository
+        },
+        featureFlags: createInMemoryFeatureFlags()
+      })
+
+      const cancelResponse = await integrationServer.inject({
+        method: 'POST',
+        url: statusHistoryUrl({
+          organisationId: fixture.id,
+          registrationId: registration.id,
+          accreditationId
+        }),
+        payload: cancelPayload,
+        ...asServiceMaintainerWrite()
+      })
+      expect(cancelResponse.statusCode).toBe(StatusCodes.OK)
+
+      const issueResponse = await integrationServer.inject({
+        method: 'POST',
+        url: `/v1/organisations/${fixture.id}/registrations/${registration.id}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+        ...asOperator(),
+        payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+      })
+
+      expect(issueResponse.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(issueResponse.payload).toContain(
+        'Cannot issue a PRN on a cancelled accreditation'
+      )
+    })
+
+    it('permits issuing a PRN again once the accreditation has been reinstated after an appeal through this endpoint', async () => {
+      const fixture = buildOrgWithAccreditationStatus('cancelled', {
+        registrationStatus: 'approved'
+      })
+      const registration = fixture.registrations[0]
+      const accreditationId = /** @type {string} */ (
+        registration.accreditationId
+      )
+      const prnId = new ObjectId().toHexString()
+
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository([
+          /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+            /** @type {unknown} */ (
+              buildAwaitingAuthorisationPrn({
+                id: prnId,
+                organisation: { id: fixture.id, name: 'Test Organisation' },
+                registrationId: registration.id,
+                accreditation:
+                  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['accreditation']} */ ({
+                    id: accreditationId,
+                    accreditationYear: 2026
+                  })
+              })
+            )
+          )
+        ])({
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn(),
+          trace: vi.fn(),
+          fatal: vi.fn(),
+          child: vi.fn()
+        })
+
+      // A ledger holding enough balance for the PRN's tonnage, so the issue
+      // succeeds once the cancellation is overturned.
+      const ledgerRepository = createInMemoryLedgerRepository([
+        partialMock(
+          buildLedgerEvent({
+            organisationId: fixture.id,
+            registrationId: registration.id,
+            accreditationId,
+            number: 1,
+            payload: { summaryLogId: 'log-1', creditTotal: 500 },
+            openingBalance: { amount: 0, availableAmount: 0 },
+            closingBalance: { amount: 500, availableAmount: 500 }
+          })
+        )
+      ])()
+
+      const integrationServer = await createTestServer({
+        repositories: {
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            fixture
+          ]),
+          systemLogsRepository: createSystemLogsRepository(),
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository,
+          ledgerRepository: () => ledgerRepository
+        },
+        featureFlags: createInMemoryFeatureFlags()
+      })
+
+      const reinstateResponse = await integrationServer.inject({
+        method: 'POST',
+        url: statusHistoryUrl({
+          organisationId: fixture.id,
+          registrationId: registration.id,
+          accreditationId
+        }),
+        payload: reinstateAfterAppealPayload,
         ...asServiceMaintainerWrite()
       })
       expect(reinstateResponse.statusCode).toBe(StatusCodes.OK)
