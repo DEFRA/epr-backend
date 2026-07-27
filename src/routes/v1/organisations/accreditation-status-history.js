@@ -76,9 +76,22 @@ export const accreditationStatusHistory = {
     // silent no-op instead of the required 422.
     assertRegAccStatusTransitionValid(fromStatus, toStatus)
 
-    // Granting issues the accreditation number, which must not already be in
-    // use by any accreditation in any organisation.
     if (accreditationNumber) {
+      // Granting sets validFrom to appliesFrom but leaves validTo (owned by
+      // the application data) untouched, so reject a window that would be
+      // inverted. When validTo is absent the replace below 422s via the
+      // schema guard requiring it on approved accreditations.
+      if (accreditation.validTo && appliesFrom > accreditation.validTo) {
+        throw Boom.badData(
+          `Cannot grant accreditation: appliesFrom ${appliesFrom} is after validTo ${accreditation.validTo}`
+        )
+      }
+
+      // Granting issues the accreditation number, which must not already be
+      // in use by any accreditation in any organisation, whatever its status.
+      // This uniqueness is enforced here only: there is no unique index on
+      // accreditations.accreditationNumber, so concurrent grants of the same
+      // number are not blocked by the database.
       const holder =
         await organisationsRepository.findByAccreditationNumber(
           accreditationNumber

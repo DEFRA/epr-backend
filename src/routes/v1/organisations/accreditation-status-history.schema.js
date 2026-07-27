@@ -1,16 +1,6 @@
 import Joi from 'joi'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
-
-const dateSchema = Joi.string()
-  .pattern(/^\d{4}-\d{2}-\d{2}$/)
-  .custom((value, helpers) => {
-    const date = new Date(`${value}T00:00:00.000Z`)
-    if (Number.isNaN(date.getTime())) {
-      return helpers.error('string.pattern.base')
-    }
-    return value
-  })
-  .messages({ 'string.pattern.base': 'Date must be in YYYY-MM-DD format' })
+import { isoDateString } from '#common/validation/iso-date-schema.js'
 
 /**
  * Discriminated union over the explicit from/to status pair: each supported
@@ -35,7 +25,7 @@ const suspendedToApprovedSchema = Joi.object({
 const createdToApprovedSchema = Joi.object({
   fromStatus: Joi.string().valid(REG_ACC_STATUS.CREATED).required(),
   toStatus: Joi.string().valid(REG_ACC_STATUS.APPROVED).required(),
-  appliesFrom: dateSchema.required(),
+  appliesFrom: isoDateString().required(),
   accreditationNumber: Joi.string().trim().min(1).required()
 })
 

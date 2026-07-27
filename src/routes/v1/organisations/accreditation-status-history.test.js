@@ -467,6 +467,26 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
     })
 
+    it('returns 422 when appliesFrom is after the accreditation validTo', async () => {
+      const ctx = await seedOrg('created', {
+        registrationStatus: 'approved',
+        accreditationOverrides: ungrantedAccreditation
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: { ...grantPayload, appliesFrom: '2027-06-01' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /appliesFrom 2027-06-01 is after validTo 2026-12-31/
+      )
+    })
+
     it('returns 422 when the linked registration is not approved', async () => {
       const ctx = await seedOrg('created', {
         accreditationOverrides: ungrantedAccreditation
@@ -555,6 +575,10 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       [
         'a grant has an invalid appliesFrom date',
         { ...grantPayload, appliesFrom: '2026-13-45' }
+      ],
+      [
+        'a grant has an appliesFrom day that does not exist in that month',
+        { ...grantPayload, appliesFrom: '2026-02-30' }
       ],
       [
         'a grant has an empty accreditation number',
