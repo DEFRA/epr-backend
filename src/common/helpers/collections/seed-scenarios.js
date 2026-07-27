@@ -15,7 +15,8 @@ import { isNil } from '#common/helpers/is-nil.js'
 import {
   REPROCESSING_TYPE,
   ORGANISATION_STATUS,
-  REG_ACC_STATUS,
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS,
   USER_ROLES
 } from '#domain/organisations/model.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -94,7 +95,7 @@ function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
     return {
       ...reg,
       ...(accreditationId && { accreditationId }),
-      status: REG_ACC_STATUS.APPROVED,
+      status: REGISTRATION_STATUS.APPROVED,
       registrationNumber: `REG-${org.orgId}-${String(sequenceNumber).padStart(SUFFIX_LENGTH, '0')}`,
       cbduNumber: `${CBDU_PREFIX}${orgIdSuffix}${sequenceNumber}`,
       ...(isReprocessor && { reprocessingType: REPROCESSING_TYPE.INPUT }),
@@ -135,7 +136,9 @@ function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
 
     return {
       ...acc,
-      status: isLinked ? REG_ACC_STATUS.APPROVED : REG_ACC_STATUS.CREATED,
+      status: isLinked
+        ? ACCREDITATION_STATUS.APPROVED
+        : ACCREDITATION_STATUS.CREATED,
       accreditationNumber: `ACC-${org.orgId}-${String(index + 1).padStart(SUFFIX_LENGTH, '0')}`,
       ...(isReprocessor &&
         isLinked && { reprocessingType: REPROCESSING_TYPE.INPUT }),
@@ -273,7 +276,7 @@ async function buildActiveOrgWithSuspendedAccreditation(
 
   // Find the first approved registration's material to match with accreditation
   const approvedReg = org.registrations.find(
-    (r) => r.status === REG_ACC_STATUS.APPROVED
+    (r) => r.status === REGISTRATION_STATUS.APPROVED
   )
   assert(
     approvedReg,
@@ -285,7 +288,7 @@ async function buildActiveOrgWithSuspendedAccreditation(
 
   const updatedAccreditations = org.accreditations.map((acc, index) =>
     index === matchingAccIndex
-      ? { ...acc, status: REG_ACC_STATUS.SUSPENDED }
+      ? { ...acc, status: ACCREDITATION_STATUS.SUSPENDED }
       : acc
   )
 

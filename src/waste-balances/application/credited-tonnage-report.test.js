@@ -4,11 +4,11 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
-  MATERIAL,
+  ACCREDITATION_STATUS,
   GLASS_RECYCLING_PROCESS,
-  REG_ACC_STATUS,
-  WASTE_PROCESSING_TYPE,
-  REPROCESSING_TYPE
+  MATERIAL,
+  REPROCESSING_TYPE,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
 /**
@@ -32,8 +32,8 @@ const ACCREDITED_FROM = '2026-01-01'
 const ACCREDITED_TO = '2026-12-31'
 
 const approvedHistory = [
-  { status: REG_ACC_STATUS.CREATED, updatedAt: '2025-11-01' },
-  { status: REG_ACC_STATUS.APPROVED, updatedAt: '2025-12-01' }
+  { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
+  { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
 ]
 
 /**

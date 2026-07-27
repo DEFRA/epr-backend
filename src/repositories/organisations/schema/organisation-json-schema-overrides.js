@@ -1,6 +1,9 @@
 import Joi from 'joi'
 import { accreditationUpdateSchema } from './accreditation.js'
-import { statusHistoryItemSchema } from './base.js'
+import {
+  accreditationStatusHistoryItemSchema,
+  registrationStatusHistoryItemSchema
+} from './base.js'
 import { organisationReplaceSchema } from './organisation.js'
 import { registrationUpdateSchema } from './registration.js'
 
@@ -88,7 +91,9 @@ export const organisationJSONSchemaOverrides = organisationReplaceSchema.keys({
     .items(
       makeEditable(
         registrationUpdateSchema.keys({
-          statusHistory: Joi.array().items(statusHistoryItemSchema).optional()
+          statusHistory: Joi.array()
+            .items(registrationStatusHistoryItemSchema)
+            .optional()
         })
       )
     )
@@ -97,7 +102,9 @@ export const organisationJSONSchemaOverrides = organisationReplaceSchema.keys({
     .items(
       makeEditable(
         accreditationUpdateSchema.keys({
-          statusHistory: Joi.array().items(statusHistoryItemSchema).optional()
+          statusHistory: Joi.array()
+            .items(accreditationStatusHistoryItemSchema)
+            .optional()
         })
       )
     )

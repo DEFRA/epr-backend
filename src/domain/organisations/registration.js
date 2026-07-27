@@ -1,5 +1,5 @@
-/** @import {Accreditation, StatusHistory} from '#domain/organisations/accreditation.js' */
-/** @import {GlassRecyclingProcess, Material, RegAccStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
+/** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
+/** @import {GlassRecyclingProcess, Material, RegistrationStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -31,7 +31,7 @@
  */
 
 /**
- * @typedef {{ id: string } & StatusHistory & {
+ * @typedef {{ id: string } & StatusHistoryOf<RegistrationStatus> & {
  *  accreditation: Accreditation | null;
  *  accreditationId?: string;
  *  applicationContactDetails: User;
@@ -52,7 +52,7 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber: string;
- *  status: Extract<RegAccStatus, 'approved'>;
+ *  status: Extract<RegistrationStatus, 'approved'>;
  *  validFrom: string;
  *  validTo: string;
  * }} RegistrationApproved
@@ -62,7 +62,7 @@
  * @typedef {RegistrationBase & {
  *  registrationNumber?: string;
  *  cbduNumber?: string;
- *  status: Extract<RegAccStatus, 'created'|'rejected'|'cancelled'>;
+ *  status: Extract<RegistrationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string
  * }} RegistrationOther
@@ -78,7 +78,7 @@
  * carries its registration number and validity dates.
  * @typedef {RegistrationBase & {
  *  registrationNumber: string;
- *  status: Extract<RegAccStatus, 'approved'|'cancelled'>;
+ *  status: Extract<RegistrationStatus, 'approved'|'cancelled'>;
  *  validFrom: string;
  *  validTo: string;
  * }} ReportableRegistration

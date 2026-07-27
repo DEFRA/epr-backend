@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { collateUsers } from './collate-users.js'
-import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 
 /**
- * @import {Organisation, RegAccStatus} from '#domain/organisations/model.js'
+ * @import {AccreditationStatus, Organisation, RegistrationStatus} from '#domain/organisations/model.js'
  * @import {Registration} from '#domain/organisations/registration.js'
  * @import {Accreditation} from '#domain/organisations/accreditation.js'
  *
@@ -42,7 +46,7 @@ describe('collateUsers', () => {
   /**
    * @param {{
    *   id?: string
-   *   status: RegAccStatus
+   *   status: RegistrationStatus
    *   submitterEmail?: string
    *   approvedPersons?: TestPerson[]
    *   applicationContact?: TestPerson
@@ -74,7 +78,7 @@ describe('collateUsers', () => {
   /**
    * @param {{
    *   id?: string
-   *   status: RegAccStatus
+   *   status: AccreditationStatus
    *   submitterEmail?: string
    *   signatories?: TestPerson[]
    * }} options
@@ -102,7 +106,7 @@ describe('collateUsers', () => {
     const org = buildOrg({
       registrations: [
         buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
+          status: REGISTRATION_STATUS.APPROVED,
           approvedPersons: [
             { email: 'ap-one@example.com', fullName: 'AP One' },
             { email: 'ap-two@example.com', fullName: 'AP Two' }
@@ -126,7 +130,7 @@ describe('collateUsers', () => {
     const org = buildOrg({
       registrations: [
         buildRegistration({
-          status: REG_ACC_STATUS.CREATED,
+          status: REGISTRATION_STATUS.CREATED,
           approvedPersons: [
             { email: 'pending@example.com', fullName: 'Pending AP' }
           ]
@@ -147,12 +151,12 @@ describe('collateUsers', () => {
       registrations: [
         buildRegistration({
           id: 'reg-1',
-          status: REG_ACC_STATUS.APPROVED,
+          status: REGISTRATION_STATUS.APPROVED,
           approvedPersons
         }),
         buildRegistration({
           id: 'reg-2',
-          status: REG_ACC_STATUS.APPROVED,
+          status: REGISTRATION_STATUS.APPROVED,
           approvedPersons
         })
       ]
@@ -169,7 +173,7 @@ describe('collateUsers', () => {
     const org = buildOrg({
       registrations: [
         buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
+          status: REGISTRATION_STATUS.APPROVED,
           applicationContact: {
             email: 'app-contact@example.com',
             fullName: 'App Contact'
@@ -191,7 +195,7 @@ describe('collateUsers', () => {
     const org = buildOrg({
       registrations: [
         buildRegistration({
-          status: REG_ACC_STATUS.CREATED,
+          status: REGISTRATION_STATUS.CREATED,
           applicationContact: {
             email: 'pending-app-contact@example.com',
             fullName: 'Pending App Contact'
@@ -210,7 +214,7 @@ describe('collateUsers', () => {
     const org = buildOrg({
       registrations: [
         buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
+          status: REGISTRATION_STATUS.APPROVED,
           submitterEmail: sharedEmail,
           approvedPersons: [{ email: sharedEmail, fullName: 'Shared Person' }],
           applicationContact: { email: sharedEmail, fullName: 'Shared Person' }
@@ -229,7 +233,7 @@ describe('collateUsers', () => {
     const org = buildOrg({
       registrations: [
         buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
+          status: REGISTRATION_STATUS.APPROVED,
           approvedPersons: [{ email: 'ap@example.com', fullName: 'AP' }]
         })
       ]
@@ -245,7 +249,7 @@ describe('collateUsers', () => {
     const org = buildOrg({
       accreditations: [
         buildAccreditation({
-          status: REG_ACC_STATUS.APPROVED,
+          status: ACCREDITATION_STATUS.APPROVED,
           signatories: [
             { email: 'signatory@example.com', fullName: 'Signatory' }
           ]

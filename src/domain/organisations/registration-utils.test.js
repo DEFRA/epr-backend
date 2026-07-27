@@ -7,7 +7,7 @@ import {
   resolveAccreditation,
   resolveDetailedMaterial
 } from './registration-utils.js'
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
@@ -159,7 +159,7 @@ describe('isRegistrationAccredited', () => {
 // ---------------------------------------------------------------------------
 
 describe('activeAccreditationValidFrom', () => {
-  it.each([REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.SUSPENDED])(
+  it.each([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])(
     'returns validFrom when accreditation status is %s',
     (status) => {
       expect(
@@ -171,16 +171,16 @@ describe('activeAccreditationValidFrom', () => {
   it('returns null for an active accreditation with no validFrom', () => {
     expect(
       activeAccreditationValidFrom({
-        status: REG_ACC_STATUS.APPROVED,
+        status: ACCREDITATION_STATUS.APPROVED,
         validFrom: null
       })
     ).toBeNull()
   })
 
   it.each([
-    REG_ACC_STATUS.CREATED,
-    REG_ACC_STATUS.REJECTED,
-    REG_ACC_STATUS.CANCELLED
+    ACCREDITATION_STATUS.CREATED,
+    ACCREDITATION_STATUS.REJECTED,
+    ACCREDITATION_STATUS.CANCELLED
   ])('returns null when accreditation status is %s', (status) => {
     expect(
       activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })

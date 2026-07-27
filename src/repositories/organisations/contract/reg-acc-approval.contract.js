@@ -8,9 +8,10 @@ import {
   getValidDateRange
 } from './test-data.js'
 import {
+  ACCREDITATION_STATUS,
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REPROCESSING_TYPE,
   TIME_SCALE,
   WASTE_PROCESSING_TYPE
@@ -41,7 +42,7 @@ export const testRegAccApprovalValidation = (it) => {
 
         const accreditationToUpdate = {
           ...inserted.accreditations[0],
-          status: REG_ACC_STATUS.APPROVED,
+          status: ACCREDITATION_STATUS.APPROVED,
           accreditationNumber: 'ACC12345',
           validFrom: VALID_FROM,
           validTo: VALID_TO,
@@ -74,7 +75,7 @@ export const testRegAccApprovalValidation = (it) => {
 
         const accreditationToUpdate = {
           ...inserted.accreditations[0],
-          status: REG_ACC_STATUS.APPROVED,
+          status: ACCREDITATION_STATUS.APPROVED,
           accreditationNumber: 'ACC12345',
           validFrom: VALID_FROM,
           validTo: VALID_TO,
@@ -83,7 +84,7 @@ export const testRegAccApprovalValidation = (it) => {
 
         const registrationToUpdate = {
           ...inserted.registrations[0],
-          status: REG_ACC_STATUS.APPROVED,
+          status: REGISTRATION_STATUS.APPROVED,
           validFrom: VALID_FROM,
           registrationNumber: 'REG12345',
           validTo: VALID_TO,
@@ -104,7 +105,7 @@ export const testRegAccApprovalValidation = (it) => {
         const updatedAcc = updated.accreditations.find(
           (a) => a.id === accreditationToUpdate.id
         )
-        expect(updatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
+        expect(updatedAcc.status).toBe(ACCREDITATION_STATUS.APPROVED)
         expect(updatedAcc.accreditationNumber).toBe('ACC12345')
       })
     })
@@ -182,7 +183,7 @@ export const testRegAccApprovalValidation = (it) => {
           const validUpdates = {
             accreditations: inserted.accreditations.map((acc) => ({
               ...acc,
-              status: REG_ACC_STATUS.APPROVED,
+              status: ACCREDITATION_STATUS.APPROVED,
               accreditationNumber: `ACC-${acc.id}`,
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -190,7 +191,7 @@ export const testRegAccApprovalValidation = (it) => {
             })),
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -208,7 +209,7 @@ export const testRegAccApprovalValidation = (it) => {
           expect(saved.accreditations).toHaveLength(2)
           expect(
             saved.accreditations.every(
-              (a) => a.status === REG_ACC_STATUS.APPROVED
+              (a) => a.status === ACCREDITATION_STATUS.APPROVED
             )
           ).toBe(true)
         })
@@ -273,7 +274,7 @@ export const testRegAccApprovalValidation = (it) => {
             accreditations: inserted.accreditations.map((acc) => {
               return {
                 ...acc,
-                status: REG_ACC_STATUS.APPROVED,
+                status: ACCREDITATION_STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
                 validFrom: VALID_FROM,
                 validTo: VALID_TO
@@ -281,7 +282,7 @@ export const testRegAccApprovalValidation = (it) => {
             }),
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
               validTo: VALID_TO
@@ -338,7 +339,7 @@ export const testRegAccApprovalValidation = (it) => {
           const invalidUpdates = {
             accreditations: inserted.accreditations.map((acc) => ({
               ...acc,
-              status: REG_ACC_STATUS.APPROVED,
+              status: ACCREDITATION_STATUS.APPROVED,
               accreditationNumber: `ACC-${acc.id}`,
               ...(acc.wasteProcessingType ===
                 WASTE_PROCESSING_TYPE.REPROCESSOR && {
@@ -349,7 +350,7 @@ export const testRegAccApprovalValidation = (it) => {
             })),
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               ...(reg.wasteProcessingType ===
                 WASTE_PROCESSING_TYPE.REPROCESSOR && {
@@ -421,7 +422,7 @@ export const testRegAccApprovalValidation = (it) => {
             accreditations: inserted.accreditations.map((acc) => {
               return {
                 ...acc,
-                status: REG_ACC_STATUS.APPROVED,
+                status: ACCREDITATION_STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
                 validFrom: VALID_FROM,
                 validTo: VALID_TO
@@ -495,7 +496,7 @@ export const testRegAccApprovalValidation = (it) => {
           const invalidUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -564,7 +565,7 @@ export const testRegAccApprovalValidation = (it) => {
           const validUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
               validTo: VALID_TO,
@@ -609,7 +610,7 @@ export const testRegAccApprovalValidation = (it) => {
           const validUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
               validTo: VALID_TO
@@ -655,7 +656,7 @@ export const testRegAccApprovalValidation = (it) => {
           const invalidUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
               validTo: VALID_TO
@@ -705,7 +706,7 @@ export const testRegAccApprovalValidation = (it) => {
           const validUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
               validTo: VALID_TO
@@ -722,7 +723,7 @@ export const testRegAccApprovalValidation = (it) => {
           expect(saved.registrations).toHaveLength(2)
           expect(
             saved.registrations.every(
-              (r) => r.status === REG_ACC_STATUS.APPROVED
+              (r) => r.status === REGISTRATION_STATUS.APPROVED
             )
           ).toBe(true)
         })
@@ -758,7 +759,7 @@ export const testRegAccApprovalValidation = (it) => {
           const invalidUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: REG_ACC_STATUS.APPROVED,
+              status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
               validTo: VALID_TO
@@ -788,7 +789,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: VALID_TO
@@ -814,7 +815,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: 'ACC123',
             validFrom: VALID_FROM,
             validTo: VALID_TO
@@ -842,7 +843,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: null,
             validFrom: VALID_FROM,
             validTo: VALID_TO
@@ -868,7 +869,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -894,7 +895,7 @@ export const testRegAccApprovalValidation = (it) => {
             (r) => r.id === registrationToUpdate.id
           )
 
-          expect(updatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(updatedReg.status).toBe(REGISTRATION_STATUS.APPROVED)
           expect(updatedReg.registrationNumber).toBe('REG12345')
           expect(updatedReg.validFrom).toBe(VALID_FROM)
           expect(updatedReg.validTo).toBe(VALID_TO)
@@ -907,7 +908,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.SUSPENDED,
+            status: ACCREDITATION_STATUS.SUSPENDED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -936,7 +937,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: null,
             validFrom: VALID_FROM,
             validTo: VALID_TO
@@ -962,7 +963,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -977,7 +978,7 @@ export const testRegAccApprovalValidation = (it) => {
               registrations: [
                 {
                   ...inserted.registrations[0],
-                  status: REG_ACC_STATUS.APPROVED,
+                  status: REGISTRATION_STATUS.APPROVED,
                   validFrom: VALID_FROM,
                   registrationNumber: 'REG12345',
                   validTo: VALID_TO,
@@ -993,7 +994,7 @@ export const testRegAccApprovalValidation = (it) => {
             (a) => a.id === accreditationToUpdate.id
           )
 
-          expect(updatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(updatedAcc.status).toBe(ACCREDITATION_STATUS.APPROVED)
           expect(updatedAcc.accreditationNumber).toBe('ACC12345')
           expect(updatedAcc.validFrom).toBe(VALID_FROM)
           expect(updatedAcc.validTo).toBe(VALID_TO)
@@ -1006,7 +1007,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.SUSPENDED,
+            status: ACCREDITATION_STATUS.SUSPENDED,
             accreditationNumber: null,
             reprocessingType: REPROCESSING_TYPE.INPUT,
             validFrom: VALID_FROM,
@@ -1067,7 +1068,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: null,
             validTo: VALID_TO,
@@ -1094,7 +1095,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             reprocessingType: REPROCESSING_TYPE.INPUT,
@@ -1124,7 +1125,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom,
             validTo,
@@ -1150,7 +1151,7 @@ export const testRegAccApprovalValidation = (it) => {
             (r) => r.id === registrationToUpdate.id
           )
 
-          expect(updatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(updatedReg.status).toBe(REGISTRATION_STATUS.APPROVED)
           expect(updatedReg.validFrom).toEqual(validFrom)
           expect(updatedReg.validTo).toEqual(validTo)
           expect(updatedReg.validFrom).toBe(VALID_FROM)
@@ -1164,7 +1165,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: '2025-13-45', // Invalid date
             validTo: VALID_TO,
@@ -1191,7 +1192,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: '01/01/2025',
@@ -1218,7 +1219,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: 'not-a-date',
             validTo: VALID_TO,
@@ -1245,7 +1246,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: 'abc',
@@ -1272,7 +1273,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: '',
             validTo: VALID_TO,
@@ -1299,7 +1300,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: '',
@@ -1326,7 +1327,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: 20250101,
             validTo: VALID_TO,
@@ -1353,7 +1354,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
             validTo: 20251231,
@@ -1380,7 +1381,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: '2025-01',
             validTo: VALID_TO,
@@ -1442,7 +1443,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: null,
             validTo: VALID_TO
@@ -1468,7 +1469,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: VALID_FROM,
             validTo: null
@@ -1497,7 +1498,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom,
             validTo,
@@ -1512,7 +1513,7 @@ export const testRegAccApprovalValidation = (it) => {
               registrations: [
                 {
                   ...inserted.registrations[0],
-                  status: REG_ACC_STATUS.APPROVED,
+                  status: REGISTRATION_STATUS.APPROVED,
                   validFrom: VALID_FROM,
                   registrationNumber: 'REG12345',
                   validTo: VALID_TO,
@@ -1528,7 +1529,7 @@ export const testRegAccApprovalValidation = (it) => {
             (a) => a.id === accreditationToUpdate.id
           )
 
-          expect(updatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
+          expect(updatedAcc.status).toBe(ACCREDITATION_STATUS.APPROVED)
           expect(updatedAcc.validFrom).toEqual(validFrom)
           expect(updatedAcc.validTo).toEqual(validTo)
           expect(updatedAcc.validFrom).toBe(VALID_FROM)
@@ -1542,7 +1543,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.APPROVED,
+            status: ACCREDITATION_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: '01/01/2025', // Invalid format
             validTo: VALID_TO,
@@ -1558,7 +1559,7 @@ export const testRegAccApprovalValidation = (it) => {
                 registrations: [
                   {
                     ...inserted.registrations[0],
-                    status: REG_ACC_STATUS.APPROVED,
+                    status: REGISTRATION_STATUS.APPROVED,
                     validFrom: VALID_FROM,
                     registrationNumber: 'REG12345',
                     validTo: VALID_TO,
@@ -1580,7 +1581,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.SUSPENDED,
+            status: ACCREDITATION_STATUS.SUSPENDED,
             accreditationNumber: 'ACC12345',
             validFrom: null,
             validTo: VALID_TO
@@ -1606,7 +1607,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: REG_ACC_STATUS.SUSPENDED,
+            status: ACCREDITATION_STATUS.SUSPENDED,
             accreditationNumber: 'ACC12345',
             validFrom: VALID_FROM,
             validTo: null
