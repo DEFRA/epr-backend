@@ -4,6 +4,7 @@ import { isRegistrationAccredited } from '#domain/organisations/registration-uti
 import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
+ * @import { AccreditationStatus } from '#domain/organisations/model.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  */
 
@@ -13,7 +14,9 @@ import { errorCodes } from '#reports/enums/error-codes.js'
  * fields for indexed logging, and `output.payload.cadence` for API clients.
  *
  * @param {Cadence} cadence
- * @param {{ accreditation: { status?: string } | null }} registration
+ * @param {{
+ *   accreditation: { status: AccreditationStatus } | null
+ * }} registration
  * @returns {void}
  */
 export const assertCadence = (cadence, registration) => {

@@ -9,7 +9,7 @@ import {
 } from './registration-utils.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 
 const userFixture = {
@@ -134,13 +134,16 @@ describe('getReportableRegistrations', () => {
 // ---------------------------------------------------------------------------
 
 describe('isRegistrationAccredited', () => {
-  it.each([
+  /** @type {Array<{ status: AccreditationStatus, expected: boolean }>} */
+  const linkedAccreditations = [
     { status: 'approved', expected: true },
     { status: 'suspended', expected: true },
     { status: 'created', expected: false },
     { status: 'rejected', expected: false },
     { status: 'cancelled', expected: false }
-  ])(
+  ]
+
+  it.each(linkedAccreditations)(
     'returns $expected when linked accreditation status is $status',
     ({ status, expected }) => {
       expect(isRegistrationAccredited({ accreditation: { status } })).toBe(

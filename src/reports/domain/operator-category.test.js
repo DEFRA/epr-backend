@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { OPERATOR_CATEGORY, getOperatorCategory } from './operator-category.js'
 
+/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+
 describe('OPERATOR_CATEGORY', () => {
   it('is frozen', () => {
     expect(Object.isFrozen(OPERATOR_CATEGORY)).toBe(true)
@@ -8,7 +10,18 @@ describe('OPERATOR_CATEGORY', () => {
 })
 
 describe('getOperatorCategory', () => {
-  it.each([
+  /**
+   * @type {Array<{
+   *   expected: string,
+   *   registration: {
+   *     accreditation: { status: AccreditationStatus } | null,
+   *     accreditationId?: string,
+   *     wasteProcessingType: string
+   *   },
+   *   scenario: string
+   * }>}
+   */
+  const categorisations = [
     {
       scenario: 'registered-only exporter (no accreditationId)',
       registration: { wasteProcessingType: 'exporter', accreditation: null },
@@ -118,9 +131,14 @@ describe('getOperatorCategory', () => {
       },
       expected: 'REPROCESSOR_REGISTERED_ONLY'
     }
-  ])('returns $expected for $scenario', ({ registration, expected }) => {
-    expect(getOperatorCategory(registration)).toBe(expected)
-  })
+  ]
+
+  it.each(categorisations)(
+    'returns $expected for $scenario',
+    ({ registration, expected }) => {
+      expect(getOperatorCategory(registration)).toBe(expected)
+    }
+  )
 
   it('throws for unknown wasteProcessingType', () => {
     expect(() => {

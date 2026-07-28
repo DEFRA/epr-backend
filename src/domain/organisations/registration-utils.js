@@ -10,13 +10,17 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
-const REPORTABLE_STATUSES = /** @type {Set<RegistrationStatus>} */ (
-  new Set([REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.CANCELLED])
-)
+/** @type {Set<RegistrationStatus>} */
+const REPORTABLE_STATUSES = new Set([
+  REGISTRATION_STATUS.APPROVED,
+  REGISTRATION_STATUS.CANCELLED
+])
 
-const ACTIVE_ACCREDITATION_STATUSES = /** @type {Set<AccreditationStatus>} */ (
-  new Set([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])
-)
+/** @type {Set<AccreditationStatus>} */
+const ACTIVE_ACCREDITATION_STATUSES = new Set([
+  ACCREDITATION_STATUS.APPROVED,
+  ACCREDITATION_STATUS.SUSPENDED
+])
 
 /**
  * Returns all reportable (approved/cancelled) registrations across all non-test organisations.
@@ -63,13 +67,15 @@ export function resolveAccreditationNumber(registration, org) {
  * sufficient — an accreditation in 'created', 'rejected', or 'cancelled'
  * state has never been active and must be treated as registered-only.
  *
- * @param {{ accreditation: { status?: string } | null }} registration
+ * @param {{
+ *   accreditation: { status: AccreditationStatus } | null
+ * }} registration
  * @returns {boolean}
  */
-export function isRegistrationAccredited(registration) {
-  const status = registration.accreditation?.status
-  return ACTIVE_ACCREDITATION_STATUSES.has(
-    /** @type {AccreditationStatus} */ (status)
+export function isRegistrationAccredited({ accreditation }) {
+  return (
+    accreditation !== null &&
+    ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)
   )
 }
 
