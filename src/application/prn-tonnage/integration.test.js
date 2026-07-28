@@ -1,13 +1,23 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
-import { aggregatePrnTonnage } from './aggregate-prn-tonnage.js'
-import { MATERIAL, TONNAGE_BAND } from '#domain/organisations/model.js'
+import {
+  aggregatePrnTonnage,
+  REGISTRATION_TYPE
+} from './aggregate-prn-tonnage.js'
+import {
+  MATERIAL,
+  REPROCESSING_TYPE,
+  TONNAGE_BAND,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildPrn,
   buildAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 /** @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -16,6 +26,14 @@ const ORGANISATIONS_COLLECTION = 'epr-organisations'
 
 const orgId = '507f1f77bcf86cd799439011'
 const accId = 'acc-1'
+const registrationId = 'reg-1'
+
+const ledgerId = {
+  organisationId: orgId,
+  registrationId,
+  accreditationId: accId
+}
+const otherLedgerId = { ...ledgerId, accreditationId: 'another-accreditation' }
 
 /** @param {PrnStatus} currentStatus */
 const withStatus = (currentStatus) => ({
@@ -40,8 +58,46 @@ const prnWithStatus = (currentStatus, tonnage) =>
     status: withStatus(currentStatus)
   })
 
+/**
+ * @param {object} [registration]
+ * @param {string} [registration.wasteProcessingType]
+ * @param {string} [registration.reprocessingType]
+ */
+const organisationWithRegistration = (registration = {}) => ({
+  _id: new ObjectId(orgId),
+  accreditations: [
+    { id: accId, prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 } }
+  ],
+  registrations: [
+    {
+      id: registrationId,
+      accreditationId: accId,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      ...registration
+    }
+  ]
+})
+
+const expectedRow = (overrides = {}) => ({
+  organisationName: 'Acme Reprocessing',
+  organisationId: orgId,
+  accreditationNumber: 'ACC-1',
+  material: MATERIAL.PLASTIC,
+  tonnageBand: TONNAGE_BAND.UP_TO_5000,
+  registrationType: REGISTRATION_TYPE.REPROCESSOR_INPUT,
+  wasteBalance: 0,
+  availableWasteBalance: 0,
+  awaitingAuthorisationTonnage: 0,
+  awaitingAcceptanceTonnage: 0,
+  awaitingCancellationTonnage: 0,
+  acceptedTonnage: 40,
+  cancelledTonnage: 0,
+  ...overrides
+})
+
 describe('aggregatePrnTonnage - Integration', () => {
   let db
+  let ledgerRepository
 
   beforeEach(
     async (
@@ -50,18 +106,18 @@ describe('aggregatePrnTonnage - Integration', () => {
       }
     ) => {
       db = mongoClient.db(DATABASE_NAME)
+      ledgerRepository = (await createMongoLedgerRepository(db))()
       await db.collection(PRNS_COLLECTION).deleteMany({})
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
+      await ledgerRepository.deleteAllInLedger(ledgerId)
+      await ledgerRepository.deleteAllInLedger(otherLedgerId)
     }
   )
 
   it('buckets tonnage by status and resolves tonnage-band from the org lookup', async () => {
-    await db.collection(ORGANISATIONS_COLLECTION).insertOne({
-      _id: new ObjectId(orgId),
-      accreditations: [
-        { id: accId, prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 } }
-      ]
-    })
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(organisationWithRegistration())
     await db
       .collection(PRNS_COLLECTION)
       .insertMany([
@@ -72,21 +128,15 @@ describe('aggregatePrnTonnage - Integration', () => {
         prnWithStatus(PRN_STATUS.CANCELLED, 50)
       ])
 
-    const { rows } = await aggregatePrnTonnage(db)
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
 
     expect(rows).toStrictEqual([
-      {
-        organisationName: 'Acme Reprocessing',
-        organisationId: orgId,
-        accreditationNumber: 'ACC-1',
-        material: MATERIAL.PLASTIC,
-        tonnageBand: TONNAGE_BAND.UP_TO_5000,
+      expectedRow({
         awaitingAuthorisationTonnage: 10,
         awaitingAcceptanceTonnage: 20,
         awaitingCancellationTonnage: 30,
-        acceptedTonnage: 40,
         cancelledTonnage: 50
-      }
+      })
     ])
   })
 
@@ -98,7 +148,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         prnWithStatus(PRN_STATUS.DISCARDED, 200)
       ])
 
-    const { rows } = await aggregatePrnTonnage(db)
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
 
     expect(rows).toStrictEqual([])
   })
@@ -108,21 +158,107 @@ describe('aggregatePrnTonnage - Integration', () => {
       .collection(PRNS_COLLECTION)
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
-    const { rows } = await aggregatePrnTonnage(db)
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
+
+    expect(rows).toStrictEqual([expectedRow({ tonnageBand: null })])
+  })
+
+  it('reads both balances from the latest ledger event for the accreditation', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(organisationWithRegistration())
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        ...ledgerId,
+        number: 1,
+        closingBalance: { amount: 500, availableAmount: 400 }
+      }),
+      buildLedgerEvent({
+        ...ledgerId,
+        number: 2,
+        openingBalance: { amount: 500, availableAmount: 400 },
+        closingBalance: { amount: 250, availableAmount: 125 }
+      })
+    ])
+
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
 
     expect(rows).toStrictEqual([
-      {
-        organisationName: 'Acme Reprocessing',
-        organisationId: orgId,
-        accreditationNumber: 'ACC-1',
-        material: MATERIAL.PLASTIC,
-        tonnageBand: null,
-        awaitingAuthorisationTonnage: 0,
-        awaitingAcceptanceTonnage: 0,
-        awaitingCancellationTonnage: 0,
-        acceptedTonnage: 40,
-        cancelledTonnage: 0
-      }
+      expectedRow({ wasteBalance: 250, availableWasteBalance: 125 })
+    ])
+  })
+
+  it('ignores ledger events belonging to another accreditation', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(organisationWithRegistration())
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        ...otherLedgerId,
+        closingBalance: { amount: 999, availableAmount: 999 }
+      })
+    ])
+
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
+
+    expect(rows).toStrictEqual([expectedRow()])
+  })
+
+  it('reports a reprocessor-output registration as REPROCESSOR_OUTPUT', async () => {
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
+      organisationWithRegistration({
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        reprocessingType: REPROCESSING_TYPE.OUTPUT
+      })
+    )
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
+
+    expect(rows).toStrictEqual([
+      expectedRow({ registrationType: REGISTRATION_TYPE.REPROCESSOR_OUTPUT })
+    ])
+  })
+
+  it('reports an exporter registration as EXPORTER', async () => {
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
+      organisationWithRegistration({
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
+      })
+    )
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
+
+    expect(rows).toStrictEqual([
+      expectedRow({ registrationType: REGISTRATION_TYPE.EXPORTER })
+    ])
+  })
+
+  it('reports a reprocessor registration with no reprocessing type as REPROCESSOR_INPUT', async () => {
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
+      organisationWithRegistration({
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+      })
+    )
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
+
+    expect(rows).toStrictEqual([
+      expectedRow({ registrationType: REGISTRATION_TYPE.REPROCESSOR_INPUT })
     ])
   })
 })

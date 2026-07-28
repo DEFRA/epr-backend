@@ -1,4 +1,5 @@
 import { describe, beforeEach, expect } from 'vitest'
+import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 
 import { it } from '#vite/fixtures/server-with-real-db.js'
@@ -8,11 +9,14 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { MATERIAL } from '#domain/organisations/model.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   buildAwaitingAcceptancePrn,
   buildAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
+import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { prnTonnagePath } from './get.js'
 
 /** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
@@ -22,6 +26,14 @@ const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const { validToken } = entraIdMockAuthTokens
 
 const orgId = '507f1f77bcf86cd799439011'
+const accId = 'acc-integ'
+const registrationId = 'reg-integ'
+
+const ledgerId = {
+  organisationId: orgId,
+  registrationId,
+  accreditationId: accId
+}
 
 describe(`GET ${prnTonnagePath} (integration)`, () => {
   setupAuthContext()
@@ -30,20 +42,41 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
     async (/** @type {{ server: TestServerWithRealDb }} */ { server }) => {
       await server.db.collection(PRNS_COLLECTION).deleteMany({})
       await server.db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
+      const ledgerRepository = (await createMongoLedgerRepository(server.db))()
+      await ledgerRepository.deleteAllInLedger(ledgerId)
     }
   )
 
   it('aggregates PRN tonnage by status via the real db', async ({ server }) => {
+    await server.db.collection(ORGANISATIONS_COLLECTION).insertOne({
+      _id: new ObjectId(orgId),
+      accreditations: [{ id: accId }],
+      registrations: [
+        {
+          id: registrationId,
+          accreditationId: accId,
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
+        }
+      ]
+    })
     await server.db.collection(PRNS_COLLECTION).insertOne(
       buildAwaitingAcceptancePrn({
         organisation: { id: orgId, name: 'Acme Reprocessing' },
         accreditation: buildAccreditation({
+          id: accId,
           accreditationNumber: 'ACC-INTEG',
           material: MATERIAL.PLASTIC
         }),
         tonnage: 100
       })
     )
+    const ledgerRepository = (await createMongoLedgerRepository(server.db))()
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        ...ledgerId,
+        closingBalance: { amount: 750, availableAmount: 600 }
+      })
+    ])
 
     const response = await server.inject({
       method: 'GET',
@@ -59,6 +92,9 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
         accreditationNumber: 'ACC-INTEG',
         material: MATERIAL.PLASTIC,
         tonnageBand: null,
+        registrationType: REGISTRATION_TYPE.EXPORTER,
+        wasteBalance: 750,
+        availableWasteBalance: 600,
         awaitingAuthorisationTonnage: 0,
         awaitingAcceptanceTonnage: 100,
         awaitingCancellationTonnage: 0,
