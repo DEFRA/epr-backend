@@ -3,6 +3,8 @@
  */
 
 /** @import {AccreditationStatus, Organisation, RegistrationStatus} from '#domain/organisations/model.js' */
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 /** @import {ReportComplianceData} from '#reports/application/report-compliance.js' */
 
@@ -101,14 +103,22 @@ function getLastStatusUpdateDate(item) {
     : null
 }
 
+/**
+ * @param {Registration} registration
+ * @param {Accreditation[]} accreditations
+ * @returns {Accreditation | null}
+ */
 function getLinkedAccreditation(registration, accreditations) {
-  return registration.accreditationId
-    ? accreditations.find(
-        (acc) =>
-          acc.id === registration.accreditationId &&
-          isAccreditationInPublishableState(acc)
-      )
-    : null
+  if (!registration.accreditationId) {
+    return null
+  }
+  return (
+    accreditations.find(
+      (acc) =>
+        acc.id === registration.accreditationId &&
+        isAccreditationInPublishableState(acc)
+    ) ?? null
+  )
 }
 
 /** @param {{ status: RegistrationStatus }} item */

@@ -23,7 +23,7 @@ import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
 /** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { FindPageForOverseasSitesAdminListParams } from './port.js' */
 
 export const createStatusHistoryEntry = (status) => ({
@@ -58,7 +58,7 @@ export const statusHistoryWithChanges = (updatedItem, existingItem) => {
  * @template {string} S
  * @param {Array<{ id: string, status: S }>} existingItems
  * @param {Array<{ id: string, status?: S }>} itemUpdates
- * @param {(fromStatus: S, toStatus: S) => void} assertStatusTransitionValid
+ * @param {StatusTransitionAsserter<S>} assertStatusTransitionValid
  * @param {Set<string>} [systemAppliedItemIds] - items whose status change was
  *   applied by the system (the registration-cancellation cascade), exempt from
  *   the transition table
@@ -112,8 +112,7 @@ export const mapDocumentWithCurrentStatuses = (org) => {
   rest.status = /** @type {OrganisationStatus} */ (getCurrentStatus(rest))
 
   for (const item of rest.registrations) {
-    // Greenfield: no stored registration history contains suspended (PAE-1705)
-    item.status = /** @type {Registration['status']} */ (getCurrentStatus(item))
+    item.status = getCurrentStatus(item)
     item.accreditation = item.accreditation ?? null
   }
 

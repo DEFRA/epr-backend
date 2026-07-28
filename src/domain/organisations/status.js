@@ -71,9 +71,14 @@ export const assertOrgStatusTransitionValid = (fromStatus, toStatus) => {
 
 /**
  * @template {string} S
+ * @typedef {(fromStatus: S, toStatus: S) => void} StatusTransitionAsserter
+ */
+
+/**
+ * @template {string} S
  * @param {Record<S, S[]>} validTransitions
  * @param {'registration' | 'accreditation'} itemKind
- * @returns {(fromStatus: S, toStatus: S) => void}
+ * @returns {StatusTransitionAsserter<S>}
  */
 const makeAssertStatusTransitionValid = (validTransitions, itemKind) => {
   return (fromStatus, toStatus) => {

@@ -56,14 +56,16 @@ export function resolveAccreditationNumber(registration, org) {
 }
 
 /**
+ * @typedef {{ accreditation: { status: AccreditationStatus } | null }} AccreditationLink
+ */
+
+/**
  * Returns true when the registration is linked to an accreditation that is
  * live (approved or suspended). Presence of accreditationId alone is not
  * sufficient — an accreditation in 'created', 'rejected', or 'cancelled'
  * state has never been active and must be treated as registered-only.
  *
- * @param {{
- *   accreditation: { status: AccreditationStatus } | null
- * }} registration
+ * @param {AccreditationLink} registration
  * @returns {boolean}
  */
 export function isRegistrationAccredited({ accreditation }) {

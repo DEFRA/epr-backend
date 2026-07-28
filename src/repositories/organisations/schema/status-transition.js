@@ -8,6 +8,7 @@ import {
 } from '#domain/organisations/model.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {StatusTransitionAsserter} from '#domain/organisations/status.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
@@ -71,7 +72,7 @@ export const assertOrgStatusTransition = (existing, updated) => {
  * @template {string} S
  * @param {{ status: S }} existing
  * @param {{ status?: S }} updated
- * @param {(fromStatus: S, toStatus: S) => void} assertStatusTransitionValid
+ * @param {StatusTransitionAsserter<S>} assertStatusTransitionValid
  * @returns {void}
  */
 export const assertAndHandleItemStateTransition = (

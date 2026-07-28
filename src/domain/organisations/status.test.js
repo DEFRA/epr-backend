@@ -12,10 +12,11 @@ import {
 import Boom from '@hapi/boom'
 
 /** @import {AccreditationStatus, OrganisationStatus, RegistrationStatus} from './model.js' */
+/** @import {StatusTransitionAsserter} from './status.js' */
 
 /**
  * @template {string} S
- * @param {(fromStatus: S, toStatus: S) => void} assertTransitionValid
+ * @param {StatusTransitionAsserter<S>} assertTransitionValid
  * @param {'registration' | 'accreditation'} itemKind
  * @param {[S, S, boolean][]} transitionTable
  */
@@ -115,6 +116,11 @@ describe('assertOrgStatusTransitionValid', () => {
 })
 
 describe('assertRegistrationStatusTransitionValid', () => {
+  // Only reachable from a status read from storage, never from a typed caller.
+  const suspended = /** @type {RegistrationStatus} */ (
+    ACCREDITATION_STATUS.SUSPENDED
+  )
+
   /** @type {[RegistrationStatus, RegistrationStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
@@ -140,7 +146,11 @@ describe('assertRegistrationStatusTransitionValid', () => {
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.CREATED, true],
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.APPROVED, false],
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.CANCELLED, false],
-    [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.REJECTED, false]
+    [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.REJECTED, false],
+
+    // Suspended is not a registration status
+    [suspended, REGISTRATION_STATUS.CANCELLED, false],
+    [REGISTRATION_STATUS.APPROVED, suspended, false]
   ]
 
   describeTransitionTable(
@@ -148,38 +158,6 @@ describe('assertRegistrationStatusTransitionValid', () => {
     'registration',
     transitionTable
   )
-
-  describe('suspended, which is not a registration status', () => {
-    const suspended = /** @type {RegistrationStatus} */ (
-      ACCREDITATION_STATUS.SUSPENDED
-    )
-
-    it('rejects a transition out of suspended', () => {
-      expect(() =>
-        assertRegistrationStatusTransitionValid(
-          suspended,
-          REGISTRATION_STATUS.CANCELLED
-        )
-      ).toThrow(
-        Boom.badData(
-          'Cannot transition registration status from suspended to cancelled'
-        )
-      )
-    })
-
-    it('rejects a transition into suspended', () => {
-      expect(() =>
-        assertRegistrationStatusTransitionValid(
-          REGISTRATION_STATUS.APPROVED,
-          suspended
-        )
-      ).toThrow(
-        Boom.badData(
-          'Cannot transition registration status from approved to suspended'
-        )
-      )
-    })
-  })
 })
 
 describe('assertAccreditationStatusTransitionValid', () => {
