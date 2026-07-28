@@ -5,6 +5,7 @@
  * @property {() => boolean} isPreCpaResubmissionReportEnabled
  * @property {() => boolean} isPreCpaResubmissionBackfillEnabled
  * @property {() => boolean} isDropWasteRecordsCollectionEnabled
+ * @property {() => boolean} isUnexportedTonnageReportEnabled
  */
 
 /**
@@ -14,6 +15,7 @@
  * @property {boolean} [preCpaResubmissionReport]
  * @property {boolean} [preCpaResubmissionBackfill]
  * @property {boolean} [dropWasteRecordsCollection]
+ * @property {boolean} [unexportedTonnageReport]
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

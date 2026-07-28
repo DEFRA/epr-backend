@@ -381,6 +381,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_DROP_WASTE_RECORDS_COLLECTION'
+    },
+    unexportedTonnageReport: {
+      doc: 'Feature Flag: Run the estate-wide unexported tonnage sizing diagnostic on startup (PAE-1783)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_UNEXPORTED_TONNAGE_REPORT'
     }
   },
   formSubmissionOverrides: {

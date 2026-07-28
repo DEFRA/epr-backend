@@ -92,4 +92,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isDropWasteRecordsCollectionEnabled()).toBe(false)
   })
+
+  it('returns true when unexportedTonnageReport flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      unexportedTonnageReport: true
+    })
+    expect(flags.isUnexportedTonnageReportEnabled()).toBe(true)
+  })
+
+  it('returns false when unexportedTonnageReport flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      unexportedTonnageReport: false
+    })
+    expect(flags.isUnexportedTonnageReportEnabled()).toBe(false)
+  })
+
+  it('returns false when unexportedTonnageReport flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isUnexportedTonnageReportEnabled()).toBe(false)
+  })
 })

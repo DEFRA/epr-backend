@@ -16,5 +16,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isDropWasteRecordsCollectionEnabled() {
     return config.get('featureFlags.dropWasteRecordsCollection')
+  },
+  isUnexportedTonnageReportEnabled() {
+    return config.get('featureFlags.unexportedTonnageReport')
   }
 })

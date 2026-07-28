@@ -17,5 +17,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isDropWasteRecordsCollectionEnabled() {
     return flags.dropWasteRecordsCollection ?? false
+  },
+  isUnexportedTonnageReportEnabled() {
+    return flags.unexportedTonnageReport ?? false
   }
 })

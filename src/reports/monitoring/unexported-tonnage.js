@@ -70,7 +70,7 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   reason: string
  * }} RecomputeFailedFinding
  *
- * @typedef {MismatchFinding | SourceMissingFinding | RecomputeFailedFinding} NotExportedFinding
+ * @typedef {MismatchFinding | SourceMissingFinding | RecomputeFailedFinding} UnexportedTonnageFinding
  */
 
 /**
@@ -83,8 +83,8 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   endDate: string,
  *   reportId: string,
  *   reportStatus: string,
- *   storedNotExported: number
- * }} ReconcilableReportRow
+ *   storedUnexported: number
+ * }} ReviewableReportRow
  */
 
 /** @type {Set<string>} */
@@ -102,7 +102,7 @@ const TONNAGE_RECEIVED_FIELD = 'TONNAGE_RECEIVED_FOR_EXPORT'
 const TONNAGE_EXPORTED_FIELD = 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
 
 /**
- * The monthly reports this diagnostic can reconcile, flattened out of the
+ * The monthly reports this diagnostic reviews, flattened out of the
  * estate-wide periodic report groupings.
  *
  * A non-null `exportActivity.tonnageReceivedNotExported` identifies an
@@ -111,18 +111,18 @@ const TONNAGE_EXPORTED_FIELD = 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
  * all. No registration lookup is needed to filter the population.
  *
  * @param {PeriodicReport[]} periodicReports
- * @returns {ReconcilableReportRow[]}
+ * @returns {ReviewableReportRow[]}
  */
-export const findReconcilableReportRows = (periodicReports) =>
+export const findReviewableReportRows = (periodicReports) =>
   periodicReports.flatMap(({ organisationId, registrationId, year, reports }) =>
     Object.entries(reports.monthly ?? {}).flatMap(([period, periodInfo]) => {
       const { current } = periodInfo
       if (!current || !REVIEWABLE_REPORT_STATUSES.has(current.status)) {
         return []
       }
-      const storedNotExported =
+      const storedUnexported =
         current.exportActivity?.tonnageReceivedNotExported
-      if (isNil(storedNotExported)) {
+      if (isNil(storedUnexported)) {
         return []
       }
       return [
@@ -135,7 +135,7 @@ export const findReconcilableReportRows = (periodicReports) =>
           endDate: periodInfo.endDate,
           reportId: current.id,
           reportStatus: current.status,
-          storedNotExported
+          storedUnexported
         }
       ]
     })
@@ -169,7 +169,7 @@ const notExportedForLoad = (data) => {
  * @param {string} endDate
  * @returns {number}
  */
-const recomputeNotExported = (wasteRecordStates, startDate, endDate) =>
+const recomputeUnexported = (wasteRecordStates, startDate, endDate) =>
   toNumber(
     filterRecordsByDateField(
       wasteRecordStates,
@@ -183,7 +183,7 @@ const recomputeNotExported = (wasteRecordStates, startDate, endDate) =>
   )
 
 /**
- * @param {ReconcilableReportRow} row
+ * @param {ReviewableReportRow} row
  * @returns {FindingIdentity}
  */
 const identityOf = (row) => ({
@@ -202,9 +202,9 @@ const identityOf = (row) => ({
  * `wasteRecordStates` is null when the report's source rows could not be
  * resolved, which is the one case a backfill could not correct on its own.
  *
- * @param {ReconcilableReportRow} row
+ * @param {ReviewableReportRow} row
  * @param {WasteRecordState[] | null} wasteRecordStates
- * @returns {NotExportedFinding | null}
+ * @returns {UnexportedTonnageFinding | null}
  */
 export const diagnoseReportRow = (row, wasteRecordStates) => {
   if (wasteRecordStates === null) {
@@ -213,7 +213,7 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
 
   let recomputed
   try {
-    recomputed = recomputeNotExported(
+    recomputed = recomputeUnexported(
       wasteRecordStates,
       row.startDate,
       row.endDate
@@ -226,28 +226,28 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
     }
   }
 
-  if (recomputed === row.storedNotExported) {
+  if (recomputed === row.storedUnexported) {
     return null
   }
 
   return {
     kind: 'mismatch',
     ...identityOf(row),
-    stored: row.storedNotExported,
+    stored: row.storedUnexported,
     recomputed,
-    delta: toNumber(subtract(recomputed, row.storedNotExported))
+    delta: toNumber(subtract(recomputed, row.storedUnexported))
   }
 }
 
 /**
  * Renders a finding as one reviewable log line.
  *
- * @param {NotExportedFinding} finding
+ * @param {UnexportedTonnageFinding} finding
  * @returns {string}
  */
-export const formatNotExportedReconciliationFinding = (finding) => {
+export const formatUnexportedTonnageFinding = (finding) => {
   const prefix =
-    `Not-exported reconciliation ${finding.kind}: org ${finding.organisationId} / ` +
+    `Unexported tonnage ${finding.kind}: org ${finding.organisationId} / ` +
     `registration ${finding.registrationId}, report ${finding.reportId} ` +
     `(${finding.month}, ${finding.reportStatus}) - `
 
@@ -268,7 +268,7 @@ export const formatNotExportedReconciliationFinding = (finding) => {
  * The scale figures the run's summary line reports. `totalDelta` covers the
  * mismatches only — the tonnage a backfill would move.
  *
- * @param {NotExportedFinding[]} findings
+ * @param {UnexportedTonnageFinding[]} findings
  * @returns {{
  *   mismatches: number,
  *   sourceMissing: number,
@@ -277,7 +277,7 @@ export const formatNotExportedReconciliationFinding = (finding) => {
  *   totalDelta: number
  * }}
  */
-export const summariseNotExportedReconciliation = (findings) => {
+export const summariseUnexportedTonnageFindings = (findings) => {
   const countOf = (kind) => findings.filter((f) => f.kind === kind).length
 
   return {
@@ -345,7 +345,7 @@ const resolveLedgers = async (
  *   organisationsRepository: OrganisationsRepository,
  *   summaryLogRowStateRepository: SummaryLogRowStateRepository
  * }} deps
- * @param {ReconcilableReportRow} row
+ * @param {ReviewableReportRow} row
  * @returns {Promise<WasteRecordState[] | null>}
  */
 const loadSourceRowStates = async (
@@ -383,7 +383,7 @@ const loadSourceRowStates = async (
 
 /**
  * Scans every reviewable accredited-exporter monthly report across the estate
- * and returns the ones whose stored not-exported figure disagrees with the
+ * and returns the ones whose stored unexported tonnage disagrees with the
  * corrected rule, alongside those that cannot be recomputed at all. Read-only.
  *
  * @param {{
@@ -391,11 +391,11 @@ const loadSourceRowStates = async (
  *   organisationsRepository: OrganisationsRepository,
  *   summaryLogRowStateRepository: SummaryLogRowStateRepository
  * }} deps
- * @returns {Promise<{ scanned: number, findings: NotExportedFinding[] }>}
+ * @returns {Promise<{ scanned: number, findings: UnexportedTonnageFinding[] }>}
  */
-export const findNotExportedReconciliationReports = async (deps) => {
+export const findUnexportedTonnageReports = async (deps) => {
   const periodicReports = await deps.reportsRepository.findAllPeriodicReports()
-  const rows = findReconcilableReportRows(periodicReports)
+  const rows = findReviewableReportRows(periodicReports)
 
   const findings = []
   for (const row of rows) {

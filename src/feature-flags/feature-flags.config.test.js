@@ -44,4 +44,13 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.dropWasteRecordsCollection'
     )
   })
+
+  it('returns true when unexportedTonnageReport flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isUnexportedTonnageReportEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.unexportedTonnageReport'
+    )
+  })
 })

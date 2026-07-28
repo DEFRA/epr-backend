@@ -2,16 +2,16 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   diagnoseReportRow,
-  findNotExportedReconciliationReports,
-  findReconcilableReportRows,
-  formatNotExportedReconciliationFinding,
-  summariseNotExportedReconciliation
-} from './not-exported-reconciliation.js'
+  findUnexportedTonnageReports,
+  findReviewableReportRows,
+  formatUnexportedTonnageFinding,
+  summariseUnexportedTonnageFindings
+} from './unexported-tonnage.js'
 
 /**
  * @import { PeriodicReport } from '#reports/repository/port.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
- * @import { NotExportedFinding, ReconcilableReportRow } from './not-exported-reconciliation.js'
+ * @import { UnexportedTonnageFinding, ReviewableReportRow } from './unexported-tonnage.js'
  */
 
 /**
@@ -34,8 +34,8 @@ const buildReceivedRow = (data = {}) =>
   )
 
 /**
- * @param {Partial<ReconcilableReportRow>} [overrides]
- * @returns {ReconcilableReportRow}
+ * @param {Partial<ReviewableReportRow>} [overrides]
+ * @returns {ReviewableReportRow}
  */
 const buildRow = (overrides = {}) => ({
   organisationId: 'org-1',
@@ -46,7 +46,7 @@ const buildRow = (overrides = {}) => ({
   endDate: '2026-02-28',
   reportId: 'report-1',
   reportStatus: 'submitted',
-  storedNotExported: 0,
+  storedUnexported: 0,
   ...overrides
 })
 
@@ -58,8 +58,8 @@ const FEB_2026_IDENTITY = {
   reportStatus: 'submitted'
 }
 
-describe('not-exported-reconciliation', () => {
-  describe('findReconcilableReportRows', () => {
+describe('unexported-tonnage', () => {
+  describe('findReviewableReportRows', () => {
     /**
      * @param {Record<string, unknown>} [monthlyOverrides]
      * @returns {PeriodicReport}
@@ -88,8 +88,8 @@ describe('not-exported-reconciliation', () => {
         })
       )
 
-    it('includes a submitted monthly report with a calculated not-exported figure', () => {
-      const rows = findReconcilableReportRows([basePeriodicReport()])
+    it('includes a submitted monthly report with a calculated unexported tonnage', () => {
+      const rows = findReviewableReportRows([basePeriodicReport()])
 
       expect(rows).toStrictEqual([buildRow()])
     })
@@ -97,7 +97,7 @@ describe('not-exported-reconciliation', () => {
     it.each([['in_progress'], ['ready_to_submit']])(
       'includes a %s monthly report',
       (status) => {
-        const rows = findReconcilableReportRows([
+        const rows = findReviewableReportRows([
           basePeriodicReport({
             current: {
               id: 'report-1',
@@ -108,13 +108,13 @@ describe('not-exported-reconciliation', () => {
         ])
 
         expect(rows).toStrictEqual([
-          buildRow({ reportStatus: status, storedNotExported: 5 })
+          buildRow({ reportStatus: status, storedUnexported: 5 })
         ])
       }
     )
 
     it('excludes a registered-only exporter, whose figure is entered by hand and stored as null', () => {
-      const rows = findReconcilableReportRows([
+      const rows = findReviewableReportRows([
         basePeriodicReport({
           current: {
             id: 'report-1',
@@ -128,7 +128,7 @@ describe('not-exported-reconciliation', () => {
     })
 
     it('excludes a reprocessor, which has no export activity at all', () => {
-      const rows = findReconcilableReportRows([
+      const rows = findReviewableReportRows([
         basePeriodicReport({
           current: { id: 'report-1', status: 'submitted' }
         })
@@ -138,7 +138,7 @@ describe('not-exported-reconciliation', () => {
     })
 
     it('excludes a report in a status the fix would never regenerate', () => {
-      const rows = findReconcilableReportRows([
+      const rows = findReviewableReportRows([
         basePeriodicReport({
           current: {
             id: 'report-1',
@@ -152,7 +152,7 @@ describe('not-exported-reconciliation', () => {
     })
 
     it('excludes a period with no current report', () => {
-      const rows = findReconcilableReportRows([
+      const rows = findReviewableReportRows([
         basePeriodicReport({ current: null })
       ])
 
@@ -182,7 +182,7 @@ describe('not-exported-reconciliation', () => {
         })
       )
 
-      expect(findReconcilableReportRows([periodicReport])).toStrictEqual([])
+      expect(findReviewableReportRows([periodicReport])).toStrictEqual([])
     })
   })
 
@@ -230,7 +230,7 @@ describe('not-exported-reconciliation', () => {
     })
 
     it('clamps a row exporting more than it received rather than crediting it back', () => {
-      const finding = diagnoseReportRow(buildRow({ storedNotExported: 5 }), [
+      const finding = diagnoseReportRow(buildRow({ storedUnexported: 5 }), [
         buildReceivedRow({
           TONNAGE_RECEIVED_FOR_EXPORT: 10,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12
@@ -279,7 +279,7 @@ describe('not-exported-reconciliation', () => {
     })
 
     it('reports a negative delta when the stored figure overstates what is on site', () => {
-      const finding = diagnoseReportRow(buildRow({ storedNotExported: 30 }), [
+      const finding = diagnoseReportRow(buildRow({ storedUnexported: 30 }), [
         buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 29.19 })
       ])
 
@@ -314,9 +314,9 @@ describe('not-exported-reconciliation', () => {
     })
   })
 
-  describe('formatNotExportedReconciliationFinding', () => {
+  describe('formatUnexportedTonnageFinding', () => {
     it('renders a mismatch as one reviewable line', () => {
-      const line = formatNotExportedReconciliationFinding({
+      const line = formatUnexportedTonnageFinding({
         kind: 'mismatch',
         ...FEB_2026_IDENTITY,
         stored: 0,
@@ -325,42 +325,42 @@ describe('not-exported-reconciliation', () => {
       })
 
       expect(line).toBe(
-        'Not-exported reconciliation mismatch: org org-1 / registration reg-1, ' +
+        'Unexported tonnage mismatch: org org-1 / registration reg-1, ' +
           'report report-1 (Feb 2026, submitted) - stored 0, recomputed 29.19, delta 29.19'
       )
     })
 
     it('renders a source-missing finding as one reviewable line', () => {
-      const line = formatNotExportedReconciliationFinding({
+      const line = formatUnexportedTonnageFinding({
         kind: 'source-missing',
         ...FEB_2026_IDENTITY
       })
 
       expect(line).toBe(
-        'Not-exported reconciliation source-missing: org org-1 / registration reg-1, ' +
+        'Unexported tonnage source-missing: org org-1 / registration reg-1, ' +
           'report report-1 (Feb 2026, submitted) - source rows could not be resolved, ' +
           'cannot recompute'
       )
     })
 
     it('renders a recompute-failed finding with its reason', () => {
-      const line = formatNotExportedReconciliationFinding({
+      const line = formatUnexportedTonnageFinding({
         kind: 'recompute-failed',
         ...FEB_2026_IDENTITY,
         reason: 'Value is not a tonnage held to two decimal places: 1.234'
       })
 
       expect(line).toBe(
-        'Not-exported reconciliation recompute-failed: org org-1 / registration reg-1, ' +
+        'Unexported tonnage recompute-failed: org org-1 / registration reg-1, ' +
           'report report-1 (Feb 2026, submitted) - ' +
           'Value is not a tonnage held to two decimal places: 1.234'
       )
     })
   })
 
-  describe('summariseNotExportedReconciliation', () => {
+  describe('summariseUnexportedTonnageFindings', () => {
     it('splits findings by kind and totals the correctable delta', () => {
-      const findings = /** @type {NotExportedFinding[]} */ (
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
         /** @type {unknown} */ ([
           { kind: 'mismatch', organisationId: 'org-1', delta: 29.19 },
           { kind: 'mismatch', organisationId: 'org-1', delta: -0.81 },
@@ -370,7 +370,7 @@ describe('not-exported-reconciliation', () => {
         ])
       )
 
-      const summary = summariseNotExportedReconciliation(findings)
+      const summary = summariseUnexportedTonnageFindings(findings)
 
       expect(summary).toStrictEqual({
         mismatches: 3,
@@ -382,7 +382,7 @@ describe('not-exported-reconciliation', () => {
     })
   })
 
-  describe('findNotExportedReconciliationReports', () => {
+  describe('findUnexportedTonnageReports', () => {
     const submittedFebReport = (tonnageReceivedNotExported) => ({
       organisationId: 'org-1',
       registrationId: 'reg-1',
@@ -409,7 +409,9 @@ describe('not-exported-reconciliation', () => {
         id: 'report-1',
         source: { summaryLogId: 'log-1' }
       }),
-      registration = { accreditationId: 'acc-1' },
+      registration = /** @type {{ accreditationId: string } | null} */ ({
+        accreditationId: 'acc-1'
+      }),
       rowStates = [buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 12 })]
     } = {}) => ({
       reportsRepository: {
@@ -434,8 +436,8 @@ describe('not-exported-reconciliation', () => {
      * @param {ReturnType<typeof buildDeps>} deps
      */
     const scan = (deps) =>
-      findNotExportedReconciliationReports(
-        /** @type {Parameters<typeof findNotExportedReconciliationReports>[0]} */ (
+      findUnexportedTonnageReports(
+        /** @type {Parameters<typeof findUnexportedTonnageReports>[0]} */ (
           /** @type {unknown} */ (deps)
         )
       )
