@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   assertAccreditationStatusTransitionValid,
-  assertOrgStatusTransitionValid,
-  assertRegistrationStatusTransitionValid
+  assertRegistrationStatusTransitionValid,
+  isOrgStatusTransitionValid
 } from './status.js'
 import {
   ACCREDITATION_STATUS,
@@ -54,7 +54,7 @@ const describeTransitionTable = (
   })
 }
 
-describe('assertOrgStatusTransitionValid', () => {
+describe('isOrgStatusTransitionValid', () => {
   /** @type {[OrganisationStatus, OrganisationStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
@@ -88,9 +88,7 @@ describe('assertOrgStatusTransitionValid', () => {
     it.each(validTransitions)(
       'allows transition from %s to %s',
       (fromStatus, toStatus) => {
-        expect(() =>
-          assertOrgStatusTransitionValid(fromStatus, toStatus)
-        ).not.toThrow()
+        expect(isOrgStatusTransitionValid(fromStatus, toStatus)).toBe(true)
       }
     )
   })
@@ -101,15 +99,9 @@ describe('assertOrgStatusTransitionValid', () => {
     )
 
     it.each(invalidTransitions)(
-      'rejects transition from %s to %s with Boom error',
+      'rejects transition from %s to %s',
       (fromStatus, toStatus) => {
-        expect(() =>
-          assertOrgStatusTransitionValid(fromStatus, toStatus)
-        ).toThrow(
-          Boom.badData(
-            `Cannot transition organisation status from ${fromStatus} to ${toStatus}`
-          )
-        )
+        expect(isOrgStatusTransitionValid(fromStatus, toStatus)).toBe(false)
       }
     )
   })

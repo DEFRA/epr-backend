@@ -4,10 +4,10 @@ import {
   validateStatusHistory
 } from './schema/index.js'
 import {
-  applyRegistrationStatusToLinkedAccreditations,
   assertAndHandleItemStateTransition,
   assertOrgStatusTransition
 } from '#repositories/organisations/schema/status-transition.js'
+import { applyRegistrationStatusToLinkedAccreditations } from '#domain/organisations/lifecycle.js'
 import {
   validateAccreditationLinkExists,
   validateAccreditationLinkMatches,

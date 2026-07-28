@@ -58,16 +58,13 @@ const VALID_ACC_TRANSITIONS = {
   [ACCREDITATION_STATUS.REJECTED]: [ACCREDITATION_STATUS.CREATED]
 }
 
-export const assertOrgStatusTransitionValid = (fromStatus, toStatus) => {
-  const allowedTransitions = VALID_ORG_TRANSITIONS[fromStatus]
-  const isValid = allowedTransitions.includes(toStatus)
-
-  if (!isValid) {
-    throw Boom.badData(
-      `Cannot transition organisation status from ${fromStatus} to ${toStatus}`
-    )
-  }
-}
+/**
+ * @param {string} fromStatus
+ * @param {string} toStatus
+ * @returns {boolean}
+ */
+export const isOrgStatusTransitionValid = (fromStatus, toStatus) =>
+  VALID_ORG_TRANSITIONS[fromStatus].includes(toStatus)
 
 /**
  * @template {string} S

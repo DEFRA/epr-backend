@@ -2,7 +2,10 @@ import { SCOPES } from '#auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import {
+  LIFECYCLE_DECISION,
+  decideOrganisationLink
+} from '#domain/organisations/lifecycle.js'
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 import { getDefraTokenSummary } from '#auth/roles/helpers.js'
@@ -76,33 +79,28 @@ export const organisationsLink = {
     const linkableOrganisations =
       await organisationsRepository.findAllLinkableForUser(tokenPayload.email)
 
-    const orgToLink = linkableOrganisations.find(
-      (linkableOrganisation) => linkableOrganisation.id === organisation.id
-    )
+    const decision = decideOrganisationLink({
+      organisation,
+      linkableOrganisations,
+      defraOrganisation: { orgId: defraIdOrgId, orgName: defraIdOrgName },
+      linkedBy: { email, id: credentialId },
+      linkedAt: new Date().toISOString()
+    })
 
-    if (!orgToLink) {
+    if (decision.outcome === LIFECYCLE_DECISION.REFUSED) {
       // strictly this should 403 if the org is linkable but the user is not an initial user...
       // ...but that differentiation is embedded within findAllLinkableForUser
       throw Boom.conflict('Organisation is not in a linkable state')
     }
 
-    const linkedDefraOrg = {
-      orgId: defraIdOrgId,
-      orgName: defraIdOrgName,
-      linkedBy: {
-        email,
-        id: credentialId
-      },
-      linkedAt: new Date().toISOString()
-    }
+    const {
+      id,
+      version: currentVersion,
+      ...organisationData
+    } = decision.organisation
+    const linkedDefraOrg = organisationData.linkedDefraOrganisation
 
-    const { id, version: currentVersion, ...organisationData } = organisation
-
-    await organisationsRepository.replace(id, currentVersion, {
-      ...organisationData,
-      status: ORGANISATION_STATUS.ACTIVE,
-      linkedDefraOrganisation: linkedDefraOrg
-    })
+    await organisationsRepository.replace(id, currentVersion, organisationData)
 
     await auditOrganisationLinking(request, id, {
       id: linkedDefraOrg.orgId,
