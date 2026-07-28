@@ -10,6 +10,8 @@ import {
   registrationFactory
 } from '#common/helpers/collections/factories/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { ObjectId } from 'mongodb'
+import { createEprOrganisationScenarios } from './seed-scenarios.js'
 
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
 import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }
@@ -19,9 +21,6 @@ import eprOrganisation1 from '#data/fixtures/common/epr-organisations/sample-org
 import eprOrganisation2 from '#data/fixtures/common/epr-organisations/sample-organisation-2.json' with { type: 'json' }
 import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-organisation-3.json' with { type: 'json' }
 import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
-
-import { ObjectId } from 'mongodb'
-import { createEprOrganisationScenarios } from './seed-scenarios.js'
 
 /** @import {Db} from 'mongodb' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */

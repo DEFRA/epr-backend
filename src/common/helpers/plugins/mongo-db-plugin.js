@@ -9,17 +9,20 @@ import {
   createLockManagerIndex
 } from '../collections/create-update.js'
 
+/** @import {Db} from 'mongodb' */
+/** @import {HapiServer} from '../../hapi-types.js' */
+
 export const mongoDbPlugin = {
   plugin: {
     name: 'mongodb',
     version: '1.0.0',
     /**
-     * @param {import('../../hapi-types.js').HapiServer} server
+     * @param {HapiServer} server
      * @param {{
      *   mongoUrl: string,
      *   mongoOptions: object,
      *   databaseName: string,
-     *   seedDatabase: (db: import('mongodb').Db) => Promise<void>
+     *   seedDatabase: (db: Db) => Promise<void>
      * }} options
      */
     register: async function (server, options) {

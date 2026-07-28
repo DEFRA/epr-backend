@@ -2,14 +2,15 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#common/helpers/auth/types.js').DefraIdTokenPayload} DefraIdTokenPayload */
+/** @import {DefraIdTokenPayload, UserRoleAndScopes} from '#auth/types.js' */
+/** @import {HapiRequest} from '#common/hapi-types.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
 
 /**
  * Determines the roles for a Defra ID user based on their token and request context
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
- * @param {import('#common/hapi-types.js').HapiRequest} request - The Hapi request object
- * @returns {Promise<import('#auth/types.js').UserRoleAndScopes>}
+ * @param {HapiRequest} request - The Hapi request object
+ * @returns {Promise<UserRoleAndScopes>}
  */
 export async function getDefraUserRoles(tokenPayload, request) {
   const { email } = tokenPayload
@@ -40,8 +41,8 @@ export async function getDefraUserRoles(tokenPayload, request) {
 }
 
 /**
- * @param {import('#common/hapi-types.js').HapiRequest} request
- * @param {import('#domain/organisations/model.js').Organisation} usersLinkedOrg
+ * @param {HapiRequest} request
+ * @param {Organisation} usersLinkedOrg
  */
 const requestIsForSameOrganisation = (request, usersLinkedOrg) => {
   const { organisationId } = request.params
@@ -50,7 +51,7 @@ const requestIsForSameOrganisation = (request, usersLinkedOrg) => {
 }
 
 /**
- * @param {import('#domain/organisations/model.js').Organisation} organisation
+ * @param {Organisation} organisation
  */
 const organisationIsActive = (organisation) => {
   return organisation.status === ORGANISATION_STATUS.ACTIVE

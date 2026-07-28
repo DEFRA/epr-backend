@@ -10,11 +10,15 @@ import {
 import Boom from '@hapi/boom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { SCOPES, ADMIN_ROLES } from './constants.js'
-import { getDefraUserRoles } from '#application/organisations/get-defra-user-roles.js'
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
 
+const mockGetDefraUserRoles = vi.fn()
+
 const createStrategyConfig = (oidcConfigs) =>
-  getJwtStrategyConfig({ ...oidcConfigs, getDefraUserRoles })
+  getJwtStrategyConfig({
+    ...oidcConfigs,
+    getDefraUserRoles: mockGetDefraUserRoles
+  })
 
 const entraIdMockIssuer = /** @type {{ issuer: string }} */ (
   entraIdMockOidcWellKnownResponse
@@ -26,13 +30,12 @@ const maintainerCredential = {
 }
 const expectedMaintainerScope = [...ADMIN_ROLES.service_maintainer]
 
-const stubRequest = (overrides = {}) => ({
-  organisationsRepository: {},
-  path: '/v1/me/organisations',
-  method: 'get',
-  params: {},
-  ...overrides
-})
+const standardUserCredential = {
+  role: null,
+  scopes: [SCOPES.organisationLinkedRead, SCOPES.organisationLinkedWrite]
+}
+
+const stubRequest = () => ({ path: '/v1/me/organisations' })
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -50,13 +53,6 @@ vi.mock('./get-entra-user-roles.js', () => ({
   getEntraUserRoles: (...args) => mockGetEntraUserRoles(...args)
 }))
 
-// Mock getUsersOrganisationInfo
-const mockGetOrgMatchingUsersToken = vi.fn()
-
-vi.mock('#application/organisations/get-users-org-info.js', () => ({
-  getOrgMatchingUsersToken: (...args) => mockGetOrgMatchingUsersToken(...args)
-}))
-
 describe('#getJwtStrategyConfig', () => {
   const mockOidcConfigs = {
     entraIdOidcConfig: entraIdMockOidcWellKnownResponse,
@@ -69,6 +65,7 @@ describe('#getJwtStrategyConfig', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetEntraUserRoles.mockResolvedValue(maintainerCredential)
+    mockGetDefraUserRoles.mockResolvedValue(standardUserCredential)
   })
 
   afterEach(() => {
@@ -521,38 +518,38 @@ describe('#getJwtStrategyConfig', () => {
 
     describe('Happy path', () => {
       test('uses issuer from defraIdOidcConfig for validation', async () => {
-        const testOrgId = 'org-id-001'
-
-        mockGetOrgMatchingUsersToken.mockResolvedValue({ id: testOrgId })
-
         const config = createStrategyConfig(customOidcConfigs)
         const artifacts = {
           decoded: { payload: { ...userPresentInOrg1DefraIdTokenPayload } }
         }
-        const request = stubRequest({
-          organisationsRepository: {
-            findById: vi.fn().mockResolvedValue({
-              id: testOrgId,
-              status: 'active',
-              users: [],
-              version: 1
-            }),
-            replace: vi.fn().mockResolvedValue(undefined)
-          },
-          path: '/any',
-          params: {
-            organisationId: testOrgId
-          }
-        })
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.issuer).toBe(
           userPresentInOrg1DefraIdTokenPayload.iss
         )
       })
 
-      test('returns standard user scope for valid Defra ID tokens', async () => {
+      test('resolves Defra ID roles from the token payload and the request', async () => {
+        const config = createStrategyConfig(mockOidcConfigs)
+        const tokenPayload = {
+          aud: mockDefraClientId,
+          contactId: 'defra-contact-123',
+          email: 'defra-user@example.com',
+          iss: defraIdMockOidcWellKnownResponse.issuer
+        }
+        const request = stubRequest()
+
+        await config.validate({ decoded: { payload: tokenPayload } }, request)
+
+        expect(mockGetDefraUserRoles).toHaveBeenCalledWith(
+          tokenPayload,
+          request
+        )
+        expect(mockGetDefraUserRoles).toHaveBeenCalledTimes(1)
+      })
+
+      test('credential carries the role and scope the Defra resolver returned', async () => {
         const config = createStrategyConfig(mockOidcConfigs)
 
         const artifacts = {
@@ -568,28 +565,11 @@ describe('#getJwtStrategyConfig', () => {
 
         const result = await config.validate(artifacts, stubRequest())
 
+        expect(result.credentials.role).toBeNull()
         expect(result.credentials.scope).toEqual([
           SCOPES.organisationLinkedRead,
           SCOPES.organisationLinkedWrite
         ])
-      })
-
-      test('Defra ID credential carries a null role', async () => {
-        const config = createStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              aud: mockDefraClientId,
-              contactId: 'defra-contact-123',
-              email: 'defra-user@example.com',
-              iss: defraIdMockOidcWellKnownResponse.issuer
-            }
-          }
-        }
-        const result = await config.validate(artifacts, stubRequest())
-
-        expect(result.credentials.role).toBeNull()
       })
 
       test.each([
@@ -671,12 +651,7 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = stubRequest({
-          path: '/any',
-          params: { organisationId: 'some-org-id' }
-        })
-
-        await expect(config.validate(artifacts, request)).rejects.toThrow(
+        await expect(config.validate(artifacts, stubRequest())).rejects.toThrow(
           Boom.forbidden('Invalid audience for Defra Id token')
         )
       })
