@@ -7,6 +7,8 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { getTargetAmount } from '#waste-balances/application/target-amount.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -121,6 +123,75 @@ const balanceBearingInput = (rows) =>
       RECEIVED_LOADS_FOR_REPROCESSING: {
         location: { sheet: 'Sheet1', row: 1, column: 'A' },
         headers: BALANCE_BEARING_HEADERS,
+        rows
+      }
+    }
+  })
+
+const EXPORTED_LOAD_HEADERS = [
+  'ROW_ID',
+  'DATE_RECEIVED_FOR_EXPORT',
+  'EWC_CODE',
+  'DESCRIPTION_WASTE',
+  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+  FIELD_GROSS_WEIGHT,
+  'TARE_WEIGHT',
+  'PALLET_WEIGHT',
+  'NET_WEIGHT',
+  'BAILING_WIRE_PROTOCOL',
+  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+  'WEIGHT_OF_NON_TARGET_MATERIALS',
+  'RECYCLABLE_PROPORTION_PERCENTAGE',
+  'TONNAGE_RECEIVED_FOR_EXPORT',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+  'DATE_OF_EXPORT',
+  'BASEL_EXPORT_CODE',
+  'CUSTOMS_CODES',
+  'CONTAINER_NUMBER',
+  'DATE_RECEIVED_BY_OSR',
+  'OSR_ID',
+  'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE'
+]
+
+/**
+ * An exported load carrying every field the exporter balance classifier needs,
+ * so only its overseas-site reference decides whether it is included.
+ */
+const exportedLoadRow = (rowNumber, rowId, tonnage, { osrId }) => ({
+  rowNumber,
+  values: [
+    rowId,
+    ACCREDITED_DATE,
+    '15 01 02',
+    'Plastic packaging',
+    'No',
+    10,
+    1,
+    0,
+    9,
+    'No',
+    'Sampling',
+    0,
+    100,
+    tonnage,
+    tonnage,
+    ACCREDITED_DATE,
+    'B3011',
+    '3915',
+    'CONT-1',
+    ACCREDITED_DATE,
+    osrId,
+    'No'
+  ]
+})
+
+const exportedLoadsInput = (rows) =>
+  /** @type {any} */ ({
+    meta: { PROCESSING_TYPE: { value: 'EXPORTER' } },
+    data: {
+      RECEIVED_LOADS_FOR_EXPORT: {
+        location: { sheet: 'Sheet1', row: 1, column: 'A' },
+        headers: EXPORTED_LOAD_HEADERS,
         rows
       }
     }
@@ -335,7 +406,7 @@ describe('syncFromSummaryLog', () => {
     ])
   })
 
-  it('updates waste balances when accreditationId is present', async () => {
+  it('credits the accredited ledger with the submission total', async () => {
     const fileId = 'file-wb'
     const extractor = extractorFor(
       fileId,
@@ -346,51 +417,61 @@ describe('syncFromSummaryLog', () => {
 
     await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
 
-    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          rowId: 'row-123',
-          type: WASTE_RECORD_TYPE.EXPORTED
-        })
-      ]),
-      {
-        user: TEST_USER,
-        accreditation: {
-          id: 'acc-default',
-          validFrom: '2023-01-01',
-          validTo: '2023-12-31'
-        },
-        overseasSites: {},
-        summaryLogId: fileId
-      }
-    )
+    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith({
+      ledgerId: {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      },
+      creditTotal: 0,
+      summaryLogId: fileId,
+      user: TEST_USER
+    })
   })
 
-  it('resolves overseas sites for exporter waste balance validation', async () => {
+  it("classifies exporter rows against the registration's resolved overseas sites", async () => {
     const fileId = 'file-ors'
     const extractor = extractorFor(
       fileId,
-      exporterInput([
-        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      exportedLoadsInput([
+        exportedLoadRow(2, 'row-2001', 12.5, { osrId: '001' }),
+        exportedLoadRow(3, 'row-2002', 40, { osrId: '002' })
       ])
     )
 
-    const validFrom = new Date('2024-01-01')
     overseasSitesRepository = {
-      findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa', validFrom }])
+      findByIds: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'site-aaa', validFrom: new Date('2024-01-01') }
+        ])
     }
     organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
       overseasSites: { '001': { overseasSiteId: 'site-aaa' } }
     })
+    organisationsRepository.findAccreditationById.mockResolvedValue({
+      id: 'acc-1',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    })
 
     await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
 
-    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
-      expect.any(Array),
-      expect.objectContaining({
-        overseasSites: { '001': { validFrom } }
-      })
-    )
+    const rowStates =
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        { ...LEDGER_ID, accreditationId: 'acc-1' },
+        fileId
+      )
+    const byRowId = new Map(rowStates.map((state) => [state.rowId, state]))
+    expect(byRowId.get('row-2001').classification).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: 12.5
+    })
+    expect(byRowId.get('row-2002').classification.reasons).toEqual([
+      { code: CLASSIFICATION_REASON.ORS_NOT_FOUND }
+    ])
   })
 
   it('commits a zero-delta event for registered-only submissions', async () => {

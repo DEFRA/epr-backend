@@ -30,6 +30,59 @@ const RECEIVED_LOADS_HEADERS = [
 ]
 
 describe('transformFromSummaryLog', () => {
+  it('stamps every record with the whole ancestor chain it is given, unaltered', () => {
+    /** @type {any} */ const parsedData = {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: RECEIVED_LOADS_HEADERS,
+          rows: [
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID
+            ),
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              ['row-456', '2025-01-16', SECOND_WEIGHT],
+              'row-456'
+            )
+          ]
+        }
+      }
+    }
+
+    // The submit path keys the row states and the ledger event off the summary
+    // log's own organisation, registration and accreditation, and classifies
+    // the records against that same key. That is only sound while the records
+    // carry exactly what they were given here.
+    const result = transformFromSummaryLog(parsedData, {
+      organisationId: 'org-ancestor',
+      registrationId: 'reg-ancestor',
+      accreditationId: 'acc-ancestor'
+    })
+
+    expect(
+      result.map(({ record }) => ({
+        organisationId: record.organisationId,
+        registrationId: record.registrationId,
+        accreditationId: record.accreditationId
+      }))
+    ).toEqual([
+      {
+        organisationId: 'org-ancestor',
+        registrationId: 'reg-ancestor',
+        accreditationId: 'acc-ancestor'
+      },
+      {
+        organisationId: 'org-ancestor',
+        registrationId: 'reg-ancestor',
+        accreditationId: 'acc-ancestor'
+      }
+    ])
+  })
+
   it('transforms parsed RECEIVED_LOADS data into waste records', () => {
     /** @type {any} */ const parsedData = {
       meta: {

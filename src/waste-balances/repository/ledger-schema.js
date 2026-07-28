@@ -89,6 +89,14 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
+ * A ledger id that names an accreditation rather than a registration alone.
+ * Only an accredited ledger carries a waste balance, so the paths that move
+ * tonnage take this and cannot be handed a registered-only ledger by mistake.
+ *
+ * @typedef {Omit<WasteBalanceLedgerId, 'accreditationId'> & { accreditationId: string }} AccreditedLedgerId
+ */
+
+/**
  * A position within a waste balance ledger: the ledger id plus a sequence
  * number. The head a decision reads at, the slot it commits to (`number + 1`),
  * and the coordinate a slot-conflict or sequence error reports on a clash.

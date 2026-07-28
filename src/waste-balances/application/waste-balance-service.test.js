@@ -376,20 +376,31 @@ describe('createWasteBalanceService', () => {
   })
 
   describe('submitSummaryLog', () => {
-    it('does not touch the ledger when there are no waste records to credit', async () => {
-      await service.submitSummaryLog([], {
+    it('credits the ledger with the total the submission carries', async () => {
+      await service.submitSummaryLog({
+        ledgerId,
+        creditTotal: 150,
         user: createdBy,
-        accreditation: { id: 'acc-1' },
-        overseasSites: /** @type {*} */ (new Map()),
         summaryLogId: 'log-A'
       })
 
-      const all = await ledgerRepository.findAllInLedger({
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1'
+      const all = await ledgerRepository.findAllInLedger(ledgerId)
+      expect(all).toHaveLength(1)
+      expect(all[0].payload).toEqual({
+        summaryLogId: 'log-A',
+        creditTotal: 150
       })
-      expect(all).toHaveLength(0)
+    })
+
+    it('refuses a ledger with no accreditation behind it', async () => {
+      await expect(
+        service.submitSummaryLog({
+          ledgerId: { ...ledgerId, accreditationId: null },
+          creditTotal: 150,
+          user: createdBy,
+          summaryLogId: 'log-A'
+        })
+      ).rejects.toThrow('accreditationId must be a string')
     })
   })
 

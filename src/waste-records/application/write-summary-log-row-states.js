@@ -23,7 +23,10 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * @param {import('#waste-records/repository/schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {OverseasSitesContext} params.overseasSites
  * @param {string} params.summaryLogId
- * @returns {Promise<void>}
+ * @returns {Promise<import('#waste-records/repository/schema.js').SummaryLogRowStateEntry[]>}
+ *   The states committed, so a caller deriving a submission total from the
+ *   committed contents reads them here rather than classifying the records
+ *   a second time.
  */
 export const writeSummaryLogRowStates = async ({
   summaryLogRowStateRepository,
@@ -42,4 +45,6 @@ export const writeSummaryLogRowStates = async ({
     classifiedRows,
     summaryLogId
   )
+
+  return classifiedRows
 }

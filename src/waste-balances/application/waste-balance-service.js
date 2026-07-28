@@ -203,36 +203,29 @@ export const createWasteBalanceService = (
     commitSummaryLogSubmittedEvent,
 
     /**
-     * Credit the ledger from a summary log's waste records: mark each row's
-     * balance inclusion, then fold, decide, and append the aggregate
-     * submission. The sole write entry the summary-log worker calls.
+     * Credit an accredited ledger with a summary log's total: fold, decide, and
+     * append the aggregate submission, then audit the balance it moved. The
+     * total arrives already summed from the row states the submission
+     * committed. The sole balance-bearing write entry the summary-log worker
+     * calls.
      *
-     * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
      * @param {Object} options
+     * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
+     * @param {number} options.creditTotal
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
-     * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation
-     * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
      * @param {string} options.summaryLogId
      * @returns {Promise<void>}
      */
-    submitSummaryLog: async (
-      wasteRecords,
-      { user, accreditation, overseasSites, summaryLogId }
-    ) => {
-      if (wasteRecords.length === 0) {
-        return
-      }
-
+    submitSummaryLog: async ({ ledgerId, creditTotal, user, summaryLogId }) => {
       await performUpdateViaLedger({
-        wasteRecords,
-        accreditation: {
-          ...accreditation,
-          id: validateAccreditationId(accreditation.id)
+        ledgerId: {
+          ...ledgerId,
+          accreditationId: validateAccreditationId(ledgerId.accreditationId)
         },
+        creditTotal,
         commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
         summaryLogId
       })
     },
