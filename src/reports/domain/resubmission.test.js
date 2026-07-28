@@ -38,14 +38,6 @@ describe('isResubmissionRequired', () => {
 })
 
 describe('resubmissionIneligibleReasonToErrorCode', () => {
-  it('maps FEATURE_DISABLED', () => {
-    expect(
-      resubmissionIneligibleReasonToErrorCode(
-        RESUBMISSION_INELIGIBLE_REASON.FEATURE_DISABLED
-      )
-    ).toBe('resubmission_feature_disabled')
-  })
-
   it('maps NOT_SUBMITTED', () => {
     expect(
       resubmissionIneligibleReasonToErrorCode(

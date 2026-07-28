@@ -7,7 +7,6 @@ import {
 } from '#reports/domain/resubmission.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
-import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 import { findSubmissionByNumber } from './submission-lookup.js'
 
 /**
@@ -100,9 +99,6 @@ export function isLatestSubmissionOf(
  * @returns {import('#reports/repository/port.js').ResubmissionIneligibleReason}
  */
 export function resubmissionEligibility(periodicReports, target) {
-  if (!isClosedPeriodAdjustmentsEnabled()) {
-    return RESUBMISSION_INELIGIBLE_REASON.FEATURE_DISABLED
-  }
   if (target.status !== REPORT_STATUS.SUBMITTED) {
     return RESUBMISSION_INELIGIBLE_REASON.NOT_SUBMITTED
   }
