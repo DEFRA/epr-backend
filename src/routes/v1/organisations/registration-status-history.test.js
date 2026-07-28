@@ -126,11 +126,25 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
   })
 
   describe('granting a created registration', () => {
+    // Held by a cancelled registration, not an approved one, to pin that the
+    // uniqueness check applies regardless of the holder's status.
     const buildOrgHoldingNumber = (registrationNumber) =>
       /** @type {import('#domain/organisations/model.js').Organisation} */ (
         /** @type {unknown} */ (
           buildOrganisation({
-            registrations: [buildRegistration({ registrationNumber })],
+            registrations: [
+              buildRegistration({
+                registrationNumber,
+                reprocessingType: 'input',
+                validFrom: '2020-01-01',
+                validTo: '2021-01-01',
+                statusHistory: [
+                  { status: 'created', updatedAt: '2019-01-01' },
+                  { status: 'approved', updatedAt: '2019-06-01' },
+                  { status: 'cancelled', updatedAt: '2020-06-01' }
+                ]
+              })
+            ],
             accreditations: []
           })
         )
@@ -222,7 +236,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
     })
 
-    it('returns 422 when the registration number is already in use by another organisation', async () => {
+    it('returns 422 when the registration number is already in use by another organisation, regardless of that registration status', async () => {
       const ctx = await seedOrg('created', {
         extraOrgs: [buildOrgHoldingNumber('REG555555')]
       })
@@ -239,6 +253,81 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(body.message).toMatch(
         /Registration number REG555555 is already in use/
       )
+    })
+
+    it('returns 422 when granting would create a duplicate approved-registration key with another registration', async () => {
+      const targetRegistration = buildRegistration({
+        reprocessingType: 'input',
+        validTo: '2026-12-31',
+        statusHistory: [{ status: 'created', updatedAt: '2024-01-01' }]
+      })
+      // Same wasteProcessingType, material, site and reprocessingType as
+      // targetRegistration (both built from the same reprocessor fixture
+      // base with no site/material override), so once targetRegistration is
+      // also approved the two share a key.
+      const conflictingRegistration = buildRegistration({
+        reprocessingType: 'input',
+        registrationNumber: 'REG777777',
+        validFrom: '2024-01-01',
+        validTo: '2025-01-01',
+        statusHistory: [
+          { status: 'created', updatedAt: '2024-01-01' },
+          { status: 'approved', updatedAt: '2024-01-15' }
+        ]
+      })
+
+      const fixture =
+        /** @type {import('#domain/organisations/model.js').Organisation} */ (
+          /** @type {unknown} */ (
+            buildOrganisation({
+              registrations: [targetRegistration, conflictingRegistration],
+              accreditations: []
+            })
+          )
+        )
+
+      server = await createTestServer({
+        repositories: {
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            fixture
+          ]),
+          systemLogsRepository: createSystemLogsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags()
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl({
+          organisationId: fixture.id,
+          registrationId: targetRegistration.id
+        }),
+        payload: grantPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /Multiple approved registrations found with duplicate keys/
+      )
+    })
+
+    it('returns 422 when the registration has no reprocessingType, which granting does not set', async () => {
+      const ctx = await seedOrg('created', {
+        registrationOverrides: { reprocessingType: null }
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: grantPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(/reprocessingType/)
     })
 
     it('returns 422 when appliesFrom is after the registration validTo', async () => {
@@ -306,6 +395,14 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       [
         'the from/to pair is not a supported transition',
         { fromStatus: 'approved', toStatus: 'cancelled' }
+      ],
+      [
+        // created -> rejected is a valid transition in the domain map
+        // (VALID_REG_TRANSITIONS) but this endpoint only builds the grant
+        // arm so far (PAE-1599) — regression protection against it being
+        // accepted by the schema before the route handles it.
+        'the from/to pair is a valid transition this endpoint has not built yet',
+        { fromStatus: 'created', toStatus: 'rejected' }
       ],
       [
         'toStatus is not a known status',
@@ -389,9 +486,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     // endpoint specifically, without re-testing the behaviours themselves.
     it('cannot create a PRN for the granted registration, because it has no accreditation to create one under', async () => {
       const fixture = buildOrgWithRegistrationStatus('created')
-      const registration = fixture.registrations.find(
-        (reg) => reg.wasteProcessingType === 'reprocessor'
-      )
+      // buildOrgWithRegistrationStatus puts the target (reprocessor)
+      // registration first and the unrelated exporter registration second.
+      const registration = fixture.registrations[0]
 
       const packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([])({
@@ -427,6 +524,23 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       })
       expect(grantResponse.statusCode).toBe(StatusCodes.OK)
 
+      // Grant does not cascade to a linked accreditation: confirm the
+      // organisation still has none, and the granted registration still has
+      // no accreditationId, before treating the PRN 404 below as evidence of
+      // registered-only rather than of some unrelated setup gap.
+      const getResponse = await integrationServer.inject({
+        method: 'GET',
+        url: `/v1/organisations/${fixture.id}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const updatedOrg = JSON.parse(getResponse.payload)
+      expect(updatedOrg.accreditations).toEqual([])
+      const grantedRegistration = updatedOrg.registrations.find(
+        (reg) => reg.id === registration.id
+      )
+      expect(grantedRegistration.status).toBe('approved')
+      expect(grantedRegistration.accreditationId).toBeUndefined()
+
       // Scenario 7: PRNs/PERNs cannot be issued for a registered-only
       // operator. There is no accreditation to create one under, so the
       // create endpoint 404s before considering the payload at all.
@@ -445,9 +559,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
     it('leaves the granted registration in the registered-only state that drives template selection, waste balance and cadence', async () => {
       const fixture = buildOrgWithRegistrationStatus('created')
-      const registration = fixture.registrations.find(
-        (reg) => reg.wasteProcessingType === 'reprocessor'
-      )
+      // buildOrgWithRegistrationStatus puts the target (reprocessor)
+      // registration first and the unrelated exporter registration second.
+      const registration = fixture.registrations[0]
 
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([fixture])

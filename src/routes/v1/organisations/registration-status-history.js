@@ -61,10 +61,13 @@ export const registrationStatusHistory = {
       )
     }
 
-    // Route-level check is required, not belt-and-braces: the repository's
-    // assertAndHandleItemStateTransition skips validation when the status is
-    // unchanged, so approved -> approved via replace() would otherwise be a
-    // silent no-op instead of the required 422.
+    // Kept even though the single created -> approved arm can never fail
+    // this check today (Joi already restricts the schema to that one valid
+    // pair): it mirrors accreditation-status-history.js and becomes
+    // load-bearing the moment a second transition arm is added here, at
+    // which point the repository's assertAndHandleItemStateTransition would
+    // otherwise silently no-op an unchanged-status replace() instead of
+    // 422ing.
     assertRegistrationStatusTransitionValid(fromStatus, toStatus)
 
     // Granting sets validFrom to appliesFrom but leaves validTo (owned by
