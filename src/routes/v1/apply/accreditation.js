@@ -1,6 +1,7 @@
-import { registrationAndAccreditationPayload } from '#common/helpers/apply/payload.js'
-import { registrationAndAccreditationHandler } from '#common/helpers/apply/handler.js'
-import { accreditationFactory } from '#common/helpers/collections/factories/index.js'
+import { createAccreditation } from '#application/form-submissions/create-registration-and-accreditation.js'
+import { parseRegistrationSubmission } from '#domain/form-submissions/parse-submission.js'
+import { registrationAndAccreditationHandler } from './handler.js'
+import { validateApplyPayload } from './validate-payload.js'
 
 export const accreditationPath = '/v1/apply/accreditation'
 
@@ -15,12 +16,11 @@ export const accreditation = {
     auth: false,
     tags: ['api'],
     validate: {
-      payload: registrationAndAccreditationPayload
+      payload: validateApplyPayload(parseRegistrationSubmission)
     }
   },
   handler: registrationAndAccreditationHandler(
-    'accreditation',
     accreditationPath,
-    accreditationFactory
+    createAccreditation
   )
 }

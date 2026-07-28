@@ -1,58 +1,17 @@
-import { safeAudit } from '#root/auditing/helpers.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import {
-  AUDIT_EVENT_ACTIONS,
-  AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES,
-  ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
-  ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
+  LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import {
-  extractAnswers,
-  extractEmail,
-  extractOrgName,
-  getRegulatorEmail
-} from '#common/helpers/apply/extract-answers.js'
-import { organisationFactory } from '#common/helpers/collections/factories/index.js'
-import { sendEmail } from '#common/helpers/notify.js'
+import { createOrganisation } from '#application/form-submissions/create-organisation.js'
+import { parseOrganisationSubmission } from '#domain/form-submissions/parse-submission.js'
+import { validateApplyPayload } from './validate-payload.js'
 
 export const organisationPath = '/v1/apply/organisation'
 
-/**
- * @typedef {{answers: object, email: string, orgName: string, rawSubmissionData: object, regulatorEmail: string}} OrganisationPayload
- */
-
-async function getNextOrgId(db) {
-  const result = await db
-    .collection('counters')
-    .findOneAndUpdate(
-      { _id: 'orgId' },
-      { $inc: { seq: 1 } },
-      { returnDocument: 'after' }
-    )
-
-  if (result?.seq === undefined) {
-    throw new Error('Failed to generate orgId: counter returned invalid result')
-  }
-
-  return result.seq
-}
-
-async function sendConfirmationEmails(email, regulatorEmail, context) {
-  await sendEmail(
-    ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
-    email,
-    context
-  )
-
-  await sendEmail(
-    ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
-    regulatorEmail,
-    context
-  )
-}
+/** @import { OrganisationDetails } from '#domain/form-submissions/parse-submission.js' */
+/** @import { FormSubmissionsRepository } from '#repositories/form-submissions/port.js' */
 
 /**
  * Apply: Organisation
@@ -65,93 +24,17 @@ export const organisation = {
     auth: false,
     tags: ['api'],
     validate: {
-      payload: (data, _options) => {
-        if (!data || typeof data !== 'object') {
-          throw Boom.badRequest('Invalid payload')
-        }
-
-        const answers = extractAnswers(data)
-        const email = extractEmail(answers)
-        const orgName = extractOrgName(answers)
-        const regulatorEmail = getRegulatorEmail(data)
-
-        if (!regulatorEmail) {
-          throw Boom.badData('Could not get regulator name from data')
-        }
-
-        if (!email) {
-          throw Boom.badData('Could not extract email from answers')
-        }
-
-        if (!orgName) {
-          throw Boom.badData('Could not extract organisation name from answers')
-        }
-
-        return {
-          answers,
-          email,
-          orgName,
-          rawSubmissionData: data,
-          regulatorEmail
-        }
-      }
+      payload: validateApplyPayload(parseOrganisationSubmission)
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<OrganisationPayload>} request
+   * @param {import('#common/hapi-types.js').HapiRequest<OrganisationDetails> & {formSubmissionsRepository: FormSubmissionsRepository}} request
    */
-  handler: async ({ db, payload, logger }, h) => {
-    const collection = db.collection('organisation')
-    const { answers, email, orgName, rawSubmissionData, regulatorEmail } =
-      payload
-
+  handler: async ({ formSubmissionsRepository, payload, logger }, h) => {
     try {
-      const orgId = await getNextOrgId(db)
-
-      const { insertedId } = await collection.insertOne(
-        organisationFactory({
-          orgId,
-          orgName,
-          email,
-          nations: null,
-          answers,
-          rawSubmissionData
-        })
+      return h.response(
+        await createOrganisation({ formSubmissionsRepository, logger }, payload)
       )
-
-      const referenceNumber = insertedId.toString()
-
-      safeAudit({
-        event: {
-          category: AUDIT_EVENT_CATEGORIES.DB,
-          action: AUDIT_EVENT_ACTIONS.DB_INSERT
-        },
-        context: {
-          orgId,
-          orgName,
-          referenceNumber
-        }
-      })
-
-      logger.info({
-        message: `Stored organisation data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-        }
-      })
-
-      await sendConfirmationEmails(email, regulatorEmail, {
-        orgId,
-        orgName,
-        referenceNumber
-      })
-
-      return h.response({
-        orgId,
-        orgName,
-        referenceNumber
-      })
     } catch (error) {
       const message = `Failure on ${organisationPath}`
 

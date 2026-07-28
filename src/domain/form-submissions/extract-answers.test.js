@@ -1,5 +1,5 @@
 import { getConfig } from '#root/config.js'
-import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import {
   extractAnswers,
   extractEmail,

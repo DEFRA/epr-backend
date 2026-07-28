@@ -7,12 +7,13 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
+import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
+import { createTestServer } from '#test/create-test-server.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import registrationFixture from '#data/fixtures/registration.json' with { type: 'json' }
 import { registrationPath } from './registration.js'
-import { it } from '#vite/fixtures/server-with-mock-db.js'
 
 const mockAudit = vi.fn()
-const mockInsertOne = vi.fn()
 const mockGlobalLoggerWarn = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
@@ -31,22 +32,35 @@ vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
 
 const url = registrationPath
 
-describe(`${url} route`, { timeout: 10000 }, () => {
-  beforeEach(() => {
+const FIXTURE_ORG_ID = 500000
+const FIXTURE_REFERENCE_NUMBER = '68a66ec3dabf09f3e442b2da'
+
+describe(`${url} route`, () => {
+  setupAuthContext()
+
+  let server
+  let formSubmissionsRepository
+
+  beforeEach(async () => {
     mockAudit.mockClear()
-    mockInsertOne.mockClear()
     mockGlobalLoggerWarn.mockClear()
+    formSubmissionsRepository = createFormSubmissionsRepository()()
+    server = await createTestServer({
+      repositories: { formSubmissionsRepository }
+    })
   })
 
-  it('returns 201 and echoes back payload on valid request', async ({
-    server
-  }) => {
-    const collectionSpy = vi.spyOn(server.db, 'collection')
-
-    collectionSpy.mockReturnValue({
-      insertOne: mockInsertOne
+  const serverRejectingInsertWith = (error) =>
+    createTestServer({
+      repositories: {
+        formSubmissionsRepository: {
+          ...formSubmissionsRepository,
+          insertRegistration: () => Promise.reject(error)
+        }
+      }
     })
 
+  it('returns 201 and stores the registration on valid request', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -55,14 +69,22 @@ describe(`${url} route`, { timeout: 10000 }, () => {
 
     expect(response.statusCode).toEqual(StatusCodes.CREATED)
 
+    const stored =
+      await formSubmissionsRepository.findRegistrationsBySystemReference(
+        FIXTURE_REFERENCE_NUMBER
+      )
+    expect(stored).toHaveLength(1)
+    expect(stored[0].orgId).toBe(FIXTURE_ORG_ID)
+    expect(stored[0].rawSubmissionData).toEqual(registrationFixture)
+
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: AUDIT_EVENT_CATEGORIES.DB,
         action: AUDIT_EVENT_ACTIONS.DB_INSERT
       },
       context: {
-        orgId: expect.any(Number),
-        referenceNumber: expect.any(String)
+        orgId: FIXTURE_ORG_ID,
+        referenceNumber: FIXTURE_REFERENCE_NUMBER
       }
     })
 
@@ -77,7 +99,7 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     )
   })
 
-  it('returns 400 if payload is not an object', async ({ server }) => {
+  it('returns 400 if payload is not an object', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -89,19 +111,15 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
 
-  it('returns 400 if payload is null', async ({ server }) => {
-    const response = await server.inject({
-      method: 'POST',
-      url,
-      payload: null
-    })
+  it('returns 400 if payload is null', async () => {
+    const response = await server.inject({ method: 'POST', url, payload: null })
 
     expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
   })
 
-  it('returns 422 if payload is missing orgId', async ({ server }) => {
+  it('returns 422 if payload is missing orgId', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -123,24 +141,17 @@ describe(`${url} route`, { timeout: 10000 }, () => {
             ]
           }
         },
-        data: {
-          main: {
-            asd123: '68a66ec3dabf09f3e442b2da'
-          }
-        }
+        data: { main: { asd123: FIXTURE_REFERENCE_NUMBER } }
       }
     })
 
-    const message = 'Could not extract orgId from answers'
     const body = JSON.parse(response.payload)
 
     expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(body.message).toEqual(message)
+    expect(body.message).toEqual('Could not extract orgId from answers')
   })
 
-  it('returns 422 if payload is missing reference number', async ({
-    server
-  }) => {
+  it('returns 422 if payload is missing reference number', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -161,22 +172,19 @@ describe(`${url} route`, { timeout: 10000 }, () => {
             ]
           }
         },
-        data: {
-          main: {
-            asd456: '500019'
-          }
-        }
+        data: { main: { asd456: '500019' } }
       }
     })
 
-    const message = 'Could not extract referenceNumber from answers'
     const body = JSON.parse(response.payload)
 
     expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(body.message).toEqual(message)
+    expect(body.message).toEqual(
+      'Could not extract referenceNumber from answers'
+    )
   })
 
-  it('returns 422 if orgId is below minimum value', async ({ server }) => {
+  it('returns 422 and warns if orgId is below minimum value', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -213,11 +221,10 @@ describe(`${url} route`, { timeout: 10000 }, () => {
       }
     })
 
-    const message = 'Organisation ID must be at least 500000'
     const body = JSON.parse(response.payload)
 
     expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(body.message).toEqual(message)
+    expect(body.message).toEqual('Organisation ID must be at least 500000')
     expect(mockGlobalLoggerWarn).toHaveBeenCalledWith({
       message:
         'orgId: 499999, referenceNumber: abcdef123456fedcba654321 - Organisation ID must be at least 500000',
@@ -226,90 +233,56 @@ describe(`${url} route`, { timeout: 10000 }, () => {
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
       },
       http: {
-        response: {
-          status_code: StatusCodes.UNPROCESSABLE_ENTITY
-        }
+        response: { status_code: StatusCodes.UNPROCESSABLE_ENTITY }
       }
     })
   })
 
-  it('returns 500 if error is thrown by insertOne', async ({ server }) => {
-    const collectionSpy = vi.spyOn(server.db, 'collection')
+  it('returns 500 if the registration cannot be stored', async () => {
+    const error = new Error('insertRegistration failed')
+    const failingServer = await serverRejectingInsertWith(error)
 
-    collectionSpy.mockReturnValue({
-      insertOne: mockInsertOne
-    })
-
-    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
-    const error = new Error('db.collection.insertOne failed')
-    mockInsertOne.mockImplementationOnce(() => {
-      throw error
-    })
-
-    const response = await server.inject({
+    const response = await failingServer.inject({
       method: 'POST',
       url,
       payload: registrationFixture
     })
 
-    expect(response.statusCode).toEqual(statusCode)
+    expect(response.statusCode).toEqual(StatusCodes.INTERNAL_SERVER_ERROR)
     const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(`An internal server error occurred`)
-    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+    expect(body.message).toMatch('An internal server error occurred')
+    expect(failingServer.loggerMocks.error).toHaveBeenCalledWith({
       err: error,
-      message: `Failure on ${registrationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: `,
+      message: `Failure on ${registrationPath} for orgId: ${FIXTURE_ORG_ID} and referenceNumber: ${FIXTURE_REFERENCE_NUMBER}, mongo validation failures: `,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
       },
       http: {
-        response: {
-          status_code: statusCode
-        }
+        response: { status_code: StatusCodes.INTERNAL_SERVER_ERROR }
       }
     })
   })
 
-  it('returns 500 if insertOne fails with mongo validation failures', async ({
-    server
-  }) => {
-    const collectionSpy = vi.spyOn(server.db, 'collection')
-
-    collectionSpy.mockReturnValue({
-      insertOne: mockInsertOne
+  it('names the rejected fields when the store reports schema violations', async () => {
+    const error = Object.assign(new Error('insertRegistration failed'), {
+      schemaViolations: [
+        "orgId - 'orgId' must be a positive integer above 500000 and is required"
+      ]
     })
+    const failingServer = await serverRejectingInsertWith(error)
 
-    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
-    const error = Object.assign(new Error('db.collection.insertOne failed'), {
-      errInfo: JSON.parse(
-        '{"failingDocumentId":"68da86a39a36abfab162b707","details":{"operatorName":"$jsonSchema","title":"Registration Validation","schemaRulesNotSatisfied":[{"operatorName":"properties","propertiesNotSatisfied":[{"propertyName":"orgId","description":"\'orgId\' must be a positive integer above 500000 and is required","details":[{"operatorName":"minimum","specifiedAs":{"minimum":500000},"reason":"comparison failed","consideredValue":100000}]}]}]}}'
-      )
-    })
-    mockInsertOne.mockImplementationOnce(() => {
-      throw error
-    })
-
-    const response = await server.inject({
+    const response = await failingServer.inject({
       method: 'POST',
       url,
       payload: registrationFixture
     })
 
-    expect(response.statusCode).toEqual(statusCode)
-    const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(`An internal server error occurred`)
-    expect(server.loggerMocks.error).toHaveBeenCalledWith({
-      err: error,
-      message: `Failure on /v1/apply/registration for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-      },
-      http: {
-        response: {
-          status_code: statusCode
-        }
-      }
-    })
+    expect(response.statusCode).toEqual(StatusCodes.INTERNAL_SERVER_ERROR)
+    expect(failingServer.loggerMocks.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: `Failure on ${registrationPath} for orgId: ${FIXTURE_ORG_ID} and referenceNumber: ${FIXTURE_REFERENCE_NUMBER}, mongo validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`
+      })
+    )
   })
 })

@@ -3,12 +3,12 @@ import {
   extractAnswers,
   extractEmail,
   extractOrgName
-} from '#common/helpers/apply/extract-answers.js'
+} from '#domain/form-submissions/extract-answers.js'
 import {
-  accreditationFactory,
-  organisationFactory,
-  registrationFactory
-} from '#common/helpers/collections/factories/index.js'
+  accreditationSubmission,
+  organisationSubmission,
+  registrationSubmission
+} from '#domain/form-submissions/submission-records.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { ObjectId } from 'mongodb'
 import { createEprOrganisationScenarios } from './seed-scenarios.js'
@@ -53,6 +53,35 @@ export async function createSeedData(
   }
 }
 
+/**
+ * The organisation collection requires a name and an email, so a fixture
+ * missing either would be rejected by the schema on insert. Fail here instead,
+ * where the cause is obvious.
+ *
+ * @param {object} rawSubmissionData
+ * @returns {import('#domain/form-submissions/submission-records.js').OrganisationSubmission}
+ */
+export function seedOrganisationRecord(rawSubmissionData) {
+  const answers = extractAnswers(rawSubmissionData)
+  const orgName = extractOrgName(answers)
+  const email = extractEmail(answers)
+
+  if (!orgName || !email) {
+    throw new Error(
+      'Create seed data: organisation fixture is missing an organisation name or email'
+    )
+  }
+
+  return organisationSubmission({
+    orgId: ORG_ID_START_NUMBER,
+    orgName,
+    email,
+    nations: null,
+    answers,
+    rawSubmissionData
+  })
+}
+
 async function createOrgRegAccFixtures(db) {
   const organisationDocCount = await db
     .collection(COLLECTION_ORGANISATION)
@@ -62,23 +91,13 @@ async function createOrgRegAccFixtures(db) {
     logger.info({
       message: 'Create seed data: inserting org/reg/acc fixtures'
     })
-    const organisationAnswers = extractAnswers(organisationFixture)
 
     const { insertedIds } = await db
       .collection(COLLECTION_ORGANISATION)
-      .insertMany([
-        organisationFactory({
-          orgId: ORG_ID_START_NUMBER,
-          orgName: extractOrgName(organisationAnswers),
-          email: extractEmail(organisationAnswers),
-          nations: null,
-          answers: organisationAnswers,
-          rawSubmissionData: organisationFixture
-        })
-      ])
+      .insertMany([seedOrganisationRecord(organisationFixture)])
 
     await db.collection(COLLECTION_REGISTRATION).insertMany([
-      registrationFactory({
+      registrationSubmission({
         referenceNumber: insertedIds[0]?.toString(),
         orgId: ORG_ID_START_NUMBER,
         answers: extractAnswers(registrationFixture),
@@ -87,7 +106,7 @@ async function createOrgRegAccFixtures(db) {
     ])
 
     await db.collection(COLLECTION_ACCREDITATION).insertMany([
-      accreditationFactory({
+      accreditationSubmission({
         referenceNumber: insertedIds[0]?.toString(),
         orgId: ORG_ID_START_NUMBER,
         answers: extractAnswers(accreditationFixture),

@@ -73,6 +73,62 @@ async function seedOrgIdCounter(db, logger) {
   logger.info({ message: `orgId counter seeded at ${seq}` })
 }
 
+const allocateOrgId = (db) => async () => {
+  const result = await db
+    .collection(COUNTERS_COLLECTION)
+    .findOneAndUpdate(
+      { _id: 'orgId' },
+      { $inc: { seq: 1 } },
+      { returnDocument: 'after' }
+    )
+
+  if (result?.seq === undefined) {
+    throw new Error('Failed to generate orgId: counter returned invalid result')
+  }
+
+  return result.seq
+}
+
+/**
+ * The write error MongoDB raises when a document fails the collection's
+ * $jsonSchema validator.
+ *
+ * @typedef {Error & {
+ *   errInfo?: {
+ *     details?: {
+ *       schemaRulesNotSatisfied?: {
+ *         propertiesNotSatisfied?: {propertyName: string, description: string}[]
+ *       }[]
+ *     }
+ *   }
+ * }} MongoWriteError
+ */
+
+/**
+ * Decodes the fields a schema validator rejected onto the driver's own error,
+ * so the caller keeps the original error while gaining the field detail.
+ *
+ * @param {MongoWriteError} error
+ * @returns {import('./port.js').FormSubmissionInsertError}
+ */
+const withSchemaViolations = (error) =>
+  Object.assign(error, {
+    schemaViolations: (error?.errInfo?.details?.schemaRulesNotSatisfied ?? [])
+      .flatMap((rule) => rule.propertiesNotSatisfied ?? [])
+      .map((prop) => `${prop.propertyName} - ${prop.description}`)
+  })
+
+const insertInto = (db, collectionName) => async (submission) => {
+  try {
+    const { insertedId } = await db
+      .collection(collectionName)
+      .insertOne(submission)
+    return insertedId.toString()
+  } catch (error) {
+    throw withSchemaViolations(error)
+  }
+}
+
 const mapDocument = (doc) => {
   const { _id, orgId, referenceNumber, rawSubmissionData } = doc
   return {
@@ -207,7 +263,11 @@ export const createFormSubmissionsRepository = async (db, logger) => {
       findRegistrationById: performFindRegistrationById(db),
       findAllOrganisations: performFindAllOrganisations(db),
       findOrganisationById: performFindOrganisationById(db),
-      findAllFormSubmissionIds: findAllFormSubmissionIds(db)
+      findAllFormSubmissionIds: findAllFormSubmissionIds(db),
+      allocateOrgId: allocateOrgId(db),
+      insertOrganisation: insertInto(db, ORGANISATION_COLLECTION),
+      insertRegistration: insertInto(db, REGISTRATIONS_COLLECTION),
+      insertAccreditation: insertInto(db, ACCREDITATIONS_COLLECTION)
     }
   }
 }

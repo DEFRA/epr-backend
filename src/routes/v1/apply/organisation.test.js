@@ -11,20 +11,14 @@ import {
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
 } from '#common/enums/index.js'
+import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
+import { createTestServer } from '#test/create-test-server.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }
-import { it } from '#vite/fixtures/server-with-mock-db.js'
 
 const mockAudit = vi.fn()
-const mockInsertOne = vi.fn().mockResolvedValue({
-  insertedId: { toString: () => '12345678901234567890abcd' }
-})
-
-// @vitest-environment node
-/* @vitest-config { "test": { "fileParallelism": false } } */
-
-const mockFindOneAndUpdate = vi.fn().mockResolvedValue({ seq: 500122 })
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -34,64 +28,53 @@ vi.mock('#common/helpers/notify.js')
 
 const url = organisationPath
 
-describe(`${url} route`, { timeout: 10000 }, () => {
-  beforeEach(() => {
+describe(`${url} route`, () => {
+  setupAuthContext()
+
+  let server
+  let formSubmissionsRepository
+
+  beforeEach(async () => {
     mockAudit.mockClear()
-    mockInsertOne.mockClear()
-    mockFindOneAndUpdate.mockClear()
+    formSubmissionsRepository = createFormSubmissionsRepository()()
+    server = await createTestServer({
+      repositories: { formSubmissionsRepository }
+    })
   })
 
-  it('returns 200 and echoes back payload on valid request', async ({
-    server
-  }) => {
-    const collectionSpy = vi.spyOn(server.db, 'collection')
-
-    collectionSpy.mockImplementation((name) => {
-      if (name === 'counters') {
-        return { findOneAndUpdate: mockFindOneAndUpdate }
-      }
-      return { insertOne: mockInsertOne }
-    })
-
+  it('returns 200 and stores the organisation on valid request', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
       payload: organisationFixture
     })
 
-    const orgId = 500122
-    const orgName = 'ACME ltd'
-
     expect(response.statusCode).toEqual(StatusCodes.OK)
+
+    const { orgId, orgName, referenceNumber } = JSON.parse(response.payload)
+    expect(orgName).toBe('ACME ltd')
+
+    const stored =
+      await formSubmissionsRepository.findOrganisationById(referenceNumber)
+    expect(stored.orgId).toBe(orgId)
+    expect(stored.rawSubmissionData).toEqual(organisationFixture)
 
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: AUDIT_EVENT_CATEGORIES.DB,
         action: AUDIT_EVENT_ACTIONS.DB_INSERT
       },
-      context: {
-        orgId,
-        orgName,
-        referenceNumber: expect.any(String)
-      }
+      context: { orgId, orgName, referenceNumber }
     })
     expect(sendEmail).toHaveBeenCalledWith(
       ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
       'alice@foo.com',
-      {
-        orgId,
-        orgName,
-        referenceNumber: expect.any(String)
-      }
+      { orgId, orgName, referenceNumber }
     )
     expect(sendEmail).toHaveBeenCalledWith(
       ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
       'test@ea.gov.uk',
-      {
-        orgId,
-        orgName,
-        referenceNumber: expect.any(String)
-      }
+      { orgId, orgName, referenceNumber }
     )
     expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -104,7 +87,26 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     )
   })
 
-  it('returns 400 if payload is not an object', async ({ server }) => {
+  it('allocates a fresh orgId to each organisation', async () => {
+    const submit = async () =>
+      JSON.parse(
+        (
+          await server.inject({
+            method: 'POST',
+            url,
+            payload: organisationFixture
+          })
+        ).payload
+      )
+
+    const first = await submit()
+    const second = await submit()
+
+    expect(second.orgId).toBe(first.orgId + 1)
+    expect(second.referenceNumber).not.toBe(first.referenceNumber)
+  })
+
+  it('returns 400 if payload is not an object', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -116,19 +118,15 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
 
-  it('returns 400 if payload is null', async ({ server }) => {
-    const response = await server.inject({
-      method: 'POST',
-      url,
-      payload: null
-    })
+  it('returns 400 if payload is null', async () => {
+    const response = await server.inject({ method: 'POST', url, payload: null })
 
     expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
   })
 
-  it('returns 422 if payload is missing email', async ({ server }) => {
+  it('returns 422 if payload is missing email', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -150,22 +148,17 @@ describe(`${url} route`, { timeout: 10000 }, () => {
             ]
           }
         },
-        data: {
-          main: {
-            asd456: 'ACME LTD'
-          }
-        }
+        data: { main: { asd456: 'ACME LTD' } }
       }
     })
 
-    const message = 'Could not extract email from answers'
     const body = JSON.parse(response.payload)
 
     expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(body.message).toEqual(message)
+    expect(body.message).toEqual('Could not extract email from answers')
   })
 
-  it('returns 422 if payload is missing orgName', async ({ server }) => {
+  it('returns 422 if payload is missing orgName', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -187,96 +180,55 @@ describe(`${url} route`, { timeout: 10000 }, () => {
             ]
           }
         },
-        data: {
-          main: {
-            asd123: 'a@b.com'
-          }
-        }
+        data: { main: { asd123: 'a@b.com' } }
       }
     })
 
-    const message = 'Could not extract organisation name from answers'
     const body = JSON.parse(response.payload)
 
     expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(body.message).toEqual(message)
+    expect(body.message).toEqual(
+      'Could not extract organisation name from answers'
+    )
   })
 
-  it('returns 422 if payload is missing regulatorEmail', async ({ server }) => {
+  it('returns 422 if payload is missing regulatorEmail', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
       payload: {
-        meta: {
-          definition: {
-            name: undefined
-          }
-        },
-        data: {
-          main: {}
+        meta: { definition: { name: undefined } },
+        data: { main: {} }
+      }
+    })
+
+    const body = JSON.parse(response.payload)
+
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(body.message).toEqual('Could not get regulator name from data')
+  })
+
+  it('returns 500 if the organisation cannot be stored', async () => {
+    const error = new Error('insertOrganisation failed')
+    const failingServer = await createTestServer({
+      repositories: {
+        formSubmissionsRepository: {
+          ...formSubmissionsRepository,
+          insertOrganisation: () => Promise.reject(error)
         }
       }
     })
 
-    const message = 'Could not get regulator name from data'
-    const body = JSON.parse(response.payload)
-
-    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(body.message).toEqual(message)
-  })
-
-  it('returns 500 if counter returns invalid result', async ({ server }) => {
-    const collectionSpy = vi.spyOn(server.db, 'collection')
-
-    collectionSpy.mockImplementation((name) => {
-      if (name === 'counters') {
-        return { findOneAndUpdate: vi.fn().mockResolvedValue(null) }
-      }
-      return { insertOne: mockInsertOne }
-    })
-
-    const response = await server.inject({
+    const response = await failingServer.inject({
       method: 'POST',
       url,
       payload: organisationFixture
     })
 
     expect(response.statusCode).toEqual(StatusCodes.INTERNAL_SERVER_ERROR)
-    expect(server.loggerMocks.error).toHaveBeenCalledWith(
-      expect.objectContaining({
-        err: expect.objectContaining({
-          message: 'Failed to generate orgId: counter returned invalid result'
-        })
-      })
-    )
-  })
-
-  it('returns 500 if error is thrown by insertOne', async ({ server }) => {
-    const collectionSpy = vi.spyOn(server.db, 'collection')
-
-    collectionSpy.mockImplementation((name) => {
-      if (name === 'counters') {
-        return { findOneAndUpdate: mockFindOneAndUpdate }
-      }
-      return { insertOne: mockInsertOne }
-    })
-
-    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
-    const error = new Error('db.collection.insertOne failed')
-    mockInsertOne.mockImplementationOnce(() => {
-      throw error
-    })
-
-    const response = await server.inject({
-      method: 'POST',
-      url,
-      payload: organisationFixture
-    })
-
-    expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(`An internal server error occurred`)
-    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+    expect(body.message).toMatch('An internal server error occurred')
+    expect(failingServer.loggerMocks.error).toHaveBeenCalledWith({
       err: error,
       message: `Failure on ${organisationPath}`,
       event: {
@@ -284,24 +236,12 @@ describe(`${url} route`, { timeout: 10000 }, () => {
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
       },
       http: {
-        response: {
-          status_code: statusCode
-        }
+        response: { status_code: StatusCodes.INTERNAL_SERVER_ERROR }
       }
     })
   })
 
-  it('returns 500 if error is thrown by sendEmail', async ({ server }) => {
-    const collectionSpy = vi.spyOn(server.db, 'collection')
-
-    collectionSpy.mockImplementation((name) => {
-      if (name === 'counters') {
-        return { findOneAndUpdate: mockFindOneAndUpdate }
-      }
-      return { insertOne: mockInsertOne }
-    })
-
-    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
+  it('returns 500 if a confirmation email cannot be sent', async () => {
     const error = new Error('Notify API failed')
     vi.mocked(sendEmail).mockRejectedValueOnce(error)
 
@@ -311,9 +251,9 @@ describe(`${url} route`, { timeout: 10000 }, () => {
       payload: organisationFixture
     })
 
-    expect(response.statusCode).toEqual(statusCode)
+    expect(response.statusCode).toEqual(StatusCodes.INTERNAL_SERVER_ERROR)
     const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(`An internal server error occurred`)
+    expect(body.message).toMatch('An internal server error occurred')
     expect(server.loggerMocks.error).toHaveBeenCalledWith({
       err: error,
       message: `Failure on ${organisationPath}`,
@@ -322,9 +262,7 @@ describe(`${url} route`, { timeout: 10000 }, () => {
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
       },
       http: {
-        response: {
-          status_code: statusCode
-        }
+        response: { status_code: StatusCodes.INTERNAL_SERVER_ERROR }
       }
     })
   })

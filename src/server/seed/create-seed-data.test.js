@@ -1,7 +1,8 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { ObjectId } from 'mongodb'
 import { describe, expect, it, vi } from 'vitest'
-import { createSeedData } from './create-seed-data.js'
+import { createSeedData, seedOrganisationRecord } from './create-seed-data.js'
+import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }
 import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
 
 /**
@@ -10,6 +11,22 @@ import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
 
 const PRODUCTION = () => true
 const NON_PRODUCTION = () => false
+
+describe('seedOrganisationRecord', () => {
+  it('builds an organisation record from the fixture', () => {
+    const record = seedOrganisationRecord(organisationFixture)
+
+    expect(record.orgName).toBe('ACME ltd')
+    expect(record.email).toBe('alice@foo.com')
+    expect(record.rawSubmissionData).toEqual(organisationFixture)
+  })
+
+  it('refuses a fixture with no organisation name or email', () => {
+    expect(() => seedOrganisationRecord({ meta: {}, data: {} })).toThrow(
+      'organisation fixture is missing an organisation name or email'
+    )
+  })
+})
 
 describe('createSeedData', () => {
   it('does not create seed data in production', async () => {

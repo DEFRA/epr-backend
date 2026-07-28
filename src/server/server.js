@@ -209,13 +209,7 @@ async function createServer(options = {}) {
     }
   })
 
-  // LEGACY: Skip MongoDB, repositories and workers for tests of /v1/apply/* routes.
-  // These routes use raw db.collection() access and need refactoring.
-  // Once refactored, delete this flag and the server-with-mock-db.js fixture.
-  // See: src/routes/v1/apply/*.js
-  if (!options._testOnlyLegacyApplyRoutes) {
-    plugins.push(...getProductionPlugins(config))
-  }
+  plugins.push(...getProductionPlugins(config))
 
   plugins.push(router)
 
