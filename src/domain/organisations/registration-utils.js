@@ -67,10 +67,9 @@ export function resolveAccreditationNumber(registration, org) {
  * @returns {boolean}
  */
 export function isRegistrationAccredited({ accreditation }) {
-  return (
-    accreditation !== null &&
-    ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)
-  )
+  return accreditation
+    ? ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)
+    : false
 }
 
 /**
