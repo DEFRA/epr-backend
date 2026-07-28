@@ -1,12 +1,12 @@
-import { toNumber } from '#common/helpers/decimal-utils.js'
+import { greaterThan, toNumber } from '#common/helpers/decimal-utils.js'
 import {
   ZERO_TONNAGE,
   addTonnage,
+  subtractTonnage,
   toRoundedTonnage
 } from '#common/helpers/rounded-tonnage.js'
 import { groupAndSum, isYes } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { isDateInRange } from './filter-records-by-date.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 
@@ -97,21 +97,37 @@ function getTonnageRepatriated(repatriatedRecords) {
   )
 }
 
-function calculateTonnageReceivedNotExported(
-  wasteReceivedRecords,
-  startDate,
-  endDate
-) {
+/**
+ * A load's contribution to "packaging waste received but not exported": the
+ * tonnage received for export less the tonnage actually exported, with a blank
+ * exported tonnage read as zero. Clamped at zero — a row reporting more exported
+ * than received is a data error, not waste owed back.
+ *
+ * @param {Record<string, any>} data
+ * @returns {import('#common/helpers/rounded-tonnage.js').RoundedTonnage}
+ */
+function tonnageStillOnSite(data) {
+  const received = toRoundedTonnage(data.TONNAGE_RECEIVED_FOR_EXPORT)
+  const exported = toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
+  return greaterThan(received, exported)
+    ? subtractTonnage(received, exported)
+    : ZERO_TONNAGE
+}
+
+/**
+ * Total tonnage received in the period that has not been exported, summed per
+ * load. A load counts on its exported tonnage alone: an export date without an
+ * exported tonnage means the waste is still on site, so the date plays no part.
+ *
+ * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} wasteReceivedRecords
+ * @returns {number}
+ */
+function calculateTonnageReceivedNotExported(wasteReceivedRecords) {
   return toNumber(
-    wasteReceivedRecords
-      .filter(
-        ({ data }) => !isDateInRange(data.DATE_OF_EXPORT, startDate, endDate)
-      )
-      .reduce(
-        (sum, { data }) =>
-          addTonnage(sum, toRoundedTonnage(data.TONNAGE_RECEIVED_FOR_EXPORT)),
-        ZERO_TONNAGE
-      )
+    wasteReceivedRecords.reduce(
+      (sum, { data }) => addTonnage(sum, tonnageStillOnSite(data)),
+      ZERO_TONNAGE
+    )
   )
 }
 
@@ -163,8 +179,6 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
  * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteExportedRecords
  * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.repatriatedRecords
  * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteReceivedRecords
- * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
- * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
  * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]
  * @param {string} params.operatorCategory
  */
@@ -172,8 +186,6 @@ export function aggregateWasteExported({
   wasteExportedRecords,
   repatriatedRecords,
   wasteReceivedRecords,
-  startDate,
-  endDate,
   orsDetailsMap = new Map(),
   operatorCategory
 }) {
@@ -210,11 +222,7 @@ export function aggregateWasteExported({
     tonnageReceivedNotExported:
       operatorCategory === OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
         ? null
-        : calculateTonnageReceivedNotExported(
-            wasteReceivedRecords,
-            startDate,
-            endDate
-          ),
+        : calculateTonnageReceivedNotExported(wasteReceivedRecords),
     tonnageRefusedAtDestination,
     tonnageStoppedDuringExport,
     totalTonnageRefusedOrStopped,

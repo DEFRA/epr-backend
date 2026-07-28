@@ -1057,12 +1057,41 @@ describe('#aggregateReportDetail', () => {
     })
 
     describe('tonnageReceivedNotExported', () => {
-      it('excludes records whose DATE_OF_EXPORT falls within the same period', () => {
+      it('counts a load in full when no tonnage has been exported', () => {
+        const records = [
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+            TONNAGE_RECEIVED_FOR_EXPORT: 29.19,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: null
+          })
+        ]
+
+        const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(29.19)
+      })
+
+      it('counts a load in full when it carries an in-period export date but no exported tonnage', () => {
         const records = [
           buildAccreditedExportedRecord({
             DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
             DATE_OF_EXPORT: '2026-02-20',
-            TONNAGE_RECEIVED_FOR_EXPORT: 50
+            TONNAGE_RECEIVED_FOR_EXPORT: 29.19,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: null
+          })
+        ]
+
+        const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(29.19)
+      })
+
+      it('counts nothing for a fully exported load', () => {
+        const records = [
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+            TONNAGE_RECEIVED_FOR_EXPORT: 50,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 50
           })
         ]
 
@@ -1071,56 +1100,78 @@ describe('#aggregateReportDetail', () => {
         expect(result.exportActivity?.tonnageReceivedNotExported).toBe(0)
       })
 
-      it('includes records whose DATE_OF_EXPORT is after the period', () => {
+      it('counts the remainder of a partly exported load', () => {
         const records = [
           buildAccreditedExportedRecord({
             DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-            DATE_OF_EXPORT: '2026-03-10',
-            TONNAGE_RECEIVED_FOR_EXPORT: 37.5
+            TONNAGE_RECEIVED_FOR_EXPORT: 10,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 6
           })
         ]
 
         const result = aggregateReportDetail(records, accreditedExporterArgs)
 
-        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(37.5)
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(4)
       })
 
-      it('includes records with no DATE_OF_EXPORT', () => {
+      it('counts nothing for a load exporting more than it received, rather than crediting it back', () => {
         const records = [
           buildAccreditedExportedRecord({
             DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-            DATE_OF_EXPORT: null,
-            TONNAGE_RECEIVED_FOR_EXPORT: 25
+            TONNAGE_RECEIVED_FOR_EXPORT: 10,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12
+          }),
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-02-10',
+            TONNAGE_RECEIVED_FOR_EXPORT: 8,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
           })
         ]
 
         const result = aggregateReportDetail(records, accreditedExporterArgs)
 
-        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(25)
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(3)
       })
 
-      it('sums only records not exported within the period', () => {
+      it('ignores loads received outside the period', () => {
+        const records = [
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-03-02',
+            TONNAGE_RECEIVED_FOR_EXPORT: 25,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: null
+          })
+        ]
+
+        const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(0)
+      })
+
+      it('sums the unexported remainder across every load received in the period', () => {
         const records = [
           buildAccreditedExportedRecord({
             DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
             DATE_OF_EXPORT: '2026-02-20',
-            TONNAGE_RECEIVED_FOR_EXPORT: 30
+            TONNAGE_RECEIVED_FOR_EXPORT: 30,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 30
           }),
           buildAccreditedExportedRecord({
             DATE_RECEIVED_FOR_EXPORT: '2026-02-10',
             DATE_OF_EXPORT: '2026-03-05',
-            TONNAGE_RECEIVED_FOR_EXPORT: 20
+            TONNAGE_RECEIVED_FOR_EXPORT: 20,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12.5
           }),
           buildAccreditedExportedRecord({
             DATE_RECEIVED_FOR_EXPORT: '2026-02-15',
             DATE_OF_EXPORT: null,
-            TONNAGE_RECEIVED_FOR_EXPORT: 10
+            TONNAGE_RECEIVED_FOR_EXPORT: 10,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: null
           })
         ]
 
         const result = aggregateReportDetail(records, accreditedExporterArgs)
 
-        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(30)
+        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(17.5)
       })
     })
   })

@@ -153,8 +153,6 @@ export function aggregateReportDetail(
         wasteExportedRecords,
         repatriatedRecords: wasteRepatriatedRecords,
         wasteReceivedRecords,
-        startDate,
-        endDate,
         orsDetailsMap,
         operatorCategory
       })
