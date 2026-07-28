@@ -23,8 +23,8 @@ import {
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
-/** @typedef {import('./load-counts.js').Loads} Loads */
-/** @typedef {import('./period-status.js').LoadsByReportingPeriod} LoadsByReportingPeriod */
+/** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
+/** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @typedef {string} ProcessingType */
 /** @typedef {import('#reports/application/report-service.js').ReportsService} ReportsService */
 

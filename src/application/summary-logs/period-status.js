@@ -21,6 +21,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {LoadsByReportingPeriod, PeriodStatusByRecordChange, RowDetail, RowIdentity} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {PROCESSING_TYPE_TABLES} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
@@ -28,41 +29,6 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @import {RecordChange} from './record-change.js' */
 
 /** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
-
-/**
- * A load's stable identity and exclusion reason codes, computed once and
- * carried onto every leg it produces. exclusionReasons is empty for an
- * included row.
- * @typedef {{ rowId: string, wasteRecordType: string, exclusionReasons: string[] }} RowIdentity
- */
-
-/**
- * A single load listed under an expandable bucket: its identity plus the
- * signed tonnage this leg contributed to the period's balance (0 for a
- * non-balance-affecting row). For a cross-period amendment each period's row
- * carries that leg's delta, not the global net.
- * @typedef {RowIdentity & { tonnageDelta: number }} RowDetail
- */
-
-/**
- * @typedef {{ count: number, tonnageDelta: number, rows: RowDetail[] }} BalanceAffectingBucket
- */
-
-/**
- * @typedef {{ count: number, rows: RowDetail[] }} NonBalanceAffectingBucket
- */
-
-/**
- * @typedef {{ balanceAffecting: BalanceAffectingBucket, nonBalanceAffecting: NonBalanceAffectingBucket }} PeriodStatusGroup
- */
-
-/**
- * @typedef {{ added: PeriodStatusGroup, adjusted: PeriodStatusGroup }} PeriodStatusByRecordChange
- */
-
-/**
- * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange, closedPeriods: PeriodRef[] }} LoadsByReportingPeriod
- */
 
 /**
  * @typedef {Object} ClassificationContext

@@ -53,8 +53,8 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
-/** @import {Loads} from './load-counts.js' */
-/** @import {LoadsByReportingPeriod} from './period-status.js' */
+/** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
+/** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 
 /**

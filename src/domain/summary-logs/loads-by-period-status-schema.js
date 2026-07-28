@@ -9,6 +9,43 @@ import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
  * Used by both repository (storage validation) and route (response validation).
  */
 
+/** @import {PeriodRef} from '#reports/domain/period-key.js' */
+
+/**
+ * A load's stable identity and exclusion reason codes, computed once and
+ * carried onto every leg it produces. exclusionReasons is empty for an
+ * included row.
+ * @typedef {{ rowId: string, wasteRecordType: string, exclusionReasons: string[] }} RowIdentity
+ */
+
+/**
+ * A single load listed under an expandable bucket: its identity plus the
+ * signed tonnage this leg contributed to the period's balance (0 for a
+ * non-balance-affecting row). For a cross-period amendment each period's row
+ * carries that leg's delta, not the global net.
+ * @typedef {RowIdentity & { tonnageDelta: number }} RowDetail
+ */
+
+/**
+ * @typedef {{ count: number, tonnageDelta: number, rows: RowDetail[] }} BalanceAffectingBucket
+ */
+
+/**
+ * @typedef {{ count: number, rows: RowDetail[] }} NonBalanceAffectingBucket
+ */
+
+/**
+ * @typedef {{ balanceAffecting: BalanceAffectingBucket, nonBalanceAffecting: NonBalanceAffectingBucket }} PeriodStatusGroup
+ */
+
+/**
+ * @typedef {{ added: PeriodStatusGroup, adjusted: PeriodStatusGroup }} PeriodStatusByRecordChange
+ */
+
+/**
+ * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange, closedPeriods: PeriodRef[] }} LoadsByReportingPeriod
+ */
+
 // Per-bucket cap on listed rows. The producer (period-status.js) truncates to
 // this and the schema validates it; sharing one constant keeps them in step.
 // Matches MAX_ROW_IDS in load-counts.js.

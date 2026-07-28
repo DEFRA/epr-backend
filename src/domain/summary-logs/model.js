@@ -33,8 +33,8 @@
  * @property {ValidationIssueCounts} [counts] - Issue counts by severity (computed pre-cap, so total may exceed issues.length when capped for storage)
  */
 
-/** @import {Loads} from '#application/summary-logs/load-counts.js' */
-/** @import {LoadsByReportingPeriod} from '#application/summary-logs/period-status.js' */
+/** @import {Loads} from './loads-schema.js' */
+/** @import {LoadsByReportingPeriod} from './loads-by-period-status-schema.js' */
 /** @import {ValidationIssueCounts} from '#common/validation/validation-issues.js' */
 /** @import {ProcessingType} from './meta-fields.js' */
 /** @import {SummaryLogStatus} from './status.js' */
