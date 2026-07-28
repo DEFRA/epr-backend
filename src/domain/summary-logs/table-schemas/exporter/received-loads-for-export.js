@@ -21,7 +21,7 @@ import {
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
+import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
   NET_WEIGHT_MESSAGES,
