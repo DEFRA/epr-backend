@@ -113,6 +113,8 @@ const grantPayload = {
   appliesFrom: '2026-08-01',
   accreditationNumber: 'ACC999999'
 }
+const rejectPayload = { fromStatus: 'created', toStatus: 'rejected' }
+const reopenPayload = { fromStatus: 'rejected', toStatus: 'created' }
 
 describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history', () => {
   setupAuthContext()
@@ -696,6 +698,144 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         /Cannot transition accreditation from created: its status is suspended/
       )
     })
+  })
+
+  describe('rejecting a created accreditation', () => {
+    it('rejects a created accreditation and returns 200 with { status: "rejected" }', async () => {
+      const ctx = await seedOrg('created')
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: rejectPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({ status: 'rejected' })
+    })
+
+    it('appends a rejected statusHistory entry, preserving earlier entries', async () => {
+      const ctx = await seedOrg('created')
+
+      await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: rejectPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const updatedOrg = JSON.parse(getResponse.payload)
+      const accreditation = updatedOrg.accreditations.find(
+        (a) => a.id === ctx.accreditationId
+      )
+
+      expect(accreditation.status).toBe('rejected')
+      expect(accreditation.statusHistory.map((e) => e.status)).toEqual([
+        'created',
+        'rejected'
+      ])
+
+      const otherAccreditation = updatedOrg.accreditations.find(
+        (a) => a.id === ctx.otherAccreditationId
+      )
+      expect(otherAccreditation.status).toBe('created')
+    })
+
+    it.each(['approved', 'suspended', 'rejected', 'cancelled'])(
+      'returns 422 when rejecting an accreditation that is currently %s',
+      async (status) => {
+        const ctx = await seedOrg(status)
+
+        const response = await server.inject({
+          method: 'POST',
+          url: statusHistoryUrl(ctx),
+          payload: rejectPayload,
+          headers: { Authorization: `Bearer ${validToken}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        const body = JSON.parse(response.payload)
+        expect(body.message).toMatch(
+          new RegExp(
+            `Cannot transition accreditation from created: its status is ${status}`
+          )
+        )
+      }
+    )
+  })
+
+  describe('reopening a rejected accreditation', () => {
+    it('reopens a rejected accreditation and returns 200 with { status: "created" }', async () => {
+      const ctx = await seedOrg('rejected')
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: reopenPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({ status: 'created' })
+    })
+
+    it('appends a created statusHistory entry, preserving the rejection gap', async () => {
+      const ctx = await seedOrg('rejected')
+
+      await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: reopenPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const updatedOrg = JSON.parse(getResponse.payload)
+      const accreditation = updatedOrg.accreditations.find(
+        (a) => a.id === ctx.accreditationId
+      )
+
+      expect(accreditation.status).toBe('created')
+      expect(accreditation.statusHistory.map((e) => e.status)).toEqual([
+        'created',
+        'rejected',
+        'created'
+      ])
+    })
+
+    it.each(['approved', 'suspended', 'created', 'cancelled'])(
+      'returns 422 when reopening an accreditation that is currently %s',
+      async (status) => {
+        const ctx = await seedOrg(status)
+
+        const response = await server.inject({
+          method: 'POST',
+          url: statusHistoryUrl(ctx),
+          payload: reopenPayload,
+          headers: { Authorization: `Bearer ${validToken}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        const body = JSON.parse(response.payload)
+        expect(body.message).toMatch(
+          new RegExp(
+            `Cannot transition accreditation from rejected: its status is ${status}`
+          )
+        )
+      }
+    )
   })
 
   describe('payload validation', () => {
