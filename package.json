@@ -20,6 +20,7 @@
     "#overseas-sites/*": "./src/overseas-sites/*",
     "#packaging-recycling-notes/*": "./src/packaging-recycling-notes/*",
     "#plugins/*": "./src/plugins/*",
+    "#public-register/*": "./src/public-register/*",
     "#reports/*": "./src/reports/*",
     "#repositories/*": "./src/repositories/*",
     "#root/*": "./src/*",

@@ -4,13 +4,13 @@
  * @property {number} [preSignedUrlExpiry] - Expiry time for pre-signed URLs in seconds
  */
 
-/** @typedef {import('#domain/public-register/repository/port.js').PresignedUrlResult} PresignedUrlResult */
+/** @typedef {import('./port.js').PresignedUrlResult} PresignedUrlResult */
 
 /**
  * Creates an in-memory public register repository for testing
  *
  * @param {InMemoryPublicRegisterRepositoryConfig} [config={}]
- * @returns {import('#domain/public-register/repository/port.js').PublicRegisterRepository}
+ * @returns {import('./port.js').PublicRegisterRepository}
  */
 export const createInMemoryPublicRegisterRepository = (config = {}) => {
   const s3Bucket = config.s3Bucket ?? 'test-bucket'
