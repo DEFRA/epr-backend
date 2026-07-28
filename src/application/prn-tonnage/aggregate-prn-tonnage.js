@@ -34,6 +34,8 @@ const CANCELLED_STATUSES = [PRN_STATUS.CANCELLED]
 const EXCLUDED_STATUSES = [PRN_STATUS.DELETED, PRN_STATUS.DISCARDED]
 const STATUS_FIELD = 'status.currentStatus'
 const STATUS_PATH = `$${STATUS_FIELD}`
+const GROUPED_ORGANISATION_ID = '$_id.orgId'
+const GROUPED_ACCREDITATION_ID = '$_id.accId'
 
 const buildAccreditedRegistrationStage = () => ({
   $addFields: {
@@ -53,8 +55,8 @@ const buildOrganisationLookupStage = () => ({
   $lookup: {
     from: ORGANISATIONS_COLLECTION,
     let: {
-      orgId: { $toObjectId: '$_id.orgId' },
-      accId: '$_id.accId'
+      orgId: { $toObjectId: GROUPED_ORGANISATION_ID },
+      accId: GROUPED_ACCREDITATION_ID
     },
     pipeline: [
       { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
@@ -121,16 +123,16 @@ const buildAddFieldsStage = () => ({
   $addFields: {
     organisationId: {
       $toString: {
-        $ifNull: [{ $first: '$orgLookup.orgId' }, '$_id.orgId']
+        $ifNull: [{ $first: '$orgLookup.orgId' }, GROUPED_ORGANISATION_ID]
       }
     },
     tonnageBand: { $ifNull: [{ $first: '$orgLookup.tonnageBand' }, null] },
     ledgerId: {
-      organisationId: '$_id.orgId',
+      organisationId: GROUPED_ORGANISATION_ID,
       registrationId: {
         $ifNull: [{ $first: '$orgLookup.registrationId' }, null]
       },
-      accreditationId: '$_id.accId'
+      accreditationId: GROUPED_ACCREDITATION_ID
     },
     registration: {
       wasteProcessingType: {
