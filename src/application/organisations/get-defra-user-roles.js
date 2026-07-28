@@ -3,7 +3,7 @@ import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
+/** @typedef {import('#common/helpers/auth/types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 
 /**
  * Determines the roles for a Defra ID user based on their token and request context

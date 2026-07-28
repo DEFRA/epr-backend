@@ -5,7 +5,7 @@ import { getDefraTokenSummary } from '#common/helpers/auth/roles/helpers.js'
  */
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
+/** @typedef {import('#common/helpers/auth/types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
