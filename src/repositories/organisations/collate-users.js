@@ -2,17 +2,17 @@ import { REGISTRATION_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {CollatedUser, Organisation, RegOrAccStatus, UserRoles} from '#domain/organisations/model.js' */
+/** @import {AccreditationStatus, CollatedUser, Organisation, OrganisationStatus, RegistrationStatus, UserRoles} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 
 /** @typedef {Pick<CollatedUser, 'fullName'|'email'|'roles'>} SlimUser */
 
 /**
- * get user roles for the provided status. Generic over registrations and
- * accreditations; the compared values (created/approved) are common to both,
- * so the registration constants are used.
+ * get user roles for the provided status. Generic over organisations,
+ * registrations and accreditations; the compared values (created/approved) are
+ * common to all three, so the registration constants are used.
  *
- * @param {RegOrAccStatus} status
+ * @param {RegistrationStatus | AccreditationStatus | OrganisationStatus} status
  * @returns {UserRoles[]}
  */
 const getUserRolesForStatus = (status) => {

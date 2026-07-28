@@ -29,12 +29,6 @@ export const ACCREDITATION_STATUS = Object.freeze({
   SUSPENDED: 'suspended'
 })
 
-/**
- * Union for code that is generic over registrations and accreditations
- * (status history, user collation).
- * @typedef {RegistrationStatus | AccreditationStatus} RegOrAccStatus
- */
-
 /** @type {ReadonlySet<AccreditationStatus>} */
 export const ACTIVE_ACCREDITATION_STATUSES = new Set([
   ACCREDITATION_STATUS.APPROVED,
@@ -254,11 +248,23 @@ export const USER_ROLES = Object.freeze({
  */
 
 /**
+ * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
+ * getStatusHistoryDateTimes normalises string inputs via `new Date(...)`, so the
+ * consumer contract genuinely accepts either.
+ *
+ * @template {string} S
  * @typedef {{
- *   status: RegOrAccStatus;
- *   updatedAt: Date;
+ *   status: S;
+ *   updatedAt: Date | string;
  *   updatedBy?: string;
- * }} StatusHistoryItem
+ * }} StatusHistoryEntryOf
+ */
+
+/**
+ * @template {string} S
+ * @typedef {{
+ *   statusHistory: StatusHistoryEntryOf<S>[];
+ * }} StatusHistoryOf
  */
 
 /**
@@ -290,7 +296,7 @@ export const USER_ROLES = Object.freeze({
  *   reprocessingNations?: NationValue[];
  *   schemaVersion: number;
  *   status: OrganisationStatus;
- *   statusHistory: StatusHistoryItem[];
+ *   statusHistory: StatusHistoryEntryOf<OrganisationStatus>[];
  *   submittedToRegulator: RegulatorValue;
  *   submitterContactDetails: User;
  *   users: CollatedUser[];
