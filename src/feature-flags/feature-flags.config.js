@@ -5,17 +5,17 @@ export const createConfigFeatureFlags = (config) => ({
   isDevEndpointsEnabled() {
     return config.get('featureFlags.devEndpoints')
   },
-  isStaleIssuedTonnageReportEnabled() {
-    return config.get('featureFlags.staleIssuedTonnageReport')
-  },
-  isPreCpaResubmissionReportEnabled() {
-    return config.get('featureFlags.preCpaResubmissionReport')
+  isDropWasteRecordsCollectionEnabled() {
+    return config.get('featureFlags.dropWasteRecordsCollection')
   },
   isPreCpaResubmissionBackfillEnabled() {
     return config.get('featureFlags.preCpaResubmissionBackfill')
   },
-  isDropWasteRecordsCollectionEnabled() {
-    return config.get('featureFlags.dropWasteRecordsCollection')
+  isPreCpaResubmissionReportEnabled() {
+    return config.get('featureFlags.preCpaResubmissionReport')
+  },
+  isStaleIssuedTonnageReportEnabled() {
+    return config.get('featureFlags.staleIssuedTonnageReport')
   },
   isUnexportedTonnageReportEnabled() {
     return config.get('featureFlags.unexportedTonnageReport')

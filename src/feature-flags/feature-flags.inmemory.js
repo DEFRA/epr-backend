@@ -6,17 +6,17 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
   },
-  isStaleIssuedTonnageReportEnabled() {
-    return flags.staleIssuedTonnageReport ?? false
-  },
-  isPreCpaResubmissionReportEnabled() {
-    return flags.preCpaResubmissionReport ?? false
+  isDropWasteRecordsCollectionEnabled() {
+    return flags.dropWasteRecordsCollection ?? false
   },
   isPreCpaResubmissionBackfillEnabled() {
     return flags.preCpaResubmissionBackfill ?? false
   },
-  isDropWasteRecordsCollectionEnabled() {
-    return flags.dropWasteRecordsCollection ?? false
+  isPreCpaResubmissionReportEnabled() {
+    return flags.preCpaResubmissionReport ?? false
+  },
+  isStaleIssuedTonnageReportEnabled() {
+    return flags.staleIssuedTonnageReport ?? false
   },
   isUnexportedTonnageReportEnabled() {
     return flags.unexportedTonnageReport ?? false

@@ -358,17 +358,11 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    staleIssuedTonnageReport: {
-      doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
+    dropWasteRecordsCollection: {
+      doc: 'Feature Flag: Drop the decommissioned waste-records collection on startup. With this off, startup only reports whether the collection is still present and how many documents it holds.',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
-    },
-    preCpaResubmissionReport: {
-      doc: 'Feature Flag: Run the estate-wide pre-CPA resubmission sizing diagnostic on startup (PAE-1747)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_REPORT'
+      env: 'FEATURE_FLAG_DROP_WASTE_RECORDS_COLLECTION'
     },
     preCpaResubmissionBackfill: {
       doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768). Only takes effect when closedPeriodAdjustments is also enabled.',
@@ -376,11 +370,17 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
     },
-    dropWasteRecordsCollection: {
-      doc: 'Feature Flag: Drop the decommissioned waste-records collection on startup. With this off, startup only reports whether the collection is still present and how many documents it holds.',
+    preCpaResubmissionReport: {
+      doc: 'Feature Flag: Run the estate-wide pre-CPA resubmission sizing diagnostic on startup (PAE-1747)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_DROP_WASTE_RECORDS_COLLECTION'
+      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_REPORT'
+    },
+    staleIssuedTonnageReport: {
+      doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
     },
     unexportedTonnageReport: {
       doc: 'Feature Flag: Run the estate-wide unexported tonnage sizing diagnostic on startup (PAE-1783)',

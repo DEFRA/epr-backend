@@ -1,20 +1,20 @@
 /**
  * @typedef {Object} FeatureFlags
  * @property {() => boolean} isDevEndpointsEnabled
- * @property {() => boolean} isStaleIssuedTonnageReportEnabled
- * @property {() => boolean} isPreCpaResubmissionReportEnabled
- * @property {() => boolean} isPreCpaResubmissionBackfillEnabled
  * @property {() => boolean} isDropWasteRecordsCollectionEnabled
+ * @property {() => boolean} isPreCpaResubmissionBackfillEnabled
+ * @property {() => boolean} isPreCpaResubmissionReportEnabled
+ * @property {() => boolean} isStaleIssuedTonnageReportEnabled
  * @property {() => boolean} isUnexportedTonnageReportEnabled
  */
 
 /**
  * @typedef {Object} FeatureFlagOverrides
  * @property {boolean} [devEndpoints]
- * @property {boolean} [staleIssuedTonnageReport]
- * @property {boolean} [preCpaResubmissionReport]
- * @property {boolean} [preCpaResubmissionBackfill]
  * @property {boolean} [dropWasteRecordsCollection]
+ * @property {boolean} [preCpaResubmissionBackfill]
+ * @property {boolean} [preCpaResubmissionReport]
+ * @property {boolean} [staleIssuedTonnageReport]
  * @property {boolean} [unexportedTonnageReport]
  */
 
