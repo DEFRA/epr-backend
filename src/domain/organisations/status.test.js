@@ -11,12 +11,13 @@ import {
 } from './model.js'
 import Boom from '@hapi/boom'
 
-/** @import {AccreditationStatus, OrganisationStatus, RegOrAccStatus} from './model.js' */
+/** @import {AccreditationStatus, OrganisationStatus, RegistrationStatus} from './model.js' */
 
 /**
- * @param {(fromStatus: string, toStatus: string) => void} assertTransitionValid
+ * @template {string} S
+ * @param {(fromStatus: S, toStatus: S) => void} assertTransitionValid
  * @param {'registration' | 'accreditation'} itemKind
- * @param {[RegOrAccStatus, RegOrAccStatus, boolean][]} transitionTable
+ * @param {[S, S, boolean][]} transitionTable
  */
 const describeTransitionTable = (
   assertTransitionValid,
@@ -114,12 +115,11 @@ describe('assertOrgStatusTransitionValid', () => {
 })
 
 describe('assertRegistrationStatusTransitionValid', () => {
-  /** @type {[RegOrAccStatus, RegOrAccStatus, boolean][]} */
+  /** @type {[RegistrationStatus, RegistrationStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
     [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.APPROVED, true],
     [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.REJECTED, true],
-    [REGISTRATION_STATUS.CREATED, ACCREDITATION_STATUS.SUSPENDED, false],
     [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.CANCELLED, false],
     [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.CREATED, false],
 
@@ -127,28 +127,18 @@ describe('assertRegistrationStatusTransitionValid', () => {
     // registration status (PAE-1705)
     [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.CREATED, true],
     [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.CANCELLED, true],
-    [REGISTRATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED, false],
     [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.REJECTED, false],
     [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.APPROVED, false],
-
-    // From SUSPENDED — not a registration status; nothing is reachable
-    [ACCREDITATION_STATUS.SUSPENDED, REGISTRATION_STATUS.APPROVED, false],
-    [ACCREDITATION_STATUS.SUSPENDED, REGISTRATION_STATUS.CANCELLED, false],
-    [ACCREDITATION_STATUS.SUSPENDED, REGISTRATION_STATUS.CREATED, false],
-    [ACCREDITATION_STATUS.SUSPENDED, REGISTRATION_STATUS.REJECTED, false],
-    [ACCREDITATION_STATUS.SUSPENDED, ACCREDITATION_STATUS.SUSPENDED, false],
 
     // From CANCELLED — reinstatement only
     [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.APPROVED, true],
     [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.CREATED, false],
     [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.REJECTED, false],
-    [REGISTRATION_STATUS.CANCELLED, ACCREDITATION_STATUS.SUSPENDED, false],
     [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.CANCELLED, false],
 
     // From REJECTED
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.CREATED, true],
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.APPROVED, false],
-    [REGISTRATION_STATUS.REJECTED, ACCREDITATION_STATUS.SUSPENDED, false],
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.CANCELLED, false],
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.REJECTED, false]
   ]
@@ -158,6 +148,41 @@ describe('assertRegistrationStatusTransitionValid', () => {
     'registration',
     transitionTable
   )
+
+  // A typed caller can no longer pass suspended, so the table above cannot
+  // express these. What remains worth testing is the runtime guard for a
+  // status read from storage: one case per branch, source and target.
+  describe('suspended, which is not a registration status', () => {
+    const suspended = /** @type {RegistrationStatus} */ (
+      ACCREDITATION_STATUS.SUSPENDED
+    )
+
+    it('rejects a transition out of suspended', () => {
+      expect(() =>
+        assertRegistrationStatusTransitionValid(
+          suspended,
+          REGISTRATION_STATUS.CANCELLED
+        )
+      ).toThrow(
+        Boom.badData(
+          'Cannot transition registration status from suspended to cancelled'
+        )
+      )
+    })
+
+    it('rejects a transition into suspended', () => {
+      expect(() =>
+        assertRegistrationStatusTransitionValid(
+          REGISTRATION_STATUS.APPROVED,
+          suspended
+        )
+      ).toThrow(
+        Boom.badData(
+          'Cannot transition registration status from approved to suspended'
+        )
+      )
+    })
+  })
 })
 
 describe('assertAccreditationStatusTransitionValid', () => {

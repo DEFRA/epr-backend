@@ -5,6 +5,8 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 
+/** @import { AccreditationStatus, RegistrationStatus } from '#domain/organisations/model.js' */
+
 const VALID_ORG_TRANSITIONS = {
   [ORGANISATION_STATUS.CREATED]: [
     ORGANISATION_STATUS.APPROVED,
@@ -21,6 +23,7 @@ const VALID_ORG_TRANSITIONS = {
 // Registrations cannot be suspended (PAE-1705): a registration is either live
 // or terminated, so approved -> cancelled is direct and there is no suspended
 // node at all.
+/** @type {Record<RegistrationStatus, RegistrationStatus[]>} */
 const VALID_REG_TRANSITIONS = {
   [REGISTRATION_STATUS.CREATED]: [
     REGISTRATION_STATUS.APPROVED,
@@ -37,6 +40,7 @@ const VALID_REG_TRANSITIONS = {
 // Accreditations keep suspension and may only reach cancelled via suspended
 // (ADR 0042). The registration-cancellation cascade bypasses this table by
 // design — cancelling a registration force-cancels its linked accreditation.
+/** @type {Record<AccreditationStatus, AccreditationStatus[]>} */
 const VALID_ACC_TRANSITIONS = {
   [ACCREDITATION_STATUS.CREATED]: [
     ACCREDITATION_STATUS.APPROVED,
@@ -66,9 +70,15 @@ export const assertOrgStatusTransitionValid = (fromStatus, toStatus) => {
 }
 
 /**
- * @param {Record<string, string[]>} validTransitions
+ * The status parameters are typed to the entity's own status union, so a
+ * status the entity can never hold is a compile error at the call site. The
+ * `?? []` still guards the runtime path, where a status read from storage is
+ * only as trustworthy as the document it came from.
+ *
+ * @template {string} S
+ * @param {Record<S, S[]>} validTransitions
  * @param {'registration' | 'accreditation'} itemKind
- * @returns {(fromStatus: string, toStatus: string) => void}
+ * @returns {(fromStatus: S, toStatus: S) => void}
  */
 const makeAssertStatusTransitionValid = (validTransitions, itemKind) => {
   return (fromStatus, toStatus) => {

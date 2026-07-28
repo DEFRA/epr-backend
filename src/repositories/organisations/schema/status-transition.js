@@ -67,9 +67,10 @@ export const assertOrgStatusTransition = (existing, updated) => {
 }
 
 /**
- * @param {{ status: string }} existing
- * @param {{ status?: string }} updated
- * @param {(fromStatus: string, toStatus: string) => void} assertStatusTransitionValid
+ * @template {string} S
+ * @param {{ status: S }} existing
+ * @param {{ status?: S }} updated
+ * @param {(fromStatus: S, toStatus: S) => void} assertStatusTransitionValid
  * @returns {void}
  */
 export const assertAndHandleItemStateTransition = (
@@ -91,9 +92,11 @@ const isRegistrationCancelled = (registration) =>
 // against the incoming payload status so that an attempt to reinstate a
 // cascade-cancelled accreditation (payload approved, registration still
 // cancelled) is also caught and held at cancelled.
-const CASCADEABLE_ACC_STATUSES = /** @type {Set<AccreditationStatus>} */ (
-  new Set([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])
-)
+/** @type {Set<AccreditationStatus>} */
+const CASCADEABLE_ACC_STATUSES = new Set([
+  ACCREDITATION_STATUS.APPROVED,
+  ACCREDITATION_STATUS.SUSPENDED
+])
 
 /**
  * Cancelling a registration force-cancels its linked accreditation, whether

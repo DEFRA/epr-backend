@@ -55,9 +55,10 @@ export const statusHistoryWithChanges = (updatedItem, existingItem) => {
 }
 
 /**
- * @param {Array<{ id: string, status: string }>} existingItems
- * @param {Array<{ id: string, status?: string }>} itemUpdates
- * @param {(fromStatus: string, toStatus: string) => void} assertStatusTransitionValid
+ * @template {string} S
+ * @param {Array<{ id: string, status: S }>} existingItems
+ * @param {Array<{ id: string, status?: S }>} itemUpdates
+ * @param {(fromStatus: S, toStatus: S) => void} assertStatusTransitionValid
  * @param {Set<string>} [systemAppliedItemIds] - items whose status change was
  *   applied by the system (the registration-cancellation cascade), exempt from
  *   the transition table
