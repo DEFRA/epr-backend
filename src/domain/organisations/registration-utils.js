@@ -1,5 +1,5 @@
 import {
-  ACCREDITATION_STATUS,
+  ACTIVE_ACCREDITATION_STATUSES,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
@@ -14,12 +14,6 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 const REPORTABLE_STATUSES = new Set([
   REGISTRATION_STATUS.APPROVED,
   REGISTRATION_STATUS.CANCELLED
-])
-
-/** @type {Set<AccreditationStatus>} */
-const ACTIVE_ACCREDITATION_STATUSES = new Set([
-  ACCREDITATION_STATUS.APPROVED,
-  ACCREDITATION_STATUS.SUSPENDED
 ])
 
 /**
@@ -90,8 +84,7 @@ export function isRegistrationAccredited({ accreditation }) {
 export function activeAccreditationValidFrom(accreditation) {
   if (
     accreditation &&
-    (accreditation.status === ACCREDITATION_STATUS.APPROVED ||
-      accreditation.status === ACCREDITATION_STATUS.SUSPENDED)
+    ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)
   ) {
     return accreditation.validFrom ?? null
   }

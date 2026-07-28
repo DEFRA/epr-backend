@@ -149,9 +149,6 @@ describe('assertRegistrationStatusTransitionValid', () => {
     transitionTable
   )
 
-  // A typed caller can no longer pass suspended, so the table above cannot
-  // express these. What remains worth testing is the runtime guard for a
-  // status read from storage: one case per branch, source and target.
   describe('suspended, which is not a registration status', () => {
     const suspended = /** @type {RegistrationStatus} */ (
       ACCREDITATION_STATUS.SUSPENDED

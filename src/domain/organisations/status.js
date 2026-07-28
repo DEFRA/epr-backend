@@ -70,11 +70,6 @@ export const assertOrgStatusTransitionValid = (fromStatus, toStatus) => {
 }
 
 /**
- * The status parameters are typed to the entity's own status union, so a
- * status the entity can never hold is a compile error at the call site. The
- * `?? []` still guards the runtime path, where a status read from storage is
- * only as trustworthy as the document it came from.
- *
  * @template {string} S
  * @param {Record<S, S[]>} validTransitions
  * @param {'registration' | 'accreditation'} itemKind
