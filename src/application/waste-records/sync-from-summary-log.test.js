@@ -5,6 +5,8 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { getTargetAmount } from '#waste-balances/application/target-amount.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -68,6 +70,61 @@ const receivedRow = (rowNumber, rowId, date, weight) => ({
   rowNumber,
   values: [rowId, date, weight]
 })
+
+const BALANCE_BEARING_HEADERS = [
+  'ROW_ID',
+  'DATE_RECEIVED_FOR_REPROCESSING',
+  'EWC_CODE',
+  'DESCRIPTION_WASTE',
+  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+  FIELD_GROSS_WEIGHT,
+  'TARE_WEIGHT',
+  'PALLET_WEIGHT',
+  'NET_WEIGHT',
+  'BAILING_WIRE_PROTOCOL',
+  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+  'WEIGHT_OF_NON_TARGET_MATERIALS',
+  'RECYCLABLE_PROPORTION_PERCENTAGE',
+  'TONNAGE_RECEIVED_FOR_RECYCLING'
+]
+
+const ACCREDITED_DATE = '2026-02-01'
+
+/**
+ * A row carrying every field the reprocessor-input balance classifier needs, so
+ * it classifies INCLUDED and contributes its tonnage.
+ */
+const balanceBearingRow = (rowNumber, rowId, tonnage, prnIssued = 'No') => ({
+  rowNumber,
+  values: [
+    rowId,
+    ACCREDITED_DATE,
+    '15 01 02',
+    'Plastic packaging',
+    prnIssued,
+    10,
+    1,
+    0,
+    9,
+    'No',
+    'Sampling',
+    0,
+    100,
+    tonnage
+  ]
+})
+
+const balanceBearingInput = (rows) =>
+  /** @type {any} */ ({
+    meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+    data: {
+      RECEIVED_LOADS_FOR_REPROCESSING: {
+        location: { sheet: 'Sheet1', row: 1, column: 'A' },
+        headers: BALANCE_BEARING_HEADERS,
+        rows
+      }
+    }
+  })
 
 describe('syncFromSummaryLog', () => {
   let wasteBalanceService
@@ -449,6 +506,136 @@ describe('syncFromSummaryLog', () => {
       )
 
       expect(result).toEqual({ created: 0, updated: 0 })
+    })
+  })
+
+  describe('the committed submission, against a real ledger', () => {
+    const ACCREDITATION = {
+      id: 'acc-1',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    }
+    const ACCREDITED_LEDGER_ID = {
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1'
+    }
+
+    const realBalanceSync = (extractor) =>
+      makeSync({
+        extractor,
+        wasteBalanceService: createWasteBalanceService(ledgerRepository)
+      })
+
+    const submittedEvents = async (ledgerId) =>
+      (await ledgerRepository.findAllInLedger(ledgerId)).filter(
+        (event) => event.kind === LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+      )
+
+    beforeEach(() => {
+      organisationsRepository.findAccreditationById.mockResolvedValue(
+        ACCREDITATION
+      )
+    })
+
+    it('credits the ledger with the total carried by the row states it committed', async () => {
+      const fileId = 'file-credit'
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: balanceBearingInput([
+          balanceBearingRow(2, 'row-1001', 1.005),
+          balanceBearingRow(3, 'row-1002', 2.5),
+          balanceBearingRow(4, 'row-1003', 4, 'Yes')
+        ])
+      })
+
+      await realBalanceSync(extractor)(
+        summaryLogFor(fileId, 'acc-1'),
+        TEST_USER
+      )
+
+      const rowStates =
+        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+          ACCREDITED_LEDGER_ID,
+          fileId
+        )
+      const creditFromStates = rowStates.reduce(
+        (total, state) => total + getTargetAmount(state.classification),
+        0
+      )
+
+      const [event] = await submittedEvents(ACCREDITED_LEDGER_ID)
+      expect(event.payload).toEqual({ summaryLogId: fileId, creditTotal: 3.51 })
+      expect(creditFromStates).toBeCloseTo(3.51, 10)
+    })
+
+    it('commits no event when an accredited balance-bearing submission has no rows', async () => {
+      const fileId = 'file-accredited-empty'
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: balanceBearingInput([])
+      })
+
+      await realBalanceSync(extractor)(
+        summaryLogFor(fileId, 'acc-1'),
+        TEST_USER
+      )
+
+      expect(
+        await ledgerRepository.findAllInLedger(ACCREDITED_LEDGER_ID)
+      ).toEqual([])
+    })
+
+    it('commits no event for an accredited registered-only submission', async () => {
+      const fileId = 'file-accredited-reg-only'
+      const extractor = extractorFor(fileId, {
+        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' } },
+        data: {}
+      })
+
+      await realBalanceSync(extractor)(
+        summaryLogFor(fileId, 'acc-1'),
+        TEST_USER
+      )
+
+      expect(
+        await ledgerRepository.findAllInLedger(ACCREDITED_LEDGER_ID)
+      ).toEqual([])
+    })
+
+    it('commits a zero-credit event with no accreditation, even with no rows', async () => {
+      const fileId = 'file-unaccredited-empty'
+      const extractor = extractorFor(fileId, {
+        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+        data: {}
+      })
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        overseasSites: {}
+      })
+
+      await realBalanceSync(extractor)(summaryLogFor(fileId), TEST_USER)
+
+      const [event] = await submittedEvents(LEDGER_ID)
+      expect(event.payload).toEqual({ summaryLogId: fileId, creditTotal: 0 })
+    })
+
+    it('commits the row states whether or not the submission bears a balance', async () => {
+      const fileId = 'file-states-always'
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: balanceBearingInput([balanceBearingRow(2, 'row-1001', 3.25)])
+      })
+
+      await realBalanceSync(extractor)(
+        summaryLogFor(fileId, 'acc-1'),
+        TEST_USER
+      )
+
+      const rowStates =
+        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+          ACCREDITED_LEDGER_ID,
+          fileId
+        )
+      expect(rowStates.map((state) => state.rowId)).toEqual(['row-1001'])
+      expect(rowStates[0].classification.transactionAmount).toBe(3.25)
     })
   })
 })
