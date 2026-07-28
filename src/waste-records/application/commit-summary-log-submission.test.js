@@ -14,12 +14,14 @@ const REGISTRATION_ID = 'reg-1'
 const ACCREDITATION_ID = 'acc-1'
 const SUMMARY_LOG_ID = 'log-A'
 
+/** @type {import('#waste-balances/repository/ledger-schema.js').AccreditedLedgerId} */
 const accreditedLedgerId = {
   organisationId: ORGANISATION_ID,
   registrationId: REGISTRATION_ID,
   accreditationId: ACCREDITATION_ID
 }
 
+/** @type {import('#waste-records/repository/schema.js').WasteBalanceLedgerId} */
 const registeredOnlyLedgerId = {
   organisationId: ORGANISATION_ID,
   registrationId: REGISTRATION_ID,

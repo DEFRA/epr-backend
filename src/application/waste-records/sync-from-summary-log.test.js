@@ -214,11 +214,15 @@ describe('syncFromSummaryLog', () => {
     }
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
-      findAccreditationById: vi.fn().mockResolvedValue({
-        id: 'acc-default',
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31'
-      })
+      // Both organisations repositories find the accreditation by matching its
+      // own id, so the one returned always carries the id that was asked for.
+      findAccreditationById: vi
+        .fn()
+        .mockImplementation(async (_organisationId, accreditationId) => ({
+          id: accreditationId,
+          validFrom: '2023-01-01',
+          validTo: '2023-12-31'
+        }))
     }
     overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([])

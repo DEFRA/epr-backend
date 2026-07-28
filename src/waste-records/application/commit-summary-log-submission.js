@@ -83,7 +83,13 @@ export const commitSummaryLogSubmission = async ({
     summaryLogId
   })
 
-  if (!accreditation) {
+  // The accreditation is what makes a ledger able to hold a balance, so the
+  // accredited identity is derived from it rather than tested for separately.
+  const accreditedLedgerId = accreditation
+    ? { ...ledgerId, accreditationId: accreditation.id }
+    : null
+
+  if (!accreditedLedgerId) {
     await wasteBalanceService.commitSummaryLogSubmittedEvent(
       ledgerId,
       { summaryLogId, creditTotal: 0 },
@@ -104,7 +110,7 @@ export const commitSummaryLogSubmission = async ({
   }
 
   await wasteBalanceService.submitSummaryLog({
-    ledgerId,
+    ledgerId: accreditedLedgerId,
     creditTotal: creditTotalOf(rowStates),
     summaryLogId,
     user

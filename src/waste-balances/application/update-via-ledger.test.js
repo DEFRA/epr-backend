@@ -31,6 +31,7 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 
 const accreditationId = 'acc-1'
 
+/** @type {import('../repository/ledger-schema.js').AccreditedLedgerId} */
 const ledgerId = {
   organisationId: 'org-1',
   registrationId: 'reg-1',

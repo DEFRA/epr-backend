@@ -210,7 +210,7 @@ export const createWasteBalanceService = (
      * calls.
      *
      * @param {Object} options
-     * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
+     * @param {import('../repository/ledger-schema.js').AccreditedLedgerId} options.ledgerId
      * @param {number} options.creditTotal
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
      * @param {string} options.summaryLogId

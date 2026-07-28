@@ -12,7 +12,9 @@ import {
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
+import { invalidArg } from '#test/type-helpers.js'
 
+/** @type {import('../repository/ledger-schema.js').AccreditedLedgerId} */
 const ledgerId = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
@@ -24,6 +26,9 @@ const createdBy = {
   name: 'Test User',
   email: 'user@example.test'
 }
+
+/** @type {import('#domain/summary-logs/worker/port.js').SubmitUser} */
+const submitter = { ...createdBy, scope: ['some-scope'], role: 'standard_user' }
 
 describe('createWasteBalanceService', () => {
   let ledgerRepository
@@ -380,7 +385,7 @@ describe('createWasteBalanceService', () => {
       await service.submitSummaryLog({
         ledgerId,
         creditTotal: 150,
-        user: createdBy,
+        user: submitter,
         summaryLogId: 'log-A'
       })
 
@@ -393,11 +398,13 @@ describe('createWasteBalanceService', () => {
     })
 
     it('refuses a ledger with no accreditation behind it', async () => {
+      // The signature takes an accredited ledger, so only an unchecked caller
+      // can get here — which is what the runtime guard is for.
       await expect(
         service.submitSummaryLog({
-          ledgerId: { ...ledgerId, accreditationId: null },
+          ledgerId: invalidArg({ ...ledgerId, accreditationId: null }),
           creditTotal: 150,
-          user: createdBy,
+          user: submitter,
           summaryLogId: 'log-A'
         })
       ).rejects.toThrow('accreditationId must be a string')
