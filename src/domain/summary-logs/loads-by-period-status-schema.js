@@ -48,7 +48,7 @@ import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
 
 // Per-bucket cap on listed rows. The producer (period-status.js) truncates to
 // this and the schema validates it; sharing one constant keeps them in step.
-// Matches MAX_ROW_IDS in load-counts.js.
+// Matches MAX_ROW_IDS in loads-schema.js.
 export const MAX_ROWS_PER_BUCKET = 100
 
 // One listed load: its identity, distinct exclusion reason codes (empty for an

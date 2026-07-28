@@ -1,3 +1,4 @@
+import { MAX_ROW_IDS } from '#domain/summary-logs/loads-schema.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
 
@@ -17,8 +18,6 @@ import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
  * @property {LoadCategory} included - Loads included in Waste Balance calculation
  * @property {LoadCategory} excluded - Loads excluded from Waste Balance calculation
  */
-
-const MAX_ROW_IDS = 100
 
 /**
  * Creates a fresh empty load category
