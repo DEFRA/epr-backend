@@ -43,12 +43,6 @@ import {
 const PRNS_COLLECTION = 'packaging-recycling-notes'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 
-/**
- * The kind of balance a report row is showing. The three are not comparable
- * figures — reprocessor input and exporter balances measure waste taken in,
- * reprocessor output measures recyclate produced — so a row carries its type
- * alongside its balance.
- */
 export const REGISTRATION_TYPE = Object.freeze({
   REPROCESSOR_INPUT: 'REPROCESSOR_INPUT',
   REPROCESSOR_OUTPUT: 'REPROCESSOR_OUTPUT',
