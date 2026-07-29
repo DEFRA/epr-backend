@@ -15,7 +15,7 @@ import { summaryLogResponseSchema } from '../response.schema.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
-import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
+import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */

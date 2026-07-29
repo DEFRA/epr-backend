@@ -1,7 +1,7 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { ObjectId } from 'mongodb'
 import { describe, expect, it, vi } from 'vitest'
-import { createSeedData } from './create-update.js'
+import { createSeedData } from './create-seed-data.js'
 import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
 
 /**

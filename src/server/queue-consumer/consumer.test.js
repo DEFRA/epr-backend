@@ -26,7 +26,7 @@ vi.mock('@aws-sdk/client-sqs', () => ({
 }))
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
-vi.mock('#common/helpers/metrics/summary-logs.js')
+vi.mock('#application/summary-logs/metrics.js')
 
 const TEST_USER = {
   id: 'test-user',
@@ -40,7 +40,7 @@ const { createSummaryLogsValidator } =
 const { syncFromSummaryLog } =
   await import('#application/waste-records/sync-from-summary-log.js')
 const { summaryLogMetrics } =
-  await import('#common/helpers/metrics/summary-logs.js')
+  await import('#application/summary-logs/metrics.js')
 
 describe('createCommandQueueConsumer', () => {
   let sqsClient

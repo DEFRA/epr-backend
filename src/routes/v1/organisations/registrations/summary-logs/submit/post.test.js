@@ -33,7 +33,7 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
   auditSummaryLogSubmit: (...args) => mockAuditSummaryLogSubmit(...args)
 }))
 
-vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+vi.mock('#application/summary-logs/metrics.js', () => ({
   summaryLogMetrics: {
     recordStatusTransition: (...args) => mockRecordStatusTransition(...args)
   }

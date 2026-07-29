@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { getDefraUserRoles } from './get-defra-user-roles.js'
-import { SCOPES } from './constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 
 const mockGetOrgMatchingUsersToken = vi.fn()
 const mockGetDefraTokenSummary = vi.fn()
 
-vi.mock('./roles/helpers.js', () => ({
+vi.mock('#common/helpers/auth/roles/helpers.js', () => ({
   getDefraTokenSummary: (/** @type {any} */ ...args) =>
     mockGetDefraTokenSummary(...args)
 }))
