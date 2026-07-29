@@ -9,7 +9,6 @@ export const isResubmissionRequired = (resubmissionRequired) =>
 
 /** Reasons a submitted report may not be eligible for a manual resubmission request, plus `ELIGIBLE`. */
 export const RESUBMISSION_INELIGIBLE_REASON = Object.freeze({
-  FEATURE_DISABLED: 'feature-disabled',
   NOT_SUBMITTED: 'not-submitted',
   ALREADY_REQUESTED: 'already-requested',
   NOT_LATEST_SUBMISSION: 'not-latest-submission',
@@ -24,8 +23,6 @@ export const RESUBMISSION_INELIGIBLE_REASON = Object.freeze({
  */
 export const resubmissionIneligibleReasonToErrorCode = (reason) => {
   switch (reason) {
-    case RESUBMISSION_INELIGIBLE_REASON.FEATURE_DISABLED:
-      return errorCodes.resubmissionFeatureDisabled
     case RESUBMISSION_INELIGIBLE_REASON.NOT_SUBMITTED:
       return errorCodes.reportNotSubmitted
     case RESUBMISSION_INELIGIBLE_REASON.ALREADY_REQUESTED:

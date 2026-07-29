@@ -1,5 +1,4 @@
 import { ObjectId } from 'mongodb'
-import { config } from '#root/config.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -116,14 +115,6 @@ describe('resubmission-service', () => {
   })
 
   describe('canRequestResubmission', () => {
-    beforeEach(() => {
-      config.set('featureFlags.closedPeriodAdjustments', true)
-    })
-
-    afterEach(() => {
-      config.set('featureFlags.closedPeriodAdjustments', false)
-    })
-
     const buildReport = (overrides = {}) => ({
       year: 2024,
       cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
@@ -236,30 +227,10 @@ describe('resubmission-service', () => {
 
       expect(canRequestResubmission(periodicReports, report)).toBe(false)
     })
-
-    it('returns false when closedPeriodAdjustments is disabled', () => {
-      config.set('featureFlags.closedPeriodAdjustments', false)
-      const report = buildReport()
-      const periodicReports = periodicReportsWith({
-        id: 'report-1',
-        submissionNumber: 1,
-        status: REPORT_STATUS.SUBMITTED
-      })
-
-      expect(canRequestResubmission(periodicReports, report)).toBe(false)
-    })
   })
 
   describe('requestOperatorResubmission', () => {
     const REQUESTED_BY = { id: 'user-1', name: 'Alice', position: 'Officer' }
-
-    beforeEach(() => {
-      config.set('featureFlags.closedPeriodAdjustments', true)
-    })
-
-    afterEach(() => {
-      config.set('featureFlags.closedPeriodAdjustments', false)
-    })
 
     it('flags the report and returns the flagged result', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
@@ -349,31 +320,6 @@ describe('resubmission-service', () => {
           requestedBy: REQUESTED_BY
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
-    })
-
-    it('throws 409 when closedPeriodAdjustments is disabled', async () => {
-      const reportsRepository = createInMemoryReportsRepository()()
-      const params = defaultParams()
-      await createAndSubmitReport(reportsRepository, {
-        organisationId: params.organisationId,
-        registrationId: params.registrationId,
-        submissionNumber: 1
-      })
-
-      config.set('featureFlags.closedPeriodAdjustments', false)
-
-      await expect(
-        requestOperatorResubmission({
-          reportsRepository,
-          organisationId: params.organisationId,
-          registrationId: params.registrationId,
-          year: 2024,
-          cadence: 'monthly',
-          period: 1,
-          submissionNumber: 1,
-          requestedBy: REQUESTED_BY
-        })
-      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
     })
 
     it('throws 409 when the report is not submitted', async () => {

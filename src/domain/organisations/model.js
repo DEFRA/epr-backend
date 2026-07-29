@@ -35,6 +35,12 @@ export const ACCREDITATION_STATUS = Object.freeze({
  * @typedef {RegistrationStatus | AccreditationStatus} RegOrAccStatus
  */
 
+/** @type {ReadonlySet<AccreditationStatus>} */
+export const ACTIVE_ACCREDITATION_STATUSES = new Set([
+  ACCREDITATION_STATUS.APPROVED,
+  ACCREDITATION_STATUS.SUSPENDED
+])
+
 /**
  * Status values for organisations
  * @typedef {typeof ORGANISATION_STATUS[keyof typeof ORGANISATION_STATUS]} OrganisationStatus

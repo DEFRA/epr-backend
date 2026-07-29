@@ -346,12 +346,6 @@ const baseConfig = {
     }
   },
   featureFlags: {
-    closedPeriodAdjustments: {
-      doc: 'Feature Flag: Flag submitted reports as requiring resubmission when a later summary log restates a closed period',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_CLOSED_PERIOD_ADJUSTMENTS'
-    },
     devEndpoints: {
       doc: 'Feature Flag: Enable development endpoints',
       format: Boolean,
@@ -365,7 +359,7 @@ const baseConfig = {
       env: 'FEATURE_FLAG_DROP_WASTE_RECORDS_COLLECTION'
     },
     preCpaResubmissionBackfill: {
-      doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768). Only takes effect when closedPeriodAdjustments is also enabled.',
+      doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768).',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
@@ -533,13 +527,4 @@ function getConfig(overrides = {}) {
 
 const isProductionEnvironment = () => config.get('cdpEnvironment') === 'prod'
 const isLocalEnvironment = () => config.get('cdpEnvironment') === 'local'
-const isClosedPeriodAdjustmentsEnabled = () =>
-  config.get('featureFlags.closedPeriodAdjustments')
-
-export {
-  config,
-  getConfig,
-  isClosedPeriodAdjustmentsEnabled,
-  isLocalEnvironment,
-  isProductionEnvironment
-}
+export { config, getConfig, isLocalEnvironment, isProductionEnvironment }
