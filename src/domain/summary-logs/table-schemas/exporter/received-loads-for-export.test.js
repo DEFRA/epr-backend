@@ -855,6 +855,25 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
 
+      it.each(['WAS_THE_WASTE_STOPPED', 'WAS_THE_WASTE_REFUSED'])(
+        'still returns IGNORED when a row with %s is outside the accreditation period',
+        (field) => {
+          const row = {
+            ...completeRow,
+            [field]: 'Yes',
+            DATE_OF_EXPORT: new Date('2023-12-31')
+          }
+          const result = schema.classifyForWasteBalance(row, {
+            accreditation,
+            overseasSites: ORS_VALIDATION_DISABLED
+          })
+          expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+          expect(result.reasons).toEqual([
+            { code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }
+          ])
+        }
+      )
+
       it('reports stopped first when the row is both stopped and refused', () => {
         const row = {
           ...completeRow,

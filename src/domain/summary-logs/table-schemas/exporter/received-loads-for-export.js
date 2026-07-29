@@ -213,6 +213,21 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       return missingResult
     }
 
+    if (
+      !isAccreditedAtDates(
+        [data[FIELDS.DATE_OF_EXPORT], data[FIELDS.DATE_RECEIVED_BY_OSR]],
+        accreditation
+      )
+    ) {
+      return {
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      }
+    }
+
+    // A load that was stopped or refused never completed its export, so its
+    // overseas site's approval status is moot — say which of the two happened
+    // rather than reporting an ORS problem the operator cannot act on.
     if (isYes(data[FIELDS.WAS_THE_WASTE_STOPPED])) {
       return {
         outcome: ROW_OUTCOME.EXCLUDED,
@@ -224,18 +239,6 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       return {
         outcome: ROW_OUTCOME.EXCLUDED,
         reasons: [{ code: CLASSIFICATION_REASON.WASTE_REFUSED }]
-      }
-    }
-
-    if (
-      !isAccreditedAtDates(
-        [data[FIELDS.DATE_OF_EXPORT], data[FIELDS.DATE_RECEIVED_BY_OSR]],
-        accreditation
-      )
-    ) {
-      return {
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
       }
     }
 
