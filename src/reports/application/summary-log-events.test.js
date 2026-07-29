@@ -1,6 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { config } from '#root/config.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
@@ -21,8 +20,6 @@ import {
 /**
  * @import { SummaryLogUploadedParams, SummaryLogUploadedRepositories } from './summary-log-events.js'
  */
-
-const CLOSED_PERIOD_ADJUSTMENTS = 'featureFlags.closedPeriodAdjustments'
 
 const mockAuditMarkReportsStale = vi.fn()
 const mockAuditMarkReportsRequiringResubmission = vi.fn()
@@ -68,7 +65,6 @@ const closedPeriod = {
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(FIXED_NOW))
-  config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
   mockAuditMarkReportsStale.mockResolvedValue(undefined)
   mockAuditMarkReportsRequiringResubmission.mockResolvedValue(undefined)
 })
@@ -76,7 +72,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
   vi.clearAllMocks()
-  config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
 })
 
 describe('onSummaryLogUploaded', () => {
@@ -271,27 +266,6 @@ describe('onSummaryLogUploaded', () => {
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
       summaryLogId: DEFAULT_SL_ID,
-      reportsRepository: reportsRepositoryFactory(),
-      systemLogsRepository: buildSystemLogsRepository()
-    })
-
-    const unchanged = await reportsRepositoryFactory().findReportById(reportId)
-    expect(unchanged.resubmissionRequired).toBeUndefined()
-    expect(mockAuditMarkReportsRequiringResubmission).not.toHaveBeenCalled()
-  })
-
-  it('does not flag resubmission when the closed-period-adjustments flag is off', async () => {
-    config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
-    const reportsRepositoryFactory = createInMemoryReportsRepository()
-    const { id: reportId } = await createAndSubmitReport(
-      reportsRepositoryFactory()
-    )
-
-    await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
-      closedPeriods: [closedPeriod],
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })

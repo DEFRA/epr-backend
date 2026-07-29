@@ -1,4 +1,3 @@
-import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   auditMarkReportsStale,
@@ -77,10 +76,6 @@ export const createOnSummaryLogUploaded =
       logger.info({
         message: `No active report marked stale for ${organisationId}/${registrationId} summaryLogId=${summaryLogId} (none active, or already flagged by an earlier trigger)`
       })
-    }
-
-    if (!isClosedPeriodAdjustmentsEnabled()) {
-      return
     }
 
     const reportsRequiringResubmission =

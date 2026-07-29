@@ -8,7 +8,14 @@ describe('OPERATOR_CATEGORY', () => {
 })
 
 describe('getOperatorCategory', () => {
-  it.each([
+  /**
+   * @type {Array<{
+   *   expected: string,
+   *   registration: Parameters<typeof getOperatorCategory>[0],
+   *   scenario: string
+   * }>}
+   */
+  const categorisations = [
     {
       scenario: 'registered-only exporter (no accreditationId)',
       registration: { wasteProcessingType: 'exporter', accreditation: null },
@@ -118,9 +125,14 @@ describe('getOperatorCategory', () => {
       },
       expected: 'REPROCESSOR_REGISTERED_ONLY'
     }
-  ])('returns $expected for $scenario', ({ registration, expected }) => {
-    expect(getOperatorCategory(registration)).toBe(expected)
-  })
+  ]
+
+  it.each(categorisations)(
+    'returns $expected for $scenario',
+    ({ registration, expected }) => {
+      expect(getOperatorCategory(registration)).toBe(expected)
+    }
+  )
 
   it('throws for unknown wasteProcessingType', () => {
     expect(() => {
