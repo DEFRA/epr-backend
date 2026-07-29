@@ -44,12 +44,27 @@ const createdToApprovedSchema = Joi.object({
   accreditationNumber: Joi.string().trim().min(1).required()
 })
 
+// Refusing a non-compliant application (PAE-1618): the operator stays
+// registered-only, so no number or validity dates are involved.
+const createdToRejectedSchema = Joi.object({
+  fromStatus: Joi.string().valid(ACCREDITATION_STATUS.CREATED).required(),
+  toStatus: Joi.string().valid(ACCREDITATION_STATUS.REJECTED).required()
+})
+
+// Reopening a rejected application for rework (PAE-1623).
+const rejectedToCreatedSchema = Joi.object({
+  fromStatus: Joi.string().valid(ACCREDITATION_STATUS.REJECTED).required(),
+  toStatus: Joi.string().valid(ACCREDITATION_STATUS.CREATED).required()
+})
+
 export const accreditationStatusHistoryPayloadSchema = Joi.alternatives()
   .try(
     approvedToSuspendedSchema,
     suspendedToApprovedSchema,
     suspendedToCancelledSchema,
     cancelledToApprovedSchema,
-    createdToApprovedSchema
+    createdToApprovedSchema,
+    createdToRejectedSchema,
+    rejectedToCreatedSchema
   )
   .required()
