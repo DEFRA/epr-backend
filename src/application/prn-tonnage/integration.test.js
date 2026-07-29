@@ -157,6 +157,16 @@ describe('aggregatePrnTonnage - Integration', () => {
     expect(rows).toStrictEqual([])
   })
 
+  it('refuses to report a row whose registration it cannot resolve', async () => {
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+    await expect(aggregatePrnTonnage(db, ledgerRepository)).rejects.toThrow(
+      'Unreportable PRN tonnage row'
+    )
+  })
+
   it('reads both balances from the latest ledger event for the accreditation', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)

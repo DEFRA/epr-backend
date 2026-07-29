@@ -1,3 +1,4 @@
+import Joi from 'joi'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   REPROCESSING_TYPE,
@@ -17,6 +18,26 @@ import {
  * @typedef {Object} RegistrationProcessingTypes
  * @property {WasteProcessingTypeValue} wasteProcessingType
  * @property {ReprocessingType} [reprocessingType]
+ */
+
+/**
+ * A row the pipeline resolved all the way down the hierarchy, ready to be
+ * reported.
+ *
+ * @typedef {Object} AggregatedRow
+ * @property {string} organisationName
+ * @property {string} organisationId
+ * @property {string} registrationNumber
+ * @property {string} accreditationNumber
+ * @property {string} material
+ * @property {string} tonnageBand
+ * @property {WasteBalanceLedgerId} ledgerId
+ * @property {RegistrationProcessingTypes} registration
+ * @property {number} awaitingAuthorisationTonnage
+ * @property {number} awaitingAcceptanceTonnage
+ * @property {number} awaitingCancellationTonnage
+ * @property {number} acceptedTonnage
+ * @property {number} cancelledTonnage
  */
 
 const PRNS_COLLECTION = 'packaging-recycling-notes'
@@ -186,6 +207,36 @@ const buildAggregationPipeline = () => [
 ]
 
 /**
+ * What a row must carry to be reportable. A row missing its ledger id would be
+ * reported as a balance of zero, which a regulator cannot tell apart from an
+ * operator holding nothing — so the report fails rather than publishes it.
+ */
+const aggregatedRowSchema = Joi.object({
+  organisationName: Joi.string().required(),
+  organisationId: Joi.string().required(),
+  registrationNumber: Joi.string().required(),
+  accreditationNumber: Joi.string().required(),
+  material: Joi.string().required(),
+  tonnageBand: Joi.string().required(),
+  ledgerId: Joi.object({
+    organisationId: Joi.string().required(),
+    registrationId: Joi.string().required(),
+    accreditationId: Joi.string().required()
+  }).required(),
+  registration: Joi.object({
+    wasteProcessingType: Joi.string()
+      .valid(...Object.values(WASTE_PROCESSING_TYPE))
+      .required(),
+    reprocessingType: Joi.string().valid(...Object.values(REPROCESSING_TYPE))
+  }).required(),
+  awaitingAuthorisationTonnage: Joi.number().required(),
+  awaitingAcceptanceTonnage: Joi.number().required(),
+  awaitingCancellationTonnage: Joi.number().required(),
+  acceptedTonnage: Joi.number().required(),
+  cancelledTonnage: Joi.number().required()
+})
+
+/**
  * Mirrors `processingTypeFor`
  * (`#waste-balances/domain/credited-tonnage.js`): an exporter registration is
  * an exporter, and a reprocessor registration without an explicit reprocessing
@@ -228,7 +279,7 @@ const balancesFor = async (ledgerRepository, ledgerId) => {
  * the figures, so the response carries the report's column order.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
- * @param {import('mongodb').Document} aggregatedRow
+ * @param {AggregatedRow} aggregatedRow
  */
 const buildReportRow = async (
   ledgerRepository,
@@ -268,7 +319,12 @@ export const aggregatePrnTonnage = async (db, ledgerRepository) => {
     .toArray()
 
   const rows = await Promise.all(
-    aggregatedRows.map((row) => buildReportRow(ledgerRepository, row))
+    aggregatedRows.map((row) =>
+      buildReportRow(
+        ledgerRepository,
+        Joi.attempt(row, aggregatedRowSchema, 'Unreportable PRN tonnage row')
+      )
+    )
   )
 
   return {
