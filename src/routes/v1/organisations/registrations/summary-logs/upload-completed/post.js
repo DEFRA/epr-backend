@@ -4,7 +4,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
+import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 import {
   calculateExpiresAt,
   createRejectedValidation,

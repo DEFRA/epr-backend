@@ -47,6 +47,7 @@ import { runOrganisationValidationSweep } from '#server/run-organisation-validat
 import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
 import { runPreCpaResubmissionBackfill } from '#server/run-pre-cpa-resubmission-backfill.js'
 import { runWasteRecordsCollectionDrop } from '#server/run-waste-records-collection-drop.js'
+import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -117,7 +118,7 @@ function getProductionPlugins(config) {
   const plugins = [
     {
       plugin: mongoDbPlugin,
-      options: config.get('mongo')
+      options: { ...config.get('mongo'), seedDatabase }
     },
     {
       plugin: mongoOrganisationsRepositoryPlugin,

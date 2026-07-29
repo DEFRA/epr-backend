@@ -18,7 +18,7 @@ import { summaryLogsUploadCompletedPath } from './post.js'
 
 const mockRecordStatusTransition = vi.fn()
 
-vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+vi.mock('#application/summary-logs/metrics.js', () => ({
   summaryLogMetrics: {
     recordStatusTransition: (...args) => mockRecordStatusTransition(...args)
   }
