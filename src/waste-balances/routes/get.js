@@ -3,6 +3,8 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
 import { wasteBalanceResponseSchema } from './response.schema.js'
 
+/** @import { HapiRequest, HapiResponseObject, HapiResponseToolkit } from '#common/hapi-types.js' */
+
 export const wasteBalanceGetPath =
   '/v1/organisations/{organisationId}/waste-balances'
 
@@ -39,9 +41,9 @@ export const wasteBalanceGet = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest} request
-   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
-   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
+   * @param {HapiRequest & { params: { organisationId: string } }} request
+   * @param {HapiResponseToolkit} h
+   * @returns {Promise<HapiResponseObject>}
    */
   handler: async (
     { wasteBalanceService, organisationsRepository, query, params },

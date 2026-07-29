@@ -16,7 +16,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
- * @import { CreatePrnResponse } from '#packaging-recycling-notes/domain/model.js'
+ * @import { CreatePrnResponse, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { HapiRequest } from '#common/hapi-types.js'
@@ -111,7 +111,7 @@ const deriveAccreditationYear = (accreditation) => {
 }
 
 /**
- * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
+ * @param {PackagingRecyclingNote} prn
  * @param {{ wasteProcessingType: string }} accreditation
  * @returns {CreatePrnResponse}
  */
@@ -172,7 +172,11 @@ export const packagingRecyclingNotesCreate = {
     }
   },
   /**
-   * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   organisationsRepository: OrganisationsRepository,
+   *   params: { organisationId: string, registrationId: string, accreditationId: string }
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

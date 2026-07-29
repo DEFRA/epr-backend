@@ -8,15 +8,17 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 
-/** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
+/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 export const packagingRecyclingNotesListPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes'
 
 /**
  * Build response from PRN list
- * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} prns
+ * @param {PackagingRecyclingNote[]} prns
  * @param {{ wasteProcessingType: string }} accreditation
  */
 const buildResponse = (prns, { wasteProcessingType }) =>
@@ -40,7 +42,11 @@ export const packagingRecyclingNotesList = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {HapiRequest & {
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   organisationsRepository: OrganisationsRepository,
+   *   params: { organisationId: string, registrationId: string, accreditationId: string }
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

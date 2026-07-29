@@ -13,6 +13,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createStatusesValidator } from '#packaging-recycling-notes/routes/validation.js'
 
 /**
+ * @import {HapiRequest} from '#common/hapi-types.js'
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
  * @import {PrnStatus} from '#packaging-recycling-notes/domain/model.js'
  */
@@ -33,8 +34,9 @@ export const adminAccreditationPackagingRecyclingNotesList = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
+   * @param {HapiRequest & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   params: { organisationId: string, registrationId: string, accreditationId: string },
    *   query: { statuses: PrnStatus[] }
    * }} request
    */

@@ -25,6 +25,7 @@ import { getProjectedPrnByNumber } from '#packaging-recycling-notes/application/
 /**
  * @typedef {HapiRequest & {
  *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+ *   params: { prnNumber: string },
  *   prnEvents: { onCancelled: OnPrnCancelled }
  * }} ExternalTransitionRequest
  */

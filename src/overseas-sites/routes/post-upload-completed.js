@@ -13,7 +13,7 @@ import {
   UPLOAD_FILE_STATUS
 } from './post-upload-completed.schema.js'
 
-/** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
 /** @import { OrsImportsCommandExecutor } from '#overseas-sites/imports/worker/port.js' */
 
@@ -70,7 +70,11 @@ export const orsUploadCompleted = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<OrsUploadCompletedPayload> & {orsImportsRepository: OrsImportsRepository, orsImportsWorker: OrsImportsCommandExecutor}} request
+   * @param {HapiRequest<OrsUploadCompletedPayload> & {
+   *   orsImportsRepository: OrsImportsRepository,
+   *   orsImportsWorker: OrsImportsCommandExecutor,
+   *   params: { id: string }
+   * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
