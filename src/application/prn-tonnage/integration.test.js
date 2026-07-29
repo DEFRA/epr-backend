@@ -109,7 +109,7 @@ const organisationWithRegistration = (
 
 const expectedRow = (overrides = {}) => ({
   organisationName: 'Acme Reprocessing',
-  organisationId: String(orgId),
+  orgId: String(orgId),
   registrationNumber: 'REG-1',
   registrationType: REGISTRATION_TYPE.REPROCESSOR_INPUT,
   accreditationNumber: 'ACC-1',

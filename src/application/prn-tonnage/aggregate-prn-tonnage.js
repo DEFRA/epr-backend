@@ -305,7 +305,7 @@ const buildReportRow = async (
   }
 ) => ({
   organisationName,
-  organisationId: orgId,
+  orgId,
   registrationNumber,
   registrationType: registrationTypeFor(registration),
   accreditationNumber,

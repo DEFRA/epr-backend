@@ -98,7 +98,7 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
     expect(JSON.parse(response.payload).rows).toStrictEqual([
       {
         organisationName: 'Acme Reprocessing',
-        organisationId: String(orgId),
+        orgId: String(orgId),
         registrationNumber: 'REG-INTEG',
         registrationType: REGISTRATION_TYPE.EXPORTER,
         accreditationNumber: 'ACC-INTEG',

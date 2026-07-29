@@ -4,7 +4,7 @@ import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnag
 
 const prnTonnageRowSchema = Joi.object({
   organisationName: Joi.string().required(),
-  organisationId: Joi.string().required(),
+  orgId: Joi.string().required(),
   registrationNumber: Joi.string().required(),
   registrationType: Joi.string()
     .valid(...Object.values(REGISTRATION_TYPE))
