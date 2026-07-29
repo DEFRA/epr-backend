@@ -12,6 +12,7 @@ import {
   UnauthorisedTransitionError
 } from './model.js'
 
+/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
 /** @import {PrnStatus} from './model.js' */
 
 describe('PRN_STATUS_TRANSITIONS', () => {
@@ -157,14 +158,20 @@ describe('validateTransition', () => {
 })
 
 describe('assertAccreditationCanIssue', () => {
-  it.each(['approved', 'created', 'rejected'])(
+  /** @type {AccreditationStatus[]} */
+  const issuableStatuses = ['approved', 'created', 'rejected']
+
+  /** @type {AccreditationStatus[]} */
+  const blockedStatuses = ['suspended', 'cancelled']
+
+  it.each(issuableStatuses)(
     'does not throw when accreditation is %s',
     (status) => {
       expect(() => assertAccreditationCanIssue({ status })).not.toThrow()
     }
   )
 
-  it.each(['suspended', 'cancelled'])(
+  it.each(blockedStatuses)(
     'throws AccreditationStatusError when accreditation is %s',
     (status) => {
       expect(() => assertAccreditationCanIssue({ status })).toThrow(
