@@ -1,6 +1,5 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
-import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -1322,14 +1321,6 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       })
 
       describe('canRequestResubmission field', () => {
-        beforeEach(() => {
-          config.set('featureFlags.closedPeriodAdjustments', true)
-        })
-
-        afterEach(() => {
-          config.set('featureFlags.closedPeriodAdjustments', false)
-        })
-
         const createSubmittedReport = async (
           reportsRepositoryFactory,
           organisationId,
@@ -1434,36 +1425,6 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
           expect(response.statusCode).toBe(StatusCodes.OK)
           expect(payload.canRequestResubmission).toBe(true)
-        })
-
-        it('is false when closedPeriodAdjustments is disabled', async () => {
-          const {
-            server,
-            organisationId,
-            registrationId,
-            reportsRepositoryFactory
-          } = await createServerWithReports({
-            wasteProcessingType: 'reprocessor',
-            accreditationId: undefined
-          })
-
-          await createSubmittedReport(
-            reportsRepositoryFactory,
-            organisationId,
-            registrationId
-          )
-
-          config.set('featureFlags.closedPeriodAdjustments', false)
-
-          const response = await makeRequest(
-            server,
-            organisationId,
-            registrationId
-          )
-          const payload = JSON.parse(response.payload)
-
-          expect(response.statusCode).toBe(StatusCodes.OK)
-          expect(payload.canRequestResubmission).toBe(false)
         })
 
         it('is false once resubmissionRequired.operatorRequested is already set', async () => {
