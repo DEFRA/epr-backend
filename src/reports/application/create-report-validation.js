@@ -3,7 +3,6 @@ import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-pe
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { isResubmissionRequired } from '#reports/domain/resubmission.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
-import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 import { findSubmissionByNumber } from './submission-lookup.js'
 
 /**
@@ -156,10 +155,6 @@ export const assertResubmissionAllowed = (
         payload: { reason }
       }
     )
-
-  if (!isClosedPeriodAdjustmentsEnabled()) {
-    throw reject(errorCodes.resubmissionFeatureDisabled)
-  }
 
   const previous = findSubmissionByNumber(
     periodicReports,

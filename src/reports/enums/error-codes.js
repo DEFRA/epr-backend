@@ -4,7 +4,6 @@ export const errorCodes = {
   invalidPeriod: 'invalid_period',
   periodNotEnded: 'period_not_ended',
   reportAlreadyExists: 'report_already_exists',
-  resubmissionFeatureDisabled: 'resubmission_feature_disabled',
   resubmissionNotPermitted: 'resubmission_not_permitted',
   reportNotSubmitted: 'report_not_submitted',
   reportNotLatestSubmission: 'report_not_latest_submission',

@@ -1,13 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { config } from '#root/config.js'
 import { runPreCpaResubmissionBackfill } from './run-pre-cpa-resubmission-backfill.js'
-
-const CLOSED_PERIOD_ADJUSTMENTS = 'featureFlags.closedPeriodAdjustments'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -171,11 +168,6 @@ const buildServer = (
 describe('runPreCpaResubmissionBackfill', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
-  })
-
-  afterEach(() => {
-    config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
   })
 
   describe('diagnostic step (preCpaResubmissionReport)', () => {
@@ -349,9 +341,8 @@ describe('runPreCpaResubmissionBackfill', () => {
     })
   })
 
-  describe('backfill step (preCpaResubmissionBackfill, requires CPA enabled)', () => {
-    it('does not write when the backfill flag is off, even with findings and CPA on', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
+  describe('backfill step (preCpaResubmissionBackfill)', () => {
+    it('does not write when the backfill flag is off, even with findings', async () => {
       const app = oneFindingApp()
       const server = buildServer(app, {
         reportEnabled: false,
@@ -366,24 +357,7 @@ describe('runPreCpaResubmissionBackfill', () => {
       ).not.toHaveBeenCalled()
     })
 
-    it('does not write when CPA is off, even with the backfill flag on', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
-      const app = oneFindingApp()
-      const server = buildServer(app, {
-        reportEnabled: false,
-        backfillEnabled: true
-      })
-
-      await runPreCpaResubmissionBackfill(server)
-
-      expect(server.locker.lock).not.toHaveBeenCalled()
-      expect(
-        app.reportsRepository.markSubmittedReportsRequiringResubmission
-      ).not.toHaveBeenCalled()
-    })
-
     it('runs the backfill even when the report (diagnostic) flag is off', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
       const app = oneFindingApp()
       app.reportsRepository.markSubmittedReportsRequiringResubmission = vi
         .fn()
@@ -440,7 +414,6 @@ describe('runPreCpaResubmissionBackfill', () => {
     })
 
     it('runs both steps under a single shared lock when both flags are on', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
       const app = oneFindingApp()
       const server = buildServer(app, {
         reportEnabled: true,
@@ -462,7 +435,6 @@ describe('runPreCpaResubmissionBackfill', () => {
     })
 
     it('logs a report already flagged by an earlier run as a no-op, not an error', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
       const app = oneFindingApp()
       app.reportsRepository.markSubmittedReportsRequiringResubmission = vi
         .fn()
@@ -483,7 +455,6 @@ describe('runPreCpaResubmissionBackfill', () => {
     })
 
     it('warns when a write flags a reportId the scan did not attribute the period to', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
       const app = oneFindingApp()
       app.reportsRepository.markSubmittedReportsRequiringResubmission = vi
         .fn()
@@ -519,7 +490,6 @@ describe('runPreCpaResubmissionBackfill', () => {
     })
 
     it('logs a failed group and still releases the lock, without aborting the whole run', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
       const app = oneFindingApp()
       const writeError = new Error('mongo write failed')
       app.reportsRepository.markSubmittedReportsRequiringResubmission = vi

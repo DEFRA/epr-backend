@@ -14,13 +14,10 @@ import {
   buildCreateReportParams,
   createAndSubmitReport
 } from '#reports/repository/contract/test-data.js'
-import { config } from '#root/config.js'
 import { reportsRequestResubmissionPath } from './request-resubmission.js'
 import * as reportAudit from '#reports/application/audit.js'
 
 /** @import { Registration } from '#domain/organisations/registration.js' */
-
-const CLOSED_PERIOD_ADJUSTMENTS = 'featureFlags.closedPeriodAdjustments'
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportRequestResubmission: vi.fn().mockResolvedValue(undefined)
@@ -79,12 +76,7 @@ describe(`POST ${reportsRequestResubmissionPath}`, () => {
   }
 
   beforeEach(() => {
-    config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
     vi.clearAllMocks()
-  })
-
-  afterEach(() => {
-    config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
   })
 
   describe('successful request', () => {
@@ -354,22 +346,6 @@ describe(`POST ${reportsRequestResubmissionPath}`, () => {
       const response = await server.inject({
         method: 'POST',
         url: makeUrl(org.id, registration.id, 2024, 'monthly', 1, 1),
-        ...asOperator()
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-    })
-  })
-
-  describe('feature flag disabled', () => {
-    it('returns 409 when closedPeriodAdjustments is disabled', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
-      const { server, organisationId, registrationId } =
-        await buildServerWithSubmittedReport()
-
-      const response = await server.inject({
-        method: 'POST',
-        url: makeUrl(organisationId, registrationId),
         ...asOperator()
       })
 
