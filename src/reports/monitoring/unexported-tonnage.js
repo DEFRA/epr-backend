@@ -87,6 +87,17 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * }} ReviewableReportRow
  */
 
+/**
+ * What a finding says about its report: the stored figure disagrees with the
+ * corrected rule, the source rows could not be resolved at all, or they were
+ * resolved but could not be read as tonnages.
+ */
+const FINDING_KIND = Object.freeze({
+  MISMATCH: /** @type {'mismatch'} */ ('mismatch'),
+  SOURCE_MISSING: /** @type {'source-missing'} */ ('source-missing'),
+  RECOMPUTE_FAILED: /** @type {'recompute-failed'} */ ('recompute-failed')
+})
+
 /** @type {Set<string>} */
 const REVIEWABLE_REPORT_STATUSES = new Set([
   REPORT_STATUS.SUBMITTED,
@@ -208,7 +219,7 @@ const identityOf = (row) => ({
  */
 export const diagnoseReportRow = (row, wasteRecordStates) => {
   if (wasteRecordStates === null) {
-    return { kind: 'source-missing', ...identityOf(row) }
+    return { kind: FINDING_KIND.SOURCE_MISSING, ...identityOf(row) }
   }
 
   let recomputed
@@ -220,7 +231,7 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
     )
   } catch (error) {
     return {
-      kind: 'recompute-failed',
+      kind: FINDING_KIND.RECOMPUTE_FAILED,
       ...identityOf(row),
       reason: /** @type {Error} */ (error).message
     }
@@ -231,7 +242,7 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
   }
 
   return {
-    kind: 'mismatch',
+    kind: FINDING_KIND.MISMATCH,
     ...identityOf(row),
     stored: row.storedUnexported,
     recomputed,
@@ -251,14 +262,14 @@ export const formatUnexportedTonnageFinding = (finding) => {
     `registration ${finding.registrationId}, report ${finding.reportId} ` +
     `(${finding.month}, ${finding.reportStatus}) - `
 
-  if (finding.kind === 'mismatch') {
+  if (finding.kind === FINDING_KIND.MISMATCH) {
     return (
       prefix +
       `stored ${finding.stored}, recomputed ${finding.recomputed}, ` +
       `delta ${finding.delta}`
     )
   }
-  if (finding.kind === 'recompute-failed') {
+  if (finding.kind === FINDING_KIND.RECOMPUTE_FAILED) {
     return prefix + finding.reason
   }
   return prefix + 'source rows could not be resolved, cannot recompute'
@@ -281,14 +292,14 @@ export const summariseUnexportedTonnageFindings = (findings) => {
   const countOf = (kind) => findings.filter((f) => f.kind === kind).length
 
   return {
-    mismatches: countOf('mismatch'),
-    sourceMissing: countOf('source-missing'),
-    recomputeFailed: countOf('recompute-failed'),
+    mismatches: countOf(FINDING_KIND.MISMATCH),
+    sourceMissing: countOf(FINDING_KIND.SOURCE_MISSING),
+    recomputeFailed: countOf(FINDING_KIND.RECOMPUTE_FAILED),
     affectedOrganisations: new Set(findings.map((f) => f.organisationId)).size,
     totalDelta: toNumber(
       findings.reduce(
         (total, finding) =>
-          finding.kind === 'mismatch'
+          finding.kind === FINDING_KIND.MISMATCH
             ? addTonnage(total, toRoundedTonnage(finding.delta))
             : total,
         ZERO_TONNAGE
