@@ -43,8 +43,8 @@ export const packagingRecyclingNotesList = {
   },
   /**
    * @param {HapiRequest & {
-   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   organisationsRepository: OrganisationsRepository,
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   params: { organisationId: string, registrationId: string, accreditationId: string }
    * }} request
    * @param {Object} h - Hapi response toolkit

@@ -20,7 +20,7 @@ import { uploadCompletedPayloadSchema } from './post.schema.js'
 /** @import { HapiRequest, TypedLogger } from '#common/hapi-types.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @typedef {import('./post.schema.js').SummaryLogUpload} SummaryLogUpload */
+/** @import { SummaryLogUpload } from './post.schema.js' */
 
 /**
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload

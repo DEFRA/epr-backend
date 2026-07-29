@@ -173,8 +173,8 @@ export const packagingRecyclingNotesCreate = {
   },
   /**
    * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
-   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   organisationsRepository: OrganisationsRepository,
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   params: { organisationId: string, registrationId: string, accreditationId: string }
    * }} request
    * @param {Object} h - Hapi response toolkit

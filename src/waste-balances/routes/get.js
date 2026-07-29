@@ -41,7 +41,10 @@ export const wasteBalanceGet = {
     }
   },
   /**
-   * @param {HapiRequest & { params: { organisationId: string } }} request
+   * @param {HapiRequest & {
+   *   params: { organisationId: string },
+   *   query: { accreditationIds: string }
+   * }} request
    * @param {HapiResponseToolkit} h
    * @returns {Promise<HapiResponseObject>}
    */
@@ -50,9 +53,7 @@ export const wasteBalanceGet = {
     h
   ) => {
     const { organisationId } = params
-    const accreditationIds = new Set(
-      /** @type {string} */ (query.accreditationIds).split(',')
-    )
+    const accreditationIds = new Set(query.accreditationIds.split(','))
 
     const [organisation] = await organisationsRepository.findByIds([
       organisationId

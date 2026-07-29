@@ -29,8 +29,8 @@ export const overseasSiteUpdate = {
   /**
    * @param {HapiRequest<Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>> & {
    *   overseasSitesRepository: OverseasSitesRepository,
-   *   systemLogsRepository: SystemLogsRepository,
-   *   params: { id: string }
+   *   params: { id: string },
+   *   systemLogsRepository: SystemLogsRepository
    * }} request
    * @param {HapiResponseToolkit} h - Hapi response toolkit
    */

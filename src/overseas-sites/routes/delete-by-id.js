@@ -25,8 +25,8 @@ export const overseasSiteDelete = {
   /**
    * @param {HapiRequest & {
    *   overseasSitesRepository: OverseasSitesRepository,
-   *   systemLogsRepository: SystemLogsRepository,
-   *   params: { id: string }
+   *   params: { id: string },
+   *   systemLogsRepository: SystemLogsRepository
    * }} request
    * @param {HapiResponseToolkit} h - Hapi response toolkit
    */
