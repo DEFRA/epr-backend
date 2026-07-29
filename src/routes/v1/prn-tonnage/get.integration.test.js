@@ -29,12 +29,13 @@ const PRNS_COLLECTION = 'packaging-recycling-notes'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const { validToken } = entraIdMockAuthTokens
 
-const orgId = '507f1f77bcf86cd799439011'
+const organisationId = '507f1f77bcf86cd799439011'
+const orgId = 100987
 const accId = 'acc-integ'
 const registrationId = 'reg-integ'
 
 const ledgerId = {
-  organisationId: orgId,
+  organisationId,
   registrationId,
   accreditationId: accId
 }
@@ -53,7 +54,8 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
 
   it('aggregates PRN tonnage by status via the real db', async ({ server }) => {
     await server.db.collection(ORGANISATIONS_COLLECTION).insertOne({
-      _id: new ObjectId(orgId),
+      _id: new ObjectId(organisationId),
+      orgId,
       accreditations: [
         { id: accId, prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 } }
       ],
@@ -68,7 +70,8 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
     })
     await server.db.collection(PRNS_COLLECTION).insertOne(
       buildAwaitingAcceptancePrn({
-        organisation: { id: orgId, name: 'Acme Reprocessing' },
+        registrationId,
+        organisation: { id: organisationId, name: 'Acme Reprocessing' },
         accreditation: buildAccreditation({
           id: accId,
           accreditationNumber: 'ACC-INTEG',
@@ -95,7 +98,7 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
     expect(JSON.parse(response.payload).rows).toStrictEqual([
       {
         organisationName: 'Acme Reprocessing',
-        organisationId: orgId,
+        organisationId: String(orgId),
         registrationNumber: 'REG-INTEG',
         registrationType: REGISTRATION_TYPE.EXPORTER,
         accreditationNumber: 'ACC-INTEG',

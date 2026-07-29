@@ -24,12 +24,13 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 const PRNS_COLLECTION = 'packaging-recycling-notes'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 
-const orgId = '507f1f77bcf86cd799439011'
+const organisationId = '507f1f77bcf86cd799439011'
+const orgId = 100234
 const accId = 'acc-1'
 const registrationId = 'reg-1'
 
 const ledgerId = {
-  organisationId: orgId,
+  organisationId,
   registrationId,
   accreditationId: accId
 }
@@ -48,7 +49,8 @@ const withStatus = (currentStatus) => ({
  */
 const prnWithStatus = (currentStatus, tonnage) =>
   buildPrn({
-    organisation: { id: orgId, name: 'Acme Reprocessing' },
+    registrationId,
+    organisation: { id: organisationId, name: 'Acme Reprocessing' },
     accreditation: buildAccreditation({
       id: accId,
       accreditationNumber: 'ACC-1',
@@ -59,29 +61,55 @@ const prnWithStatus = (currentStatus, tonnage) =>
   })
 
 /**
- * @param {object} [registration]
- * @param {string} [registration.wasteProcessingType]
- * @param {string} [registration.reprocessingType]
+ * A registration as the database holds one. The organisation schema defaults
+ * `registrationNumber` and `reprocessingType` to null until the registration is
+ * approved, and forbids an exporter a reprocessing type at all.
+ *
+ * @typedef {Object} StoredRegistration
+ * @property {string} id
+ * @property {string | null} registrationNumber
+ * @property {string} accreditationId
+ * @property {string} wasteProcessingType
+ * @property {string | null} [reprocessingType]
  */
-const organisationWithRegistration = (registration = {}) => ({
-  _id: new ObjectId(orgId),
+
+const registrationIdentity = {
+  id: registrationId,
+  registrationNumber: 'REG-1',
+  accreditationId: accId
+}
+
+/**
+ * @param {string | null} reprocessingType
+ * @returns {StoredRegistration}
+ */
+const reprocessorRegistration = (reprocessingType) => ({
+  ...registrationIdentity,
+  wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+  reprocessingType
+})
+
+/** @type {StoredRegistration} */
+const exporterRegistration = {
+  ...registrationIdentity,
+  wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
+}
+
+/** @param {StoredRegistration} [registration] */
+const organisationWithRegistration = (
+  registration = reprocessorRegistration(REPROCESSING_TYPE.INPUT)
+) => ({
+  _id: new ObjectId(organisationId),
+  orgId,
   accreditations: [
     { id: accId, prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 } }
   ],
-  registrations: [
-    {
-      id: registrationId,
-      registrationNumber: 'REG-1',
-      accreditationId: accId,
-      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-      ...registration
-    }
-  ]
+  registrations: [registration]
 })
 
 const expectedRow = (overrides = {}) => ({
   organisationName: 'Acme Reprocessing',
-  organisationId: orgId,
+  organisationId: String(orgId),
   registrationNumber: 'REG-1',
   registrationType: REGISTRATION_TYPE.REPROCESSOR_INPUT,
   accreditationNumber: 'ACC-1',
@@ -157,13 +185,58 @@ describe('aggregatePrnTonnage - Integration', () => {
     expect(rows).toStrictEqual([])
   })
 
-  it('refuses to report a row whose registration it cannot resolve', async () => {
+  it('refuses to report a row whose organisation it cannot resolve', async () => {
     await db
       .collection(PRNS_COLLECTION)
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     await expect(aggregatePrnTonnage(db, ledgerRepository)).rejects.toThrow(
-      'Unreportable PRN tonnage row'
+      'Unreportable PRN tonnage row for accreditation ACC-1'
+    )
+  })
+
+  it('refuses to report a row whose registration the organisation does not hold', async () => {
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne({
+      ...organisationWithRegistration(),
+      registrations: [
+        { ...reprocessorRegistration(REPROCESSING_TYPE.INPUT), id: 'reg-other' }
+      ]
+    })
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+    await expect(aggregatePrnTonnage(db, ledgerRepository)).rejects.toThrow(
+      'Unreportable PRN tonnage row for accreditation ACC-1'
+    )
+  })
+
+  it('refuses to report a reprocessor registration with no reprocessing type', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(organisationWithRegistration(reprocessorRegistration(null)))
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+    await expect(aggregatePrnTonnage(db, ledgerRepository)).rejects.toThrow(
+      'registration.reprocessingType'
+    )
+  })
+
+  it('refuses to report a registration with no registration number', async () => {
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
+      organisationWithRegistration({
+        ...reprocessorRegistration(REPROCESSING_TYPE.INPUT),
+        registrationNumber: null
+      })
+    )
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+    await expect(aggregatePrnTonnage(db, ledgerRepository)).rejects.toThrow(
+      'registrationNumber'
     )
   })
 
@@ -215,12 +288,13 @@ describe('aggregatePrnTonnage - Integration', () => {
   })
 
   it('reports a reprocessor-output registration as REPROCESSOR_OUTPUT', async () => {
-    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
-      organisationWithRegistration({
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        reprocessingType: REPROCESSING_TYPE.OUTPUT
-      })
-    )
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        organisationWithRegistration(
+          reprocessorRegistration(REPROCESSING_TYPE.OUTPUT)
+        )
+      )
     await db
       .collection(PRNS_COLLECTION)
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
@@ -233,11 +307,9 @@ describe('aggregatePrnTonnage - Integration', () => {
   })
 
   it('reports an exporter registration as EXPORTER', async () => {
-    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
-      organisationWithRegistration({
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
-      })
-    )
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(organisationWithRegistration(exporterRegistration))
     await db
       .collection(PRNS_COLLECTION)
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
@@ -249,12 +321,14 @@ describe('aggregatePrnTonnage - Integration', () => {
     ])
   })
 
-  it('reports a reprocessor registration with no reprocessing type as REPROCESSOR_INPUT', async () => {
-    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
-      organisationWithRegistration({
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
-      })
-    )
+  it('reports a reprocessor-input registration as REPROCESSOR_INPUT', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        organisationWithRegistration(
+          reprocessorRegistration(REPROCESSING_TYPE.INPUT)
+        )
+      )
     await db
       .collection(PRNS_COLLECTION)
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))

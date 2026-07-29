@@ -26,7 +26,7 @@ import {
  *
  * @typedef {Object} AggregatedRow
  * @property {string} organisationName
- * @property {string} organisationId
+ * @property {string} orgId
  * @property {string} registrationNumber
  * @property {string} accreditationNumber
  * @property {string} material
@@ -68,7 +68,8 @@ const CANCELLED_STATUSES = [PRN_STATUS.CANCELLED]
 const EXCLUDED_STATUSES = [PRN_STATUS.DELETED, PRN_STATUS.DISCARDED]
 const STATUS_FIELD = 'status.currentStatus'
 const STATUS_PATH = `$${STATUS_FIELD}`
-const GROUPED_ORGANISATION_ID = '$_id.orgId'
+const GROUPED_ORGANISATION_ID = '$_id.organisationId'
+const GROUPED_REGISTRATION_ID = '$_id.registrationId'
 const GROUPED_ACCREDITATION_ID = '$_id.accId'
 
 const buildAccreditedRegistrationStage = () => ({
@@ -78,7 +79,7 @@ const buildAccreditedRegistrationStage = () => ({
         $filter: {
           input: { $ifNull: ['$registrations', []] },
           as: 'registration',
-          cond: { $eq: ['$$registration.accreditationId', '$$accId'] }
+          cond: { $eq: ['$$registration.id', '$$regId'] }
         }
       }
     }
@@ -89,11 +90,12 @@ const buildOrganisationLookupStage = () => ({
   $lookup: {
     from: ORGANISATIONS_COLLECTION,
     let: {
-      orgId: { $toObjectId: GROUPED_ORGANISATION_ID },
+      organisationId: { $toObjectId: GROUPED_ORGANISATION_ID },
+      regId: GROUPED_REGISTRATION_ID,
       accId: GROUPED_ACCREDITATION_ID
     },
     pipeline: [
-      { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
+      { $match: { $expr: { $eq: ['$_id', '$$organisationId'] } } },
       buildAccreditedRegistrationStage(),
       { $unwind: '$accreditations' },
       {
@@ -104,8 +106,8 @@ const buildOrganisationLookupStage = () => ({
       {
         $project: {
           _id: 0,
+          orgId: '$orgId',
           tonnageBand: '$accreditations.prnIssuance.tonnageBand',
-          registrationId: '$accreditedRegistration.id',
           registrationNumber: '$accreditedRegistration.registrationNumber',
           wasteProcessingType: '$accreditedRegistration.wasteProcessingType',
           reprocessingType: '$accreditedRegistration.reprocessingType'
@@ -134,8 +136,9 @@ const buildMatchStage = () => ({
 const buildGroupStage = () => ({
   $group: {
     _id: {
-      orgId: '$organisation.id',
+      organisationId: '$organisation.id',
       orgName: '$organisation.name',
+      registrationId: '$registrationId',
       accId: '$accreditation.id',
       accNumber: '$accreditation.accreditationNumber',
       material: '$accreditation.material'
@@ -156,12 +159,12 @@ const buildGroupStage = () => ({
 
 const buildAddFieldsStage = () => ({
   $addFields: {
-    organisationId: { $toString: GROUPED_ORGANISATION_ID },
+    orgId: { $toString: { $first: '$orgLookup.orgId' } },
     registrationNumber: { $first: '$orgLookup.registrationNumber' },
     tonnageBand: { $first: '$orgLookup.tonnageBand' },
     ledgerId: {
       organisationId: GROUPED_ORGANISATION_ID,
-      registrationId: { $first: '$orgLookup.registrationId' },
+      registrationId: GROUPED_REGISTRATION_ID,
       accreditationId: GROUPED_ACCREDITATION_ID
     },
     registration: {
@@ -175,7 +178,7 @@ const buildProjectStage = () => ({
   $project: {
     _id: 0,
     organisationName: '$_id.orgName',
-    organisationId: 1,
+    orgId: 1,
     registrationNumber: 1,
     accreditationNumber: '$_id.accNumber',
     material: '$_id.material',
@@ -213,7 +216,7 @@ const buildAggregationPipeline = () => [
  */
 const aggregatedRowSchema = Joi.object({
   organisationName: Joi.string().required(),
-  organisationId: Joi.string().required(),
+  orgId: Joi.string().required(),
   registrationNumber: Joi.string().required(),
   accreditationNumber: Joi.string().required(),
   material: Joi.string().required(),
@@ -227,7 +230,13 @@ const aggregatedRowSchema = Joi.object({
     wasteProcessingType: Joi.string()
       .valid(...Object.values(WASTE_PROCESSING_TYPE))
       .required(),
-    reprocessingType: Joi.string().valid(...Object.values(REPROCESSING_TYPE))
+    reprocessingType: Joi.string()
+      .valid(...Object.values(REPROCESSING_TYPE))
+      .when('wasteProcessingType', {
+        is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        then: Joi.required(),
+        otherwise: Joi.forbidden()
+      })
   }).required(),
   awaitingAuthorisationTonnage: Joi.number().required(),
   awaitingAcceptanceTonnage: Joi.number().required(),
@@ -239,8 +248,8 @@ const aggregatedRowSchema = Joi.object({
 /**
  * Mirrors `processingTypeFor`
  * (`#waste-balances/domain/credited-tonnage.js`): an exporter registration is
- * an exporter, and a reprocessor registration without an explicit reprocessing
- * type is an input reprocessor.
+ * an exporter, and a reprocessor registration is typed by the reprocessing type
+ * an approved registration is required to carry.
  *
  * @param {RegistrationProcessingTypes} registration
  */
@@ -287,7 +296,7 @@ const buildReportRow = async (
     ledgerId,
     registration,
     organisationName,
-    organisationId,
+    orgId,
     registrationNumber,
     accreditationNumber,
     material,
@@ -296,7 +305,7 @@ const buildReportRow = async (
   }
 ) => ({
   organisationName,
-  organisationId,
+  organisationId: orgId,
   registrationNumber,
   registrationType: registrationTypeFor(registration),
   accreditationNumber,
@@ -322,7 +331,11 @@ export const aggregatePrnTonnage = async (db, ledgerRepository) => {
     aggregatedRows.map((row) =>
       buildReportRow(
         ledgerRepository,
-        Joi.attempt(row, aggregatedRowSchema, 'Unreportable PRN tonnage row')
+        Joi.attempt(
+          row,
+          aggregatedRowSchema,
+          `Unreportable PRN tonnage row for accreditation ${row.accreditationNumber}:`
+        )
       )
     )
   )
