@@ -5,7 +5,7 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/index.js'
-import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
+import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -351,11 +351,11 @@ const recordValidationIssueMetrics = async (issues, processingType) => {
     await summaryLogMetrics.recordValidationIssues(
       {
         severity:
-          /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationSeverity} */ (
+          /** @type {import('#application/summary-logs/metrics.js').ValidationSeverity} */ (
             severity
           ),
         category:
-          /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationCategory} */ (
+          /** @type {import('#application/summary-logs/metrics.js').ValidationCategory} */ (
             category
           ),
         processingType: /** @type {ProcessingType} */ (processingType)
@@ -394,7 +394,7 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
       await summaryLogMetrics.recordRowOutcome(
         {
           outcome:
-            /** @type {import('#common/helpers/metrics/summary-logs.js').RowOutcome} */ (
+            /** @type {import('#application/summary-logs/metrics.js').RowOutcome} */ (
               outcome
             ),
           processingType: /** @type {ProcessingType} */ (processingType)

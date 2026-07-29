@@ -179,7 +179,7 @@ const mockRecordValidationDuration = vi.fn()
 const mockRecordValidationIssues = vi.fn()
 const mockRecordRowOutcome = vi.fn()
 
-vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+vi.mock('#application/summary-logs/metrics.js', () => ({
   summaryLogMetrics: {
     recordStatusTransition: (...args) => mockRecordStatusTransition(...args),
     recordValidationDuration: (...args) =>
