@@ -1,5 +1,4 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { isClosedPeriodAdjustmentsEnabled } from '#root/config.js'
 import {
   findPreCpaResubmissionReports,
   backfillPreCpaResubmissionReports,
@@ -193,18 +192,16 @@ const runBackfill = async (server) => {
  * The two steps are gated independently: the diagnostic (read-only sizing/
  * logging) runs when `preCpaResubmissionReport` is enabled; the backfill
  * (writes `resubmissionRequired.closedPeriodRestated`) runs when
- * `preCpaResubmissionBackfill` is enabled AND closed-period adjustments
- * itself is enabled -- CPA must already be live before its history is
- * backfilled. Either can run without the other. With both flags off, this
- * returns before touching the locker or any repository.
+ * `preCpaResubmissionBackfill` is enabled. Either can run without the other.
+ * With both flags off, this returns before touching the locker or any
+ * repository.
  *
  * @param {Object} server - Hapi server instance
  */
 export const runPreCpaResubmissionBackfill = async (server) => {
   const reportEnabled = server.featureFlags.isPreCpaResubmissionReportEnabled()
   const backfillEnabled =
-    server.featureFlags.isPreCpaResubmissionBackfillEnabled() &&
-    isClosedPeriodAdjustmentsEnabled()
+    server.featureFlags.isPreCpaResubmissionBackfillEnabled()
 
   if (!reportEnabled && !backfillEnabled) {
     return

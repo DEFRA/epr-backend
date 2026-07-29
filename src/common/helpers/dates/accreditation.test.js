@@ -7,6 +7,7 @@ import {
 } from './accreditation.js'
 
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
+/** @import {StatusHistoryDateTime} from './accreditation.js' */
 
 describe('accreditation date helpers', () => {
   describe('isWithinAccreditationDateRange', () => {
@@ -109,6 +110,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return false when most recent status is approved', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'approved',
@@ -126,6 +128,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return true when accreditation was suspended at the given date', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'suspended',
@@ -147,6 +150,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return false when accreditation was re-approved after suspension', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'approved',
@@ -172,6 +176,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return true when date falls within a suspension period before re-approval', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'approved',
@@ -197,6 +202,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return false when date is before any status history entries', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'approved',
@@ -210,6 +216,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return true on the exact date of suspension', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'suspended',
@@ -231,6 +238,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return false when most recent status is created', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'created',
@@ -244,6 +252,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return true with a single suspended entry', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'suspended',
@@ -257,6 +266,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should use the first entry when multiple share the same timestamp', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'suspended',
@@ -277,6 +287,7 @@ describe('accreditation date helpers', () => {
       ).toBe(true)
     })
     it('should return true when the most recent status is cancelled', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'cancelled',
@@ -298,6 +309,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return true on the exact date of cancellation', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'cancelled',
@@ -315,6 +327,7 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return false for a date before cancellation while still approved', () => {
+      /** @type {StatusHistoryDateTime[]} */
       const statusHistory = [
         {
           status: 'cancelled',

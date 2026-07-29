@@ -11,12 +11,14 @@ import {
 } from './model.js'
 import Boom from '@hapi/boom'
 
-/** @import {AccreditationStatus, OrganisationStatus, RegOrAccStatus} from './model.js' */
+/** @import {AccreditationStatus, OrganisationStatus, RegistrationStatus} from './model.js' */
+/** @import {StatusTransitionAsserter} from './status.js' */
 
 /**
- * @param {(fromStatus: string, toStatus: string) => void} assertTransitionValid
+ * @template {string} S
+ * @param {StatusTransitionAsserter<S>} assertTransitionValid
  * @param {'registration' | 'accreditation'} itemKind
- * @param {[RegOrAccStatus, RegOrAccStatus, boolean][]} transitionTable
+ * @param {[S, S, boolean][]} transitionTable
  */
 const describeTransitionTable = (
   assertTransitionValid,
@@ -114,12 +116,16 @@ describe('assertOrgStatusTransitionValid', () => {
 })
 
 describe('assertRegistrationStatusTransitionValid', () => {
-  /** @type {[RegOrAccStatus, RegOrAccStatus, boolean][]} */
+  // Only reachable from a status read from storage, never from a typed caller.
+  const suspended = /** @type {RegistrationStatus} */ (
+    ACCREDITATION_STATUS.SUSPENDED
+  )
+
+  /** @type {[RegistrationStatus, RegistrationStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
     [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.APPROVED, true],
     [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.REJECTED, true],
-    [REGISTRATION_STATUS.CREATED, ACCREDITATION_STATUS.SUSPENDED, false],
     [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.CANCELLED, false],
     [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.CREATED, false],
 
@@ -127,30 +133,24 @@ describe('assertRegistrationStatusTransitionValid', () => {
     // registration status (PAE-1705)
     [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.CREATED, true],
     [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.CANCELLED, true],
-    [REGISTRATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED, false],
     [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.REJECTED, false],
     [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.APPROVED, false],
-
-    // From SUSPENDED — not a registration status; nothing is reachable
-    [ACCREDITATION_STATUS.SUSPENDED, REGISTRATION_STATUS.APPROVED, false],
-    [ACCREDITATION_STATUS.SUSPENDED, REGISTRATION_STATUS.CANCELLED, false],
-    [ACCREDITATION_STATUS.SUSPENDED, REGISTRATION_STATUS.CREATED, false],
-    [ACCREDITATION_STATUS.SUSPENDED, REGISTRATION_STATUS.REJECTED, false],
-    [ACCREDITATION_STATUS.SUSPENDED, ACCREDITATION_STATUS.SUSPENDED, false],
 
     // From CANCELLED — reinstatement only
     [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.APPROVED, true],
     [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.CREATED, false],
     [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.REJECTED, false],
-    [REGISTRATION_STATUS.CANCELLED, ACCREDITATION_STATUS.SUSPENDED, false],
     [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.CANCELLED, false],
 
     // From REJECTED
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.CREATED, true],
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.APPROVED, false],
-    [REGISTRATION_STATUS.REJECTED, ACCREDITATION_STATUS.SUSPENDED, false],
     [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.CANCELLED, false],
-    [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.REJECTED, false]
+    [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.REJECTED, false],
+
+    // Suspended is not a registration status
+    [suspended, REGISTRATION_STATUS.CANCELLED, false],
+    [REGISTRATION_STATUS.APPROVED, suspended, false]
   ]
 
   describeTransitionTable(

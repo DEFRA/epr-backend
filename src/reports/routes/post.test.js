@@ -16,7 +16,6 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
-import { config } from '#root/config.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
@@ -690,12 +689,7 @@ describe(`POST ${reportsPostPath}`, () => {
   })
 
   describe('resubmission submissions (submissionNumber > 1)', () => {
-    const CLOSED_PERIOD_ADJUSTMENTS = 'featureFlags.closedPeriodAdjustments'
     const changedBy = { id: 'user-1', name: 'Test', position: 'Officer' }
-
-    afterEach(() => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
-    })
 
     const buildSubmission = (
       organisationId,
@@ -786,8 +780,7 @@ describe(`POST ${reportsPostPath}`, () => {
         n
       )
 
-    it('creates submission 2 when the flag is on and submission 1 is submitted and flagged', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
+    it('creates submission 2 when submission 1 is submitted and flagged', async () => {
       const { server, organisationId, registrationId, repo } = await setup()
 
       const { id } = await repo.createReport(
@@ -807,30 +800,7 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(JSON.parse(response.payload).submissionNumber).toBe(2)
     })
 
-    it('rejects submission 2 with 409 resubmission_feature_disabled when the flag is off', async () => {
-      const { server, organisationId, registrationId, repo } = await setup()
-
-      const { id } = await repo.createReport(
-        buildSubmission(organisationId, registrationId, 1)
-      )
-      await submitReport(repo, id)
-      await flagPeriod(repo, organisationId, registrationId)
-
-      const response = await postSubmission(
-        server,
-        organisationId,
-        registrationId,
-        2
-      )
-
-      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      expect(JSON.parse(response.payload).reason).toBe(
-        'resubmission_feature_disabled'
-      )
-    })
-
     it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is submitted but not flagged', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
       const { server, organisationId, registrationId, repo } = await setup()
 
       const { id } = await repo.createReport(
@@ -852,7 +822,6 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is still in progress', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
       const { server, organisationId, registrationId, repo } = await setup()
 
       await repo.createReport(
@@ -873,7 +842,6 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('rejects submission 2 with 409 resubmission_not_permitted when no submission 1 exists', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
       const { server, organisationId, registrationId } = await setup()
 
       const response = await postSubmission(
@@ -890,7 +858,6 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('rejects submission 3 when submission 2 is not yet submitted', async () => {
-      config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
       const { server, organisationId, registrationId, repo } = await setup()
 
       const { id } = await repo.createReport(

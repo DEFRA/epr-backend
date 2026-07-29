@@ -55,13 +55,7 @@ const prnIssuanceSchema = Joi.object({
 export const accreditationSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
-    .valid(
-      ACCREDITATION_STATUS.CREATED,
-      ACCREDITATION_STATUS.APPROVED,
-      ACCREDITATION_STATUS.CANCELLED,
-      ACCREDITATION_STATUS.REJECTED,
-      ACCREDITATION_STATUS.SUSPENDED
-    )
+    .valid(...Object.values(ACCREDITATION_STATUS))
     .forbidden(),
   validFrom: dateRequiredWhenApprovedOrSuspended(),
   validTo: dateRequiredWhenApprovedOrSuspended(),

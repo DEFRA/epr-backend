@@ -71,12 +71,7 @@ const overseasSitesMapSchema = Joi.object().pattern(
 export const registrationSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
-    .valid(
-      REGISTRATION_STATUS.CREATED,
-      REGISTRATION_STATUS.APPROVED,
-      REGISTRATION_STATUS.CANCELLED,
-      REGISTRATION_STATUS.REJECTED
-    )
+    .valid(...Object.values(REGISTRATION_STATUS))
     .forbidden(),
   registrationNumber: Joi.string()
     .when('status', requiredWhenApproved)
