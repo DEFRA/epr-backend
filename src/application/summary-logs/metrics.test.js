@@ -46,7 +46,7 @@ vi.mock('#common/helpers/metrics.js', async (importOriginal) => {
   }
 })
 
-const { summaryLogMetrics } = await import('./summary-logs.js')
+const { summaryLogMetrics } = await import('./metrics.js')
 
 describe('summaryLogMetrics', () => {
   beforeEach(() => {

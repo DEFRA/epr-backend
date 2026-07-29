@@ -1,3 +1,4 @@
+import { getDefraUserRoles } from '#application/organisations/get-defra-user-roles.js'
 import { getOidcConfigs } from '#common/helpers/auth/get-oidc-configs.js'
 import { getJwtStrategyConfig } from '#common/helpers/auth/get-jwt-strategy-config.js'
 
@@ -11,7 +12,7 @@ export const authPlugin = {
       server.auth.strategy(
         'access-token',
         'jwt',
-        getJwtStrategyConfig(oidcConfigs)
+        getJwtStrategyConfig({ ...oidcConfigs, getDefraUserRoles })
       )
       server.auth.default('access-token')
     }
