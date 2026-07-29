@@ -105,12 +105,14 @@ const buildOrgWithLinkedAccreditation = (accStatus) => {
       validTo: '2026-12-31'
     }),
     statusHistory:
-      accStatus === 'created'
-        ? [{ status: 'created', updatedAt: '2024-01-01' }]
-        : [
-            { status: 'created', updatedAt: '2024-01-01' },
-            { status: accStatus, updatedAt: '2024-03-01' }
-          ]
+      /** @type {import('#domain/organisations/accreditation.js').StatusHistoryEntry[]} */ (
+        accStatus === 'created'
+          ? [{ status: 'created', updatedAt: '2024-01-01' }]
+          : [
+              { status: 'created', updatedAt: '2024-01-01' },
+              { status: accStatus, updatedAt: '2024-03-01' }
+            ]
+      )
   })
   return /** @type {import('#domain/organisations/model.js').Organisation} */ (
     /** @type {unknown} */ (
