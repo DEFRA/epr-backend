@@ -5,6 +5,19 @@ import {
 } from '#domain/organisations/model.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
+
+/**
+ * The registration's own processing-type fields, the same shape
+ * `AccreditationContext` takes in `#waste-balances/domain/credited-tonnage.js`.
+ * An exporter registration is forbidden a reprocessing type, so it arrives
+ * absent.
+ *
+ * @typedef {Object} RegistrationProcessingTypes
+ * @property {WasteProcessingTypeValue} wasteProcessingType
+ * @property {ReprocessingType} [reprocessingType]
+ */
 
 const PRNS_COLLECTION = 'packaging-recycling-notes'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
@@ -82,6 +95,7 @@ const buildOrganisationLookupStage = () => ({
   }
 })
 
+/** @param {string[]} statuses */
 const buildStatusTonnageAccumulator = (statuses) => ({
   $sum: {
     $cond: [{ $in: [STATUS_PATH, statuses] }, '$tonnage', 0]
@@ -131,9 +145,7 @@ const buildAddFieldsStage = () => ({
     },
     registration: {
       wasteProcessingType: { $first: '$orgLookup.wasteProcessingType' },
-      reprocessingType: {
-        $ifNull: [{ $first: '$orgLookup.reprocessingType' }, null]
-      }
+      reprocessingType: { $first: '$orgLookup.reprocessingType' }
     }
   }
 })
@@ -179,7 +191,7 @@ const buildAggregationPipeline = () => [
  * an exporter, and a reprocessor registration without an explicit reprocessing
  * type is an input reprocessor.
  *
- * @param {{ wasteProcessingType: string, reprocessingType: string | null }} registration
+ * @param {RegistrationProcessingTypes} registration
  */
 const registrationTypeFor = ({ wasteProcessingType, reprocessingType }) => {
   if (wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
@@ -196,7 +208,7 @@ const registrationTypeFor = ({ wasteProcessingType, reprocessingType }) => {
  * accreditation whose ledger has no events yet holds nothing.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
- * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  */
 const balancesFor = async (ledgerRepository, ledgerId) => {
   const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -212,18 +224,36 @@ const balancesFor = async (ledgerRepository, ledgerId) => {
 }
 
 /**
+ * Reads down the hierarchy — organisation, registration, accreditation — before
+ * the figures, so the response carries the report's column order.
+ *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('mongodb').Document} aggregatedRow
  */
-const buildReportRow = async (ledgerRepository, aggregatedRow) => {
-  const { ledgerId, registration, ...row } = aggregatedRow
-
-  return {
-    ...row,
-    registrationType: registrationTypeFor(registration),
-    ...(await balancesFor(ledgerRepository, ledgerId))
+const buildReportRow = async (
+  ledgerRepository,
+  {
+    ledgerId,
+    registration,
+    organisationName,
+    organisationId,
+    registrationNumber,
+    accreditationNumber,
+    material,
+    tonnageBand,
+    ...tonnages
   }
-}
+) => ({
+  organisationName,
+  organisationId,
+  registrationNumber,
+  registrationType: registrationTypeFor(registration),
+  accreditationNumber,
+  material,
+  tonnageBand,
+  ...(await balancesFor(ledgerRepository, ledgerId)),
+  ...tonnages
+})
 
 /**
  * @param {import('mongodb').Db} db

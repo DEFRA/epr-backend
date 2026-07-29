@@ -98,7 +98,9 @@ const expectedRow = (overrides = {}) => ({
 })
 
 describe('aggregatePrnTonnage - Integration', () => {
+  /** @type {import('mongodb').Db} */
   let db
+  /** @type {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} */
   let ledgerRepository
 
   beforeEach(
