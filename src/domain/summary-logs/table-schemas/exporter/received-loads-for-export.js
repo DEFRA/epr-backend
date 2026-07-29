@@ -16,6 +16,7 @@ import {
   createFreeTextFieldSchema,
   createEnumFieldSchema,
   toThreeDigitId,
+  isYes,
   YES_NO_VALUES
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
@@ -210,6 +211,20 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     )
     if (missingResult) {
       return missingResult
+    }
+
+    if (isYes(data[FIELDS.WAS_THE_WASTE_STOPPED])) {
+      return {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.WASTE_STOPPED }]
+      }
+    }
+
+    if (isYes(data[FIELDS.WAS_THE_WASTE_REFUSED])) {
+      return {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.WASTE_REFUSED }]
+      }
     }
 
     if (
