@@ -57,16 +57,18 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * }} FindingIdentity
  *
  * @typedef {FindingIdentity & {
- *   kind: 'mismatch',
+ *   kind: typeof FINDING_KIND.MISMATCH,
  *   stored: number,
  *   recomputed: number,
  *   delta: number
  * }} MismatchFinding
  *
- * @typedef {FindingIdentity & { kind: 'source-missing' }} SourceMissingFinding
+ * @typedef {FindingIdentity & {
+ *   kind: typeof FINDING_KIND.SOURCE_MISSING
+ * }} SourceMissingFinding
  *
  * @typedef {FindingIdentity & {
- *   kind: 'recompute-failed',
+ *   kind: typeof FINDING_KIND.RECOMPUTE_FAILED,
  *   reason: string
  * }} RecomputeFailedFinding
  *
@@ -93,10 +95,12 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * resolved but could not be read as tonnages.
  */
 const FINDING_KIND = Object.freeze({
-  MISMATCH: /** @type {'mismatch'} */ ('mismatch'),
-  SOURCE_MISSING: /** @type {'source-missing'} */ ('source-missing'),
-  RECOMPUTE_FAILED: /** @type {'recompute-failed'} */ ('recompute-failed')
+  MISMATCH: 'mismatch',
+  SOURCE_MISSING: 'source-missing',
+  RECOMPUTE_FAILED: 'recompute-failed'
 })
+
+/** @typedef {(typeof FINDING_KIND)[keyof typeof FINDING_KIND]} FindingKind */
 
 /** @type {Set<string>} */
 const REVIEWABLE_REPORT_STATUSES = new Set([
