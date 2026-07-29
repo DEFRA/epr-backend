@@ -27,12 +27,15 @@ export const registrationStatusHistory = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{
-   *    fromStatus: RegistrationStatus,
-   *    toStatus: RegistrationStatus,
-   *    appliesFrom: string,
-   *    registrationNumber: string
-   * }> & {
+   * @param {import('#common/hapi-types.js').HapiRequest<
+   *    { fromStatus: RegistrationStatus, toStatus: RegistrationStatus } |
+   *    {
+   *      fromStatus: RegistrationStatus,
+   *      toStatus: RegistrationStatus,
+   *      appliesFrom: string,
+   *      registrationNumber: string
+   *    }
+   * > & {
    *    organisationsRepository: OrganisationsRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string }
@@ -43,8 +46,12 @@ export const registrationStatusHistory = {
   handler: async (request, h) => {
     const { organisationsRepository } = request
     const { organisationId, registrationId } = request.params
-    const { fromStatus, toStatus, appliesFrom, registrationNumber } =
-      request.payload
+    const payload = request.payload
+    const { fromStatus, toStatus } = payload
+
+    // The created -> approved arm of the payload schema requires both grant
+    // fields; the other arms forbid them.
+    const grant = 'registrationNumber' in payload ? payload : undefined
 
     const initial = await organisationsRepository.findById(organisationId)
 
@@ -61,40 +68,47 @@ export const registrationStatusHistory = {
       )
     }
 
-    // Kept even though the single created -> approved arm can never fail
-    // this check today (Joi already restricts the schema to that one valid
-    // pair): it mirrors accreditation-status-history.js and becomes
-    // load-bearing the moment a second transition arm is added here, at
-    // which point the repository's assertAndHandleItemStateTransition would
-    // otherwise silently no-op an unchanged-status replace() instead of
-    // 422ing.
+    // Route-level check is required, not belt-and-braces: the repository's
+    // assertAndHandleItemStateTransition skips validation when the status is
+    // unchanged, so a same-status replace() would otherwise be a silent
+    // no-op instead of the required 422.
     assertRegistrationStatusTransitionValid(fromStatus, toStatus)
 
-    // Granting sets validFrom to appliesFrom but leaves validTo (owned by
-    // the application data) untouched, so reject a window that would be
-    // inverted. When validTo is absent the replace below 422s via the
-    // schema guard requiring it on approved registrations.
-    if (
-      registration.validTo &&
-      new Date(appliesFrom) > new Date(registration.validTo)
-    ) {
-      throw Boom.badData(
-        `Cannot grant registration: appliesFrom ${appliesFrom} is after validTo ${registration.validTo}`
+    if (grant) {
+      // Granting sets validFrom to appliesFrom but leaves validTo (owned by
+      // the application data) untouched, so reject a window that would be
+      // inverted. When validTo is absent the replace below 422s via the
+      // schema guard requiring it on approved registrations.
+      if (
+        registration.validTo &&
+        new Date(grant.appliesFrom) > new Date(registration.validTo)
+      ) {
+        throw Boom.badData(
+          `Cannot grant registration: appliesFrom ${grant.appliesFrom} is after validTo ${registration.validTo}`
+        )
+      }
+
+      // Granting issues the registration number, which must not already be
+      // in use by any registration in any organisation, whatever its status.
+      // This uniqueness is enforced here only: there is no unique index on
+      // registrations.registrationNumber, so concurrent grants of the same
+      // number are not blocked by the database.
+      const holder = await organisationsRepository.findByRegistrationNumber(
+        grant.registrationNumber
       )
+      if (holder) {
+        throw Boom.badData(
+          `Registration number ${grant.registrationNumber} is already in use`
+        )
+      }
     }
 
-    // Granting issues the registration number, which must not already be in
-    // use by any registration in any organisation, whatever its status.
-    // This uniqueness is enforced here only: there is no unique index on
-    // registrations.registrationNumber, so concurrent grants of the same
-    // number are not blocked by the database.
-    const holder =
-      await organisationsRepository.findByRegistrationNumber(registrationNumber)
-    if (holder) {
-      throw Boom.badData(
-        `Registration number ${registrationNumber} is already in use`
-      )
-    }
+    const grantFields = grant
+      ? {
+          registrationNumber: grant.registrationNumber,
+          validFrom: grant.appliesFrom
+        }
+      : {}
 
     const { id, version, ...orgFields } = initial
 
@@ -108,8 +122,7 @@ export const registrationStatusHistory = {
             /** @type {typeof reg} */ ({
               ...reg,
               status: toStatus,
-              registrationNumber,
-              validFrom: appliesFrom
+              ...grantFields
             })
           : reg
       )
