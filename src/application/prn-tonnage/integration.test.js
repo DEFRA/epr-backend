@@ -71,6 +71,7 @@ const organisationWithRegistration = (registration = {}) => ({
   registrations: [
     {
       id: registrationId,
+      registrationNumber: 'REG-1',
       accreditationId: accId,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
       ...registration
@@ -81,10 +82,11 @@ const organisationWithRegistration = (registration = {}) => ({
 const expectedRow = (overrides = {}) => ({
   organisationName: 'Acme Reprocessing',
   organisationId: orgId,
+  registrationNumber: 'REG-1',
+  registrationType: REGISTRATION_TYPE.REPROCESSOR_INPUT,
   accreditationNumber: 'ACC-1',
   material: MATERIAL.PLASTIC,
   tonnageBand: TONNAGE_BAND.UP_TO_5000,
-  registrationType: REGISTRATION_TYPE.REPROCESSOR_INPUT,
   wasteBalance: 0,
   availableWasteBalance: 0,
   awaitingAuthorisationTonnage: 0,
@@ -151,16 +153,6 @@ describe('aggregatePrnTonnage - Integration', () => {
     const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
 
     expect(rows).toStrictEqual([])
-  })
-
-  it('resolves tonnage-band to null when no matching organisation exists', async () => {
-    await db
-      .collection(PRNS_COLLECTION)
-      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
-
-    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
-
-    expect(rows).toStrictEqual([expectedRow({ tonnageBand: null })])
   })
 
   it('reads both balances from the latest ledger event for the accreditation', async () => {

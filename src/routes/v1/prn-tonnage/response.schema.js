@@ -5,16 +5,16 @@ import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnag
 const prnTonnageRowSchema = Joi.object({
   organisationName: Joi.string().required(),
   organisationId: Joi.string().required(),
+  registrationNumber: Joi.string().required(),
+  registrationType: Joi.string()
+    .valid(...Object.values(REGISTRATION_TYPE))
+    .required(),
   accreditationNumber: Joi.string().required(),
   material: Joi.string()
     .valid(...Object.values(MATERIAL))
     .required(),
   tonnageBand: Joi.string()
     .valid(...Object.values(TONNAGE_BAND))
-    .allow(null)
-    .required(),
-  registrationType: Joi.string()
-    .valid(...Object.values(REGISTRATION_TYPE))
     .required(),
   wasteBalance: Joi.number().required(),
   availableWasteBalance: Joi.number().required(),

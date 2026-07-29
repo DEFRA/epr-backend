@@ -9,7 +9,11 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  MATERIAL,
+  TONNAGE_BAND,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import {
   buildAwaitingAcceptancePrn,
   buildAccreditation
@@ -50,10 +54,13 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
   it('aggregates PRN tonnage by status via the real db', async ({ server }) => {
     await server.db.collection(ORGANISATIONS_COLLECTION).insertOne({
       _id: new ObjectId(orgId),
-      accreditations: [{ id: accId }],
+      accreditations: [
+        { id: accId, prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 } }
+      ],
       registrations: [
         {
           id: registrationId,
+          registrationNumber: 'REG-INTEG',
           accreditationId: accId,
           wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
         }
@@ -89,10 +96,11 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
       {
         organisationName: 'Acme Reprocessing',
         organisationId: orgId,
+        registrationNumber: 'REG-INTEG',
+        registrationType: REGISTRATION_TYPE.EXPORTER,
         accreditationNumber: 'ACC-INTEG',
         material: MATERIAL.PLASTIC,
-        tonnageBand: null,
-        registrationType: REGISTRATION_TYPE.EXPORTER,
+        tonnageBand: TONNAGE_BAND.UP_TO_5000,
         wasteBalance: 750,
         availableWasteBalance: 600,
         awaitingAuthorisationTonnage: 0,

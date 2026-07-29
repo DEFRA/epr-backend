@@ -70,9 +70,9 @@ const buildOrganisationLookupStage = () => ({
       {
         $project: {
           _id: 0,
-          orgId: '$orgId',
           tonnageBand: '$accreditations.prnIssuance.tonnageBand',
           registrationId: '$accreditedRegistration.id',
+          registrationNumber: '$accreditedRegistration.registrationNumber',
           wasteProcessingType: '$accreditedRegistration.wasteProcessingType',
           reprocessingType: '$accreditedRegistration.reprocessingType'
         }
@@ -121,23 +121,16 @@ const buildGroupStage = () => ({
 
 const buildAddFieldsStage = () => ({
   $addFields: {
-    organisationId: {
-      $toString: {
-        $ifNull: [{ $first: '$orgLookup.orgId' }, GROUPED_ORGANISATION_ID]
-      }
-    },
-    tonnageBand: { $ifNull: [{ $first: '$orgLookup.tonnageBand' }, null] },
+    organisationId: { $toString: GROUPED_ORGANISATION_ID },
+    registrationNumber: { $first: '$orgLookup.registrationNumber' },
+    tonnageBand: { $first: '$orgLookup.tonnageBand' },
     ledgerId: {
       organisationId: GROUPED_ORGANISATION_ID,
-      registrationId: {
-        $ifNull: [{ $first: '$orgLookup.registrationId' }, null]
-      },
+      registrationId: { $first: '$orgLookup.registrationId' },
       accreditationId: GROUPED_ACCREDITATION_ID
     },
     registration: {
-      wasteProcessingType: {
-        $ifNull: [{ $first: '$orgLookup.wasteProcessingType' }, null]
-      },
+      wasteProcessingType: { $first: '$orgLookup.wasteProcessingType' },
       reprocessingType: {
         $ifNull: [{ $first: '$orgLookup.reprocessingType' }, null]
       }
@@ -150,6 +143,7 @@ const buildProjectStage = () => ({
     _id: 0,
     organisationName: '$_id.orgName',
     organisationId: 1,
+    registrationNumber: 1,
     accreditationNumber: '$_id.accNumber',
     material: '$_id.material',
     tonnageBand: 1,
@@ -183,10 +177,9 @@ const buildAggregationPipeline = () => [
  * Mirrors `processingTypeFor`
  * (`#waste-balances/domain/credited-tonnage.js`): an exporter registration is
  * an exporter, and a reprocessor registration without an explicit reprocessing
- * type is an input reprocessor. A row whose registration could not be resolved
- * takes the same default.
+ * type is an input reprocessor.
  *
- * @param {{ wasteProcessingType: string | null, reprocessingType: string | null }} registration
+ * @param {{ wasteProcessingType: string, reprocessingType: string | null }} registration
  */
 const registrationTypeFor = ({ wasteProcessingType, reprocessingType }) => {
   if (wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
@@ -200,22 +193,13 @@ const registrationTypeFor = ({ wasteProcessingType, reprocessingType }) => {
 
 /**
  * The accreditation's balances, read from the head of its ledger. An
- * accreditation whose registration could not be resolved, or whose ledger has
- * no events yet, holds nothing.
+ * accreditation whose ledger has no events yet holds nothing.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
- * @param {{ organisationId: string, registrationId: string | null, accreditationId: string }} ledgerId
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
  */
 const balancesFor = async (ledgerRepository, ledgerId) => {
-  if (ledgerId.registrationId === null) {
-    return ZERO_BALANCES
-  }
-
-  const latest = await ledgerRepository.findLatestInLedger(
-    /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */ (
-      ledgerId
-    )
-  )
+  const latest = await ledgerRepository.findLatestInLedger(ledgerId)
 
   if (latest === null) {
     return ZERO_BALANCES
