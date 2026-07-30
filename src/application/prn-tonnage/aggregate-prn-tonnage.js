@@ -1,5 +1,4 @@
 import Joi from 'joi'
-import chunk from 'lodash.chunk'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   REPROCESSING_TYPE,
@@ -49,6 +48,10 @@ export const REGISTRATION_TYPE = Object.freeze({
   REPROCESSOR_OUTPUT: 'REPROCESSOR_OUTPUT',
   EXPORTER: 'EXPORTER'
 })
+
+/**
+ * @typedef {typeof REGISTRATION_TYPE[keyof typeof REGISTRATION_TYPE]} RegistrationType
+ */
 
 /**
  * How many ledger reads the report holds in flight at once. Every report row
@@ -300,11 +303,33 @@ const balancesFor = async (ledgerRepository, ledgerId) => {
 }
 
 /**
+ * A row as the report publishes it: the hierarchy read down from organisation
+ * to accreditation, then the balances it holds, then its PRN tonnage by status.
+ *
+ * @typedef {Object} ReportRow
+ * @property {string} organisationName
+ * @property {string} orgId
+ * @property {string} registrationNumber
+ * @property {RegistrationType} registrationType
+ * @property {string} accreditationNumber
+ * @property {string} material
+ * @property {string} tonnageBand
+ * @property {number} wasteBalance
+ * @property {number} availableWasteBalance
+ * @property {number} awaitingAuthorisationTonnage
+ * @property {number} awaitingAcceptanceTonnage
+ * @property {number} awaitingCancellationTonnage
+ * @property {number} acceptedTonnage
+ * @property {number} cancelledTonnage
+ */
+
+/**
  * Reads down the hierarchy — organisation, registration, accreditation — before
  * the figures, so the response carries the report's column order.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {AggregatedRow} aggregatedRow
+ * @returns {Promise<ReportRow>}
  */
 const buildReportRow = async (
   ledgerRepository,
@@ -332,25 +357,38 @@ const buildReportRow = async (
 })
 
 /**
+ * @template T
+ * @param {number} size
+ * @param {T[]} items
+ * @returns {T[][]}
+ */
+const inBatchesOf = (size, items) =>
+  Array.from({ length: Math.ceil(items.length / size) }, (_, batch) =>
+    items.slice(batch * size, (batch + 1) * size)
+  )
+
+/**
  * Resolves the rows a batch at a time, so the report never has more than
  * `LEDGER_READ_CONCURRENCY` ledger reads outstanding however many
- * accreditations it covers.
+ * accreditations it covers. Awaiting the rows reported so far before touching
+ * the next batch is what holds each batch back until its predecessor lands.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {AggregatedRow[]} aggregatedRows
  */
-const buildReportRows = async (ledgerRepository, aggregatedRows) => {
-  const rows = []
+const buildReportRows = (ledgerRepository, aggregatedRows) => {
+  /** @type {ReportRow[]} */
+  const nothingReportedYet = []
 
-  for (const batch of chunk(aggregatedRows, LEDGER_READ_CONCURRENCY)) {
-    rows.push(
-      ...(await Promise.all(
-        batch.map((row) => buildReportRow(ledgerRepository, row))
-      ))
-    )
-  }
-
-  return rows
+  return inBatchesOf(LEDGER_READ_CONCURRENCY, aggregatedRows).reduce(
+    async (reportedSoFar, batch) =>
+      (await reportedSoFar).concat(
+        await Promise.all(
+          batch.map((row) => buildReportRow(ledgerRepository, row))
+        )
+      ),
+    Promise.resolve(nothingReportedYet)
+  )
 }
 
 /**
