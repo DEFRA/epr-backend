@@ -64,6 +64,59 @@ const validateMyPayload = (payload) => {
   return payload
 }
 
+/**
+ * @param {string} label - 'Registration' or 'Accreditation', used in error messages
+ * @param {Array<{id: string, status?: string}>} existingItems - items from the stored document, with derived status
+ * @param {Array<{id?: string, status?: string}> | undefined} itemUpdates - items from the incoming update fragment
+ * @returns {string[]} one error clause per offending item
+ */
+const collectStatusChangeErrors = (label, existingItems, itemUpdates) => {
+  const existingById = new Map(existingItems.map((item) => [item.id, item]))
+
+  const errors = []
+  for (const item of itemUpdates ?? []) {
+    const existing = existingById.get(item.id)
+    if (existing && item.status && item.status !== existing.status) {
+      errors.push(
+        `${label} ${item.id} status cannot be changed from ${existing.status} to ${item.status} here — use the status transition actions`
+      )
+    }
+    if (!existing && item.status && item.status !== 'created') {
+      errors.push(
+        `${label} ${item.id} status cannot be set to ${item.status} here — new items start as created`
+      )
+    }
+  }
+  return errors
+}
+
+/**
+ * Registration and accreditation statuses cannot be changed via this endpoint;
+ * status changes go through the dedicated status-history endpoints (PAE-1645).
+ *
+ * @param {Organisation} initial - the stored organisation (findById throws 404 when the id is unknown)
+ * @param {OrganisationReplacement} updates
+ * @throws {Boom.Boom} 422 with one clause per offending item, joined by '; '
+ */
+const validateStatusesUnchanged = (initial, updates) => {
+  const errors = [
+    ...collectStatusChangeErrors(
+      'Registration',
+      initial.registrations,
+      updates.registrations
+    ),
+    ...collectStatusChangeErrors(
+      'Accreditation',
+      initial.accreditations,
+      updates.accreditations
+    )
+  ]
+
+  if (errors.length > 0) {
+    throw Boom.badData(errors.join('; '))
+  }
+}
+
 export const organisationsPutById = {
   method: 'PUT',
   path: organisationsPutByIdPath,
@@ -102,12 +155,14 @@ export const organisationsPutById = {
     /** @type {OrganisationReplacement} */
     const updates = sanitisedFragment
 
+    const initial = await organisationsRepository.findById(id)
+    validateStatusesUnchanged(initial, updates)
+
     await validateOverseasSiteReferences(
       overseasSitesRepository,
       updates.registrations
     )
 
-    const initial = await organisationsRepository.findById(id)
     await organisationsRepository.replace(id, version, updates)
     const updated = await organisationsRepository.findById(id, version + 1)
     await auditOrganisationUpdate(request, id, initial, updated)

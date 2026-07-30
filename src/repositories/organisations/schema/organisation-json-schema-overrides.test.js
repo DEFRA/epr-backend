@@ -1,6 +1,9 @@
 import Joi from 'joi'
 import { describe, expect, it } from 'vitest'
-import { makeEditable } from './organisation-json-schema-overrides.js'
+import {
+  makeEditable,
+  organisationJSONSchemaOverrides
+} from './organisation-json-schema-overrides.js'
 
 describe('makeEditable', () => {
   it('returns schema as-is if falsy (Line 173)', () => {
@@ -151,5 +154,35 @@ describe('makeEditable', () => {
 
     const grandChildDesc = childKey.keys.GrandChild
     expect(grandChildDesc.flags?.presence).not.toBe('required')
+  })
+})
+
+describe('status keys in the JSON editor schema (PAE-1645)', () => {
+  it('marks a status key readOnly', () => {
+    const schema = Joi.object({
+      status: Joi.string()
+    })
+    const editable = makeEditable(schema)
+    const desc = editable.describe()
+
+    expect(desc.keys.status.metas).toEqual(
+      expect.arrayContaining([{ readOnly: true }])
+    )
+  })
+
+  it('marks registration and accreditation status readOnly but leaves organisation status editable', () => {
+    const desc = organisationJSONSchemaOverrides.describe()
+
+    expect(desc.keys.status.metas).toBeUndefined()
+
+    const registrationItem = desc.keys.registrations.items[0]
+    expect(registrationItem.keys.status.metas).toEqual(
+      expect.arrayContaining([{ readOnly: true }])
+    )
+
+    const accreditationItem = desc.keys.accreditations.items[0]
+    expect(accreditationItem.keys.status.metas).toEqual(
+      expect.arrayContaining([{ readOnly: true }])
+    )
   })
 })
