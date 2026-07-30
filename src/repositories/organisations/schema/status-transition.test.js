@@ -5,21 +5,21 @@ import {
 } from '#domain/organisations/model.js'
 import { partialMock } from '#test/type-helpers.js'
 
-/** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {RegistrationUpdate} from '#domain/organisations/registration.js' */
+/** @import {AccreditationUpdate} from '#domain/organisations/accreditation.js' */
 
 describe('applyRegistrationStatusToLinkedAccreditations', () => {
   it.each([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])(
     'cancels a linked %s accreditation and reports it as cascade-cancelled',
     (status) => {
-      /** @type {Registration[]} */
+      /** @type {RegistrationUpdate[]} */
       const registrations = [
         partialMock({
           status: REGISTRATION_STATUS.CANCELLED,
           accreditationId: 'acc-1'
         })
       ]
-      /** @type {Accreditation[]} */
+      /** @type {AccreditationUpdate[]} */
       const accreditations = [partialMock({ id: 'acc-1', status })]
 
       const result = applyRegistrationStatusToLinkedAccreditations(
@@ -37,14 +37,14 @@ describe('applyRegistrationStatusToLinkedAccreditations', () => {
   it.each([ACCREDITATION_STATUS.CREATED, ACCREDITATION_STATUS.REJECTED])(
     'leaves a linked %s accreditation untouched — it was never live',
     (status) => {
-      /** @type {Registration[]} */
+      /** @type {RegistrationUpdate[]} */
       const registrations = [
         partialMock({
           status: REGISTRATION_STATUS.CANCELLED,
           accreditationId: 'acc-1'
         })
       ]
-      /** @type {Accreditation[]} */
+      /** @type {AccreditationUpdate[]} */
       const accreditations = [partialMock({ id: 'acc-1', status })]
 
       const result = applyRegistrationStatusToLinkedAccreditations(
@@ -58,14 +58,14 @@ describe('applyRegistrationStatusToLinkedAccreditations', () => {
   )
 
   it('leaves accreditations untouched when the linked registration is not cancelled', () => {
-    /** @type {Registration[]} */
+    /** @type {RegistrationUpdate[]} */
     const registrations = [
       partialMock({
         status: REGISTRATION_STATUS.APPROVED,
         accreditationId: 'acc-1'
       })
     ]
-    /** @type {Accreditation[]} */
+    /** @type {AccreditationUpdate[]} */
     const accreditations = [
       partialMock({ id: 'acc-1', status: ACCREDITATION_STATUS.APPROVED })
     ]
@@ -80,11 +80,11 @@ describe('applyRegistrationStatusToLinkedAccreditations', () => {
   })
 
   it('leaves accreditations untouched when the cancelled registration has no linked accreditation', () => {
-    /** @type {Registration[]} */
+    /** @type {RegistrationUpdate[]} */
     const registrations = [
       partialMock({ status: REGISTRATION_STATUS.CANCELLED })
     ]
-    /** @type {Accreditation[]} */
+    /** @type {AccreditationUpdate[]} */
     const accreditations = [
       partialMock({ id: 'acc-1', status: ACCREDITATION_STATUS.APPROVED })
     ]
@@ -95,6 +95,26 @@ describe('applyRegistrationStatusToLinkedAccreditations', () => {
     )
 
     expect(result.accreditations[0].status).toBe(ACCREDITATION_STATUS.APPROVED)
+    expect(result.cascadeCancelledIds).toStrictEqual(new Set())
+  })
+
+  it('skips a linked accreditation whose update proposes no status, since liveness is judged on the payload', () => {
+    /** @type {RegistrationUpdate[]} */
+    const registrations = [
+      partialMock({
+        status: REGISTRATION_STATUS.CANCELLED,
+        accreditationId: 'acc-1'
+      })
+    ]
+    /** @type {AccreditationUpdate[]} */
+    const accreditations = [partialMock({ id: 'acc-1', status: undefined })]
+
+    const result = applyRegistrationStatusToLinkedAccreditations(
+      registrations,
+      accreditations
+    )
+
+    expect(result.accreditations[0].status).toBeUndefined()
     expect(result.cascadeCancelledIds).toStrictEqual(new Set())
   })
 })

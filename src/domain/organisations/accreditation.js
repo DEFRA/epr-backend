@@ -93,4 +93,17 @@
  * @typedef {AccreditationApproved | AccreditationOther} Accreditation
  */
 
+/**
+ * An accreditation as a validated update carries it. Status is optional, since
+ * it is derived from statusHistory on read, and statusHistory does not come
+ * from the caller.
+ *
+ * @typedef {Omit<AccreditationBase, 'statusHistory'> & {
+ *  accreditationNumber?: string | null;
+ *  status?: AccreditationStatus;
+ *  validFrom?: string;
+ *  validTo?: string;
+ * }} AccreditationUpdate
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
