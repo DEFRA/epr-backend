@@ -114,6 +114,10 @@ const organisationWithRegistration = (
   registrations: [registration]
 })
 
+/** @param {number} count */
+const accreditationNumbers = (count) =>
+  [...Array(count).keys()].map((index) => `ACC-${index}`)
+
 /**
  * An organisation holding `count` accreditations, each on its own registration
  * and each with one accepted PRN, so the report has `count` rows to resolve
@@ -430,7 +434,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     ])
   })
 
-  it('holds no more ledger reads in flight at once than the pool can spare', async () => {
+  it('holds exactly LEDGER_READ_CONCURRENCY ledger reads in flight at once', async () => {
     const rowCount = LEDGER_READ_CONCURRENCY * 2 + 1
     const { organisation, prns } = organisationWithAccreditations(rowCount)
     await db.collection(ORGANISATIONS_COLLECTION).insertOne(organisation)
@@ -440,7 +444,20 @@ describe('aggregatePrnTonnage - Integration', () => {
     const { rows } = await aggregatePrnTonnage(db, repository)
 
     expect(rows).toHaveLength(rowCount)
-    expect(peak()).toBeLessThanOrEqual(LEDGER_READ_CONCURRENCY)
+    expect(peak()).toBe(LEDGER_READ_CONCURRENCY)
+  })
+
+  it('reports the rows in sorted order across batches', async () => {
+    const rowCount = LEDGER_READ_CONCURRENCY * 2 + 1
+    const { organisation, prns } = organisationWithAccreditations(rowCount)
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne(organisation)
+    await db.collection(PRNS_COLLECTION).insertMany(prns)
+
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
+
+    expect(rows.map((row) => row.accreditationNumber)).toStrictEqual(
+      accreditationNumbers(rowCount).toSorted()
+    )
   })
 
   it('reports a reprocessor-input registration as REPROCESSOR_INPUT', async () => {
