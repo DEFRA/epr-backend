@@ -11,7 +11,8 @@ import { summaryLogsCreatePayloadSchema } from './post.schema.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
-/** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
+/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
 
 /**
  * @typedef {{redirectUrl: string}} SummaryLogsCreatePayload
@@ -31,7 +32,10 @@ export const summaryLogsCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<SummaryLogsCreatePayload> & {uploadsRepository: UploadsRepository}} request
+   * @param {HapiRequest<SummaryLogsCreatePayload> & {
+   *   params: { organisationId: string, registrationId: string },
+   *   uploadsRepository: UploadsRepository
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
