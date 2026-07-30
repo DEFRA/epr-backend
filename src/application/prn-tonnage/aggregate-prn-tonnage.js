@@ -1,4 +1,5 @@
 import Joi from 'joi'
+import chunk from 'lodash.chunk'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   REPROCESSING_TYPE,
@@ -48,6 +49,14 @@ export const REGISTRATION_TYPE = Object.freeze({
   REPROCESSOR_OUTPUT: 'REPROCESSOR_OUTPUT',
   EXPORTER: 'EXPORTER'
 })
+
+/**
+ * How many ledger reads the report holds in flight at once. Every report row
+ * needs its own ledger read, and a whole report's worth of them released
+ * together would check out the MongoDB driver's connection pool and queue
+ * every other request on the pod behind it.
+ */
+export const LEDGER_READ_CONCURRENCY = 10
 
 const ZERO_BALANCES = Object.freeze({
   wasteBalance: 0,
@@ -323,6 +332,28 @@ const buildReportRow = async (
 })
 
 /**
+ * Resolves the rows a batch at a time, so the report never has more than
+ * `LEDGER_READ_CONCURRENCY` ledger reads outstanding however many
+ * accreditations it covers.
+ *
+ * @param {WasteBalanceLedgerRepository} ledgerRepository
+ * @param {AggregatedRow[]} aggregatedRows
+ */
+const buildReportRows = async (ledgerRepository, aggregatedRows) => {
+  const rows = []
+
+  for (const batch of chunk(aggregatedRows, LEDGER_READ_CONCURRENCY)) {
+    rows.push(
+      ...(await Promise.all(
+        batch.map((row) => buildReportRow(ledgerRepository, row))
+      ))
+    )
+  }
+
+  return rows
+}
+
+/**
  * @param {import('mongodb').Db} db
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  */
@@ -334,15 +365,13 @@ export const aggregatePrnTonnage = async (db, ledgerRepository) => {
     .aggregate(pipeline)
     .toArray()
 
-  const rows = await Promise.all(
+  const rows = await buildReportRows(
+    ledgerRepository,
     aggregatedRows.map((row) =>
-      buildReportRow(
-        ledgerRepository,
-        Joi.attempt(
-          row,
-          aggregatedRowSchema,
-          `Unreportable PRN tonnage row for accreditation ${row.ledgerId.accreditationId}:`
-        )
+      Joi.attempt(
+        row,
+        aggregatedRowSchema,
+        `Unreportable PRN tonnage row for accreditation ${row.ledgerId.accreditationId}:`
       )
     )
   )

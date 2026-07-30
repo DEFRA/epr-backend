@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'
 import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import {
   aggregatePrnTonnage,
+  LEDGER_READ_CONCURRENCY,
   REGISTRATION_TYPE
 } from './aggregate-prn-tonnage.js'
 import {
@@ -112,6 +113,79 @@ const organisationWithRegistration = (
   ],
   registrations: [registration]
 })
+
+/**
+ * An organisation holding `count` accreditations, each on its own registration
+ * and each with one accepted PRN, so the report has `count` rows to resolve
+ * balances for.
+ *
+ * @param {number} count
+ */
+const organisationWithAccreditations = (count) => {
+  const indices = [...Array(count).keys()]
+
+  return {
+    organisation: {
+      _id: new ObjectId(organisationId),
+      orgId,
+      companyDetails: { name: 'Acme Reprocessing' },
+      accreditations: indices.map((index) => ({
+        id: `acc-${index}`,
+        accreditationNumber: `ACC-${index}`,
+        material: MATERIAL.PLASTIC,
+        prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 }
+      })),
+      registrations: indices.map((index) => ({
+        id: `reg-${index}`,
+        registrationNumber: `REG-${index}`,
+        accreditationId: `acc-${index}`,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        reprocessingType: REPROCESSING_TYPE.INPUT
+      }))
+    },
+    prns: indices.map((index) =>
+      buildPrn({
+        registrationId: `reg-${index}`,
+        organisation: { id: organisationId, name: 'Acme Reprocessing' },
+        accreditation: buildAccreditation({
+          id: `acc-${index}`,
+          accreditationNumber: `ACC-${index}`,
+          material: MATERIAL.PLASTIC
+        }),
+        tonnage: 40,
+        status: withStatus(PRN_STATUS.ACCEPTED)
+      })
+    )
+  }
+}
+
+/**
+ * Wraps a ledger repository to record how many of its reads were ever in
+ * flight at once.
+ *
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} repository
+ */
+const recordingPeakConcurrency = (repository) => {
+  let inFlight = 0
+  let peak = 0
+
+  return {
+    peak: () => peak,
+    repository: {
+      ...repository,
+      /** @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId */
+      findLatestInLedger: async (ledgerId) => {
+        inFlight += 1
+        peak = Math.max(peak, inFlight)
+        try {
+          return await repository.findLatestInLedger(ledgerId)
+        } finally {
+          inFlight -= 1
+        }
+      }
+    }
+  }
+}
 
 const expectedRow = (overrides = {}) => ({
   organisationName: 'Acme Reprocessing',
@@ -354,6 +428,19 @@ describe('aggregatePrnTonnage - Integration', () => {
     expect(rows).toStrictEqual([
       expectedRow({ registrationType: REGISTRATION_TYPE.EXPORTER })
     ])
+  })
+
+  it('holds no more ledger reads in flight at once than the pool can spare', async () => {
+    const rowCount = LEDGER_READ_CONCURRENCY * 2 + 1
+    const { organisation, prns } = organisationWithAccreditations(rowCount)
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne(organisation)
+    await db.collection(PRNS_COLLECTION).insertMany(prns)
+    const { peak, repository } = recordingPeakConcurrency(ledgerRepository)
+
+    const { rows } = await aggregatePrnTonnage(db, repository)
+
+    expect(rows).toHaveLength(rowCount)
+    expect(peak()).toBeLessThanOrEqual(LEDGER_READ_CONCURRENCY)
   })
 
   it('reports a reprocessor-input registration as REPROCESSOR_INPUT', async () => {
