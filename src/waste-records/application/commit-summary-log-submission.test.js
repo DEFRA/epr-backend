@@ -7,6 +7,7 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { partialMock } from '#test/type-helpers.js'
 
 const ORGANISATION_ID = 'org-1'
@@ -44,12 +45,18 @@ const user = {
   role: 'standard_user'
 }
 
-const overseasSites = /** @type {any} */ (new Map())
+// These submissions are reprocessor-input, which the orchestrator resolves to
+// the disabled sentinel rather than a sites lookup.
+/** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} */
+const overseasSites = ORS_VALIDATION_DISABLED
 
 /**
  * A reprocessor-input row carrying every field the balance classifier needs, so
  * it is included and contributes `tonnage`. A PRN issued on the waste excludes
  * it while leaving the tonnage on the row.
+ *
+ * @param {{ rowId: number, tonnage: number, prnIssued?: string }} row
+ * @returns {import('#domain/waste-records/model.js').WasteRecord}
  */
 const includableRecord = ({ rowId, tonnage, prnIssued = 'No' }) => ({
   organisationId: ORGANISATION_ID,

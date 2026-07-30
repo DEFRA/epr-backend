@@ -280,6 +280,7 @@ export const syncFromSummaryLog = (dependencies) => {
         )
       : null
 
+    /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */
     const ledgerId = {
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
