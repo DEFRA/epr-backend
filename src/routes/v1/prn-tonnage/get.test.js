@@ -11,9 +11,13 @@ import { createMockLogger } from '#test/mock-logger.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
-vi.mock('#application/prn-tonnage/aggregate-prn-tonnage.js', () => ({
-  aggregatePrnTonnage: vi.fn()
-}))
+vi.mock(
+  '#application/prn-tonnage/aggregate-prn-tonnage.js',
+  async (importActual) => ({
+    ...(await importActual()),
+    aggregatePrnTonnage: vi.fn()
+  })
+)
 
 describe('getPrnTonnage route handler', () => {
   const mockDb = createMockDb()
