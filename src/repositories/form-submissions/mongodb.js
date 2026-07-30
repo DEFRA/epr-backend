@@ -2,6 +2,13 @@ import { ObjectId } from 'mongodb'
 import { ORG_ID_START_NUMBER } from '#common/enums/db.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/**
+ * @import {
+ *   AccreditationSubmission,
+ *   OrganisationSubmission,
+ *   RegistrationSubmission
+ * } from '#domain/form-submissions/submission-records.js'
+ */
 
 const ACCREDITATIONS_COLLECTION = 'accreditation'
 const REGISTRATIONS_COLLECTION = 'registration'
@@ -118,6 +125,11 @@ const withSchemaViolations = (error) =>
       .map((prop) => `${prop.propertyName} - ${prop.description}`)
   })
 
+/**
+ * @param {import('mongodb').Db} db
+ * @param {string} collectionName
+ * @returns {(submission: OrganisationSubmission | RegistrationSubmission | AccreditationSubmission) => Promise<string>}
+ */
 const insertInto = (db, collectionName) => async (submission) => {
   try {
     const { insertedId } = await db
@@ -126,6 +138,22 @@ const insertInto = (db, collectionName) => async (submission) => {
     return insertedId.toString()
   } catch (error) {
     throw withSchemaViolations(error)
+  }
+}
+
+/**
+ * Registrations and accreditations already carry the reference number they were
+ * filed against, so the document id the store mints is of no use to the caller.
+ *
+ * @param {import('mongodb').Db} db
+ * @param {string} collectionName
+ * @returns {(submission: RegistrationSubmission | AccreditationSubmission) => Promise<void>}
+ */
+const insertDiscardingId = (db, collectionName) => {
+  const insert = insertInto(db, collectionName)
+
+  return async (submission) => {
+    await insert(submission)
   }
 }
 
@@ -266,8 +294,8 @@ export const createFormSubmissionsRepository = async (db, logger) => {
       findAllFormSubmissionIds: findAllFormSubmissionIds(db),
       allocateOrgId: allocateOrgId(db),
       insertOrganisation: insertInto(db, ORGANISATION_COLLECTION),
-      insertRegistration: insertInto(db, REGISTRATIONS_COLLECTION),
-      insertAccreditation: insertInto(db, ACCREDITATIONS_COLLECTION)
+      insertRegistration: insertDiscardingId(db, REGISTRATIONS_COLLECTION),
+      insertAccreditation: insertDiscardingId(db, ACCREDITATIONS_COLLECTION)
     }
   }
 }

@@ -33,7 +33,7 @@
  * Thrown by the insert operations. A store that validates documents against a
  * schema decodes the violated rules into `schemaViolations` so callers can log
  * which fields were rejected without knowing the store's error shape.
- * @typedef {Error & { schemaViolations?: string[] }} FormSubmissionInsertError
+ * @typedef {Error & { schemaViolations: string[] }} FormSubmissionInsertError
  */
 
 /**

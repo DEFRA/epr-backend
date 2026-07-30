@@ -35,6 +35,14 @@ import { SCHEMA_VERSION } from '#common/enums/index.js'
  * @property {object} rawSubmissionData
  */
 
+/**
+ * @typedef {Object} AgainstOrganisationFields
+ * @property {number} orgId
+ * @property {string} referenceNumber
+ * @property {Answer[]} answers
+ * @property {object} rawSubmissionData
+ */
+
 const emptySubmission = {
   schemaVersion: SCHEMA_VERSION,
   answers: {},
@@ -68,7 +76,7 @@ export function organisationSubmission({
  * Registrations and accreditations are both filed against an organisation that
  * already holds an orgId, so they carry the same fields.
  *
- * @param {{orgId: number, referenceNumber: string, answers: Answer[], rawSubmissionData: object}} fields
+ * @param {AgainstOrganisationFields} fields
  */
 const againstOrganisation = ({
   orgId,
@@ -85,13 +93,13 @@ const againstOrganisation = ({
   })
 
 /**
- * @param {{orgId: number, referenceNumber: string, answers: Answer[], rawSubmissionData: object}} fields
+ * @param {AgainstOrganisationFields} fields
  * @returns {RegistrationSubmission}
  */
 export const registrationSubmission = (fields) => againstOrganisation(fields)
 
 /**
- * @param {{orgId: number, referenceNumber: string, answers: Answer[], rawSubmissionData: object}} fields
+ * @param {AgainstOrganisationFields} fields
  * @returns {AccreditationSubmission}
  */
 export const accreditationSubmission = (fields) => againstOrganisation(fields)

@@ -42,6 +42,7 @@ function warnIfNoteworthy(rejection) {
  *
  * @template T
  * @param {(data: object) => {submission?: T, rejection?: SubmissionRejection}} parse
+ * @returns {(data: unknown, options?: unknown) => T | undefined}
  */
 export const validateApplyPayload = (parse) => (data, _options) => {
   if (!data || typeof data !== 'object') {

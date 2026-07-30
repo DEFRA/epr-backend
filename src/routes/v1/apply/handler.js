@@ -12,6 +12,19 @@ import {
  */
 
 /**
+ * Only the repository decorates a failure with the fields its store rejected,
+ * so anything else reaching here — a notification failure, a bug — reports none.
+ *
+ * @param {unknown} error
+ * @returns {error is FormSubmissionInsertError}
+ */
+const hasSchemaViolations = (error) =>
+  error instanceof Error &&
+  Array.isArray(
+    /** @type {{schemaViolations?: unknown}} */ (error).schemaViolations
+  )
+
+/**
  * @param {string} path
  * @param {(dependencies: {formSubmissionsRepository: FormSubmissionsRepository, logger: TypedLogger}, details: RegistrationDetails) => Promise<void>} create
  */
@@ -27,8 +40,9 @@ export function registrationAndAccreditationHandler(path, create) {
 
       return h.response().code(StatusCodes.CREATED)
     } catch (error) {
-      const { schemaViolations = [] } =
-        /** @type {FormSubmissionInsertError} */ (error)
+      const schemaViolations = hasSchemaViolations(error)
+        ? error.schemaViolations
+        : []
       const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, mongo validation failures: ${schemaViolations}`
 
       logger.error({
