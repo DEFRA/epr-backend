@@ -21,7 +21,10 @@ export const overseasSiteById = {
     tags: ['api']
   },
   /**
-   * @param {HapiRequest & {overseasSitesRepository: OverseasSitesRepository}} request
+   * @param {HapiRequest & {
+   *   overseasSitesRepository: OverseasSitesRepository,
+   *   params: { id: string }
+   * }} request
    * @param {HapiResponseToolkit} h - Hapi response toolkit
    */
   handler: async (request, h) => {

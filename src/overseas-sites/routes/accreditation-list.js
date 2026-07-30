@@ -9,8 +9,9 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 export const accreditationOverseasSitesPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/overseas-sites'
@@ -76,8 +77,12 @@ export const accreditationOverseasSitesList = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, overseasSitesRepository: OverseasSitesRepository}} request
-   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
+   * @param {HapiRequest & {
+   *   organisationsRepository: OrganisationsRepository,
+   *   overseasSitesRepository: OverseasSitesRepository,
+   *   params: { organisationId: string, registrationId: string, accreditationId: string }
+   * }} request
+   * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { organisationsRepository, overseasSitesRepository, params, logger } =

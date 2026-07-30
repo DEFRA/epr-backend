@@ -7,7 +7,8 @@ import {
 } from '#common/enums/index.js'
 import { summaryLogsListResponseSchema } from './response.schema.js'
 
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
 export const summaryLogsListPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
@@ -25,7 +26,10 @@ export const summaryLogsList = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
+   * @param {HapiRequest & {
+   *   params: { organisationId: string, registrationId: string },
+   *   summaryLogsRepository: SummaryLogsRepository
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

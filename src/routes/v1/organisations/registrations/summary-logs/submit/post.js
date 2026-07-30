@@ -15,13 +15,13 @@ import { summaryLogResponseSchema } from '../response.schema.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
-import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
+import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 
-/** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
-/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
-/** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
+/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
+/** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
+/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 /**
  * Checks if the summary log's preview is stale and handles the superseded transition
@@ -82,7 +82,12 @@ export const summaryLogsSubmit = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor} & {systemLogsRepository: SystemLogsRepository}} request
+   * @param {HapiRequest & {
+   *   params: { organisationId: string, registrationId: string, summaryLogId: string },
+   *   summaryLogsRepository: SummaryLogsRepository,
+   *   summaryLogsWorker: SummaryLogsCommandExecutor,
+   *   systemLogsRepository: SystemLogsRepository
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
