@@ -165,20 +165,23 @@ const organisationWithAccreditations = (count) => {
 
 /**
  * Wraps a ledger repository to record how many of its reads were ever in
- * flight at once.
+ * flight at once, and how many it was asked for at all.
  *
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} repository
  */
 const recordingPeakConcurrency = (repository) => {
   let inFlight = 0
   let peak = 0
+  let reads = 0
 
   return {
     peak: () => peak,
+    reads: () => reads,
     repository: {
       ...repository,
       /** @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId */
       findLatestInLedger: async (ledgerId) => {
+        reads += 1
         inFlight += 1
         peak = Math.max(peak, inFlight)
         try {
@@ -445,6 +448,56 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     expect(rows).toHaveLength(rowCount)
     expect(peak()).toBe(LEDGER_READ_CONCURRENCY)
+  })
+
+  it('spends no ledger reads when a later row is unreportable', async () => {
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne({
+      ...organisationWithRegistration(),
+      accreditations: [
+        {
+          id: accId,
+          accreditationNumber: 'ACC-1',
+          material: MATERIAL.PLASTIC,
+          prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 }
+        },
+        {
+          id: 'acc-2',
+          accreditationNumber: 'ACC-2',
+          material: MATERIAL.PLASTIC,
+          prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 }
+        }
+      ],
+      registrations: [
+        reprocessorRegistration(REPROCESSING_TYPE.INPUT),
+        {
+          ...reprocessorRegistration(REPROCESSING_TYPE.INPUT),
+          id: 'reg-2',
+          registrationNumber: null,
+          accreditationId: 'acc-2'
+        }
+      ]
+    })
+    await db.collection(PRNS_COLLECTION).insertMany([
+      prnWithStatus(PRN_STATUS.ACCEPTED, 40),
+      buildPrn({
+        registrationId: 'reg-2',
+        organisation: { id: organisationId, name: 'Acme Reprocessing' },
+        accreditation: buildAccreditation({
+          id: 'acc-2',
+          accreditationNumber: 'ACC-2',
+          material: MATERIAL.PLASTIC
+        }),
+        tonnage: 10,
+        status: withStatus(PRN_STATUS.ACCEPTED)
+      })
+    ])
+    const { reads, repository } = recordingPeakConcurrency(ledgerRepository)
+
+    await expect(aggregatePrnTonnage(db, repository)).rejects.toThrow(
+      'registrationNumber'
+    )
+
+    expect(reads()).toBe(0)
   })
 
   it('reports the rows in sorted order across batches', async () => {
