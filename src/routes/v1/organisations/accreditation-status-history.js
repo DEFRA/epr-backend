@@ -2,6 +2,10 @@ import Boom from '@hapi/boom'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS
+} from '#domain/organisations/model.js'
 import { assertAccreditationStatusTransitionValid } from '#domain/organisations/status.js'
 import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
 
@@ -12,6 +16,45 @@ import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-
 
 export const accreditationStatusHistoryPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history'
+
+/**
+ * Grant-only validations. Granting sets validFrom to appliesFrom but leaves
+ * validTo (owned by the application data) untouched, so reject a window that
+ * would be inverted — when validTo is absent the replace 422s via the schema
+ * guard requiring it on approved accreditations. Granting also issues the
+ * accreditation number, which must not already be in use by any
+ * accreditation in any organisation, whatever its status. This uniqueness is
+ * enforced here only: there is no unique index on
+ * accreditations.accreditationNumber, so concurrent grants of the same
+ * number are not blocked by the database.
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {{ validTo?: string }} accreditation
+ * @param {{ appliesFrom: string, accreditationNumber: string }} grant
+ * @returns {Promise<void>}
+ */
+const assertGrantAllowed = async (
+  organisationsRepository,
+  accreditation,
+  grant
+) => {
+  if (
+    accreditation.validTo &&
+    new Date(grant.appliesFrom) > new Date(accreditation.validTo)
+  ) {
+    throw Boom.badData(
+      `Cannot grant accreditation: appliesFrom ${grant.appliesFrom} is after validTo ${accreditation.validTo}`
+    )
+  }
+
+  const holder = await organisationsRepository.findByAccreditationNumber(
+    grant.accreditationNumber
+  )
+  if (holder) {
+    throw Boom.badData(
+      `Accreditation number ${grant.accreditationNumber} is already in use`
+    )
+  }
+}
 
 export const accreditationStatusHistory = {
   method: 'POST',
@@ -77,6 +120,21 @@ export const accreditationStatusHistory = {
       )
     }
 
+    // Both to-approved arms (grant and reinstate) require the linked
+    // registration to be approved (PAE-1800). Without this a cancelled
+    // registration's cascade-cancelled accreditation could be "reinstated":
+    // the repository cascade would hold it at cancelled while the endpoint
+    // returned 200 — this guard makes the rejection explicit. Granting gets
+    // the same clear message instead of validateApprovals' generic one.
+    if (
+      toStatus === ACCREDITATION_STATUS.APPROVED &&
+      registration.status !== REGISTRATION_STATUS.APPROVED
+    ) {
+      throw Boom.badData(
+        `Cannot transition accreditation to approved: its registration is ${registration.status}`
+      )
+    }
+
     // Route-level check is required, not belt-and-braces: the repository's
     // assertAndHandleItemStateTransition skips validation when the status is
     // unchanged, so suspended -> suspended via replace() would otherwise be a
@@ -84,32 +142,7 @@ export const accreditationStatusHistory = {
     assertAccreditationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
-      // Granting sets validFrom to appliesFrom but leaves validTo (owned by
-      // the application data) untouched, so reject a window that would be
-      // inverted. When validTo is absent the replace below 422s via the
-      // schema guard requiring it on approved accreditations.
-      if (
-        accreditation.validTo &&
-        new Date(grant.appliesFrom) > new Date(accreditation.validTo)
-      ) {
-        throw Boom.badData(
-          `Cannot grant accreditation: appliesFrom ${grant.appliesFrom} is after validTo ${accreditation.validTo}`
-        )
-      }
-
-      // Granting issues the accreditation number, which must not already be
-      // in use by any accreditation in any organisation, whatever its status.
-      // This uniqueness is enforced here only: there is no unique index on
-      // accreditations.accreditationNumber, so concurrent grants of the same
-      // number are not blocked by the database.
-      const holder = await organisationsRepository.findByAccreditationNumber(
-        grant.accreditationNumber
-      )
-      if (holder) {
-        throw Boom.badData(
-          `Accreditation number ${grant.accreditationNumber} is already in use`
-        )
-      }
+      await assertGrantAllowed(organisationsRepository, accreditation, grant)
     }
 
     const grantFields = grant
