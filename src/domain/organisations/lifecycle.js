@@ -7,8 +7,8 @@ import {
 import { isOrgStatusTransitionValid } from './status.js'
 
 /** @import {LinkedDefraOrganisation, Organisation, OrganisationUpdate} from './model.js' */
-/** @import {Registration} from './registration.js' */
-/** @import {Accreditation} from './accreditation.js' */
+/** @import {RegistrationUpdate} from './registration.js' */
+/** @import {AccreditationUpdate} from './accreditation.js' */
 
 /**
  * @typedef {typeof LIFECYCLE_REFUSAL.INVALID_TRANSITION
@@ -161,7 +161,7 @@ export const decideOrganisationLink = ({
 }
 
 /**
- * @param {Registration} registration
+ * @param {RegistrationUpdate} registration
  * @returns {boolean}
  */
 const isRegistrationCancelled = (registration) =>
@@ -175,9 +175,9 @@ const isRegistrationCancelled = (registration) =>
  * system-driven changes, exempt from the accreditation transition table —
  * which deliberately has no direct approved -> cancelled arc for user-driven
  * updates (ADR 0042).
- * @param {Registration[]} registrations
- * @param {Accreditation[]} accreditations
- * @returns {{ accreditations: Accreditation[], cascadeCancelledIds: Set<string> }}
+ * @param {RegistrationUpdate[]} registrations
+ * @param {AccreditationUpdate[]} accreditations
+ * @returns {{ accreditations: AccreditationUpdate[], cascadeCancelledIds: Set<string> }}
  */
 export const applyRegistrationStatusToLinkedAccreditations = (
   registrations,
@@ -198,13 +198,16 @@ export const applyRegistrationStatusToLinkedAccreditations = (
   const updatedAccreditations = accreditations.map((acc) => {
     // Liveness is judged on the incoming payload status, so an attempt to
     // reinstate a cascade-cancelled accreditation (payload approved, its
-    // registration still cancelled) is caught here and held at cancelled.
+    // registration still cancelled) is caught here and held at cancelled. An
+    // update that proposes no status is proposing no change, so it is left
+    // alone.
     if (
       linkedToCancelledRegistration.has(acc.id) &&
+      acc.status !== undefined &&
       ACTIVE_ACCREDITATION_STATUSES.has(acc.status)
     ) {
       cascadeCancelledIds.add(acc.id)
-      return /** @type {Accreditation} */ ({
+      return /** @type {AccreditationUpdate} */ ({
         ...acc,
         status: ACCREDITATION_STATUS.CANCELLED
       })

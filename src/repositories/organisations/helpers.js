@@ -24,7 +24,7 @@ import { getCurrentStatus } from './status.js'
 /** @import { WithId } from 'mongodb' */
 /** @import { Organisation, OrganisationStatus, OrganisationUpdate } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
-/** @import { FindPageForOverseasSitesAdminListParams } from './port.js' */
+/** @import { FindPageForOverseasSitesAdminListParams, OrganisationReplacement } from './port.js' */
 
 export const createStatusHistoryEntry = (status) => ({
   status,
@@ -164,7 +164,8 @@ function prepareRegAccForReplace(validated, existing) {
 
 /**
  * @param {Organisation} existing
- * @param {object} updates
+ * @param {OrganisationReplacement} updates - the caller's proposed replacement,
+ *   unvalidated until validateOrganisationUpdate has been through it.
  */
 export const prepareForReplace = (existing, updates) => {
   const validated = validateOrganisationUpdate(updates, existing)

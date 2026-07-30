@@ -1,19 +1,27 @@
 import { REGISTRATION_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { getCurrentStatus } from './status.js'
 
-/** @import {Accreditation, AccreditationBase} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationUpdate} from '#domain/organisations/accreditation.js' */
 /** @import {CollatedUser, RegOrAccStatus, StatusHistoryItem, User, UserRoles} from '#domain/organisations/model.js' */
-/** @import {Registration, RegistrationBase} from '#domain/organisations/registration.js' */
+/** @import {RegistrationUpdate} from '#domain/organisations/registration.js' */
 
 /** @typedef {Pick<CollatedUser, 'fullName'|'email'|'roles'>} SlimUser */
+
+/**
+ * @typedef {Omit<RegistrationUpdate, 'status'> & { statusHistory: StatusHistoryItem[] }} CollatableRegistration
+ */
+
+/**
+ * @typedef {Omit<AccreditationUpdate, 'status'> & { statusHistory: StatusHistoryItem[] }} CollatableAccreditation
+ */
 
 /**
  * The organisation as the write path holds it: statusHistory rather than a
  * materialised status, on the organisation and on every item.
  *
  * @typedef {{
- *   accreditations: AccreditationBase[],
- *   registrations: RegistrationBase[],
+ *   accreditations: CollatableAccreditation[],
+ *   registrations: CollatableRegistration[],
  *   statusHistory: StatusHistoryItem[],
  *   submitterContactDetails?: User,
  *   users?: CollatedUser[]
@@ -39,7 +47,7 @@ const getUserRolesForStatus = (status) => {
 }
 
 /**
- * @template {Accreditation|Registration} T
+ * @template {CollatableAccreditation|CollatableRegistration} T
  * @param {UserCollationSource} updated
  * @param {'accreditations'|'registrations'} collectionKey
  * @param {(item: T) => SlimUser[]} extractAdditionalUsers
@@ -77,7 +85,7 @@ const collateRegistrationUsers = (updated) =>
   collateItems(
     updated,
     'registrations',
-    (/** @type {Registration} */ registration) => {
+    (/** @type {CollatableRegistration} */ registration) => {
       const roles = getUserRolesForStatus(getCurrentStatus(registration))
 
       const additional = registration.approvedPersons.map(
@@ -101,7 +109,7 @@ const collateAccreditationUsers = (updated) =>
   collateItems(
     updated,
     'accreditations',
-    (/** @type {Accreditation} */ accreditation) =>
+    (/** @type {CollatableAccreditation} */ accreditation) =>
       accreditation.prnIssuance.signatories.map(({ email, fullName }) => ({
         fullName,
         email,

@@ -84,4 +84,18 @@
  * }} ReportableRegistration
  */
 
+/**
+ * A registration as a validated update carries it. Status is optional, since
+ * it is derived from statusHistory on read; neither statusHistory nor the
+ * resolved accreditation come from the caller.
+ *
+ * @typedef {Omit<RegistrationBase, 'statusHistory' | 'accreditation'> & {
+ *  cbduNumber?: string;
+ *  registrationNumber?: string | null;
+ *  status?: RegistrationStatus;
+ *  validFrom?: string;
+ *  validTo?: string;
+ * }} RegistrationUpdate
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
