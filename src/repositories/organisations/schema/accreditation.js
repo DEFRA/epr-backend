@@ -69,15 +69,7 @@ export const accreditationSchema = Joi.object({
   orgName: Joi.string().required(),
   site: whenReprocessor(accreditationSiteSchema),
   material: Joi.string()
-    .valid(
-      MATERIAL.ALUMINIUM,
-      MATERIAL.FIBRE,
-      MATERIAL.GLASS,
-      MATERIAL.PAPER,
-      MATERIAL.PLASTIC,
-      MATERIAL.STEEL,
-      MATERIAL.WOOD
-    )
+    .valid(...Object.values(MATERIAL))
     .required(),
   glassRecyclingProcess: whenMaterial(
     MATERIAL.GLASS,

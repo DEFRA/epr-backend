@@ -34,32 +34,14 @@ export const wasteExemptionSchema = Joi.object({
     otherwise: Joi.string().required()
   }),
   materials: Joi.array()
-    .items(
-      Joi.valid(
-        MATERIAL.ALUMINIUM,
-        MATERIAL.FIBRE,
-        MATERIAL.GLASS,
-        MATERIAL.PAPER,
-        MATERIAL.PLASTIC,
-        MATERIAL.STEEL,
-        MATERIAL.WOOD
-      )
-    )
+    .items(Joi.valid(...Object.values(MATERIAL)))
     .min(1)
     .required()
 })
 
 export const authorisedMaterialSchema = Joi.object({
   material: Joi.string()
-    .valid(
-      MATERIAL.ALUMINIUM,
-      MATERIAL.FIBRE,
-      MATERIAL.GLASS,
-      MATERIAL.PAPER,
-      MATERIAL.PLASTIC,
-      MATERIAL.STEEL,
-      MATERIAL.WOOD
-    )
+    .valid(...Object.values(MATERIAL))
     .required(),
   authorisedWeightInTonnes: Joi.number().required(),
   timeScale: Joi.string()

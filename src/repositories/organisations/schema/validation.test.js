@@ -10,6 +10,8 @@ import {
   MATERIAL,
   REGISTRATION_STATUS,
   REGULATOR,
+  TIME_SCALE,
+  WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
@@ -479,6 +481,98 @@ describe('validateRegistration', () => {
       expect(() => validateRegistration(registration)).not.toThrow()
     })
   })
+
+  describe('material enum coverage', () => {
+    const registrationMaterialSites = [
+      {
+        site: 'registration material',
+        build: (material) =>
+          buildRegistration({
+            material,
+            glassRecyclingProcess:
+              material === MATERIAL.GLASS ? ['glass_re_melt'] : null
+          })
+      },
+      {
+        site: 'site capacity material',
+        build: (material) => {
+          const registration = buildRegistration()
+
+          return {
+            ...registration,
+            site: {
+              ...registration.site,
+              siteCapacity: [
+                {
+                  material,
+                  siteCapacityInTonnes: 15,
+                  siteCapacityTimescale: TIME_SCALE.YEARLY
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        site: 'authorised permit material',
+        build: (material) =>
+          buildRegistration({
+            wasteManagementPermits: [
+              {
+                type: WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
+                permitNumber: 'WML123456',
+                authorisedMaterials: [
+                  {
+                    material,
+                    authorisedWeightInTonnes: 10,
+                    timeScale: TIME_SCALE.YEARLY
+                  }
+                ]
+              }
+            ]
+          })
+      },
+      {
+        site: 'waste exemption material',
+        build: (material) =>
+          buildRegistration({
+            submittedToRegulator: REGULATOR.EA,
+            wasteManagementPermits: [
+              {
+                type: WASTE_PERMIT_TYPE.WASTE_EXEMPTION,
+                exemptions: [
+                  {
+                    reference: 'WEX123456',
+                    exemptionCode: 'U9',
+                    materials: [material]
+                  }
+                ]
+              }
+            ]
+          })
+      }
+    ]
+
+    const acceptedCases = registrationMaterialSites.flatMap(({ site, build }) =>
+      Object.values(MATERIAL).map((material) => ({ site, material, build }))
+    )
+
+    it.each(acceptedCases)(
+      'should accept $material as the $site',
+      ({ material, build }) => {
+        expect(() => validateRegistration(build(material))).not.toThrow()
+      }
+    )
+
+    it.each(registrationMaterialSites)(
+      'should reject a material outside the enum as the $site',
+      ({ build }) => {
+        expect(() => validateRegistration(build('unobtainium'))).toThrow(
+          /Invalid registration data.*material.*must be one of/
+        )
+      }
+    )
+  })
 })
 
 describe('validateAccreditation', () => {
@@ -582,6 +676,34 @@ describe('validateAccreditation', () => {
       )
 
       expect(() => validateAccreditation(accreditation)).not.toThrow()
+    })
+  })
+
+  describe('material enum coverage', () => {
+    const buildWithMaterial = (material) =>
+      /** @type {Parameters<typeof buildAccreditation>[0]} */ (
+        /** @type {unknown} */ ({
+          material,
+          glassRecyclingProcess:
+            material === MATERIAL.GLASS ? ['glass_re_melt'] : null
+        })
+      )
+
+    it.each(Object.values(MATERIAL))(
+      'should accept %s as the accreditation material',
+      (material) => {
+        const accreditation = buildAccreditation(buildWithMaterial(material))
+
+        expect(() => validateAccreditation(accreditation)).not.toThrow()
+      }
+    )
+
+    it('should reject a material outside the enum', () => {
+      const accreditation = buildAccreditation(buildWithMaterial('unobtainium'))
+
+      expect(() => validateAccreditation(accreditation)).toThrow(
+        /Invalid accreditation data.*material.*must be one of/
+      )
     })
   })
 
