@@ -71,6 +71,7 @@ const validateMyPayload = (payload) => {
  * @returns {string[]} one error clause per offending item
  */
 const collectStatusChangeErrors = (label, existingItems, itemUpdates) => {
+  /** @type {Map<string | undefined, {id: string, status?: string}>} */
   const existingById = new Map(existingItems.map((item) => [item.id, item]))
 
   const errors = []
