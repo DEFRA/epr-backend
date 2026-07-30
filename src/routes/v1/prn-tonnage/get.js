@@ -29,10 +29,10 @@ export const getPrnTonnage = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { db, logger } = request
+    const { db, ledgerRepository, logger } = request
 
     try {
-      const result = await aggregatePrnTonnage(db)
+      const result = await aggregatePrnTonnage(db, ledgerRepository)
 
       logger.info({
         message: 'PRN tonnage data retrieved successfully',
