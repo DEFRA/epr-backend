@@ -4,9 +4,8 @@ import { getDefraTokenSummary } from '#common/helpers/auth/roles/helpers.js'
  * @typedef {'trace'|'debug'|'info'|'warn'|'error'|'fatal'} LogLevel
  */
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
-
+/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {DefraIdTokenPayload} from '#auth/types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
 /**

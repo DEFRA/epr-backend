@@ -5,7 +5,9 @@ import {
 } from '#common/enums/index.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 export const summaryLogFilePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/file'
@@ -20,9 +22,10 @@ export const summaryLogFile = {
     tags: ['api', 'admin']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
+   * @param {HapiRequest & {
+   *   params: { organisationId: string, registrationId: string, summaryLogId: string },
    *   summaryLogsRepository: SummaryLogsRepository,
-   *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
+   *   systemLogsRepository: SystemLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
