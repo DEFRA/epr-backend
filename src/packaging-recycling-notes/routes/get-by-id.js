@@ -11,14 +11,15 @@ import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-co
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { getProjectedPrnById } from '#packaging-recycling-notes/application/get-projected-prn.js'
 
-/** @typedef {import('#packaging-recycling-notes/domain/model.js').GetPrnResponse} GetPrnResponse */
-/** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { GetPrnResponse, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
+/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 
 export const packagingRecyclingNoteByIdPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{prnId}'
 
 /**
- * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
+ * @param {PackagingRecyclingNote} prn
  * @param {{ wasteProcessingType: string }} accreditation
  * @returns {GetPrnResponse}
  */
@@ -49,8 +50,11 @@ export const packagingRecyclingNoteById = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
-   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h - Hapi response toolkit
+   * @param {HapiRequest & {
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   params: { organisationId: string, registrationId: string, accreditationId: string, prnId: string }
+   * }} request
+   * @param {HapiResponseToolkit} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {

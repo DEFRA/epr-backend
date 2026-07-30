@@ -17,10 +17,10 @@ import {
 
 import { uploadCompletedPayloadSchema } from './post.schema.js'
 
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
-/** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
-/** @typedef {import('./post.schema.js').SummaryLogUpload} SummaryLogUpload */
+/** @import { HapiRequest, TypedLogger } from '#common/hapi-types.js' */
+/** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
+/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { SummaryLogUpload } from './post.schema.js' */
 
 /**
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
@@ -158,7 +158,11 @@ export const summaryLogsUploadCompleted = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<UploadCompletedPayload> & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor}} request
+   * @param {HapiRequest<UploadCompletedPayload> & {
+   *   params: { organisationId: string, registrationId: string, summaryLogId: string },
+   *   summaryLogsRepository: SummaryLogsRepository,
+   *   summaryLogsWorker: SummaryLogsCommandExecutor
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

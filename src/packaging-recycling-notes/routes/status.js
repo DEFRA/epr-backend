@@ -21,7 +21,7 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
- * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { HapiRequest, TypedLogger } from '#common/hapi-types.js'
  * @import { OnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
  */
 
@@ -84,7 +84,7 @@ const buildUser = (auth) => {
  * Maps a status-update failure to the HTTP error it should surface as.
  * @param {*} error
  * @param {string} path
- * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {TypedLogger} logger
  */
 const mapUpdateStatusError = (error, path, logger) => {
   if (error instanceof AccreditationStatusError) {
@@ -133,6 +133,7 @@ export const packagingRecyclingNotesUpdateStatus = {
   /**
    * @param {HapiRequest<{ status: PrnStatus }> & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   params: { organisationId: string, registrationId: string, accreditationId: string, id: string },
    *   prnEvents: { onCancelled: OnPrnCancelled }
    * }} request
    * @param {Object} h - Hapi response toolkit

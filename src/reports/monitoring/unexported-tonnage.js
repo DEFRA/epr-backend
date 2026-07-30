@@ -255,29 +255,33 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
 }
 
 /**
+ * The part of a log line that differs by kind: the figures for a mismatch, the
+ * underlying error for a failed recompute, and why nothing could be computed
+ * when the source rows were unresolvable.
+ *
+ * @param {UnexportedTonnageFinding} finding
+ * @returns {string}
+ */
+const detailOf = (finding) => {
+  if (finding.kind === FINDING_KIND.MISMATCH) {
+    return `stored ${finding.stored}, recomputed ${finding.recomputed}, delta ${finding.delta}`
+  }
+  if (finding.kind === FINDING_KIND.RECOMPUTE_FAILED) {
+    return finding.reason
+  }
+  return 'source rows could not be resolved, cannot recompute'
+}
+
+/**
  * Renders a finding as one reviewable log line.
  *
  * @param {UnexportedTonnageFinding} finding
  * @returns {string}
  */
-export const formatUnexportedTonnageFinding = (finding) => {
-  const prefix =
-    `Unexported tonnage ${finding.kind}: org ${finding.organisationId} / ` +
-    `registration ${finding.registrationId}, report ${finding.reportId} ` +
-    `(${finding.month}, ${finding.reportStatus}) - `
-
-  if (finding.kind === FINDING_KIND.MISMATCH) {
-    return (
-      prefix +
-      `stored ${finding.stored}, recomputed ${finding.recomputed}, ` +
-      `delta ${finding.delta}`
-    )
-  }
-  if (finding.kind === FINDING_KIND.RECOMPUTE_FAILED) {
-    return prefix + finding.reason
-  }
-  return prefix + 'source rows could not be resolved, cannot recompute'
-}
+export const formatUnexportedTonnageFinding = (finding) =>
+  `Unexported tonnage ${finding.kind}: org ${finding.organisationId} / ` +
+  `registration ${finding.registrationId}, report ${finding.reportId} ` +
+  `(${finding.month}, ${finding.reportStatus}) - ${detailOf(finding)}`
 
 /**
  * The scale figures the run's summary line reports. `totalDelta` covers the
