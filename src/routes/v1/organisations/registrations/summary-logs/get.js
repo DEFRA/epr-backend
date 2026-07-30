@@ -15,7 +15,8 @@ import { summaryLogResponseSchema } from './response.schema.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
 export const summaryLogsGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}'
@@ -31,7 +32,10 @@ export const summaryLogsGet = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
+   * @param {HapiRequest & {
+   *   params: { organisationId: string, registrationId: string, summaryLogId: string },
+   *   summaryLogsRepository: SummaryLogsRepository
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

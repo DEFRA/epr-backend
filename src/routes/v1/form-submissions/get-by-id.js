@@ -1,7 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
-/** @typedef {import('#repositories/form-submissions/port.js').FormSubmissionsRepository} FormSubmissionsRepository */
+/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { FormSubmissionsRepository } from '#repositories/form-submissions/port.js' */
 
 export const formSubmissionsDataGet = {
   method: 'GET',
@@ -13,7 +14,10 @@ export const formSubmissionsDataGet = {
     tags: ['api', 'admin']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {formSubmissionsRepository: FormSubmissionsRepository}} request
+   * @param {HapiRequest & {
+   *   formSubmissionsRepository: FormSubmissionsRepository,
+   *   params: { documentId: string }
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async ({ formSubmissionsRepository, params }, h) => {
