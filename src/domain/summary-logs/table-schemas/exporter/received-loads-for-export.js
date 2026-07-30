@@ -16,6 +16,7 @@ import {
   createFreeTextFieldSchema,
   createEnumFieldSchema,
   toThreeDigitId,
+  isYes,
   YES_NO_VALUES
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
@@ -221,6 +222,29 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       return {
         outcome: ROW_OUTCOME.IGNORED,
         reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      }
+    }
+
+    // A load that was stopped or refused never completed its export, so its
+    // overseas site's approval status is moot — say which of the two happened
+    // rather than reporting an ORS problem the operator cannot act on.
+    //
+    // These two read through isYes rather than comparing against
+    // YES_NO_VALUES.YES like the checks below, because they are absent from
+    // validationSchema and so reach here with whatever the cell held. The
+    // report aggregation reads the same two columns the same way, so a stray
+    // 'yes ' cannot count in one place and not the other.
+    if (isYes(data[FIELDS.WAS_THE_WASTE_STOPPED])) {
+      return {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.WASTE_STOPPED }]
+      }
+    }
+
+    if (isYes(data[FIELDS.WAS_THE_WASTE_REFUSED])) {
+      return {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.WASTE_REFUSED }]
       }
     }
 

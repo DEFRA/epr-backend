@@ -264,6 +264,53 @@ describe('loadsByReportingPeriod population at validate time', () => {
     })
   })
 
+  it.each([
+    {
+      description: 'stopped',
+      overrides: { wasteStopped: 'Yes' },
+      reason: CLASSIFICATION_REASON.WASTE_STOPPED
+    },
+    {
+      description: 'refused',
+      overrides: { wasteRefused: 'Yes' },
+      reason: CLASSIFICATION_REASON.WASTE_REFUSED
+    }
+  ])(
+    'classifies a $description added load as nonBalanceAffecting in the open period',
+    async ({ overrides, reason }) => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+
+      // A load stopped in transit or refused at the destination passes
+      // validation but never counts towards the balance, so it moves no
+      // tonnage and the check page names which of the two applied.
+      const loadsByReportingPeriod = await uploadAndValidate(
+        env,
+        'sl-stopped-refused',
+        'file-stopped-refused',
+        createUploadData([
+          { rowId: 1001, osrId: 100, exportTonnage: 100, ...overrides }
+        ])
+      )
+
+      expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual({
+        balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+        nonBalanceAffecting: {
+          count: 1,
+          rows: [
+            {
+              rowId: '1001',
+              wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+              exclusionReasons: [reason],
+              tonnageDelta: 0
+            }
+          ]
+        }
+      })
+    }
+  )
+
   it('records each nonBalanceAffecting row with its identity and exclusion reason', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter'
