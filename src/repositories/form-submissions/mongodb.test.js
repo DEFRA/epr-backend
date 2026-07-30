@@ -6,8 +6,11 @@ import { testFormSubmissionsRepositoryContract } from './port.contract.js'
 import {
   buildAccreditation,
   buildRegistration,
-  buildOrganisation
+  buildOrganisation,
+  generateReferenceNumber
 } from './contract/test-data.js'
+import { createOrUpdateRegistrationCollection } from '#common/helpers/collections/create-update-registration.js'
+import { registrationSubmission } from '#domain/form-submissions/submission-records.js'
 
 /**
  * @import { Collection, Db } from 'mongodb'
@@ -205,6 +208,94 @@ describe('MongoDB form submissions repository', () => {
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
       expect(counter?.seq).toBe(600000)
+    })
+  })
+
+  describe('allocateOrgId', () => {
+    it('fails rather than inventing an id when the counter is missing', async ({
+      mongoClient
+    }) => {
+      const db = mongoClient.db(DATABASE_NAME)
+      const repository = (
+        await createFormSubmissionsRepository(db, testLogger)
+      )()
+      await countersCollection(db).deleteMany({})
+
+      await expect(repository.allocateOrgId()).rejects.toThrow(
+        'Failed to generate orgId: counter returned invalid result'
+      )
+    })
+  })
+
+  describe('schema violations on insert', () => {
+    const withRegistrationValidator = async (db) => {
+      const collections = await db
+        .listCollections({}, { nameOnly: true })
+        .toArray()
+      await createOrUpdateRegistrationCollection(db, collections)
+    }
+
+    const removeRegistrationValidator = (db) =>
+      db.command({ collMod: 'registration', validator: {} })
+
+    it('names the property a document was rejected for', async ({
+      mongoClient
+    }) => {
+      const db = mongoClient.db(DATABASE_NAME)
+      await withRegistrationValidator(db)
+      const repository = (
+        await createFormSubmissionsRepository(db, testLogger)
+      )()
+
+      const belowMinimum = registrationSubmission({
+        orgId: 1,
+        referenceNumber: generateReferenceNumber(),
+        answers: [],
+        rawSubmissionData: {}
+      })
+
+      const error = await repository
+        .insertRegistration(belowMinimum)
+        .catch((thrown) => thrown)
+
+      expect(error.schemaViolations).toEqual([
+        expect.stringContaining('orgId - ')
+      ])
+
+      await removeRegistrationValidator(db)
+    })
+
+    it('reports no properties when the document breaks a non-property rule', async ({
+      mongoClient
+    }) => {
+      const db = mongoClient.db(DATABASE_NAME)
+      await withRegistrationValidator(db)
+      const repository = (
+        await createFormSubmissionsRepository(db, testLogger)
+      )()
+
+      const error = await repository
+        .insertRegistration(/** @type {*} */ ({ orgId: 500001 }))
+        .catch((thrown) => thrown)
+
+      expect(error.schemaViolations).toEqual([])
+
+      await removeRegistrationValidator(db)
+    })
+
+    it('reports no properties when the failure is not a schema violation', async ({
+      mongoClient
+    }) => {
+      const db = mongoClient.db(DATABASE_NAME)
+      const repository = (
+        await createFormSubmissionsRepository(db, testLogger)
+      )()
+
+      const error = await repository
+        .insertRegistration(/** @type {*} */ ('not-a-document'))
+        .catch((thrown) => thrown)
+
+      expect(error.schemaViolations).toEqual([])
     })
   })
 
