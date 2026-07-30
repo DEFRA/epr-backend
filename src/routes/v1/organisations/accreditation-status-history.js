@@ -2,6 +2,10 @@ import Boom from '@hapi/boom'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS
+} from '#domain/organisations/model.js'
 import { assertAccreditationStatusTransitionValid } from '#domain/organisations/status.js'
 import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
 
@@ -74,6 +78,21 @@ export const accreditationStatusHistory = {
     if (accreditation.status !== fromStatus) {
       throw Boom.badData(
         `Cannot transition accreditation from ${fromStatus}: its status is ${accreditation.status}`
+      )
+    }
+
+    // Both to-approved arms (grant and reinstate) require the linked
+    // registration to be approved (PAE-1800). Without this a cancelled
+    // registration's cascade-cancelled accreditation could be "reinstated":
+    // the repository cascade would hold it at cancelled while the endpoint
+    // returned 200 — this guard makes the rejection explicit. Granting gets
+    // the same clear message instead of validateApprovals' generic one.
+    if (
+      toStatus === ACCREDITATION_STATUS.APPROVED &&
+      registration.status !== REGISTRATION_STATUS.APPROVED
+    ) {
+      throw Boom.badData(
+        `Cannot transition accreditation to approved: its registration is ${registration.status}`
       )
     }
 
