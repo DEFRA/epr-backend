@@ -2,6 +2,7 @@ import { ledgerIdFor } from '#application/summary-logs/ledger-id.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
+  buildAccreditation,
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
@@ -65,6 +66,59 @@ const buildOrgWithRegistrationStatus = (
       buildOrganisation({
         registrations: [registration, otherRegistration],
         accreditations: []
+      })
+    )
+  )
+}
+
+/**
+ * Builds an organisation whose approved reprocessor registration is linked
+ * to an accreditation in the given status, to prove the repository cascade
+ * on registration cancellation (PAE-1615): live (approved/suspended)
+ * accreditations are force-cancelled; created/rejected ones are untouched.
+ * wasteProcessingType and reprocessingType are set explicitly on both the
+ * registration and the accreditation (material/site are left to the shared
+ * fixture defaults) so they share a validateAccreditationLinkMatches key —
+ * mirrors the pairing in accreditation-status-history.test.js.
+ * @param {string} accStatus
+ */
+const buildOrgWithLinkedAccreditation = (accStatus) => {
+  const accreditationId = new ObjectId().toString()
+  const registration = buildRegistration({
+    reprocessingType: 'input',
+    registrationNumber: 'REG123456',
+    validFrom: '2024-01-01',
+    validTo: '2026-12-31',
+    accreditationId,
+    statusHistory: [
+      { status: 'created', updatedAt: '2024-01-01' },
+      { status: 'approved', updatedAt: '2024-02-01' }
+    ]
+  })
+  const accreditation = buildAccreditation({
+    id: accreditationId,
+    wasteProcessingType: registration.wasteProcessingType,
+    reprocessingType: 'input',
+    ...(accStatus !== 'created' && {
+      accreditationNumber: 'ACC123456',
+      validFrom: '2024-01-01',
+      validTo: '2026-12-31'
+    }),
+    statusHistory:
+      /** @type {import('#domain/organisations/accreditation.js').StatusHistoryEntry[]} */ (
+        accStatus === 'created'
+          ? [{ status: 'created', updatedAt: '2024-01-01' }]
+          : [
+              { status: 'created', updatedAt: '2024-01-01' },
+              { status: accStatus, updatedAt: '2024-03-01' }
+            ]
+      )
+  })
+  return /** @type {import('#domain/organisations/model.js').Organisation} */ (
+    /** @type {unknown} */ (
+      buildOrganisation({
+        registrations: [registration],
+        accreditations: [accreditation]
       })
     )
   )
@@ -387,6 +441,270 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     )
   })
 
+  describe.each([
+    { name: 'reject (PAE-1609)', from: 'created', to: 'rejected' },
+    { name: 'reopen (PAE-1614)', from: 'rejected', to: 'created' },
+    { name: 'cancel (PAE-1615)', from: 'approved', to: 'cancelled' },
+    { name: 'reinstate (PAE-1616)', from: 'cancelled', to: 'approved' }
+  ])('$name', ({ from, to }) => {
+    const payload = (overrides = {}) => ({
+      fromStatus: from,
+      toStatus: to,
+      ...overrides
+    })
+
+    it(`transitions the registration from ${from} to ${to}, appends statusHistory and returns 200 with { status: "${to}" }`, async () => {
+      const ctx = await seedOrg(from)
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: payload(),
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({ status: to })
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const org = JSON.parse(getResponse.payload)
+      const registration = org.registrations.find(
+        (reg) => reg.id === ctx.registrationId
+      )
+      expect(registration.status).toBe(to)
+      expect(registration.statusHistory.at(-1)).toMatchObject({ status: to })
+
+      const other = org.registrations.find(
+        (reg) => reg.id === ctx.otherRegistrationId
+      )
+      expect(other.status).toBe('created')
+    })
+
+    it('captures a system log entry with actor and before/after status', async () => {
+      const ctx = await seedOrg(from)
+      const start = new Date()
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: payload(),
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const systemLogsResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/system-logs/search?organisationId=${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
+      const { systemLogs } = JSON.parse(systemLogsResponse.payload)
+      expect(systemLogs).toHaveLength(1)
+
+      const [entry] = systemLogs
+      expect(entry.createdBy).toMatchObject({
+        id: 'test-user-id',
+        email: 'me@example.com'
+      })
+      expect(new Date(entry.createdAt).getTime()).toBeGreaterThanOrEqual(
+        start.getTime()
+      )
+      expect(entry.event).toMatchObject({
+        category: 'entity',
+        subCategory: 'epr-organisations',
+        action: 'update'
+      })
+
+      const previousRegistration = entry.context.previous.registrations.find(
+        (reg) => reg.id === ctx.registrationId
+      )
+      const nextRegistration = entry.context.next.registrations.find(
+        (reg) => reg.id === ctx.registrationId
+      )
+      expect(previousRegistration.status).toBe(from)
+      expect(nextRegistration.status).toBe(to)
+
+      expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+    })
+
+    it(`returns 422 when the registration is not currently ${from}`, async () => {
+      const wrongStatus = from === 'created' ? 'approved' : 'created'
+      const ctx = await seedOrg(wrongStatus)
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: payload(),
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(JSON.parse(response.payload).message).toBe(
+        `Cannot transition registration from ${from}: its status is ${wrongStatus}`
+      )
+    })
+  })
+
+  describe('cancellation cascade to the linked accreditation (PAE-1615)', () => {
+    const seedLinkedOrg = async (accStatus) => {
+      const fixture = buildOrgWithLinkedAccreditation(accStatus)
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([fixture])
+      server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: createSystemLogsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags()
+      })
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${fixture.id}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const org = JSON.parse(getResponse.payload)
+      return {
+        organisationId: org.id,
+        registrationId: org.registrations[0].id,
+        accreditationId: org.registrations[0].accreditationId
+      }
+    }
+
+    const cancelRegistration = (ctx) =>
+      server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: { fromStatus: 'approved', toStatus: 'cancelled' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+    const fetchAccreditation = async (ctx) => {
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const org = JSON.parse(getResponse.payload)
+      return org.accreditations.find((acc) => acc.id === ctx.accreditationId)
+    }
+
+    it.each(['approved', 'suspended'])(
+      'force-cancels a linked %s accreditation with its own statusHistory entry',
+      async (accStatus) => {
+        const ctx = await seedLinkedOrg(accStatus)
+
+        const response = await cancelRegistration(ctx)
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        const accreditation = await fetchAccreditation(ctx)
+        expect(accreditation.status).toBe('cancelled')
+        expect(accreditation.statusHistory.at(-1)).toMatchObject({
+          status: 'cancelled'
+        })
+      }
+    )
+
+    it.each(['created', 'rejected'])(
+      'leaves a linked %s accreditation untouched',
+      async (accStatus) => {
+        const ctx = await seedLinkedOrg(accStatus)
+
+        const response = await cancelRegistration(ctx)
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        const accreditation = await fetchAccreditation(ctx)
+        expect(accreditation.status).toBe(accStatus)
+      }
+    )
+
+    it('does not reinstate the cascade-cancelled accreditation when the registration is reinstated (REG9 AC4)', async () => {
+      const ctx = await seedLinkedOrg('approved')
+      await cancelRegistration(ctx)
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: { fromStatus: 'cancelled', toStatus: 'approved' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const accreditation = await fetchAccreditation(ctx)
+      expect(accreditation.status).toBe('cancelled')
+    })
+  })
+
+  describe('reinstating a cancelled registration (PAE-1616)', () => {
+    it('returns 422 when reinstating would create a duplicate approved-registration key with another registration', async () => {
+      const targetRegistration = buildRegistration({
+        reprocessingType: 'input',
+        registrationNumber: 'REG888888',
+        validFrom: '2024-01-01',
+        validTo: '2026-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2024-01-01' },
+          { status: 'approved', updatedAt: '2024-01-15' },
+          { status: 'cancelled', updatedAt: '2024-06-01' }
+        ]
+      })
+      // Same wasteProcessingType, material, site and reprocessingType as
+      // targetRegistration (both built from the same reprocessor fixture
+      // base with no site/material override), so once targetRegistration is
+      // also approved the two share a key.
+      const conflictingRegistration = buildRegistration({
+        reprocessingType: 'input',
+        registrationNumber: 'REG777777',
+        validFrom: '2024-01-01',
+        validTo: '2025-01-01',
+        statusHistory: [
+          { status: 'created', updatedAt: '2024-01-01' },
+          { status: 'approved', updatedAt: '2024-01-15' }
+        ]
+      })
+
+      const fixture =
+        /** @type {import('#domain/organisations/model.js').Organisation} */ (
+          /** @type {unknown} */ (
+            buildOrganisation({
+              registrations: [targetRegistration, conflictingRegistration],
+              accreditations: []
+            })
+          )
+        )
+
+      server = await createTestServer({
+        repositories: {
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            fixture
+          ]),
+          systemLogsRepository: createSystemLogsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags()
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl({
+          organisationId: fixture.id,
+          registrationId: targetRegistration.id
+        }),
+        payload: { fromStatus: 'cancelled', toStatus: 'approved' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /Multiple approved registrations found with duplicate keys/
+      )
+    })
+  })
+
   describe('payload validation', () => {
     it.each([
       ['payload is missing', undefined],
@@ -394,19 +712,23 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       ['payload uses the old status-only shape', { status: 'approved' }],
       [
         'the from/to pair is not a supported transition',
-        { fromStatus: 'approved', toStatus: 'cancelled' }
+        { fromStatus: 'created', toStatus: 'cancelled' }
       ],
       [
-        // created -> rejected is a valid transition in the domain map
-        // (VALID_REG_TRANSITIONS) but this endpoint only builds the grant
-        // arm so far (PAE-1599) — regression protection against it being
-        // accepted by the schema before the route handles it.
-        'the from/to pair is a valid transition this endpoint has not built yet',
-        { fromStatus: 'created', toStatus: 'rejected' }
+        'the from/to pair is not a supported transition (reverse direction)',
+        { fromStatus: 'approved', toStatus: 'rejected' }
       ],
       [
         'toStatus is not a known status',
         { fromStatus: 'created', toStatus: 'nonsense' }
+      ],
+      [
+        'grant fields are sent with a non-grant pair',
+        {
+          fromStatus: 'created',
+          toStatus: 'rejected',
+          registrationNumber: 'REG123456'
+        }
       ],
       ['payload has unexpected fields', { ...grantPayload, reason: 'x' }],
       [
