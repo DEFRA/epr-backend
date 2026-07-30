@@ -1,23 +1,33 @@
 import Joi from 'joi'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
+  MATERIAL,
   REPROCESSING_TYPE,
+  TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { Material, ReprocessingType, TonnageBand } from '#domain/organisations/model.js' */
+
+/**
+ * @typedef {{ wasteProcessingType: typeof WASTE_PROCESSING_TYPE.EXPORTER }} ExporterProcessingTypes
+ */
+
+/**
+ * @typedef {{ wasteProcessingType: typeof WASTE_PROCESSING_TYPE.REPROCESSOR, reprocessingType: ReprocessingType }} ReprocessorProcessingTypes
+ */
 
 /**
  * The registration's own processing-type fields, the same shape
  * `AccreditationContext` takes in `#waste-balances/domain/credited-tonnage.js`.
- * An exporter registration is forbidden a reprocessing type, so it arrives
- * absent.
+ * An exporter registration is forbidden a reprocessing type and an approved
+ * reprocessor registration is required to carry one, so the two are separate
+ * shapes rather than one shape with an optional field — a reprocessor without
+ * a reprocessing type cannot be built.
  *
- * @typedef {Object} RegistrationProcessingTypes
- * @property {WasteProcessingTypeValue} wasteProcessingType
- * @property {ReprocessingType} [reprocessingType]
+ * @typedef {ExporterProcessingTypes | ReprocessorProcessingTypes} RegistrationProcessingTypes
  */
 
 /**
@@ -29,8 +39,8 @@ import {
  * @property {string} orgId
  * @property {string} registrationNumber
  * @property {string} accreditationNumber
- * @property {string} material
- * @property {string} tonnageBand
+ * @property {Material} material
+ * @property {TonnageBand} tonnageBand
  * @property {WasteBalanceLedgerId} ledgerId
  * @property {RegistrationProcessingTypes} registration
  * @property {number} awaitingAuthorisationTonnage
@@ -238,8 +248,12 @@ const aggregatedRowSchema = Joi.object({
   orgId: Joi.string().required(),
   registrationNumber: Joi.string().required(),
   accreditationNumber: Joi.string().required(),
-  material: Joi.string().required(),
-  tonnageBand: Joi.string().required(),
+  material: Joi.string()
+    .valid(...Object.values(MATERIAL))
+    .required(),
+  tonnageBand: Joi.string()
+    .valid(...Object.values(TONNAGE_BAND))
+    .required(),
   ledgerId: Joi.object({
     organisationId: Joi.string().required(),
     registrationId: Joi.string().required(),
@@ -272,14 +286,14 @@ const aggregatedRowSchema = Joi.object({
  *
  * @param {RegistrationProcessingTypes} registration
  */
-const registrationTypeFor = ({ wasteProcessingType, reprocessingType }) => {
-  if (wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
+const registrationTypeFor = (registration) => {
+  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
     return REGISTRATION_TYPE.EXPORTER
   }
-  if (reprocessingType === REPROCESSING_TYPE.OUTPUT) {
-    return REGISTRATION_TYPE.REPROCESSOR_OUTPUT
-  }
-  return REGISTRATION_TYPE.REPROCESSOR_INPUT
+
+  return registration.reprocessingType === REPROCESSING_TYPE.OUTPUT
+    ? REGISTRATION_TYPE.REPROCESSOR_OUTPUT
+    : REGISTRATION_TYPE.REPROCESSOR_INPUT
 }
 
 /**
@@ -312,8 +326,8 @@ const balancesFor = async (ledgerRepository, ledgerId) => {
  * @property {string} registrationNumber
  * @property {RegistrationType} registrationType
  * @property {string} accreditationNumber
- * @property {string} material
- * @property {string} tonnageBand
+ * @property {Material} material
+ * @property {TonnageBand} tonnageBand
  * @property {number} wasteBalance
  * @property {number} availableWasteBalance
  * @property {number} awaitingAuthorisationTonnage
