@@ -56,8 +56,14 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
     await server.db.collection(ORGANISATIONS_COLLECTION).insertOne({
       _id: new ObjectId(organisationId),
       orgId,
+      companyDetails: { name: 'Acme Reprocessing' },
       accreditations: [
-        { id: accId, prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 } }
+        {
+          id: accId,
+          accreditationNumber: 'ACC-INTEG',
+          material: MATERIAL.PLASTIC,
+          prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 }
+        }
       ],
       registrations: [
         {

@@ -101,8 +101,14 @@ const organisationWithRegistration = (
 ) => ({
   _id: new ObjectId(organisationId),
   orgId,
+  companyDetails: { name: 'Acme Reprocessing' },
   accreditations: [
-    { id: accId, prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 } }
+    {
+      id: accId,
+      accreditationNumber: 'ACC-1',
+      material: MATERIAL.PLASTIC,
+      prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 }
+    }
   ],
   registrations: [registration]
 })
@@ -191,7 +197,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     await expect(aggregatePrnTonnage(db, ledgerRepository)).rejects.toThrow(
-      'Unreportable PRN tonnage row for accreditation ACC-1'
+      'Unreportable PRN tonnage row for accreditation acc-1'
     )
   })
 
@@ -207,7 +213,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     await expect(aggregatePrnTonnage(db, ledgerRepository)).rejects.toThrow(
-      'Unreportable PRN tonnage row for accreditation ACC-1'
+      'Unreportable PRN tonnage row for accreditation acc-1'
     )
   })
 
@@ -238,6 +244,35 @@ describe('aggregatePrnTonnage - Integration', () => {
     await expect(aggregatePrnTonnage(db, ledgerRepository)).rejects.toThrow(
       'registrationNumber'
     )
+  })
+
+  it('reports one row per accreditation when its prns snapshot different organisation names', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(organisationWithRegistration())
+    await db.collection(PRNS_COLLECTION).insertMany([
+      prnWithStatus(PRN_STATUS.ACCEPTED, 40),
+      {
+        ...prnWithStatus(PRN_STATUS.ACCEPTED, 10),
+        organisation: { id: organisationId, name: 'Acme Reprocessing Ltd' }
+      }
+    ])
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        ...ledgerId,
+        closingBalance: { amount: 250, availableAmount: 125 }
+      })
+    ])
+
+    const { rows } = await aggregatePrnTonnage(db, ledgerRepository)
+
+    expect(rows).toStrictEqual([
+      expectedRow({
+        acceptedTonnage: 50,
+        wasteBalance: 250,
+        availableWasteBalance: 125
+      })
+    ])
   })
 
   it('reads both balances from the latest ledger event for the accreditation', async () => {

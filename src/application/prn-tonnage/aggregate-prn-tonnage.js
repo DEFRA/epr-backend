@@ -66,6 +66,9 @@ const GROUPED_ORGANISATION_ID = '$_id.organisationId'
 const GROUPED_REGISTRATION_ID = '$_id.registrationId'
 const GROUPED_ACCREDITATION_ID = '$_id.accId'
 
+/** @param {string} field */
+const fromOrganisation = (field) => ({ $first: `$orgLookup.${field}` })
+
 const buildAccreditedRegistrationStage = () => ({
   $addFields: {
     accreditedRegistration: {
@@ -101,6 +104,9 @@ const buildOrganisationLookupStage = () => ({
         $project: {
           _id: 0,
           orgId: '$orgId',
+          organisationName: '$companyDetails.name',
+          accreditationNumber: '$accreditations.accreditationNumber',
+          material: '$accreditations.material',
           tonnageBand: '$accreditations.prnIssuance.tonnageBand',
           registrationNumber: '$accreditedRegistration.registrationNumber',
           wasteProcessingType: '$accreditedRegistration.wasteProcessingType',
@@ -127,15 +133,19 @@ const buildMatchStage = () => ({
   }
 })
 
+/**
+ * Keyed on ids alone. A PRN carries the organisation name, accreditation number
+ * and material as they stood when it was raised, so keying on those would split
+ * one accreditation across rows the ledger — keyed on ids — cannot tell apart,
+ * reporting its balance once per row. The names come from the organisation
+ * lookup instead.
+ */
 const buildGroupStage = () => ({
   $group: {
     _id: {
       organisationId: '$organisation.id',
-      orgName: '$organisation.name',
       registrationId: '$registrationId',
-      accId: '$accreditation.id',
-      accNumber: '$accreditation.accreditationNumber',
-      material: '$accreditation.material'
+      accId: '$accreditation.id'
     },
     awaitingAuthorisationTonnage: buildStatusTonnageAccumulator(
       AWAITING_AUTHORISATION_STATUSES
@@ -153,17 +163,20 @@ const buildGroupStage = () => ({
 
 const buildAddFieldsStage = () => ({
   $addFields: {
-    orgId: { $toString: { $first: '$orgLookup.orgId' } },
-    registrationNumber: { $first: '$orgLookup.registrationNumber' },
-    tonnageBand: { $first: '$orgLookup.tonnageBand' },
+    orgId: { $toString: fromOrganisation('orgId') },
+    organisationName: fromOrganisation('organisationName'),
+    registrationNumber: fromOrganisation('registrationNumber'),
+    accreditationNumber: fromOrganisation('accreditationNumber'),
+    material: fromOrganisation('material'),
+    tonnageBand: fromOrganisation('tonnageBand'),
     ledgerId: {
       organisationId: GROUPED_ORGANISATION_ID,
       registrationId: GROUPED_REGISTRATION_ID,
       accreditationId: GROUPED_ACCREDITATION_ID
     },
     registration: {
-      wasteProcessingType: { $first: '$orgLookup.wasteProcessingType' },
-      reprocessingType: { $first: '$orgLookup.reprocessingType' }
+      wasteProcessingType: fromOrganisation('wasteProcessingType'),
+      reprocessingType: fromOrganisation('reprocessingType')
     }
   }
 })
@@ -171,11 +184,11 @@ const buildAddFieldsStage = () => ({
 const buildProjectStage = () => ({
   $project: {
     _id: 0,
-    organisationName: '$_id.orgName',
+    organisationName: 1,
     orgId: 1,
     registrationNumber: 1,
-    accreditationNumber: '$_id.accNumber',
-    material: '$_id.material',
+    accreditationNumber: 1,
+    material: 1,
     tonnageBand: 1,
     awaitingAuthorisationTonnage: 1,
     awaitingAcceptanceTonnage: 1,
@@ -328,7 +341,7 @@ export const aggregatePrnTonnage = async (db, ledgerRepository) => {
         Joi.attempt(
           row,
           aggregatedRowSchema,
-          `Unreportable PRN tonnage row for accreditation ${row.accreditationNumber}:`
+          `Unreportable PRN tonnage row for accreditation ${row.ledgerId.accreditationId}:`
         )
       )
     )
