@@ -5,6 +5,8 @@ export const CLASSIFICATION_REASON = Object.freeze({
   PRODUCT_WEIGHT_NOT_ADDED: 'PRODUCT_WEIGHT_NOT_ADDED',
   ORS_NOT_APPROVED: 'ORS_NOT_APPROVED',
   ORS_NOT_FOUND: 'ORS_NOT_FOUND',
+  WASTE_STOPPED: 'WASTE_STOPPED',
+  WASTE_REFUSED: 'WASTE_REFUSED',
   // A template section whose rows never feed the waste balance by design (eg
   // Processed on a reprocessor input template, or Sent on for an exporter).
   // Distinguishes these by-design rows from rows that were evaluated and

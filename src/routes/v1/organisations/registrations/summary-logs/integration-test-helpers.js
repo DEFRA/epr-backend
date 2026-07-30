@@ -128,7 +128,9 @@ export const EXPORTER_HEADERS = [
   'EXPORT_CONTROLS',
   'BASEL_EXPORT_CODE',
   'CUSTOMS_CODES',
-  'CONTAINER_NUMBER'
+  'CONTAINER_NUMBER',
+  'WAS_THE_WASTE_REFUSED',
+  'WAS_THE_WASTE_STOPPED'
 ]
 
 const TARE_PLUS_PALLET_WEIGHT = 150
@@ -278,7 +280,9 @@ export const createExporterRowValues = (overrides = {}) => {
     exportControls: 'Article 18 (Green list)',
     baselCode: 'B3020',
     customsCode: '123456',
-    containerNumber: 'CONT123456'
+    containerNumber: 'CONT123456',
+    wasteRefused: 'No',
+    wasteStopped: 'No'
   }
   const d = { ...defaults, ...overrides }
   return [
@@ -306,7 +310,9 @@ export const createExporterRowValues = (overrides = {}) => {
     d.exportControls,
     d.baselCode,
     d.customsCode,
-    d.containerNumber
+    d.containerNumber,
+    d.wasteRefused,
+    d.wasteStopped
   ]
 }
 

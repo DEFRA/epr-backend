@@ -14,6 +14,7 @@ export {
   YES_NO_VALUES,
   DROPDOWN_PLACEHOLDER
 } from './joi-messages.js'
+export { isYes } from './yes-no.js'
 export { areNumbersEqual, isProductCorrect } from './number-validation.js'
 export { createRowIdSchema } from './row-id.schema.js'
 
