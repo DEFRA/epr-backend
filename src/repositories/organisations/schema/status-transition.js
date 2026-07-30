@@ -5,12 +5,12 @@ import {
   decideOrganisationStatusChange
 } from '#domain/organisations/lifecycle.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Organisation, OrganisationUpdate} from '#domain/organisations/model.js' */
 /** @import {OrganisationStatusRefusal} from '#domain/organisations/lifecycle.js' */
 /** @import {StatusTransitionAsserter} from '#domain/organisations/status.js' */
 
 /**
- * @type {Record<OrganisationStatusRefusal, (existing: Organisation, requested: Organisation) => Error>}
+ * @type {Record<OrganisationStatusRefusal, (existing: Organisation, requested: OrganisationUpdate) => Error>}
  */
 const ORGANISATION_STATUS_ERRORS = {
   [LIFECYCLE_REFUSAL.INVALID_TRANSITION]: (existing, requested) =>
@@ -19,19 +19,17 @@ const ORGANISATION_STATUS_ERRORS = {
     ),
   [LIFECYCLE_REFUSAL.NO_APPROVED_REGISTRATION]: () =>
     Boom.badData(
-      'Cannot approve organisation without at least one approved registration',
-      { statusCode: 422 }
+      'Cannot approve organisation without at least one approved registration'
     ),
   [LIFECYCLE_REFUSAL.NOT_LINKED_TO_DEFRA_ORGANISATION]: () =>
     Boom.badData(
-      'Cannot activate organisation without linking to a Defra organisation',
-      { statusCode: 422 }
+      'Cannot activate organisation without linking to a Defra organisation'
     )
 }
 
 /**
  * @param {Organisation} existing
- * @param {Organisation} requested
+ * @param {OrganisationUpdate} requested
  * @returns {void}
  */
 export const assertOrgStatusTransition = (existing, requested) => {

@@ -22,7 +22,7 @@ import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
-/** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { Organisation, OrganisationStatus, OrganisationUpdate } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { FindPageForOverseasSitesAdminListParams } from './port.js' */
 
@@ -55,9 +55,13 @@ export const statusHistoryWithChanges = (updatedItem, existingItem) => {
 }
 
 /**
+ * Status is dropped from each item and its statusHistory refreshed instead —
+ * the current status is derived from that history on read.
+ *
  * @template {string} S
+ * @template {{ id: string, status?: S }} T
  * @param {Array<{ id: string, status: S }>} existingItems
- * @param {Array<{ id: string, status?: S }>} itemUpdates
+ * @param {T[]} itemUpdates
  * @param {StatusTransitionAsserter<S>} assertStatusTransitionValid
  * @param {Set<string>} [systemAppliedItemIds] - items whose status change was
  *   applied by the system (the registration-cancellation cascade), exempt from
@@ -123,6 +127,10 @@ export const mapDocumentWithCurrentStatuses = (org) => {
   return { id: _id.toString(), ...rest }
 }
 
+/**
+ * @param {OrganisationUpdate} validated
+ * @param {Organisation} existing
+ */
 function prepareRegAccForReplace(validated, existing) {
   const { accreditations: accreditationsAfterUpdate, cascadeCancelledIds } =
     applyRegistrationStatusToLinkedAccreditations(
@@ -154,6 +162,10 @@ function prepareRegAccForReplace(validated, existing) {
   return { registrations, accreditations }
 }
 
+/**
+ * @param {Organisation} existing
+ * @param {object} updates
+ */
 export const prepareForReplace = (existing, updates) => {
   const validated = validateOrganisationUpdate(updates, existing)
   const { registrations, accreditations } = prepareRegAccForReplace(

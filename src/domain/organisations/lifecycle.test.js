@@ -13,7 +13,7 @@ import {
 } from './model.js'
 import { partialMock } from '#test/type-helpers.js'
 
-/** @import {LinkedDefraOrganisation, Organisation} from './model.js' */
+/** @import {LinkedDefraOrganisation, Organisation, OrganisationUpdate} from './model.js' */
 /** @import {Registration} from './registration.js' */
 /** @import {Accreditation} from './accreditation.js' */
 
@@ -25,16 +25,23 @@ const LINKED_DEFRA_ORGANISATION = {
   linkedBy: { email: 'indiana.jones@example.com', id: 'contact-1' }
 }
 
+/** @returns {Organisation} */
 const anOrganisation = (/** @type {Partial<Organisation>} */ fields) =>
   partialMock({ registrations: [], accreditations: [], ...fields })
 
+/** @returns {OrganisationUpdate} */
+const anOrganisationUpdate = (
+  /** @type {Partial<OrganisationUpdate>} */ fields
+) => partialMock({ registrations: [], accreditations: [], ...fields })
+
+/** @returns {Registration} */
 const anApprovedRegistration = () =>
   partialMock({ status: REGISTRATION_STATUS.APPROVED })
 
 describe('decideOrganisationStatusChange', () => {
   it('accepts an update that requests no status', () => {
     const existing = anOrganisation({ status: ORGANISATION_STATUS.CREATED })
-    const requested = anOrganisation({})
+    const requested = anOrganisationUpdate({})
 
     expect(decideOrganisationStatusChange(existing, requested)).toStrictEqual({
       outcome: LIFECYCLE_DECISION.ACCEPTED
@@ -43,7 +50,9 @@ describe('decideOrganisationStatusChange', () => {
 
   it('accepts an update that requests the status the organisation already has', () => {
     const existing = anOrganisation({ status: ORGANISATION_STATUS.ACTIVE })
-    const requested = anOrganisation({ status: ORGANISATION_STATUS.ACTIVE })
+    const requested = anOrganisationUpdate({
+      status: ORGANISATION_STATUS.ACTIVE
+    })
 
     expect(decideOrganisationStatusChange(existing, requested)).toStrictEqual({
       outcome: LIFECYCLE_DECISION.ACCEPTED
@@ -52,7 +61,9 @@ describe('decideOrganisationStatusChange', () => {
 
   it('refuses a transition the organisation transition table does not allow', () => {
     const existing = anOrganisation({ status: ORGANISATION_STATUS.CREATED })
-    const requested = anOrganisation({ status: ORGANISATION_STATUS.ACTIVE })
+    const requested = anOrganisationUpdate({
+      status: ORGANISATION_STATUS.ACTIVE
+    })
 
     expect(decideOrganisationStatusChange(existing, requested)).toStrictEqual({
       outcome: LIFECYCLE_DECISION.REFUSED,
@@ -64,7 +75,7 @@ describe('decideOrganisationStatusChange', () => {
     const existing = anOrganisation({ status: ORGANISATION_STATUS.CREATED })
 
     it('refuses approval when no registration is approved', () => {
-      const requested = anOrganisation({
+      const requested = anOrganisationUpdate({
         status: ORGANISATION_STATUS.APPROVED,
         registrations: [partialMock({ status: REGISTRATION_STATUS.CREATED })]
       })
@@ -78,7 +89,7 @@ describe('decideOrganisationStatusChange', () => {
     })
 
     it('accepts approval when at least one registration is approved', () => {
-      const requested = anOrganisation({
+      const requested = anOrganisationUpdate({
         status: ORGANISATION_STATUS.APPROVED,
         registrations: [
           partialMock({ status: REGISTRATION_STATUS.REJECTED }),
@@ -98,7 +109,9 @@ describe('decideOrganisationStatusChange', () => {
     const existing = anOrganisation({ status: ORGANISATION_STATUS.APPROVED })
 
     it('refuses activation when no Defra organisation is linked', () => {
-      const requested = anOrganisation({ status: ORGANISATION_STATUS.ACTIVE })
+      const requested = anOrganisationUpdate({
+        status: ORGANISATION_STATUS.ACTIVE
+      })
 
       expect(decideOrganisationStatusChange(existing, requested)).toStrictEqual(
         {
@@ -109,7 +122,7 @@ describe('decideOrganisationStatusChange', () => {
     })
 
     it('refuses activation when the linked Defra organisation is empty', () => {
-      const requested = anOrganisation({
+      const requested = anOrganisationUpdate({
         status: ORGANISATION_STATUS.ACTIVE,
         linkedDefraOrganisation: partialMock({})
       })
@@ -123,7 +136,7 @@ describe('decideOrganisationStatusChange', () => {
     })
 
     it('accepts activation when a Defra organisation is linked', () => {
-      const requested = anOrganisation({
+      const requested = anOrganisationUpdate({
         status: ORGANISATION_STATUS.ACTIVE,
         linkedDefraOrganisation: LINKED_DEFRA_ORGANISATION
       })

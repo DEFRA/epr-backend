@@ -1,11 +1,12 @@
 import {
   ACCREDITATION_STATUS,
+  ACTIVE_ACCREDITATION_STATUSES,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
 } from './model.js'
 import { isOrgStatusTransitionValid } from './status.js'
 
-/** @import {AccreditationStatus, LinkedDefraOrganisation, Organisation} from './model.js' */
+/** @import {LinkedDefraOrganisation, Organisation, OrganisationUpdate} from './model.js' */
 /** @import {Registration} from './registration.js' */
 /** @import {Accreditation} from './accreditation.js' */
 
@@ -38,6 +39,16 @@ import { isOrgStatusTransitionValid } from './status.js'
  *   } OrganisationLinkDecision
  */
 
+/**
+ * @typedef {{
+ *   organisation: Organisation,
+ *   linkableOrganisations: Organisation[],
+ *   defraOrganisation: Pick<LinkedDefraOrganisation, 'orgId' | 'orgName'>,
+ *   linkedBy: LinkedDefraOrganisation['linkedBy'],
+ *   linkedAt: string
+ * }} OrganisationLinkRequest
+ */
+
 export const LIFECYCLE_DECISION = Object.freeze({
   ACCEPTED: 'accepted',
   REFUSED: 'refused'
@@ -51,7 +62,7 @@ export const LIFECYCLE_REFUSAL = Object.freeze({
 })
 
 /** @type {{ outcome: typeof LIFECYCLE_DECISION.ACCEPTED }} */
-const ACCEPTED = { outcome: LIFECYCLE_DECISION.ACCEPTED }
+const ACCEPTED = Object.freeze({ outcome: LIFECYCLE_DECISION.ACCEPTED })
 
 /**
  * @param {OrganisationStatusRefusal} reason
@@ -60,7 +71,7 @@ const ACCEPTED = { outcome: LIFECYCLE_DECISION.ACCEPTED }
 const refused = (reason) => ({ outcome: LIFECYCLE_DECISION.REFUSED, reason })
 
 /**
- * @param {Organisation} organisation
+ * @param {OrganisationUpdate} organisation
  * @returns {boolean}
  */
 const hasApprovedRegistration = (organisation) =>
@@ -69,11 +80,12 @@ const hasApprovedRegistration = (organisation) =>
   )
 
 /**
- * @param {Organisation} organisation
+ * @param {OrganisationUpdate} organisation
  * @returns {boolean}
  */
-const isLinkedToDefraOrganisation = ({ linkedDefraOrganisation }) =>
-  !!linkedDefraOrganisation && Object.keys(linkedDefraOrganisation).length > 0
+const isLinkedToDefraOrganisation = (organisation) =>
+  !!organisation.linkedDefraOrganisation &&
+  Object.keys(organisation.linkedDefraOrganisation).length > 0
 
 /**
  * Decide whether an organisation may take the status its update requests. An
@@ -81,8 +93,9 @@ const isLinkedToDefraOrganisation = ({ linkedDefraOrganisation }) =>
  * on the transition table and satisfy the conditions the target status carries.
  *
  * @param {Organisation} existing
- * @param {Organisation} requested - the incoming update, whose registrations
- *   and linked Defra organisation the conditions are judged against.
+ * @param {OrganisationUpdate} requested - the incoming update, whose
+ *   registrations and linked Defra organisation the conditions are judged
+ *   against.
  * @returns {OrganisationStatusDecision}
  */
 export const decideOrganisationStatusChange = (existing, requested) => {
@@ -116,12 +129,7 @@ export const decideOrganisationStatusChange = (existing, requested) => {
  * organisation the user may link can be linked; that set is resolved by the
  * caller, which also holds the clock the link is stamped with.
  *
- * @param {Object} params
- * @param {Organisation} params.organisation
- * @param {Organisation[]} params.linkableOrganisations
- * @param {Pick<LinkedDefraOrganisation, 'orgId' | 'orgName'>} params.defraOrganisation
- * @param {LinkedDefraOrganisation['linkedBy']} params.linkedBy
- * @param {string} params.linkedAt
+ * @param {OrganisationLinkRequest} request
  * @returns {OrganisationLinkDecision}
  */
 export const decideOrganisationLink = ({
@@ -152,16 +160,12 @@ export const decideOrganisationLink = ({
   }
 }
 
+/**
+ * @param {Registration} registration
+ * @returns {boolean}
+ */
 const isRegistrationCancelled = (registration) =>
   registration.status === REGISTRATION_STATUS.CANCELLED
-
-// Only a live accreditation is force-cancelled by the cascade. The check runs
-// against the incoming payload status so that an attempt to reinstate a
-// cascade-cancelled accreditation (payload approved, registration still
-// cancelled) is also caught and held at cancelled.
-const CASCADEABLE_ACC_STATUSES = /** @type {Set<AccreditationStatus>} */ (
-  new Set([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])
-)
 
 /**
  * Cancelling a registration force-cancels its linked accreditation, whether
@@ -192,9 +196,12 @@ export const applyRegistrationStatusToLinkedAccreditations = (
   const cascadeCancelledIds = new Set()
 
   const updatedAccreditations = accreditations.map((acc) => {
+    // Liveness is judged on the incoming payload status, so an attempt to
+    // reinstate a cascade-cancelled accreditation (payload approved, its
+    // registration still cancelled) is caught here and held at cancelled.
     if (
       linkedToCancelledRegistration.has(acc.id) &&
-      CASCADEABLE_ACC_STATUSES.has(acc.status)
+      ACTIVE_ACCREDITATION_STATUSES.has(acc.status)
     ) {
       cascadeCancelledIds.add(acc.id)
       return /** @type {Accreditation} */ ({

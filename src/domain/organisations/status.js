@@ -5,8 +5,9 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 
-/** @import { AccreditationStatus, RegistrationStatus } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, OrganisationStatus, RegistrationStatus } from '#domain/organisations/model.js' */
 
+/** @type {Record<OrganisationStatus, OrganisationStatus[]>} */
 const VALID_ORG_TRANSITIONS = {
   [ORGANISATION_STATUS.CREATED]: [
     ORGANISATION_STATUS.APPROVED,
@@ -59,8 +60,11 @@ const VALID_ACC_TRANSITIONS = {
 }
 
 /**
- * @param {string} fromStatus
- * @param {string} toStatus
+ * Total over `OrganisationStatus`: every member is a key of the table above, so
+ * the lookup cannot come back undefined and the predicate needs no fallback.
+ *
+ * @param {OrganisationStatus} fromStatus
+ * @param {OrganisationStatus} toStatus
  * @returns {boolean}
  */
 export const isOrgStatusTransitionValid = (fromStatus, toStatus) =>

@@ -298,3 +298,13 @@ export const USER_ROLES = Object.freeze({
  *   wasteProcessingTypes: WasteProcessingTypeValue[];
  * }} Organisation
  */
+
+/**
+ * An organisation as it arrives on the write path: what a validated update
+ * carries, which is not an `Organisation`. `id` cannot be updated, `status` is
+ * optional because most updates leave it alone, and `statusHistory` and
+ * `version` are derived by the repository rather than supplied.
+ *
+ * @typedef {Omit<Organisation, 'id' | 'status' | 'statusHistory' | 'version'>
+ *   & { status?: OrganisationStatus }} OrganisationUpdate
+ */
