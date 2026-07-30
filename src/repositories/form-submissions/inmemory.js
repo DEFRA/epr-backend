@@ -15,6 +15,36 @@ const highestOrgId = (organisations) =>
   )
 
 /**
+ * One collection of submissions, cloned on the way in and on the way out so a
+ * caller cannot reach the stored documents.
+ *
+ * @param {Object[]} initialItems
+ */
+const collectionOf = (initialItems) => {
+  const items = structuredClone(initialItems)
+
+  return {
+    insert(submission) {
+      const id = new ObjectId().toString()
+      items.push({ ...structuredClone(submission), id })
+      return id
+    },
+    findAll: () => structuredClone(items),
+    findById(id) {
+      if (!id || (id.trim && !id.trim())) {
+        return null
+      }
+      return structuredClone(items).find((item) => item.id === id) || null
+    },
+    findBySystemReference: (ref) =>
+      structuredClone(items).filter(
+        (item) => item.referenceNumber.toLowerCase() === ref.toLowerCase()
+      ),
+    ids: () => new Set(items.map((item) => item.id))
+  }
+}
+
+/**
  * @param {Object[]} [initialAccreditations=[]]
  * @param {Object[]} [initialRegistrations=[]]
  * @param {Object[]} [initialOrganisations=[]]
@@ -25,11 +55,11 @@ export const createFormSubmissionsRepository = (
   initialRegistrations = [],
   initialOrganisations = []
 ) => {
-  const organisations = structuredClone(initialOrganisations)
-  const accreditations = structuredClone(initialAccreditations)
-  const registrations = structuredClone(initialRegistrations)
+  const organisations = collectionOf(initialOrganisations)
+  const accreditations = collectionOf(initialAccreditations)
+  const registrations = collectionOf(initialRegistrations)
 
-  let orgIdCounter = highestOrgId(organisations)
+  let orgIdCounter = highestOrgId(initialOrganisations)
 
   return () => ({
     async allocateOrgId() {
@@ -37,67 +67,28 @@ export const createFormSubmissionsRepository = (
       return orgIdCounter
     },
     async insertOrganisation(submission) {
-      const id = new ObjectId().toString()
-      organisations.push({ ...structuredClone(submission), id })
-      return id
+      return organisations.insert(submission)
     },
     async insertRegistration(submission) {
-      registrations.push({
-        ...structuredClone(submission),
-        id: new ObjectId().toString()
-      })
+      registrations.insert(submission)
     },
     async insertAccreditation(submission) {
-      accreditations.push({
-        ...structuredClone(submission),
-        id: new ObjectId().toString()
-      })
+      accreditations.insert(submission)
     },
-    async findAllAccreditations() {
-      return structuredClone(accreditations)
-    },
-    async findAccreditationsBySystemReference(ref) {
-      return structuredClone(accreditations).filter(
-        (acc) => acc.referenceNumber.toLowerCase() === ref.toLowerCase()
-      )
-    },
-    async findAccreditationById(id) {
-      if (!id || (id.trim && !id.trim())) {
-        return null
-      }
-      return (
-        structuredClone(accreditations).find((org) => org.id === id) || null
-      )
-    },
-    async findAllOrganisations() {
-      return structuredClone(organisations)
-    },
-    async findOrganisationById(id) {
-      if (!id || (id.trim && !id.trim())) {
-        return null
-      }
-      return structuredClone(organisations).find((org) => org.id === id) || null
-    },
-    async findAllRegistrations() {
-      return structuredClone(registrations)
-    },
-    async findRegistrationsBySystemReference(ref) {
-      return structuredClone(registrations).filter(
-        (reg) => reg.referenceNumber.toLowerCase() === ref.toLowerCase()
-      )
-    },
-    async findRegistrationById(id) {
-      if (!id || (id.trim && !id.trim())) {
-        return null
-      }
-      return structuredClone(registrations).find((org) => org.id === id) || null
-    },
-    async findAllFormSubmissionIds() {
-      return {
-        organisations: new Set(organisations.map((org) => org.id)),
-        registrations: new Set(registrations.map((reg) => reg.id)),
-        accreditations: new Set(accreditations.map((acc) => acc.id))
-      }
-    }
+    findAllAccreditations: async () => accreditations.findAll(),
+    findAccreditationsBySystemReference: async (ref) =>
+      accreditations.findBySystemReference(ref),
+    findAccreditationById: async (id) => accreditations.findById(id),
+    findAllOrganisations: async () => organisations.findAll(),
+    findOrganisationById: async (id) => organisations.findById(id),
+    findAllRegistrations: async () => registrations.findAll(),
+    findRegistrationsBySystemReference: async (ref) =>
+      registrations.findBySystemReference(ref),
+    findRegistrationById: async (id) => registrations.findById(id),
+    findAllFormSubmissionIds: async () => ({
+      organisations: organisations.ids(),
+      registrations: registrations.ids(),
+      accreditations: accreditations.ids()
+    })
   })
 }

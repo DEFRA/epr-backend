@@ -201,17 +201,17 @@ async function createServer(options = {}) {
     plugins.push(...getSwaggerPlugins())
   }
 
-  plugins.push({
-    plugin: featureFlags,
-    options: {
-      config,
-      featureFlags: options.featureFlags
-    }
-  })
-
-  plugins.push(...getProductionPlugins(config))
-
-  plugins.push(router)
+  plugins.push(
+    {
+      plugin: featureFlags,
+      options: {
+        config,
+        featureFlags: options.featureFlags
+      }
+    },
+    ...getProductionPlugins(config),
+    router
+  )
 
   await server.register(plugins)
 
