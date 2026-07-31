@@ -5,9 +5,9 @@ import {
   validateRegistration,
   validateStatusHistory
 } from './validation.js'
+import { MATERIAL } from '#domain/materials.js'
 import {
   ACCREDITATION_STATUS,
-  MATERIAL,
   REGISTRATION_STATUS,
   REGULATOR,
   TIME_SCALE,

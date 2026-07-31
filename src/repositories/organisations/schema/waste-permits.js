@@ -1,7 +1,7 @@
 import Joi from 'joi'
+import { MATERIAL } from '#domain/materials.js'
 import {
   REGULATOR,
-  MATERIAL,
   TIME_SCALE,
   WASTE_PERMIT_TYPE
 } from '#domain/organisations/model.js'

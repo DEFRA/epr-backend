@@ -1,8 +1,5 @@
-import {
-  MATERIAL,
-  TONNAGE_MONITORING_MATERIALS,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { MATERIAL, REPORTING_MATERIALS } from '#domain/materials.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { toNumber } from '#common/helpers/decimal-utils.js'
 import { getMonthRange } from '#common/helpers/date-formatter.js'
@@ -38,7 +35,7 @@ export const formatMaterialResults = (results, valueField) => {
     results.map((result) => [result._id, toNumber(result[valueField])])
   )
 
-  const materials = TONNAGE_MONITORING_MATERIALS.map((material) => ({
+  const materials = REPORTING_MATERIALS.map((material) => ({
     material,
     [valueField]: materialMap.get(material) || 0
   }))
@@ -51,7 +48,7 @@ export const formatMaterialResults = (results, valueField) => {
 const getMaterialMonthlyCombinations = () => {
   const monthsByYear = Object.groupBy(getMonthRange(), (m) => m.year)
 
-  return TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
+  return REPORTING_MATERIALS.flatMap((material) =>
     Object.values(WASTE_PROCESSING_TYPE)
       .map((type) => capitalize(type))
       .flatMap((type) =>

@@ -1,8 +1,7 @@
 import { isNil } from '#common/helpers/is-nil.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import {
   BUSINESS_TYPE,
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   NATION,
   PARTNER_TYPE,
   PARTNERSHIP_TYPE,

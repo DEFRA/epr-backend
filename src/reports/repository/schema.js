@@ -1,9 +1,7 @@
 import { toDecimal } from '#common/helpers/decimal-utils.js'
 import { tonnage, wholeTonnage } from '#common/validation/tonnage-schema.js'
-import {
-  TONNAGE_MONITORING_MATERIALS,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { REPORTING_MATERIALS } from '#domain/materials.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
@@ -170,7 +168,7 @@ export const createReportSchema = Joi.object({
   endDate: CALENDAR_DATE_SCHEMA,
   dueDate: CALENDAR_DATE_SCHEMA,
   material: Joi.string()
-    .valid(...TONNAGE_MONITORING_MATERIALS)
+    .valid(...REPORTING_MATERIALS)
     .required(),
   wasteProcessingType: Joi.string()
     .valid(...Object.values(WASTE_PROCESSING_TYPE))

@@ -1,4 +1,5 @@
-/** @import {AccreditationStatus, GlassRecyclingProcess, ReprocessingType, User} from '#domain/organisations/model.js' */
+/** @import {GlassRecyclingProcess} from '#domain/materials.js' */
+/** @import {AccreditationStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
  * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but

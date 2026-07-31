@@ -1,5 +1,6 @@
 import Joi from 'joi'
-import { MATERIAL, TONNAGE_BAND } from '#domain/organisations/model.js'
+import { MATERIAL } from '#domain/materials.js'
+import { TONNAGE_BAND } from '#domain/organisations/model.js'
 import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
 
 const prnTonnageRowSchema = Joi.object({

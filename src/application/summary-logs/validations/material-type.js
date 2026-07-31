@@ -3,10 +3,7 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
-import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL
-} from '#domain/organisations/model.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,

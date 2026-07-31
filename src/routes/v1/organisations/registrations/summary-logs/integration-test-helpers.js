@@ -29,7 +29,8 @@ import assert from 'node:assert/strict'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { StatusHistoryEntry, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { Material, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import {Material} from '#domain/materials.js' */
+/** @import {RegistrationStatus, ReprocessingType} from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 

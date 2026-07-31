@@ -2,13 +2,15 @@
  * Pure utility functions for formatting public register data
  */
 
-/** @import {Address, GlassRecyclingProcess, Material, TonnageBand} from '#domain/organisations/model.js' */
+/** @import {GlassRecyclingProcess, Material} from '#domain/materials.js' */
+/** @import {Address, TonnageBand} from '#domain/organisations/model.js' */
 /** @import {RegistrationAddress} from '#domain/organisations/registration.js' */
 
 import {
   GLASS_RECYCLING_PROCESS,
-  MATERIAL
-} from '#domain/organisations/model.js'
+  MATERIAL,
+  MATERIAL_PROCESS_CODE
+} from '#domain/materials.js'
 
 const MATERIAL_DISPLAY_NAMES = {
   [MATERIAL.FIBRE]: 'Fibre based composite',
@@ -18,16 +20,6 @@ const MATERIAL_DISPLAY_NAMES = {
 const GLASS_RECYCLING_PROCESS_MAPPING = {
   [GLASS_RECYCLING_PROCESS.GLASS_OTHER]: 'other',
   [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]: 'remelt'
-}
-
-export const ANNEX_II_PROCESS = {
-  [MATERIAL.GLASS]: 'R5',
-  [MATERIAL.PAPER]: 'R3',
-  [MATERIAL.PLASTIC]: 'R3',
-  [MATERIAL.STEEL]: 'R4',
-  [MATERIAL.WOOD]: 'R3',
-  [MATERIAL.FIBRE]: 'R3',
-  [MATERIAL.ALUMINIUM]: 'R4'
 }
 
 export const TONNAGE_BAND_DISPLAY_NAMES = {
@@ -93,7 +85,7 @@ export function formatMaterial(material, glassRecyclingProcess = []) {
  * @returns {string} - Annex II process code (e.g., 'R3', 'R4', 'R5')
  */
 export function getAnnexIIProcess(material) {
-  return ANNEX_II_PROCESS[material] || ''
+  return MATERIAL_PROCESS_CODE[material] || ''
 }
 
 /**

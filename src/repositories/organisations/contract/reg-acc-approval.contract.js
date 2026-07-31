@@ -7,10 +7,9 @@ import {
   prepareOrgUpdate,
   getValidDateRange
 } from './test-data.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import {
   ACCREDITATION_STATUS,
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   REGISTRATION_STATUS,
   REPROCESSING_TYPE,
   TIME_SCALE,

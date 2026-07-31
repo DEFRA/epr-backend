@@ -8,10 +8,9 @@ import {
   getAnnexIIProcess,
   uppercaseString
 } from './formatters.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import {
   ACCREDITATION_STATUS,
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'

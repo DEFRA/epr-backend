@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { MATERIAL } from '#domain/materials.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { ObjectId } from 'mongodb'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
 import {

@@ -9,8 +9,8 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { MATERIAL } from '#domain/materials.js'
 import {
-  MATERIAL,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'

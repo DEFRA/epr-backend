@@ -1,7 +1,6 @@
 import Joi from 'joi'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   REGISTRATION_STATUS,
   REGULATOR,
   TIME_SCALE,

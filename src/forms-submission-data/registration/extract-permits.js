@@ -6,8 +6,8 @@ import {
   convertToNumber,
   mapWastePermitType
 } from '#formsubmission/parsing-common/form-data-mapper.js'
+import { MATERIAL } from '#domain/materials.js'
 import {
-  MATERIAL,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'

@@ -3,9 +3,8 @@ import {
   isAccreditationForRegistration,
   getRegAccKey
 } from './submission-keys.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
