@@ -31,12 +31,13 @@ export const GLASS_RECYCLING_PROCESS = Object.freeze({
 
 /**
  * The granularity tonnage is reported, monitored and displayed at: glass splits
- * into its two recycling processes, every other material stands alone.
+ * into its two recycling processes, every other material stands alone. Named
+ * for the `$effectiveMaterial` field the tonnage aggregations already compute.
  *
  * Distinct from `Material`, which is what a registration is held for, and from
  * the public register's `packagingWasteCategory`, which is a rendered label
  * rather than a key.
- * @typedef {Exclude<Material, 'glass'> | GlassRecyclingProcess} ReportingMaterial
+ * @typedef {Exclude<Material, 'glass'> | GlassRecyclingProcess} EffectiveMaterial
  */
 
 /**
@@ -45,8 +46,8 @@ export const GLASS_RECYCLING_PROCESS = Object.freeze({
  */
 const isNotGlass = (material) => material !== MATERIAL.GLASS
 
-/** @type {readonly ReportingMaterial[]} */
-export const REPORTING_MATERIALS = Object.freeze([
+/** @type {readonly EffectiveMaterial[]} */
+export const EFFECTIVE_MATERIALS = Object.freeze([
   ...Object.values(MATERIAL).filter(isNotGlass),
   ...Object.values(GLASS_RECYCLING_PROCESS)
 ])

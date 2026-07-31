@@ -1,14 +1,14 @@
 import Joi from 'joi'
-import { REPORTING_MATERIALS } from '#domain/materials.js'
+import { EFFECTIVE_MATERIALS } from '#domain/materials.js'
 
 const materialBalanceSchema = Joi.object({
   material: Joi.string()
-    .valid(...REPORTING_MATERIALS)
+    .valid(...EFFECTIVE_MATERIALS)
     .required(),
   availableAmount: Joi.number().required()
 })
 
-const materialsExample = REPORTING_MATERIALS.map((material) => ({
+const materialsExample = EFFECTIVE_MATERIALS.map((material) => ({
   material,
   availableAmount: 0
 }))

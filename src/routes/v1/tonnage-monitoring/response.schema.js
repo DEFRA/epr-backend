@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { REPORTING_MATERIALS } from '#domain/materials.js'
+import { EFFECTIVE_MATERIALS } from '#domain/materials.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { capitalize } from '#common/helpers/formatters.js'
 
@@ -31,7 +31,7 @@ const START_YEAR = 2026
 const MAX_YEAR = 2100
 const materialTonnageSchema = Joi.object({
   material: Joi.string()
-    .valid(...REPORTING_MATERIALS)
+    .valid(...EFFECTIVE_MATERIALS)
     .required(),
   year: Joi.number().integer().min(START_YEAR).max(MAX_YEAR).required(),
 

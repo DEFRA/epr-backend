@@ -6,7 +6,7 @@ import {
   formatMaterialResults,
   formatTonnageMonitoringResults
 } from './material-aggregation.js'
-import { REPORTING_MATERIALS } from '#domain/materials.js'
+import { EFFECTIVE_MATERIALS } from '#domain/materials.js'
 
 /**
  * `formatMaterialResults` keys the metric dynamically (`totalTonnage` /
@@ -172,7 +172,7 @@ describe('material-aggregation', () => {
           year: 2026,
           months: [{ month: 'Jan', tonnage: 0 }]
         })
-        expect(REPORTING_MATERIALS).toContain(entry.material)
+        expect(EFFECTIVE_MATERIALS).toContain(entry.material)
         expect(['Exporter', 'Reprocessor']).toContain(entry.type)
       })
 
