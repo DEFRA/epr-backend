@@ -2,25 +2,11 @@
  * Pure utility functions for formatting public register data
  */
 
-/** @import {GlassRecyclingProcess, Material} from '#domain/materials.js' */
+/** @import {Material} from '#domain/materials.js' */
 /** @import {Address, TonnageBand} from '#domain/organisations/model.js' */
 /** @import {RegistrationAddress} from '#domain/organisations/registration.js' */
 
-import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
-  MATERIAL_PROCESS_CODE
-} from '#domain/materials.js'
-
-const MATERIAL_DISPLAY_NAMES = {
-  [MATERIAL.FIBRE]: 'Fibre based composite',
-  [MATERIAL.PAPER]: 'Paper and board'
-}
-
-const GLASS_RECYCLING_PROCESS_MAPPING = {
-  [GLASS_RECYCLING_PROCESS.GLASS_OTHER]: 'other',
-  [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]: 'remelt'
-}
+import { materialToProcessCode } from '#domain/materials.js'
 
 export const TONNAGE_BAND_DISPLAY_NAMES = {
   up_to_500: 'Up to 500 tonnes',
@@ -62,30 +48,12 @@ export function capitalize(str) {
 }
 
 /**
- * Formats material to human-readable format with special handling for glass
- * @param {Material} material - Material constant (e.g., 'plastic', 'glass')
- * @param {GlassRecyclingProcess[]} glassRecyclingProcess - Array of glass recycling processes (for glass material only)
- * @returns {string} - Formatted material (e.g., 'Plastic', 'Glass-remelt', 'Glass-remelt-other')
- */
-export function formatMaterial(material, glassRecyclingProcess = []) {
-  if (material === MATERIAL.GLASS && glassRecyclingProcess?.length > 0) {
-    const recyclingProcesses = glassRecyclingProcess
-      .map((process) => GLASS_RECYCLING_PROCESS_MAPPING[process])
-      .join('-')
-
-    return `Glass-${recyclingProcesses}`
-  }
-
-  return MATERIAL_DISPLAY_NAMES[material] || capitalize(material)
-}
-
-/**
  * Gets Annex II Process code for a material
  * @param {Material} material - Material constant
  * @returns {string} - Annex II process code (e.g., 'R3', 'R4', 'R5')
  */
 export function getAnnexIIProcess(material) {
-  return MATERIAL_PROCESS_CODE[material] || ''
+  return materialToProcessCode[material] || ''
 }
 
 /**

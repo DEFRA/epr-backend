@@ -5,9 +5,9 @@
 import {
   capitalize,
   formatAddress,
-  formatMaterial,
   uppercaseString
 } from '#common/helpers/formatters.js'
+import { formatMaterialCsvLabel } from '#domain/material-csv-labels.js'
 import { toISOString } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
@@ -90,7 +90,7 @@ function buildRegistrationLookup(organisations) {
               registrationNumber: registration.registrationNumber || '',
               accreditationNumber: accreditation?.accreditationNumber || '',
               reprocessingSite: formatAddress(registration.site?.address),
-              packagingWasteCategory: formatMaterial(
+              packagingWasteCategory: formatMaterialCsvLabel(
                 registration.material,
                 registration.glassRecyclingProcess
               )

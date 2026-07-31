@@ -67,7 +67,7 @@ export const PROCESS_CODE = Object.freeze({
  * so a new material cannot be added without giving it a code.
  * @type {Record<Material, ProcessCode>}
  */
-export const MATERIAL_PROCESS_CODE = Object.freeze({
+export const materialToProcessCode = Object.freeze({
   [MATERIAL.ALUMINIUM]: PROCESS_CODE.R4,
   [MATERIAL.FIBRE]: PROCESS_CODE.R3,
   [MATERIAL.GLASS]: PROCESS_CODE.R5,

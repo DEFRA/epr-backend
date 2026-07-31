@@ -1,4 +1,4 @@
-import { MATERIAL_PROCESS_CODE } from '#domain/materials.js'
+import { materialToProcessCode } from '#domain/materials.js'
 
 /** @import {ProcessCode} from '#domain/materials.js' */
 
@@ -11,5 +11,5 @@ export function getProcessCode(material) {
   if (!material) {
     return null
   }
-  return MATERIAL_PROCESS_CODE[material.toLowerCase()] ?? null
+  return materialToProcessCode[material.toLowerCase()] ?? null
 }
