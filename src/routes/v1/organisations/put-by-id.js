@@ -49,7 +49,7 @@ async function validateOverseasSiteReferences(
   }
 }
 
-const validateMyPayload = (payload) => {
+export const validateMyPayload = (payload) => {
   if (typeof payload.version !== 'number') {
     throw Boom.badRequest('Payload must include a numeric version field')
   }
@@ -118,19 +118,16 @@ const validateStatusesUnchanged = (initial, updates) => {
   }
 }
 
-export const organisationsPutById = {
-  method: 'PUT',
-  path: organisationsPutByIdPath,
-  options: {
-    auth: {
-      scope: [SCOPES.adminWrite]
-    },
-    tags: ['api', 'admin'],
-    validate: {
-      payload: validateMyPayload
-    }
-  },
-
+/**
+ * Builds the PUT handler. The public route enforces the PAE-1645 status
+ * immutability guard and audits the change; the non-prod dev seeding route
+ * (`/v1/dev/organisations/{id}`) skips both — journey-test fixtures use it
+ * to seed statuses and numbers directly, and it is unauthenticated so there
+ * is no actor to audit.
+ * @param {{ devSeeding?: boolean }} [options]
+ */
+export const makePutOrganisationHandler =
+  ({ devSeeding = false } = {}) =>
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<PutByIdPayload> & {
    *    organisationsRepository: OrganisationsRepository,
@@ -140,7 +137,7 @@ export const organisationsPutById = {
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async (request, h) => {
+  async (request, h) => {
     const { organisationsRepository, overseasSitesRepository } = request
 
     const id = request.params.id.trim()
@@ -157,7 +154,9 @@ export const organisationsPutById = {
     const updates = sanitisedFragment
 
     const initial = await organisationsRepository.findById(id)
-    validateStatusesUnchanged(initial, updates)
+    if (!devSeeding) {
+      validateStatusesUnchanged(initial, updates)
+    }
 
     await validateOverseasSiteReferences(
       overseasSitesRepository,
@@ -166,7 +165,24 @@ export const organisationsPutById = {
 
     await organisationsRepository.replace(id, version, updates)
     const updated = await organisationsRepository.findById(id, version + 1)
-    await auditOrganisationUpdate(request, id, initial, updated)
+    if (!devSeeding) {
+      await auditOrganisationUpdate(request, id, initial, updated)
+    }
     return h.response(updated).code(StatusCodes.OK)
   }
+
+export const organisationsPutById = {
+  method: 'PUT',
+  path: organisationsPutByIdPath,
+  options: {
+    auth: {
+      scope: [SCOPES.adminWrite]
+    },
+    tags: ['api', 'admin'],
+    validate: {
+      payload: validateMyPayload
+    }
+  },
+
+  handler: makePutOrganisationHandler()
 }
