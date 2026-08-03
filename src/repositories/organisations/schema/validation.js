@@ -49,7 +49,11 @@ export const validateOrganisationInsert = (data) => {
   )
 }
 
-/** @param {object} data @param {import('#domain/organisations/model.js').Organisation | null} [existing] */
+/**
+ * @param {object} data
+ * @param {import('#domain/organisations/model.js').Organisation | null} [existing]
+ * @returns {import('#domain/organisations/model.js').OrganisationUpdate}
+ */
 export const validateOrganisationUpdate = (data, existing = null) => {
   return validateWithSchema(
     organisationReplaceSchema,

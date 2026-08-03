@@ -7,17 +7,17 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Organisation, OrganisationUpdate} from '#domain/organisations/model.js' */
 /** @import {StatusTransitionAsserter} from '#domain/organisations/status.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {RegistrationUpdate} from '#domain/organisations/registration.js' */
+/** @import {AccreditationUpdate} from '#domain/organisations/accreditation.js' */
 
 /**
- * @param {Organisation} existing
+ * @param {OrganisationUpdate} updated
  * @returns {void}
  */
-const requireApprovedRegistration = (existing) => {
-  const hasApproved = existing.registrations.some(
+const requireApprovedRegistration = (updated) => {
+  const hasApproved = updated.registrations.some(
     (reg) => reg.status === REGISTRATION_STATUS.APPROVED
   )
 
@@ -30,7 +30,7 @@ const requireApprovedRegistration = (existing) => {
 }
 
 /**
- * @param {Organisation} updated
+ * @param {OrganisationUpdate} updated
  * @returns {void}
  */
 const requireLinkedDefraOrg = (updated) => {
@@ -48,7 +48,7 @@ const requireLinkedDefraOrg = (updated) => {
 /**
  * Validates organisation status transitions and ensures required conditions are met
  * @param {Organisation} existing
- * @param {Organisation} updated
+ * @param {OrganisationUpdate} updated
  * @returns {void}
  */
 export const assertOrgStatusTransition = (existing, updated) => {
@@ -87,6 +87,10 @@ export const assertAndHandleItemStateTransition = (
   assertStatusTransitionValid(existing.status, updated.status)
 }
 
+/**
+ * @param {RegistrationUpdate} registration
+ * @returns {boolean}
+ */
 const isRegistrationCancelled = (registration) =>
   registration.status === REGISTRATION_STATUS.CANCELLED
 
@@ -98,9 +102,9 @@ const isRegistrationCancelled = (registration) =>
  * system-driven changes, exempt from the accreditation transition table —
  * which deliberately has no direct approved -> cancelled arc for user-driven
  * updates (ADR 0042).
- * @param {Registration[]} registrations
- * @param {Accreditation[]} accreditations
- * @returns {{ accreditations: Accreditation[], cascadeCancelledIds: Set<string> }}
+ * @param {RegistrationUpdate[]} registrations
+ * @param {AccreditationUpdate[]} accreditations
+ * @returns {{ accreditations: AccreditationUpdate[], cascadeCancelledIds: Set<string> }}
  */
 export const applyRegistrationStatusToLinkedAccreditations = (
   registrations,
@@ -119,12 +123,15 @@ export const applyRegistrationStatusToLinkedAccreditations = (
   const cascadeCancelledIds = new Set()
 
   const updatedAccreditations = accreditations.map((acc) => {
+    // Liveness is judged on the incoming payload status, so an update that
+    // proposes no status for an accreditation leaves it out of the cascade.
     if (
       linkedToCancelledRegistration.has(acc.id) &&
+      acc.status !== undefined &&
       ACTIVE_ACCREDITATION_STATUSES.has(acc.status)
     ) {
       cascadeCancelledIds.add(acc.id)
-      return /** @type {Accreditation} */ ({
+      return /** @type {AccreditationUpdate} */ ({
         ...acc,
         status: ACCREDITATION_STATUS.CANCELLED
       })
