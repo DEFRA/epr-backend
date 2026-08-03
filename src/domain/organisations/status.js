@@ -5,8 +5,9 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 
-/** @import { AccreditationStatus, RegistrationStatus } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, OrganisationStatus, RegistrationStatus } from '#domain/organisations/model.js' */
 
+/** @type {Record<OrganisationStatus, OrganisationStatus[]>} */
 const VALID_ORG_TRANSITIONS = {
   [ORGANISATION_STATUS.CREATED]: [
     ORGANISATION_STATUS.APPROVED,
@@ -58,16 +59,16 @@ const VALID_ACC_TRANSITIONS = {
   [ACCREDITATION_STATUS.REJECTED]: [ACCREDITATION_STATUS.CREATED]
 }
 
-export const assertOrgStatusTransitionValid = (fromStatus, toStatus) => {
-  const allowedTransitions = VALID_ORG_TRANSITIONS[fromStatus]
-  const isValid = allowedTransitions.includes(toStatus)
-
-  if (!isValid) {
-    throw Boom.badData(
-      `Cannot transition organisation status from ${fromStatus} to ${toStatus}`
-    )
-  }
-}
+/**
+ * Total over `OrganisationStatus`: every member is a key of the table above, so
+ * the lookup cannot come back undefined and the predicate needs no fallback.
+ *
+ * @param {OrganisationStatus} fromStatus
+ * @param {OrganisationStatus} toStatus
+ * @returns {boolean}
+ */
+export const isOrgStatusTransitionValid = (fromStatus, toStatus) =>
+  VALID_ORG_TRANSITIONS[fromStatus].includes(toStatus)
 
 /**
  * @template {string} S

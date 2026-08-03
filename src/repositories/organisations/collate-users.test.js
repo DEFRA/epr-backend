@@ -7,9 +7,8 @@ import {
 } from '#domain/organisations/model.js'
 
 /**
- * @import {AccreditationStatus, Organisation, RegistrationStatus} from '#domain/organisations/model.js'
- * @import {Registration} from '#domain/organisations/registration.js'
- * @import {Accreditation} from '#domain/organisations/accreditation.js'
+ * @import {AccreditationStatus, RegistrationStatus} from '#domain/organisations/model.js'
+ * @import {CollatableAccreditation, CollatableRegistration, UserCollationSource} from './collate-users.js'
  *
  * @typedef {{ email: string, fullName: string }} TestPerson
  */
@@ -17,12 +16,12 @@ import {
 describe('collateUsers', () => {
   /**
    * @param {{
-   *   registrations?: Registration[]
-   *   accreditations?: Accreditation[]
+   *   registrations?: CollatableRegistration[]
+   *   accreditations?: CollatableAccreditation[]
    *   users?: TestPerson[]
    *   submitterContactDetails?: TestPerson
    * }} [options]
-   * @returns {Organisation}
+   * @returns {UserCollationSource}
    */
   const buildOrg = ({
     registrations = [],
@@ -33,7 +32,7 @@ describe('collateUsers', () => {
       email: 'org-submitter@example.com'
     }
   } = {}) =>
-    /** @type {Organisation} */ (
+    /** @type {UserCollationSource} */ (
       /** @type {unknown} */ ({
         statusHistory: [{ status: 'created', updatedAt: new Date() }],
         submitterContactDetails,
@@ -51,7 +50,7 @@ describe('collateUsers', () => {
    *   approvedPersons?: TestPerson[]
    *   applicationContact?: TestPerson
    * }} options
-   * @returns {Registration}
+   * @returns {CollatableRegistration}
    */
   const buildRegistration = ({
     id = 'reg-1',
@@ -60,7 +59,7 @@ describe('collateUsers', () => {
     approvedPersons = [],
     applicationContact
   }) =>
-    /** @type {Registration} */ (
+    /** @type {CollatableRegistration} */ (
       /** @type {unknown} */ ({
         id,
         statusHistory: [{ status, updatedAt: new Date() }],
@@ -82,7 +81,7 @@ describe('collateUsers', () => {
    *   submitterEmail?: string
    *   signatories?: TestPerson[]
    * }} options
-   * @returns {Accreditation}
+   * @returns {CollatableAccreditation}
    */
   const buildAccreditation = ({
     id = 'acc-1',
@@ -90,7 +89,7 @@ describe('collateUsers', () => {
     submitterEmail = 'acc-submitter@example.com',
     signatories = []
   }) =>
-    /** @type {Accreditation} */ (
+    /** @type {CollatableAccreditation} */ (
       /** @type {unknown} */ ({
         id,
         statusHistory: [{ status, updatedAt: new Date() }],
@@ -269,7 +268,9 @@ describe('collateUsers', () => {
 
   it('omits the org-level submitter when it is absent', () => {
     const org = buildOrg()
-    delete (/** @type {Partial<Organisation>} */ (org).submitterContactDetails)
+    delete (
+      /** @type {Partial<UserCollationSource>} */ (org).submitterContactDetails
+    )
 
     const emails = collateUsers(org).map((u) => u.email)
 
@@ -278,7 +279,7 @@ describe('collateUsers', () => {
 
   it('handles an org with no users field', () => {
     const org = buildOrg()
-    delete (/** @type {Partial<Organisation>} */ (org).users)
+    delete (/** @type {Partial<UserCollationSource>} */ (org).users)
 
     expect(() => collateUsers(org)).not.toThrow()
     expect(collateUsers(org)).toEqual([

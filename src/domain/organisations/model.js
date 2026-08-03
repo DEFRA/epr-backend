@@ -1,5 +1,5 @@
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {Accreditation, AccreditationUpdate} from '#domain/organisations/accreditation.js' */
+/** @import {Registration, RegistrationUpdate} from '#domain/organisations/registration.js' */
 
 /**
  * @typedef {Registration | Accreditation} RegistrationOrAccreditation
@@ -297,4 +297,20 @@ export const USER_ROLES = Object.freeze({
  *   version: number;
  *   wasteProcessingTypes: WasteProcessingTypeValue[];
  * }} Organisation
+ */
+
+/**
+ * An organisation as it arrives on the write path: what a validated update
+ * carries, which is not an `Organisation`. `id` cannot be updated, `status` is
+ * optional because most updates leave it alone, and `statusHistory` and
+ * `version` are derived by the repository rather than supplied. Its
+ * registrations and accreditations are updates too, on the same terms.
+ *
+ * @typedef {Omit<Organisation,
+ *     'accreditations' | 'id' | 'registrations' | 'status' | 'statusHistory' | 'version'
+ *   > & {
+ *   accreditations: AccreditationUpdate[];
+ *   registrations: RegistrationUpdate[];
+ *   status?: OrganisationStatus;
+ * }} OrganisationUpdate
  */

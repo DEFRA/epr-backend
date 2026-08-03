@@ -12,7 +12,8 @@ import {
 import Boom from '@hapi/boom'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {RegistrationUpdate} from '#domain/organisations/registration.js' */
+/** @import {AccreditationUpdate} from '#domain/organisations/accreditation.js' */
 /** @import {RegistrationOrAccreditation} from '#domain/organisations/model.js' */
 
 export const PREVIOUS_SCHEMA_VERSION = 2
@@ -150,8 +151,8 @@ function formatDuplicateError(duplicates, itemType) {
 }
 
 /**
- * @param {Registration[]} registrations
- * @returns {[string, Registration[]][]}
+ * @param {RegistrationUpdate[]} registrations
+ * @returns {[string, RegistrationUpdate[]][]}
  */
 function findAccreditationIdsLinkedToMultipleRegistrations(registrations) {
   const linkedRegistrations = registrations.filter(
@@ -164,13 +165,13 @@ function findAccreditationIdsLinkedToMultipleRegistrations(registrations) {
   )
 
   return (
-    /** @type {[string, Registration[]][]} */
+    /** @type {[string, RegistrationUpdate[]][]} */
     (Object.entries(grouped)).filter(([, regs]) => regs.length > 1)
   )
 }
 
 /**
- * @param {Registration[]} registrations
+ * @param {RegistrationUpdate[]} registrations
  */
 export function validateAccreditationLinkUniqueness(registrations) {
   const duplicates =
@@ -192,8 +193,8 @@ export function validateAccreditationLinkUniqueness(registrations) {
 }
 
 /**
- * @param {Registration[]} registrations
- * @param {import('#domain/organisations/accreditation.js').Accreditation[]} accreditations
+ * @param {RegistrationUpdate[]} registrations
+ * @param {AccreditationUpdate[]} accreditations
  */
 export function validateAccreditationLinkExists(registrations, accreditations) {
   const accreditationIds = new Set(accreditations.map((acc) => acc.id))
@@ -217,8 +218,8 @@ export function validateAccreditationLinkExists(registrations, accreditations) {
 }
 
 /**
- * @param {Registration[]} registrations
- * @param {import('#domain/organisations/accreditation.js').Accreditation[]} accreditations
+ * @param {RegistrationUpdate[]} registrations
+ * @param {AccreditationUpdate[]} accreditations
  */
 export function validateAccreditationLinkMatches(
   registrations,

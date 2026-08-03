@@ -1,70 +1,42 @@
 import Boom from '@hapi/boom'
-import { assertOrgStatusTransitionValid } from '#domain/organisations/status.js'
 import {
-  ACCREDITATION_STATUS,
-  ACTIVE_ACCREDITATION_STATUSES,
-  ORGANISATION_STATUS,
-  REGISTRATION_STATUS
-} from '#domain/organisations/model.js'
+  LIFECYCLE_DECISION,
+  LIFECYCLE_REFUSAL,
+  decideOrganisationStatusChange
+} from '#domain/organisations/lifecycle.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Organisation, OrganisationUpdate} from '#domain/organisations/model.js' */
+/** @import {OrganisationStatusRefusal} from '#domain/organisations/lifecycle.js' */
 /** @import {StatusTransitionAsserter} from '#domain/organisations/status.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
 /**
- * @param {Organisation} existing
- * @returns {void}
+ * @type {Record<OrganisationStatusRefusal, (existing: Organisation, requested: OrganisationUpdate) => Error>}
  */
-const requireApprovedRegistration = (existing) => {
-  const hasApproved = existing.registrations.some(
-    (reg) => reg.status === REGISTRATION_STATUS.APPROVED
-  )
-
-  if (!hasApproved) {
-    throw Boom.badData(
-      'Cannot approve organisation without at least one approved registration',
-      { statusCode: 422 }
+const ORGANISATION_STATUS_ERRORS = {
+  [LIFECYCLE_REFUSAL.INVALID_TRANSITION]: (existing, requested) =>
+    Boom.badData(
+      `Cannot transition organisation status from ${existing.status} to ${requested.status}`
+    ),
+  [LIFECYCLE_REFUSAL.NO_APPROVED_REGISTRATION]: () =>
+    Boom.badData(
+      'Cannot approve organisation without at least one approved registration'
+    ),
+  [LIFECYCLE_REFUSAL.NOT_LINKED_TO_DEFRA_ORGANISATION]: () =>
+    Boom.badData(
+      'Cannot activate organisation without linking to a Defra organisation'
     )
-  }
 }
 
 /**
- * @param {Organisation} updated
- * @returns {void}
- */
-const requireLinkedDefraOrg = (updated) => {
-  if (
-    !updated.linkedDefraOrganisation ||
-    Object.keys(updated.linkedDefraOrganisation).length === 0
-  ) {
-    throw Boom.badData(
-      'Cannot activate organisation without linking to a Defra organisation',
-      { statusCode: 422 }
-    )
-  }
-}
-
-/**
- * Validates organisation status transitions and ensures required conditions are met
  * @param {Organisation} existing
- * @param {Organisation} updated
+ * @param {OrganisationUpdate} requested
  * @returns {void}
  */
-export const assertOrgStatusTransition = (existing, updated) => {
-  // If no status change requested (undefined or same), skip validation
-  if (!updated.status || existing.status === updated.status) {
-    return
-  }
+export const assertOrgStatusTransition = (existing, requested) => {
+  const decision = decideOrganisationStatusChange(existing, requested)
 
-  assertOrgStatusTransitionValid(existing.status, updated.status)
-
-  if (updated.status === ORGANISATION_STATUS.APPROVED) {
-    requireApprovedRegistration(updated)
-  }
-
-  if (updated.status === ORGANISATION_STATUS.ACTIVE) {
-    requireLinkedDefraOrg(updated)
+  if (decision.outcome === LIFECYCLE_DECISION.REFUSED) {
+    throw ORGANISATION_STATUS_ERRORS[decision.reason](existing, requested)
   }
 }
 
@@ -85,52 +57,4 @@ export const assertAndHandleItemStateTransition = (
     return
   }
   assertStatusTransitionValid(existing.status, updated.status)
-}
-
-const isRegistrationCancelled = (registration) =>
-  registration.status === REGISTRATION_STATUS.CANCELLED
-
-/**
- * Cancelling a registration force-cancels its linked accreditation, whether
- * that accreditation is approved or suspended (PAE-1705 Scenario 5). An
- * accreditation that was never live (created or rejected) is left untouched.
- * The returned cascadeCancelledIds mark the force-cancelled accreditations as
- * system-driven changes, exempt from the accreditation transition table —
- * which deliberately has no direct approved -> cancelled arc for user-driven
- * updates (ADR 0042).
- * @param {Registration[]} registrations
- * @param {Accreditation[]} accreditations
- * @returns {{ accreditations: Accreditation[], cascadeCancelledIds: Set<string> }}
- */
-export const applyRegistrationStatusToLinkedAccreditations = (
-  registrations,
-  accreditations
-) => {
-  /** @type {Set<string>} */
-  const linkedToCancelledRegistration = new Set()
-
-  for (const reg of registrations) {
-    if (reg.accreditationId && isRegistrationCancelled(reg)) {
-      linkedToCancelledRegistration.add(reg.accreditationId)
-    }
-  }
-
-  /** @type {Set<string>} */
-  const cascadeCancelledIds = new Set()
-
-  const updatedAccreditations = accreditations.map((acc) => {
-    if (
-      linkedToCancelledRegistration.has(acc.id) &&
-      ACTIVE_ACCREDITATION_STATUSES.has(acc.status)
-    ) {
-      cascadeCancelledIds.add(acc.id)
-      return /** @type {Accreditation} */ ({
-        ...acc,
-        status: ACCREDITATION_STATUS.CANCELLED
-      })
-    }
-    return acc
-  })
-
-  return { accreditations: updatedAccreditations, cascadeCancelledIds }
 }
