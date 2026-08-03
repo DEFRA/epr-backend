@@ -35,13 +35,4 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.preCpaResubmissionBackfill'
     )
   })
-
-  it('returns true when dropWasteRecordsCollection flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isDropWasteRecordsCollectionEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.dropWasteRecordsCollection'
-    )
-  })
 })

@@ -369,12 +369,6 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
-    },
-    dropWasteRecordsCollection: {
-      doc: 'Feature Flag: Drop the decommissioned waste-records collection on startup. With this off, startup only reports whether the collection is still present and how many documents it holds.',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_DROP_WASTE_RECORDS_COLLECTION'
     }
   },
   formSubmissionOverrides: {
