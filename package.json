@@ -109,12 +109,9 @@
   "overrides": {
     "@apidevtools/json-schema-ref-parser": "15.3.6",
     "@apidevtools/swagger-parser": "12.1.0",
-    "@grpc/grpc-js": "1.14.4",
-    "fast-xml-parser": "5.7.3",
-    "form-data": "4.0.6",
+    "fast-uri": "3.1.5",
     "glob": "11.1.0",
     "joi": "18.2.1",
-    "tmp": "0.2.7",
     "uuid": "14.0.0"
   },
   "devDependencies": {
