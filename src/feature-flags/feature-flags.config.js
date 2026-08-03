@@ -13,8 +13,5 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isPreCpaResubmissionBackfillEnabled() {
     return config.get('featureFlags.preCpaResubmissionBackfill')
-  },
-  isDropWasteRecordsCollectionEnabled() {
-    return config.get('featureFlags.dropWasteRecordsCollection')
   }
 })
