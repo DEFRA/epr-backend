@@ -1,3 +1,4 @@
+import { MATERIAL } from '#domain/materials.js'
 import {
   ACTIVE_ACCREDITATION_STATUSES,
   REGISTRATION_STATUS
@@ -106,7 +107,7 @@ export function activeAccreditationValidFrom(accreditation) {
 export function resolveDetailedMaterial(registration) {
   const glassProcess = registration.glassRecyclingProcess
   if (
-    registration.material === 'glass' &&
+    registration.material === MATERIAL.GLASS &&
     glassProcess &&
     glassProcess.length > 0
   ) {
