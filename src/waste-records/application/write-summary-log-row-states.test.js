@@ -3,13 +3,19 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { writeSummaryLogRowStates } from './write-summary-log-row-states.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+
+/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
+/**
+ * @param {{ rowId: string, tonnage: number }} args
+ * @returns {WasteRecord}
+ */
 const buildRegisteredOnlyRecord = ({ rowId, tonnage }) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
-  rowId: String(rowId),
+  rowId,
   type: WASTE_RECORD_TYPE.RECEIVED,
   data: {
     processingType: 'REPROCESSOR_REGISTERED_ONLY',
@@ -17,10 +23,14 @@ const buildRegisteredOnlyRecord = ({ rowId, tonnage }) => ({
   }
 })
 
+/**
+ * @param {{ rowId: string, tonnage: number }} args
+ * @returns {WasteRecord}
+ */
 const buildReceivedRecord = ({ rowId, tonnage }) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
-  rowId: String(rowId),
+  rowId,
   type: WASTE_RECORD_TYPE.RECEIVED,
   data: {
     processingType: 'REPROCESSOR_REGISTERED_ONLY',
@@ -28,10 +38,14 @@ const buildReceivedRecord = ({ rowId, tonnage }) => ({
   }
 })
 
+/**
+ * @param {{ rowId: string }} args
+ * @returns {WasteRecord}
+ */
 const buildIncompleteReprocessorInputRecord = ({ rowId }) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
-  rowId: String(rowId),
+  rowId,
   type: WASTE_RECORD_TYPE.RECEIVED,
   data: {
     processingType: 'REPROCESSOR_INPUT',
@@ -78,8 +92,8 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStateRepository,
       wasteRecords: [
-        buildRegisteredOnlyRecord({ rowId: 1, tonnage: 10 }),
-        buildRegisteredOnlyRecord({ rowId: 2, tonnage: 20 })
+        buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 }),
+        buildRegisteredOnlyRecord({ rowId: '2', tonnage: 20 })
       ],
       accreditation: null,
       ledgerId: registeredOnlyLedgerId,
@@ -110,7 +124,7 @@ describe('writeSummaryLogRowStates', () => {
   it('stores tonnages coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
       summaryLogRowStateRepository,
-      wasteRecords: [buildReceivedRecord({ rowId: 1, tonnage: 1.005 })],
+      wasteRecords: [buildReceivedRecord({ rowId: '1', tonnage: 1.005 })],
       accreditation: null,
       ledgerId: registeredOnlyLedgerId,
       overseasSites,
@@ -128,7 +142,7 @@ describe('writeSummaryLogRowStates', () => {
   it('stores weight quantities coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
       summaryLogRowStateRepository,
-      wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 7.536 })],
+      wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 7.536 })],
       accreditation: null,
       ledgerId: registeredOnlyLedgerId,
       overseasSites,
@@ -147,9 +161,9 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStateRepository,
       wasteRecords: [
-        buildReceivedRecord({ rowId: 1, tonnage: 1.005 }),
-        buildReceivedRecord({ rowId: 2, tonnage: 1.005 }),
-        buildReceivedRecord({ rowId: 3, tonnage: 1.005 })
+        buildReceivedRecord({ rowId: '1', tonnage: 1.005 }),
+        buildReceivedRecord({ rowId: '2', tonnage: 1.005 }),
+        buildReceivedRecord({ rowId: '3', tonnage: 1.005 })
       ],
       accreditation: null,
       ledgerId: registeredOnlyLedgerId,
@@ -175,7 +189,7 @@ describe('writeSummaryLogRowStates', () => {
   it('carries the supplied accreditation id onto the ledger', async () => {
     await writeSummaryLogRowStates({
       summaryLogRowStateRepository,
-      wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 10 })],
+      wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
       accreditation: {
         id: 'acc-1',
         validFrom: '2023-01-01',
@@ -197,7 +211,7 @@ describe('writeSummaryLogRowStates', () => {
   it('stamps the missing field on a row excluded for incomplete data', async () => {
     await writeSummaryLogRowStates({
       summaryLogRowStateRepository,
-      wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: 1 })],
+      wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
       accreditation: {
         id: 'acc-1',
         validFrom: '2023-01-01',
@@ -227,7 +241,7 @@ describe('writeSummaryLogRowStates', () => {
     const submit = () =>
       writeSummaryLogRowStates({
         summaryLogRowStateRepository,
-        wasteRecords: [buildRegisteredOnlyRecord({ rowId: 1, tonnage: 10 })],
+        wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
         accreditation: null,
         ledgerId: registeredOnlyLedgerId,
         overseasSites,

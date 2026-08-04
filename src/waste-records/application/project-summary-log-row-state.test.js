@@ -2,12 +2,15 @@ import { describe, it, expect } from 'vitest'
 
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+
+/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 const overseasSites = /** @type {any} */ (new Map())
 
 describe('projectSummaryLogRowState', () => {
   it('classifies the record and coerces its stored tonnages to two decimal places', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
@@ -41,6 +44,7 @@ describe('projectSummaryLogRowState', () => {
   })
 
   it('hoists processingType to a top-level field, leaving it out of the stored data', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
@@ -59,6 +63,7 @@ describe('projectSummaryLogRowState', () => {
   })
 
   it('drops the redundant ROW_ID key from the stored data', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
@@ -78,6 +83,7 @@ describe('projectSummaryLogRowState', () => {
   })
 
   it('stores a row state that reconciles by construction — NET equals GROSS minus TARE minus PALLET at 2dp', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
@@ -101,10 +107,11 @@ describe('projectSummaryLogRowState', () => {
   })
 
   it('coerces a numeric rowId to a string', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
-      rowId: 1000,
+      rowId: '1000',
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: { processingType: 'REPROCESSOR_REGISTERED_ONLY' }
     }
@@ -119,6 +126,7 @@ describe('projectSummaryLogRowState', () => {
   })
 
   it('coerces a copy, leaving the source record data at full precision', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',

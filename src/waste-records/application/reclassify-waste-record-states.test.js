@@ -7,6 +7,8 @@ import {
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+
+/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
@@ -153,6 +155,7 @@ describe('reclassifyWasteRecordStates', () => {
   })
 })
 
+/** @returns {WasteRecord} */
 const fullPrecisionReceivedRecord = (tonnage) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
