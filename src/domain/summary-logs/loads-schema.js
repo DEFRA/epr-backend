@@ -10,25 +10,27 @@ import Joi from 'joi'
  */
 
 const buildLoadsSchemas = (rowIdSchema) => {
-  const loadCategorySchema = Joi.object({
+  const category = Joi.object({
     count: Joi.number().integer().min(0).required(),
     rowIds: Joi.array().items(rowIdSchema).max(100).required()
   })
 
-  const loadValiditySchema = Joi.object({
-    valid: loadCategorySchema.required(),
-    invalid: loadCategorySchema.required(),
-    included: loadCategorySchema.required(),
-    excluded: loadCategorySchema.required()
+  const validity = Joi.object({
+    valid: category.required(),
+    invalid: category.required(),
+    included: category.required(),
+    excluded: category.required()
   })
 
-  const loadsSchema = Joi.object({
-    added: loadValiditySchema.required(),
-    unchanged: loadValiditySchema.required(),
-    adjusted: loadValiditySchema.required()
-  })
-
-  return { loadCategorySchema, loadValiditySchema, loadsSchema }
+  return {
+    loadCategorySchema: category,
+    loadValiditySchema: validity,
+    loadsSchema: Joi.object({
+      added: validity.required(),
+      unchanged: validity.required(),
+      adjusted: validity.required()
+    })
+  }
 }
 
 export const { loadCategorySchema, loadValiditySchema, loadsSchema } =
