@@ -55,6 +55,7 @@ vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
 }))
 
 /** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
+/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 
 const accreditationId = 'acc-1'
 
@@ -80,6 +81,10 @@ const user = {
   role: 'standard_user'
 }
 
+/**
+ * @param {{ rowId: string, tonnage: number, prnIssued?: boolean }} args
+ * @returns {WasteRecord}
+ */
 const buildExporterRecord = ({ rowId, tonnage, prnIssued = false }) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
