@@ -95,13 +95,16 @@ const transformTable = (
       wasteRecord.accreditationId = accreditationId
     }
 
-    return {
+    /** @type {ValidatedWasteRecord} */
+    const validatedWasteRecord = {
       record: wasteRecord,
       issues,
       outcome,
       tableName,
       wasteRecordType: tableWasteRecordType
     }
+
+    return validatedWasteRecord
   })
 }
 

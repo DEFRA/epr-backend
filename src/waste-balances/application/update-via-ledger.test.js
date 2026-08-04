@@ -89,7 +89,7 @@ const buildExporterRecord = ({ rowId, tonnage, prnIssued = false }) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId,
-  rowId: String(rowId),
+  rowId,
   type: WASTE_RECORD_TYPE.EXPORTED,
   data: { processingType: 'EXPORTER', tonnage, prnIssued }
 })
