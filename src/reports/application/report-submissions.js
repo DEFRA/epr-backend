@@ -8,7 +8,8 @@ import {
   mergeReportingPeriods,
   selectSubmittedReports
 } from '#reports/domain/merge-reporting-periods.js'
-import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
+import { capitalize } from '#common/helpers/formatters.js'
+import { formatMaterialCsvLabel } from '#domain/material-csv-labels.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import {
@@ -159,7 +160,7 @@ function buildRow(
     approvedPersonsEmail: registration.approvedPersons
       .map((p) => p.email)
       .join(', '),
-    material: formatMaterial(
+    material: formatMaterialCsvLabel(
       registration.material,
       registration.glassRecyclingProcess
     ),

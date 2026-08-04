@@ -3,15 +3,13 @@ import { invalidArg } from '#test/type-helpers.js'
 import {
   capitalize,
   formatAddress,
-  formatMaterial,
   formatTonnageBand,
   getAnnexIIProcess,
   uppercaseString
 } from './formatters.js'
+import { MATERIAL } from '#domain/materials.js'
 import {
   ACCREDITATION_STATUS,
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -71,38 +69,6 @@ describe('formatters', () => {
 
     it('should return empty string for null or undefined', () => {
       expect(capitalize(invalidArg(null))).toBe('')
-    })
-  })
-
-  describe('formatMaterial', () => {
-    it('should format non-glass materials', () => {
-      expect(formatMaterial(MATERIAL.ALUMINIUM)).toBe('Aluminium')
-      expect(formatMaterial(MATERIAL.FIBRE)).toBe('Fibre based composite')
-      expect(formatMaterial(MATERIAL.PAPER)).toBe('Paper and board')
-      expect(formatMaterial(MATERIAL.PLASTIC)).toBe('Plastic')
-      expect(formatMaterial(MATERIAL.STEEL)).toBe('Steel')
-      expect(formatMaterial(MATERIAL.WOOD)).toBe('Wood')
-    })
-
-    it('should format glass with remelt process only', () => {
-      expect(
-        formatMaterial(MATERIAL.GLASS, [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT])
-      ).toBe('Glass-remelt')
-    })
-
-    it('should format glass with other process only', () => {
-      expect(
-        formatMaterial(MATERIAL.GLASS, [GLASS_RECYCLING_PROCESS.GLASS_OTHER])
-      ).toBe('Glass-other')
-    })
-
-    it('should format glass with both processes', () => {
-      expect(
-        formatMaterial(MATERIAL.GLASS, [
-          GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-          GLASS_RECYCLING_PROCESS.GLASS_OTHER
-        ])
-      ).toBe('Glass-remelt-other')
     })
   })
 

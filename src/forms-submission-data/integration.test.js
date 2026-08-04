@@ -1,7 +1,7 @@
 import exporterAccreditation from '#data/fixtures/ea/accreditation/exporter.json' with { type: 'json' }
 import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json' with { type: 'json' }
 import { logger } from '#common/helpers/logging/logger.js'
-import { MATERIAL } from '#domain/organisations/model.js'
+import { MATERIAL } from '#domain/materials.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'

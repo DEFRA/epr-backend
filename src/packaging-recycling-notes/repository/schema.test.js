@@ -7,8 +7,8 @@ import {
   buildAwaitingAcceptancePrn
 } from './contract/test-data.js'
 
-/** @typedef {import('#packaging-recycling-notes/domain/model.js').AccreditationSnapshot} AccreditationSnapshot */
-/** @typedef {import('#domain/organisations/model.js').Material} Material */
+/** @import {Material} from '#domain/materials.js' */
+/** @import {AccreditationSnapshot} from '#packaging-recycling-notes/domain/model.js' */
 
 const buildReadDocument = (overrides = {}) => ({
   id: '507f1f77bcf86cd799439011',

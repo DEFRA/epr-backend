@@ -78,19 +78,6 @@ export const REGULATOR_DISPLAY = Object.freeze({
 })
 
 /**
- * @typedef {typeof MATERIAL[keyof typeof MATERIAL]} Material
- */
-export const MATERIAL = Object.freeze({
-  ALUMINIUM: 'aluminium',
-  FIBRE: 'fibre',
-  GLASS: 'glass',
-  PAPER: 'paper',
-  PLASTIC: 'plastic',
-  STEEL: 'steel',
-  WOOD: 'wood'
-})
-
-/**
  * @typedef {typeof WASTE_PROCESSING_TYPE[keyof typeof WASTE_PROCESSING_TYPE]} WasteProcessingTypeValue
  */
 export const WASTE_PROCESSING_TYPE = Object.freeze({
@@ -144,20 +131,6 @@ export const WASTE_PERMIT_TYPE = Object.freeze({
   INSTALLATION_PERMIT: 'installation_permit',
   WASTE_EXEMPTION: 'waste_exemption'
 })
-
-/**
- * @typedef {typeof GLASS_RECYCLING_PROCESS[keyof typeof GLASS_RECYCLING_PROCESS]} GlassRecyclingProcess
- */
-export const GLASS_RECYCLING_PROCESS = Object.freeze({
-  GLASS_RE_MELT: 'glass_re_melt',
-  GLASS_OTHER: 'glass_other'
-})
-
-/** @type {readonly (Material | GlassRecyclingProcess)[]} */
-export const TONNAGE_MONITORING_MATERIALS = Object.freeze([
-  ...Object.values(MATERIAL).filter((m) => m !== MATERIAL.GLASS),
-  ...Object.values(GLASS_RECYCLING_PROCESS)
-])
 
 /**
  * @typedef {typeof TONNAGE_BAND[keyof typeof TONNAGE_BAND]} TonnageBand

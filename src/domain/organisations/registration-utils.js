@@ -1,10 +1,12 @@
+import { MATERIAL } from '#domain/materials.js'
 import {
   ACTIVE_ACCREDITATION_STATUSES,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
-/** @import { AccreditationStatus, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
+/** @import {GlassRecyclingProcess, Material} from '#domain/materials.js' */
+/** @import {AccreditationStatus, Organisation, RegistrationStatus} from '#domain/organisations/model.js' */
 /** @import { Registration, ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
@@ -105,7 +107,7 @@ export function activeAccreditationValidFrom(accreditation) {
 export function resolveDetailedMaterial(registration) {
   const glassProcess = registration.glassRecyclingProcess
   if (
-    registration.material === 'glass' &&
+    registration.material === MATERIAL.GLASS &&
     glassProcess &&
     glassProcess.length > 0
   ) {

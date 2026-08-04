@@ -14,10 +14,9 @@ import {
   mapWasteProcessingType,
   normalizeObjectId
 } from './form-data-mapper.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import {
   BUSINESS_TYPE,
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   NATION,
   PARTNER_TYPE,
   PARTNERSHIP_TYPE,

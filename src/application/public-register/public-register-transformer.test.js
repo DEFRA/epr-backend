@@ -7,9 +7,9 @@ import {
   buildRegistration,
   getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
+import { MATERIAL } from '#domain/materials.js'
 import {
   ACCREDITATION_STATUS,
-  MATERIAL,
   REGISTRATION_STATUS,
   REGULATOR,
   WASTE_PROCESSING_TYPE

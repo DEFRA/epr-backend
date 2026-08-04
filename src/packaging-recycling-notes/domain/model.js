@@ -2,7 +2,8 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 export const PRN_NUMBER_MAX_LENGTH = 20
 
-/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {GlassRecyclingProcess, Material} from '#domain/materials.js' */
+/** @import {AccreditationStatus, RegulatorValue} from '#domain/organisations/model.js' */
 
 /**
  * Status values for Packaging Recycling Notes (PRNs)
@@ -174,9 +175,9 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   id: string;
  *   accreditationNumber: string;
  *   accreditationYear: number;
- *   material: import('#domain/organisations/model.js').Material;
- *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue;
- *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess;
+ *   material: Material;
+ *   submittedToRegulator: RegulatorValue;
+ *   glassRecyclingProcess?: GlassRecyclingProcess;
  *   siteAddress?: {
  *     line1: string;
  *     line2?: string;

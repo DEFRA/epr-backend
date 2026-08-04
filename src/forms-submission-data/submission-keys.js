@@ -1,4 +1,5 @@
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { MATERIAL } from '#domain/materials.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { siteKey } from '#formsubmission/parsing-common/site.js'
 
 /**

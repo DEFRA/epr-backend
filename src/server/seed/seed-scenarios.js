@@ -12,6 +12,7 @@ import crypto from 'node:crypto'
 import { ObjectId } from 'mongodb'
 
 import { isNil } from '#common/helpers/is-nil.js'
+import { MATERIAL } from '#domain/materials.js'
 import {
   REPROCESSING_TYPE,
   ORGANISATION_STATUS,
@@ -132,7 +133,9 @@ function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
     const isReprocessor = acc.wasteProcessingType === 'reprocessor'
     const isLinked = linkedAccreditationIds.has(acc.id)
     const needsUniquePostcode =
-      index === SECOND_GLASS_INDEX && acc.material === 'glass' && isReprocessor
+      index === SECOND_GLASS_INDEX &&
+      acc.material === MATERIAL.GLASS &&
+      isReprocessor
 
     return {
       ...acc,
