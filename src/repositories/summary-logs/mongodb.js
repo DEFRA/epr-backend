@@ -11,6 +11,7 @@ import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
 import { parseSummaryLogUri } from './parse-uri.js'
+import { normaliseStoredSummaryLog } from '#domain/summary-logs/normalise-load-row-ids.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -115,7 +116,7 @@ const findById = (db) => async (id) => {
     return null
   }
   const { _id, version, ...summaryLog } = doc
-  return { version, summaryLog }
+  return { version, summaryLog: normaliseStoredSummaryLog(summaryLog) }
 }
 
 const findLatestSubmittedForOrgReg =
@@ -136,7 +137,11 @@ const findLatestSubmittedForOrgReg =
     }
 
     const { _id, version, ...summaryLog } = doc
-    return { id: _id, version, summaryLog }
+    return {
+      id: _id,
+      version,
+      summaryLog: normaliseStoredSummaryLog(summaryLog)
+    }
   }
 
 const findAllByOrgReg = (db) => async (organisationId, registrationId) => {
@@ -163,7 +168,11 @@ const findAllByOrgReg = (db) => async (organisationId, registrationId) => {
 
   return docs.map((doc) => {
     const { _id, version, _uploadedAt: _u, ...summaryLog } = doc
-    return { id: _id, version, summaryLog }
+    return {
+      id: _id,
+      version,
+      summaryLog: normaliseStoredSummaryLog(summaryLog)
+    }
   })
 }
 
@@ -293,7 +302,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
     const { _id, version: newVersion, ...summaryLog } = result
     return {
       success: true,
-      summaryLog,
+      summaryLog: normaliseStoredSummaryLog(summaryLog),
       version: newVersion
     }
   } catch (error) {

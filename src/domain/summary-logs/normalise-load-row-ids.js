@@ -40,3 +40,21 @@ export const normaliseLoadRowIds = (loads) =>
       CHANGES.map((change) => [change, normaliseValidity(loads[change])])
     )
   )
+
+/**
+ * Applies the same coercion to a summary log on its way out of storage, so
+ * every reader sees the row ID type the domain model declares.
+ *
+ * @template {{ loads?: unknown }} T
+ * @param {T} summaryLog
+ * @returns {T}
+ */
+export const normaliseStoredSummaryLog = (summaryLog) =>
+  summaryLog.loads
+    ? {
+        ...summaryLog,
+        loads: normaliseLoadRowIds(
+          /** @type {StoredLoads} */ (summaryLog.loads)
+        )
+      }
+    : summaryLog

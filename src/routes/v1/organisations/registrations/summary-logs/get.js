@@ -10,7 +10,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import { extractResponseMetaFields } from '#domain/summary-logs/extract-response-meta-fields.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
-import { normaliseLoadRowIds } from '#domain/summary-logs/normalise-load-row-ids.js'
 import { transformValidationResponse } from './transform-validation-response.js'
 import { summaryLogResponseSchema } from './response.schema.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
@@ -54,9 +53,7 @@ export const summaryLogsGet = {
     const response = {
       status: summaryLog.status,
       ...transformValidationResponse(summaryLog.validation),
-      ...(summaryLog.loads && {
-        loads: normaliseLoadRowIds(summaryLog.loads)
-      }),
+      ...(summaryLog.loads && { loads: summaryLog.loads }),
       ...((summaryLog.status === SUMMARY_LOG_STATUS.VALIDATED ||
         summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED) && {
         loadsByReportingPeriod:

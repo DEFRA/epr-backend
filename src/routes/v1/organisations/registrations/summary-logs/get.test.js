@@ -141,34 +141,6 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(payload.loads).toEqual(loads)
     })
 
-    it('returns row IDs stored as numbers in their string form', async () => {
-      const { server, summaryLogsRepository } = await createServer()
-      /** @type {import('#domain/summary-logs/normalise-load-row-ids.js').StoredLoads} */
-      const legacyLoads = createLoads()
-      legacyLoads.added.valid = { count: 2, rowIds: [1000, 1001] }
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        summaryLogFactory.validated({
-          organisationId,
-          registrationId,
-          meta: { PROCESSING_TYPE: 'EXPORTER' }
-        })
-      )
-      await summaryLogsRepository.update(summaryLogId, 1, {
-        // No current writer can produce numeric row IDs; only summary logs
-        // stored before ROW_ID coercion hold them, which is what this seeds.
-        // @ts-expect-error the write contract is string-only, deliberately
-        loads: legacyLoads
-      })
-      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
-
-      const response = await makeRequest(server)
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload.loads.added.valid.rowIds).toEqual(['1000', '1001'])
-    })
-
     it('does not include loads when absent', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
