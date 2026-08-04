@@ -158,7 +158,6 @@ const fullPrecisionReceivedRecord = (tonnage) => ({
   registrationId: 'reg-1',
   rowId: '1001',
   type: WASTE_RECORD_TYPE.RECEIVED,
-  versions: [],
   data: {
     processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
     DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',

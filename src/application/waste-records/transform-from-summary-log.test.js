@@ -67,37 +67,6 @@ describe('transformFromSummaryLog', () => {
     expectValidWasteRecord(result[1], 'row-456', '2025-01-16', SECOND_WEIGHT)
   })
 
-  it('transforms rows into records without version history', () => {
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: RECEIVED_LOADS_HEADERS,
-          rows: [
-            createRow(
-              RECEIVED_LOADS_HEADERS,
-              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
-              FIRST_ROW_ID
-            )
-          ]
-        }
-      }
-    }
-
-    const result = transformFromSummaryLog(parsedData, {
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    })
-
-    expect(result[0].record).not.toHaveProperty('versions')
-    expect(result[0]).not.toHaveProperty('change')
-  })
-
   it('returns empty array when no RECEIVED_LOADS data present', () => {
     /** @type {any} */ const parsedData = {
       meta: {

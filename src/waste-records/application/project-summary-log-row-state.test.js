@@ -13,7 +13,6 @@ describe('projectSummaryLogRowState', () => {
       registrationId: 'reg-1',
       rowId: '1',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: {
         processingType: 'REPROCESSOR_REGISTERED_ONLY',
         TONNAGE_RECEIVED_FOR_RECYCLING: 1.005,
@@ -47,7 +46,6 @@ describe('projectSummaryLogRowState', () => {
       registrationId: 'reg-1',
       rowId: '1',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: {
         processingType: 'REPROCESSOR_REGISTERED_ONLY',
         supplierName: 'Acme'
@@ -66,7 +64,6 @@ describe('projectSummaryLogRowState', () => {
       registrationId: 'reg-1',
       rowId: '1011',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: {
         processingType: 'REPROCESSOR_REGISTERED_ONLY',
         ROW_ID: 1011,
@@ -86,7 +83,6 @@ describe('projectSummaryLogRowState', () => {
       registrationId: 'reg-1',
       rowId: '3',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: {
         processingType: 'REPROCESSOR_REGISTERED_ONLY',
         GROSS_WEIGHT: 10.004,
@@ -110,7 +106,6 @@ describe('projectSummaryLogRowState', () => {
       registrationId: 'reg-1',
       rowId: 1000,
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: { processingType: 'REPROCESSOR_REGISTERED_ONLY' }
     }
 
@@ -129,7 +124,6 @@ describe('projectSummaryLogRowState', () => {
       registrationId: 'reg-1',
       rowId: '2',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: { processingType: 'REPROCESSOR_REGISTERED_ONLY', NET_WEIGHT: 7.536 }
     }
 

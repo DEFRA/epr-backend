@@ -11,7 +11,6 @@ const buildRegisteredOnlyRecord = ({ rowId, tonnage }) => ({
   registrationId: 'reg-1',
   rowId: String(rowId),
   type: WASTE_RECORD_TYPE.RECEIVED,
-  versions: [],
   data: {
     processingType: 'REPROCESSOR_REGISTERED_ONLY',
     NET_WEIGHT: tonnage
@@ -23,7 +22,6 @@ const buildReceivedRecord = ({ rowId, tonnage }) => ({
   registrationId: 'reg-1',
   rowId: String(rowId),
   type: WASTE_RECORD_TYPE.RECEIVED,
-  versions: [],
   data: {
     processingType: 'REPROCESSOR_REGISTERED_ONLY',
     TONNAGE_RECEIVED_FOR_RECYCLING: tonnage
@@ -35,7 +33,6 @@ const buildIncompleteReprocessorInputRecord = ({ rowId }) => ({
   registrationId: 'reg-1',
   rowId: String(rowId),
   type: WASTE_RECORD_TYPE.RECEIVED,
-  versions: [],
   data: {
     processingType: 'REPROCESSOR_INPUT',
     ROW_ID: String(rowId),
