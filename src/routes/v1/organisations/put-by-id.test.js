@@ -1167,6 +1167,36 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
     expect(reloaded.registrations[0].status).toBe('rejected')
   })
 
+  it('accepts adjacent entries with the same status — a repeat is not a transition', async () => {
+    const { server, org } = await seed({
+      accreditationHistory: SUSPENSION_HISTORY
+    })
+    const accreditation = org.accreditations[0]
+    const [created, approved, suspended] = accreditation.statusHistory
+
+    const response = await putOrganisation(
+      server,
+      org,
+      prepareOrgUpdate(org, {
+        accreditations: [
+          withHistory(accreditation, [
+            created,
+            approved,
+            { ...suspended, status: 'approved' }
+          ])
+        ]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+
+    const reloaded = await getOrganisation(server, org.id)
+    expect(reloaded.accreditations[0].status).toBe('approved')
+    expect(
+      reloaded.accreditations[0].statusHistory.map((entry) => entry.status)
+    ).toEqual(['created', 'approved', 'approved'])
+  })
+
   it('accepts an unchanged echo of every status history', async () => {
     const { server, org } = await seed({
       accreditationHistory: SUSPENSION_HISTORY,

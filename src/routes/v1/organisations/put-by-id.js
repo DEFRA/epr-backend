@@ -186,7 +186,10 @@ const findInvalidTransition = (history, isValidTransition) => {
   for (let index = 1; index < history.length; index++) {
     const from = history[index - 1].status
     const to = history[index].status
-    if (!isValidTransition(from, to)) {
+    // A repeated status is not a transition — the domain skips validation for
+    // same-status updates, and correcting an entry to match its neighbour
+    // (e.g. neutralising a wrongly recorded suspension) must be allowed.
+    if (from !== to && !isValidTransition(from, to)) {
       return { from, to }
     }
   }
