@@ -29,17 +29,20 @@ import {
  * renders `null` as "NA".
  *
  * @param {WasteRecord} record
+ * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @param {Accreditation | null} accreditation
  * @param {OverseasSitesContext} overseasSites
  * @returns {CsvWasteBalanceClassification | null}
  */
 export const getWasteBalanceClassification = (
   record,
+  processingType,
   accreditation,
   overseasSites
 ) => {
   const { outcome, reasons, transactionAmount } = classifyRecordForWasteBalance(
     record,
+    processingType,
     accreditation,
     overseasSites
   )

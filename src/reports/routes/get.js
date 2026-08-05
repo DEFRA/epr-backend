@@ -82,6 +82,7 @@ export const reportsGet = {
   /**
    * @param {HapiRequest & {
    *   organisationsRepository: OrganisationsRepository,
+   *   params: { organisationId: string, registrationId: string },
    *   reportsRepository: ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h

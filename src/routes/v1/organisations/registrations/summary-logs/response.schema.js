@@ -1,10 +1,7 @@
 import Joi from 'joi'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import {
-  loadsSchema,
-  loadsByWasteRecordTypeSchema
-} from '#domain/summary-logs/loads-schema.js'
+import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
 import { loadsByReportingPeriodSchema } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 const countSchema = Joi.number().integer().min(0).required()
@@ -75,7 +72,6 @@ export const summaryLogResponseSchema = Joi.object({
     then: loadsByReportingPeriodSchema.required(),
     otherwise: loadsByReportingPeriodSchema.optional()
   }),
-  loadsByWasteRecordType: loadsByWasteRecordTypeSchema.optional(),
   processingType: Joi.when('status', {
     is: SUMMARY_LOG_STATUS.VALIDATED,
     then: Joi.string().required(),

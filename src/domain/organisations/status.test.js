@@ -1,12 +1,58 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assertAccreditationStatusTransitionValid,
   assertOrgStatusTransitionValid,
-  assertRegAccStatusTransitionValid
+  assertRegistrationStatusTransitionValid
 } from './status.js'
-import { ORGANISATION_STATUS, REG_ACC_STATUS } from './model.js'
+import {
+  ACCREDITATION_STATUS,
+  ORGANISATION_STATUS,
+  REGISTRATION_STATUS
+} from './model.js'
 import Boom from '@hapi/boom'
 
-/** @import {OrganisationStatus, RegAccStatus} from './model.js' */
+/** @import {AccreditationStatus, OrganisationStatus, RegistrationStatus} from './model.js' */
+/** @import {StatusTransitionAsserter} from './status.js' */
+
+/**
+ * @template {string} S
+ * @param {StatusTransitionAsserter<S>} assertTransitionValid
+ * @param {'registration' | 'accreditation'} itemKind
+ * @param {[S, S, boolean][]} transitionTable
+ */
+const describeTransitionTable = (
+  assertTransitionValid,
+  itemKind,
+  transitionTable
+) => {
+  describe('valid transitions', () => {
+    const validTransitions = transitionTable.filter(([, , isValid]) => isValid)
+
+    it.each(validTransitions)(
+      'allows transition from %s to %s',
+      (fromStatus, toStatus) => {
+        expect(() => assertTransitionValid(fromStatus, toStatus)).not.toThrow()
+      }
+    )
+  })
+
+  describe('invalid transitions', () => {
+    const invalidTransitions = transitionTable.filter(
+      ([, , isValid]) => !isValid
+    )
+
+    it.each(invalidTransitions)(
+      'rejects transition from %s to %s with Boom error',
+      (fromStatus, toStatus) => {
+        expect(() => assertTransitionValid(fromStatus, toStatus)).toThrow(
+          Boom.badData(
+            `Cannot transition ${itemKind} status from ${fromStatus} to ${toStatus}`
+          )
+        )
+      }
+    )
+  })
+}
 
 describe('assertOrgStatusTransitionValid', () => {
   /** @type {[OrganisationStatus, OrganisationStatus, boolean][]} */
@@ -69,74 +115,94 @@ describe('assertOrgStatusTransitionValid', () => {
   })
 })
 
-describe('assertRegAccStatusTransitionValid', () => {
-  /** @type {[RegAccStatus, RegAccStatus, boolean][]} */
+describe('assertRegistrationStatusTransitionValid', () => {
+  // Only reachable from a status read from storage, never from a typed caller.
+  const suspended = /** @type {RegistrationStatus} */ (
+    ACCREDITATION_STATUS.SUSPENDED
+  )
+
+  /** @type {[RegistrationStatus, RegistrationStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
-    [REG_ACC_STATUS.CREATED, REG_ACC_STATUS.APPROVED, true],
-    [REG_ACC_STATUS.CREATED, REG_ACC_STATUS.REJECTED, true],
-    [REG_ACC_STATUS.CREATED, REG_ACC_STATUS.SUSPENDED, false],
-    [REG_ACC_STATUS.CREATED, REG_ACC_STATUS.CANCELLED, false],
-    [REG_ACC_STATUS.CREATED, REG_ACC_STATUS.CREATED, false],
+    [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.APPROVED, true],
+    [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.REJECTED, true],
+    [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.CANCELLED, false],
+    [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.CREATED, false],
 
-    // From APPROVED
-    [REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.SUSPENDED, true],
-    [REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.CREATED, true],
-    [REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.REJECTED, false],
-    [REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.CANCELLED, false],
-    [REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.APPROVED, false],
+    // From APPROVED — direct cancellation is valid; suspension is not a
+    // registration status (PAE-1705)
+    [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.CREATED, true],
+    [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.CANCELLED, true],
+    [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.REJECTED, false],
+    [REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.APPROVED, false],
 
-    // From SUSPENDED
-    [REG_ACC_STATUS.SUSPENDED, REG_ACC_STATUS.APPROVED, true],
-    [REG_ACC_STATUS.SUSPENDED, REG_ACC_STATUS.CANCELLED, true],
-    [REG_ACC_STATUS.SUSPENDED, REG_ACC_STATUS.CREATED, false],
-    [REG_ACC_STATUS.SUSPENDED, REG_ACC_STATUS.REJECTED, false],
-    [REG_ACC_STATUS.SUSPENDED, REG_ACC_STATUS.SUSPENDED, false],
+    // From CANCELLED — reinstatement only
+    [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.APPROVED, true],
+    [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.CREATED, false],
+    [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.REJECTED, false],
+    [REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.CANCELLED, false],
 
-    // From CANCELLED
-    [REG_ACC_STATUS.CANCELLED, REG_ACC_STATUS.CREATED, false],
-    [REG_ACC_STATUS.CANCELLED, REG_ACC_STATUS.APPROVED, true],
-    [REG_ACC_STATUS.CANCELLED, REG_ACC_STATUS.REJECTED, false],
-    [REG_ACC_STATUS.CANCELLED, REG_ACC_STATUS.SUSPENDED, false],
-    [REG_ACC_STATUS.CANCELLED, REG_ACC_STATUS.CANCELLED, false],
+    // From REJECTED
+    [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.CREATED, true],
+    [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.APPROVED, false],
+    [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.CANCELLED, false],
+    [REGISTRATION_STATUS.REJECTED, REGISTRATION_STATUS.REJECTED, false],
 
-    // From REJECTED (no valid transitions)
-    [REG_ACC_STATUS.REJECTED, REG_ACC_STATUS.CREATED, true],
-    [REG_ACC_STATUS.REJECTED, REG_ACC_STATUS.APPROVED, false],
-    [REG_ACC_STATUS.REJECTED, REG_ACC_STATUS.SUSPENDED, false],
-    [REG_ACC_STATUS.REJECTED, REG_ACC_STATUS.CANCELLED, false],
-    [REG_ACC_STATUS.REJECTED, REG_ACC_STATUS.REJECTED, false]
+    // Suspended is not a registration status
+    [suspended, REGISTRATION_STATUS.CANCELLED, false],
+    [REGISTRATION_STATUS.APPROVED, suspended, false]
   ]
 
-  describe('valid transitions', () => {
-    const validTransitions = transitionTable.filter(([, , isValid]) => isValid)
+  describeTransitionTable(
+    assertRegistrationStatusTransitionValid,
+    'registration',
+    transitionTable
+  )
+})
 
-    it.each(validTransitions)(
-      'allows transition from %s to %s',
-      (fromStatus, toStatus) => {
-        expect(() =>
-          assertRegAccStatusTransitionValid(fromStatus, toStatus)
-        ).not.toThrow()
-      }
-    )
-  })
+describe('assertAccreditationStatusTransitionValid', () => {
+  /** @type {[AccreditationStatus, AccreditationStatus, boolean][]} */
+  const transitionTable = [
+    // From CREATED
+    [ACCREDITATION_STATUS.CREATED, ACCREDITATION_STATUS.APPROVED, true],
+    [ACCREDITATION_STATUS.CREATED, ACCREDITATION_STATUS.REJECTED, true],
+    [ACCREDITATION_STATUS.CREATED, ACCREDITATION_STATUS.SUSPENDED, false],
+    [ACCREDITATION_STATUS.CREATED, ACCREDITATION_STATUS.CANCELLED, false],
+    [ACCREDITATION_STATUS.CREATED, ACCREDITATION_STATUS.CREATED, false],
 
-  describe('invalid transitions', () => {
-    const invalidTransitions = transitionTable.filter(
-      ([, , isValid]) => !isValid
-    )
+    // From APPROVED — suspension stays an accreditation concept; direct
+    // cancellation stays forbidden (ADR 0042 — cancelled only from suspended)
+    [ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED, true],
+    [ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.CREATED, true],
+    [ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.REJECTED, false],
+    [ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.CANCELLED, false],
+    [ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.APPROVED, false],
 
-    it.each(invalidTransitions)(
-      'rejects transition from %s to %s with Boom error',
-      (fromStatus, toStatus) => {
-        expect(() =>
-          assertRegAccStatusTransitionValid(fromStatus, toStatus)
-        ).toThrow(
-          Boom.badData(
-            `Cannot transition registration/accreditation status from ${fromStatus} to ${toStatus}`
-          )
-        )
-      }
-    )
-  })
+    // From SUSPENDED
+    [ACCREDITATION_STATUS.SUSPENDED, ACCREDITATION_STATUS.APPROVED, true],
+    [ACCREDITATION_STATUS.SUSPENDED, ACCREDITATION_STATUS.CANCELLED, true],
+    [ACCREDITATION_STATUS.SUSPENDED, ACCREDITATION_STATUS.CREATED, false],
+    [ACCREDITATION_STATUS.SUSPENDED, ACCREDITATION_STATUS.REJECTED, false],
+    [ACCREDITATION_STATUS.SUSPENDED, ACCREDITATION_STATUS.SUSPENDED, false],
+
+    // From CANCELLED — reinstatement only
+    [ACCREDITATION_STATUS.CANCELLED, ACCREDITATION_STATUS.APPROVED, true],
+    [ACCREDITATION_STATUS.CANCELLED, ACCREDITATION_STATUS.CREATED, false],
+    [ACCREDITATION_STATUS.CANCELLED, ACCREDITATION_STATUS.REJECTED, false],
+    [ACCREDITATION_STATUS.CANCELLED, ACCREDITATION_STATUS.SUSPENDED, false],
+    [ACCREDITATION_STATUS.CANCELLED, ACCREDITATION_STATUS.CANCELLED, false],
+
+    // From REJECTED
+    [ACCREDITATION_STATUS.REJECTED, ACCREDITATION_STATUS.CREATED, true],
+    [ACCREDITATION_STATUS.REJECTED, ACCREDITATION_STATUS.APPROVED, false],
+    [ACCREDITATION_STATUS.REJECTED, ACCREDITATION_STATUS.SUSPENDED, false],
+    [ACCREDITATION_STATUS.REJECTED, ACCREDITATION_STATUS.CANCELLED, false],
+    [ACCREDITATION_STATUS.REJECTED, ACCREDITATION_STATUS.REJECTED, false]
+  ]
+
+  describeTransitionTable(
+    assertAccreditationStatusTransitionValid,
+    'accreditation',
+    transitionTable
+  )
 })

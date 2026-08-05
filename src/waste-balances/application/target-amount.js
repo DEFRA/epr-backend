@@ -24,16 +24,23 @@ import {
  * row identity and data alongside.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  * @returns {ClassifiedRow}
  */
-export const classifyWasteRecord = (record, accreditation, overseasSites) => ({
+export const classifyWasteRecord = (
+  record,
+  processingType,
+  accreditation,
+  overseasSites
+) => ({
   rowId: record.rowId,
   wasteRecordType: record.type,
   data: record.data,
   classification: classifyRecordForWasteBalance(
     record,
+    processingType,
     accreditation,
     overseasSites
   )

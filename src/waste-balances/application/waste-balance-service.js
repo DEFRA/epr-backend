@@ -12,7 +12,6 @@ import {
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
 import { currentWasteBalance } from './current-waste-balance.js'
-import { markExcludedRecords } from './mark-excluded-records.js'
 import { performUpdateViaLedger } from './update-via-ledger.js'
 import { validateAccreditationId } from '../repository/validation.js'
 
@@ -220,14 +219,12 @@ export const createWasteBalanceService = (
       wasteRecords,
       { user, accreditation, overseasSites, summaryLogId }
     ) => {
-      const annotatedRecords = markExcludedRecords(wasteRecords)
-
-      if (annotatedRecords.length === 0) {
+      if (wasteRecords.length === 0) {
         return
       }
 
       await performUpdateViaLedger({
-        wasteRecords: annotatedRecords,
+        wasteRecords,
         accreditation: {
           ...accreditation,
           id: validateAccreditationId(accreditation.id)

@@ -73,7 +73,7 @@ function groupByRegistration(allPeriodicReports) {
 }
 
 /**
- * Builds a map of report compliance data for all approved/suspended registrations.
+ * Builds a map of report compliance data for all approved/cancelled registrations.
  *
  * Each entry in `entries` is keyed by `registrationId` and contains only the
  * periods that were actually submitted (`submittedDates`). The consumer can

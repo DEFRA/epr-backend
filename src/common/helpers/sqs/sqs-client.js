@@ -6,6 +6,8 @@ import {
   ReceiveMessageCommand
 } from '@aws-sdk/client-sqs'
 
+/** @import { SQSClientConfig } from '@aws-sdk/client-sqs' */
+
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClientType */
 
 /**
@@ -13,7 +15,7 @@ import {
  * @param {Object} options
  * @param {string} options.region - AWS region
  * @param {string} [options.endpoint] - Custom SQS endpoint (e.g. LocalStack)
- * @param {object} [options.credentials] - AWS credentials override
+ * @param {SQSClientConfig['credentials']} [options.credentials] - AWS credentials override
  * @returns {import('@aws-sdk/client-sqs').SQSClient}
  */
 export function createSqsClient({ region, endpoint, credentials = undefined }) {

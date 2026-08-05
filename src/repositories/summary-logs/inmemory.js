@@ -91,9 +91,8 @@ const findById = (staleCache) => async (id) => {
 
 const findLatestSubmittedForOrgReg =
   (staleCache) => async (organisationId, registrationId) => {
-    let latestId = null
-    let latestDoc = null
-    let latestSubmittedAt = null
+    /** @type {{ id: string, doc: any, submittedAt: string } | null} */
+    let latest = null
 
     for (const [id, doc] of staleCache) {
       if (
@@ -104,22 +103,20 @@ const findLatestSubmittedForOrgReg =
         const { submittedAt } = doc.summaryLog
 
         // Return the most recently submitted summary log
-        if (latestDoc === null || submittedAt > latestSubmittedAt) {
-          latestId = id
-          latestDoc = doc
-          latestSubmittedAt = submittedAt
+        if (latest === null || submittedAt > latest.submittedAt) {
+          latest = { id, doc, submittedAt }
         }
       }
     }
 
-    if (!latestDoc) {
+    if (!latest) {
       return null
     }
 
     return {
-      id: latestId,
-      version: latestDoc.version,
-      summaryLog: structuredClone(latestDoc.summaryLog)
+      id: latest.id,
+      version: latest.doc.version,
+      summaryLog: structuredClone(latest.doc.summaryLog)
     }
   }
 

@@ -11,7 +11,6 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
@@ -22,10 +21,15 @@ import { createReportsService } from '#reports/application/report-service.js'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { partialMock } from '#test/type-helpers.js'
 
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
+
+/** @import { HapiServer } from '#common/hapi-types.js' */
+/** @import { StatusHistoryEntry, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+/** @import { Material, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
@@ -124,7 +128,9 @@ export const EXPORTER_HEADERS = [
   'EXPORT_CONTROLS',
   'BASEL_EXPORT_CODE',
   'CUSTOMS_CODES',
-  'CONTAINER_NUMBER'
+  'CONTAINER_NUMBER',
+  'WAS_THE_WASTE_REFUSED',
+  'WAS_THE_WASTE_STOPPED'
 ]
 
 const TARE_PLUS_PALLET_WEIGHT = 150
@@ -274,7 +280,9 @@ export const createExporterRowValues = (overrides = {}) => {
     exportControls: 'Article 18 (Green list)',
     baselCode: 'B3020',
     customsCode: '123456',
-    containerNumber: 'CONT123456'
+    containerNumber: 'CONT123456',
+    wasteRefused: 'No',
+    wasteStopped: 'No'
   }
   const d = { ...defaults, ...overrides }
   return [
@@ -302,7 +310,9 @@ export const createExporterRowValues = (overrides = {}) => {
     d.exportControls,
     d.baselCode,
     d.customsCode,
-    d.containerNumber
+    d.containerNumber,
+    d.wasteRefused,
+    d.wasteStopped
   ]
 }
 
@@ -353,7 +363,7 @@ const DEFAULT_MAX_ATTEMPTS = 20
 
 /**
  * Poll until summary log status changes from the specified status.
- * @param {object} server - Test server instance
+ * @param {HapiServer} server - Test server instance
  * @param {string} organisationId - Organisation ID
  * @param {string} registrationId - Registration ID
  * @param {string} summaryLogId - Summary log ID
@@ -474,13 +484,16 @@ export const createTestInfrastructure = async (
     { ...testOrg, status: 'active' }
   ])()
   const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
-  const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
   const overseasSitesRepository = createInMemoryOverseasSitesRepository([])()
+  const ledgerRepository = createInMemoryLedgerRepository()()
+  const summaryLogRowStateRepository =
+    createInMemorySummaryLogRowStateRepository()()
 
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
-    wasteRecordsRepository,
+    summaryLogRowStateRepository,
+    ledgerRepository,
     reportsService: /** @type {any} */ ({
       findPeriodicReports: async () => []
     }),
@@ -534,9 +547,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const organisationsRepository = createInMemoryOrganisationsRepository([
     { ...testOrg, status: 'active' }
   ])()
-
-  const wasteRecordsRepositoryFactory = createInMemoryWasteRecordsRepository()
-  const wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
   const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
@@ -599,7 +609,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
-    wasteRecordsRepository,
+    summaryLogRowStateRepository,
+    ledgerRepository,
     reportsService: createReportsService(reportsRepository),
     overseasSitesRepository,
     summaryLogExtractor: dynamicExtractor,
@@ -608,11 +619,11 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
-    wasteRecordRepository: wasteRecordsRepository,
     wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
     summaryLogRowStateRepository,
+    ledgerRepository,
     logger: mockLogger
   })
 
@@ -627,7 +638,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       uploadsRepository,
       ledgerRepository: () => ledgerRepository,
       wasteBalanceService: () => wasteBalanceService,
-      wasteRecordsRepository: () => wasteRecordsRepository,
       packagingRecyclingNotesRepository: () =>
         packagingRecyclingNotesRepository,
       organisationsRepository: () => organisationsRepository
@@ -646,7 +656,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     server,
     summaryLogsRepository,
     wasteBalanceService,
-    wasteRecordsRepository,
     packagingRecyclingNotesRepository,
     organisationsRepository,
     overseasSitesRepository,
@@ -711,14 +720,14 @@ const buildComplexTestOrg = ({
   const registration = {
     id: registrationId,
     registrationNumber: 'REG-123',
-    status: 'approved',
-    statusHistory: [
+    status: /** @type {'approved'} */ ('approved'),
+    statusHistory: /** @type {StatusHistoryEntryOf<RegistrationStatus>[]} */ ([
       { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
       { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-    ],
-    material,
+    ]),
+    material: /** @type {Material} */ (material),
     wasteProcessingType: processingType,
-    reprocessingType,
+    reprocessingType: /** @type {ReprocessingType} */ (reprocessingType),
     formSubmission: { id: registrationId, time: new Date() },
     submittedToRegulator: 'ea',
     validFrom: VALID_FROM,
@@ -736,10 +745,10 @@ const buildComplexTestOrg = ({
 
   return buildReadOrganisation({
     status: 'active',
-    registrations: [registration],
+    registrations: [partialMock(registration)],
     accreditations: accredited
       ? [
-          {
+          partialMock({
             id: accreditationId,
             accreditationNumber: 'ACC-123',
             validFrom: VALID_FROM,
@@ -752,11 +761,11 @@ const buildComplexTestOrg = ({
                 postcode: 'AB1 2CD'
               }
             },
-            statusHistory: [
+            statusHistory: /** @type {StatusHistoryEntry[]} */ ([
               { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
               { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-            ]
-          }
+            ])
+          })
         ]
       : []
   })

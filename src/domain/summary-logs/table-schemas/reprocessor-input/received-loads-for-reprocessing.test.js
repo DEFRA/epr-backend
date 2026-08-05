@@ -699,11 +699,20 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
       it('returns EXCLUDED with all missing fields listed', () => {
         const row = { ...completeRow }
-        delete row.ROW_ID
+        delete row.EWC_CODE
         delete row.TONNAGE_RECEIVED_FOR_RECYCLING
         const result = schema.classifyForWasteBalance(row, { accreditation })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
-        expect(result.reasons).toHaveLength(2)
+        expect(result.reasons).toEqual([
+          {
+            code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+            field: 'EWC_CODE'
+          },
+          {
+            code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+            field: 'TONNAGE_RECEIVED_FOR_RECYCLING'
+          }
+        ])
       })
 
       it('returns EXCLUDED when required field is null', () => {

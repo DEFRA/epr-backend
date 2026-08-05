@@ -10,7 +10,8 @@ import {
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import {
  *   MarkReportStaleResult,
- *   MarkSubmittedReportRequiringResubmissionResult
+ *   MarkSubmittedReportRequiringResubmissionResult,
+ *   Report
  * } from '#reports/repository/port.js'
  */
 
@@ -46,8 +47,8 @@ export const MARK_STALE_ACTION = Object.freeze({
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId
- * @param {object} params.previous
- * @param {object} params.next
+ * @param {Report} params.previous
+ * @param {Report} params.next
  */
 export async function auditReportStatusTransition(request, params) {
   const {
@@ -117,7 +118,7 @@ export async function auditReportStatusTransition(request, params) {
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId
- * @param {object} params.previous
+ * @param {Report} params.previous
  */
 export async function auditReportDelete(request, params) {
   const {
@@ -315,6 +316,56 @@ export async function auditReportCreate(request, params) {
       submissionNumber,
       reportId,
       createdAt
+    },
+    user: extractUserDetails(request)
+  }
+
+  safeAudit(payload)
+  await recordSystemLog(request, payload)
+}
+
+/**
+ * Audits an operator's own request for resubmission. Request-bound like
+ * {@link auditReportCreate}, not the system/batch shape
+ * {@link auditMarkReportsRequiringResubmission} uses.
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
+ * @param {object} params
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {number} params.year
+ * @param {string} params.cadence
+ * @param {number} params.period
+ * @param {number} params.submissionNumber
+ * @param {string} params.reportId
+ * @param {import('#reports/repository/port.js').ReportResubmissionRequired} params.resubmissionRequired
+ */
+export async function auditReportRequestResubmission(request, params) {
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    reportId,
+    resubmissionRequired
+  } = params
+
+  const payload = {
+    event: {
+      category: AUDIT_CATEGORY,
+      subCategory: AUDIT_SUB_CATEGORY,
+      action: 'request-resubmission'
+    },
+    context: {
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber,
+      reportId,
+      resubmissionRequired
     },
     user: extractUserDetails(request)
   }

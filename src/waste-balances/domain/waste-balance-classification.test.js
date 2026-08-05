@@ -21,8 +21,7 @@ const buildRecord = (overrides = {}) =>
   /** @type {*} */ ({
     rowId: 'row-1',
     type: 'EXPORTED',
-    data: { processingType: PROCESSING_TYPES.EXPORTER, tonnage: 100 },
-    excludedFromWasteBalance: false,
+    data: { tonnage: 100 },
     ...overrides
   })
 
@@ -64,7 +63,12 @@ describe('classifyRecordForWasteBalance', () => {
     })
 
     expect(
-      classifyRecordForWasteBalance(buildRecord(), null, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        null,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
       reasons: [],
@@ -76,7 +80,12 @@ describe('classifyRecordForWasteBalance', () => {
     await setSchema(null)
 
     expect(
-      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        accreditation,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
       reasons: [],
@@ -84,51 +93,24 @@ describe('classifyRecordForWasteBalance', () => {
     })
   })
 
-  it('treats NOT_APPLICABLE as taking precedence over a manual exclusion', async () => {
+  it('surfaces the excluded outcome and reasons from the schema classifier, contributing no amount', async () => {
     await setSchema({
       classifyForWasteBalance: () => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: 100
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: 'MISSING_REQUIRED_FIELD', field: 'tonnage' }]
       })
     })
-    const record = buildRecord({ excludedFromWasteBalance: true })
-
-    expect(classifyRecordForWasteBalance(record, null, overseasSites)).toEqual({
-      outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
-      reasons: [],
-      transactionAmount: 0
-    })
-  })
-
-  it('is NOT_APPLICABLE for a manually excluded record whose schema has no classifier', async () => {
-    await setSchema(null)
-    const record = buildRecord({ excludedFromWasteBalance: true })
 
     expect(
-      classifyRecordForWasteBalance(record, accreditation, overseasSites)
-    ).toEqual({
-      outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
-      reasons: [],
-      transactionAmount: 0
-    })
-  })
-
-  it('is EXCLUDED for a manually excluded record with an accreditation and schema', async () => {
-    await setSchema({
-      classifyForWasteBalance: () => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: 100
-      })
-    })
-    const record = buildRecord({ excludedFromWasteBalance: true })
-
-    expect(
-      classifyRecordForWasteBalance(record, accreditation, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        accreditation,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
-      reasons: [],
+      reasons: [{ code: 'MISSING_REQUIRED_FIELD', field: 'tonnage' }],
       transactionAmount: 0
     })
   })
@@ -143,7 +125,12 @@ describe('classifyRecordForWasteBalance', () => {
     })
 
     expect(
-      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        accreditation,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
       reasons: [{ code: 'WITHIN_ACCREDITATION_PERIOD' }],
@@ -160,7 +147,12 @@ describe('classifyRecordForWasteBalance', () => {
     })
 
     expect(
-      classifyRecordForWasteBalance(buildRecord(), accreditation, overseasSites)
+      classifyRecordForWasteBalance(
+        buildRecord(),
+        PROCESSING_TYPES.EXPORTER,
+        accreditation,
+        overseasSites
+      )
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.IGNORED,
       reasons: [{ code: 'PRN_ISSUED' }],

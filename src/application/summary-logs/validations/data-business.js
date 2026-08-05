@@ -3,7 +3,7 @@ import { validateRowContinuity } from './row-continuity.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {PreviousSubmission} from '#waste-records/application/read-summary-log-row-states.js' */
 
 /**
  * Validates data business rules
@@ -22,13 +22,10 @@ import { validateRowContinuity } from './row-continuity.js'
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste records from the current upload
- * @param {WasteRecord[]} params.existingWasteRecords - Existing waste records from previous uploads
+ * @param {PreviousSubmission | null} params.previousSubmission - The latest submitted summary log with its row states, or null when the registration has never submitted
  * @returns {ValidationIssuesCollector} Validation issues object
  */
-export const validateDataBusiness = ({
-  wasteRecords,
-  existingWasteRecords
-}) => {
+export const validateDataBusiness = ({ wasteRecords, previousSubmission }) => {
   const issues = createValidationIssues()
 
   for (const validate of [
@@ -38,7 +35,7 @@ export const validateDataBusiness = ({
     // validateTonnageAccuracy,
     // etc.
   ]) {
-    issues.merge(validate({ wasteRecords, existingWasteRecords }))
+    issues.merge(validate({ wasteRecords, previousSubmission }))
   }
 
   return issues

@@ -8,6 +8,7 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
 
 export const orsImportStatusPath = '/v1/overseas-sites/imports/{id}'
@@ -20,8 +21,11 @@ export const orsImportStatus = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {orsImportsRepository: OrsImportsRepository}} request
-   * @param {object} h - Hapi response toolkit
+   * @param {HapiRequest & {
+   *   orsImportsRepository: OrsImportsRepository,
+   *   params: { id: string }
+   * }} request
+   * @param {HapiResponseToolkit} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const { orsImportsRepository, params, logger } = request

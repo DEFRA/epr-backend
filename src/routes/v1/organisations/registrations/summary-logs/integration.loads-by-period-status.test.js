@@ -58,6 +58,16 @@ describe('loadsByReportingPeriod population at validate time', () => {
     }
   })
 
+  /**
+   * A summary log's cover-sheet metadata. Which cells are present varies by
+   * processing type — a registered-only cover sheet carries no accreditation.
+   *
+   * @typedef {Record<string, { value: unknown, location: { sheet: string, row: number, column: string } }>} SummaryLogMeta
+   */
+
+  /**
+   * @param {SummaryLogMeta} [meta]
+   */
   const upload = async (
     env,
     summaryLogId,
@@ -89,7 +99,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     )
   }
 
-  const getLoadsByReportingPeriod = async (env, summaryLogId) => {
+  const getCheckPage = async (env, summaryLogId) => {
     const { server, organisationId, registrationId } = env
 
     const response = await server.inject({
@@ -98,8 +108,11 @@ describe('loadsByReportingPeriod population at validate time', () => {
       ...asOperator()
     })
 
-    return JSON.parse(response.payload).loadsByReportingPeriod
+    return JSON.parse(response.payload)
   }
+
+  const getLoadsByReportingPeriod = async (env, summaryLogId) =>
+    (await getCheckPage(env, summaryLogId)).loadsByReportingPeriod
 
   const uploadAndValidate = async (
     env,
@@ -250,6 +263,53 @@ describe('loadsByReportingPeriod population at validate time', () => {
       }
     })
   })
+
+  it.each([
+    {
+      description: 'stopped',
+      overrides: { wasteStopped: 'Yes' },
+      reason: CLASSIFICATION_REASON.WASTE_STOPPED
+    },
+    {
+      description: 'refused',
+      overrides: { wasteRefused: 'Yes' },
+      reason: CLASSIFICATION_REASON.WASTE_REFUSED
+    }
+  ])(
+    'classifies a $description added load as nonBalanceAffecting in the open period',
+    async ({ overrides, reason }) => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+
+      // A load stopped in transit or refused at the destination passes
+      // validation but never counts towards the balance, so it moves no
+      // tonnage and the check page names which of the two applied.
+      const loadsByReportingPeriod = await uploadAndValidate(
+        env,
+        'sl-stopped-refused',
+        'file-stopped-refused',
+        createUploadData([
+          { rowId: 1001, osrId: 100, exportTonnage: 100, ...overrides }
+        ])
+      )
+
+      expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual({
+        balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+        nonBalanceAffecting: {
+          count: 1,
+          rows: [
+            {
+              rowId: '1001',
+              wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+              exclusionReasons: [reason],
+              tonnageDelta: 0
+            }
+          ]
+        }
+      })
+    }
+  )
 
   it('records each nonBalanceAffecting row with its identity and exclusion reason', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
@@ -737,6 +797,58 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
     ).toBe(0)
+  })
+
+  // A registered-only submission has no accreditation, so its row states are
+  // reachable only through the summary-log-submitted event on the unaccredited
+  // ledger stream. Re-uploading identical rows must resolve that submission as
+  // the baseline and classify every row unchanged; a baseline that fails to
+  // resolve reports the rows as freshly added instead.
+  it('resolves a registered-only submission as the baseline for a re-upload', async () => {
+    const organisationId = new ObjectId().toString()
+    const registrationId = new ObjectId().toString()
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      accredited: false,
+      organisationId,
+      registrationId
+    })
+
+    const registeredOnlyRows = createRegisteredOnlyUploadData([
+      { rowId: 1001, month: '2025-01-01' },
+      { rowId: 1002, month: '2025-04-01' }
+    ])
+
+    await upload(
+      env,
+      'sl-registered-only-original',
+      'file-registered-only-original',
+      registeredOnlyRows,
+      registeredOnlyMeta
+    )
+    await submitAndPoll(env, 'sl-registered-only-original')
+
+    await upload(
+      env,
+      'sl-registered-only-reupload',
+      'file-registered-only-reupload',
+      registeredOnlyRows,
+      registeredOnlyMeta
+    )
+    const { loadsByReportingPeriod, loads } = await getCheckPage(
+      env,
+      'sl-registered-only-reupload'
+    )
+
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.nonBalanceAffecting.count
+    ).toBe(0)
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.adjusted.nonBalanceAffecting.count
+    ).toBe(0)
+    expect(loads.added.valid.count).toBe(0)
+    expect(loads.adjusted.valid.count).toBe(0)
+    expect(loads.unchanged.valid.count).toBe(2)
   })
 
   it('includes loadsByReportingPeriod on the GET response after submit', async () => {

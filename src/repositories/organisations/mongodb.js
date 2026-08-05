@@ -18,6 +18,9 @@ import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 import { getCurrentStatus } from './status.js'
 
+/** @import { Collection, Db } from 'mongodb' */
+/** @import { FindPageParams, OrganisationsRepositoryFactory } from './port.js' */
+
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
@@ -25,8 +28,8 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
  * Ensures the collection exists with required indexes.
  * Safe to call multiple times - MongoDB createIndex is idempotent.
  *
- * @param {import('mongodb').Db} db
- * @returns {Promise<import('mongodb').Collection>}
+ * @param {Db} db
+ * @returns {Promise<Collection>}
  */
 async function ensureCollection(db) {
   const collection = db.collection(COLLECTION_NAME)
@@ -138,6 +141,12 @@ const performReplace = (db) => async (id, version, updates) => {
   }
 }
 
+/**
+ * @returns {(
+ *   | { shouldReturn: true, result: ReturnType<typeof mapDocumentWithCurrentStatuses> }
+ *   | { shouldReturn: false }
+ * )}
+ */
 const handleFoundDocument = (doc, minimumVersion) => {
   const mapped = mapDocumentWithCurrentStatuses(doc)
 
@@ -171,12 +180,9 @@ const performFindById =
       const isLastRetry = i === maxRetries - 1
 
       if (doc) {
-        const { shouldReturn, result } = handleFoundDocument(
-          doc,
-          minimumVersion
-        )
-        if (shouldReturn) {
-          return result
+        const outcome = handleFoundDocument(doc, minimumVersion)
+        if (outcome.shouldReturn) {
+          return outcome.result
         }
         // Document exists but version too low - will retry
       } else if (minimumVersion === undefined || isLastRetry) {
@@ -210,7 +216,7 @@ const performFindAllBySchemaVersion = (db) => async (schemaVersion) => {
 
 const performFindPage =
   (db) =>
-  async ({ search, page, pageSize }) => {
+  async (/** @type {FindPageParams} */ { search, page, pageSize }) => {
     const trimmedSearch = (search ?? '').trim()
     const filter =
       trimmedSearch === ''
@@ -296,6 +302,31 @@ const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   const doc = await db
     .collection(COLLECTION_NAME)
     .findOne({ 'linkedDefraOrganisation.orgId': defraOrgId })
+
+  if (!doc) {
+    return null
+  }
+
+  return mapDocumentWithCurrentStatuses(doc)
+}
+
+const performFindByAccreditationNumber =
+  (db) => async (accreditationNumber) => {
+    const doc = await db
+      .collection(COLLECTION_NAME)
+      .findOne({ 'accreditations.accreditationNumber': accreditationNumber })
+
+    if (!doc) {
+      return null
+    }
+
+    return mapDocumentWithCurrentStatuses(doc)
+  }
+
+const performFindByRegistrationNumber = (db) => async (registrationNumber) => {
+  const doc = await db
+    .collection(COLLECTION_NAME)
+    .findOne({ 'registrations.registrationNumber': registrationNumber })
 
   if (!doc) {
     return null
@@ -429,9 +460,9 @@ const performReplaceRegistrationOverseasSites =
   }
 
 /**
- * @param {import('mongodb').Db} db - MongoDB database instance
+ * @param {Db} db - MongoDB database instance
  * @param {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistencyConfig] - Eventual consistency retry configuration
- * @returns {Promise<import('./port.js').OrganisationsRepositoryFactory>}
+ * @returns {Promise<OrganisationsRepositoryFactory>}
  */
 export const createOrganisationsRepository = async (
   db,
@@ -462,6 +493,8 @@ export const createOrganisationsRepository = async (
       findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
+      findByAccreditationNumber: performFindByAccreditationNumber(db),
+      findByRegistrationNumber: performFindByRegistrationNumber(db),
       findAllLinkableForUser: performFindAllLinkableForUser(db),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),

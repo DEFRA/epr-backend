@@ -2,7 +2,7 @@ import Joi from 'joi'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REGULATOR,
   TIME_SCALE,
   WASTE_PROCESSING_TYPE
@@ -12,18 +12,18 @@ import {
   formFileUploadSchema,
   formSubmissionSchema,
   idSchema,
-  reprocessingTypeSchema,
+  makeReprocessingTypeSchema,
   userSchema
 } from './base.js'
 import { wasteManagementPermitSchema } from './waste-permits.js'
 import { yearlyMetricsSchema } from './metrics.js'
 import {
   CURRENT_SCHEMA_VERSION,
-  dateRequiredWhenApprovedOrSuspended,
+  dateRequiredWhenApproved,
   requiredForExporterOptionalForReprocessor,
   requiredForReprocessor,
   requiredForReprocessorOptionalForExporter,
-  requiredWhenApprovedOrSuspended,
+  requiredWhenApproved,
   whenExporter,
   whenMaterial,
   whenReprocessor
@@ -71,20 +71,14 @@ const overseasSitesMapSchema = Joi.object().pattern(
 export const registrationSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
-    .valid(
-      REG_ACC_STATUS.CREATED,
-      REG_ACC_STATUS.APPROVED,
-      REG_ACC_STATUS.CANCELLED,
-      REG_ACC_STATUS.REJECTED,
-      REG_ACC_STATUS.SUSPENDED
-    )
+    .valid(...Object.values(REGISTRATION_STATUS))
     .forbidden(),
   registrationNumber: Joi.string()
-    .when('status', requiredWhenApprovedOrSuspended)
+    .when('status', requiredWhenApproved)
     .default(null),
-  reprocessingType: reprocessingTypeSchema,
-  validFrom: dateRequiredWhenApprovedOrSuspended(),
-  validTo: dateRequiredWhenApprovedOrSuspended(),
+  reprocessingType: makeReprocessingTypeSchema(requiredWhenApproved),
+  validFrom: dateRequiredWhenApproved(),
+  validTo: dateRequiredWhenApproved(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),

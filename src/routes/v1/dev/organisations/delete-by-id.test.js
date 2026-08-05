@@ -28,7 +28,6 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
     const stubCounts = {
       'packaging-recycling-notes': 3,
       reports: 4,
-      'waste-records': 17,
       'summary-logs': 1,
       'overseas-sites': 0,
       'epr-organisations': 1

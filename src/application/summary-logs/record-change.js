@@ -1,12 +1,9 @@
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
-
-/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
-
 /**
  * How a waste record changed in the current summary-log upload, in the
- * user-facing reporting vocabulary. Derived from the record's latest version:
- * a version CREATED in this upload reads as added, an UPDATED one as adjusted,
- * and a record with no version from this upload as unchanged.
+ * user-facing reporting vocabulary. Derived by comparing the upload's row
+ * against the latest submitted summary log's row state: a row not present in
+ * that state reads as added, a row whose content or reading differs as adjusted,
+ * and a row that matches it exactly as unchanged.
  */
 export const RECORD_CHANGE = Object.freeze({
   ADDED: 'added',
@@ -17,25 +14,19 @@ export const RECORD_CHANGE = Object.freeze({
 /** @typedef {typeof RECORD_CHANGE[keyof typeof RECORD_CHANGE]} RecordChange */
 
 /**
- * Classifies how a record changed in this upload from its latest version.
+ * The change classified for a record. Every waste record classified in this
+ * upload has an entry keyed `${type}:${rowId}`, so the lookup is total; a miss
+ * is an invariant violation, not a reachable state.
  *
- * A record always carries at least one version (the repository schema rejects
- * an empty versions array), so an empty array is a data-integrity violation:
- * throw loudly rather than silently misclassifying it as unchanged.
- *
- * @param {ValidatedWasteRecord['record']} record
- * @param {string} summaryLogId
+ * @param {Map<string, RecordChange>} recordChanges
+ * @param {{ type: string, rowId: string | number }} record
  * @returns {RecordChange}
  */
-export const determineRecordStatus = (record, summaryLogId) => {
-  const lastVersion = record.versions.at(-1)
-  if (!lastVersion) {
-    throw new Error(`waste record ${record.rowId} has no versions`)
+export const recordChangeFor = (recordChanges, record) => {
+  const change = recordChanges.get(`${record.type}:${record.rowId}`)
+  /* v8 ignore next 3 -- every classified record has a change */
+  if (!change) {
+    throw new Error(`No record change for ${record.type}:${record.rowId}`)
   }
-  if (lastVersion.summaryLog?.id !== summaryLogId) {
-    return RECORD_CHANGE.UNCHANGED
-  }
-  return lastVersion.status === VERSION_STATUS.CREATED
-    ? RECORD_CHANGE.ADDED
-    : RECORD_CHANGE.ADJUSTED
+  return change
 }

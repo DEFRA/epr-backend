@@ -39,8 +39,7 @@ import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-field
 /**
  * Fields required for waste balance calculation (Section 1)
  */
-const WASTE_BALANCE_FIELDS = [
-  FIELDS.ROW_ID,
+const WASTE_BALANCE_CONTENT_FIELDS = [
   FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
   FIELDS.EWC_CODE,
   FIELDS.DESCRIPTION_WASTE,
@@ -55,6 +54,8 @@ const WASTE_BALANCE_FIELDS = [
   FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
   FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
 ]
+
+const WASTE_BALANCE_FIELDS = [FIELDS.ROW_ID, ...WASTE_BALANCE_CONTENT_FIELDS]
 
 /**
  * Supplementary fields (Sections 2 & 3) - columns present in template but not required for waste balance
@@ -162,7 +163,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
   ) => {
     const missingResult = checkRequiredFields(
       data,
-      WASTE_BALANCE_FIELDS,
+      WASTE_BALANCE_CONTENT_FIELDS,
       RECEIVED_LOADS_FOR_REPROCESSING.unfilledValues
     )
     if (missingResult) {

@@ -27,9 +27,10 @@ describe('buildCalendarPeriods', () => {
     const flagged = period(
       submittedReport({
         resubmissionRequired: {
-          uploadedAt: '2026-05-01T12:00:00.000Z',
-          reason: 'closed_period_restated',
-          summaryLogId: 'sl-2'
+          closedPeriodRestated: {
+            uploadedAt: '2026-05-01T12:00:00.000Z',
+            summaryLogId: 'sl-2'
+          }
         }
       })
     )
@@ -54,9 +55,10 @@ describe('buildCalendarPeriods', () => {
       submittedReport({
         id: 'report-jan',
         resubmissionRequired: {
-          uploadedAt: '2026-05-01T12:00:00.000Z',
-          reason: 'closed_period_restated',
-          summaryLogId: 'sl-2'
+          closedPeriodRestated: {
+            uploadedAt: '2026-05-01T12:00:00.000Z',
+            summaryLogId: 'sl-2'
+          }
         }
       })
     )

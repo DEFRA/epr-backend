@@ -1,7 +1,4 @@
 import { createMongoClient } from '#common/helpers/mongo-client.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
-import { isProductionEnvironment } from '#root/config.js'
 import { LockManager } from 'mongo-locks'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -9,16 +6,24 @@ import {
 } from '../../enums/index.js'
 import {
   createFormCollections,
-  createLockManagerIndex,
-  createSeedData
+  createLockManagerIndex
 } from '../collections/create-update.js'
+
+/** @import {Db} from 'mongodb' */
+/** @import {HapiServer} from '../../hapi-types.js' */
 
 export const mongoDbPlugin = {
   plugin: {
     name: 'mongodb',
     version: '1.0.0',
     /**
-     * @param {import('../../hapi-types.js').HapiServer} server
+     * @param {HapiServer} server
+     * @param {{
+     *   mongoUrl: string,
+     *   mongoOptions: object,
+     *   databaseName: string,
+     *   seedDatabase: (db: Db) => Promise<void>
+     * }} options
      */
     register: async function (server, options) {
       server.logger.info({
@@ -40,18 +45,7 @@ export const mongoDbPlugin = {
 
       await createFormCollections(db)
       await createLockManagerIndex(db)
-
-      const organisationsRepositoryFactory =
-        await createOrganisationsRepository(db)
-      const wasteRecordsRepositoryFactory =
-        await createWasteRecordsRepository(db)
-
-      await createSeedData(
-        db,
-        isProductionEnvironment,
-        organisationsRepositoryFactory(),
-        wasteRecordsRepositoryFactory()
-      )
+      await options.seedDatabase(db)
 
       server.logger.info({
         message: `MongoDb connected to ${options.databaseName}`,

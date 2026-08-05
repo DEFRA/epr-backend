@@ -26,7 +26,7 @@ vi.mock('@aws-sdk/client-sqs', () => ({
 }))
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
-vi.mock('#common/helpers/metrics/summary-logs.js')
+vi.mock('#application/summary-logs/metrics.js')
 
 const TEST_USER = {
   id: 'test-user',
@@ -40,14 +40,13 @@ const { createSummaryLogsValidator } =
 const { syncFromSummaryLog } =
   await import('#application/waste-records/sync-from-summary-log.js')
 const { summaryLogMetrics } =
-  await import('#common/helpers/metrics/summary-logs.js')
+  await import('#application/summary-logs/metrics.js')
 
 describe('createCommandQueueConsumer', () => {
   let sqsClient
   let logger
   let summaryLogsRepository
   let organisationsRepository
-  let wasteRecordsRepository
   let wasteBalanceService
   let reportsRepository
   let summaryLogExtractor
@@ -78,7 +77,6 @@ describe('createCommandQueueConsumer', () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     organisationsRepository = {}
-    wasteRecordsRepository = {}
     wasteBalanceService = {}
     reportsRepository = createInMemoryReportsRepository()()
     summaryLogExtractor = {}
@@ -126,7 +124,6 @@ describe('createCommandQueueConsumer', () => {
         logger,
         summaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
         wasteBalanceService,
         reportsService: createReportsService(reportsRepository),
         summaryLogExtractor,
@@ -145,7 +142,6 @@ describe('createCommandQueueConsumer', () => {
             logger,
             summaryLogsRepository,
             organisationsRepository,
-            wasteRecordsRepository,
             wasteBalanceService,
             summaryLogExtractor
           },

@@ -1,7 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { RESUBMISSION_REASON } from '#reports/domain/resubmission.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { config } from '#root/config.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
@@ -22,8 +20,6 @@ import {
 /**
  * @import { SummaryLogUploadedParams, SummaryLogUploadedRepositories } from './summary-log-events.js'
  */
-
-const CLOSED_PERIOD_ADJUSTMENTS = 'featureFlags.closedPeriodAdjustments'
 
 const mockAuditMarkReportsStale = vi.fn()
 const mockAuditMarkReportsRequiringResubmission = vi.fn()
@@ -69,7 +65,6 @@ const closedPeriod = {
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(FIXED_NOW))
-  config.set(CLOSED_PERIOD_ADJUSTMENTS, true)
   mockAuditMarkReportsStale.mockResolvedValue(undefined)
   mockAuditMarkReportsRequiringResubmission.mockResolvedValue(undefined)
 })
@@ -77,7 +72,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
   vi.clearAllMocks()
-  config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
 })
 
 describe('onSummaryLogUploaded', () => {
@@ -221,9 +215,10 @@ describe('onSummaryLogUploaded', () => {
 
     const updated = await reportsRepositoryFactory().findReportById(reportId)
     expect(updated.resubmissionRequired).toEqual({
-      uploadedAt: FIXED_NOW,
-      reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-      summaryLogId: DEFAULT_SL_ID
+      closedPeriodRestated: {
+        uploadedAt: FIXED_NOW,
+        summaryLogId: DEFAULT_SL_ID
+      }
     })
   })
 
@@ -251,8 +246,9 @@ describe('onSummaryLogUploaded', () => {
         reportsRequiringResubmission: expect.arrayContaining([
           expect.objectContaining({
             resubmissionRequired: expect.objectContaining({
-              reason: RESUBMISSION_REASON.CLOSED_PERIOD_RESTATED,
-              summaryLogId: DEFAULT_SL_ID
+              closedPeriodRestated: expect.objectContaining({
+                summaryLogId: DEFAULT_SL_ID
+              })
             })
           })
         ])
@@ -270,27 +266,6 @@ describe('onSummaryLogUploaded', () => {
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
       summaryLogId: DEFAULT_SL_ID,
-      reportsRepository: reportsRepositoryFactory(),
-      systemLogsRepository: buildSystemLogsRepository()
-    })
-
-    const unchanged = await reportsRepositoryFactory().findReportById(reportId)
-    expect(unchanged.resubmissionRequired).toBeUndefined()
-    expect(mockAuditMarkReportsRequiringResubmission).not.toHaveBeenCalled()
-  })
-
-  it('does not flag resubmission when the closed-period-adjustments flag is off', async () => {
-    config.set(CLOSED_PERIOD_ADJUSTMENTS, false)
-    const reportsRepositoryFactory = createInMemoryReportsRepository()
-    const { id: reportId } = await createAndSubmitReport(
-      reportsRepositoryFactory()
-    )
-
-    await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
-      closedPeriods: [closedPeriod],
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })

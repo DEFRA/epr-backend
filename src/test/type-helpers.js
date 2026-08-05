@@ -10,7 +10,7 @@ import { expect } from 'vitest'
  * @param {T} value
  * @returns {asserts value is NonNullable<T>}
  */
-export const assertPresent = (value) => {
+export function assertPresent(value) {
   expect(value).toBeDefined()
   expect(value).not.toBeNull()
 }

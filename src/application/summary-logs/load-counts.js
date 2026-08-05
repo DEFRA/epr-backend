@@ -1,8 +1,9 @@
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { RECORD_CHANGE, determineRecordStatus } from './record-change.js'
+import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
+/** @import {RecordChange} from './record-change.js' */
 
 /**
  * @typedef {Object} LoadCategory
@@ -35,11 +36,6 @@ import { RECORD_CHANGE, determineRecordStatus } from './record-change.js'
  * @property {LoadValidity} added - Loads added in this upload
  * @property {LoadValidity} unchanged - Loads unchanged from previous uploads
  * @property {LoadValidity} adjusted - Loads adjusted in this upload
- */
-
-/**
- * @typedef {{ wasteRecordType: string, sheetName: string } & Loads} LoadsByWasteRecordTypeEntry
- * @typedef {LoadsByWasteRecordTypeEntry[]} LoadsByWasteRecordType
  */
 
 const MAX_ROW_IDS = 100
@@ -105,15 +101,15 @@ const addToCategory = (category, rowId) => ({
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records (all tables)
- * @param {string} params.summaryLogId - The current summary log ID
+ * @param {Map<string, RecordChange>} params.recordChanges - Record change keyed by `${type}:${rowId}`
  * @returns {{ added: ValidityCounts, unchanged: ValidityCounts, adjusted: ValidityCounts }}
  */
-export const countByValidity = ({ wasteRecords, summaryLogId }) =>
+export const countByValidity = ({ wasteRecords, recordChanges }) =>
   wasteRecords
     .filter((wr) => wr.outcome !== ROW_OUTCOME.IGNORED)
     .reduce(
       (acc, { record, issues }) => {
-        const status = determineRecordStatus(record, summaryLogId)
+        const status = recordChangeFor(recordChanges, record)
         const key =
           /** @type {ValidationIssue[]} */ (issues).length > 0
             ? 'invalid'
@@ -140,13 +136,13 @@ export const countByValidity = ({ wasteRecords, summaryLogId }) =>
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste-balance table records only
- * @param {string} params.summaryLogId - The current summary log ID
+ * @param {Map<string, RecordChange>} params.recordChanges - Record change keyed by `${type}:${rowId}`
  * @returns {{ added: InclusionCounts, unchanged: InclusionCounts, adjusted: InclusionCounts }}
  */
-export const countByWasteBalanceInclusion = ({ wasteRecords, summaryLogId }) =>
+export const countByWasteBalanceInclusion = ({ wasteRecords, recordChanges }) =>
   wasteRecords.reduce(
     (acc, { record, outcome }) => {
-      const status = determineRecordStatus(record, summaryLogId)
+      const status = recordChangeFor(recordChanges, record)
       if (
         outcome === ROW_OUTCOME.IGNORED &&
         status === RECORD_CHANGE.UNCHANGED
@@ -185,52 +181,3 @@ export const mergeLoads = (validationResults, classificationResults) => ({
   },
   adjusted: { ...validationResults.adjusted, ...classificationResults.adjusted }
 })
-
-/**
- * Groups waste records by wasteRecordType and computes per-type load counts.
- * Uses a Map to guarantee unique wasteRecordType entries by construction.
- *
- * @param {Object} params
- * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records with tableName and wasteRecordType
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records only
- * @param {string} params.summaryLogId - The current summary log ID
- * @param {Object<string, { sheetName: string, wasteRecordType: string }>} params.tableSchemas - Table schemas keyed by table name
- * @returns {LoadsByWasteRecordType}
- */
-export const countByWasteRecordType = ({
-  wasteRecords,
-  wasteBalanceRecords,
-  summaryLogId,
-  tableSchemas
-}) => {
-  const wasteBalancesGroupedByType = Map.groupBy(
-    wasteBalanceRecords,
-    (wr) => wr.wasteRecordType
-  )
-  const wasteRecordsGroupedByType = Map.groupBy(
-    wasteRecords,
-    (wr) => wr.wasteRecordType
-  )
-
-  const expectedTypes = new Map(
-    Object.values(tableSchemas).map(({ wasteRecordType, sheetName }) => [
-      wasteRecordType,
-      sheetName
-    ])
-  )
-
-  return Array.from(expectedTypes.entries()).map(([type, sheetName]) => ({
-    wasteRecordType: type,
-    sheetName,
-    ...mergeLoads(
-      countByValidity({
-        wasteRecords: wasteRecordsGroupedByType.get(type) ?? [],
-        summaryLogId
-      }),
-      countByWasteBalanceInclusion({
-        wasteRecords: wasteBalancesGroupedByType.get(type) ?? [],
-        summaryLogId
-      })
-    )
-  }))
-}

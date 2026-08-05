@@ -9,6 +9,7 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
@@ -22,8 +23,12 @@ export const overseasSiteDelete = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {overseasSitesRepository: OverseasSitesRepository, systemLogsRepository: SystemLogsRepository}} request
-   * @param {object} h - Hapi response toolkit
+   * @param {HapiRequest & {
+   *   overseasSitesRepository: OverseasSitesRepository,
+   *   params: { id: string },
+   *   systemLogsRepository: SystemLogsRepository
+   * }} request
+   * @param {HapiResponseToolkit} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const { overseasSitesRepository, params, logger } = request

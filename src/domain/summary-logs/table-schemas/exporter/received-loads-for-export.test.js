@@ -724,7 +724,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           { accreditation, overseasSites: ORS_VALIDATION_DISABLED }
         )
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
-        expect(result.reasons).toHaveLength(22)
+        expect(result.reasons).toHaveLength(21)
       })
 
       it('returns EXCLUDED when required field is null', () => {
@@ -804,6 +804,90 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(result.reasons).toContainEqual({
           code: CLASSIFICATION_REASON.PRN_ISSUED
         })
+      })
+    })
+
+    describe('EXCLUDED outcome - waste stopped or refused', () => {
+      it.each([
+        {
+          field: 'WAS_THE_WASTE_STOPPED',
+          code: CLASSIFICATION_REASON.WASTE_STOPPED
+        },
+        {
+          field: 'WAS_THE_WASTE_REFUSED',
+          code: CLASSIFICATION_REASON.WASTE_REFUSED
+        }
+      ])('returns EXCLUDED when $field is Yes', ({ field, code }) => {
+        const row = { ...completeRow, [field]: 'Yes' }
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({ code })
+      })
+
+      it.each(['yes', 'YES', ' Yes '])(
+        'treats %p as Yes, matching the monthly report',
+        (value) => {
+          const row = { ...completeRow, WAS_THE_WASTE_REFUSED: value }
+          const result = schema.classifyForWasteBalance(row, {
+            accreditation,
+            overseasSites: ORS_VALIDATION_DISABLED
+          })
+          expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+          expect(result.reasons).toContainEqual({
+            code: CLASSIFICATION_REASON.WASTE_REFUSED
+          })
+        }
+      )
+
+      it.each(['No', ''])('does not exclude when the answer is %p', (value) => {
+        const row = {
+          ...completeRow,
+          WAS_THE_WASTE_STOPPED: value,
+          WAS_THE_WASTE_REFUSED: value
+        }
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      })
+
+      it.each(['WAS_THE_WASTE_STOPPED', 'WAS_THE_WASTE_REFUSED'])(
+        'still returns IGNORED when a row with %s is outside the accreditation period',
+        (field) => {
+          const row = {
+            ...completeRow,
+            [field]: 'Yes',
+            DATE_OF_EXPORT: new Date('2023-12-31')
+          }
+          const result = schema.classifyForWasteBalance(row, {
+            accreditation,
+            overseasSites: ORS_VALIDATION_DISABLED
+          })
+          expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+          expect(result.reasons).toEqual([
+            { code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }
+          ])
+        }
+      )
+
+      it('reports stopped first when the row is both stopped and refused', () => {
+        const row = {
+          ...completeRow,
+          WAS_THE_WASTE_STOPPED: 'Yes',
+          WAS_THE_WASTE_REFUSED: 'Yes'
+        }
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toEqual([
+          { code: CLASSIFICATION_REASON.WASTE_STOPPED }
+        ])
       })
     })
 

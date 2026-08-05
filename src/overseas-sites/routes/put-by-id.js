@@ -10,6 +10,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { overseasSiteUpdatePayloadSchema } from './put-by-id.schema.js'
 
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
@@ -26,8 +27,12 @@ export const overseasSiteUpdate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>> & {overseasSitesRepository: OverseasSitesRepository, systemLogsRepository: SystemLogsRepository}} request
-   * @param {object} h - Hapi response toolkit
+   * @param {HapiRequest<Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>> & {
+   *   overseasSitesRepository: OverseasSitesRepository,
+   *   params: { id: string },
+   *   systemLogsRepository: SystemLogsRepository
+   * }} request
+   * @param {HapiResponseToolkit} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const { overseasSitesRepository, params, payload, logger } = request

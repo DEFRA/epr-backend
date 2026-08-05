@@ -33,10 +33,15 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * `upsertSummaryLogRowStates` compares and stores. Carries no ledger-identity fields (supplied
  * separately) and no membership (assigned at write).
  *
+ * `processingType` is the template the row reported under. One summary log is
+ * one uploaded workbook, so every row of a given log carries the same value —
+ * but a registration can report under different templates across its logs, so
+ * it belongs to the row rather than to the registration.
+ *
  * @typedef {Object} SummaryLogRowStateEntry
  * @property {string} rowId
  * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
- * @property {string} processingType
+ * @property {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @property {Record<string, any>} data
  * @property {RowClassification} classification
  */
@@ -49,7 +54,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @typedef {WasteBalanceLedgerId & {
  *   wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType,
  *   rowId: string,
- *   processingType: string,
+ *   processingType: import('#domain/summary-logs/meta-fields.js').ProcessingType,
  *   data: Record<string, any>,
  *   classification: RowClassification,
  *   summaryLogIds: string[]

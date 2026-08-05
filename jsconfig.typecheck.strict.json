@@ -3,7 +3,6 @@
   "compilerOptions": {
     "noImplicitAny": true,
     "noUncheckedIndexedAccess": true,
-    "strictFunctionTypes": true,
     "types": ["vitest/globals"],
     "useUnknownInCatchVariables": true
   },

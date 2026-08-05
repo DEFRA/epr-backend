@@ -1,14 +1,16 @@
 import Boom from '@hapi/boom'
+import { assertOrgStatusTransitionValid } from '#domain/organisations/status.js'
 import {
-  assertOrgStatusTransitionValid,
-  assertRegAccStatusTransitionValid
-} from '#domain/organisations/status.js'
-import {
+  ACCREDITATION_STATUS,
+  ACTIVE_ACCREDITATION_STATUSES,
   ORGANISATION_STATUS,
-  REG_ACC_STATUS
+  REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {StatusTransitionAsserter} from '#domain/organisations/status.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
 /**
  * @param {Organisation} existing
@@ -16,7 +18,7 @@ import {
  */
 const requireApprovedRegistration = (existing) => {
   const hasApproved = existing.registrations.some(
-    (reg) => reg.status === REG_ACC_STATUS.APPROVED
+    (reg) => reg.status === REGISTRATION_STATUS.APPROVED
   )
 
   if (!hasApproved) {
@@ -66,36 +68,69 @@ export const assertOrgStatusTransition = (existing, updated) => {
   }
 }
 
-export const assertAndHandleItemStateTransition = (existing, updated) => {
+/**
+ * @template {string} S
+ * @param {{ status: S }} existing
+ * @param {{ status?: S }} updated
+ * @param {StatusTransitionAsserter<S>} assertStatusTransitionValid
+ * @returns {void}
+ */
+export const assertAndHandleItemStateTransition = (
+  existing,
+  updated,
+  assertStatusTransitionValid
+) => {
   // If no status change requested (undefined or same), skip validation
   if (!updated.status || existing.status === updated.status) {
     return
   }
-  assertRegAccStatusTransitionValid(existing.status, updated.status)
+  assertStatusTransitionValid(existing.status, updated.status)
 }
 
-const isRegistrationCancelledOrSuspended = (registration) => {
-  return [REG_ACC_STATUS.SUSPENDED, REG_ACC_STATUS.CANCELLED].includes(
-    registration.status
-  )
-}
+const isRegistrationCancelled = (registration) =>
+  registration.status === REGISTRATION_STATUS.CANCELLED
 
+/**
+ * Cancelling a registration force-cancels its linked accreditation, whether
+ * that accreditation is approved or suspended (PAE-1705 Scenario 5). An
+ * accreditation that was never live (created or rejected) is left untouched.
+ * The returned cascadeCancelledIds mark the force-cancelled accreditations as
+ * system-driven changes, exempt from the accreditation transition table —
+ * which deliberately has no direct approved -> cancelled arc for user-driven
+ * updates (ADR 0042).
+ * @param {Registration[]} registrations
+ * @param {Accreditation[]} accreditations
+ * @returns {{ accreditations: Accreditation[], cascadeCancelledIds: Set<string> }}
+ */
 export const applyRegistrationStatusToLinkedAccreditations = (
   registrations,
   accreditations
 ) => {
-  const statusUpdates = new Map()
+  /** @type {Set<string>} */
+  const linkedToCancelledRegistration = new Set()
 
   for (const reg of registrations) {
-    if (reg.accreditationId && isRegistrationCancelledOrSuspended(reg)) {
-      statusUpdates.set(reg.accreditationId, reg.status)
+    if (reg.accreditationId && isRegistrationCancelled(reg)) {
+      linkedToCancelledRegistration.add(reg.accreditationId)
     }
   }
 
-  return accreditations.map((acc) => {
-    if (statusUpdates.has(acc.id)) {
-      return { ...acc, status: statusUpdates.get(acc.id) }
+  /** @type {Set<string>} */
+  const cascadeCancelledIds = new Set()
+
+  const updatedAccreditations = accreditations.map((acc) => {
+    if (
+      linkedToCancelledRegistration.has(acc.id) &&
+      ACTIVE_ACCREDITATION_STATUSES.has(acc.status)
+    ) {
+      cascadeCancelledIds.add(acc.id)
+      return /** @type {Accreditation} */ ({
+        ...acc,
+        status: ACCREDITATION_STATUS.CANCELLED
+      })
     }
     return acc
   })
+
+  return { accreditations: updatedAccreditations, cascadeCancelledIds }
 }

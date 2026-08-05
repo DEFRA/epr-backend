@@ -100,7 +100,7 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
       ])
     })
 
-    it('returns one entry per accredited partition', async () => {
+    it('returns one entry per partition', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
           registrationId: 'reg-a',
@@ -125,7 +125,7 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
       expect(entryFor(result, 'acc-b')).toMatchObject({ summaryLogId: 'log-b' })
     })
 
-    it('excludes registered-only partitions (accreditationId null)', async () => {
+    it('includes registered-only partitions (accreditationId null) as their own entries', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
           registrationId: 'reg-accredited',
@@ -139,22 +139,21 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
           registrationId: 'reg-registered-only',
           accreditationId: null,
           number: 1,
-          payload: { summaryLogId: 'log-registered-only', creditTotal: 50 }
+          payload: { summaryLogId: 'log-registered-only', creditTotal: 0 }
         })
       ])
 
       const result = await repository.findLatestSubmittedSummaryLogPerLedger()
 
-      expect(result).toEqual([
-        {
-          ledgerId: {
-            organisationId: 'org-1',
-            registrationId: 'reg-accredited',
-            accreditationId: 'acc-present'
-          },
-          summaryLogId: 'log-accredited'
-        }
-      ])
+      expect(result).toHaveLength(2)
+      expect(result).toContainEqual({
+        ledgerId: {
+          organisationId: 'org-1',
+          registrationId: 'reg-registered-only',
+          accreditationId: null
+        },
+        summaryLogId: 'log-registered-only'
+      })
     })
 
     it('excludes accredited partitions with no submitted summary log', async () => {

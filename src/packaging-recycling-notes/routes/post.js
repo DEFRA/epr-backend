@@ -9,14 +9,14 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   WASTE_PROCESSING_TYPE,
-  REG_ACC_STATUS
+  ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
- * @import { CreatePrnResponse } from '#packaging-recycling-notes/domain/model.js'
+ * @import { CreatePrnResponse, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { HapiRequest } from '#common/hapi-types.js'
@@ -111,7 +111,7 @@ const deriveAccreditationYear = (accreditation) => {
 }
 
 /**
- * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
+ * @param {PackagingRecyclingNote} prn
  * @param {{ wasteProcessingType: string }} accreditation
  * @returns {CreatePrnResponse}
  */
@@ -172,7 +172,11 @@ export const packagingRecyclingNotesCreate = {
     }
   },
   /**
-   * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
+   *   organisationsRepository: OrganisationsRepository,
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   params: { organisationId: string, registrationId: string, accreditationId: string }
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -200,7 +204,7 @@ export const packagingRecyclingNotesCreate = {
         organisationsRepository.findById(organisationId)
       ])
 
-      if (accreditation.status === REG_ACC_STATUS.CANCELLED) {
+      if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
         throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
       }
 

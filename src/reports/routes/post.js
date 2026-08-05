@@ -16,6 +16,7 @@ import {
   withRegistrationDetails
 } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
+import { reportResponseFailAction } from './response-fail-action.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
@@ -62,7 +63,7 @@ export const reportsPost = {
     },
     response: {
       schema: reportDetailResponseSchema,
-      failAction: 'error'
+      failAction: reportResponseFailAction
     }
   },
   /**

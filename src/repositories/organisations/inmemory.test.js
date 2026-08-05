@@ -8,8 +8,9 @@ import {
   prepareOrgUpdate
 } from './contract/test-data.js'
 import {
+  ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
-  REG_ACC_STATUS
+  REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 
 const it = base.extend({
@@ -300,13 +301,13 @@ describe('In-memory organisations repository', () => {
         registrations: [
           {
             ...organisation.registrations[0],
-            status: REG_ACC_STATUS.REJECTED
+            status: REGISTRATION_STATUS.REJECTED
           }
         ],
         accreditations: [
           {
             ...organisation.accreditations[0],
-            status: REG_ACC_STATUS.REJECTED
+            status: ACCREDITATION_STATUS.REJECTED
           }
         ]
       })

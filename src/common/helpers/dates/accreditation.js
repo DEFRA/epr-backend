@@ -1,5 +1,11 @@
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+
+/**
+ * @typedef {{ updatedAt: number, status: AccreditationStatus }} StatusHistoryDateTime
+ */
 
 /**
  * Checks if all dates are accredited
@@ -26,7 +32,7 @@ export function isAccreditedAtDates(dates, accreditation) {
 /**
  * Convert dates to numbers and sort descending
  * @param { StatusHistoryEntry[] } statusHistory - Accreditation status history
- * @returns {{ updatedAt: number; status: string; }[]} Sorted list
+ * @returns {StatusHistoryDateTime[]} Sorted list
  */
 export function getStatusHistoryDateTimes(statusHistory) {
   const statusDates = statusHistory.map((s) => ({
@@ -62,7 +68,7 @@ export function isWithinAccreditationDateRange(date, accreditation) {
  * is never altered by these transitions.
  *
  * @param {string|Date} date - The date to check
- * @param {{ updatedAt: number; status: string; }[]} statusHistory - Accreditation status history in descending date order
+ * @param {StatusHistoryDateTime[]} statusHistory - Accreditation status history in descending date order
  * @returns {boolean} True if the accreditation was suspended or cancelled at the given date
  */
 export function isSuspendedOrCancelledAtDate(date, statusHistory) {
@@ -70,6 +76,7 @@ export function isSuspendedOrCancelledAtDate(date, statusHistory) {
     (entry) => entry.updatedAt <= new Date(date).getTime()
   )?.status
   return (
-    status === REG_ACC_STATUS.SUSPENDED || status === REG_ACC_STATUS.CANCELLED
+    status === ACCREDITATION_STATUS.SUSPENDED ||
+    status === ACCREDITATION_STATUS.CANCELLED
   )
 }

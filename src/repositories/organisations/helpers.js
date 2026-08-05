@@ -14,8 +14,17 @@ import {
   validateAccreditationLinkUniqueness,
   validateApprovals
 } from './schema/helpers.js'
+import {
+  assertAccreditationStatusTransitionValid,
+  assertRegistrationStatusTransitionValid
+} from '#domain/organisations/status.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
+
+/** @import { WithId } from 'mongodb' */
+/** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
+/** @import { FindPageForOverseasSitesAdminListParams } from './port.js' */
 
 export const createStatusHistoryEntry = (status) => ({
   status,
@@ -45,7 +54,21 @@ export const statusHistoryWithChanges = (updatedItem, existingItem) => {
   return validateStatusHistory(statusHistory)
 }
 
-export const updateStatusHistoryForItems = (existingItems, itemUpdates) => {
+/**
+ * @template {string} S
+ * @param {Array<{ id: string, status: S }>} existingItems
+ * @param {Array<{ id: string, status?: S }>} itemUpdates
+ * @param {StatusTransitionAsserter<S>} assertStatusTransitionValid
+ * @param {Set<string>} [systemAppliedItemIds] - items whose status change was
+ *   applied by the system (the registration-cancellation cascade), exempt from
+ *   the transition table
+ */
+export const updateStatusHistoryForItems = (
+  existingItems,
+  itemUpdates,
+  assertStatusTransitionValid,
+  systemAppliedItemIds = new Set()
+) => {
   const existingItemsById = new Map(
     existingItems.map((item) => [item.id, item])
   )
@@ -55,7 +78,13 @@ export const updateStatusHistoryForItems = (existingItems, itemUpdates) => {
     if (existingItem) {
       existingItemsById.delete(updatedItem.id)
       // Validate status transition for registrations/accreditations
-      assertAndHandleItemStateTransition(existingItem, updatedItem)
+      if (!systemAppliedItemIds.has(updatedItem.id)) {
+        assertAndHandleItemStateTransition(
+          existingItem,
+          updatedItem,
+          assertStatusTransitionValid
+        )
+      }
       return {
         ...updatedItem,
         statusHistory: statusHistoryWithChanges(updatedItem, existingItem)
@@ -75,10 +104,12 @@ export const updateStatusHistoryForItems = (existingItems, itemUpdates) => {
 }
 
 export const mapDocumentWithCurrentStatuses = (org) => {
-  const normalised = normaliseOrganisationFromDb(org)
+  const normalised = /** @type {WithId<Omit<Organisation, 'id'>>} */ (
+    normaliseOrganisationFromDb(org)
+  )
   const { _id, ...rest } = normalised
 
-  rest.status = getCurrentStatus(rest)
+  rest.status = /** @type {OrganisationStatus} */ (getCurrentStatus(rest))
 
   for (const item of rest.registrations) {
     item.status = getCurrentStatus(item)
@@ -93,7 +124,7 @@ export const mapDocumentWithCurrentStatuses = (org) => {
 }
 
 function prepareRegAccForReplace(validated, existing) {
-  const accreditationsAfterUpdate =
+  const { accreditations: accreditationsAfterUpdate, cascadeCancelledIds } =
     applyRegistrationStatusToLinkedAccreditations(
       validated.registrations,
       validated.accreditations
@@ -110,12 +141,15 @@ function prepareRegAccForReplace(validated, existing) {
   validateApprovals(validated.registrations, accreditationsAfterUpdate)
   const registrations = updateStatusHistoryForItems(
     existing.registrations,
-    validated.registrations
+    validated.registrations,
+    assertRegistrationStatusTransitionValid
   )
 
   const accreditations = updateStatusHistoryForItems(
     existing.accreditations,
-    accreditationsAfterUpdate
+    accreditationsAfterUpdate,
+    assertAccreditationStatusTransitionValid,
+    cascadeCancelledIds
   )
   return { registrations, accreditations }
 }
@@ -309,7 +343,13 @@ export const performFindAllForOverseasSitesAdminList = (db) => async () => {
 
 export const performFindPageForOrsAdminList =
   (db) =>
-  async ({ page, pageSize, registrationNumber }) => {
+  async (
+    /** @type {FindPageForOverseasSitesAdminListParams} */ {
+      page,
+      pageSize,
+      registrationNumber
+    }
+  ) => {
     const skip = (page - 1) * pageSize
 
     const [result] = await db

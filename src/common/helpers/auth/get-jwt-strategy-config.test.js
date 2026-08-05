@@ -12,19 +12,30 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { SCOPES, ADMIN_ROLES } from './constants.js'
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
 
+const mockGetDefraUserRoles = vi.fn()
+
+const createStrategyConfig = (oidcConfigs) =>
+  getJwtStrategyConfig({
+    ...oidcConfigs,
+    getDefraUserRoles: mockGetDefraUserRoles
+  })
+
+const entraIdMockIssuer = /** @type {{ issuer: string }} */ (
+  entraIdMockOidcWellKnownResponse
+).issuer
+
 const maintainerCredential = {
   role: 'service_maintainer',
   scopes: [...ADMIN_ROLES.service_maintainer]
 }
 const expectedMaintainerScope = [...ADMIN_ROLES.service_maintainer]
 
-const stubRequest = (overrides = {}) => ({
-  organisationsRepository: {},
-  path: '/v1/me/organisations',
-  method: 'get',
-  params: {},
-  ...overrides
-})
+const standardUserCredential = {
+  role: null,
+  scopes: [SCOPES.organisationLinkedRead, SCOPES.organisationLinkedWrite]
+}
+
+const stubRequest = () => ({ path: '/v1/me/organisations' })
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -42,13 +53,6 @@ vi.mock('./get-entra-user-roles.js', () => ({
   getEntraUserRoles: (...args) => mockGetEntraUserRoles(...args)
 }))
 
-// Mock getUsersOrganisationInfo
-const mockGetOrgMatchingUsersToken = vi.fn()
-
-vi.mock('./get-users-org-info.js', () => ({
-  getOrgMatchingUsersToken: (...args) => mockGetOrgMatchingUsersToken(...args)
-}))
-
 describe('#getJwtStrategyConfig', () => {
   const mockOidcConfigs = {
     entraIdOidcConfig: entraIdMockOidcWellKnownResponse,
@@ -61,6 +65,7 @@ describe('#getJwtStrategyConfig', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetEntraUserRoles.mockResolvedValue(maintainerCredential)
+    mockGetDefraUserRoles.mockResolvedValue(standardUserCredential)
   })
 
   afterEach(() => {
@@ -70,8 +75,12 @@ describe('#getJwtStrategyConfig', () => {
   describe('configuration structure', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         if (key === 'roles.serviceMaintainers') {
           return JSON.stringify(['maintainer@example.com'])
         }
@@ -80,7 +89,7 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('returns correct keys configuration with both JWKS URIs', () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       expect(config.keys).toEqual([
         {
@@ -93,7 +102,7 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('returns correct verify configuration', () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       expect(config.verify).toEqual({
         aud: false,
@@ -107,7 +116,7 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('returns validate function', () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       expect(config.validate).toBeTypeOf('function')
     })
@@ -116,8 +125,12 @@ describe('#getJwtStrategyConfig', () => {
   describe('validate function - Entra ID tokens', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         if (key === 'roles.serviceMaintainers') {
           return JSON.stringify(['maintainer@example.com'])
         }
@@ -126,12 +139,12 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('validates Entra ID token with valid audience and returns credentials', async () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             preferred_username: 'user@example.com'
@@ -146,7 +159,7 @@ describe('#getJwtStrategyConfig', () => {
         credentials: {
           id: 'contact-123',
           email: 'user@example.com',
-          issuer: entraIdMockOidcWellKnownResponse.issuer,
+          issuer: entraIdMockIssuer,
           role: 'service_maintainer',
           scope: expectedMaintainerScope
         }
@@ -154,12 +167,12 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('credential carries the resolved admin role', async () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             preferred_username: 'user@example.com'
@@ -173,10 +186,10 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('calls getEntraUserRoles with email address from token payload', async () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const tokenPayload = {
-        iss: entraIdMockOidcWellKnownResponse.issuer,
+        iss: entraIdMockIssuer,
         aud: mockEntraClientId,
         oid: 'contact-123',
         preferred_username: 'user@example.com'
@@ -201,12 +214,12 @@ describe('#getJwtStrategyConfig', () => {
     ])(
       'When token.preferred_username is %s, parsed email is %s',
       async (preferredUsername, expected) => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
+        const config = createStrategyConfig(mockOidcConfigs)
 
         const artifacts = {
           decoded: {
             payload: {
-              iss: entraIdMockOidcWellKnownResponse.issuer,
+              iss: entraIdMockIssuer,
               aud: mockEntraClientId,
               oid: 'contact-123',
               preferred_username: preferredUsername
@@ -224,12 +237,12 @@ describe('#getJwtStrategyConfig', () => {
     )
 
     test('throws forbidden error for Entra ID token with invalid audience', async () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: 'wrong-client-id',
             oid: 'contact-123',
             email: 'user@example.com'
@@ -248,12 +261,12 @@ describe('#getJwtStrategyConfig', () => {
         scopes: [...ADMIN_ROLES.service_maintainer_write]
       })
 
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             email: 'user@example.com'
@@ -274,12 +287,12 @@ describe('#getJwtStrategyConfig', () => {
         scopes: [...ADMIN_ROLES.support]
       })
 
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             email: 'support@example.com'
@@ -295,12 +308,12 @@ describe('#getJwtStrategyConfig', () => {
     test('handles Entra ID token where user matches no admin tier (empty scope)', async () => {
       mockGetEntraUserRoles.mockResolvedValue({ role: null, scopes: [] })
 
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-456',
             email: 'regular-user@example.com'
@@ -314,12 +327,12 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('handles token payload with missing id field', async () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             // oid is missing
             email: 'user@example.com'
@@ -334,12 +347,12 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('handles null values in token payload', async () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: null,
             email: null,
@@ -356,12 +369,12 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('calls config.get for Entra ID client ID', async () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
             email: 'user@example.com'
@@ -375,12 +388,12 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test('handles multiple concurrent Entra ID token validations', async () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
+      const config = createStrategyConfig(mockOidcConfigs)
 
       const artifacts1 = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-1',
             email: 'user1@example.com'
@@ -391,7 +404,7 @@ describe('#getJwtStrategyConfig', () => {
       const artifacts2 = {
         decoded: {
           payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
+            iss: entraIdMockIssuer,
             aud: mockEntraClientId,
             oid: 'contact-2',
             email: 'user2@example.com'
@@ -413,8 +426,12 @@ describe('#getJwtStrategyConfig', () => {
   describe('OIDC config variations', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         if (key === 'roles.serviceMaintainers') {
           return JSON.stringify(['maintainer@example.com'])
         }
@@ -432,7 +449,7 @@ describe('#getJwtStrategyConfig', () => {
         defraIdOidcConfig: defraIdMockOidcWellKnownResponse
       }
 
-      const config = getJwtStrategyConfig(customOidcConfigs)
+      const config = createStrategyConfig(customOidcConfigs)
 
       expect(config.keys[0].uri).toBe(customEntraJwksUri)
     })
@@ -447,7 +464,7 @@ describe('#getJwtStrategyConfig', () => {
         }
       }
 
-      const config = getJwtStrategyConfig(customOidcConfigs)
+      const config = createStrategyConfig(customOidcConfigs)
 
       expect(config.keys[1].uri).toBe(customDefraJwksUri)
     })
@@ -462,7 +479,7 @@ describe('#getJwtStrategyConfig', () => {
         defraIdOidcConfig: defraIdMockOidcWellKnownResponse
       }
 
-      const config = getJwtStrategyConfig(customOidcConfigs)
+      const config = createStrategyConfig(customOidcConfigs)
 
       const artifacts = {
         decoded: {
@@ -489,47 +506,51 @@ describe('#getJwtStrategyConfig', () => {
 
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'oidc.entraId.clientId') {
+          return mockEntraClientId
+        }
+        if (key === 'oidc.defraId.clientId') {
+          return mockDefraClientId
+        }
         return null
       })
     })
 
     describe('Happy path', () => {
       test('uses issuer from defraIdOidcConfig for validation', async () => {
-        const testOrgId = 'org-id-001'
-
-        mockGetOrgMatchingUsersToken.mockResolvedValue({ id: testOrgId })
-
-        const config = getJwtStrategyConfig(customOidcConfigs)
+        const config = createStrategyConfig(customOidcConfigs)
         const artifacts = {
           decoded: { payload: { ...userPresentInOrg1DefraIdTokenPayload } }
         }
-        const request = stubRequest({
-          organisationsRepository: {
-            findById: vi.fn().mockResolvedValue({
-              id: testOrgId,
-              status: 'active',
-              users: [],
-              version: 1
-            }),
-            replace: vi.fn().mockResolvedValue(undefined)
-          },
-          path: '/any',
-          params: {
-            organisationId: testOrgId
-          }
-        })
 
-        const result = await config.validate(artifacts, request)
+        const result = await config.validate(artifacts, stubRequest())
 
         expect(result.credentials.issuer).toBe(
           userPresentInOrg1DefraIdTokenPayload.iss
         )
       })
 
-      test('returns standard user scope for valid Defra ID tokens', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
+      test('resolves Defra ID roles from the token payload and the request', async () => {
+        const config = createStrategyConfig(mockOidcConfigs)
+        const tokenPayload = {
+          aud: mockDefraClientId,
+          contactId: 'defra-contact-123',
+          email: 'defra-user@example.com',
+          iss: defraIdMockOidcWellKnownResponse.issuer
+        }
+        const request = stubRequest()
+
+        await config.validate({ decoded: { payload: tokenPayload } }, request)
+
+        expect(mockGetDefraUserRoles).toHaveBeenCalledWith(
+          tokenPayload,
+          request
+        )
+        expect(mockGetDefraUserRoles).toHaveBeenCalledTimes(1)
+      })
+
+      test('credential carries the role and scope the Defra resolver returned', async () => {
+        const config = createStrategyConfig(mockOidcConfigs)
 
         const artifacts = {
           decoded: {
@@ -544,28 +565,11 @@ describe('#getJwtStrategyConfig', () => {
 
         const result = await config.validate(artifacts, stubRequest())
 
+        expect(result.credentials.role).toBeNull()
         expect(result.credentials.scope).toEqual([
           SCOPES.organisationLinkedRead,
           SCOPES.organisationLinkedWrite
         ])
-      })
-
-      test('Defra ID credential carries a null role', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              aud: mockDefraClientId,
-              contactId: 'defra-contact-123',
-              email: 'defra-user@example.com',
-              iss: defraIdMockOidcWellKnownResponse.issuer
-            }
-          }
-        }
-        const result = await config.validate(artifacts, stubRequest())
-
-        expect(result.credentials.role).toBeNull()
       })
 
       test.each([
@@ -592,7 +596,7 @@ describe('#getJwtStrategyConfig', () => {
         ['handles null firstName and lastName', null, null, ''],
         ['handles empty string firstName and lastName', '', '', '']
       ])('%s', async (_description, firstName, lastName, expectedName) => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
+        const config = createStrategyConfig(mockOidcConfigs)
 
         const artifacts = {
           decoded: {
@@ -613,7 +617,7 @@ describe('#getJwtStrategyConfig', () => {
       })
 
       test('does not call getEntraUserRoles for Defra ID tokens', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
+        const config = createStrategyConfig(mockOidcConfigs)
 
         const artifacts = {
           decoded: {
@@ -637,7 +641,7 @@ describe('#getJwtStrategyConfig', () => {
 
     describe('Error cases', () => {
       test('throws forbidden error for Defra ID token with invalid audience', async () => {
-        const config = getJwtStrategyConfig(customOidcConfigs)
+        const config = createStrategyConfig(customOidcConfigs)
 
         const artifacts = {
           decoded: {
@@ -647,18 +651,13 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
-        const request = stubRequest({
-          path: '/any',
-          params: { organisationId: 'some-org-id' }
-        })
-
-        await expect(config.validate(artifacts, request)).rejects.toThrow(
+        await expect(config.validate(artifacts, stubRequest())).rejects.toThrow(
           Boom.forbidden('Invalid audience for Defra Id token')
         )
       })
 
       test('handles empty string values in token payload', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
+        const config = createStrategyConfig(mockOidcConfigs)
 
         const artifacts = {
           decoded: {
@@ -681,12 +680,12 @@ describe('#getJwtStrategyConfig', () => {
 
     describe('concurrent validation with both issuer types', () => {
       test('handles concurrent validations of different issuer types', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
+        const config = createStrategyConfig(mockOidcConfigs)
 
         const entraArtifacts = {
           decoded: {
             payload: {
-              iss: entraIdMockOidcWellKnownResponse.issuer,
+              iss: entraIdMockIssuer,
               aud: mockEntraClientId,
               oid: 'entra-contact',
               email: 'entra@example.com'
@@ -722,7 +721,7 @@ describe('#getJwtStrategyConfig', () => {
 
     describe('unrecognized issuer handling', () => {
       test('throws bad request error for unrecognized issuer', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
+        const config = createStrategyConfig(mockOidcConfigs)
 
         const unknownIssuer = 'https://unknown-issuer.example.com'
 

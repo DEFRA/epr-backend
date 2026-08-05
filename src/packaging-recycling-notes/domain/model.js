@@ -1,6 +1,8 @@
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 export const PRN_NUMBER_MAX_LENGTH = 20
+
+/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
 
 /**
  * Status values for Packaging Recycling Notes (PRNs)
@@ -128,14 +130,14 @@ export class AccreditationStatusError extends Error {
  * Asserts that an accreditation permits issuing a PRN. Issuing is blocked while
  * the accreditation is suspended (temporary) or cancelled (terminal). A PRN can
  * still be created (drafted) while suspended.
- * @param {{ status?: string } | null | undefined} accreditation
+ * @param {{ status: AccreditationStatus } | null | undefined} accreditation
  * @throws {AccreditationStatusError} when the accreditation is suspended or cancelled
  */
 export function assertAccreditationCanIssue(accreditation) {
   const status = accreditation?.status
   if (
-    status === REG_ACC_STATUS.SUSPENDED ||
-    status === REG_ACC_STATUS.CANCELLED
+    status === ACCREDITATION_STATUS.SUSPENDED ||
+    status === ACCREDITATION_STATUS.CANCELLED
   ) {
     throw new AccreditationStatusError('issue', status)
   }

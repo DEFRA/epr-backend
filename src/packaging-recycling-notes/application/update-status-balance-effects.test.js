@@ -10,6 +10,10 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
+/**
+ * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
+ */
+
 const REGISTRATION_ID = 'reg-1'
 const ACCREDITATION_ID = 'acc-1'
 const ORGANISATION_ID = 'org-1'
@@ -52,7 +56,9 @@ const serviceWithBalance = (closingBalance) => {
         })
       ]
     : []
-  return createWasteBalanceService(createInMemoryLedgerRepository(events)())
+  return createWasteBalanceService(
+    createInMemoryLedgerRepository(/** @type {LedgerEvent[]} */ (events))()
+  )
 }
 
 const applyTransition = (service, logger, currentStatus, newStatus) =>

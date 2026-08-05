@@ -44,7 +44,12 @@ export const performUpdateViaLedger = async ({
   const organisationId = wasteRecords[0].organisationId
 
   const classifiedRows = wasteRecords.map((record) =>
-    classifyWasteRecord(record, accreditation, overseasSites)
+    classifyWasteRecord(
+      record,
+      record.data?.processingType,
+      accreditation,
+      overseasSites
+    )
   )
 
   let creditTotal = 0

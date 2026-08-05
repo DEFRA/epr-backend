@@ -140,7 +140,9 @@ describe('Waste balance stream (Exporter)', () => {
       accreditationId: 'ACC-123'
     })
     expect(latest).not.toBeNull()
-    if (!latest) throw new Error('latest stream event is null')
+    if (!latest) {
+      throw new Error('latest stream event is null')
+    }
     expect(latest.number).toBe(1)
     expect(latest.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
     expect(
@@ -179,8 +181,12 @@ describe('Waste balance stream (Exporter)', () => {
       accreditationId: 'ACC-123'
     })
 
-    if (!afterSecond) throw new Error('afterSecond stream event is null')
-    if (!afterFirst) throw new Error('afterFirst stream event is null')
+    if (!afterSecond) {
+      throw new Error('afterSecond stream event is null')
+    }
+    if (!afterFirst) {
+      throw new Error('afterFirst stream event is null')
+    }
     expect(afterSecond.number).toBe(2)
     expect(afterSecond.closingBalance).toEqual(afterFirst.closingBalance)
   })
@@ -228,7 +234,9 @@ describe('Waste balance stream (Exporter)', () => {
       registrationId,
       accreditationId: 'ACC-123'
     })
-    if (!latest) throw new Error('latest stream event is null')
+    if (!latest) {
+      throw new Error('latest stream event is null')
+    }
     expect(latest.number).toBe(2)
     expect(
       /** @type {{ creditTotal: number }} */ (latest.payload).creditTotal

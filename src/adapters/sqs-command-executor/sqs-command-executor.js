@@ -20,7 +20,7 @@ import { ORS_IMPORT_COMMAND } from '#overseas-sites/domain/import-status.js'
  * @typedef {object} ExecutorDependencies
  * @property {SQSClient} sqsClient
  * @property {string} queueName
- * @property {object} logger
+ * @property {TypedLogger} logger
  */
 
 /**
@@ -112,8 +112,7 @@ export const createSqsCommandExecutor = async (deps) => {
   const queueUrl = await resolveQueueUrl(sqsClient, queueName)
 
   logger.info({
-    message: `Resolved queue URL: ${queueUrl}`,
-    queueName
+    message: `Resolved queue URL: ${queueUrl} for queue ${queueName}`
   })
 
   return {

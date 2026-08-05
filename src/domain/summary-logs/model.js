@@ -33,7 +33,7 @@
  * @property {ValidationIssueCounts} [counts] - Issue counts by severity (computed pre-cap, so total may exceed issues.length when capped for storage)
  */
 
-/** @import {Loads, LoadsByWasteRecordType} from '#application/summary-logs/load-counts.js' */
+/** @import {Loads} from '#application/summary-logs/load-counts.js' */
 /** @import {LoadsByReportingPeriod} from '#application/summary-logs/period-status.js' */
 /** @import {ValidationIssueCounts} from '#common/validation/validation-issues.js' */
 /** @import {ProcessingType} from './meta-fields.js' */
@@ -60,7 +60,6 @@
  *   file: SummaryLogFile,
  *   loads?: Loads,
  *   loadsByReportingPeriod?: LoadsByReportingPeriod,
- *   loadsByWasteRecordType?: LoadsByWasteRecordType,
  *   meta?: SummaryLogMeta,
  *   organisationId?: string,
  *   registrationId?: string,
@@ -69,7 +68,5 @@
  *   validation?: Validation
  * }} SummaryLog
  */
-
-/** @typedef {Omit<SummaryLog, 'file'> & { file: StoredFile }} StoredSummaryLog */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

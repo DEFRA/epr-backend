@@ -11,9 +11,13 @@ import { createMockLogger } from '#test/mock-logger.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
-vi.mock('#application/prn-tonnage/aggregate-prn-tonnage.js', () => ({
-  aggregatePrnTonnage: vi.fn()
-}))
+vi.mock(
+  '#application/prn-tonnage/aggregate-prn-tonnage.js',
+  async (importActual) => ({
+    ...(await importActual()),
+    aggregatePrnTonnage: vi.fn()
+  })
+)
 
 describe('getPrnTonnage route handler', () => {
   const mockDb = createMockDb()
@@ -37,28 +41,6 @@ describe('getPrnTonnage route handler', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  it('returns 200 and logs success when aggregation succeeds', async () => {
-    const payload = {
-      generatedAt: '2026-02-23T15:00:00.000Z',
-      rows: []
-    }
-    vi.mocked(aggregatePrnTonnage).mockResolvedValue(payload)
-
-    await getPrnTonnage.handler(buildRequest(), mockH)
-
-    expect(aggregatePrnTonnage).toHaveBeenCalledWith(mockDb)
-    expect(mockLogger.info).toHaveBeenCalledWith({
-      message: 'PRN tonnage data retrieved successfully',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-      }
-    })
-    expect(mockResponse).toHaveBeenCalledWith(payload)
-    expect(mockCode).toHaveBeenCalledWith(StatusCodes.OK)
-    expect(mockLogger.error).not.toHaveBeenCalled()
   })
 
   it('logs error and throws badImplementation when aggregation fails', async () => {

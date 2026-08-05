@@ -7,9 +7,9 @@ import {
   resolveAccreditation,
   resolveDetailedMaterial
 } from './registration-utils.js'
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 
 const userFixture = {
@@ -80,29 +80,20 @@ describe('getReportableRegistrations', () => {
     expect(result[0].registration.status).toBe('approved')
   })
 
-  it('includes suspended registrations', () => {
-    const org = buildOrg({ registrations: [buildReg({ status: 'suspended' })] })
-
-    expect(getReportableRegistrations([org])).toHaveLength(1)
-  })
-
   it('includes cancelled registrations', () => {
     const org = buildOrg({ registrations: [buildReg({ status: 'cancelled' })] })
 
     expect(getReportableRegistrations([org])).toHaveLength(1)
   })
 
-  it('excludes created registrations', () => {
-    const org = buildOrg({ registrations: [buildReg({ status: 'created' })] })
+  it.each(['suspended', 'created', 'rejected'])(
+    'excludes %s registrations',
+    (status) => {
+      const org = buildOrg({ registrations: [buildReg({ status })] })
 
-    expect(getReportableRegistrations([org])).toHaveLength(0)
-  })
-
-  it('excludes rejected registrations', () => {
-    const org = buildOrg({ registrations: [buildReg({ status: 'rejected' })] })
-
-    expect(getReportableRegistrations([org])).toHaveLength(0)
-  })
+      expect(getReportableRegistrations([org])).toHaveLength(0)
+    }
+  )
 
   it('excludes test organisations by orgId', () => {
     const testOrg = buildOrg({
@@ -143,13 +134,16 @@ describe('getReportableRegistrations', () => {
 // ---------------------------------------------------------------------------
 
 describe('isRegistrationAccredited', () => {
-  it.each([
+  /** @type {Array<{ status: AccreditationStatus, expected: boolean }>} */
+  const linkedAccreditations = [
     { status: 'approved', expected: true },
     { status: 'suspended', expected: true },
     { status: 'created', expected: false },
     { status: 'rejected', expected: false },
     { status: 'cancelled', expected: false }
-  ])(
+  ]
+
+  it.each(linkedAccreditations)(
     'returns $expected when linked accreditation status is $status',
     ({ status, expected }) => {
       expect(isRegistrationAccredited({ accreditation: { status } })).toBe(
@@ -168,7 +162,7 @@ describe('isRegistrationAccredited', () => {
 // ---------------------------------------------------------------------------
 
 describe('activeAccreditationValidFrom', () => {
-  it.each([REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.SUSPENDED])(
+  it.each([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])(
     'returns validFrom when accreditation status is %s',
     (status) => {
       expect(
@@ -180,16 +174,16 @@ describe('activeAccreditationValidFrom', () => {
   it('returns null for an active accreditation with no validFrom', () => {
     expect(
       activeAccreditationValidFrom({
-        status: REG_ACC_STATUS.APPROVED,
+        status: ACCREDITATION_STATUS.APPROVED,
         validFrom: null
       })
     ).toBeNull()
   })
 
   it.each([
-    REG_ACC_STATUS.CREATED,
-    REG_ACC_STATUS.REJECTED,
-    REG_ACC_STATUS.CANCELLED
+    ACCREDITATION_STATUS.CREATED,
+    ACCREDITATION_STATUS.REJECTED,
+    ACCREDITATION_STATUS.CANCELLED
   ])('returns null when accreditation status is %s', (status) => {
     expect(
       activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })

@@ -48,7 +48,7 @@ jobs:
     if: needs.pr-prep.outputs.docs-only != 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -116,7 +116,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
@@ -135,13 +135,13 @@ jobs:
       matrix:
         waste-record-states: [true]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check for matching journey test branch
         id: journey-branch
         run: |
           BRANCH="${{ github.head_ref }}"
-          if git ls-remote --heads https://github.com/DEFRA/epr-backend-journey-tests.git "$BRANCH" | grep -q .; then
+          if git ls-remote --heads https://github.com/DEFRA/epr-re-ex-journey-tests.git "$BRANCH" | grep -q .; then
             echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
           else
             echo "ref=main" >> "$GITHUB_OUTPUT"
@@ -158,12 +158,13 @@ jobs:
         run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
 
       - name: Run journey tests on ${{ steps.journey-branch.outputs.ref }}
-        uses: DEFRA/epr-backend-journey-tests/run-journey-tests@main
+        uses: DEFRA/epr-re-ex-journey-tests/run-journey-tests@main
         with:
           epr-backend: ${{github.sha}}
           branch: ${{ steps.journey-branch.outputs.ref }}
           waste-record-states: ${{ matrix.waste-record-states }}
           artifact-suffix: -waste-record-states-${{ matrix.waste-record-states }}
+          test-scope: all
 
       - name: Write journey test summary
         if: always()

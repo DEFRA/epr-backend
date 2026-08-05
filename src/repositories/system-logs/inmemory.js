@@ -1,4 +1,4 @@
-/** @import {SystemLog} from './port.js' */
+/** @import { FindParams, SystemLog, SystemLogsRepositoryFactory } from './port.js' */
 
 import {
   SUMMARY_LOG_SUB_CATEGORY,
@@ -26,7 +26,16 @@ const performInsertMany = (storage, state) => async (systemLogs) => {
 
 const performFind =
   (storage) =>
-  async ({ organisationId, userId, subCategory, limit, cursor, direction }) => {
+  async (
+    /** @type {FindParams} */ {
+      organisationId,
+      userId,
+      subCategory,
+      limit,
+      cursor,
+      direction
+    }
+  ) => {
     const isPrev = direction === 'prev'
 
     let results = storage.filter((item) => {
@@ -92,7 +101,7 @@ const performFindSummaryLogSubmitActors =
   }
 
 /**
- * @returns {import('./port.js').SystemLogsRepositoryFactory}
+ * @returns {SystemLogsRepositoryFactory}
  */
 export function createSystemLogsRepository() {
   /** @type {Array<SystemLog & { _internalId: number }>} */

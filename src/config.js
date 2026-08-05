@@ -346,29 +346,29 @@ const baseConfig = {
     }
   },
   featureFlags: {
-    closedPeriodAdjustments: {
-      doc: 'Feature Flag: Flag submitted reports as requiring resubmission when a later summary log restates a closed period',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_CLOSED_PERIOD_ADJUSTMENTS'
-    },
     devEndpoints: {
       doc: 'Feature Flag: Enable development endpoints',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    fixDuplicateAccreditationLinks: {
-      doc: 'Feature Flag: Fix duplicate accreditation links in existing organisation data on startup',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_FIX_DUPLICATE_ACCREDITATION_LINKS'
-    },
     staleIssuedTonnageReport: {
       doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
+    },
+    preCpaResubmissionReport: {
+      doc: 'Feature Flag: Run the estate-wide pre-CPA resubmission sizing diagnostic on startup (PAE-1747)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_REPORT'
+    },
+    preCpaResubmissionBackfill: {
+      doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768).',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
     }
   },
   formSubmissionOverrides: {
@@ -515,13 +515,4 @@ function getConfig(overrides = {}) {
 
 const isProductionEnvironment = () => config.get('cdpEnvironment') === 'prod'
 const isLocalEnvironment = () => config.get('cdpEnvironment') === 'local'
-const isClosedPeriodAdjustmentsEnabled = () =>
-  config.get('featureFlags.closedPeriodAdjustments')
-
-export {
-  config,
-  getConfig,
-  isClosedPeriodAdjustmentsEnabled,
-  isLocalEnvironment,
-  isProductionEnvironment
-}
+export { config, getConfig, isLocalEnvironment, isProductionEnvironment }

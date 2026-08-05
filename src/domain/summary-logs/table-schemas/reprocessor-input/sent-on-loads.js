@@ -14,8 +14,7 @@ import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-field
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
-const WASTE_BALANCE_FIELDS = [
-  FIELDS.ROW_ID,
+const WASTE_BALANCE_CONTENT_FIELDS = [
   FIELDS.DATE_LOAD_LEFT_SITE,
   FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
 ]
@@ -44,7 +43,7 @@ export const SENT_ON_LOADS = {
   ) => {
     const missingResult = checkRequiredFields(
       data,
-      WASTE_BALANCE_FIELDS,
+      WASTE_BALANCE_CONTENT_FIELDS,
       SENT_ON_LOADS.unfilledValues
     )
     if (missingResult) {

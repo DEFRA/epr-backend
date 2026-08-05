@@ -48,6 +48,7 @@ describe('SummaryLogExtractor', () => {
 
     summaryLog = {
       file: {
+        status: 'complete',
         uri: 's3://test-bucket/test-key'
       }
     }
@@ -63,6 +64,20 @@ describe('SummaryLogExtractor', () => {
     expect(uploadsRepository.findByLocation).toHaveBeenCalledWith(
       's3://test-bucket/test-key'
     )
+  })
+
+  it('should throw when the file upload is not complete', async () => {
+    summaryLog.file = { status: 'pending' }
+
+    const result = await summaryLogExtractor
+      .extract(summaryLog, { logger })
+      .catch((err) => err)
+
+    expect(result).toBeInstanceOf(Error)
+    expect(result.message).toBe(
+      'Cannot extract summary log: file upload is not complete (status: pending)'
+    )
+    expect(uploadsRepository.findByLocation).not.toHaveBeenCalled()
   })
 
   it('should throw error when file not found', async () => {

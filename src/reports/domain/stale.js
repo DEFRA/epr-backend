@@ -2,6 +2,10 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 
+/**
+ * @import { ReportStale, StaleSummaryLogChanged } from '#reports/repository/port.js'
+ */
+
 export const STALE_REASON = Object.freeze({
   SUMMARY_LOG_CHANGED: 'summary_log_changed',
   PRN_CANCELLED: 'prn_cancelled'
@@ -44,35 +48,44 @@ export const staleReasons = (stale) => {
 }
 
 /**
- * Normalises a report's `stale` field to the current nested shape. Old
- * documents (written before the PRN-cancellation trigger existed) carry a
- * flat `{ uploadedAt, reason, summaryLogId }` object; new writes only ever
- * produce `{ summaryLogChanged?, prnCancelled? }`. Applied at the repository
- * read boundary so every caller sees the current shape regardless of when
- * the document was written — no bulk migration needed, since `stale` only
- * ever applies to active drafts, which are short-lived by construction.
+ * Normalises a report's `stale` field to the current nested shape
+ * (`{ summaryLogChanged?, prnCancelled? }`), upgrading the legacy flat
+ * shape (`{ uploadedAt, reason, summaryLogId }`) where needed.
  *
  * @param {Record<string, unknown> | undefined} stale
- * @returns {import('#reports/repository/port.js').ReportStale | undefined}
+ * @returns {ReportStale | undefined}
  */
 export const normaliseStale = (stale) => {
   if (!stale) {
     return undefined
   }
-  if ('summaryLogChanged' in stale || 'prnCancelled' in stale) {
-    return /** @type {import('#reports/repository/port.js').ReportStale} */ (
-      stale
-    )
+
+  const { summaryLogChanged, prnCancelled, reason: _reason, ...rest } = stale
+
+  if (summaryLogChanged || prnCancelled) {
+    return /** @type {ReportStale} */ ({
+      ...(summaryLogChanged ? { summaryLogChanged } : {}),
+      ...(prnCancelled ? { prnCancelled } : {})
+    })
   }
+
   // Old flat shape: the only reason that existed before this change.
-  const { reason: _reason, ...rest } = stale
-  return {
-    summaryLogChanged:
-      /** @type {import('#reports/repository/port.js').StaleSummaryLogChanged} */ (
-        rest
-      )
-  }
+  return { summaryLogChanged: /** @type {StaleSummaryLogChanged} */ (rest) }
 }
+
+const KNOWN_STALE_KEYS = new Set(['summaryLogChanged', 'prnCancelled'])
+
+/**
+ * Lists the top-level `stale` keys that `normaliseStale` would drop: the legacy
+ * flat fields left on a document written (or re-flagged) in the old shape. Empty
+ * for a clean nested-shape `stale`. Lets the read boundary flag which documents
+ * still carry the legacy shape so the migration tail is observable (PAE-1755).
+ *
+ * @param {Record<string, unknown> | undefined} stale
+ * @returns {string[]}
+ */
+export const legacyStaleKeys = (stale) =>
+  stale ? Object.keys(stale).filter((key) => !KNOWN_STALE_KEYS.has(key)) : []
 
 /**
  * Asserts `reasons` matches the 409 payload's `code` contract, so the shape

@@ -2,11 +2,16 @@
  * Transforms organisation entities into public register row objects
  */
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {AccreditationStatus, Organisation, RegistrationStatus} from '#domain/organisations/model.js' */
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 /** @import {ReportComplianceData} from '#reports/application/report-compliance.js' */
 
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS
+} from '#domain/organisations/model.js'
 import {
   capitalize,
   formatAddress,
@@ -20,10 +25,20 @@ import chunk from 'lodash.chunk'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { config } from '#root/config.js'
 
-const INCLUDED_STATUSES = new Set([
-  REG_ACC_STATUS.APPROVED,
-  REG_ACC_STATUS.SUSPENDED,
-  REG_ACC_STATUS.CANCELLED
+// A registration's own status can never be suspended (suspension is an
+// accreditation-only concept), so suspended is excluded here.
+/** @type {Set<RegistrationStatus>} */
+const REGISTRATION_INCLUDED_STATUSES = new Set([
+  REGISTRATION_STATUS.APPROVED,
+  REGISTRATION_STATUS.CANCELLED
+])
+
+// Cancelled and suspended accreditations remain on the public register (BR-E8).
+/** @type {Set<AccreditationStatus>} */
+const ACCREDITATION_INCLUDED_STATUSES = new Set([
+  ACCREDITATION_STATUS.APPROVED,
+  ACCREDITATION_STATUS.SUSPENDED,
+  ACCREDITATION_STATUS.CANCELLED
 ])
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
@@ -88,17 +103,32 @@ function getLastStatusUpdateDate(item) {
     : null
 }
 
+/**
+ * @param {Registration} registration
+ * @param {Accreditation[]} accreditations
+ * @returns {Accreditation | null}
+ */
 function getLinkedAccreditation(registration, accreditations) {
-  return registration.accreditationId
-    ? accreditations.find(
-        (acc) =>
-          acc.id === registration.accreditationId && isInPublishableState(acc)
-      )
-    : null
+  if (!registration.accreditationId) {
+    return null
+  }
+  return (
+    accreditations.find(
+      (acc) =>
+        acc.id === registration.accreditationId &&
+        isAccreditationInPublishableState(acc)
+    ) ?? null
+  )
 }
 
-function isInPublishableState(item) {
-  return INCLUDED_STATUSES.has(item.status)
+/** @param {{ status: RegistrationStatus }} item */
+function isRegistrationInPublishableState(item) {
+  return REGISTRATION_INCLUDED_STATUSES.has(item.status)
+}
+
+/** @param {{ status: AccreditationStatus }} item */
+function isAccreditationInPublishableState(item) {
+  return ACCREDITATION_INCLUDED_STATUSES.has(item.status)
 }
 
 function isTestOrg(org) {
@@ -115,22 +145,24 @@ function processBatch(batch, reportComplianceData) {
   return batch
     .filter((org) => !isTestOrg(org))
     .flatMap((org) =>
-      org.registrations.filter(isInPublishableState).map((registration) => {
-        const accreditation = getLinkedAccreditation(
-          registration,
-          org.accreditations
-        )
-        const entry = entries.get(registration.id)
-        const reportComplianceFields = entry
-          ? buildReportComplianceFields(periods, entry)
-          : {}
-        return transformRegAcc(
-          org,
-          registration,
-          accreditation,
-          reportComplianceFields
-        )
-      })
+      org.registrations
+        .filter(isRegistrationInPublishableState)
+        .map((registration) => {
+          const accreditation = getLinkedAccreditation(
+            registration,
+            org.accreditations
+          )
+          const entry = entries.get(registration.id)
+          const reportComplianceFields = entry
+            ? buildReportComplianceFields(periods, entry)
+            : {}
+          return transformRegAcc(
+            org,
+            registration,
+            accreditation,
+            reportComplianceFields
+          )
+        })
     )
 }
 

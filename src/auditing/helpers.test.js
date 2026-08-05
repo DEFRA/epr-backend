@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { audit } from '@defra/cdp-auditing'
 import { logger } from '#common/helpers/logging/logger.js'
+import { invalidArg } from '#test/type-helpers.js'
 import { extractUserDetails, safeAudit, recordSystemLogs } from './helpers.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
@@ -40,7 +41,7 @@ describe('safeAudit', () => {
       user: { id: 'user-1' }
     }
 
-    safeAudit(payload)
+    safeAudit(invalidArg(payload))
 
     expect(audit).toHaveBeenCalledWith(payload)
     expect(logger.warn).not.toHaveBeenCalled()
@@ -59,7 +60,7 @@ describe('safeAudit', () => {
       user: { id: 'user-1', email: 'test@example.com' }
     }
 
-    safeAudit(payload)
+    safeAudit(invalidArg(payload))
 
     expect(audit).toHaveBeenCalledWith({
       event: payload.event,
@@ -202,7 +203,7 @@ describe('recordSystemLogs', () => {
       )
     const payload = buildPayload(1)
 
-    await recordSystemLogs(repository, [payload])
+    await recordSystemLogs(repository, [invalidArg(payload)])
 
     expect(mockInsertMany).toHaveBeenCalledExactlyOnceWith([
       {

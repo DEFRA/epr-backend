@@ -36,10 +36,11 @@ import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
 import { createInMemoryWasteBalanceServicePlugin } from '#waste-balances/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-inmemory.plugin.js'
-import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
 
-/** @import { Lifecycle } from '@hapi/hapi' */
+/** @import { Lifecycle, Plugin } from '@hapi/hapi' */
+/** @import { Db } from 'mongodb' */
+/** @import { FeatureFlags } from '#common/hapi-types.js' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
 /** @import { Mock } from 'vitest' */
 
@@ -56,7 +57,8 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
 /**
  * @typedef {{
  *   config?: Record<string, any>
- *   featureFlags?: object
+ *   db?: Db
+ *   featureFlags?: FeatureFlags
  *   repositories?: object
  *   workers?: object
  *   dlqService?: import('#plugins/dlq-admin.js').DlqService
@@ -89,6 +91,21 @@ function createRepositoryPlugin(name, repositoryOrFactory) {
   }
 }
 
+/**
+ * Decorates `server` and `request` with a real Mongo `Db`, for route tests that
+ * exercise raw `request.db` access instead of a repository.
+ *
+ * @param {Db} db
+ * @returns {Plugin<void>}
+ */
+const createDbPlugin = (db) => ({
+  name: 'test-db',
+  register: (server) => {
+    server.decorate('server', 'db', db)
+    server.decorate('request', 'db', db)
+  }
+})
+
 const repositoryConfigs = [
   {
     name: 'organisationsRepository',
@@ -101,10 +118,6 @@ const repositoryConfigs = [
   {
     name: 'formSubmissionsRepository',
     createDefault: createInMemoryFormSubmissionsRepositoryPlugin
-  },
-  {
-    name: 'wasteRecordsRepository',
-    createDefault: createInMemoryWasteRecordsRepositoryPlugin
   },
   {
     name: 'summaryLogRowStatesRepository',
@@ -224,13 +237,13 @@ function attachLoggerMocks(testServer) {
 
   testServer.ext('onRequest', (request, h) => {
     vi.spyOn(request.logger, 'info').mockImplementation(
-      testServer.loggerMocks.info
+      /** @type {(...args: unknown[]) => void} */ (testServer.loggerMocks.info)
     )
     vi.spyOn(request.logger, 'error').mockImplementation(
-      testServer.loggerMocks.error
+      /** @type {(...args: unknown[]) => void} */ (testServer.loggerMocks.error)
     )
     vi.spyOn(request.logger, 'warn').mockImplementation(
-      testServer.loggerMocks.warn
+      /** @type {(...args: unknown[]) => void} */ (testServer.loggerMocks.warn)
     )
     return h.continue
   })
@@ -283,6 +296,7 @@ export async function createTestServer(options = {}) {
       plugin: mockDlqAdminPlugin,
       options: { dlqService: options.dlqService }
     },
+    ...(options.db ? [createDbPlugin(options.db)] : []),
     router
   ]
 

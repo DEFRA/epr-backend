@@ -1,4 +1,5 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import { FindPageParams, OrganisationsRepositoryFactory } from './port.js' */
 
 import Boom from '@hapi/boom'
 import {
@@ -158,7 +159,7 @@ const performFindAllBySchemaVersion = (staleCache) => async (schemaVersion) => {
 
 const performFindPage =
   (staleCache) =>
-  async ({ search, page, pageSize }) => {
+  async (/** @type {FindPageParams} */ { search, page, pageSize }) => {
     const trimmedSearch = (search ?? '').trim()
 
     let matches = structuredClone(staleCache)
@@ -250,6 +251,36 @@ const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
 
   return mapDocumentWithCurrentStatuses(structuredClone(found))
 }
+
+const performFindByAccreditationNumber =
+  (staleCache) => async (accreditationNumber) => {
+    const found = staleCache.find((org) =>
+      org.accreditations.some(
+        (acc) => acc.accreditationNumber === accreditationNumber
+      )
+    )
+
+    if (!found) {
+      return null
+    }
+
+    return mapDocumentWithCurrentStatuses(structuredClone(found))
+  }
+
+const performFindByRegistrationNumber =
+  (staleCache) => async (registrationNumber) => {
+    const found = staleCache.find((org) =>
+      org.registrations.some(
+        (reg) => reg.registrationNumber === registrationNumber
+      )
+    )
+
+    if (!found) {
+      return null
+    }
+
+    return mapDocumentWithCurrentStatuses(structuredClone(found))
+  }
 
 const caseInsensitiveEquals = (a, b) =>
   a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
@@ -384,7 +415,7 @@ const performFindAccreditationById =
  * Uses aggressive retry settings optimized for setImmediate() sync timing.
  *
  * @param {Organisation[]} [initialOrganisations=[]]
- * @returns {import('./port.js').OrganisationsRepositoryFactory}
+ * @returns {OrganisationsRepositoryFactory}
  */
 export const createInMemoryOrganisationsRepository = (
   initialOrganisations = []
@@ -417,6 +448,8 @@ export const createInMemoryOrganisationsRepository = (
       findById,
       findByIds: performFindByIds(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
+      findByAccreditationNumber: performFindByAccreditationNumber(staleCache),
+      findByRegistrationNumber: performFindByRegistrationNumber(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
       findByOrgId: performFindByOrgId(staleCache),
       replaceRegistrationOverseasSites: performReplaceRegistrationOverseasSites(

@@ -101,9 +101,9 @@ export class LedgerSequenceError extends Error {
  */
 
 /**
- * The latest submitted summary log of one accredited ledger partition: the
- * ledger id and the `summaryLogId` carried by the highest-numbered
- * `summary log submitted` event in that partition.
+ * One ledger partition's latest submitted summary log: its ledger id and the
+ * `summaryLogId` carried by the highest-numbered `summary log submitted`
+ * event in that partition.
  *
  * @typedef {Object} LatestSubmittedSummaryLogPerLedger
  * @property {WasteBalanceLedgerId} ledgerId
@@ -134,12 +134,11 @@ export class LedgerSequenceError extends Error {
  *   Return all events for the given ledger, ordered by `number`
  *   ascending. Returns an empty array if the ledger has no events.
  * @property {() => Promise<LatestSubmittedSummaryLogPerLedger[]>} findLatestSubmittedSummaryLogPerLedger
- *   Return one entry per accredited ledger partition (`accreditationId`
- *   non-null) that has at least one `summary log submitted` event: the ledger
- *   id and the `summaryLogId` of the highest-numbered such event in that
- *   partition. Registered-only partitions (`accreditationId` null) and
- *   partitions with no submitted summary log never appear. Order is
- *   unspecified.
+ *   Return one entry per ledger partition that has at least one
+ *   `summary log submitted` event: the ledger id and the `summaryLogId` of
+ *   the highest-numbered such event in that partition. Registered-only
+ *   partitions appear with `accreditationId: null`; partitions with no
+ *   submitted summary log never appear. Order is unspecified.
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<number>} deleteAllInLedger
  *   Migration PAE-1382: delete all events for the given ledger.
  *   Returns the number of deleted events. No-op on empty ledger.

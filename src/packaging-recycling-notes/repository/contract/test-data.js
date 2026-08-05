@@ -1,6 +1,8 @@
 import { randomInt, randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
+/** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
+
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
 const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
 const DEFAULT_ISSUER = { id: 'user-issuer', name: 'Issuer User' }
@@ -21,7 +23,8 @@ const CANCELLED_ISSUED_STEP_OFFSET = 3
 
 /**
  * Builds an accreditation with sensible defaults.
- * @param {object} [overrides]
+ * @param {Partial<AccreditationSnapshot>} [overrides]
+ * @returns {AccreditationSnapshot}
  */
 export const buildAccreditation = (overrides = {}) => ({
   id: `acc-${randomUUID()}`,
@@ -63,7 +66,9 @@ export const underAccreditation = (accreditationId, overrides = {}) => ({
     name: 'Test Organisation'
   },
   registrationId: accreditationId.registrationId,
-  accreditation: buildAccreditation({ id: accreditationId.accreditationId }),
+  accreditation: buildAccreditation({
+    id: /** @type {string} */ (accreditationId.accreditationId)
+  }),
   ...overrides
 })
 

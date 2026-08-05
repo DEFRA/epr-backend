@@ -1,5 +1,4 @@
 import Joi from 'joi'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * Shared Joi schemas for loads classification
@@ -27,17 +26,3 @@ export const loadsSchema = Joi.object({
   unchanged: loadValiditySchema.required(),
   adjusted: loadValiditySchema.required()
 })
-
-export const loadsByWasteRecordTypeSchema = Joi.array()
-  .items(
-    Joi.object({
-      wasteRecordType: Joi.string()
-        .valid(...Object.values(WASTE_RECORD_TYPE))
-        .required(),
-      sheetName: Joi.string().required(),
-      added: loadValiditySchema.required(),
-      unchanged: loadValiditySchema.required(),
-      adjusted: loadValiditySchema.required()
-    })
-  )
-  .unique('wasteRecordType')

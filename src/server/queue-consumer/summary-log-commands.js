@@ -9,14 +9,15 @@ import { createSummaryLogsValidator } from '#application/summary-logs/validate.j
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /**
+ * @import { SubmitUser } from '#domain/summary-logs/worker/port.js'
  * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
  */
 
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
 /** @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} SummaryLogRowStateRepository */
+/** @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository */
 /** @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#reports/domain/period-key.js').PeriodRef} PeriodRef */
@@ -27,13 +28,24 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {TypedLogger} logger
  * @property {SummaryLogsRepository} summaryLogsRepository
  * @property {OrganisationsRepository} organisationsRepository
- * @property {WasteRecordsRepository} wasteRecordsRepository
  * @property {SummaryLogRowStateRepository} summaryLogRowStatesRepository
+ * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {WasteBalanceService} wasteBalanceService
  * @property {ReportsService} reportsService
  * @property {SummaryLogExtractor} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {OnSummaryLogUploaded} onSummaryLogUploaded
+ */
+
+/**
+ * @typedef {object} ValidateCommandPayload
+ * @property {string} summaryLogId
+ */
+
+/**
+ * @typedef {object} SubmitCommandPayload
+ * @property {string} summaryLogId
+ * @property {SubmitUser} user
  */
 
 const userSchema = Joi.object({
@@ -52,9 +64,9 @@ const userSchema = Joi.object({
  * @typedef {object} CommandHandler
  * @property {string} command - The command string (e.g. 'validate', 'submit')
  * @property {import('joi').ObjectSchema} payloadSchema - Validates everything except 'command'
- * @property {(payload: object, deps: object) => Promise<void>} execute - Runs the command
- * @property {(payload: object, deps: object) => Promise<void>} onFailure - Marks as failed on terminal error
- * @property {(payload: object) => string} describe - Returns logging context
+ * @property {(payload: any, deps: any) => Promise<void>} execute - Runs the command
+ * @property {(payload: any, deps: any) => Promise<void>} onFailure - Marks as failed on terminal error
+ * @property {(payload: any) => string} describe - Returns logging context
  */
 
 /** @type {CommandHandler[]} */
@@ -64,12 +76,16 @@ export const summaryLogCommandHandlers = [
     payloadSchema: Joi.object({
       summaryLogId: Joi.string().required()
     }),
-    execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
+    execute: async (
+      /** @type {ValidateCommandPayload} */ payload,
+      /** @type {SummaryLogHandlerDeps} */ deps
+    ) => {
       const {
         logger,
         summaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
+        summaryLogRowStatesRepository,
+        ledgerRepository,
         reportsService,
         overseasSitesRepository,
         summaryLogExtractor
@@ -79,7 +95,8 @@ export const summaryLogCommandHandlers = [
         logger,
         summaryLogsRepository,
         organisationsRepository,
-        wasteRecordsRepository,
+        summaryLogRowStateRepository: summaryLogRowStatesRepository,
+        ledgerRepository,
         reportsService,
         overseasSitesRepository,
         summaryLogExtractor
@@ -87,14 +104,18 @@ export const summaryLogCommandHandlers = [
 
       await validateSummaryLog(payload.summaryLogId)
     },
-    onFailure: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
+    onFailure: async (
+      /** @type {ValidateCommandPayload} */ payload,
+      /** @type {SummaryLogHandlerDeps} */ deps
+    ) => {
       await markAsValidationFailed(
         payload.summaryLogId,
         deps.summaryLogsRepository,
         deps.logger
       )
     },
-    describe: (payload) => `summaryLogId=${payload.summaryLogId}`
+    describe: (/** @type {ValidateCommandPayload} */ payload) =>
+      `summaryLogId=${payload.summaryLogId}`
   },
   {
     command: SUMMARY_LOG_COMMAND.SUBMIT,
@@ -102,19 +123,26 @@ export const summaryLogCommandHandlers = [
       summaryLogId: Joi.string().required(),
       user: userSchema.required()
     }),
-    execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
+    execute: async (
+      /** @type {SubmitCommandPayload} */ payload,
+      /** @type {SummaryLogHandlerDeps} */ deps
+    ) => {
       await submitSummaryLog(payload.summaryLogId, {
         ...deps,
         user: payload.user
       })
     },
-    onFailure: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
+    onFailure: async (
+      /** @type {SubmitCommandPayload} */ payload,
+      /** @type {SummaryLogHandlerDeps} */ deps
+    ) => {
       await markAsSubmissionFailed(
         payload.summaryLogId,
         deps.summaryLogsRepository,
         deps.logger
       )
     },
-    describe: (payload) => `summaryLogId=${payload.summaryLogId}`
+    describe: (/** @type {SubmitCommandPayload} */ payload) =>
+      `summaryLogId=${payload.summaryLogId}`
   }
 ]

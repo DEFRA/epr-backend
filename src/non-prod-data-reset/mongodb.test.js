@@ -20,11 +20,6 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  buildVersionData,
-  toWasteRecordVersions
-} from '#repositories/waste-records/contract/test-data.js'
-import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { createMongoSummaryLogRowStateRepository } from '#waste-records/repository/mongodb.js'
 
@@ -59,7 +54,6 @@ const COLLECTIONS = [
   'packaging-recycling-notes',
   'waste-balance-events',
   'reports',
-  'waste-records',
   'summary-logs',
   'overseas-sites',
   'system-logs',
@@ -81,7 +75,7 @@ const mockLogger = {
  * @typedef {object} ResetTestFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('mongodb').Db} database
- * @property {object & { prns: { create: Function }, wasteRecords: { appendVersions: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, [k: string]: object | Function }} repositories
+ * @property {object & { prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, [k: string]: object | Function }} repositories
  * @property {import('./mongodb.js').NonProdDataReset} reset
  * @property {(value: string) => void} setCdpEnvironment
  */
@@ -109,7 +103,6 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         []
       )
       const reportsFactory = await createReportsRepository(database)
-      const wasteRecordsFactory = await createWasteRecordsRepository(database)
       const summaryLogsFactory = await createSummaryLogsRepository(
         database,
         // @ts-expect-error -- partial S3 config sufficient for test
@@ -124,7 +117,6 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         organisations: organisationsFactory(),
         prns: prnsFactory(mockLogger),
         reports: reportsFactory(),
-        wasteRecords: wasteRecordsFactory(),
         summaryLogs: summaryLogsFactory(mockLogger),
         overseasSites: overseasSitesFactory(),
         systemLogs: systemLogsFactory(mockLogger),
@@ -210,15 +202,6 @@ const seedDownstreamForOrganisation = async (
     })
   )
 
-  const { version, data } = buildVersionData()
-  await repositories.wasteRecords.appendVersions(
-    organisationId,
-    registrationId,
-    toWasteRecordVersions({
-      received: { 'row-1': { version, data } }
-    })
-  )
-
   await repositories.summaryLogs.insert(
     `summary-log-${randomUUID()}`,
     summaryLogFactory.validating({ organisationId, registrationId })
@@ -275,7 +258,6 @@ const EMPTY_COUNTS = {
   'waste-balance-events': 0,
   'summary-log-row-states': 0,
   reports: 0,
-  'waste-records': 0,
   'summary-logs': 0,
   'overseas-sites': 0,
   'system-logs': 0,
@@ -314,7 +296,6 @@ describe('non-prod data reset (mongo)', () => {
         'waste-balance-events': 1,
         'summary-log-row-states': 1,
         reports: 1,
-        'waste-records': 1,
         'summary-logs': 1,
         'overseas-sites': 2,
         'system-logs': 1,
@@ -357,11 +338,6 @@ describe('non-prod data reset (mongo)', () => {
       expect(
         await database
           .collection('reports')
-          .countDocuments({ organisationId: other.organisationId })
-      ).toBe(1)
-      expect(
-        await database
-          .collection('waste-records')
           .countDocuments({ organisationId: other.organisationId })
       ).toBe(1)
       expect(

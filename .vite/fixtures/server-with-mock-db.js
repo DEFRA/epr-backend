@@ -18,7 +18,7 @@ import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
  *     error: ReturnType<typeof vi.fn>
  *     warn: ReturnType<typeof vi.fn>
  *   }
- * }} TestServer
+ * }} TestServerWithMockDb
  */
 
 /**
@@ -39,7 +39,7 @@ export const it =
   /**
    * @type {TestAPI<{
    *   mockOidcServer: ReturnType<typeof createMockOidcServers>
-   *   server: TestServer
+   *   server: TestServerWithMockDb
    * }>}
    */ (
     test.extend({
@@ -75,7 +75,7 @@ export const it =
 
           await testServer.initialize()
 
-          /** @type {TestServer} */
+          /** @type {TestServerWithMockDb} */
           const server = /** @type {*} */ (testServer)
 
           server.loggerMocks = {

@@ -50,27 +50,29 @@ describe('findReviewableMonthlyReportRows', () => {
    * @returns {import('#reports/repository/port.js').PeriodicReport}
    */
   const basePeriodicReport = (monthlyOverrides = {}) =>
-    /** @type {import('#reports/repository/port.js').PeriodicReport} */ ({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      year: 2025,
-      reports: {
-        monthly: {
-          6: {
-            startDate: '2025-06-01',
-            endDate: '2025-06-30',
-            dueDate: '2025-07-15T00:00:00.000Z',
-            current: {
-              id: 'report-1',
-              status: 'submitted',
-              prn: { issuedTonnage: 50 }
-            },
-            previousSubmissions: [],
-            ...monthlyOverrides
+    /** @type {import('#reports/repository/port.js').PeriodicReport} */ (
+      /** @type {unknown} */ ({
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2025,
+        reports: {
+          monthly: {
+            6: {
+              startDate: '2025-06-01',
+              endDate: '2025-06-30',
+              dueDate: '2025-07-15T00:00:00.000Z',
+              current: {
+                id: 'report-1',
+                status: 'submitted',
+                prn: { issuedTonnage: 50 }
+              },
+              previousSubmissions: [],
+              ...monthlyOverrides
+            }
           }
         }
-      }
-    })
+      })
+    )
 
   it('includes a submitted monthly report with prn data', () => {
     const rows = findReviewableMonthlyReportRows([basePeriodicReport()])

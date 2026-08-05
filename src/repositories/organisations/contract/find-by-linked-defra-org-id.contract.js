@@ -117,7 +117,9 @@ export const testFindByLinkedDefraOrgIdBehaviour = (it) => {
       let result
       for (let i = 0; i < 10; i++) {
         result = await repository.findByLinkedDefraOrgId(defraOrgId)
-        if (result) break
+        if (result) {
+          break
+        }
         await new Promise((resolve) => setTimeout(resolve, 50))
       }
 

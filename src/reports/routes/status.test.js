@@ -1,11 +1,11 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildOrganisationWithRegistration,
@@ -68,7 +68,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         ...(accreditationId && { accreditationId })
       })
       const org = buildOrganisationWithRegistration(
-        registration,
+        partialMock(registration),
         accreditationStatus
       )
       return { org, registration }
@@ -85,7 +85,7 @@ describe(`POST ${reportsStatusPath}`, () => {
       )
 
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([partialMock(org)])
 
       const reportsRepositoryFactory = createInMemoryReportsRepository()
       const reportsRepository = reportsRepositoryFactory()
@@ -108,7 +108,6 @@ describe(`POST ${reportsStatusPath}`, () => {
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
-          wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: reportsRepositoryFactory
         },
         featureFlags: createInMemoryFeatureFlags()
@@ -133,12 +132,11 @@ describe(`POST ${reportsStatusPath}`, () => {
       )
 
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([partialMock(org)])
 
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
-          wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: createInMemoryReportsRepository()
         },
         featureFlags: createInMemoryFeatureFlags()

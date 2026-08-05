@@ -2,7 +2,6 @@ import { vi } from 'vitest'
 
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
-/** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 /** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
 /** @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js' */
@@ -28,6 +27,8 @@ export const createMockOrganisationsRepository = (overrides = {}) => ({
   findByIds: vi.fn(),
   findById: vi.fn(),
   findByLinkedDefraOrgId: vi.fn(),
+  findByAccreditationNumber: vi.fn(),
+  findByRegistrationNumber: vi.fn(),
   findAllLinked: vi.fn(),
   findAllLinkableForUser: vi.fn(),
   findRegistrationById: vi.fn(),
@@ -54,20 +55,6 @@ export const createMockSummaryLogsRepository = (overrides = {}) => ({
   findAllSummaryLogStatsByRegistrationId: vi.fn(),
   transitionToSubmittingExclusive: vi.fn(),
   getDownloadUrl: vi.fn(),
-  ...overrides
-})
-
-/**
- * Builds a fully-typed WasteRecordsRepository mock with every method as a
- * vi.fn(). Pass `overrides` to stub specific methods for a test.
- *
- * @param {Partial<WasteRecordsRepository>} [overrides]
- * @returns {WasteRecordsRepository}
- */
-export const createMockWasteRecordsRepository = (overrides = {}) => ({
-  findByRegistration: vi.fn(),
-  appendVersions: vi.fn(),
-  findDistinctDataKeys: vi.fn(),
   ...overrides
 })
 

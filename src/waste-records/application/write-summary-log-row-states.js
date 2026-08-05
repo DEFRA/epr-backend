@@ -1,4 +1,3 @@
-import { markExcludedRecords } from '#waste-balances/application/mark-excluded-records.js'
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 
 /**
@@ -11,12 +10,11 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * and waste-balance classification. Runs for every submission regardless of
  * processing type or accreditation: the ledger's `accreditationId` is null
  * for registered-only and no-accreditation registrations, and rows whose schema
- * has no waste balance classify as EXCLUDED with no contribution.
+ * has no waste balance classify as NOT_APPLICABLE with no contribution.
  *
- * Records are first marked excluded-or-included exactly as the balance path
- * does, then classified against the same accreditation (or null), so an
- * accredited balance-type submission produces identical row states whether it
- * arrives here or, previously, through the balance path.
+ * Records are classified against the same accreditation (or null) as the
+ * balance path, so an accredited balance-type submission produces identical row
+ * states whichever path it arrives through.
  *
  * @param {Object} params
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
@@ -35,7 +33,7 @@ export const writeSummaryLogRowStates = async ({
   overseasSites,
   summaryLogId
 }) => {
-  const classifiedRows = markExcludedRecords(wasteRecords).map((record) =>
+  const classifiedRows = wasteRecords.map((record) =>
     projectSummaryLogRowState(record, accreditation, overseasSites)
   )
 

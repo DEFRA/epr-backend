@@ -16,7 +16,16 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
 import { reportsGetDetailPath } from './get-detail.js'
+
+/**
+ * @import { Organisation } from '#domain/organisations/model.js'
+ * @import { Registration } from '#domain/organisations/registration.js'
+ */
 
 const SUMMARY_LOG_ID = 'sl-1'
 const SUBMITTED_AT = new Date('2026-03-31T09:00:00.000Z')
@@ -79,7 +88,9 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       wasteRecordOverrides = [],
       accreditationStatus
     ) => {
-      const registration = buildRegistration(registrationOverrides)
+      const registration = /** @type {Registration} */ (
+        buildRegistration(registrationOverrides)
+      )
       const org = buildOrganisationWithRegistration(
         registration,
         accreditationStatus
@@ -88,7 +99,9 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       // Use initial-org pattern to preserve accreditation statusHistory
       // (insert() overrides statusHistory to the default 'created' entry).
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([org])
+        createInMemoryOrganisationsRepository([
+          /** @type {Organisation} */ (org)
+        ])
 
       const { ledgerRepository, summaryLogRowStatesRepository } =
         await seedRepositories(org, registration, wasteRecordOverrides)
@@ -1305,6 +1318,194 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(payload.stale.summaryLogChanged.uploadedAt).toBe(uploadedAt)
         expect(payload.stale.prnCancelled.prnId).toBe(prnId)
         expect(payload.stale.prnCancelled.occurredAt).toBe(occurredAt)
+      })
+
+      describe('canRequestResubmission field', () => {
+        const createSubmittedReport = async (
+          reportsRepositoryFactory,
+          organisationId,
+          registrationId,
+          overrides = {}
+        ) => {
+          const reportsRepository = reportsRepositoryFactory()
+          const changedBy = { id: 'user-1', name: 'Test', position: 'Officer' }
+
+          const { id } = await reportsRepository.createReport(
+            /** @type {import('#reports/repository/port.js').CreateReportParams} */ (
+              /** @type {unknown} */ ({
+                organisationId,
+                registrationId: String(registrationId),
+                year: 2026,
+                cadence: 'quarterly',
+                period: 1,
+                submissionNumber: 1,
+                startDate: '2026-01-01',
+                endDate: '2026-03-31',
+                dueDate: '2026-04-20',
+                changedBy,
+                material: 'plastic',
+                wasteProcessingType: 'reprocessor',
+                recyclingActivity: {
+                  suppliers: [],
+                  totalTonnageReceived: 0,
+                  tonnageRecycled: null,
+                  tonnageNotRecycled: null
+                },
+                wasteSent: {
+                  tonnageSentToReprocessor: 0,
+                  tonnageSentToExporter: 0,
+                  tonnageSentToAnotherSite: 0,
+                  finalDestinations: []
+                },
+                prn: null,
+                source: { summaryLogId: 'sl-1', lastUploadedAt: null },
+                ...overrides
+              })
+            )
+          )
+          await reportsRepository.updateReportStatus({
+            reportId: id,
+            version: 1,
+            status: REPORT_STATUS.READY_TO_SUBMIT,
+            slot: REPORT_STATUS_SLOT.READY,
+            changedBy
+          })
+          await reportsRepository.updateReportStatus({
+            reportId: id,
+            version: 2,
+            status: REPORT_STATUS.SUBMITTED,
+            slot: REPORT_STATUS_SLOT.SUBMITTED,
+            changedBy,
+            submissionDeclaredBy: 'Test User'
+          })
+          return id
+        }
+
+        it('is false for computed data when no stored report exists', async () => {
+          const { server, organisationId, registrationId } =
+            await createServerWithReports({
+              wasteProcessingType: 'reprocessor',
+              accreditationId: undefined
+            })
+
+          const response = await makeRequest(
+            server,
+            organisationId,
+            registrationId
+          )
+          const payload = JSON.parse(response.payload)
+
+          expect(response.statusCode).toBe(StatusCodes.OK)
+          expect(payload.canRequestResubmission).toBe(false)
+        })
+
+        it('is true for a plain submitted report with no draft and no prior flag', async () => {
+          const {
+            server,
+            organisationId,
+            registrationId,
+            reportsRepositoryFactory
+          } = await createServerWithReports({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+          await createSubmittedReport(
+            reportsRepositoryFactory,
+            organisationId,
+            registrationId
+          )
+
+          const response = await makeRequest(
+            server,
+            organisationId,
+            registrationId
+          )
+          const payload = JSON.parse(response.payload)
+
+          expect(response.statusCode).toBe(StatusCodes.OK)
+          expect(payload.canRequestResubmission).toBe(true)
+        })
+
+        it('is false once resubmissionRequired.operatorRequested is already set', async () => {
+          const {
+            server,
+            organisationId,
+            registrationId,
+            reportsRepositoryFactory
+          } = await createServerWithReports({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+          await createSubmittedReport(
+            reportsRepositoryFactory,
+            organisationId,
+            registrationId
+          )
+
+          const reportsRepository = reportsRepositoryFactory()
+          await reportsRepository.markSubmittedReportRequiringResubmissionByOperator(
+            {
+              organisationId,
+              registrationId: String(registrationId),
+              year: 2026,
+              cadence: 'quarterly',
+              period: 1,
+              submissionNumber: 1,
+              requestedBy: {
+                id: 'user-2',
+                name: 'Operator',
+                position: 'Officer'
+              },
+              requestedAt: new Date().toISOString()
+            }
+          )
+
+          const response = await makeRequest(
+            server,
+            organisationId,
+            registrationId
+          )
+          const payload = JSON.parse(response.payload)
+
+          expect(response.statusCode).toBe(StatusCodes.OK)
+          expect(payload.canRequestResubmission).toBe(false)
+        })
+
+        it('is false for a submission superseded by a later submitted resubmission', async () => {
+          const {
+            server,
+            organisationId,
+            registrationId,
+            reportsRepositoryFactory
+          } = await createServerWithReports({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+          await createSubmittedReport(
+            reportsRepositoryFactory,
+            organisationId,
+            registrationId
+          )
+          await createSubmittedReport(
+            reportsRepositoryFactory,
+            organisationId,
+            registrationId,
+            { submissionNumber: 2 }
+          )
+
+          const response = await server.inject({
+            method: 'GET',
+            url: makeUrl(organisationId, registrationId, 2026, 'quarterly', 1),
+            ...asOperator()
+          })
+          const payload = JSON.parse(response.payload)
+
+          expect(response.statusCode).toBe(StatusCodes.OK)
+          expect(payload.canRequestResubmission).toBe(false)
+        })
       })
     })
 

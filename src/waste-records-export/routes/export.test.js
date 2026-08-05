@@ -5,6 +5,8 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+
+/** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
@@ -69,17 +71,19 @@ const createServerWithRepos = async ({
   }
 
   const ledgerRepository = createInMemoryLedgerRepository(
-    seeds.map((seed) =>
-      buildLedgerEvent({
-        organisationId: seed.organisationId ?? 'org-1',
-        registrationId: seed.registrationId ?? 'reg-1',
-        accreditationId: seed.accreditationId ?? null,
-        number: 1,
-        payload: {
-          summaryLogId: seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID,
-          creditTotal: 0
-        }
-      })
+    /** @type {LedgerEvent[]} */ (
+      seeds.map((seed) =>
+        buildLedgerEvent({
+          organisationId: seed.organisationId ?? 'org-1',
+          registrationId: seed.registrationId ?? 'reg-1',
+          accreditationId: seed.accreditationId ?? null,
+          number: 1,
+          payload: {
+            summaryLogId: seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID,
+            creditTotal: 0
+          }
+        })
+      )
     )
   )()
 

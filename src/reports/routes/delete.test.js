@@ -5,7 +5,6 @@ import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildOrganisation,
@@ -55,7 +54,6 @@ describe(`DELETE ${reportsDeletePath}`, () => {
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
-          wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: reportsRepositoryFactory
         },
         featureFlags: createInMemoryFeatureFlags()
@@ -82,7 +80,6 @@ describe(`DELETE ${reportsDeletePath}`, () => {
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
-          wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: createInMemoryReportsRepository()
         },
         featureFlags: createInMemoryFeatureFlags()

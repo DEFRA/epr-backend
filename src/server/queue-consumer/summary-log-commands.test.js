@@ -42,7 +42,6 @@ describe('summaryLogCommandHandlers', () => {
       logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
       summaryLogsRepository: { findById: vi.fn(), update: vi.fn() },
       organisationsRepository: {},
-      wasteRecordsRepository: {},
       wasteBalanceService: {},
       reportsService: {
         hasReportSubmittedSince: vi.fn(),
@@ -105,7 +104,6 @@ describe('summaryLogCommandHandlers', () => {
           logger: deps.logger,
           summaryLogsRepository: deps.summaryLogsRepository,
           organisationsRepository: deps.organisationsRepository,
-          wasteRecordsRepository: deps.wasteRecordsRepository,
           reportsService: deps.reportsService,
           summaryLogExtractor: deps.summaryLogExtractor
         })

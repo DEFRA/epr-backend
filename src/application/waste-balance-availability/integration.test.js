@@ -1,23 +1,14 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { MongoClient, ObjectId } from 'mongodb'
+import { ObjectId } from 'mongodb'
+import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { aggregateAvailableBalance } from './aggregate-available-balance.js'
 import {
   MATERIAL,
   GLASS_RECYCLING_PROCESS
 } from '#domain/organisations/model.js'
 
-const DATABASE_NAME = 'epr-backend'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_BALANCE_EVENTS_COLLECTION = 'waste-balance-events'
-
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  }
-})
 
 const createOrganisation = (id, registrations) => ({
   _id: new ObjectId(id),

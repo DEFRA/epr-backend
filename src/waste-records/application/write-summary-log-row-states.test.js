@@ -4,6 +4,7 @@ import { writeSummaryLogRowStates } from './write-summary-log-row-states.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 const buildRegisteredOnlyRecord = ({ rowId, tonnage }) => ({
   organisationId: 'org-1',
@@ -26,6 +27,31 @@ const buildReceivedRecord = ({ rowId, tonnage }) => ({
   data: {
     processingType: 'REPROCESSOR_REGISTERED_ONLY',
     TONNAGE_RECEIVED_FOR_RECYCLING: tonnage
+  }
+})
+
+const buildIncompleteReprocessorInputRecord = ({ rowId }) => ({
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  rowId: String(rowId),
+  type: WASTE_RECORD_TYPE.RECEIVED,
+  versions: [],
+  data: {
+    processingType: 'REPROCESSOR_INPUT',
+    ROW_ID: String(rowId),
+    DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+    EWC_CODE: '15 01 02',
+    DESCRIPTION_WASTE: 'Plastic packaging',
+    WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+    GROSS_WEIGHT: 10,
+    TARE_WEIGHT: 1,
+    PALLET_WEIGHT: 0,
+    NET_WEIGHT: 9,
+    BAILING_WIRE_PROTOCOL: 'No',
+    HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
+    WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+    RECYCLABLE_PROPORTION_PERCENTAGE: 100
+    // TONNAGE_RECEIVED_FOR_RECYCLING deliberately absent
   }
 })
 
@@ -169,6 +195,35 @@ describe('writeSummaryLogRowStates', () => {
         'log-A'
       )
     expect(committed.accreditationId).toBe('acc-1')
+  })
+
+  it('stamps the missing field on a row excluded for incomplete data', async () => {
+    await writeSummaryLogRowStates({
+      summaryLogRowStateRepository,
+      wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: 1 })],
+      accreditation: {
+        id: 'acc-1',
+        validFrom: '2023-01-01',
+        validTo: '2030-12-31'
+      },
+      ledgerId: accreditedLedgerId,
+      overseasSites,
+      summaryLogId: 'log-A'
+    })
+
+    const [committed] =
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        accreditedLedgerId,
+        'log-A'
+      )
+
+    expect(committed.classification.outcome).toBe(
+      WASTE_BALANCE_OUTCOME.EXCLUDED
+    )
+    expect(committed.classification.reasons).toContainEqual({
+      code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+      field: 'TONNAGE_RECEIVED_FOR_RECYCLING'
+    })
   })
 
   it('is idempotent — re-running the same submission adds no duplicate', async () => {

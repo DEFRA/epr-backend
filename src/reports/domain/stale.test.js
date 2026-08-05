@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assertNotStale,
   assertValidStaleReasonsCode,
+  legacyStaleKeys,
   normaliseStale,
   STALE_REASON,
   staleReasons
@@ -106,6 +107,92 @@ describe('normaliseStale', () => {
         summaryLogId: 'sl-1'
       }
     })
+  })
+
+  it('strips legacy flat siblings left behind by a dot-path $set onto an old-shape document', () => {
+    // A doc first written in the old flat shape, then later `$set` with a
+    // dot-path (e.g. `stale.summaryLogChanged`) merges rather than replaces,
+    // leaving the legacy top-level keys alongside the new nested key.
+    const mixed = {
+      uploadedAt: '2025-01-01T00:00:00.000Z',
+      reason: 'summary_log_changed',
+      summaryLogId: 'sl-1',
+      summaryLogChanged: {
+        uploadedAt: '2025-02-01T00:00:00.000Z',
+        summaryLogId: 'sl-2'
+      }
+    }
+
+    expect(normaliseStale(mixed)).toEqual({
+      summaryLogChanged: {
+        uploadedAt: '2025-02-01T00:00:00.000Z',
+        summaryLogId: 'sl-2'
+      }
+    })
+  })
+
+  it('strips legacy flat siblings alongside a nested prnCancelled key', () => {
+    const mixed = {
+      uploadedAt: '2025-01-01T00:00:00.000Z',
+      reason: 'summary_log_changed',
+      summaryLogId: 'sl-1',
+      prnCancelled: buildPrnCancelled()
+    }
+
+    expect(normaliseStale(mixed)).toEqual({
+      prnCancelled: buildPrnCancelled()
+    })
+  })
+
+  it('preserves both reasons when both nested keys are present alongside legacy siblings', () => {
+    const mixed = {
+      uploadedAt: '2025-01-01T00:00:00.000Z',
+      reason: 'summary_log_changed',
+      summaryLogId: 'sl-1',
+      summaryLogChanged: buildSummaryLogChanged(),
+      prnCancelled: buildPrnCancelled()
+    }
+
+    expect(normaliseStale(mixed)).toEqual({
+      summaryLogChanged: buildSummaryLogChanged(),
+      prnCancelled: buildPrnCancelled()
+    })
+  })
+})
+
+describe('legacyStaleKeys', () => {
+  it('returns [] for undefined', () => {
+    expect(legacyStaleKeys(undefined)).toEqual([])
+  })
+
+  it('returns [] for the current nested shape', () => {
+    expect(
+      legacyStaleKeys({
+        summaryLogChanged: buildSummaryLogChanged(),
+        prnCancelled: buildPrnCancelled()
+      })
+    ).toEqual([])
+  })
+
+  it('returns every flat key for the old flat shape', () => {
+    expect(
+      legacyStaleKeys({
+        uploadedAt: '2025-01-01T00:00:00.000Z',
+        reason: 'summary_log_changed',
+        summaryLogId: 'sl-1'
+      })
+    ).toEqual(['uploadedAt', 'reason', 'summaryLogId'])
+  })
+
+  it('returns only the stray siblings for a hybrid shape', () => {
+    expect(
+      legacyStaleKeys({
+        uploadedAt: '2025-01-01T00:00:00.000Z',
+        reason: 'summary_log_changed',
+        summaryLogId: 'sl-1',
+        summaryLogChanged: buildSummaryLogChanged()
+      })
+    ).toEqual(['uploadedAt', 'reason', 'summaryLogId'])
   })
 })
 

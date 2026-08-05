@@ -21,11 +21,12 @@ import {
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 const VALID_FROM = '2025-01-01'
@@ -61,7 +62,7 @@ const buildTestOrg = (organisationId, registrationId) => {
   const accreditationId = 'acc-123'
   const testOrg = buildReadOrganisation({
     registrations: [
-      {
+      partialMock({
         id: registrationId,
         registrationNumber: 'REG-123',
         status: 'approved',
@@ -72,10 +73,10 @@ const buildTestOrg = (organisationId, registrationId) => {
         validFrom: VALID_FROM,
         validTo: VALID_TO,
         accreditationId
-      }
+      })
     ],
     accreditations: [
-      {
+      partialMock({
         id: accreditationId,
         accreditationNumber: 'ACC-123',
         material: 'paper',
@@ -84,7 +85,7 @@ const buildTestOrg = (organisationId, registrationId) => {
         submittedToRegulator: 'ea',
         validFrom: VALID_FROM,
         validTo: VALID_TO
-      }
+      })
     ]
   })
   testOrg.id = organisationId
@@ -108,7 +109,6 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
   const organisationsRepository = createInMemoryOrganisationsRepository([
     buildTestOrg(organisationId, registrationId)
   ])()
-  const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
 
   const summaryLog = summaryLogFactory.submitting({
     organisationId,
@@ -122,16 +122,16 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     [summaryLog.file.id]: { meta: META, data: RECEIVED_DATA }
   })
 
+  const ledgerRepository = createInMemoryLedgerRepository()()
+
   const deps = {
     logger,
     summaryLogsRepository,
     organisationsRepository,
-    wasteRecordsRepository,
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStateRepository()(),
-    wasteBalanceService: createWasteBalanceService(
-      createInMemoryLedgerRepository()()
-    ),
+    ledgerRepository,
+    wasteBalanceService: createWasteBalanceService(ledgerRepository),
     summaryLogExtractor,
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsService: createReportsService(reportsRepository),
@@ -144,8 +144,7 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     summaryLogId,
     organisationId,
     registrationId,
-    summaryLogsRepository,
-    wasteRecordsRepository
+    summaryLogsRepository
   }
 }
 
@@ -157,7 +156,6 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       organisationId,
       registrationId,
-      wasteRecordsRepository,
       summaryLogsRepository
     } = await setupSubmit({
       reportsRepository,
@@ -174,12 +172,6 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     await expect(submitSummaryLog(summaryLogId, deps)).rejects.toBeInstanceOf(
       PermanentError
     )
-
-    const wasteRecords = await wasteRecordsRepository.findByRegistration(
-      organisationId,
-      registrationId
-    )
-    expect(wasteRecords).toEqual([])
 
     // The guard throws before any write, so the log is untouched at version 1.
     const { summaryLog, version } = await waitForVersion(
@@ -198,7 +190,6 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       organisationId,
       registrationId,
-      wasteRecordsRepository,
       summaryLogsRepository
     } = await setupSubmit({ reportsRepository })
 
@@ -210,12 +201,17 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
     await submitSummaryLog(summaryLogId, deps)
 
-    const wasteRecords = await wasteRecordsRepository.findByRegistration(
+    const rowStates = await summaryLogRowStatesForRegistration({
       organisationId,
-      registrationId
-    )
-    expect(wasteRecords).toHaveLength(2)
-    expect(wasteRecords.map((record) => record.rowId)).toEqual(['1001', '1002'])
+      registrationId,
+      accreditationId: 'acc-123',
+      ledgerRepository: deps.ledgerRepository,
+      summaryLogRowStateRepository: deps.summaryLogRowStatesRepository
+    })
+    expect(rowStates.map((state) => state.rowId).sort()).toEqual([
+      '1001',
+      '1002'
+    ])
 
     const { summaryLog } = await waitForVersion(
       summaryLogsRepository,

@@ -7,6 +7,11 @@ import {
   underAccreditation
 } from '../repository/contract/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { assertPresent } from '#test/type-helpers.js'
+
+/**
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ */
 
 const PERIOD_START = '2025-01-01'
 const PERIOD_END = '2025-12-31'
@@ -33,7 +38,7 @@ function createRepo() {
  * Creates a draft PRN then transitions it to awaiting_acceptance,
  * populating the issued slot at the given timestamp.
  *
- * @param {object} repo
+ * @param {PackagingRecyclingNotesRepository} repo
  * @param {{ tonnage: number, issuedAt?: Date }} options
  */
 async function issuePrn(repo, { tonnage, issuedAt = IN_PERIOD }) {
@@ -41,7 +46,7 @@ async function issuePrn(repo, { tonnage, issuedAt = IN_PERIOD }) {
     buildPrn(underAccreditation(ACCREDITATION, { tonnage }))
   )
 
-  return repo.updateStatus({
+  const issued = await repo.updateStatus({
     id: draft.id,
     version: draft.version,
     status: PRN_STATUS.AWAITING_ACCEPTANCE,
@@ -49,17 +54,21 @@ async function issuePrn(repo, { tonnage, issuedAt = IN_PERIOD }) {
     updatedBy: ACTOR,
     operation: { slot: 'issued', at: issuedAt, by: ACTOR }
   })
+
+  assertPresent(issued)
+  return issued
 }
 
 /**
  * Transitions an issued PRN to accepted, populating the accepted slot.
  *
- * @param {object} repo
+ * @param {PackagingRecyclingNotesRepository} repo
  * @param {string} id
  * @param {{ acceptedAt?: Date }} options
  */
 async function acceptPrn(repo, id, { acceptedAt = IN_PERIOD } = {}) {
   const current = await repo.findById(id)
+  assertPresent(current)
   return repo.updateStatus({
     id,
     version: current.version,
@@ -73,11 +82,12 @@ async function acceptPrn(repo, id, { acceptedAt = IN_PERIOD } = {}) {
 /**
  * Transitions an issued PRN to awaiting_cancellation.
  *
- * @param {object} repo
+ * @param {PackagingRecyclingNotesRepository} repo
  * @param {string} id
  */
 async function requestCancelPrn(repo, id) {
   const current = await repo.findById(id)
+  assertPresent(current)
   return repo.updateStatus({
     id,
     version: current.version,
@@ -91,11 +101,12 @@ async function requestCancelPrn(repo, id) {
  * Transitions a PRN awaiting cancellation to cancelled, populating the
  * cancelled slot.
  *
- * @param {object} repo
+ * @param {PackagingRecyclingNotesRepository} repo
  * @param {string} id
  */
 async function cancelPrn(repo, id) {
   const current = await repo.findById(id)
+  assertPresent(current)
   return repo.updateStatus({
     id,
     version: current.version,

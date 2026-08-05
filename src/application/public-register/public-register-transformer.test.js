@@ -8,12 +8,14 @@ import {
   getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
 import {
+  ACCREDITATION_STATUS,
   MATERIAL,
-  REG_ACC_STATUS,
+  REGISTRATION_STATUS,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
+import { invalidArg, partialMock } from '#test/type-helpers.js'
 
 describe('transform', () => {
   const baseAddress = {
@@ -38,7 +40,7 @@ describe('transform', () => {
 
   const createTestRegistration = (overrides = {}) => {
     return buildRegistration({
-      status: REG_ACC_STATUS.APPROVED,
+      status: REGISTRATION_STATUS.APPROVED,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
       material: MATERIAL.PLASTIC,
       registrationNumber: 'R12345678PL',
@@ -51,7 +53,7 @@ describe('transform', () => {
 
   const createTestAccreditation = (overrides = {}) => {
     const id = new ObjectId().toString()
-    const status = overrides.status || REG_ACC_STATUS.APPROVED
+    const status = overrides.status || ACCREDITATION_STATUS.APPROVED
     return buildAccreditation({
       id,
       status,
@@ -66,7 +68,7 @@ describe('transform', () => {
         signatories: []
       },
       statusHistory: [
-        { status: REG_ACC_STATUS.CREATED, updatedAt: CREATED_DATE },
+        { status: ACCREDITATION_STATUS.CREATED, updatedAt: CREATED_DATE },
         { status, updatedAt: TODAY }
       ],
       ...overrides
@@ -176,15 +178,11 @@ describe('transform', () => {
 
   it.each([
     {
-      status: REG_ACC_STATUS.APPROVED,
+      status: REGISTRATION_STATUS.APPROVED,
       expectedStatus: 'Approved'
     },
     {
-      status: REG_ACC_STATUS.SUSPENDED,
-      expectedStatus: 'Suspended'
-    },
-    {
-      status: REG_ACC_STATUS.CANCELLED,
+      status: REGISTRATION_STATUS.CANCELLED,
       expectedStatus: 'Cancelled'
     }
   ])(
@@ -220,21 +218,21 @@ describe('transform', () => {
 
   it.each([
     {
-      status: REG_ACC_STATUS.APPROVED,
+      status: ACCREDITATION_STATUS.APPROVED,
       expectedStatus: 'Approved',
       accreditationNumber: 'A123456PL',
       tonnageBand: 'up_to_10000',
       expectedTonnageBand: 'Up to 10,000 tonnes'
     },
     {
-      status: REG_ACC_STATUS.SUSPENDED,
+      status: ACCREDITATION_STATUS.SUSPENDED,
       expectedStatus: 'Suspended',
       accreditationNumber: 'A234567PL',
       tonnageBand: 'up_to_5000',
       expectedTonnageBand: 'Up to 5,000 tonnes'
     },
     {
-      status: REG_ACC_STATUS.CANCELLED,
+      status: ACCREDITATION_STATUS.CANCELLED,
       expectedStatus: 'Cancelled',
       accreditationNumber: 'A345678PL',
       tonnageBand: 'up_to_500',
@@ -299,20 +297,26 @@ describe('transform', () => {
         registeredAddress: baseAddress
       },
       registrations: [
-        buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
-          registrationNumber: 'R11111111PL',
-          validFrom: VALID_FROM,
-          validTo: VALID_TO
-        }),
-        buildRegistration({
-          status: REG_ACC_STATUS.CREATED,
-          registrationNumber: 'R22222222PL'
-        }),
-        buildRegistration({
-          status: REG_ACC_STATUS.REJECTED,
-          registrationNumber: 'R33333333PL'
-        })
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.APPROVED,
+            registrationNumber: 'R11111111PL',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO
+          })
+        ),
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.CREATED,
+            registrationNumber: 'R22222222PL'
+          })
+        ),
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.REJECTED,
+            registrationNumber: 'R33333333PL'
+          })
+        )
       ]
     })
 
@@ -332,27 +336,29 @@ describe('transform', () => {
       },
       submittedToRegulator: 'ea',
       registrations: [
-        buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
-          registrationNumber: 'R11111111PL',
-          validFrom: VALID_FROM,
-          validTo: VALID_TO,
-          accreditationId: accreditationId.toString(),
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          material: MATERIAL.PLASTIC,
-          site: {
-            address: {
-              line1: '2 Waste Site',
-              town: 'London',
-              postcode: 'EC1 1AA'
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.APPROVED,
+            registrationNumber: 'R11111111PL',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            accreditationId: accreditationId.toString(),
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.PLASTIC,
+            site: {
+              address: {
+                line1: '2 Waste Site',
+                town: 'London',
+                postcode: 'EC1 1AA'
+              }
             }
-          }
-        })
+          })
+        )
       ],
       accreditations: [
         buildAccreditation({
           id: accreditationId.toString(),
-          status: REG_ACC_STATUS.CREATED,
+          status: ACCREDITATION_STATUS.CREATED,
           accreditationNumber: 'A999999PL'
         })
       ]
@@ -401,62 +407,70 @@ describe('transform', () => {
       },
       submittedToRegulator: 'ea',
       registrations: [
-        buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          material: MATERIAL.PLASTIC,
-          registrationNumber: 'R11111111PL',
-          validFrom: VALID_FROM,
-          validTo: VALID_TO,
-          site: {
-            address: {
-              line1: '2 Waste Site',
-              town: 'London',
-              postcode: 'EC1 1AA'
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.APPROVED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.PLASTIC,
+            registrationNumber: 'R11111111PL',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            site: {
+              address: {
+                line1: '2 Waste Site',
+                town: 'London',
+                postcode: 'EC1 1AA'
+              }
             }
-          }
-        }),
-        buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          material: MATERIAL.PAPER,
-          registrationNumber: 'R22222222PL',
-          validFrom: VALID_FROM,
-          validTo: VALID_TO,
-          site: {
-            address: {
-              line1: '2 Waste Site',
-              town: 'London',
-              postcode: 'EC1 1AA'
+          })
+        ),
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.APPROVED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.PAPER,
+            registrationNumber: 'R22222222PL',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            site: {
+              address: {
+                line1: '2 Waste Site',
+                town: 'London',
+                postcode: 'EC1 1AA'
+              }
             }
-          }
-        }),
-        buildRegistration({
-          status: REG_ACC_STATUS.CREATED,
-          material: MATERIAL.STEEL,
-          registrationNumber: 'R33333333PL'
-        })
+          })
+        ),
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.CREATED,
+            material: MATERIAL.STEEL,
+            registrationNumber: 'R33333333PL'
+          })
+        )
       ]
     })
 
     const org2 = buildReadOrganisation({
       companyDetails: {
         name: 'Exporter Ltd',
-        tradingName: null,
-        registeredAddress: null,
+        tradingName: invalidArg(null),
+        registeredAddress: invalidArg(null),
         address: baseAddress
       },
       submittedToRegulator: 'sepa',
       registrations: [
-        buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-          material: MATERIAL.ALUMINIUM,
-          registrationNumber: 'R44444444AL',
-          validFrom: VALID_FROM,
-          validTo: VALID_TO,
-          site: null
-        })
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.APPROVED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.ALUMINIUM,
+            registrationNumber: 'R44444444AL',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            site: null
+          })
+        )
       ]
     })
 
@@ -627,15 +641,17 @@ describe('transform', () => {
       },
       submittedToRegulator: 'ea',
       registrations: [
-        buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
-          registrationNumber: 'R99999999PL',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          material: MATERIAL.PLASTIC,
-          validFrom: VALID_FROM,
-          validTo: VALID_TO,
-          site: { address: baseSiteAddress }
-        })
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.APPROVED,
+            registrationNumber: 'R99999999PL',
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.PLASTIC,
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            site: { address: baseSiteAddress }
+          })
+        )
       ]
     })
 
@@ -647,15 +663,17 @@ describe('transform', () => {
       },
       submittedToRegulator: 'ea',
       registrations: [
-        buildRegistration({
-          status: REG_ACC_STATUS.APPROVED,
-          registrationNumber: 'R50000100PL',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          material: MATERIAL.PLASTIC,
-          validFrom: VALID_FROM,
-          validTo: VALID_TO,
-          site: { address: baseSiteAddress }
-        })
+        partialMock(
+          buildRegistration({
+            status: REGISTRATION_STATUS.APPROVED,
+            registrationNumber: 'R50000100PL',
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.PLASTIC,
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            site: { address: baseSiteAddress }
+          })
+        )
       ]
     })
 

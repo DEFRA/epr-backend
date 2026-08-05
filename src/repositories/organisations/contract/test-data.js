@@ -5,6 +5,8 @@ import { createInitialStatusHistory } from '../helpers.js'
 import { getCurrentStatus } from '../status.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {Organisation, OrganisationStatus} from '#domain/organisations/model.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
 
 const ORG_ID_START = 500000
 export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
@@ -156,8 +158,8 @@ export const buildOrganisation = (overrides = {}) => {
  * top-level and nested 'status' fields the read path derives from statusHistory.
  * Use this for tests that consume an organisation (vs insert it).
  *
- * @param {object} [overrides]
- * @returns {import('#domain/organisations/model.js').Organisation}
+ * @param {Partial<Organisation>} [overrides]
+ * @returns {Organisation}
  */
 export const buildReadOrganisation = (overrides = {}) => {
   const org = buildOrganisation(overrides)
@@ -170,7 +172,12 @@ export const buildReadOrganisation = (overrides = {}) => {
       accreditation.status ?? getCurrentStatus(accreditation)
   }
 
-  return { ...org, status: overrides.status ?? getCurrentStatus(org) }
+  return {
+    ...org,
+    status:
+      overrides.status ??
+      /** @type {OrganisationStatus} */ (getCurrentStatus(org))
+  }
 }
 
 /**
@@ -180,9 +187,9 @@ export const buildReadOrganisation = (overrides = {}) => {
  * createInMemoryOrganisationsRepository — otherwise insert() will overwrite
  * the statusHistory with the default 'created' entry.
  *
- * @param {object} registration - From buildRegistration
+ * @param {Registration} registration - From buildRegistration
  * @param {'created'|'approved'|'suspended'} [accreditationStatus] - If set, links a matching accreditation
- * @returns {object}
+ * @returns {Omit<Organisation, 'status'>}
  */
 export const buildOrganisationWithRegistration = (
   registration,

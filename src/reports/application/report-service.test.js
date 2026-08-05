@@ -19,14 +19,22 @@ import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod,
   fetchReportBySubmissionNumber,
-  isLatestSubmission,
   createReportsService
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
+/**
+ * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
+ */
+
 const SUMMARY_LOG_ID = 'sl-1'
 const SUBMITTED_AT = new Date('2024-01-15T00:00:00.000Z')
 
+/**
+ * @param {Partial<Registration>} [overrides]
+ * @returns {Registration}
+ */
 const buildRegistration = (overrides = {}) => {
   const hasAccreditationIdOverride = 'accreditationId' in overrides
   const accreditationId = hasAccreditationIdOverride
@@ -38,21 +46,23 @@ const buildRegistration = (overrides = {}) => {
       ? overrides.accreditation
       : defaultAccreditation
   const { accreditation: _a, accreditationId: _b, ...rest } = overrides
-  return {
-    id: new ObjectId().toString(),
-    accreditationId,
-    accreditation,
-    material: 'plastic',
-    wasteProcessingType: 'reprocessor',
-    site: {
-      address: {
-        line1: '1 Recycling Lane',
-        town: 'Greenville',
-        postcode: 'GR1 1AA'
-      }
-    },
-    ...rest
-  }
+  return /** @type {Registration} */ (
+    /** @type {unknown} */ ({
+      id: new ObjectId().toString(),
+      accreditationId,
+      accreditation,
+      material: 'plastic',
+      wasteProcessingType: 'reprocessor',
+      site: {
+        address: {
+          line1: '1 Recycling Lane',
+          town: 'Greenville',
+          postcode: 'GR1 1AA'
+        }
+      },
+      ...rest
+    })
+  )
 }
 
 const buildReceivedEntry = (overrides = {}) =>
@@ -62,11 +72,11 @@ const buildReceivedEntry = (overrides = {}) =>
     data: {
       SUPPLIER_NAME: 'Supplier A',
       ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Reprocessor',
-      TONNAGE_RECEIVED_FOR_RECYCLING: '100',
+      TONNAGE_RECEIVED_FOR_RECYCLING: 100,
       DATE_RECEIVED_FOR_REPROCESSING: '2024-01-10',
       FINAL_DESTINATION_NAME: 'Dest A',
       FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
-      TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: '50',
+      TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50,
       DATE_LOAD_LEFT_SITE: '2024-01-12',
       ...overrides
     }
@@ -180,18 +190,22 @@ describe('report-service', () => {
         'sl-2'
       )
 
-      const firstSubmission = buildLedgerEvent({
-        ...ledgerId,
-        number: 1,
-        createdAt: SUBMITTED_AT,
-        payload: { summaryLogId: 'sl-1', creditTotal: 100 }
-      })
-      const secondSubmission = buildLedgerEvent({
-        ...ledgerId,
-        number: 2,
-        createdAt: new Date('2024-02-15T00:00:00.000Z'),
-        payload: { summaryLogId: 'sl-2', creditTotal: 150 }
-      })
+      const firstSubmission = /** @type {LedgerEvent} */ (
+        buildLedgerEvent({
+          ...ledgerId,
+          number: 1,
+          createdAt: SUBMITTED_AT,
+          payload: { summaryLogId: 'sl-1', creditTotal: 100 }
+        })
+      )
+      const secondSubmission = /** @type {LedgerEvent} */ (
+        buildLedgerEvent({
+          ...ledgerId,
+          number: 2,
+          createdAt: new Date('2024-02-15T00:00:00.000Z'),
+          payload: { summaryLogId: 'sl-2', creditTotal: 150 }
+        })
+      )
       const beforeCommit = createInMemoryLedgerRepository([firstSubmission])()
       const afterCommit = createInMemoryLedgerRepository([
         firstSubmission,
@@ -421,51 +435,6 @@ describe('report-service', () => {
       )
 
       expect(result).toBeNull()
-    })
-  })
-
-  describe('isLatestSubmission', () => {
-    const stubRepository = (periodicReports) =>
-      /** @type {any} */ ({
-        findPeriodicReports: vi.fn().mockResolvedValue(periodicReports)
-      })
-
-    const slotWith = (current, previousSubmissions = []) => [
-      {
-        year: 2024,
-        reports: { monthly: { 1: { current, previousSubmissions } } }
-      }
-    ]
-
-    it('returns false when the period has no reports at all', async () => {
-      const result = await isLatestSubmission(
-        stubRepository([]),
-        'org-1',
-        'reg-1',
-        2024,
-        'monthly',
-        1,
-        1
-      )
-
-      expect(result).toBe(false)
-    })
-
-    it('returns false for an earlier submission superseded by a later in-progress draft', async () => {
-      const draft = { status: REPORT_STATUS.IN_PROGRESS, submissionNumber: 2 }
-      const submitted = { status: REPORT_STATUS.SUBMITTED, submissionNumber: 1 }
-
-      const result = await isLatestSubmission(
-        stubRepository(slotWith(draft, [submitted])),
-        'org-1',
-        'reg-1',
-        2024,
-        'monthly',
-        1,
-        1
-      )
-
-      expect(result).toBe(false)
     })
   })
 

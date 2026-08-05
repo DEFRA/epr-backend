@@ -2,6 +2,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
   buildOrganisation,
+  buildRegistration,
   prepareOrgUpdate
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -733,5 +734,176 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
     expect(siteResponse.statusCode).toBe(StatusCodes.OK)
     const site = JSON.parse(siteResponse.payload)
     expect(site.id).toBe(knownSiteId)
+  })
+})
+
+describe('PUT /v1/organisations/{id} status change guard', () => {
+  setupAuthContext()
+  let server
+  let organisationsRepository
+
+  beforeEach(async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    organisationsRepository = organisationsRepositoryFactory()
+
+    server = await createTestServer({
+      repositories: {
+        organisationsRepository: organisationsRepositoryFactory,
+        systemLogsRepository: createSystemLogsRepository()
+      },
+      featureFlags: createInMemoryFeatureFlags()
+    })
+  })
+
+  afterAll(() => {
+    vi.resetAllMocks()
+  })
+
+  const createOrganisation = async () => {
+    const fixture = buildOrganisation()
+    await organisationsRepository.insert(fixture)
+
+    const fetchResponse = await server.inject({
+      method: 'GET',
+      url: `/v1/organisations/${fixture.id}`,
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    expect(fetchResponse.statusCode).toBe(StatusCodes.OK)
+    return JSON.parse(fetchResponse.payload)
+  }
+
+  const putOrganisation = (org, updateFragment) =>
+    server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: { Authorization: `Bearer ${validToken}` },
+      payload: { version: org.version, updateFragment }
+    })
+
+  it('returns 422 when a registration status differs from its current status', async () => {
+    const org = await createOrganisation()
+    const registration = org.registrations[0]
+
+    const response = await putOrganisation(
+      org,
+      prepareOrgUpdate(org, {
+        registrations: [{ ...registration, status: 'rejected' }]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toBe(
+      `Registration ${registration.id} status cannot be changed from created to rejected here — use the status transition actions`
+    )
+  })
+
+  it('returns 422 when an accreditation status differs from its current status', async () => {
+    const org = await createOrganisation()
+    const accreditation = org.accreditations[0]
+
+    const response = await putOrganisation(
+      org,
+      prepareOrgUpdate(org, {
+        accreditations: [{ ...accreditation, status: 'rejected' }]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toBe(
+      `Accreditation ${accreditation.id} status cannot be changed from created to rejected here — use the status transition actions`
+    )
+  })
+
+  it('lists every offending item separated by "; "', async () => {
+    const org = await createOrganisation()
+    const registration = org.registrations[0]
+    const accreditation = org.accreditations[0]
+
+    const response = await putOrganisation(
+      org,
+      prepareOrgUpdate(org, {
+        registrations: [{ ...registration, status: 'rejected' }],
+        accreditations: [{ ...accreditation, status: 'rejected' }]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toBe(
+      `Registration ${registration.id} status cannot be changed from created to rejected here — use the status transition actions; ` +
+        `Accreditation ${accreditation.id} status cannot be changed from created to rejected here — use the status transition actions`
+    )
+  })
+
+  it('returns 422 when a new registration carries a status other than created', async () => {
+    const org = await createOrganisation()
+    const newRegistration = buildRegistration({ status: 'rejected' })
+
+    const response = await putOrganisation(
+      org,
+      prepareOrgUpdate(org, {
+        registrations: [newRegistration]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toBe(
+      `Registration ${newRegistration.id} status cannot be set to rejected here — new items start as created`
+    )
+  })
+
+  it('accepts a new registration with status created', async () => {
+    const org = await createOrganisation()
+    const newRegistration = buildRegistration({ status: 'created' })
+
+    const response = await putOrganisation(
+      org,
+      prepareOrgUpdate(org, {
+        registrations: [newRegistration]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+
+  it('accepts a new registration without a status', async () => {
+    const org = await createOrganisation()
+    const newRegistration = buildRegistration()
+
+    const response = await putOrganisation(
+      org,
+      prepareOrgUpdate(org, {
+        registrations: [newRegistration]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+
+  it('accepts an update that echoes current statuses unchanged', async () => {
+    const org = await createOrganisation()
+
+    const response = await putOrganisation(org, prepareOrgUpdate(org, {}))
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+
+  it('accepts an updated item that omits status entirely', async () => {
+    const org = await createOrganisation()
+    const { status: _, ...registrationWithoutStatus } = org.registrations[0]
+
+    const response = await putOrganisation(
+      org,
+      prepareOrgUpdate(org, {
+        registrations: [registrationWithoutStatus]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 })

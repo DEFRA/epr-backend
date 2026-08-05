@@ -20,7 +20,6 @@ const buildRecord = (overrides = {}) =>
     rowId: 'row-1',
     type: 'EXPORTED',
     data: { processingType: PROCESSING_TYPES.EXPORTER, tonnage: 100 },
-    excludedFromWasteBalance: false,
     ...overrides
   })
 
@@ -51,7 +50,12 @@ describe('classifyWasteRecord', () => {
       data: { processingType: PROCESSING_TYPES.EXPORTER, tonnage: 42 }
     })
 
-    const result = classifyWasteRecord(record, accreditation, overseasSites)
+    const result = classifyWasteRecord(
+      record,
+      PROCESSING_TYPES.EXPORTER,
+      accreditation,
+      overseasSites
+    )
 
     expect(result.rowId).toBe('row-7')
     expect(result.wasteRecordType).toBe('EXPORTED')
@@ -72,6 +76,7 @@ describe('classifyWasteRecord', () => {
 
     const { classification } = classifyWasteRecord(
       buildRecord(),
+      PROCESSING_TYPES.EXPORTER,
       accreditation,
       overseasSites
     )

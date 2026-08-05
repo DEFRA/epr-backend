@@ -1,6 +1,6 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import {
-  REG_ACC_STATUS,
+  ACCREDITATION_STATUS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { siteInfoToLog } from './parsing-common/site.js'
@@ -153,7 +153,7 @@ function findEligibleAccreditations(
   claimedAccreditationIds
 ) {
   return accreditations
-    .filter((acc) => acc.status !== REG_ACC_STATUS.APPROVED)
+    .filter((acc) => acc.status !== ACCREDITATION_STATUS.APPROVED)
     .filter((acc) => !claimedAccreditationIds.has(acc.id))
     .filter((acc) => isAccreditationForRegistration(acc, registration))
 }
@@ -174,7 +174,7 @@ function isLinkedToApprovedAccreditation(registration, accreditations) {
   const linkedAccreditation = accreditations.find(
     (acc) => acc.id === registration.accreditationId
   )
-  return linkedAccreditation?.status === REG_ACC_STATUS.APPROVED
+  return linkedAccreditation?.status === ACCREDITATION_STATUS.APPROVED
 }
 
 /**
@@ -308,6 +308,11 @@ function logUnlinkedAccreditations(organisation) {
   logger.warn({ message })
 }
 
+/**
+ * @param {any[]} organisations
+ * @param {string} propertyName
+ * @param {(item: any) => boolean} [filter]
+ */
 function countItems(organisations, propertyName, filter = () => true) {
   return organisations.flatMap((org) => org[propertyName] ?? []).filter(filter)
     .length

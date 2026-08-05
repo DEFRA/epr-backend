@@ -38,15 +38,15 @@ import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mon
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
 import { mongoWasteBalanceServicePlugin } from '#waste-balances/repository/mongodb.plugin.js'
-import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
 import { mongoSummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/mongodb.plugin.js'
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
-import { runDuplicateAccreditationLinkMigration } from '#server/run-duplicate-accreditation-link-migration.js'
 import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
+import { runPreCpaResubmissionBackfill } from '#server/run-pre-cpa-resubmission-backfill.js'
+import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -117,7 +117,7 @@ function getProductionPlugins(config) {
   const plugins = [
     {
       plugin: mongoDbPlugin,
-      options: config.get('mongo')
+      options: { ...config.get('mongo'), seedDatabase }
     },
     {
       plugin: mongoOrganisationsRepositoryPlugin,
@@ -125,7 +125,6 @@ function getProductionPlugins(config) {
     },
     mongoSummaryLogsRepositoryPlugin,
     mongoFormSubmissionsRepositoryPlugin,
-    mongoWasteRecordsRepositoryPlugin,
     mongoLedgerRepositoryPlugin,
     mongoWasteBalanceServicePlugin,
     mongoSystemLogsRepositoryPlugin,
@@ -224,8 +223,8 @@ async function createServer(options = {}) {
   server.ext('onPostStart', () => {
     runFormsDataMigration(server)
     runOrganisationValidationSweep(server)
-    runDuplicateAccreditationLinkMigration(server)
     runStaleIssuedTonnageReport(server)
+    runPreCpaResubmissionBackfill(server)
   })
 
   return server

@@ -1,17 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
+import { asStoredRowStates } from './as-stored-row-states-test-helpers.js'
 import wasteRecordsAccreditedJson from './test-data/exporter-accredited.json' with { type: 'json' }
 import wasteRecordsRegisteredOnlyJson from './test-data/exporter-reg-only.json' with { type: 'json' }
 
-const wasteRecordsAccredited =
-  /** @type {import('#root/reports/domain/aggregation/aggregate-report-detail.js').ReportableWasteRecordState[]} */ (
-    /** @type {unknown} */ (wasteRecordsAccreditedJson)
-  )
-const wasteRecordsRegisteredOnly =
-  /** @type {import('#root/reports/domain/aggregation/aggregate-report-detail.js').ReportableWasteRecordState[]} */ (
-    /** @type {unknown} */ (wasteRecordsRegisteredOnlyJson)
-  )
+const wasteRecordsAccredited = asStoredRowStates(wasteRecordsAccreditedJson)
+const wasteRecordsRegisteredOnly = asStoredRowStates(
+  wasteRecordsRegisteredOnlyJson
+)
 
 describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', () => {
   const orsDetailsMap = new Map([

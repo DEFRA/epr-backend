@@ -4,8 +4,8 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { partialMock } from '#test/type-helpers.js'
 import {
   buildOrganisationWithRegistration,
   buildRegistration
@@ -18,6 +18,8 @@ import {
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import { reportsUnsubmitPath } from './unsubmit.js'
 import * as reportAudit from '#reports/application/audit.js'
+
+/** @import { Registration } from '#domain/organisations/registration.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
@@ -41,7 +43,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
       wasteProcessingType: 'reprocessor',
       accreditationId: undefined
     })
-    const org = buildOrganisationWithRegistration(registration)
+    const org = buildOrganisationWithRegistration(
+      /** @type {Registration} */ (registration)
+    )
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
@@ -56,8 +60,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([org]),
-        wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
         reportsRepository: reportsRepositoryFactory
       }
     })
@@ -76,7 +81,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
       wasteProcessingType: 'reprocessor',
       accreditationId: undefined
     })
-    const org = buildOrganisationWithRegistration(registration)
+    const org = buildOrganisationWithRegistration(
+      /** @type {Registration} */ (registration)
+    )
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
@@ -100,8 +107,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([org]),
-        wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
         reportsRepository: reportsRepositoryFactory
       }
     })
@@ -117,7 +125,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
       wasteProcessingType: 'reprocessor',
       accreditationId: undefined
     })
-    const org = buildOrganisationWithRegistration(registration)
+    const org = buildOrganisationWithRegistration(
+      /** @type {Registration} */ (registration)
+    )
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
@@ -140,8 +150,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([org]),
-        wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
         reportsRepository: reportsRepositoryFactory
       }
     })
@@ -294,14 +305,15 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         const registration = buildRegistration({
           wasteProcessingType: 'reprocessor'
         })
-        const org = buildOrganisationWithRegistration(registration)
+        const org = buildOrganisationWithRegistration(
+          /** @type {Registration} */ (registration)
+        )
 
         const server = await createTestServer({
           repositories: {
             organisationsRepository: createInMemoryOrganisationsRepository([
-              org
+              partialMock(org)
             ]),
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
             reportsRepository: createInMemoryReportsRepository()
           }
         })
@@ -331,6 +343,34 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
       it('returns 409 when report is ready_to_submit', async () => {
         const { server, organisationId, registrationId } =
           await buildServerWithReportInStatus('ready_to_submit')
+
+        const response = await server.inject({
+          method: 'POST',
+          url: makeUrl(organisationId, registrationId),
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+
+      it('returns 409 when report is marked as requiring resubmission', async () => {
+        const { server, organisationId, registrationId, reportsRepository } =
+          await buildServerWithSubmittedReport()
+
+        const flagged =
+          await reportsRepository.markSubmittedReportRequiringResubmissionByOperator(
+            {
+              organisationId,
+              registrationId,
+              year: 2024,
+              cadence: 'monthly',
+              period: 1,
+              submissionNumber: 1,
+              requestedBy: DEFAULT_CHANGED_BY,
+              requestedAt: new Date().toISOString()
+            }
+          )
+        expect(flagged).not.toBeNull()
 
         const response = await server.inject({
           method: 'POST',
@@ -396,7 +436,9 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
           wasteProcessingType: 'reprocessor',
           accreditationId: undefined
         })
-        const org = buildOrganisationWithRegistration(registration)
+        const org = buildOrganisationWithRegistration(
+          /** @type {Registration} */ (registration)
+        )
 
         const reportsRepositoryFactory = createInMemoryReportsRepository()
         const reportsRepository = reportsRepositoryFactory()
@@ -422,9 +464,8 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         const server = await createTestServer({
           repositories: {
             organisationsRepository: createInMemoryOrganisationsRepository([
-              org
+              partialMock(org)
             ]),
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
             reportsRepository: reportsRepositoryFactory
           }
         })
