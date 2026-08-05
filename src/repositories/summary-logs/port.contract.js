@@ -8,7 +8,6 @@ import { testExpiresAtBehaviour } from './contract/expires-at.contract.js'
 import { testFindAllSummaryLogStatsByRegistrationId } from './contract/find-all-stats.contract.js'
 import { testFindAllByOrgReg } from './contract/find-all-by-org-reg.contract.js'
 import { testGetDownloadUrlBehaviour } from './contract/get-download-url.contract.js'
-import { testLegacyRowIdBehaviour } from './contract/legacy-row-ids.contract.js'
 
 export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
   describe('summary logs repository contract', () => {
@@ -22,6 +21,5 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testFindAllSummaryLogStatsByRegistrationId(repositoryFactory)
     testFindAllByOrgReg(repositoryFactory)
     testGetDownloadUrlBehaviour(repositoryFactory)
-    testLegacyRowIdBehaviour(repositoryFactory)
   })
 }

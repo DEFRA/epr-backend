@@ -25,25 +25,18 @@ const normaliseValidity = (validity) =>
   )
 
 /**
- * Summary logs written before ROW_ID coercion landed hold row IDs as numbers
- * rather than strings. Coercing them as they are read lets those documents stay
- * as they are while every reader sees the string form the contract promises.
- *
- * @template {StoredLoads | null | undefined} T
- * @param {T} loads
- * @returns {T}
+ * @param {StoredLoads} loads
  */
-export const normaliseLoadRowIds = (loads) =>
-  loads &&
-  /** @type {any} */ (
-    Object.fromEntries(
-      CHANGES.map((change) => [change, normaliseValidity(loads[change])])
-    )
+const normaliseLoadRowIds = (loads) =>
+  Object.fromEntries(
+    CHANGES.map((change) => [change, normaliseValidity(loads[change])])
   )
 
 /**
- * Applies the same coercion to a summary log on its way out of storage, so
- * every reader sees the row ID type the domain model declares.
+ * Summary logs written before ROW_ID coercion landed hold row IDs as numbers
+ * rather than strings. Coercing them as the document leaves storage lets those
+ * documents stay as they are while every reader sees the string form the
+ * summary log model declares.
  *
  * @template {{ loads?: unknown }} T
  * @param {T} summaryLog

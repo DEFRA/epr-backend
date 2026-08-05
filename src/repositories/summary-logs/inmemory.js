@@ -8,7 +8,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import Boom from '@hapi/boom'
 import { parseSummaryLogUri } from './parse-uri.js'
-import { normaliseStoredSummaryLog } from '#domain/summary-logs/normalise-load-row-ids.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -87,10 +86,7 @@ const findById = (staleCache) => async (id) => {
   if (!doc) {
     return null
   }
-  return {
-    version: doc.version,
-    summaryLog: normaliseStoredSummaryLog(structuredClone(doc.summaryLog))
-  }
+  return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
 }
 
 const findLatestSubmittedForOrgReg =
@@ -120,9 +116,7 @@ const findLatestSubmittedForOrgReg =
     return {
       id: latest.id,
       version: latest.doc.version,
-      summaryLog: normaliseStoredSummaryLog(
-        structuredClone(latest.doc.summaryLog)
-      )
+      summaryLog: structuredClone(latest.doc.summaryLog)
     }
   }
 
@@ -145,7 +139,7 @@ const findAllByOrgReg =
         matches.push({
           id,
           version: doc.version,
-          summaryLog: normaliseStoredSummaryLog(structuredClone(summaryLog)),
+          summaryLog: structuredClone(summaryLog),
           _uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt
         })
       }
@@ -264,7 +258,7 @@ const transitionToSubmittingExclusive =
 
     return {
       success: true,
-      summaryLog: normaliseStoredSummaryLog(structuredClone(updatedSummaryLog)),
+      summaryLog: structuredClone(updatedSummaryLog),
       version: newVersion
     }
   }

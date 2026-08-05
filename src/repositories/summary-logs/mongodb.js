@@ -11,7 +11,7 @@ import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
 import { parseSummaryLogUri } from './parse-uri.js'
-import { normaliseStoredSummaryLog } from '#domain/summary-logs/normalise-load-row-ids.js'
+import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
 import {
   validateId,
   validateSummaryLogInsert,
