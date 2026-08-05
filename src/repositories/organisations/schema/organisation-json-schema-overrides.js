@@ -92,21 +92,23 @@ export const makeEditable = (schema) => {
 }
 
 /**
- * A status history entry is editable only in its updatedAt date (PAE-1809);
- * the status and updatedBy are frozen so the editor blocks them client-side.
+ * A status history entry is editable in its status and updatedAt date
+ * (PAE-1809); updatedBy is frozen so the editor blocks it client-side. The
+ * route guard enforces the rest server-side: fixed entry count, created first,
+ * ascending dates, valid transitions.
  *
  * Entries deliberately bypass makeEditable: it makes every key it touches
- * optional and nullable, which would drop updatedAt from the entry's required
- * list — and an entry without a date is not an entry.
+ * optional and nullable, which would drop status and updatedAt from the
+ * entry's required list — and an entry without either is not an entry.
  * @param {Joi.ObjectSchema} entrySchema
  * @returns {Joi.ArraySchema}
  */
 const editableStatusHistory = (entrySchema) =>
   Joi.array()
     .items(
-      entrySchema
-        .fork(['status'], (schema) => schema.meta({ readOnly: true }))
-        .fork(['updatedBy'], (schema) => schema.meta({ readOnly: true }))
+      entrySchema.fork(['updatedBy'], (schema) =>
+        schema.meta({ readOnly: true })
+      )
     )
     .optional()
 

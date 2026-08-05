@@ -1108,6 +1108,65 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
     expect(systemLogs[0].context.organisationId).toBe(org.id)
   })
 
+  it('accepts a corrected status when the resulting sequence is valid', async () => {
+    const { server, org } = await seed({
+      accreditationHistory: SUSPENSION_HISTORY
+    })
+    const accreditation = org.accreditations[0]
+    const [created, approved, suspended] = accreditation.statusHistory
+
+    const response = await putOrganisation(
+      server,
+      org,
+      prepareOrgUpdate(org, {
+        accreditations: [
+          withHistory(accreditation, [
+            created,
+            approved,
+            { ...suspended, status: 'cancelled' }
+          ])
+        ]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+
+    const reloaded = await getOrganisation(server, org.id)
+    expect(reloaded.accreditations[0].status).toBe('cancelled')
+    expect(
+      reloaded.accreditations[0].statusHistory.map((entry) => entry.status)
+    ).toEqual(['created', 'approved', 'cancelled'])
+  })
+
+  it('accepts a corrected registration status and derives the new current status', async () => {
+    const { server, org } = await seed({
+      registrationHistory: [
+        { status: 'created', updatedAt: CREATED_AT },
+        { status: 'approved', updatedAt: APPROVED_AT }
+      ]
+    })
+    const registration = org.registrations[0]
+    const [created, approved] = registration.statusHistory
+
+    const response = await putOrganisation(
+      server,
+      org,
+      prepareOrgUpdate(org, {
+        registrations: [
+          withHistory(registration, [
+            created,
+            { ...approved, status: 'rejected' }
+          ])
+        ]
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+
+    const reloaded = await getOrganisation(server, org.id)
+    expect(reloaded.registrations[0].status).toBe('rejected')
+  })
+
   it('accepts an unchanged echo of every status history', async () => {
     const { server, org } = await seed({
       accreditationHistory: SUSPENSION_HISTORY,
@@ -1216,8 +1275,8 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
   })
 
   describe('rejected edits', () => {
-    const FROZEN_STRUCTURE_CLAUSE = (label, id) =>
-      `${label} ${id} status history can only change updatedAt dates — statuses and structure are fixed`
+    const ENTRIES_FIXED_CLAUSE = (label, id) =>
+      `${label} ${id} status history entries cannot be added or removed`
 
     it('returns 422 when an entry is added', async () => {
       const { server, org } = await seed({
@@ -1240,7 +1299,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
 
       expectClause(
         response,
-        FROZEN_STRUCTURE_CLAUSE('Accreditation', accreditation.id)
+        ENTRIES_FIXED_CLAUSE('Accreditation', accreditation.id)
       )
     })
 
@@ -1262,11 +1321,11 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
 
       expectClause(
         response,
-        FROZEN_STRUCTURE_CLAUSE('Accreditation', accreditation.id)
+        ENTRIES_FIXED_CLAUSE('Accreditation', accreditation.id)
       )
     })
 
-    it('returns 422 when a status value is changed', async () => {
+    it('returns 422 when a changed status breaks the transition sequence', async () => {
       const { server, org } = await seed({
         accreditationHistory: SUSPENSION_HISTORY
       })
@@ -1280,8 +1339,8 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
           accreditations: [
             withHistory(accreditation, [
               created,
-              approved,
-              { ...suspended, status: 'cancelled' }
+              { ...approved, status: 'rejected' },
+              suspended
             ])
           ]
         })
@@ -1289,7 +1348,33 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
 
       expectClause(
         response,
-        FROZEN_STRUCTURE_CLAUSE('Accreditation', accreditation.id)
+        `Accreditation ${accreditation.id} status history contains an invalid transition from rejected to suspended`
+      )
+    })
+
+    it('returns 422 when the first entry is no longer created', async () => {
+      const { server, org } = await seed({
+        accreditationHistory: SUSPENSION_HISTORY
+      })
+      const accreditation = org.accreditations[0]
+      const [created, ...rest] = accreditation.statusHistory
+
+      const response = await putOrganisation(
+        server,
+        org,
+        prepareOrgUpdate(org, {
+          accreditations: [
+            withHistory(accreditation, [
+              { ...created, status: 'approved' },
+              ...rest
+            ])
+          ]
+        })
+      )
+
+      expectClause(
+        response,
+        `Accreditation ${accreditation.id} status history must start with created`
       )
     })
 
@@ -1312,7 +1397,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
 
       expectClause(
         response,
-        FROZEN_STRUCTURE_CLAUSE('Accreditation', accreditation.id)
+        `Accreditation ${accreditation.id} status history dates must be in date order`
       )
     })
 
@@ -1338,7 +1423,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
 
       expectClause(
         response,
-        FROZEN_STRUCTURE_CLAUSE('Accreditation', accreditation.id)
+        `Accreditation ${accreditation.id} status history updatedBy cannot be changed`
       )
     })
 
@@ -1436,7 +1521,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
 
       expectClause(
         response,
-        `${FROZEN_STRUCTURE_CLAUSE('Registration', registration.id)}; ` +
+        `${ENTRIES_FIXED_CLAUSE('Registration', registration.id)}; ` +
           `Accreditation ${accreditation.id} status history dates must be in date order`
       )
     })

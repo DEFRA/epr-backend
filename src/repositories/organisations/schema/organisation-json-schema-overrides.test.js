@@ -204,13 +204,11 @@ describe('status history in the JSON editor schema (PAE-1809)', () => {
   )
 
   it.each(collections)(
-    'freezes status and updatedBy on every %s status history entry',
+    'freezes updatedBy but leaves status editable on every %s status history entry',
     (collection) => {
       const entry = entryOf(collection)
 
-      expect(entry.keys.status.metas).toEqual(
-        expect.arrayContaining([{ readOnly: true }])
-      )
+      expect(entry.keys.status.metas).toBeUndefined()
       expect(entry.keys.updatedBy.metas).toEqual(
         expect.arrayContaining([{ readOnly: true }])
       )

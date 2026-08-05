@@ -2,7 +2,10 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
-import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS
+} from '#domain/organisations/model.js'
 import {
   isAccreditationStatusTransitionValid,
   isRegistrationStatusTransitionValid
@@ -139,10 +142,12 @@ const toTimestamp = (updatedAt) => new Date(updatedAt).getTime()
 /**
  * @param {StatusHistoryEntry} incoming
  * @param {StatusHistoryEntry} stored
- * @returns {boolean} true when the entry's frozen fields are untouched
+ * @returns {boolean}
  */
-const hasSameFrozenFields = (incoming, stored) =>
-  incoming.status === stored.status && incoming.updatedBy === stored.updatedBy
+const isSameEntry = (incoming, stored) =>
+  incoming.status === stored.status &&
+  incoming.updatedBy === stored.updatedBy &&
+  toTimestamp(incoming.updatedAt) === toTimestamp(stored.updatedAt)
 
 /**
  * @param {StatusHistoryEntry[]} incoming
@@ -151,20 +156,15 @@ const hasSameFrozenFields = (incoming, stored) =>
  */
 const isUnchangedHistory = (incoming, stored) =>
   incoming.length === stored.length &&
-  incoming.every(
-    (entry, index) =>
-      hasSameFrozenFields(entry, stored[index]) &&
-      toTimestamp(entry.updatedAt) === toTimestamp(stored[index].updatedAt)
-  )
+  incoming.every((entry, index) => isSameEntry(entry, stored[index]))
 
 /**
  * @param {StatusHistoryEntry[]} incoming
- * @param {StatusHistoryEntry[]} stored
+ * @param {StatusHistoryEntry[]} stored - same length as incoming (checked first)
  * @returns {boolean}
  */
-const hasFrozenStructure = (incoming, stored) =>
-  incoming.length === stored.length &&
-  incoming.every((entry, index) => hasSameFrozenFields(entry, stored[index]))
+const hasSameUpdatedBy = (incoming, stored) =>
+  incoming.every((entry, index) => entry.updatedBy === stored[index].updatedBy)
 
 /**
  * @param {StatusHistoryEntry[]} history
@@ -228,8 +228,16 @@ const findStatusHistoryViolation = (
     return null
   }
 
-  if (!hasFrozenStructure(incoming, stored)) {
-    return `${label} ${id} status history can only change updatedAt dates — statuses and structure are fixed`
+  if (incoming.length !== stored.length) {
+    return `${label} ${id} status history entries cannot be added or removed`
+  }
+
+  if (!hasSameUpdatedBy(incoming, stored)) {
+    return `${label} ${id} status history updatedBy cannot be changed`
+  }
+
+  if (incoming[0].status !== REGISTRATION_STATUS.CREATED) {
+    return `${label} ${id} status history must start with created`
   }
 
   if (!isStrictlyAscending(incoming)) {
@@ -285,10 +293,14 @@ const collectStatusHistoryErrors = (
 }
 
 /**
- * A registration or accreditation status history may only have its updatedAt
- * dates corrected through this endpoint (PAE-1809): the statuses, the entries
- * and their order are fixed, corrected dates must stay strictly ascending, and
- * the resulting sequence must still be a walk of the domain transition table.
+ * A registration or accreditation status history may have its entry statuses
+ * and updatedAt dates corrected through this endpoint (PAE-1809). Entries
+ * cannot be added, removed or reattributed, the history must still start at
+ * created, corrected dates must stay strictly ascending, and the resulting
+ * sequence must be a walk of the domain transition table. Correcting the last
+ * entry changes the item's derived status directly — deliberately, per the
+ * ticket — without the dedicated transition endpoints' side effects (no
+ * cascade cancel, no grant fields, no approval-uniqueness check).
  *
  * @param {Organisation} initial - the stored organisation (findById throws 404 when the id is unknown)
  * @param {OrganisationReplacement} updates
