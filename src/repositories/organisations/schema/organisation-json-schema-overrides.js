@@ -91,27 +91,45 @@ export const makeEditable = (schema) => {
   return editableSchema
 }
 
+/**
+ * A status history entry is editable only in its updatedAt date (PAE-1809);
+ * the status and updatedBy are frozen so the editor blocks them client-side.
+ *
+ * Entries deliberately bypass makeEditable: it makes every key it touches
+ * optional and nullable, which would drop updatedAt from the entry's required
+ * list — and an entry without a date is not an entry.
+ * @param {Joi.ObjectSchema} entrySchema
+ * @returns {Joi.ArraySchema}
+ */
+const editableStatusHistory = (entrySchema) =>
+  Joi.array()
+    .items(
+      entrySchema
+        .fork(['status'], (schema) => schema.meta({ readOnly: true }))
+        .fork(['updatedBy'], (schema) => schema.meta({ readOnly: true }))
+    )
+    .optional()
+
+// statusHistory is injected after makeEditable rather than merged into the
+// update schemas beforehand, which keeps the generated output the same whether
+// or not those schemas carry a statusHistory key of their own.
 export const organisationJSONSchemaOverrides = organisationReplaceSchema.keys({
   registrations: Joi.array()
     .items(
-      makeEditable(
-        registrationUpdateSchema.keys({
-          statusHistory: Joi.array()
-            .items(registrationStatusHistoryItemSchema)
-            .optional()
-        })
-      )
+      makeEditable(registrationUpdateSchema).keys({
+        statusHistory: editableStatusHistory(
+          registrationStatusHistoryItemSchema
+        )
+      })
     )
     .default([]),
   accreditations: Joi.array()
     .items(
-      makeEditable(
-        accreditationUpdateSchema.keys({
-          statusHistory: Joi.array()
-            .items(accreditationStatusHistoryItemSchema)
-            .optional()
-        })
-      )
+      makeEditable(accreditationUpdateSchema).keys({
+        statusHistory: editableStatusHistory(
+          accreditationStatusHistoryItemSchema
+        )
+      })
     )
     .default([])
 })

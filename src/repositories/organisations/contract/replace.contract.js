@@ -121,7 +121,10 @@ export const testReplaceBehaviour = (it) => {
 
         const { accreditationId: _, ...regWithoutLink } =
           organisationAfterInsert.registrations[0]
-        const updatePayload = prepareOrgUpdate(organisation, {
+        // Built from the stored organisation, as a real caller does: untouched
+        // items round-trip their stored statusHistory, which replace() now
+        // persists verbatim rather than discarding (PAE-1809).
+        const updatePayload = prepareOrgUpdate(organisationAfterInsert, {
           accreditations: [accreditationToUpdate],
           registrations: [regWithoutLink]
         })
@@ -533,6 +536,215 @@ export const testReplaceBehaviour = (it) => {
         await expect(
           repository.replace(organisation.id, 1, updatePayload)
         ).rejects.toThrow(/Invalid organisation data: status:.*must be one of/)
+      })
+
+      describe('supplied statusHistory', () => {
+        const CORRECTED_DATE = '2024-03-05T00:00:00.000Z'
+
+        it('persists a registration statusHistory supplied by the caller when the status is unchanged', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const registration = organisation.registrations[0]
+          const updatePayload = prepareOrgUpdate(organisation, {
+            registrations: [
+              {
+                ...registration,
+                statusHistory: [
+                  {
+                    status: REGISTRATION_STATUS.CREATED,
+                    updatedAt: CORRECTED_DATE
+                  }
+                ]
+              }
+            ]
+          })
+          await repository.replace(organisation.id, 1, updatePayload)
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedReg = result.registrations.find(
+            (r) => r.id === registration.id
+          )
+          expect(updatedReg.status).toBe(REGISTRATION_STATUS.CREATED)
+          expect(updatedReg.statusHistory).toHaveLength(1)
+          expect(
+            new Date(updatedReg.statusHistory[0].updatedAt).toISOString()
+          ).toBe(CORRECTED_DATE)
+        })
+
+        it('persists an accreditation statusHistory supplied by the caller when the status is unchanged', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const accreditationId = organisation.accreditations[0].id
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(organisation, {
+              accreditations: [
+                {
+                  ...organisation.accreditations[0],
+                  status: ACCREDITATION_STATUS.REJECTED
+                }
+              ]
+            })
+          )
+
+          const afterRejection = await repository.findById(organisation.id, 2)
+          const rejectedAcc = afterRejection.accreditations.find(
+            (a) => a.id === accreditationId
+          )
+          const correctedHistory = [
+            rejectedAcc.statusHistory[0],
+            { ...rejectedAcc.statusHistory[1], updatedAt: CORRECTED_DATE }
+          ]
+
+          await repository.replace(
+            organisation.id,
+            2,
+            prepareOrgUpdate(afterRejection, {
+              accreditations: [
+                { ...rejectedAcc, statusHistory: correctedHistory }
+              ]
+            })
+          )
+
+          const result = await repository.findById(organisation.id, 3)
+          const updatedAcc = result.accreditations.find(
+            (a) => a.id === accreditationId
+          )
+          expect(updatedAcc.status).toBe(ACCREDITATION_STATUS.REJECTED)
+          expect(updatedAcc.statusHistory).toHaveLength(2)
+          expect(updatedAcc.statusHistory[0].status).toBe(
+            ACCREDITATION_STATUS.CREATED
+          )
+          expect(
+            new Date(updatedAcc.statusHistory[0].updatedAt).toISOString()
+          ).toBe(new Date(rejectedAcc.statusHistory[0].updatedAt).toISOString())
+          expect(
+            new Date(updatedAcc.statusHistory[1].updatedAt).toISOString()
+          ).toBe(CORRECTED_DATE)
+        })
+
+        it('appends to the stored history and ignores the supplied one when the status also changes', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const afterInsert = await repository.findById(organisation.id)
+          const registration = afterInsert.registrations[0]
+          const storedCreatedAt = registration.statusHistory[0].updatedAt
+          const updatePayload = prepareOrgUpdate(organisation, {
+            registrations: [
+              {
+                ...registration,
+                status: REGISTRATION_STATUS.REJECTED,
+                statusHistory: [
+                  {
+                    status: REGISTRATION_STATUS.CREATED,
+                    updatedAt: CORRECTED_DATE
+                  }
+                ]
+              }
+            ]
+          })
+          await repository.replace(organisation.id, 1, updatePayload)
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedReg = result.registrations.find(
+            (r) => r.id === registration.id
+          )
+          expect(updatedReg.statusHistory).toHaveLength(2)
+          expect(
+            new Date(updatedReg.statusHistory[0].updatedAt).toISOString()
+          ).toBe(new Date(storedCreatedAt).toISOString())
+          expect(updatedReg.statusHistory[1].status).toBe(
+            REGISTRATION_STATUS.REJECTED
+          )
+        })
+
+        it('ignores a statusHistory supplied for a brand new registration and seeds the created history', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const replaceStartedAt = new Date()
+          const newRegistration = buildRegistration({
+            statusHistory: [
+              { status: REGISTRATION_STATUS.CREATED, updatedAt: CORRECTED_DATE }
+            ]
+          })
+          const updatePayload = prepareOrgUpdate(organisation, {
+            registrations: [newRegistration]
+          })
+          await repository.replace(organisation.id, 1, updatePayload)
+
+          const result = await repository.findById(organisation.id, 2)
+          const addedReg = result.registrations.find(
+            (r) => r.id === newRegistration.id
+          )
+          expect(addedReg.statusHistory).toHaveLength(1)
+          expect(addedReg.statusHistory[0].status).toBe(
+            REGISTRATION_STATUS.CREATED
+          )
+          expect(
+            new Date(addedReg.statusHistory[0].updatedAt).getTime()
+          ).toBeGreaterThanOrEqual(replaceStartedAt.getTime())
+        })
+
+        it('rejects a supplied registration statusHistory holding a status registrations can never have', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const updatePayload = prepareOrgUpdate(organisation, {
+            registrations: [
+              {
+                ...organisation.registrations[0],
+                statusHistory: [
+                  {
+                    status: REGISTRATION_STATUS.CREATED,
+                    updatedAt: CORRECTED_DATE
+                  },
+                  {
+                    status: ACCREDITATION_STATUS.SUSPENDED,
+                    updatedAt: CORRECTED_DATE
+                  }
+                ]
+              }
+            ]
+          })
+
+          await expect(
+            repository.replace(organisation.id, 1, updatePayload)
+          ).rejects.toMatchObject({
+            isBoom: true,
+            output: { statusCode: 422 }
+          })
+        })
+
+        it('rejects a supplied statusHistory whose entries have an invalid shape', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const updatePayload = prepareOrgUpdate(organisation, {
+            registrations: [
+              {
+                ...organisation.registrations[0],
+                statusHistory: [
+                  {
+                    status: REGISTRATION_STATUS.CREATED,
+                    updatedAt: 'not-a-date'
+                  }
+                ]
+              }
+            ]
+          })
+
+          await expect(
+            repository.replace(organisation.id, 1, updatePayload)
+          ).rejects.toMatchObject({
+            isBoom: true,
+            output: { statusCode: 422 }
+          })
+        })
       })
     })
 

@@ -2,8 +2,18 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import {
+  isAccreditationStatusTransitionValid,
+  isRegistrationStatusTransitionValid
+} from '#domain/organisations/status.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { StatusTransitionPredicate } from '#domain/organisations/status.js' */
+
+/**
+ * @typedef {{status: string, updatedAt: Date | string, updatedBy?: string}} StatusHistoryEntry
+ */
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
@@ -119,11 +129,198 @@ const validateStatusesUnchanged = (initial, updates) => {
 }
 
 /**
- * Builds the PUT handler. The public route enforces the PAE-1645 status
- * immutability guard and audits the change; the non-prod dev seeding route
- * (`/v1/dev/organisations/{id}`) skips both — journey-test fixtures use it
- * to seed statuses and numbers directly, and it is unauthenticated so there
- * is no actor to audit.
+ * Incoming dates arrive as ISO strings from the editor round-trip while stored
+ * ones are Dates, so entries are only ever compared by timestamp.
+ * @param {Date | string} updatedAt
+ * @returns {number}
+ */
+const toTimestamp = (updatedAt) => new Date(updatedAt).getTime()
+
+/**
+ * @param {StatusHistoryEntry} incoming
+ * @param {StatusHistoryEntry} stored
+ * @returns {boolean} true when the entry's frozen fields are untouched
+ */
+const hasSameFrozenFields = (incoming, stored) =>
+  incoming.status === stored.status && incoming.updatedBy === stored.updatedBy
+
+/**
+ * @param {StatusHistoryEntry[]} incoming
+ * @param {StatusHistoryEntry[]} stored
+ * @returns {boolean}
+ */
+const isUnchangedHistory = (incoming, stored) =>
+  incoming.length === stored.length &&
+  incoming.every(
+    (entry, index) =>
+      hasSameFrozenFields(entry, stored[index]) &&
+      toTimestamp(entry.updatedAt) === toTimestamp(stored[index].updatedAt)
+  )
+
+/**
+ * @param {StatusHistoryEntry[]} incoming
+ * @param {StatusHistoryEntry[]} stored
+ * @returns {boolean}
+ */
+const hasFrozenStructure = (incoming, stored) =>
+  incoming.length === stored.length &&
+  incoming.every((entry, index) => hasSameFrozenFields(entry, stored[index]))
+
+/**
+ * @param {StatusHistoryEntry[]} history
+ * @returns {boolean}
+ */
+const isStrictlyAscending = (history) =>
+  history.every(
+    (entry, index) =>
+      index === 0 ||
+      toTimestamp(history[index - 1].updatedAt) < toTimestamp(entry.updatedAt)
+  )
+
+/**
+ * @param {StatusHistoryEntry[]} history
+ * @param {StatusTransitionPredicate} isValidTransition
+ * @returns {{from: string, to: string} | null} the first adjacent pair the transition table rejects
+ */
+const findInvalidTransition = (history, isValidTransition) => {
+  for (let index = 1; index < history.length; index++) {
+    const from = history[index - 1].status
+    const to = history[index].status
+    if (!isValidTransition(from, to)) {
+      return { from, to }
+    }
+  }
+  return null
+}
+
+/**
+ * Cancelling a registration force-cancels its linked accreditation, an edge the
+ * accreditation transition table deliberately omits for user-driven changes.
+ * Such a history is stored data an admin must still be able to redate.
+ * @param {string} fromStatus
+ * @param {string} toStatus
+ * @returns {boolean}
+ */
+const isValidAccreditationHistoryTransition = (fromStatus, toStatus) =>
+  isAccreditationStatusTransitionValid(fromStatus, toStatus) ||
+  (fromStatus === ACCREDITATION_STATUS.APPROVED &&
+    toStatus === ACCREDITATION_STATUS.CANCELLED)
+
+/**
+ * @param {string} label - 'Registration' or 'Accreditation', used in error messages
+ * @param {string | undefined} id
+ * @param {StatusHistoryEntry[]} incoming
+ * @param {StatusHistoryEntry[]} stored
+ * @param {StatusTransitionPredicate} isValidTransition
+ * @returns {string | null} the clause for the first rule the edit breaks, or null when it is allowed
+ */
+const findStatusHistoryViolation = (
+  label,
+  id,
+  incoming,
+  stored,
+  isValidTransition
+) => {
+  // An unchanged echo skips every check. The editor round-trips the whole
+  // document, so an organisation whose stored history already breaks the rules
+  // would otherwise 422 on every save, including edits to unrelated fields.
+  if (isUnchangedHistory(incoming, stored)) {
+    return null
+  }
+
+  if (!hasFrozenStructure(incoming, stored)) {
+    return `${label} ${id} status history can only change updatedAt dates — statuses and structure are fixed`
+  }
+
+  if (!isStrictlyAscending(incoming)) {
+    return `${label} ${id} status history dates must be in date order`
+  }
+
+  const invalidTransition = findInvalidTransition(incoming, isValidTransition)
+  if (invalidTransition) {
+    return `${label} ${id} status history contains an invalid transition from ${invalidTransition.from} to ${invalidTransition.to}`
+  }
+
+  return null
+}
+
+/**
+ * @param {string} label - 'Registration' or 'Accreditation', used in error messages
+ * @param {Array<{id: string, statusHistory: StatusHistoryEntry[]}>} existingItems - items from the stored document
+ * @param {Array<{id?: string, statusHistory?: StatusHistoryEntry[]}> | undefined} itemUpdates - items from the incoming update fragment
+ * @param {StatusTransitionPredicate} isValidTransition
+ * @returns {string[]} one error clause per offending item
+ */
+const collectStatusHistoryErrors = (
+  label,
+  existingItems,
+  itemUpdates,
+  isValidTransition
+) => {
+  /** @type {Map<string | undefined, {id: string, statusHistory: StatusHistoryEntry[]}>} */
+  const existingById = new Map(existingItems.map((item) => [item.id, item]))
+
+  const errors = []
+  for (const item of itemUpdates ?? []) {
+    if (!item.statusHistory) {
+      continue
+    }
+
+    const existing = existingById.get(item.id)
+    const violation = existing
+      ? findStatusHistoryViolation(
+          label,
+          item.id,
+          item.statusHistory,
+          existing.statusHistory,
+          isValidTransition
+        )
+      : `${label} ${item.id} status history cannot be set on new items`
+
+    if (violation) {
+      errors.push(violation)
+    }
+  }
+  return errors
+}
+
+/**
+ * A registration or accreditation status history may only have its updatedAt
+ * dates corrected through this endpoint (PAE-1809): the statuses, the entries
+ * and their order are fixed, corrected dates must stay strictly ascending, and
+ * the resulting sequence must still be a walk of the domain transition table.
+ *
+ * @param {Organisation} initial - the stored organisation (findById throws 404 when the id is unknown)
+ * @param {OrganisationReplacement} updates
+ * @throws {Boom.Boom} 422 with one clause per offending item, joined by '; '
+ */
+const validateStatusHistoryEdits = (initial, updates) => {
+  const errors = [
+    ...collectStatusHistoryErrors(
+      'Registration',
+      initial.registrations,
+      updates.registrations,
+      isRegistrationStatusTransitionValid
+    ),
+    ...collectStatusHistoryErrors(
+      'Accreditation',
+      initial.accreditations,
+      updates.accreditations,
+      isValidAccreditationHistoryTransition
+    )
+  ]
+
+  if (errors.length > 0) {
+    throw Boom.badData(errors.join('; '))
+  }
+}
+
+/**
+ * Builds the PUT handler. The public route enforces the status immutability
+ * and status-history guards and audits the change; the non-prod dev seeding
+ * route (`/v1/dev/organisations/{id}`) skips them all — journey-test fixtures
+ * use it to seed statuses, numbers and status histories directly, and it is
+ * unauthenticated so there is no actor to audit.
  * @param {{ devSeeding?: boolean }} [options]
  */
 export const makePutOrganisationHandler =
@@ -156,6 +353,7 @@ export const makePutOrganisationHandler =
     const initial = await organisationsRepository.findById(id)
     if (!devSeeding) {
       validateStatusesUnchanged(initial, updates)
+      validateStatusHistoryEdits(initial, updates)
     }
 
     await validateOverseasSiteReferences(
