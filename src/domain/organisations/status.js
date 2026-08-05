@@ -75,17 +75,39 @@ export const assertOrgStatusTransitionValid = (fromStatus, toStatus) => {
  */
 
 /**
+ * Widened to plain strings: callers that walk a whole status history hold
+ * entries typed only as strings.
+ * @typedef {(fromStatus: string, toStatus: string) => boolean} StatusTransitionPredicate
+ */
+
+/**
+ * @param {Record<string, string[]>} validTransitions
+ * @returns {StatusTransitionPredicate}
+ */
+const makeIsStatusTransitionValid =
+  (validTransitions) => (fromStatus, toStatus) =>
+    (validTransitions[fromStatus] ?? []).includes(toStatus)
+
+// Exposed for callers that inspect a whole status history rather than a single
+// transition, and so must report every offending pair instead of throwing on
+// the first (the JSON editor's status-history guard, PAE-1809).
+export const isRegistrationStatusTransitionValid = makeIsStatusTransitionValid(
+  VALID_REG_TRANSITIONS
+)
+
+export const isAccreditationStatusTransitionValid = makeIsStatusTransitionValid(
+  VALID_ACC_TRANSITIONS
+)
+
+/**
  * @template {string} S
- * @param {Record<S, S[]>} validTransitions
+ * @param {StatusTransitionPredicate} isStatusTransitionValid
  * @param {'registration' | 'accreditation'} itemKind
  * @returns {StatusTransitionAsserter<S>}
  */
-const makeAssertStatusTransitionValid = (validTransitions, itemKind) => {
+const makeAssertStatusTransitionValid = (isStatusTransitionValid, itemKind) => {
   return (fromStatus, toStatus) => {
-    const allowedTransitions = validTransitions[fromStatus] ?? []
-    const isValid = allowedTransitions.includes(toStatus)
-
-    if (!isValid) {
+    if (!isStatusTransitionValid(fromStatus, toStatus)) {
       throw Boom.badData(
         `Cannot transition ${itemKind} status from ${fromStatus} to ${toStatus}`
       )
@@ -94,7 +116,13 @@ const makeAssertStatusTransitionValid = (validTransitions, itemKind) => {
 }
 
 export const assertRegistrationStatusTransitionValid =
-  makeAssertStatusTransitionValid(VALID_REG_TRANSITIONS, 'registration')
+  makeAssertStatusTransitionValid(
+    isRegistrationStatusTransitionValid,
+    'registration'
+  )
 
 export const assertAccreditationStatusTransitionValid =
-  makeAssertStatusTransitionValid(VALID_ACC_TRANSITIONS, 'accreditation')
+  makeAssertStatusTransitionValid(
+    isAccreditationStatusTransitionValid,
+    'accreditation'
+  )

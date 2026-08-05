@@ -8,6 +8,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
+  accreditationStatusHistoryItemSchema,
   formFileUploadSchema,
   formSubmissionSchema,
   idSchema,
@@ -104,7 +105,12 @@ export const accreditationSchema = Joi.object({
   )
 })
 
-export const accreditationUpdateSchema = accreditationSchema.fork(
-  ['status'],
-  (schema) => schema.optional()
-)
+// See registrationUpdateSchema — statusHistory is accepted so admins can
+// correct the updatedAt dates of an existing accreditation (PAE-1809).
+export const accreditationUpdateSchema = accreditationSchema
+  .fork(['status'], (schema) => schema.optional())
+  .keys({
+    statusHistory: Joi.array()
+      .items(accreditationStatusHistoryItemSchema)
+      .optional()
+  })
