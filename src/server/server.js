@@ -47,7 +47,6 @@ import { runOrganisationValidationSweep } from '#server/run-organisation-validat
 import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
 import { runPreCpaResubmissionBackfill } from '#server/run-pre-cpa-resubmission-backfill.js'
 import { runUnexportedTonnageReport } from '#server/run-unexported-tonnage-report.js'
-import { runWasteRecordsCollectionDrop } from '#server/run-waste-records-collection-drop.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -228,7 +227,6 @@ async function createServer(options = {}) {
     runStaleIssuedTonnageReport(server)
     runPreCpaResubmissionBackfill(server)
     runUnexportedTonnageReport(server)
-    runWasteRecordsCollectionDrop(server)
   })
 
   return server

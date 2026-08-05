@@ -32,7 +32,7 @@
     "#waste-records-export/*": "./src/waste-records-export/*"
   },
   "engines": {
-    "node": "^24.18.0"
+    "node": "^24.18.1"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
@@ -62,11 +62,11 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.1095.0",
-    "@aws-sdk/client-sqs": "3.1095.0",
-    "@aws-sdk/credential-providers": "3.1095.0",
-    "@aws-sdk/lib-storage": "3.1095.0",
-    "@aws-sdk/s3-request-presigner": "3.1095.0",
+    "@aws-sdk/client-s3": "3.1100.0",
+    "@aws-sdk/client-sqs": "3.1100.0",
+    "@aws-sdk/credential-providers": "3.1100.0",
+    "@aws-sdk/lib-storage": "3.1100.0",
+    "@aws-sdk/s3-request-presigner": "3.1100.0",
     "@defra/cdp-auditing": "0.6.1",
     "@defra/hapi-secure-context": "0.4.0",
     "@defra/hapi-tracing": "1.30.0",
@@ -109,30 +109,27 @@
   "overrides": {
     "@apidevtools/json-schema-ref-parser": "15.3.6",
     "@apidevtools/swagger-parser": "12.1.0",
-    "@grpc/grpc-js": "1.14.4",
-    "fast-xml-parser": "5.7.3",
-    "form-data": "4.0.6",
+    "fast-uri": "3.1.5",
     "glob": "11.1.0",
     "joi": "18.2.1",
-    "tmp": "0.2.7",
     "uuid": "14.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.10",
-    "@vitest/eslint-plugin": "1.6.23",
+    "@vitest/eslint-plugin": "1.6.24",
     "eslint": "9.39.2",
     "eslint-import-resolver-typescript": "4.4.5",
     "eslint-plugin-import-x": "4.17.1",
     "eslint-plugin-n": "18.2.2",
     "husky": "9.1.7",
-    "knip": "6.27.0",
-    "lint-staged": "17.1.0",
+    "knip": "6.30.0",
+    "lint-staged": "17.2.0",
     "msw": "2.15.0",
     "neostandard": "0.13.0",
     "nodemon": "3.1.14",
-    "prettier": "3.9.5",
+    "prettier": "3.9.6",
     "testcontainers": "12.0.4",
-    "tinybench": "6.0.2",
+    "tinybench": "6.1.2",
     "typescript": "7.0.2",
     "vitest": "4.1.10",
     "vitest-mongodb": "1.0.3"

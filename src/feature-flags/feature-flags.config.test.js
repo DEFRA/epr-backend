@@ -5,10 +5,6 @@ import { createConfigFeatureFlags } from './feature-flags.config.js'
 const FLAGS = [
   ['isDevEndpointsEnabled', 'featureFlags.devEndpoints'],
   [
-    'isDropWasteRecordsCollectionEnabled',
-    'featureFlags.dropWasteRecordsCollection'
-  ],
-  [
     'isPreCpaResubmissionBackfillEnabled',
     'featureFlags.preCpaResubmissionBackfill'
   ],

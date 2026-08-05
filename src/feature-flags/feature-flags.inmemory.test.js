@@ -9,7 +9,6 @@ import { createInMemoryFeatureFlags } from './feature-flags.inmemory.js'
  */
 const FLAGS = [
   ['isDevEndpointsEnabled', 'devEndpoints'],
-  ['isDropWasteRecordsCollectionEnabled', 'dropWasteRecordsCollection'],
   ['isPreCpaResubmissionBackfillEnabled', 'preCpaResubmissionBackfill'],
   ['isPreCpaResubmissionReportEnabled', 'preCpaResubmissionReport'],
   ['isStaleIssuedTonnageReportEnabled', 'staleIssuedTonnageReport'],
