@@ -5,9 +5,6 @@ export const createConfigFeatureFlags = (config) => ({
   isDevEndpointsEnabled() {
     return config.get('featureFlags.devEndpoints')
   },
-  isDropWasteRecordsCollectionEnabled() {
-    return config.get('featureFlags.dropWasteRecordsCollection')
-  },
   isPreCpaResubmissionBackfillEnabled() {
     return config.get('featureFlags.preCpaResubmissionBackfill')
   },

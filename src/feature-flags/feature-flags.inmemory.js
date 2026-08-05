@@ -6,9 +6,6 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
   },
-  isDropWasteRecordsCollectionEnabled() {
-    return flags.dropWasteRecordsCollection ?? false
-  },
   isPreCpaResubmissionBackfillEnabled() {
     return flags.preCpaResubmissionBackfill ?? false
   },

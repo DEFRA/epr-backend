@@ -352,12 +352,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    dropWasteRecordsCollection: {
-      doc: 'Feature Flag: Drop the decommissioned waste-records collection on startup. With this off, startup only reports whether the collection is still present and how many documents it holds.',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_DROP_WASTE_RECORDS_COLLECTION'
-    },
     preCpaResubmissionBackfill: {
       doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768).',
       format: Boolean,
