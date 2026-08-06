@@ -7,13 +7,11 @@ import { coerceStoredTonnages } from './stored-tonnage-coercion.js'
 
 /**
  * Project a waste record into its committed row state: classify it for the
- * waste balance, coerce the stored tonnages to two decimal places, and hold the
- * rowId as a string. These are properties of the row-state value itself, so they
+ * waste balance and coerce the stored tonnages to two decimal places. These are
+ * properties of the row-state value itself, so they
  * live here in the projection rather than at each write site — every path that
- * persists a row state goes through this seam and inherits the shape. The
- * rowId is a row reference, not a number; a string holding matches the insert
- * schema and the forward-write transformer regardless of how the source record
- * stored it. `processingType` names the template the row reports under
+ * persists a row state goes through this seam and inherits the shape.
+ * `processingType` names the template the row reports under
  * rather than describing the load, so it is hoisted to a top-level field
  * alongside the record rather than kept inside the raw `data`; the redundant
  * `ROW_ID` copy is dropped in favour of the top-level
@@ -40,7 +38,6 @@ export const projectSummaryLogRowState = (
   const { ROW_ID: _ROW_ID, processingType, ...data } = classified.data
   return {
     ...classified,
-    rowId: String(classified.rowId),
     processingType,
     data: coerceStoredTonnages(data)
   }

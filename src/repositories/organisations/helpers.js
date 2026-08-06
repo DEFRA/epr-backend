@@ -26,6 +26,12 @@ import { getCurrentStatus } from './status.js'
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { FindPageForOverseasSitesAdminListParams } from './port.js' */
 
+/**
+ * A status history entry as it reaches the repository: stored entries carry a
+ * Date, caller-supplied ones an ISO string.
+ * @typedef {{status: string, updatedAt: Date | string}} StatusHistoryEntryInput
+ */
+
 export const createStatusHistoryEntry = (status) => ({
   status,
   updatedAt: new Date()
@@ -36,6 +42,20 @@ export const createInitialStatusHistory = () => {
   return validateStatusHistory(statusHistory)
 }
 
+/**
+ * Derives the statusHistory to persist for an item.
+ *
+ * A status change always appends to the stored history — a caller-supplied
+ * history is ignored in that case, so the recorded transition is the server's.
+ * Without a status change a supplied history is honoured (PAE-1809: admins
+ * correcting updatedAt dates); a new item is always seeded fresh. Only the
+ * registration and accreditation update schemas carry a statusHistory key, so
+ * the organisation-level call site never supplies one.
+ *
+ * @param {{ status?: string, statusHistory?: StatusHistoryEntryInput[] }} updatedItem
+ * @param {{ statusHistory: StatusHistoryEntryInput[] } | null | undefined} existingItem
+ * @returns {Array<{status: string, updatedAt: Date}>}
+ */
 export const statusHistoryWithChanges = (updatedItem, existingItem) => {
   let statusHistory = createInitialStatusHistory()
   if (existingItem) {
@@ -48,7 +68,7 @@ export const statusHistoryWithChanges = (updatedItem, existingItem) => {
         createStatusHistoryEntry(updatedItem.status)
       ]
     } else {
-      statusHistory = existingItem.statusHistory
+      statusHistory = updatedItem.statusHistory ?? existingItem.statusHistory
     }
   }
   return validateStatusHistory(statusHistory)
@@ -56,8 +76,8 @@ export const statusHistoryWithChanges = (updatedItem, existingItem) => {
 
 /**
  * @template {string} S
- * @param {Array<{ id: string, status: S }>} existingItems
- * @param {Array<{ id: string, status?: S }>} itemUpdates
+ * @param {Array<{ id: string, status: S, statusHistory: StatusHistoryEntryInput[] }>} existingItems
+ * @param {Array<{ id: string, status?: S, statusHistory?: StatusHistoryEntryInput[] }>} itemUpdates
  * @param {StatusTransitionAsserter<S>} assertStatusTransitionValid
  * @param {Set<string>} [systemAppliedItemIds] - items whose status change was
  *   applied by the system (the registration-cancellation cascade), exempt from

@@ -36,8 +36,9 @@ vi.mock('@defra/cdp-auditing', () => ({
  * changing the target's status leaves other accreditations untouched.
  * The linked registration is 'created' by default; approving the
  * accreditation requires an approved registration, so tests opt in via
- * registrationStatus. accreditationOverrides lets grant tests shape the
- * target accreditation (e.g. no number yet).
+ * registrationStatus ('approved', 'rejected' or 'cancelled').
+ * accreditationOverrides lets grant tests shape the target accreditation
+ * (e.g. no number yet).
  * @param {string} status
  * @param {{ registrationStatus?: string, accreditationOverrides?: object }} [options]
  */
@@ -49,15 +50,16 @@ const buildOrgWithAccreditationStatus = (
   const registration = buildRegistration({
     accreditationId,
     reprocessingType: 'input',
-    ...(registrationStatus === 'approved' && {
-      // registrationNumber/validFrom/validTo are required once a
-      // registration has been approved or suspended.
+    ...(registrationStatus !== 'created' && {
+      // registrationNumber/validFrom/validTo are only required once a
+      // registration has been approved, but non-created registrations get
+      // them for realism (mirrors buildOrgWithRegistrationStatus).
       registrationNumber: 'REG123456',
       validFrom: '2024-01-01',
       validTo: '2025-01-01',
       statusHistory: [
         { status: 'created', updatedAt: '2024-01-01' },
-        { status: 'approved', updatedAt: '2024-01-15' }
+        { status: registrationStatus, updatedAt: '2024-01-15' }
       ]
     })
   })
@@ -371,8 +373,8 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /approved but not linked to an approved registration/
+      expect(body.message).toBe(
+        'Cannot transition accreditation to approved: its registration is created'
       )
     })
 
@@ -522,8 +524,8 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /approved but not linked to an approved registration/
+      expect(body.message).toBe(
+        'Cannot transition accreditation to approved: its registration is created'
       )
     })
 
@@ -659,8 +661,8 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /approved but not linked to an approved registration/
+      expect(body.message).toBe(
+        'Cannot transition accreditation to approved: its registration is created'
       )
     })
 
@@ -836,6 +838,37 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         )
       }
     )
+  })
+
+  describe('to-approved transitions require an approved registration (PAE-1800)', () => {
+    const reinstatePayloadArm = {
+      fromStatus: 'cancelled',
+      toStatus: 'approved'
+    }
+
+    describe.each([
+      { arm: 'grant', accStatus: 'created', payload: grantPayload },
+      { arm: 'reinstate', accStatus: 'cancelled', payload: reinstatePayloadArm }
+    ])('$arm', ({ accStatus, payload }) => {
+      it.each(['created', 'rejected', 'cancelled'])(
+        'returns 422 when the linked registration is %s',
+        async (registrationStatus) => {
+          const ctx = await seedOrg(accStatus, { registrationStatus })
+
+          const response = await server.inject({
+            method: 'POST',
+            url: statusHistoryUrl(ctx),
+            payload,
+            headers: { Authorization: `Bearer ${validToken}` }
+          })
+
+          expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+          expect(JSON.parse(response.payload).message).toBe(
+            `Cannot transition accreditation to approved: its registration is ${registrationStatus}`
+          )
+        }
+      )
+    })
   })
 
   describe('payload validation', () => {

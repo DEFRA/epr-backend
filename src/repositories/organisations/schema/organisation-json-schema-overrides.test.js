@@ -1,6 +1,9 @@
 import Joi from 'joi'
 import { describe, expect, it } from 'vitest'
-import { makeEditable } from './organisation-json-schema-overrides.js'
+import {
+  makeEditable,
+  organisationJSONSchemaOverrides
+} from './organisation-json-schema-overrides.js'
 
 describe('makeEditable', () => {
   it('returns schema as-is if falsy (Line 173)', () => {
@@ -152,4 +155,75 @@ describe('makeEditable', () => {
     const grandChildDesc = childKey.keys.GrandChild
     expect(grandChildDesc.flags?.presence).not.toBe('required')
   })
+})
+
+describe('status keys in the JSON editor schema (PAE-1645)', () => {
+  it('marks a status key readOnly', () => {
+    const schema = Joi.object({
+      status: Joi.string()
+    })
+    const editable = makeEditable(schema)
+    const desc = editable.describe()
+
+    expect(desc.keys.status.metas).toEqual(
+      expect.arrayContaining([{ readOnly: true }])
+    )
+  })
+
+  it('marks registration and accreditation status readOnly but leaves organisation status editable', () => {
+    const desc = organisationJSONSchemaOverrides.describe()
+
+    expect(desc.keys.status.metas).toBeUndefined()
+
+    const registrationItem = desc.keys.registrations.items[0]
+    expect(registrationItem.keys.status.metas).toEqual(
+      expect.arrayContaining([{ readOnly: true }])
+    )
+
+    const accreditationItem = desc.keys.accreditations.items[0]
+    expect(accreditationItem.keys.status.metas).toEqual(
+      expect.arrayContaining([{ readOnly: true }])
+    )
+  })
+})
+
+describe('status history in the JSON editor schema (PAE-1809)', () => {
+  const collections = ['registrations', 'accreditations']
+
+  const statusHistoryOf = (collection) =>
+    organisationJSONSchemaOverrides.describe().keys[collection].items[0].keys
+      .statusHistory
+
+  const entryOf = (collection) => statusHistoryOf(collection).items[0]
+
+  it.each(collections)(
+    'leaves the %s status history editable',
+    (collection) => {
+      expect(statusHistoryOf(collection).metas).toBeUndefined()
+    }
+  )
+
+  it.each(collections)(
+    'freezes updatedBy but leaves status editable on every %s status history entry',
+    (collection) => {
+      const entry = entryOf(collection)
+
+      expect(entry.keys.status.metas).toBeUndefined()
+      expect(entry.keys.updatedBy.metas).toEqual(
+        expect.arrayContaining([{ readOnly: true }])
+      )
+    }
+  )
+
+  it.each(collections)(
+    'keeps updatedAt an editable, required ISO date on every %s status history entry',
+    (collection) => {
+      const entry = entryOf(collection)
+
+      expect(entry.keys.updatedAt.metas).toBeUndefined()
+      expect(entry.keys.updatedAt.flags.presence).toBe('required')
+      expect(entry.keys.updatedAt.flags.format).toBe('iso')
+      expect(entry.keys.status.flags.presence).toBe('required')
+    }
+  )
 })

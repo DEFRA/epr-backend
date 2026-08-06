@@ -4,7 +4,8 @@ import {
   addTonnage,
   toRoundedTonnage
 } from '#common/helpers/rounded-tonnage.js'
-import { groupAndSum, isYes } from './helpers.js'
+import { groupAndSum } from './helpers.js'
+import { isYes } from '#domain/summary-logs/table-schemas/shared/yes-no.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { isDateInRange } from './filter-records-by-date.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'

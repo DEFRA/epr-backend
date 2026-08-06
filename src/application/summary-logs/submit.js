@@ -9,7 +9,7 @@ import {
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
+import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 
 /**
  * @import { TypedLogger } from '#common/hapi-types.js'
