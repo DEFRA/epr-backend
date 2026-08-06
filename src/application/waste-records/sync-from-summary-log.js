@@ -1,6 +1,6 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { resolveOverseasSites } from './resolve-overseas-sites.js'
-import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
+import { commitSummaryLogSubmission } from '#waste-records/application/commit-summary-log-submission.js'
 import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
@@ -18,8 +18,6 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
- * @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js'
- * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
  */
 
 /**
@@ -155,40 +153,6 @@ const resolveAccreditation = async (
 }
 
 /**
- * @param {object} params
- * @param {ParsedSummaryLog} params.parsedData
- * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
- * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
- * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
- * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
- * @param {string} params.summaryLogId
- */
-const updateWasteBalances = async ({
-  parsedData,
-  accreditation,
-  wasteBalanceService,
-  wasteRecords,
-  user,
-  overseasSites,
-  summaryLogId
-}) => {
-  // We only calculate waste balance for exporters and reprocessor inputs currently
-  const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
-  const shouldCalculateWasteBalance =
-    processingType === PROCESSING_TYPES.EXPORTER ||
-    processingType === PROCESSING_TYPES.REPROCESSOR_INPUT ||
-    processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT
-
-  if (shouldCalculateWasteBalance) {
-    await wasteBalanceService.submitSummaryLog(
-      wasteRecords.map((r) => r.record),
-      { user, accreditation, overseasSites, summaryLogId }
-    )
-  }
-}
-
-/**
  * Counts how the submission's rows changed against the registration's latest
  * committed submission — the same comparison the check-page classification
  * runs — for observability metrics. Added rows count as created, adjusted rows
@@ -237,79 +201,6 @@ const countRecordChanges = async ({
     created: changes.filter((change) => change === RECORD_CHANGE.ADDED).length,
     updated: changes.filter((change) => change === RECORD_CHANGE.ADJUSTED)
       .length
-  }
-}
-
-/**
- * Commits the per-row state for every submission (keyed by accreditation
- * existence) and, for an accredited balance-bearing submission, its waste
- * balance.
- *
- * Every submission records a summary-log-submitted event marking that the
- * summary log was submitted. For an accredited submission that event also
- * carries the waste-balance delta (written via updateWasteBalances). A
- * registered-only / no-accreditation submission has no balance, so its event is
- * zero-delta — the submission is still recorded, it just moves no tonnage.
- *
- * @param {object} params
- * @param {{ file: { id: string }, organisationId: string, registrationId: string }} params.summaryLog
- * @param {string | undefined} params.accreditationId
- * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
- * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
- * @param {ParsedSummaryLog} params.parsedData
- * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
- * @param {ReturnType<typeof createWasteBalanceService>} params.wasteBalanceService
- */
-const commitStateAndBalance = async ({
-  summaryLog,
-  accreditationId,
-  accreditation,
-  wasteRecords,
-  overseasSites,
-  parsedData,
-  user,
-  summaryLogRowStateRepository,
-  wasteBalanceService
-}) => {
-  await writeSummaryLogRowStates({
-    summaryLogRowStateRepository,
-    wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
-    accreditation,
-    ledgerId: {
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
-      accreditationId: accreditationId ?? null
-    },
-    overseasSites,
-    summaryLogId: summaryLog.file.id
-  })
-
-  if (accreditation) {
-    await updateWasteBalances({
-      parsedData,
-      accreditation,
-      wasteBalanceService,
-      wasteRecords,
-      user,
-      overseasSites,
-      summaryLogId: summaryLog.file.id
-    })
-  } else {
-    await wasteBalanceService.commitSummaryLogSubmittedEvent(
-      {
-        registrationId: summaryLog.registrationId,
-        accreditationId: null,
-        organisationId: summaryLog.organisationId
-      },
-      { summaryLogId: summaryLog.file.id, creditTotal: 0 },
-      {
-        id: user.id,
-        ...(user.name && { name: user.name }),
-        email: user.email
-      }
-    )
   }
 }
 
@@ -389,32 +280,34 @@ export const syncFromSummaryLog = (dependencies) => {
         )
       : null
 
+    /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */
+    const ledgerId = {
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      accreditationId: accreditationId ?? null
+    }
+
     // 5. Classify created/updated against the committed head, before committing
     const metrics = await countRecordChanges({
       wasteRecords,
       accreditation,
       overseasSites,
-      ledgerId: {
-        organisationId: summaryLog.organisationId,
-        registrationId: summaryLog.registrationId,
-        accreditationId: accreditationId ?? null
-      },
+      ledgerId,
       ledgerRepository,
       summaryLogRowStateRepository
     })
 
-    // 6. Commit per-row state for every submission and the balance for
-    // accredited balance-bearing ones.
-    await commitStateAndBalance({
-      summaryLog,
-      accreditationId,
-      accreditation,
-      wasteRecords,
-      overseasSites,
-      parsedData,
-      user,
+    // 6. Commit the submission: its per-row state and its ledger event
+    await commitSummaryLogSubmission({
       summaryLogRowStateRepository,
-      wasteBalanceService
+      wasteBalanceService,
+      wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
+      accreditation,
+      ledgerId,
+      processingType,
+      overseasSites,
+      summaryLogId: summaryLog.file.id,
+      user
     })
 
     return metrics

@@ -12,7 +12,9 @@ import {
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
+import { invalidArg } from '#test/type-helpers.js'
 
+/** @type {import('../repository/ledger-schema.js').AccreditedLedgerId} */
 const ledgerId = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
@@ -24,6 +26,9 @@ const createdBy = {
   name: 'Test User',
   email: 'user@example.test'
 }
+
+/** @type {import('#domain/summary-logs/worker/port.js').SubmitUser} */
+const submitter = { ...createdBy, scope: ['some-scope'], role: 'standard_user' }
 
 describe('createWasteBalanceService', () => {
   let ledgerRepository
@@ -376,20 +381,33 @@ describe('createWasteBalanceService', () => {
   })
 
   describe('submitSummaryLog', () => {
-    it('does not touch the ledger when there are no waste records to credit', async () => {
-      await service.submitSummaryLog([], {
-        user: createdBy,
-        accreditation: { id: 'acc-1' },
-        overseasSites: /** @type {*} */ (new Map()),
+    it('credits the ledger with the total the submission carries', async () => {
+      await service.submitSummaryLog({
+        ledgerId,
+        creditTotal: 150,
+        user: submitter,
         summaryLogId: 'log-A'
       })
 
-      const all = await ledgerRepository.findAllInLedger({
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1'
+      const all = await ledgerRepository.findAllInLedger(ledgerId)
+      expect(all).toHaveLength(1)
+      expect(all[0].payload).toEqual({
+        summaryLogId: 'log-A',
+        creditTotal: 150
       })
-      expect(all).toHaveLength(0)
+    })
+
+    it('refuses a ledger with no accreditation behind it', async () => {
+      // The signature takes an accredited ledger, so only an unchecked caller
+      // can get here — which is what the runtime guard is for.
+      await expect(
+        service.submitSummaryLog({
+          ledgerId: invalidArg({ ...ledgerId, accreditationId: null }),
+          creditTotal: 150,
+          user: submitter,
+          summaryLogId: 'log-A'
+        })
+      ).rejects.toThrow('accreditationId must be a string')
     })
   })
 

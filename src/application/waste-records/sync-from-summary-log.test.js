@@ -5,6 +5,10 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { getTargetAmount } from '#waste-balances/application/target-amount.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -69,6 +73,130 @@ const receivedRow = (rowNumber, rowId, date, weight) => ({
   values: [rowId, date, weight]
 })
 
+const BALANCE_BEARING_HEADERS = [
+  'ROW_ID',
+  'DATE_RECEIVED_FOR_REPROCESSING',
+  'EWC_CODE',
+  'DESCRIPTION_WASTE',
+  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+  FIELD_GROSS_WEIGHT,
+  'TARE_WEIGHT',
+  'PALLET_WEIGHT',
+  'NET_WEIGHT',
+  'BAILING_WIRE_PROTOCOL',
+  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+  'WEIGHT_OF_NON_TARGET_MATERIALS',
+  'RECYCLABLE_PROPORTION_PERCENTAGE',
+  'TONNAGE_RECEIVED_FOR_RECYCLING'
+]
+
+const ACCREDITED_DATE = '2026-02-01'
+
+/**
+ * A row carrying every field the reprocessor-input balance classifier needs, so
+ * it classifies INCLUDED and contributes its tonnage.
+ */
+const balanceBearingRow = (rowNumber, rowId, tonnage, prnIssued = 'No') => ({
+  rowNumber,
+  values: [
+    rowId,
+    ACCREDITED_DATE,
+    '15 01 02',
+    'Plastic packaging',
+    prnIssued,
+    10,
+    1,
+    0,
+    9,
+    'No',
+    'Sampling',
+    0,
+    100,
+    tonnage
+  ]
+})
+
+const balanceBearingInput = (rows) =>
+  /** @type {any} */ ({
+    meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+    data: {
+      RECEIVED_LOADS_FOR_REPROCESSING: {
+        location: { sheet: 'Sheet1', row: 1, column: 'A' },
+        headers: BALANCE_BEARING_HEADERS,
+        rows
+      }
+    }
+  })
+
+const EXPORTED_LOAD_HEADERS = [
+  'ROW_ID',
+  'DATE_RECEIVED_FOR_EXPORT',
+  'EWC_CODE',
+  'DESCRIPTION_WASTE',
+  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+  FIELD_GROSS_WEIGHT,
+  'TARE_WEIGHT',
+  'PALLET_WEIGHT',
+  'NET_WEIGHT',
+  'BAILING_WIRE_PROTOCOL',
+  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+  'WEIGHT_OF_NON_TARGET_MATERIALS',
+  'RECYCLABLE_PROPORTION_PERCENTAGE',
+  'TONNAGE_RECEIVED_FOR_EXPORT',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+  'DATE_OF_EXPORT',
+  'BASEL_EXPORT_CODE',
+  'CUSTOMS_CODES',
+  'CONTAINER_NUMBER',
+  'DATE_RECEIVED_BY_OSR',
+  'OSR_ID',
+  'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE'
+]
+
+/**
+ * An exported load carrying every field the exporter balance classifier needs,
+ * so only its overseas-site reference decides whether it is included.
+ */
+const exportedLoadRow = (rowNumber, rowId, tonnage, { osrId }) => ({
+  rowNumber,
+  values: [
+    rowId,
+    ACCREDITED_DATE,
+    '15 01 02',
+    'Plastic packaging',
+    'No',
+    10,
+    1,
+    0,
+    9,
+    'No',
+    'Sampling',
+    0,
+    100,
+    tonnage,
+    tonnage,
+    ACCREDITED_DATE,
+    'B3011',
+    '3915',
+    'CONT-1',
+    ACCREDITED_DATE,
+    osrId,
+    'No'
+  ]
+})
+
+const exportedLoadsInput = (rows) =>
+  /** @type {any} */ ({
+    meta: { PROCESSING_TYPE: { value: 'EXPORTER' } },
+    data: {
+      RECEIVED_LOADS_FOR_EXPORT: {
+        location: { sheet: 'Sheet1', row: 1, column: 'A' },
+        headers: EXPORTED_LOAD_HEADERS,
+        rows
+      }
+    }
+  })
+
 describe('syncFromSummaryLog', () => {
   let wasteBalanceService
   let organisationsRepository
@@ -86,11 +214,15 @@ describe('syncFromSummaryLog', () => {
     }
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
-      findAccreditationById: vi.fn().mockResolvedValue({
-        id: 'acc-default',
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31'
-      })
+      // Both organisations repositories find the accreditation by matching its
+      // own id, so the one returned always carries the id that was asked for.
+      findAccreditationById: vi
+        .fn()
+        .mockImplementation(async (_organisationId, accreditationId) => ({
+          id: accreditationId,
+          validFrom: '2023-01-01',
+          validTo: '2023-12-31'
+        }))
     }
     overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([])
@@ -278,7 +410,7 @@ describe('syncFromSummaryLog', () => {
     ])
   })
 
-  it('updates waste balances when accreditationId is present', async () => {
+  it('credits the accredited ledger with the submission total', async () => {
     const fileId = 'file-wb'
     const extractor = extractorFor(
       fileId,
@@ -289,51 +421,61 @@ describe('syncFromSummaryLog', () => {
 
     await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
 
-    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          rowId: 'row-123',
-          type: WASTE_RECORD_TYPE.EXPORTED
-        })
-      ]),
-      {
-        user: TEST_USER,
-        accreditation: {
-          id: 'acc-default',
-          validFrom: '2023-01-01',
-          validTo: '2023-12-31'
-        },
-        overseasSites: {},
-        summaryLogId: fileId
-      }
-    )
+    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith({
+      ledgerId: {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      },
+      creditTotal: 0,
+      summaryLogId: fileId,
+      user: TEST_USER
+    })
   })
 
-  it('resolves overseas sites for exporter waste balance validation', async () => {
+  it("classifies exporter rows against the registration's resolved overseas sites", async () => {
     const fileId = 'file-ors'
     const extractor = extractorFor(
       fileId,
-      exporterInput([
-        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      exportedLoadsInput([
+        exportedLoadRow(2, 'row-2001', 12.5, { osrId: '001' }),
+        exportedLoadRow(3, 'row-2002', 40, { osrId: '002' })
       ])
     )
 
-    const validFrom = new Date('2024-01-01')
     overseasSitesRepository = {
-      findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa', validFrom }])
+      findByIds: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'site-aaa', validFrom: new Date('2024-01-01') }
+        ])
     }
     organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
       overseasSites: { '001': { overseasSiteId: 'site-aaa' } }
     })
+    organisationsRepository.findAccreditationById.mockResolvedValue({
+      id: 'acc-1',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    })
 
     await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
 
-    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
-      expect.any(Array),
-      expect.objectContaining({
-        overseasSites: { '001': { validFrom } }
-      })
-    )
+    const rowStates =
+      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        { ...LEDGER_ID, accreditationId: 'acc-1' },
+        fileId
+      )
+    const byRowId = new Map(rowStates.map((state) => [state.rowId, state]))
+    expect(byRowId.get('row-2001').classification).toEqual({
+      outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: 12.5
+    })
+    expect(byRowId.get('row-2002').classification.reasons).toEqual([
+      { code: CLASSIFICATION_REASON.ORS_NOT_FOUND }
+    ])
   })
 
   it('commits a zero-delta event for registered-only submissions', async () => {
@@ -449,6 +591,136 @@ describe('syncFromSummaryLog', () => {
       )
 
       expect(result).toEqual({ created: 0, updated: 0 })
+    })
+  })
+
+  describe('the committed submission, against a real ledger', () => {
+    const ACCREDITATION = {
+      id: 'acc-1',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      statusHistory: []
+    }
+    const ACCREDITED_LEDGER_ID = {
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1'
+    }
+
+    const realBalanceSync = (extractor) =>
+      makeSync({
+        extractor,
+        wasteBalanceService: createWasteBalanceService(ledgerRepository)
+      })
+
+    const submittedEvents = async (ledgerId) =>
+      (await ledgerRepository.findAllInLedger(ledgerId)).filter(
+        (event) => event.kind === LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+      )
+
+    beforeEach(() => {
+      organisationsRepository.findAccreditationById.mockResolvedValue(
+        ACCREDITATION
+      )
+    })
+
+    it('credits the ledger with the total carried by the row states it committed', async () => {
+      const fileId = 'file-credit'
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: balanceBearingInput([
+          balanceBearingRow(2, 'row-1001', 1.005),
+          balanceBearingRow(3, 'row-1002', 2.5),
+          balanceBearingRow(4, 'row-1003', 4, 'Yes')
+        ])
+      })
+
+      await realBalanceSync(extractor)(
+        summaryLogFor(fileId, 'acc-1'),
+        TEST_USER
+      )
+
+      const rowStates =
+        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+          ACCREDITED_LEDGER_ID,
+          fileId
+        )
+      const creditFromStates = rowStates.reduce(
+        (total, state) => total + getTargetAmount(state.classification),
+        0
+      )
+
+      const [event] = await submittedEvents(ACCREDITED_LEDGER_ID)
+      expect(event.payload).toEqual({ summaryLogId: fileId, creditTotal: 3.51 })
+      expect(creditFromStates).toBeCloseTo(3.51, 10)
+    })
+
+    it('commits no event when an accredited balance-bearing submission has no rows', async () => {
+      const fileId = 'file-accredited-empty'
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: balanceBearingInput([])
+      })
+
+      await realBalanceSync(extractor)(
+        summaryLogFor(fileId, 'acc-1'),
+        TEST_USER
+      )
+
+      expect(
+        await ledgerRepository.findAllInLedger(ACCREDITED_LEDGER_ID)
+      ).toEqual([])
+    })
+
+    it('commits no event for an accredited registered-only submission', async () => {
+      const fileId = 'file-accredited-reg-only'
+      const extractor = extractorFor(fileId, {
+        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' } },
+        data: {}
+      })
+
+      await realBalanceSync(extractor)(
+        summaryLogFor(fileId, 'acc-1'),
+        TEST_USER
+      )
+
+      expect(
+        await ledgerRepository.findAllInLedger(ACCREDITED_LEDGER_ID)
+      ).toEqual([])
+    })
+
+    it('commits a zero-credit event with no accreditation, even with no rows', async () => {
+      const fileId = 'file-unaccredited-empty'
+      const extractor = extractorFor(fileId, {
+        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+        data: {}
+      })
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        overseasSites: {}
+      })
+
+      await realBalanceSync(extractor)(summaryLogFor(fileId), TEST_USER)
+
+      const [event] = await submittedEvents(LEDGER_ID)
+      expect(event.payload).toEqual({ summaryLogId: fileId, creditTotal: 0 })
+    })
+
+    it('commits the row states whether or not the submission bears a balance', async () => {
+      const fileId = 'file-states-always'
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: balanceBearingInput([balanceBearingRow(2, 'row-1001', 3.25)])
+      })
+
+      await realBalanceSync(extractor)(
+        summaryLogFor(fileId, 'acc-1'),
+        TEST_USER
+      )
+
+      const rowStates =
+        await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+          ACCREDITED_LEDGER_ID,
+          fileId
+        )
+      expect(rowStates.map((state) => state.rowId)).toEqual(['row-1001'])
+      expect(rowStates[0].classification.transactionAmount).toBe(3.25)
     })
   })
 })
