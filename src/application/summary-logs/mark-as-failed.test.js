@@ -1,7 +1,7 @@
 import { vi, describe, it, expect } from 'vitest'
 
 import { markAsSubmissionFailed } from './mark-as-failed.js'
-import { SUMMARY_LOG_STATUS } from './status.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockSummaryLogsRepository } from '#test/mock-repositories.js'
 

@@ -4,7 +4,7 @@ import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
 import {
   markAsValidationFailed,
   markAsSubmissionFailed
-} from '#domain/summary-logs/mark-as-failed.js'
+} from '#application/summary-logs/mark-as-failed.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 

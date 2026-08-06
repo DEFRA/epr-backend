@@ -1,23 +1,11 @@
+import { MAX_ROW_IDS } from '#domain/summary-logs/loads-schema.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
+/** @import {LoadCategory, LoadValidity, Loads} from '#domain/summary-logs/loads-schema.js' */
 /** @import {RecordChange} from './record-change.js' */
-
-/**
- * @typedef {Object} LoadCategory
- * @property {number} count - Total count of loads
- * @property {string[]} rowIds - Row IDs (truncated to MAX_ROW_IDS)
- */
-
-/**
- * @typedef {Object} LoadValidity
- * @property {LoadCategory} valid - Valid loads (no issues)
- * @property {LoadCategory} invalid - Invalid loads (has issues)
- * @property {LoadCategory} included - Loads included in Waste Balance calculation
- * @property {LoadCategory} excluded - Loads excluded from Waste Balance calculation
- */
 
 /**
  * @typedef {Object} ValidityCounts
@@ -30,15 +18,6 @@ import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
  * @property {LoadCategory} included - Loads included in Waste Balance calculation
  * @property {LoadCategory} excluded - Loads excluded from Waste Balance calculation
  */
-
-/**
- * @typedef {Object} Loads
- * @property {LoadValidity} added - Loads added in this upload
- * @property {LoadValidity} unchanged - Loads unchanged from previous uploads
- * @property {LoadValidity} adjusted - Loads adjusted in this upload
- */
-
-const MAX_ROW_IDS = 100
 
 /**
  * Creates a fresh empty load category
