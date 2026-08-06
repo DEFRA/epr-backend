@@ -2,7 +2,7 @@ import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
-/** @typedef {import('#domain/public-register/repository/port.js').PresignedUrlResult} PresignedUrlResult */
+/** @typedef {import('./port.js').PresignedUrlResult} PresignedUrlResult */
 
 /**
  * @typedef {Object} PublicRegisterRepositoryConfig
@@ -15,7 +15,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
  * Creates an S3-based public register repository
  *
  * @param {PublicRegisterRepositoryConfig} config
- * @returns {import('#domain/public-register/repository/port.js').PublicRegisterRepository}
+ * @returns {import('./port.js').PublicRegisterRepository}
  */
 export const createPublicRegisterRepository = ({
   s3Client,

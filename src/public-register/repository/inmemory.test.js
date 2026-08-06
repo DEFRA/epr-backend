@@ -2,7 +2,7 @@ import { describe, it as base, expect } from 'vitest'
 import { createInMemoryPublicRegisterRepository } from './inmemory.js'
 import { testPublicRegisterRepositoryContract } from './port.contract.js'
 
-/** @import {PublicRegisterRepository} from '#domain/public-register/repository/port.js' */
+/** @import {PublicRegisterRepository} from './port.js' */
 /** @import {TestAPI} from 'vitest' */
 
 const it =

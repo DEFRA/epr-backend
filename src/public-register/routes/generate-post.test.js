@@ -5,14 +5,14 @@ import { StatusCodes } from 'http-status-codes'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
+import { createInMemoryPublicRegisterRepository } from '../repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
-import { publicRegisterGeneratePath } from '#routes/v1/public-register/generate/post.js'
+import { publicRegisterGeneratePath } from './generate-post.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 const mockAuditPublicRegisterGenerate = vi.fn()
 
-vi.mock('#root/auditing/public-register.js', () => ({
+vi.mock('../auditing.js', () => ({
   auditPublicRegisterGenerate: (...args) =>
     mockAuditPublicRegisterGenerate(...args)
 }))
@@ -26,7 +26,7 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
   let inMemoryOrganisationsRepository
   let inMemoryOrganisationsRepositoryFactory
 
-  /** @param {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepository - Public register repository*/
+  /** @param {import('../repository/port.js').PublicRegisterRepository} publicRegisterRepository - Public register repository*/
   let inMemoryPublicRegisterRepository
 
   beforeEach(async () => {

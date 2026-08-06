@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generatePublicRegister } from './generate-public-register.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
+import { createInMemoryPublicRegisterRepository } from '../repository/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { formatDateTimeDots } from '#common/helpers/date-formatter.js'

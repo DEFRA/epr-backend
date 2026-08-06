@@ -10,7 +10,7 @@ import {
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { S3Client } from '@aws-sdk/client-s3'
-import { createPublicRegisterRepository } from './public-register.js'
+import { createPublicRegisterRepository } from './s3.js'
 
 const mockStorage = new Map()
 
