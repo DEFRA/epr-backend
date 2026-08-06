@@ -4,6 +4,22 @@ import importX from 'eslint-plugin-import-x'
 import nodePlugin from 'eslint-plugin-n'
 import neostandard from 'neostandard'
 
+const REPOSITORIES = './src/repositories'
+
+// The domain sits at the centre of the application. Code in an outer layer
+// imports inwards to it, and it never imports back out.
+const OUTER_LAYERS = [
+  './src/adapters',
+  './src/application',
+  './src/plugins',
+  REPOSITORIES,
+  './src/routes',
+  './src/server'
+]
+
+const DOMAIN_LAYERING_MESSAGE =
+  'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
+
 const ns = neostandard({
   env: ['node', 'vitest'],
   ignores: [...neostandard.resolveIgnoresFromGitignore()],
@@ -37,7 +53,27 @@ export default [
       'import-x/named': 'error',
       'import-x/namespace': 'error',
       // 'import-x/no-unused-modules': 'error', is broken with flat config: https://github.com/import-js/eslint-plugin-import/issues/3079 (to enable when it's fixed! ☺️)
-      'import-x/no-cycle': 'error'
+      'import-x/no-cycle': 'error',
+      'import-x/no-restricted-paths': [
+        'error',
+        {
+          zones: [
+            {
+              target: './src/domain',
+              from: OUTER_LAYERS.filter((layer) => layer !== REPOSITORIES),
+              message: DOMAIN_LAYERING_MESSAGE
+            },
+            {
+              target: './src/domain',
+              from: REPOSITORIES,
+              // Tests in the domain build fixtures from the repository contract
+              // test data. Nothing else in a repository is available to it.
+              except: ['./organisations/contract'],
+              message: DOMAIN_LAYERING_MESSAGE
+            }
+          ]
+        }
+      ]
     }
   },
   {
