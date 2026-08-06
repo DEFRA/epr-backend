@@ -1,23 +1,33 @@
 import Joi from 'joi'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
+  MATERIAL,
   REPROCESSING_TYPE,
+  TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { Material, ReprocessingType, TonnageBand } from '#domain/organisations/model.js' */
+
+/**
+ * @typedef {{ wasteProcessingType: typeof WASTE_PROCESSING_TYPE.EXPORTER }} ExporterProcessingTypes
+ */
+
+/**
+ * @typedef {{ wasteProcessingType: typeof WASTE_PROCESSING_TYPE.REPROCESSOR, reprocessingType: ReprocessingType }} ReprocessorProcessingTypes
+ */
 
 /**
  * The registration's own processing-type fields, the same shape
  * `AccreditationContext` takes in `#waste-balances/domain/credited-tonnage.js`.
- * An exporter registration is forbidden a reprocessing type, so it arrives
- * absent.
+ * An exporter registration is forbidden a reprocessing type and an approved
+ * reprocessor registration is required to carry one, so the two are separate
+ * shapes rather than one shape with an optional field — a reprocessor without
+ * a reprocessing type cannot be built.
  *
- * @typedef {Object} RegistrationProcessingTypes
- * @property {WasteProcessingTypeValue} wasteProcessingType
- * @property {ReprocessingType} [reprocessingType]
+ * @typedef {ExporterProcessingTypes | ReprocessorProcessingTypes} RegistrationProcessingTypes
  */
 
 /**
@@ -29,8 +39,8 @@ import {
  * @property {string} orgId
  * @property {string} registrationNumber
  * @property {string} accreditationNumber
- * @property {string} material
- * @property {string} tonnageBand
+ * @property {Material} material
+ * @property {TonnageBand} tonnageBand
  * @property {WasteBalanceLedgerId} ledgerId
  * @property {RegistrationProcessingTypes} registration
  * @property {number} awaitingAuthorisationTonnage
@@ -48,6 +58,18 @@ export const REGISTRATION_TYPE = Object.freeze({
   REPROCESSOR_OUTPUT: 'REPROCESSOR_OUTPUT',
   EXPORTER: 'EXPORTER'
 })
+
+/**
+ * @typedef {typeof REGISTRATION_TYPE[keyof typeof REGISTRATION_TYPE]} RegistrationType
+ */
+
+/**
+ * How many ledger reads the report holds in flight at once. Every report row
+ * needs its own ledger read, and a whole report's worth of them released
+ * together would check out the MongoDB driver's connection pool and queue
+ * every other request on the pod behind it.
+ */
+export const LEDGER_READ_CONCURRENCY = 10
 
 const ZERO_BALANCES = Object.freeze({
   wasteBalance: 0,
@@ -226,8 +248,12 @@ const aggregatedRowSchema = Joi.object({
   orgId: Joi.string().required(),
   registrationNumber: Joi.string().required(),
   accreditationNumber: Joi.string().required(),
-  material: Joi.string().required(),
-  tonnageBand: Joi.string().required(),
+  material: Joi.string()
+    .valid(...Object.values(MATERIAL))
+    .required(),
+  tonnageBand: Joi.string()
+    .valid(...Object.values(TONNAGE_BAND))
+    .required(),
   ledgerId: Joi.object({
     organisationId: Joi.string().required(),
     registrationId: Joi.string().required(),
@@ -260,14 +286,14 @@ const aggregatedRowSchema = Joi.object({
  *
  * @param {RegistrationProcessingTypes} registration
  */
-const registrationTypeFor = ({ wasteProcessingType, reprocessingType }) => {
-  if (wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
+const registrationTypeFor = (registration) => {
+  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
     return REGISTRATION_TYPE.EXPORTER
   }
-  if (reprocessingType === REPROCESSING_TYPE.OUTPUT) {
-    return REGISTRATION_TYPE.REPROCESSOR_OUTPUT
-  }
-  return REGISTRATION_TYPE.REPROCESSOR_INPUT
+
+  return registration.reprocessingType === REPROCESSING_TYPE.OUTPUT
+    ? REGISTRATION_TYPE.REPROCESSOR_OUTPUT
+    : REGISTRATION_TYPE.REPROCESSOR_INPUT
 }
 
 /**
@@ -291,11 +317,33 @@ const balancesFor = async (ledgerRepository, ledgerId) => {
 }
 
 /**
+ * A row as the report publishes it: the hierarchy read down from organisation
+ * to accreditation, then the balances it holds, then its PRN tonnage by status.
+ *
+ * @typedef {Object} ReportRow
+ * @property {string} organisationName
+ * @property {string} orgId
+ * @property {string} registrationNumber
+ * @property {RegistrationType} registrationType
+ * @property {string} accreditationNumber
+ * @property {Material} material
+ * @property {TonnageBand} tonnageBand
+ * @property {number} wasteBalance
+ * @property {number} availableWasteBalance
+ * @property {number} awaitingAuthorisationTonnage
+ * @property {number} awaitingAcceptanceTonnage
+ * @property {number} awaitingCancellationTonnage
+ * @property {number} acceptedTonnage
+ * @property {number} cancelledTonnage
+ */
+
+/**
  * Reads down the hierarchy — organisation, registration, accreditation — before
  * the figures, so the response carries the report's column order.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {AggregatedRow} aggregatedRow
+ * @returns {Promise<ReportRow>}
  */
 const buildReportRow = async (
   ledgerRepository,
@@ -323,6 +371,41 @@ const buildReportRow = async (
 })
 
 /**
+ * @template T
+ * @param {number} size
+ * @param {T[]} items
+ * @returns {T[][]}
+ */
+const inBatchesOf = (size, items) =>
+  Array.from({ length: Math.ceil(items.length / size) }, (_, batch) =>
+    items.slice(batch * size, (batch + 1) * size)
+  )
+
+/**
+ * Resolves the rows a batch at a time, so the report never has more than
+ * `LEDGER_READ_CONCURRENCY` ledger reads outstanding however many
+ * accreditations it covers. Awaiting the rows reported so far before touching
+ * the next batch is what holds each batch back until its predecessor lands.
+ *
+ * @param {WasteBalanceLedgerRepository} ledgerRepository
+ * @param {AggregatedRow[]} aggregatedRows
+ */
+const buildReportRows = (ledgerRepository, aggregatedRows) => {
+  /** @type {ReportRow[]} */
+  const nothingReportedYet = []
+
+  return inBatchesOf(LEDGER_READ_CONCURRENCY, aggregatedRows).reduce(
+    async (reportedSoFar, batch) =>
+      (await reportedSoFar).concat(
+        await Promise.all(
+          batch.map((row) => buildReportRow(ledgerRepository, row))
+        )
+      ),
+    Promise.resolve(nothingReportedYet)
+  )
+}
+
+/**
  * @param {import('mongodb').Db} db
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  */
@@ -334,15 +417,13 @@ export const aggregatePrnTonnage = async (db, ledgerRepository) => {
     .aggregate(pipeline)
     .toArray()
 
-  const rows = await Promise.all(
+  const rows = await buildReportRows(
+    ledgerRepository,
     aggregatedRows.map((row) =>
-      buildReportRow(
-        ledgerRepository,
-        Joi.attempt(
-          row,
-          aggregatedRowSchema,
-          `Unreportable PRN tonnage row for accreditation ${row.ledgerId.accreditationId}:`
-        )
+      Joi.attempt(
+        row,
+        aggregatedRowSchema,
+        `Unreportable PRN tonnage row for accreditation ${row.ledgerId.accreditationId}:`
       )
     )
   )
