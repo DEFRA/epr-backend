@@ -7,7 +7,10 @@ import {
 } from './fields-by-operator-category.js'
 import { filterRecordsByDateField } from './filter-records-by-date.js'
 import { aggregateWasteReceived } from './aggregate-waste-received.js'
-import { aggregateWasteExported } from './aggregate-waste-exported.js'
+import {
+  aggregateWasteExported,
+  countOverExportedLoads
+} from './aggregate-waste-exported.js'
 import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
 import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
 
@@ -60,7 +63,10 @@ import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
  * @property {AggregatedRecyclingActivity} recyclingActivity
  * @property {AggregatedExportActivity} [exportActivity]
  * @property {AggregatedWasteSent} wasteSent
- * @property {{ wasteReceivedRecordsExcluded: number }} diagnostics
+ * @property {{
+ *   wasteReceivedRecordsExcluded: number,
+ *   overExportedLoads: number
+ * }} diagnostics
  */
 
 /**
@@ -153,14 +159,15 @@ export function aggregateReportDetail(
         wasteExportedRecords,
         repatriatedRecords: wasteRepatriatedRecords,
         wasteReceivedRecords,
-        startDate,
-        endDate,
         orsDetailsMap,
         operatorCategory
       })
     }),
     wasteSent: aggregateWasteSentOn(wasteSentOnRecords),
-    diagnostics: { wasteReceivedRecordsExcluded }
+    diagnostics: {
+      wasteReceivedRecordsExcluded,
+      overExportedLoads: countOverExportedLoads(wasteReceivedRecords)
+    }
   }
 }
 

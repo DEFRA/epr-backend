@@ -10,7 +10,8 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import { Report, ReportsRepository } from '#reports/repository/port.js'
+ * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
@@ -23,7 +24,7 @@ export const reportsGetDetailPath =
 
 /**
  * @param {HapiRequest} request
- * @param {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail | import('#reports/repository/port.js').Report} report
+ * @param {AggregatedReportDetail | Report} report
  * @param {string} organisationId
  * @param {string} registrationId
  */
@@ -50,6 +51,38 @@ function warnIfWasteRecordsExcluded(
     event: {
       action: 'fetch_or_generate_report',
       reason: `organisationId=${organisationId} registrationId=${registrationId} operatorCategory=${report.operatorCategory} wasteReceivedRecordsExcluded=${wasteReceivedRecordsExcluded}`
+    }
+  })
+}
+
+/**
+ * A load exporting more than it received is physically impossible, so its
+ * contribution to "received but not exported" is clamped to zero. The clamp
+ * discards tonnage silently, and how such a row should be handled is still open
+ * with the business — warning here keeps the condition visible in the meantime.
+ *
+ * @param {HapiRequest} request
+ * @param {AggregatedReportDetail | Report} report
+ * @param {string} organisationId
+ * @param {string} registrationId
+ */
+function warnIfLoadsOverExported(
+  request,
+  report,
+  organisationId,
+  registrationId
+) {
+  if (!('diagnostics' in report) || !report.diagnostics.overExportedLoads) {
+    return
+  }
+
+  const { overExportedLoads } = report.diagnostics
+  request.logger.warn({
+    message:
+      'Loads reporting more tonnage exported than received were clamped to zero in the not-exported figure (PAE-1783)',
+    event: {
+      action: 'fetch_or_generate_report',
+      reason: `organisationId=${organisationId} registrationId=${registrationId} operatorCategory=${report.operatorCategory} overExportedLoads=${overExportedLoads}`
     }
   })
 }
@@ -120,6 +153,7 @@ export const reportsGetDetail = {
     })
 
     warnIfWasteRecordsExcluded(request, report, organisationId, registrationId)
+    warnIfLoadsOverExported(request, report, organisationId, registrationId)
 
     return h
       .response({
