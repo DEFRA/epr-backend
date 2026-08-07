@@ -17,7 +17,10 @@ import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY } from '#reports/domain/aggregation/fields-by-operator-category.js'
-import { filterRecordsByDateField } from '#reports/domain/aggregation/filter-records-by-date.js'
+import {
+  filterRecordsByDateField,
+  isDateInRange
+} from '#reports/domain/aggregation/filter-records-by-date.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 
 /**
@@ -68,7 +71,8 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   rowsInPeriod: number,
  *   rowsUnexported: number,
  *   rowsOverExported: number,
- *   rowsMissingReceived: number
+ *   rowsMissingReceived: number,
+ *   rowsMiscounted: number
  * }} MismatchFinding
  *
  * @typedef {FindingIdentity & {
@@ -142,6 +146,10 @@ const REVIEWABLE_REPORT_STATUSES = new Set([
 const RECEIVED_DATE_FIELD =
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[OPERATOR_CATEGORY.EXPORTER]
     .wasteReceived
+
+const EXPORT_DATE_FIELD =
+  SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[OPERATOR_CATEGORY.EXPORTER]
+    .wasteExported
 
 const TONNAGE_RECEIVED_FIELD = 'TONNAGE_RECEIVED_FOR_EXPORT'
 const TONNAGE_EXPORTED_FIELD = 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
@@ -230,12 +238,33 @@ const classifyLoad = (data) => {
 }
 
 /**
+ * What the live calculation scores a load at: nothing if its export date falls
+ * in the reporting period, otherwise the whole tonnage received. Export *date*
+ * standing in for export *tonnage* is the bug being sized.
+ *
+ * This is the only place the faulty rule is reproduced, and it exists solely so
+ * a run can say how many rows the fix moves. It is meaningful on the sizing run
+ * and meaningless afterwards — once the fix lands, production no longer behaves
+ * this way, and `rowsMiscounted` describes history rather than the estate.
+ *
+ * @param {Record<string, any>} data
+ * @param {string} startDate
+ * @param {string} endDate
+ * @returns {import('#common/helpers/rounded-tonnage.js').RoundedTonnage}
+ */
+const liveContribution = (data, startDate, endDate) =>
+  isDateInRange(data[EXPORT_DATE_FIELD], startDate, endDate)
+    ? ZERO_TONNAGE
+    : toRoundedTonnage(data[TONNAGE_RECEIVED_FIELD])
+
+/**
  * @typedef {{
  *   total: number,
  *   rowsInPeriod: number,
  *   rowsUnexported: number,
  *   rowsOverExported: number,
- *   rowsMissingReceived: number
+ *   rowsMissingReceived: number,
+ *   rowsMiscounted: number
  * }} Recomputation
  */
 
@@ -258,7 +287,10 @@ const recomputeUnexported = (wasteRecordStates, startDate, endDate) => {
     RECEIVED_DATE_FIELD,
     startDate,
     endDate
-  ).map(({ data }) => classifyLoad(data))
+  ).map(({ data }) => ({
+    ...classifyLoad(data),
+    live: liveContribution(data, startDate, endDate)
+  }))
 
   return {
     total: toNumber(
@@ -272,7 +304,10 @@ const recomputeUnexported = (wasteRecordStates, startDate, endDate) => {
       .length,
     rowsOverExported: loads.filter(({ overExported }) => overExported).length,
     rowsMissingReceived: loads.filter(({ missingReceived }) => missingReceived)
-      .length
+      .length,
+    rowsMiscounted: loads.filter(
+      ({ notExported, live }) => !equals(live, notExported)
+    ).length
   }
 }
 
@@ -353,6 +388,7 @@ const detailOf = (finding) =>
   finding.kind === FINDING_KIND.MISMATCH
     ? `stored ${finding.stored}, recomputed ${finding.recomputed}, ` +
       `delta ${finding.delta}, rows ${finding.rowsInPeriod} in period / ` +
+      `${finding.rowsMiscounted} miscounted / ` +
       `${finding.rowsUnexported} unexported / ` +
       `${finding.rowsOverExported} over-exported / ` +
       `${finding.rowsMissingReceived} missing received`
@@ -515,6 +551,7 @@ export const largestUnexportedTonnageDeltas = (findings, limit) =>
  *   rowsUnexported: number,
  *   rowsOverExported: number,
  *   rowsMissingReceived: number,
+ *   rowsMiscounted: number,
  *   totalDelta: number,
  *   totalUnderstated: number,
  *   totalOverstated: number
@@ -542,6 +579,7 @@ export const summariseUnexportedTonnageFindings = (findings) => {
     rowsUnexported: sumOf('rowsUnexported'),
     rowsOverExported: sumOf('rowsOverExported'),
     rowsMissingReceived: sumOf('rowsMissingReceived'),
+    rowsMiscounted: sumOf('rowsMiscounted'),
     totalDelta: delta,
     totalUnderstated: understated,
     totalOverstated: overstated

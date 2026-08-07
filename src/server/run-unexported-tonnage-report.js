@@ -110,6 +110,7 @@ const logSummary = (scanned, findings) => {
     rowsUnexported,
     rowsOverExported,
     rowsMissingReceived,
+    rowsMiscounted,
     totalDelta,
     totalUnderstated,
     totalOverstated
@@ -123,7 +124,8 @@ const logSummary = (scanned, findings) => {
       `affected exporters ${affectedExporters} across ` +
       `${affectedOrganisations} organisations, ` +
       `unresolved exporters ${unresolvedExporters}, ` +
-      `rows ${rowsInPeriod} in period / ${rowsUnexported} unexported / ` +
+      `rows ${rowsInPeriod} in period / ${rowsMiscounted} miscounted / ` +
+      `${rowsUnexported} unexported / ` +
       `${rowsOverExported} over-exported / ` +
       `${rowsMissingReceived} missing received, total delta ${totalDelta} ` +
       `(understated ${totalUnderstated}, overstated ${totalOverstated})`

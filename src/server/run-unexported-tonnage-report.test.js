@@ -59,6 +59,14 @@ const receivedRow = (tonnageReceived, dateReceived = '2026-02-11') => ({
   }
 })
 
+const partlyExportedRow = (tonnageReceived, tonnageExported) => ({
+  ...receivedRow(tonnageReceived),
+  data: {
+    ...receivedRow(tonnageReceived).data,
+    TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: tonnageExported
+  }
+})
+
 const emptyEstateApp = () => ({
   reportsRepository: {
     findAllPeriodicReports: vi.fn().mockResolvedValue([]),
@@ -170,7 +178,7 @@ describe('runUnexportedTonnageReport', () => {
         'Unexported tonnage: scanned 0, mismatches 0, source-missing 0, ' +
           'recompute-failed 0, lookup-failed 0, affected exporters 0 across 0 organisations, ' +
           'unresolved exporters 0, ' +
-          'rows 0 in period / 0 unexported / 0 over-exported / 0 missing received, ' +
+          'rows 0 in period / 0 miscounted / 0 unexported / 0 over-exported / 0 missing received, ' +
           'total delta 0 (understated 0, overstated 0)'
       )
     )
@@ -188,7 +196,7 @@ describe('runUnexportedTonnageReport', () => {
         'unexported_tonnage_mismatch',
         'Unexported tonnage mismatch: org org-1 / registration reg-1, ' +
           'report report-1 (Feb 2026, submitted) - stored 0, recomputed 29.19, ' +
-          'delta 29.19, rows 1 in period / 1 unexported / 0 over-exported / 0 missing received',
+          'delta 29.19, rows 1 in period / 0 miscounted / 1 unexported / 0 over-exported / 0 missing received',
         'report-1'
       )
     )
@@ -198,8 +206,27 @@ describe('runUnexportedTonnageReport', () => {
         'Unexported tonnage: scanned 1, mismatches 1, source-missing 0, ' +
           'recompute-failed 0, lookup-failed 0, affected exporters 1 across 1 organisations, ' +
           'unresolved exporters 0, ' +
-          'rows 1 in period / 1 unexported / 0 over-exported / 0 missing received, ' +
+          'rows 1 in period / 0 miscounted / 1 unexported / 0 over-exported / 0 missing received, ' +
           'total delta 29.19 (understated 29.19, overstated 0)'
+      )
+    )
+  })
+
+  it('counts the rows the live rule scored differently from the corrected one', async () => {
+    const server = buildServer(
+      estateApp([submittedFebReport()], [partlyExportedRow(10, 6)])
+    )
+
+    await runUnexportedTonnageReport(server)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      infoLine(
+        'unexported_tonnage_summary',
+        'Unexported tonnage: scanned 1, mismatches 1, source-missing 0, ' +
+          'recompute-failed 0, lookup-failed 0, affected exporters 1 across 1 organisations, ' +
+          'unresolved exporters 0, ' +
+          'rows 1 in period / 1 miscounted / 1 unexported / 0 over-exported / 0 missing received, ' +
+          'total delta 4 (understated 4, overstated 0)'
       )
     )
   })
@@ -354,7 +381,7 @@ describe('runUnexportedTonnageReport', () => {
         'Unexported tonnage: scanned 3, mismatches 3, source-missing 0, ' +
           'recompute-failed 0, lookup-failed 0, affected exporters 2 across 2 organisations, ' +
           'unresolved exporters 0, ' +
-          'rows 3 in period / 3 unexported / 0 over-exported / 0 missing received, ' +
+          'rows 3 in period / 0 miscounted / 3 unexported / 0 over-exported / 0 missing received, ' +
           'total delta 30 (understated 30, overstated 0)'
       )
     )
@@ -387,7 +414,7 @@ describe('runUnexportedTonnageReport', () => {
           'recompute-failed 0, lookup-failed 1, ' +
           'affected exporters 1 across 1 organisations, ' +
           'unresolved exporters 1, ' +
-          'rows 1 in period / 1 unexported / 0 over-exported / 0 missing received, ' +
+          'rows 1 in period / 0 miscounted / 1 unexported / 0 over-exported / 0 missing received, ' +
           'total delta 29.19 (understated 29.19, overstated 0)'
       )
     )
