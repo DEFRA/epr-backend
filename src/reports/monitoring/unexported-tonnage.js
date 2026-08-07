@@ -335,15 +335,32 @@ const mismatchesOf = (findings) =>
   )
 
 /**
+ * @param {UnexportedTonnageFinding[]} findings
+ * @param {keyof FindingIdentity} field
+ * @returns {number}
+ */
+const distinctCount = (findings, field) =>
+  new Set(findings.map((finding) => finding[field])).size
+
+/**
  * The scale figures the run's summary line reports. `totalDelta` and the row
  * counts cover the mismatches only — the tonnage and data a backfill would move.
+ *
+ * An exporter is one accredited exporter registration, which is the unit the
+ * regulator deals with; an organisation may hold more than one. Both are
+ * counted over the mismatches alone, so a report whose rows could not be
+ * resolved does not present as a known-wrong exporter — those are reported
+ * separately as `unresolvedExporters`, the population whose size is unknown
+ * rather than zero.
  *
  * @param {UnexportedTonnageFinding[]} findings
  * @returns {{
  *   mismatches: number,
  *   sourceMissing: number,
  *   recomputeFailed: number,
+ *   affectedExporters: number,
  *   affectedOrganisations: number,
+ *   unresolvedExporters: number,
  *   rowsInPeriod: number,
  *   rowsUnexported: number,
  *   rowsOverExported: number,
@@ -353,6 +370,9 @@ const mismatchesOf = (findings) =>
 export const summariseUnexportedTonnageFindings = (findings) => {
   const countOf = (kind) => findings.filter((f) => f.kind === kind).length
   const mismatches = mismatchesOf(findings)
+  const unresolved = findings.filter(
+    ({ kind }) => kind !== FINDING_KIND.MISMATCH
+  )
   const sumOf = (field) =>
     mismatches.reduce((total, finding) => total + finding[field], 0)
 
@@ -360,7 +380,9 @@ export const summariseUnexportedTonnageFindings = (findings) => {
     mismatches: mismatches.length,
     sourceMissing: countOf(FINDING_KIND.SOURCE_MISSING),
     recomputeFailed: countOf(FINDING_KIND.RECOMPUTE_FAILED),
-    affectedOrganisations: new Set(findings.map((f) => f.organisationId)).size,
+    affectedExporters: distinctCount(mismatches, 'registrationId'),
+    affectedOrganisations: distinctCount(mismatches, 'organisationId'),
+    unresolvedExporters: distinctCount(unresolved, 'registrationId'),
     rowsInPeriod: sumOf('rowsInPeriod'),
     rowsUnexported: sumOf('rowsUnexported'),
     rowsOverExported: sumOf('rowsOverExported'),

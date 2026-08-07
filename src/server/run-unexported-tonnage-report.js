@@ -30,7 +30,9 @@ const runReport = async (server) => {
     mismatches,
     sourceMissing,
     recomputeFailed,
+    affectedExporters,
     affectedOrganisations,
+    unresolvedExporters,
     rowsInPeriod,
     rowsUnexported,
     rowsOverExported,
@@ -41,7 +43,9 @@ const runReport = async (server) => {
     message:
       `Unexported tonnage: scanned ${scanned}, mismatches ${mismatches}, ` +
       `source-missing ${sourceMissing}, recompute-failed ${recomputeFailed}, ` +
-      `affected organisations ${affectedOrganisations}, ` +
+      `affected exporters ${affectedExporters} across ` +
+      `${affectedOrganisations} organisations, ` +
+      `unresolved exporters ${unresolvedExporters}, ` +
       `rows ${rowsInPeriod} in period / ${rowsUnexported} unexported / ` +
       `${rowsOverExported} over-exported, total delta ${totalDelta}`
   })

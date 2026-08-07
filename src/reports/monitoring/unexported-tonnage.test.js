@@ -388,9 +388,10 @@ describe('unexported-tonnage', () => {
   })
 
   describe('summariseUnexportedTonnageFindings', () => {
-    const mismatchOf = (organisationId, delta, rows = {}) => ({
+    const mismatchOf = (organisationId, registrationId, delta, rows = {}) => ({
       kind: 'mismatch',
       organisationId,
+      registrationId,
       delta,
       rowsInPeriod: 1,
       rowsUnexported: 1,
@@ -400,15 +401,26 @@ describe('unexported-tonnage', () => {
 
     const SPREAD_OF_FINDINGS = /** @type {UnexportedTonnageFinding[]} */ (
       /** @type {unknown} */ ([
-        mismatchOf('org-1', 29.19, {
+        mismatchOf('org-1', 'reg-1', 29.19, {
           rowsInPeriod: 4,
           rowsUnexported: 3,
           rowsOverExported: 1
         }),
-        mismatchOf('org-1', -0.81),
-        mismatchOf('org-2', 4, { rowsInPeriod: 2, rowsUnexported: 2 }),
-        { kind: 'source-missing', organisationId: 'org-3' },
-        { kind: 'recompute-failed', organisationId: 'org-4' }
+        mismatchOf('org-1', 'reg-2', -0.81),
+        mismatchOf('org-2', 'reg-3', 4, {
+          rowsInPeriod: 2,
+          rowsUnexported: 2
+        }),
+        {
+          kind: 'source-missing',
+          organisationId: 'org-3',
+          registrationId: 'reg-4'
+        },
+        {
+          kind: 'recompute-failed',
+          organisationId: 'org-4',
+          registrationId: 'reg-5'
+        }
       ])
     )
 
@@ -419,11 +431,55 @@ describe('unexported-tonnage', () => {
         mismatches: 3,
         sourceMissing: 1,
         recomputeFailed: 1,
-        affectedOrganisations: 4,
+        affectedExporters: 3,
+        affectedOrganisations: 2,
+        unresolvedExporters: 2,
         rowsInPeriod: 7,
         rowsUnexported: 6,
         rowsOverExported: 1,
         totalDelta: 32.38
+      })
+    })
+
+    it('counts an exporter once however many of its reports are wrong', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          mismatchOf('org-1', 'reg-1', 5),
+          mismatchOf('org-1', 'reg-1', 7)
+        ])
+      )
+
+      const { affectedExporters, affectedOrganisations } =
+        summariseUnexportedTonnageFindings(findings)
+
+      expect({ affectedExporters, affectedOrganisations }).toStrictEqual({
+        affectedExporters: 1,
+        affectedOrganisations: 1
+      })
+    })
+
+    it('keeps an exporter whose rows could not be resolved out of the affected count', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          {
+            kind: 'source-missing',
+            organisationId: 'org-1',
+            registrationId: 'reg-1'
+          }
+        ])
+      )
+
+      const { affectedExporters, affectedOrganisations, unresolvedExporters } =
+        summariseUnexportedTonnageFindings(findings)
+
+      expect({
+        affectedExporters,
+        affectedOrganisations,
+        unresolvedExporters
+      }).toStrictEqual({
+        affectedExporters: 0,
+        affectedOrganisations: 0,
+        unresolvedExporters: 1
       })
     })
   })

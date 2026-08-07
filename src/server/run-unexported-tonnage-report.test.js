@@ -144,7 +144,8 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Unexported tonnage: scanned 0, mismatches 0, source-missing 0, ' +
-        'recompute-failed 0, affected organisations 0, ' +
+        'recompute-failed 0, affected exporters 0 across 0 organisations, ' +
+        'unresolved exporters 0, ' +
         'rows 0 in period / 0 unexported / 0 over-exported, total delta 0'
     })
   })
@@ -165,13 +166,14 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Unexported tonnage: scanned 1, mismatches 1, source-missing 0, ' +
-        'recompute-failed 0, affected organisations 1, ' +
+        'recompute-failed 0, affected exporters 1 across 1 organisations, ' +
+        'unresolved exporters 0, ' +
         'rows 1 in period / 1 unexported / 0 over-exported, total delta 29.19'
     })
     expect(logger.warn).not.toHaveBeenCalled()
   })
 
-  it('counts distinct affected organisations and totals the delta across them', async () => {
+  it('counts distinct affected exporters and organisations, and totals the delta across them', async () => {
     const server = buildServer(
       estateApp(
         [
@@ -192,7 +194,8 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Unexported tonnage: scanned 3, mismatches 3, source-missing 0, ' +
-        'recompute-failed 0, affected organisations 2, ' +
+        'recompute-failed 0, affected exporters 2 across 2 organisations, ' +
+        'unresolved exporters 0, ' +
         'rows 3 in period / 3 unexported / 0 over-exported, total delta 30'
     })
   })
