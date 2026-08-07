@@ -1,76 +1,36 @@
 import { describe, it, expect } from 'vitest'
 import { createInMemoryFeatureFlags } from './feature-flags.inmemory.js'
 
+/**
+ * @type {Array<[
+ *   keyof import('./feature-flags.port.js').FeatureFlags,
+ *   keyof import('./feature-flags.port.js').FeatureFlagOverrides
+ * ]>}
+ */
+const FLAGS = [
+  ['isDevEndpointsEnabled', 'devEndpoints'],
+  ['isPreCpaResubmissionBackfillEnabled', 'preCpaResubmissionBackfill'],
+  ['isPreCpaResubmissionReportEnabled', 'preCpaResubmissionReport'],
+  ['isStaleIssuedTonnageReportEnabled', 'staleIssuedTonnageReport'],
+  ['isUnexportedTonnageReportEnabled', 'unexportedTonnageReport']
+]
+
 describe('createInMemoryFeatureFlags', () => {
-  it('returns true when devEndpoints flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({ devEndpoints: true })
-    expect(flags.isDevEndpointsEnabled()).toBe(true)
+  it.each(FLAGS)('%s returns true when %s is enabled', (method, flag) => {
+    const flags = createInMemoryFeatureFlags({ [flag]: true })
+
+    expect(flags[method]()).toBe(true)
   })
 
-  it('returns false when devEndpoints flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({ devEndpoints: false })
-    expect(flags.isDevEndpointsEnabled()).toBe(false)
+  it.each(FLAGS)('%s returns false when %s is disabled', (method, flag) => {
+    const flags = createInMemoryFeatureFlags({ [flag]: false })
+
+    expect(flags[method]()).toBe(false)
   })
 
-  it('returns false when devEndpoints flag is not provided', () => {
+  it.each(FLAGS)('%s returns false when %s is not provided', (method) => {
     const flags = createInMemoryFeatureFlags({})
-    expect(flags.isDevEndpointsEnabled()).toBe(false)
-  })
 
-  it('returns true when staleIssuedTonnageReport flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      staleIssuedTonnageReport: true
-    })
-    expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(true)
-  })
-
-  it('returns false when staleIssuedTonnageReport flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      staleIssuedTonnageReport: false
-    })
-    expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(false)
-  })
-
-  it('returns false when staleIssuedTonnageReport flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(false)
-  })
-
-  it('returns true when preCpaResubmissionReport flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      preCpaResubmissionReport: true
-    })
-    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(true)
-  })
-
-  it('returns false when preCpaResubmissionReport flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      preCpaResubmissionReport: false
-    })
-    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(false)
-  })
-
-  it('returns false when preCpaResubmissionReport flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(false)
-  })
-
-  it('returns true when preCpaResubmissionBackfill flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      preCpaResubmissionBackfill: true
-    })
-    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(true)
-  })
-
-  it('returns false when preCpaResubmissionBackfill flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      preCpaResubmissionBackfill: false
-    })
-    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(false)
-  })
-
-  it('returns false when preCpaResubmissionBackfill flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(false)
+    expect(flags[method]()).toBe(false)
   })
 })
