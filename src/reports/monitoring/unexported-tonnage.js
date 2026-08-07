@@ -67,7 +67,8 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   delta: number,
  *   rowsInPeriod: number,
  *   rowsUnexported: number,
- *   rowsOverExported: number
+ *   rowsOverExported: number,
+ *   rowsMissingReceived: number
  * }} MismatchFinding
  *
  * @typedef {FindingIdentity & {
@@ -188,24 +189,44 @@ export const findReviewableReportRows = (periodicReports) =>
 
 /**
  * A load's contribution to the figure: the tonnage received for export that has
- * not yet been exported, and whether the row claims more exported than it
- * received. The contribution is clamped at zero for such a row, since it is a
- * data error rather than a negative amount on site — how it should be handled at
- * all is still open with the business, so the sizing run takes the conservative
- * reading and counts the rows so the decision has a number behind it.
+ * not yet been exported, and what is wrong with the row if anything.
+ *
+ * Every field on the exporter received-loads table is optional, so a blank
+ * received tonnage is possible and reads as zero. Left alone that row would
+ * present as having exported more than it received, which is a different defect
+ * with a different remedy — the business is being asked to rule on genuine
+ * over-exports, so a blank is counted as its own thing rather than folded in.
+ *
+ * The contribution is clamped at zero for both, since neither is a negative
+ * amount on site. How an over-exporting row should be handled at all is still
+ * open with the business, so the sizing run takes the conservative reading and
+ * counts the rows so the decision has a number behind it.
  *
  * @param {Record<string, any>} data
  * @returns {{
  *   notExported: import('#common/helpers/rounded-tonnage.js').RoundedTonnage,
- *   overExported: boolean
+ *   overExported: boolean,
+ *   missingReceived: boolean
  * }}
  */
 const classifyLoad = (data) => {
-  const received = toRoundedTonnage(data[TONNAGE_RECEIVED_FIELD])
   const exported = toRoundedTonnage(data[TONNAGE_EXPORTED_FIELD])
+  if (isNil(data[TONNAGE_RECEIVED_FIELD])) {
+    return {
+      notExported: ZERO_TONNAGE,
+      overExported: false,
+      missingReceived: true
+    }
+  }
+
+  const received = toRoundedTonnage(data[TONNAGE_RECEIVED_FIELD])
   return greaterThan(exported, received)
-    ? { notExported: ZERO_TONNAGE, overExported: true }
-    : { notExported: subtractTonnage(received, exported), overExported: false }
+    ? { notExported: ZERO_TONNAGE, overExported: true, missingReceived: false }
+    : {
+        notExported: subtractTonnage(received, exported),
+        overExported: false,
+        missingReceived: false
+      }
 }
 
 /**
@@ -213,7 +234,8 @@ const classifyLoad = (data) => {
  *   total: number,
  *   rowsInPeriod: number,
  *   rowsUnexported: number,
- *   rowsOverExported: number
+ *   rowsOverExported: number,
+ *   rowsMissingReceived: number
  * }} Recomputation
  */
 
@@ -248,7 +270,9 @@ const recomputeUnexported = (wasteRecordStates, startDate, endDate) => {
     rowsInPeriod: loads.length,
     rowsUnexported: loads.filter(({ notExported }) => !isZero(notExported))
       .length,
-    rowsOverExported: loads.filter(({ overExported }) => overExported).length
+    rowsOverExported: loads.filter(({ overExported }) => overExported).length,
+    rowsMissingReceived: loads.filter(({ missingReceived }) => missingReceived)
+      .length
   }
 }
 
@@ -303,8 +327,7 @@ export const diagnoseReportRow = (row, sourceRowStates) => {
     }
   }
 
-  const { total, rowsInPeriod, rowsUnexported, rowsOverExported } =
-    recomputation
+  const { total, ...rowCounts } = recomputation
   if (equals(total, row.storedUnexported)) {
     return null
   }
@@ -315,9 +338,7 @@ export const diagnoseReportRow = (row, sourceRowStates) => {
     stored: row.storedUnexported,
     recomputed: total,
     delta: toNumber(subtract(total, row.storedUnexported)),
-    rowsInPeriod,
-    rowsUnexported,
-    rowsOverExported
+    ...rowCounts
   }
 }
 
@@ -332,7 +353,9 @@ const detailOf = (finding) =>
   finding.kind === FINDING_KIND.MISMATCH
     ? `stored ${finding.stored}, recomputed ${finding.recomputed}, ` +
       `delta ${finding.delta}, rows ${finding.rowsInPeriod} in period / ` +
-      `${finding.rowsUnexported} unexported / ${finding.rowsOverExported} over-exported`
+      `${finding.rowsUnexported} unexported / ` +
+      `${finding.rowsOverExported} over-exported / ` +
+      `${finding.rowsMissingReceived} missing received`
     : finding.reason
 
 /**
@@ -491,6 +514,7 @@ export const largestUnexportedTonnageDeltas = (findings, limit) =>
  *   rowsInPeriod: number,
  *   rowsUnexported: number,
  *   rowsOverExported: number,
+ *   rowsMissingReceived: number,
  *   totalDelta: number,
  *   totalUnderstated: number,
  *   totalOverstated: number
@@ -517,6 +541,7 @@ export const summariseUnexportedTonnageFindings = (findings) => {
     rowsInPeriod: sumOf('rowsInPeriod'),
     rowsUnexported: sumOf('rowsUnexported'),
     rowsOverExported: sumOf('rowsOverExported'),
+    rowsMissingReceived: sumOf('rowsMissingReceived'),
     totalDelta: delta,
     totalUnderstated: understated,
     totalOverstated: overstated

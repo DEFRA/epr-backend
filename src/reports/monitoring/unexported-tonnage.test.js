@@ -76,6 +76,7 @@ const mismatch = (overrides = {}) =>
     rowsInPeriod: 1,
     rowsUnexported: 1,
     rowsOverExported: 0,
+    rowsMissingReceived: 0,
     ...overrides
   })
 
@@ -266,6 +267,31 @@ describe('unexported-tonnage', () => {
       )
     })
 
+    it('counts a row with no received tonnage apart from one that over-exported', () => {
+      const finding = diagnoseWithRows(buildRow({ storedUnexported: 5 }), [
+        buildReceivedRow({
+          TONNAGE_RECEIVED_FOR_EXPORT: null,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 7
+        }),
+        buildReceivedRow({
+          TONNAGE_RECEIVED_FOR_EXPORT: 10,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12
+        })
+      ])
+
+      expect(finding).toStrictEqual(
+        mismatch({
+          stored: 5,
+          recomputed: 0,
+          delta: -5,
+          rowsInPeriod: 2,
+          rowsUnexported: 0,
+          rowsOverExported: 1,
+          rowsMissingReceived: 1
+        })
+      )
+    })
+
     it('counts the rows behind the figure, so the scale of a backfill is visible', () => {
       const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 10 }),
@@ -367,16 +393,18 @@ describe('unexported-tonnage', () => {
         mismatch({
           recomputed: 29.19,
           delta: 29.19,
-          rowsInPeriod: 3,
+          rowsInPeriod: 4,
           rowsUnexported: 2,
-          rowsOverExported: 1
+          rowsOverExported: 1,
+          rowsMissingReceived: 1
         })
       )
 
       expect(line).toBe(
         'Unexported tonnage mismatch: org org-1 / registration reg-1, ' +
           'report report-1 (Feb 2026, submitted) - stored 0, recomputed 29.19, ' +
-          'delta 29.19, rows 3 in period / 2 unexported / 1 over-exported'
+          'delta 29.19, rows 4 in period / 2 unexported / 1 over-exported / ' +
+          '1 missing received'
       )
     })
 
@@ -431,15 +459,17 @@ describe('unexported-tonnage', () => {
       rowsInPeriod: 1,
       rowsUnexported: 1,
       rowsOverExported: 0,
+      rowsMissingReceived: 0,
       ...rows
     })
 
     const SPREAD_OF_FINDINGS = /** @type {UnexportedTonnageFinding[]} */ (
       /** @type {unknown} */ ([
         mismatchOf('org-1', 'reg-1', 29.19, {
-          rowsInPeriod: 4,
+          rowsInPeriod: 5,
           rowsUnexported: 3,
-          rowsOverExported: 1
+          rowsOverExported: 1,
+          rowsMissingReceived: 1
         }),
         mismatchOf('org-1', 'reg-2', -0.81),
         mismatchOf('org-2', 'reg-3', 4, {
@@ -475,9 +505,10 @@ describe('unexported-tonnage', () => {
         affectedExporters: 3,
         affectedOrganisations: 2,
         unresolvedExporters: 3,
-        rowsInPeriod: 7,
+        rowsInPeriod: 8,
         rowsUnexported: 6,
         rowsOverExported: 1,
+        rowsMissingReceived: 1,
         totalDelta: 32.38,
         totalUnderstated: 33.19,
         totalOverstated: 0.81
