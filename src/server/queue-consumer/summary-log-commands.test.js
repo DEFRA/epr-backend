@@ -4,13 +4,13 @@ import { summaryLogCommandHandlers } from './summary-log-commands.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
-vi.mock('#domain/summary-logs/mark-as-failed.js')
+vi.mock('#application/summary-logs/mark-as-failed.js')
 
 const { createSummaryLogsValidator } =
   await import('#application/summary-logs/validate.js')
 const { submitSummaryLog } = await import('#application/summary-logs/submit.js')
 const { markAsValidationFailed, markAsSubmissionFailed } =
-  await import('#domain/summary-logs/mark-as-failed.js')
+  await import('#application/summary-logs/mark-as-failed.js')
 
 /**
  * @param {string} command

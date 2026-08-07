@@ -197,4 +197,76 @@ describe('MongoDB summary logs repository', () => {
       ).rejects.toThrow('Connection timeout')
     })
   })
+
+  describe('legacy numeric row IDs', () => {
+    const category = (rowIds) => ({ count: rowIds.length, rowIds })
+
+    const validity = (rowIds) => ({
+      valid: category(rowIds),
+      invalid: category([]),
+      included: category([]),
+      excluded: category([])
+    })
+
+    /**
+     * Summary logs written before ROW_ID coercion hold row IDs as numbers.
+     * No current writer produces that shape and the storage schema rejects it,
+     * so the document has to be seeded straight into the collection.
+     */
+    const insertLegacySummaryLog = async (mongoClient, overrides) => {
+      const id = `legacy-rowids-${randomUUID()}`
+
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection('summary-logs')
+        .insertOne({
+          _id: id,
+          version: 1,
+          ...summaryLogFactory.submitted(overrides),
+          loads: {
+            added: validity([1000, 1001]),
+            unchanged: validity([]),
+            adjusted: validity([])
+          }
+        })
+
+      return id
+    }
+
+    it('findById returns them as strings', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const id = await insertLegacySummaryLog(mongoClient, {})
+
+      const found = await summaryLogsRepository.findById(id)
+
+      expect(found?.summaryLog.loads?.added.valid.rowIds).toEqual([
+        '1000',
+        '1001'
+      ])
+    })
+
+    it('findAllByOrgReg returns them as strings', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const organisationId = `org-${randomUUID()}`
+      const registrationId = `reg-${randomUUID()}`
+      await insertLegacySummaryLog(mongoClient, {
+        organisationId,
+        registrationId
+      })
+
+      const results = await summaryLogsRepository.findAllByOrgReg(
+        organisationId,
+        registrationId
+      )
+
+      expect(results[0]?.summaryLog.loads?.added.valid.rowIds).toEqual([
+        '1000',
+        '1001'
+      ])
+    })
+  })
 })

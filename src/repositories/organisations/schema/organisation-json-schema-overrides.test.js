@@ -186,3 +186,44 @@ describe('status keys in the JSON editor schema (PAE-1645)', () => {
     )
   })
 })
+
+describe('status history in the JSON editor schema (PAE-1809)', () => {
+  const collections = ['registrations', 'accreditations']
+
+  const statusHistoryOf = (collection) =>
+    organisationJSONSchemaOverrides.describe().keys[collection].items[0].keys
+      .statusHistory
+
+  const entryOf = (collection) => statusHistoryOf(collection).items[0]
+
+  it.each(collections)(
+    'leaves the %s status history editable',
+    (collection) => {
+      expect(statusHistoryOf(collection).metas).toBeUndefined()
+    }
+  )
+
+  it.each(collections)(
+    'freezes updatedBy but leaves status editable on every %s status history entry',
+    (collection) => {
+      const entry = entryOf(collection)
+
+      expect(entry.keys.status.metas).toBeUndefined()
+      expect(entry.keys.updatedBy.metas).toEqual(
+        expect.arrayContaining([{ readOnly: true }])
+      )
+    }
+  )
+
+  it.each(collections)(
+    'keeps updatedAt an editable, required ISO date on every %s status history entry',
+    (collection) => {
+      const entry = entryOf(collection)
+
+      expect(entry.keys.updatedAt.metas).toBeUndefined()
+      expect(entry.keys.updatedAt.flags.presence).toBe('required')
+      expect(entry.keys.updatedAt.flags.format).toBe('iso')
+      expect(entry.keys.status.flags.presence).toBe('required')
+    }
+  )
+})

@@ -3,7 +3,7 @@ import {
   SUBMISSION_PROCESSING_STATUSES,
   SUMMARY_LOG_STATUS,
   transitionStatus
-} from './status.js'
+} from '#domain/summary-logs/status.js'
 
 /**
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'

@@ -2,18 +2,20 @@ import { describe, it, expect } from 'vitest'
 
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+
+/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 const overseasSites = /** @type {any} */ (new Map())
 
 describe('projectSummaryLogRowState', () => {
   it('classifies the record and coerces its stored tonnages to two decimal places', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
       rowId: '1',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: {
         processingType: 'REPROCESSOR_REGISTERED_ONLY',
         TONNAGE_RECEIVED_FOR_RECYCLING: 1.005,
@@ -42,12 +44,12 @@ describe('projectSummaryLogRowState', () => {
   })
 
   it('hoists processingType to a top-level field, leaving it out of the stored data', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
       rowId: '1',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: {
         processingType: 'REPROCESSOR_REGISTERED_ONLY',
         supplierName: 'Acme'
@@ -61,12 +63,12 @@ describe('projectSummaryLogRowState', () => {
   })
 
   it('drops the redundant ROW_ID key from the stored data', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
       rowId: '1011',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: {
         processingType: 'REPROCESSOR_REGISTERED_ONLY',
         ROW_ID: 1011,
@@ -81,12 +83,12 @@ describe('projectSummaryLogRowState', () => {
   })
 
   it('stores a row state that reconciles by construction — NET equals GROSS minus TARE minus PALLET at 2dp', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
       rowId: '3',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: {
         processingType: 'REPROCESSOR_REGISTERED_ONLY',
         GROSS_WEIGHT: 10.004,
@@ -104,32 +106,13 @@ describe('projectSummaryLogRowState', () => {
     )
   })
 
-  it('coerces a numeric rowId to a string', () => {
-    const record = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: 1000,
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
-      data: { processingType: 'REPROCESSOR_REGISTERED_ONLY' }
-    }
-
-    const projected = projectSummaryLogRowState(
-      /** @type {any} */ (record),
-      null,
-      overseasSites
-    )
-
-    expect(projected.rowId).toBe('1000')
-  })
-
   it('coerces a copy, leaving the source record data at full precision', () => {
+    /** @type {WasteRecord} */
     const record = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
       rowId: '2',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      versions: [],
       data: { processingType: 'REPROCESSOR_REGISTERED_ONLY', NET_WEIGHT: 7.536 }
     }
 

@@ -30,8 +30,7 @@ describe('validateDataBusiness', () => {
             ROW_ID: rowId,
             DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
             GROSS_WEIGHT: 100
-          },
-          versions: []
+          }
         },
         issues: []
       })
