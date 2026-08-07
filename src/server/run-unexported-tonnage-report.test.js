@@ -6,7 +6,6 @@ import { runUnexportedTonnageReport } from './run-unexported-tonnage-report.js'
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: vi.fn(),
-    warn: vi.fn(),
     error: vi.fn()
   }
 }))
@@ -164,7 +163,6 @@ describe('runUnexportedTonnageReport', () => {
 
     await runUnexportedTonnageReport(server)
 
-    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.error).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
@@ -204,7 +202,6 @@ describe('runUnexportedTonnageReport', () => {
           'total delta 29.19 (understated 29.19, overstated 0)'
       )
     )
-    expect(logger.warn).not.toHaveBeenCalled()
   })
 
   const estateWithNoSourceSummaryLog = () => {
@@ -324,9 +321,13 @@ describe('runUnexportedTonnageReport', () => {
 
     await runUnexportedTonnageReport(server)
 
-    expect(logger.info).not.toHaveBeenCalledWith({
-      message: expect.stringContaining('largest deltas')
-    })
+    expect(logger.info).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: expect.objectContaining({
+          action: 'unexported_tonnage_largest_deltas'
+        })
+      })
+    )
   })
 
   it('counts distinct affected exporters and organisations, and totals the delta across them', async () => {
