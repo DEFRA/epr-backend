@@ -1,4 +1,5 @@
 import { greaterThan, toNumber } from '#common/helpers/decimal-utils.js'
+import { isNil } from '#common/helpers/is-nil.js'
 import {
   ZERO_TONNAGE,
   addTonnage,
@@ -10,6 +11,11 @@ import { isYes } from '#domain/summary-logs/table-schemas/shared/yes-no.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
+
+/**
+ * @import { RoundedTonnage } from '#common/helpers/rounded-tonnage.js'
+ * @import { ReportableWasteRecordState } from './aggregate-report-detail.js'
+ */
 
 const ORS_ID_DIGITS = 3
 const ZERO = '0'
@@ -99,13 +105,49 @@ function getTonnageRepatriated(repatriatedRecords) {
 }
 
 /**
- * A load's contribution to "packaging waste received but not exported": the
- * tonnage received for export less the tonnage actually exported, with a blank
- * exported tonnage read as zero. Clamped at zero — a row reporting more exported
- * than received is a data error, not waste owed back.
+ * Whether a load claims to have exported more than it received. Physically
+ * impossible, so it marks a data error rather than a quantity.
+ *
+ * A load with no received tonnage recorded is excluded: every field on the
+ * received-loads table is optional, so a blank reads as zero and would
+ * otherwise present as an over-export. That is a different defect with a
+ * different remedy, and folding the two together would misreport both.
  *
  * @param {Record<string, any>} data
- * @returns {import('#common/helpers/rounded-tonnage.js').RoundedTonnage}
+ * @returns {boolean}
+ */
+function isOverExported(data) {
+  return (
+    !isNil(data.TONNAGE_RECEIVED_FOR_EXPORT) &&
+    greaterThan(
+      toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED),
+      toRoundedTonnage(data.TONNAGE_RECEIVED_FOR_EXPORT)
+    )
+  )
+}
+
+/**
+ * How many loads received in the period were clamped by
+ * {@link tonnageStillOnSite}. The clamp discards tonnage silently, and how such
+ * a row should be handled is still open with the business, so the count is
+ * carried as a diagnostic rather than left invisible.
+ *
+ * @param {ReportableWasteRecordState[]} wasteReceivedRecords
+ * @returns {number}
+ */
+export function countOverExportedLoads(wasteReceivedRecords) {
+  return wasteReceivedRecords.filter(({ data }) => isOverExported(data)).length
+}
+
+/**
+ * A load's contribution to "packaging waste received but not exported": the
+ * tonnage received for export less the tonnage actually exported, with a blank
+ * exported tonnage read as zero. Clamped at zero for a row exporting more than
+ * it received, or with no received tonnage recorded at all — neither is waste
+ * owed back.
+ *
+ * @param {Record<string, any>} data
+ * @returns {RoundedTonnage}
  */
 function tonnageStillOnSite(data) {
   const received = toRoundedTonnage(data.TONNAGE_RECEIVED_FOR_EXPORT)
@@ -120,7 +162,7 @@ function tonnageStillOnSite(data) {
  * load. A load counts on its exported tonnage alone: an export date without an
  * exported tonnage means the waste is still on site, so the date plays no part.
  *
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} wasteReceivedRecords
+ * @param {ReportableWasteRecordState[]} wasteReceivedRecords
  * @returns {number}
  */
 function calculateTonnageReceivedNotExported(wasteReceivedRecords) {
@@ -136,7 +178,7 @@ function calculateTonnageReceivedNotExported(wasteReceivedRecords) {
  * Sum refused, stopped, and refused-or-stopped export tonnages. The row
  * tonnages are pre-rounded 2dp row-state values, so the sums are exact.
  *
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} exportedRecords
+ * @param {ReportableWasteRecordState[]} exportedRecords
  * @returns {{ tonnageRefusedAtDestination: number, tonnageStoppedDuringExport: number, totalTonnageRefusedOrStopped: number }}
  */
 function calculateRefusedAndStoppedTonnages(exportedRecords) {
@@ -177,9 +219,9 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
 
 /**
  * @param {object} params
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteExportedRecords
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.repatriatedRecords
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteReceivedRecords
+ * @param {ReportableWasteRecordState[]} params.wasteExportedRecords
+ * @param {ReportableWasteRecordState[]} params.repatriatedRecords
+ * @param {ReportableWasteRecordState[]} params.wasteReceivedRecords
  * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]
  * @param {string} params.operatorCategory
  */

@@ -130,7 +130,9 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
           }
         ]
       },
-      diagnostics: { wasteReceivedRecordsExcluded: 0 }
+      // One January load reports 50t exported against 44t received. Its
+      // contribution is clamped to zero, and the clamp is counted here.
+      diagnostics: { wasteReceivedRecordsExcluded: 0, overExportedLoads: 1 }
     })
   })
 })
@@ -181,7 +183,7 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
         tonnageSentToAnotherSite: 0,
         finalDestinations: []
       },
-      diagnostics: { wasteReceivedRecordsExcluded: 0 }
+      diagnostics: { wasteReceivedRecordsExcluded: 0, overExportedLoads: 0 }
     })
   })
 })
@@ -328,7 +330,7 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
           }
         ]
       },
-      diagnostics: { wasteReceivedRecordsExcluded: 0 }
+      diagnostics: { wasteReceivedRecordsExcluded: 0, overExportedLoads: 0 }
     })
   })
 })
