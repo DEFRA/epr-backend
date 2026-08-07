@@ -13,7 +13,7 @@ import {
   BASEL_CODES
 } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
+import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 const ALL_FIELDS = Object.values(FIELDS)

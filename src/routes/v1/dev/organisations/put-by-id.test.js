@@ -99,5 +99,74 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         'approved'
       )
     })
+
+    it('seeds a registration statusHistory with custom dates when the status is unchanged (PAE-1809)', async () => {
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${fixture.id}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const org = JSON.parse(getResponse.payload)
+      const registration = org.registrations[0]
+
+      const updateFragment = {
+        ...org,
+        registrations: [
+          {
+            ...registration,
+            statusHistory: [
+              { status: 'created', updatedAt: '2025-06-30T00:00:00.000Z' }
+            ]
+          }
+        ]
+      }
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: { version: Number(org.version), updateFragment }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const updatedRegistration = JSON.parse(response.payload).registrations[0]
+      expect(updatedRegistration.status).toBe('created')
+      expect(updatedRegistration.statusHistory).toEqual([
+        { status: 'created', updatedAt: '2025-06-30T00:00:00.000Z' }
+      ])
+    })
+
+    it('seeds an extra statusHistory entry — the structure change the public route refuses (PAE-1809)', async () => {
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${fixture.id}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const org = JSON.parse(getResponse.payload)
+      const registration = org.registrations[0]
+
+      const updateFragment = {
+        ...org,
+        registrations: [
+          {
+            ...registration,
+            statusHistory: [
+              { status: 'created', updatedAt: '2025-06-30T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2025-07-01T00:00:00.000Z' }
+            ]
+          }
+        ]
+      }
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: { version: Number(org.version), updateFragment }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload).registrations[0].status).toBe(
+        'approved'
+      )
+    })
   })
 })

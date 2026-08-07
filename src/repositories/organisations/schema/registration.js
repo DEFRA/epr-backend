@@ -13,6 +13,7 @@ import {
   formSubmissionSchema,
   idSchema,
   makeReprocessingTypeSchema,
+  registrationStatusHistoryItemSchema,
   userSchema
 } from './base.js'
 import { wasteManagementPermitSchema } from './waste-permits.js'
@@ -162,7 +163,15 @@ export const registrationSchema = Joi.object({
   })
 })
 
-export const registrationUpdateSchema = registrationSchema.fork(
-  ['status'],
-  (schema) => schema.optional()
-)
+// statusHistory is accepted so admins can correct the updatedAt dates of an
+// existing registration (PAE-1809). Anything the repository will not honour —
+// a history on a new registration, or one sent alongside a status change — is
+// discarded downstream by statusHistoryWithChanges, and the public route guards
+// it before it ever gets here.
+export const registrationUpdateSchema = registrationSchema
+  .fork(['status'], (schema) => schema.optional())
+  .keys({
+    statusHistory: Joi.array()
+      .items(registrationStatusHistoryItemSchema)
+      .optional()
+  })

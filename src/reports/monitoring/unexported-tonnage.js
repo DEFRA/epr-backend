@@ -1,6 +1,8 @@
 import { isNil } from '#common/helpers/is-nil.js'
 import {
+  equals,
   greaterThan,
+  isZero,
   subtract,
   toNumber
 } from '#common/helpers/decimal-utils.js'
@@ -10,6 +12,7 @@ import {
   subtractTonnage,
   toRoundedTonnage
 } from '#common/helpers/rounded-tonnage.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -52,7 +55,8 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   organisationId: string,
  *   registrationId: string,
  *   reportId: string,
- *   month: string,
+ *   year: number,
+ *   period: number,
  *   reportStatus: string
  * }} FindingIdentity
  *
@@ -60,11 +64,16 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   kind: typeof FINDING_KIND.MISMATCH,
  *   stored: number,
  *   recomputed: number,
- *   delta: number
+ *   delta: number,
+ *   rowsInPeriod: number,
+ *   rowsUnexported: number,
+ *   rowsOverExported: number,
+ *   rowsMissingReceived: number
  * }} MismatchFinding
  *
  * @typedef {FindingIdentity & {
- *   kind: typeof FINDING_KIND.SOURCE_MISSING
+ *   kind: typeof FINDING_KIND.SOURCE_MISSING,
+ *   reason: string
  * }} SourceMissingFinding
  *
  * @typedef {FindingIdentity & {
@@ -72,7 +81,21 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   reason: string
  * }} RecomputeFailedFinding
  *
- * @typedef {MismatchFinding | SourceMissingFinding | RecomputeFailedFinding} UnexportedTonnageFinding
+ * @typedef {FindingIdentity & {
+ *   kind: typeof FINDING_KIND.LOOKUP_FAILED,
+ *   reason: string
+ * }} LookupFailedFinding
+ *
+ * @typedef {MismatchFinding
+ *   | SourceMissingFinding
+ *   | RecomputeFailedFinding
+ *   | LookupFailedFinding} UnexportedTonnageFinding
+ *
+ * The rows a report was built from, or the reason they are not there. A reason
+ * here means the data genuinely is not present, which a re-run will not change
+ * — an error while reading is a `LOOKUP_FAILED` finding instead.
+ *
+ * @typedef {{ states: WasteRecordState[] } | { unresolved: string }} SourceRowStates
  */
 
 /**
@@ -91,13 +114,20 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
 
 /**
  * What a finding says about its report: the stored figure disagrees with the
- * corrected rule, the source rows could not be resolved at all, or they were
- * resolved but could not be read as tonnages.
+ * corrected rule, the source rows are not there to recompute from, they were
+ * resolved but could not be read as tonnages, or reading them failed outright.
+ *
+ * The last is kept apart from the others because it says nothing about the
+ * exporter's data — a Mongo timeout or a report deleted mid-scan is a fact
+ * about the run, and a re-run may well resolve it. Folding those into
+ * `SOURCE_MISSING` would inflate the population the business is told it cannot
+ * account for.
  */
-const FINDING_KIND = Object.freeze({
+export const FINDING_KIND = Object.freeze({
   MISMATCH: 'mismatch',
   SOURCE_MISSING: 'source-missing',
-  RECOMPUTE_FAILED: 'recompute-failed'
+  RECOMPUTE_FAILED: 'recompute-failed',
+  LOOKUP_FAILED: 'lookup-failed'
 })
 
 /** @typedef {(typeof FINDING_KIND)[keyof typeof FINDING_KIND]} FindingKind */
@@ -120,10 +150,11 @@ const TONNAGE_EXPORTED_FIELD = 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
  * The monthly reports this diagnostic reviews, flattened out of the
  * estate-wide periodic report groupings.
  *
- * A non-null `exportActivity.tonnageReceivedNotExported` identifies an
- * accredited exporter on its own: a registered-only exporter's figure is typed
- * in by hand and stored as null, and a reprocessor has no export activity at
- * all. No registration lookup is needed to filter the population.
+ * Only monthly reports are read, which is what confines the population to
+ * accredited exporters: a registration reports monthly once it holds an
+ * accreditation number and quarterly before that, so a registered-only
+ * exporter's hand-typed figure only ever lands on a quarterly report. A
+ * reprocessor has no export activity at all, and its figure reads as null.
  *
  * @param {PeriodicReport[]} periodicReports
  * @returns {ReviewableReportRow[]}
@@ -158,44 +189,92 @@ export const findReviewableReportRows = (periodicReports) =>
 
 /**
  * A load's contribution to the figure: the tonnage received for export that has
- * not yet been exported. Clamped at zero, since a row reporting more exported
- * than received is a data error rather than a negative amount on site — how that
- * row should be handled at all is still open with the business, so the sizing
- * run takes the conservative reading.
+ * not yet been exported, and what is wrong with the row if anything.
+ *
+ * Every field on the exporter received-loads table is optional, so a blank
+ * received tonnage is possible and reads as zero. Left alone that row would
+ * present as having exported more than it received, which is a different defect
+ * with a different remedy — the business is being asked to rule on genuine
+ * over-exports, so a blank is counted as its own thing rather than folded in.
+ *
+ * The contribution is clamped at zero for both, since neither is a negative
+ * amount on site. How an over-exporting row should be handled at all is still
+ * open with the business, so the sizing run takes the conservative reading and
+ * counts the rows so the decision has a number behind it.
  *
  * @param {Record<string, any>} data
- * @returns {import('#common/helpers/rounded-tonnage.js').RoundedTonnage}
+ * @returns {{
+ *   notExported: import('#common/helpers/rounded-tonnage.js').RoundedTonnage,
+ *   overExported: boolean,
+ *   missingReceived: boolean
+ * }}
  */
-const notExportedForLoad = (data) => {
-  const received = toRoundedTonnage(data[TONNAGE_RECEIVED_FIELD])
+const classifyLoad = (data) => {
   const exported = toRoundedTonnage(data[TONNAGE_EXPORTED_FIELD])
-  return greaterThan(received, exported)
-    ? subtractTonnage(received, exported)
-    : ZERO_TONNAGE
+  if (isNil(data[TONNAGE_RECEIVED_FIELD])) {
+    return {
+      notExported: ZERO_TONNAGE,
+      overExported: false,
+      missingReceived: true
+    }
+  }
+
+  const received = toRoundedTonnage(data[TONNAGE_RECEIVED_FIELD])
+  return greaterThan(exported, received)
+    ? { notExported: ZERO_TONNAGE, overExported: true, missingReceived: false }
+    : {
+        notExported: subtractTonnage(received, exported),
+        overExported: false,
+        missingReceived: false
+      }
 }
+
+/**
+ * @typedef {{
+ *   total: number,
+ *   rowsInPeriod: number,
+ *   rowsUnexported: number,
+ *   rowsOverExported: number,
+ *   rowsMissingReceived: number
+ * }} Recomputation
+ */
 
 /**
  * The corrected figure for a period: per load received in that period, column S
  * minus column T, summed. Unlike the live calculation, no load is dropped for
  * carrying an export date.
  *
+ * Reports the rows behind the figure alongside it, so a finding says how much
+ * data a backfill would move and not only how much tonnage.
+ *
  * @param {WasteRecordState[]} wasteRecordStates
  * @param {string} startDate
  * @param {string} endDate
- * @returns {number}
+ * @returns {Recomputation}
  */
-const recomputeUnexported = (wasteRecordStates, startDate, endDate) =>
-  toNumber(
-    filterRecordsByDateField(
-      wasteRecordStates,
-      RECEIVED_DATE_FIELD,
-      startDate,
-      endDate
-    ).reduce(
-      (sum, { data }) => addTonnage(sum, notExportedForLoad(data)),
-      ZERO_TONNAGE
-    )
-  )
+const recomputeUnexported = (wasteRecordStates, startDate, endDate) => {
+  const loads = filterRecordsByDateField(
+    wasteRecordStates,
+    RECEIVED_DATE_FIELD,
+    startDate,
+    endDate
+  ).map(({ data }) => classifyLoad(data))
+
+  return {
+    total: toNumber(
+      loads.reduce(
+        (sum, { notExported }) => addTonnage(sum, notExported),
+        ZERO_TONNAGE
+      )
+    ),
+    rowsInPeriod: loads.length,
+    rowsUnexported: loads.filter(({ notExported }) => !isZero(notExported))
+      .length,
+    rowsOverExported: loads.filter(({ overExported }) => overExported).length,
+    rowsMissingReceived: loads.filter(({ missingReceived }) => missingReceived)
+      .length
+  }
+}
 
 /**
  * @param {ReviewableReportRow} row
@@ -205,7 +284,8 @@ const identityOf = (row) => ({
   organisationId: row.organisationId,
   registrationId: row.registrationId,
   reportId: row.reportId,
-  month: formatPeriodLabel('monthly', row.period, row.year),
+  year: row.year,
+  period: row.period,
   reportStatus: row.reportStatus
 })
 
@@ -214,22 +294,28 @@ const identityOf = (row) => ({
  * corrected rule. Returns null when they already agree — the report the fix
  * would leave untouched.
  *
- * `wasteRecordStates` is null when the report's source rows could not be
- * resolved, which is the one case a backfill could not correct on its own.
+ * `sourceRowStates` carries a reason instead of rows when the report's source
+ * rows are not there, which is the one case a backfill could not correct on its
+ * own. The reason rides onto the finding so the reader knows which of the
+ * causes they are looking at.
  *
  * @param {ReviewableReportRow} row
- * @param {WasteRecordState[] | null} wasteRecordStates
+ * @param {SourceRowStates} sourceRowStates
  * @returns {UnexportedTonnageFinding | null}
  */
-export const diagnoseReportRow = (row, wasteRecordStates) => {
-  if (wasteRecordStates === null) {
-    return { kind: FINDING_KIND.SOURCE_MISSING, ...identityOf(row) }
+export const diagnoseReportRow = (row, sourceRowStates) => {
+  if ('unresolved' in sourceRowStates) {
+    return {
+      kind: FINDING_KIND.SOURCE_MISSING,
+      ...identityOf(row),
+      reason: sourceRowStates.unresolved
+    }
   }
 
-  let recomputed
+  let recomputation
   try {
-    recomputed = recomputeUnexported(
-      wasteRecordStates,
+    recomputation = recomputeUnexported(
+      sourceRowStates.states,
       row.startDate,
       row.endDate
     )
@@ -241,7 +327,8 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
     }
   }
 
-  if (recomputed === row.storedUnexported) {
+  const { total, ...rowCounts } = recomputation
+  if (equals(total, row.storedUnexported)) {
     return null
   }
 
@@ -249,28 +336,27 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
     kind: FINDING_KIND.MISMATCH,
     ...identityOf(row),
     stored: row.storedUnexported,
-    recomputed,
-    delta: toNumber(subtract(recomputed, row.storedUnexported))
+    recomputed: total,
+    delta: toNumber(subtract(total, row.storedUnexported)),
+    ...rowCounts
   }
 }
 
 /**
- * The part of a log line that differs by kind: the figures for a mismatch, the
- * underlying error for a failed recompute, and why nothing could be computed
- * when the source rows were unresolvable.
+ * The part of a log line that differs by kind: the figures for a mismatch, and
+ * for every other kind the reason nothing could be computed.
  *
  * @param {UnexportedTonnageFinding} finding
  * @returns {string}
  */
-const detailOf = (finding) => {
-  if (finding.kind === FINDING_KIND.MISMATCH) {
-    return `stored ${finding.stored}, recomputed ${finding.recomputed}, delta ${finding.delta}`
-  }
-  if (finding.kind === FINDING_KIND.RECOMPUTE_FAILED) {
-    return finding.reason
-  }
-  return 'source rows could not be resolved, cannot recompute'
-}
+const detailOf = (finding) =>
+  finding.kind === FINDING_KIND.MISMATCH
+    ? `stored ${finding.stored}, recomputed ${finding.recomputed}, ` +
+      `delta ${finding.delta}, rows ${finding.rowsInPeriod} in period / ` +
+      `${finding.rowsUnexported} unexported / ` +
+      `${finding.rowsOverExported} over-exported / ` +
+      `${finding.rowsMissingReceived} missing received`
+    : finding.reason
 
 /**
  * Renders a finding as one reviewable log line.
@@ -281,38 +367,184 @@ const detailOf = (finding) => {
 export const formatUnexportedTonnageFinding = (finding) =>
   `Unexported tonnage ${finding.kind}: org ${finding.organisationId} / ` +
   `registration ${finding.registrationId}, report ${finding.reportId} ` +
-  `(${finding.month}, ${finding.reportStatus}) - ${detailOf(finding)}`
+  `(${formatPeriodLabel(CADENCE.monthly, finding.period, finding.year)}, ` +
+  `${finding.reportStatus}) - ${detailOf(finding)}`
 
 /**
- * The scale figures the run's summary line reports. `totalDelta` covers the
- * mismatches only — the tonnage a backfill would move.
+ * The mismatches among a set of findings — the reports a backfill could correct
+ * in place, and the only ones carrying figures to total.
+ *
+ * @param {UnexportedTonnageFinding[]} findings
+ * @returns {MismatchFinding[]}
+ */
+const mismatchesOf = (findings) =>
+  /** @type {MismatchFinding[]} */ (
+    findings.filter(({ kind }) => kind === FINDING_KIND.MISMATCH)
+  )
+
+/**
+ * @param {UnexportedTonnageFinding[]} findings
+ * @param {keyof FindingIdentity} field
+ * @returns {number}
+ */
+const distinctCount = (findings, field) =>
+  new Set(findings.map((finding) => finding[field])).size
+
+/**
+ * The tonnage a set of mismatches moves, split by direction. Reporting the two
+ * halves alongside the net keeps a month whose understatements and
+ * overstatements cancel from reading as a month with nothing wrong in it.
+ *
+ * `overstated` is returned positive — it is an amount of tonnage, not a signed
+ * correction.
+ *
+ * @param {MismatchFinding[]} mismatches
+ * @returns {{ delta: number, understated: number, overstated: number }}
+ */
+const deltaTotalsOf = (mismatches) => {
+  const sum = (subset) =>
+    subset.reduce(
+      (total, { delta }) => addTonnage(total, toRoundedTonnage(delta)),
+      ZERO_TONNAGE
+    )
+  const understated = sum(mismatches.filter(({ delta }) => delta > 0))
+  const overstated = sum(mismatches.filter(({ delta }) => delta < 0))
+
+  return {
+    delta: toNumber(addTonnage(understated, overstated)),
+    understated: toNumber(understated),
+    overstated: toNumber(subtract(ZERO_TONNAGE, overstated))
+  }
+}
+
+const MONTHS_IN_YEAR = 12
+
+/**
+ * The correctable tonnage broken down by the month each report covers, oldest
+ * first — the shape the business asked the sizing run for. Only mismatches
+ * carry a figure, so the other finding kinds contribute no months.
+ *
+ * @param {UnexportedTonnageFinding[]} findings
+ * @returns {{
+ *   month: string,
+ *   reports: number,
+ *   delta: number,
+ *   understated: number,
+ *   overstated: number
+ * }[]}
+ */
+export const summariseUnexportedTonnageByMonth = (findings) =>
+  [
+    ...Map.groupBy(
+      mismatchesOf(findings),
+      ({ year, period }) => year * MONTHS_IN_YEAR + period
+    ).entries()
+  ]
+    .sort(([a], [b]) => a - b)
+    .map(([, mismatches]) => ({
+      month: formatPeriodLabel(
+        CADENCE.monthly,
+        mismatches[0].period,
+        mismatches[0].year
+      ),
+      reports: mismatches.length,
+      ...deltaTotalsOf(mismatches)
+    }))
+
+/**
+ * The mismatches split by the status their report sits in. A submitted report
+ * is one a regulator has already read, so correcting it means a resubmission;
+ * a draft is regenerated on its own and needs nothing beyond the fix. That
+ * split is the operational decision the ticket leaves open, so the sizing run
+ * reports it rather than a single total.
+ *
+ * @param {UnexportedTonnageFinding[]} findings
+ * @returns {Record<string, number>}
+ */
+export const summariseUnexportedTonnageByStatus = (findings) => {
+  const mismatches = mismatchesOf(findings)
+
+  return Object.fromEntries(
+    [...REVIEWABLE_REPORT_STATUSES].map((status) => [
+      status,
+      mismatches.filter(({ reportStatus }) => reportStatus === status).length
+    ])
+  )
+}
+
+/**
+ * The biggest corrections the fix would make, largest first, ranked on size
+ * rather than direction. Distinguishes one outlier report from a drift spread
+ * across the estate without reading every finding line.
+ *
+ * @param {UnexportedTonnageFinding[]} findings
+ * @param {number} limit
+ * @returns {{ reportId: string, month: string, delta: number }[]}
+ */
+export const largestUnexportedTonnageDeltas = (findings, limit) =>
+  mismatchesOf(findings)
+    .toSorted((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, limit)
+    .map(({ reportId, period, year, delta }) => ({
+      reportId,
+      month: formatPeriodLabel(CADENCE.monthly, period, year),
+      delta
+    }))
+
+/**
+ * The scale figures the run's summary line reports. `totalDelta` and the row
+ * counts cover the mismatches only — the tonnage and data a backfill would move.
+ *
+ * An exporter is one accredited exporter registration, which is the unit the
+ * regulator deals with; an organisation may hold more than one. Both are
+ * counted over the mismatches alone, so a report whose rows could not be
+ * resolved does not present as a known-wrong exporter — those are reported
+ * separately as `unresolvedExporters`, the population whose size is unknown
+ * rather than zero.
  *
  * @param {UnexportedTonnageFinding[]} findings
  * @returns {{
  *   mismatches: number,
  *   sourceMissing: number,
  *   recomputeFailed: number,
+ *   lookupFailed: number,
+ *   affectedExporters: number,
  *   affectedOrganisations: number,
- *   totalDelta: number
+ *   unresolvedExporters: number,
+ *   rowsInPeriod: number,
+ *   rowsUnexported: number,
+ *   rowsOverExported: number,
+ *   rowsMissingReceived: number,
+ *   totalDelta: number,
+ *   totalUnderstated: number,
+ *   totalOverstated: number
  * }}
  */
 export const summariseUnexportedTonnageFindings = (findings) => {
   const countOf = (kind) => findings.filter((f) => f.kind === kind).length
+  const mismatches = mismatchesOf(findings)
+  const unresolved = findings.filter(
+    ({ kind }) => kind !== FINDING_KIND.MISMATCH
+  )
+  const sumOf = (field) =>
+    mismatches.reduce((total, finding) => total + finding[field], 0)
+  const { delta, understated, overstated } = deltaTotalsOf(mismatches)
 
   return {
-    mismatches: countOf(FINDING_KIND.MISMATCH),
+    mismatches: mismatches.length,
     sourceMissing: countOf(FINDING_KIND.SOURCE_MISSING),
     recomputeFailed: countOf(FINDING_KIND.RECOMPUTE_FAILED),
-    affectedOrganisations: new Set(findings.map((f) => f.organisationId)).size,
-    totalDelta: toNumber(
-      findings.reduce(
-        (total, finding) =>
-          finding.kind === FINDING_KIND.MISMATCH
-            ? addTonnage(total, toRoundedTonnage(finding.delta))
-            : total,
-        ZERO_TONNAGE
-      )
-    )
+    lookupFailed: countOf(FINDING_KIND.LOOKUP_FAILED),
+    affectedExporters: distinctCount(mismatches, 'registrationId'),
+    affectedOrganisations: distinctCount(mismatches, 'organisationId'),
+    unresolvedExporters: distinctCount(unresolved, 'registrationId'),
+    rowsInPeriod: sumOf('rowsInPeriod'),
+    rowsUnexported: sumOf('rowsUnexported'),
+    rowsOverExported: sumOf('rowsOverExported'),
+    rowsMissingReceived: sumOf('rowsMissingReceived'),
+    totalDelta: delta,
+    totalUnderstated: understated,
+    totalOverstated: overstated
   }
 }
 
@@ -321,27 +553,30 @@ export const summariseUnexportedTonnageFindings = (findings) => {
  * phase) and its current accreditation id. Reading both means a report built
  * before accreditation still resolves its rows. A row commits under exactly one
  * ledger, so concatenating the two yields the submission's rows without
- * duplication. Returns null when the registration can no longer be looked up.
+ * duplication.
+ *
+ * Only the registration's *current* accreditation is probed, so a report built
+ * under an accreditation that has since been superseded resolves no rows and
+ * reads as source-missing. Reaching those would need the accreditation history,
+ * which the sizing run does not carry.
+ *
+ * Errors propagate: a registration that cannot be read is a fact about the run,
+ * not about the exporter's data, and the caller records it as such.
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @returns {Promise<import('#waste-records/repository/port.js').WasteBalanceLedgerId[] | null>}
+ * @returns {Promise<import('#waste-records/repository/port.js').WasteBalanceLedgerId[]>}
  */
 const resolveLedgers = async (
   organisationsRepository,
   organisationId,
   registrationId
 ) => {
-  let registration
-  try {
-    registration = await organisationsRepository.findRegistrationById(
-      organisationId,
-      registrationId
-    )
-  } catch {
-    return null
-  }
+  const registration = await organisationsRepository.findRegistrationById(
+    organisationId,
+    registrationId
+  )
 
   const accreditationIds = registration?.accreditationId
     ? [null, registration.accreditationId]
@@ -354,10 +589,14 @@ const resolveLedgers = async (
   }))
 }
 
+const NO_SUMMARY_LOG = 'no source summary log recorded on the report'
+const NO_ROWS = 'no rows found under the registration ledgers'
+
 /**
- * The row states the report was built from, or null when they cannot be
- * resolved — no source summary log recorded, no readable registration, or a
- * submission whose rows have gone.
+ * The row states the report was built from, or the reason there are none. Both
+ * reasons are statements about the stored data rather than about this run, so
+ * either one is stable across re-runs; anything that throws on the way is not,
+ * and is left to propagate.
  *
  * @param {{
  *   reportsRepository: ReportsRepository,
@@ -365,16 +604,16 @@ const resolveLedgers = async (
  *   summaryLogRowStateRepository: SummaryLogRowStateRepository
  * }} deps
  * @param {ReviewableReportRow} row
- * @returns {Promise<WasteRecordState[] | null>}
+ * @returns {Promise<SourceRowStates>}
  */
 const loadSourceRowStates = async (
   { reportsRepository, organisationsRepository, summaryLogRowStateRepository },
   row
 ) => {
   const report = await reportsRepository.findReportById(row.reportId)
-  const summaryLogId = report?.source?.summaryLogId ?? null
+  const summaryLogId = report.source?.summaryLogId ?? null
   if (summaryLogId === null) {
-    return null
+    return { unresolved: NO_SUMMARY_LOG }
   }
 
   const ledgers = await resolveLedgers(
@@ -382,13 +621,10 @@ const loadSourceRowStates = async (
     row.organisationId,
     row.registrationId
   )
-  if (ledgers === null) {
-    return null
-  }
 
-  const wasteRecordStates = []
+  const states = []
   for (const ledger of ledgers) {
-    wasteRecordStates.push(
+    states.push(
       ...(await wasteRecordStatesForHead(
         summaryLogRowStateRepository,
         ledger,
@@ -397,13 +633,19 @@ const loadSourceRowStates = async (
     )
   }
 
-  return wasteRecordStates.length > 0 ? wasteRecordStates : null
+  return states.length > 0 ? { states } : { unresolved: NO_ROWS }
 }
 
 /**
  * Scans every reviewable accredited-exporter monthly report across the estate
  * and returns the ones whose stored unexported tonnage disagrees with the
  * corrected rule, alongside those that cannot be recomputed at all. Read-only.
+ *
+ * A report is read individually after the estate-wide snapshot is taken, so one
+ * of them going away under live traffic — or any transient read failure — is
+ * expected rather than exceptional. Each is contained to its own finding: a
+ * single failure must not cost the run every figure it has already computed,
+ * since the diagnostic gets one pass per deploy.
  *
  * @param {{
  *   reportsRepository: ReportsRepository,
@@ -418,10 +660,20 @@ export const findUnexportedTonnageReports = async (deps) => {
 
   const findings = []
   for (const row of rows) {
-    const wasteRecordStates = await loadSourceRowStates(deps, row)
-    const finding = diagnoseReportRow(row, wasteRecordStates)
-    if (finding) {
-      findings.push(finding)
+    try {
+      const finding = diagnoseReportRow(
+        row,
+        await loadSourceRowStates(deps, row)
+      )
+      if (finding) {
+        findings.push(finding)
+      }
+    } catch (error) {
+      findings.push({
+        kind: FINDING_KIND.LOOKUP_FAILED,
+        ...identityOf(row),
+        reason: /** @type {Error} */ (error).message
+      })
     }
   }
 

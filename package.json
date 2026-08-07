@@ -32,7 +32,7 @@
     "#waste-records-export/*": "./src/waste-records-export/*"
   },
   "engines": {
-    "node": "^24.18.1"
+    "node": "^24.19.0"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
@@ -52,7 +52,7 @@
     "benchmark:file": "node benchmarks/parse-file.js",
     "test": "TZ=UTC vitest run --coverage",
     "test:watch": "TZ=UTC vitest --coverage",
-    "server:watch": "nodemon --inspect=0.0.0.0 --ext js,json --legacy-watch ./src",
+    "server:watch": "nodemon --inspect=0.0.0.0 --ext js,json --legacy-watch --polling-interval 1000 ./src",
     "server:debug": "nodemon --inspect-brk=0.0.0.0 --ext js,json --legacy-watch ./src",
     "start": "NODE_ENV=production node --use-strict .",
     "setup:husky": "node -e \"try { (await import('husky')).default() } catch (e) { if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e }\" --input-type module",

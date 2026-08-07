@@ -8,10 +8,7 @@ import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { partialMock } from '#test/type-helpers.js'
-import {
-  WASTE_RECORD_TYPE,
-  VERSION_STATUS
-} from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
@@ -58,6 +55,7 @@ vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
 }))
 
 /** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
+/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 
 const accreditationId = 'acc-1'
 
@@ -83,27 +81,16 @@ const user = {
   role: 'standard_user'
 }
 
-const buildExporterRecord = ({
-  rowId,
-  tonnage,
-  prnIssued = false,
-  versionId = `version-${rowId}`,
-  summaryLogId = 'log-1'
-}) => ({
+/**
+ * @param {{ rowId: string, tonnage: number, prnIssued?: boolean }} args
+ * @returns {WasteRecord}
+ */
+const buildExporterRecord = ({ rowId, tonnage, prnIssued = false }) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId,
-  rowId: String(rowId),
+  rowId,
   type: WASTE_RECORD_TYPE.EXPORTED,
-  versions: [
-    {
-      id: versionId,
-      createdAt: '2025-01-20T10:00:00.000Z',
-      status: VERSION_STATUS.CREATED,
-      summaryLog: { id: summaryLogId, uri: 's3://bucket/log' },
-      data: {}
-    }
-  ],
   data: { processingType: 'EXPORTER', tonnage, prnIssued }
 })
 
@@ -172,8 +159,8 @@ describe('performUpdateViaLedger', () => {
 
       await performUpdateViaLedger({
         wasteRecords: [
-          buildExporterRecord({ rowId: '1', tonnage: 100, versionId: 'v-1b' }),
-          buildExporterRecord({ rowId: '2', tonnage: 80, versionId: 'v-2b' }),
+          buildExporterRecord({ rowId: '1', tonnage: 100 }),
+          buildExporterRecord({ rowId: '2', tonnage: 80 }),
           buildExporterRecord({ rowId: '3', tonnage: 20 })
         ],
         accreditation,
