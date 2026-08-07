@@ -101,7 +101,7 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * corrected rule, the source rows could not be resolved at all, or they were
  * resolved but could not be read as tonnages.
  */
-const FINDING_KIND = Object.freeze({
+export const FINDING_KIND = Object.freeze({
   MISMATCH: 'mismatch',
   SOURCE_MISSING: 'source-missing',
   RECOMPUTE_FAILED: 'recompute-failed'

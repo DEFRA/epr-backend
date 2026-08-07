@@ -39,7 +39,14 @@ export const LOGGING_EVENT_ACTIONS = {
   COMPENSATION_SUCCESS: 'compensation_success',
   WASTE_BALANCE_UPDATED: 'waste_balance_updated',
   REPORT_RESPONSE_SCHEMA_VIOLATION: 'report_response_schema_violation',
-  LEGACY_STALE_SHAPE_NORMALISED: 'legacy_stale_shape_normalised'
+  LEGACY_STALE_SHAPE_NORMALISED: 'legacy_stale_shape_normalised',
+  UNEXPORTED_TONNAGE_MISMATCH: 'unexported_tonnage_mismatch',
+  UNEXPORTED_TONNAGE_SOURCE_MISSING: 'unexported_tonnage_source_missing',
+  UNEXPORTED_TONNAGE_RECOMPUTE_FAILED: 'unexported_tonnage_recompute_failed',
+  UNEXPORTED_TONNAGE_BY_MONTH: 'unexported_tonnage_by_month',
+  UNEXPORTED_TONNAGE_BY_STATUS: 'unexported_tonnage_by_status',
+  UNEXPORTED_TONNAGE_LARGEST_DELTAS: 'unexported_tonnage_largest_deltas',
+  UNEXPORTED_TONNAGE_SUMMARY: 'unexported_tonnage_summary'
 }
 
 export const AUDIT_EVENT_CATEGORIES = {

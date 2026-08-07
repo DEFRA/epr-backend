@@ -1,5 +1,10 @@
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
+  FINDING_KIND,
   findUnexportedTonnageReports,
   formatUnexportedTonnageFinding,
   largestUnexportedTonnageDeltas,
@@ -15,19 +20,47 @@ import {
 const LOCK_NAME = 'unexported-tonnage-report'
 const LARGEST_DELTAS_REPORTED = 5
 
-const log = (message) => logger.info({ message })
+/**
+ * One action per kind, so a run's mismatches can be read apart from the reports
+ * it could not recompute without parsing message text.
+ */
+const ACTION_BY_FINDING_KIND = Object.freeze({
+  [FINDING_KIND.MISMATCH]: LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_MISMATCH,
+  [FINDING_KIND.SOURCE_MISSING]:
+    LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_SOURCE_MISSING,
+  [FINDING_KIND.RECOMPUTE_FAILED]:
+    LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_RECOMPUTE_FAILED
+})
 
 /**
  * CDP indexes only an allowlisted set of ECS fields, so a figure logged as a
- * property is dropped at ingest and cannot be aggregated in OpenSearch. Every
- * breakdown is therefore rolled up here and emitted as a finished line.
+ * property is dropped at ingest and cannot be aggregated in OpenSearch. The
+ * figures therefore stay in the message and every breakdown is rolled up before
+ * it is logged; `event.action` is what makes a line findable without a regex,
+ * and `event.reference` ties it to the report it is about.
  *
+ * @param {string} action
+ * @param {string} message
+ * @param {string} [reference]
+ */
+const log = (action, message, reference) =>
+  logger.info({
+    message,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action,
+      ...(reference ? { reference } : {})
+    }
+  })
+
+/**
  * @param {UnexportedTonnageFinding[]} findings
  */
 const logBreakdowns = (findings) => {
   summariseUnexportedTonnageByMonth(findings).forEach(
     ({ month, reports, delta, understated, overstated }) =>
       log(
+        LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_BY_MONTH,
         `Unexported tonnage by month: ${month} - ${reports} report(s), ` +
           `delta ${delta}, understated ${understated}, overstated ${overstated}`
       )
@@ -36,7 +69,10 @@ const logBreakdowns = (findings) => {
   const byStatus = Object.entries(summariseUnexportedTonnageByStatus(findings))
     .map(([status, count]) => `${status} ${count}`)
     .join(', ')
-  log(`Unexported tonnage by status: ${byStatus}`)
+  log(
+    LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_BY_STATUS,
+    `Unexported tonnage by status: ${byStatus}`
+  )
 
   const largest = largestUnexportedTonnageDeltas(
     findings,
@@ -44,6 +80,7 @@ const logBreakdowns = (findings) => {
   )
   if (largest.length > 0) {
     log(
+      LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_LARGEST_DELTAS,
       'Unexported tonnage largest deltas: ' +
         largest
           .map(
@@ -75,6 +112,7 @@ const logSummary = (scanned, findings) => {
   } = summariseUnexportedTonnageFindings(findings)
 
   log(
+    LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_SUMMARY,
     `Unexported tonnage: scanned ${scanned}, mismatches ${mismatches}, ` +
       `source-missing ${sourceMissing}, recompute-failed ${recomputeFailed}, ` +
       `affected exporters ${affectedExporters} across ` +
@@ -101,7 +139,13 @@ const runReport = async (server) => {
     summaryLogRowStateRepository: server.app.summaryLogRowStateRepository
   })
 
-  findings.forEach((finding) => log(formatUnexportedTonnageFinding(finding)))
+  findings.forEach((finding) =>
+    log(
+      ACTION_BY_FINDING_KIND[finding.kind],
+      formatUnexportedTonnageFinding(finding),
+      finding.reportId
+    )
+  )
   logBreakdowns(findings)
   logSummary(scanned, findings)
 }
@@ -125,9 +169,10 @@ export const runUnexportedTonnageReport = async (server) => {
   try {
     const lock = await server.locker.lock(LOCK_NAME)
     if (!lock) {
-      logger.info({
-        message: 'Unable to obtain lock, skipping unexported tonnage report'
-      })
+      log(
+        LOGGING_EVENT_ACTIONS.LOCK_ACQUISITION_FAILED,
+        'Unable to obtain lock, skipping unexported tonnage report'
+      )
       return
     }
     try {
