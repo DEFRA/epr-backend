@@ -210,6 +210,47 @@ describe('runUnexportedTonnageReport', () => {
     })
   })
 
+  it('logs the mismatches split by report status, separating resubmissions from drafts', async () => {
+    const server = buildServer(
+      estateApp([submittedFebReport()], [receivedRow(29.19)])
+    )
+
+    await runUnexportedTonnageReport(server)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Unexported tonnage by status: submitted 1, in_progress 0, ' +
+        'ready_to_submit 0'
+    })
+  })
+
+  it('logs the largest corrections, so one outlier is not read as estate-wide drift', async () => {
+    const server = buildServer(
+      estateApp(
+        [submittedFebReport(), submittedMarchReport({ reportId: 'report-2' })],
+        [receivedRow(29.19), receivedRow(4, '2026-03-09')]
+      )
+    )
+
+    await runUnexportedTonnageReport(server)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Unexported tonnage largest deltas: report-1 (Feb 2026) 29.19; ' +
+        'report-2 (Mar 2026) 4'
+    })
+  })
+
+  it('logs no largest-deltas line when nothing is wrong', async () => {
+    const server = buildServer(emptyEstateApp())
+
+    await runUnexportedTonnageReport(server)
+
+    expect(logger.info).not.toHaveBeenCalledWith({
+      message: expect.stringContaining('largest deltas')
+    })
+  })
+
   it('counts distinct affected exporters and organisations, and totals the delta across them', async () => {
     const server = buildServer(
       estateApp(

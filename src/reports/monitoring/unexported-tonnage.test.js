@@ -5,7 +5,9 @@ import {
   findUnexportedTonnageReports,
   findReviewableReportRows,
   formatUnexportedTonnageFinding,
+  largestUnexportedTonnageDeltas,
   summariseUnexportedTonnageByMonth,
+  summariseUnexportedTonnageByStatus,
   summariseUnexportedTonnageFindings
 } from './unexported-tonnage.js'
 
@@ -551,6 +553,84 @@ describe('unexported-tonnage', () => {
       )
 
       expect(summariseUnexportedTonnageByMonth(findings)).toStrictEqual([])
+    })
+  })
+
+  describe('summariseUnexportedTonnageByStatus', () => {
+    const mismatchWith = (reportStatus) => ({ kind: 'mismatch', reportStatus })
+
+    it('separates the reports already in front of a regulator from the drafts', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          mismatchWith('submitted'),
+          mismatchWith('submitted'),
+          mismatchWith('ready_to_submit'),
+          mismatchWith('in_progress')
+        ])
+      )
+
+      expect(summariseUnexportedTonnageByStatus(findings)).toStrictEqual({
+        submitted: 2,
+        ready_to_submit: 1,
+        in_progress: 1
+      })
+    })
+
+    it('reports every status even when nothing sits in it', () => {
+      expect(summariseUnexportedTonnageByStatus([])).toStrictEqual({
+        submitted: 0,
+        ready_to_submit: 0,
+        in_progress: 0
+      })
+    })
+
+    it('counts only the mismatches, since a draft that cannot be recomputed is not resubmittable either way', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          { kind: 'source-missing', reportStatus: 'submitted' }
+        ])
+      )
+
+      expect(summariseUnexportedTonnageByStatus(findings)).toStrictEqual({
+        submitted: 0,
+        ready_to_submit: 0,
+        in_progress: 0
+      })
+    })
+  })
+
+  describe('largestUnexportedTonnageDeltas', () => {
+    const mismatchOf = (reportId, delta) => ({
+      kind: 'mismatch',
+      reportId,
+      year: 2026,
+      period: 2,
+      delta
+    })
+
+    it('ranks by the size of the correction, not its direction', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          mismatchOf('report-1', 4),
+          mismatchOf('report-2', -29.19),
+          mismatchOf('report-3', 10)
+        ])
+      )
+
+      expect(largestUnexportedTonnageDeltas(findings, 2)).toStrictEqual([
+        { reportId: 'report-2', month: 'Feb 2026', delta: -29.19 },
+        { reportId: 'report-3', month: 'Feb 2026', delta: 10 }
+      ])
+    })
+
+    it('returns everything it has when fewer mismatches than the limit', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([mismatchOf('report-1', 4)])
+      )
+
+      expect(largestUnexportedTonnageDeltas(findings, 5)).toStrictEqual([
+        { reportId: 'report-1', month: 'Feb 2026', delta: 4 }
+      ])
     })
   })
 

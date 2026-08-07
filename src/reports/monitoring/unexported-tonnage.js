@@ -409,6 +409,46 @@ export const summariseUnexportedTonnageByMonth = (findings) =>
     }))
 
 /**
+ * The mismatches split by the status their report sits in. A submitted report
+ * is one a regulator has already read, so correcting it means a resubmission;
+ * a draft is regenerated on its own and needs nothing beyond the fix. That
+ * split is the operational decision the ticket leaves open, so the sizing run
+ * reports it rather than a single total.
+ *
+ * @param {UnexportedTonnageFinding[]} findings
+ * @returns {Record<string, number>}
+ */
+export const summariseUnexportedTonnageByStatus = (findings) => {
+  const mismatches = mismatchesOf(findings)
+
+  return Object.fromEntries(
+    [...REVIEWABLE_REPORT_STATUSES].map((status) => [
+      status,
+      mismatches.filter(({ reportStatus }) => reportStatus === status).length
+    ])
+  )
+}
+
+/**
+ * The biggest corrections the fix would make, largest first, ranked on size
+ * rather than direction. Distinguishes one outlier report from a drift spread
+ * across the estate without reading every finding line.
+ *
+ * @param {UnexportedTonnageFinding[]} findings
+ * @param {number} limit
+ * @returns {{ reportId: string, month: string, delta: number }[]}
+ */
+export const largestUnexportedTonnageDeltas = (findings, limit) =>
+  mismatchesOf(findings)
+    .toSorted((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, limit)
+    .map(({ reportId, period, year, delta }) => ({
+      reportId,
+      month: formatPeriodLabel(CADENCE.monthly, period, year),
+      delta
+    }))
+
+/**
  * The scale figures the run's summary line reports. `totalDelta` and the row
  * counts cover the mismatches only — the tonnage and data a backfill would move.
  *
