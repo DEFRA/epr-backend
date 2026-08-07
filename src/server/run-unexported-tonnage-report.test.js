@@ -170,7 +170,7 @@ describe('runUnexportedTonnageReport', () => {
       infoLine(
         'unexported_tonnage_summary',
         'Unexported tonnage: scanned 0, mismatches 0, source-missing 0, ' +
-          'recompute-failed 0, affected exporters 0 across 0 organisations, ' +
+          'recompute-failed 0, lookup-failed 0, affected exporters 0 across 0 organisations, ' +
           'unresolved exporters 0, ' +
           'rows 0 in period / 0 unexported / 0 over-exported, ' +
           'total delta 0 (understated 0, overstated 0)'
@@ -198,7 +198,7 @@ describe('runUnexportedTonnageReport', () => {
       infoLine(
         'unexported_tonnage_summary',
         'Unexported tonnage: scanned 1, mismatches 1, source-missing 0, ' +
-          'recompute-failed 0, affected exporters 1 across 1 organisations, ' +
+          'recompute-failed 0, lookup-failed 0, affected exporters 1 across 1 organisations, ' +
           'unresolved exporters 0, ' +
           'rows 1 in period / 1 unexported / 0 over-exported, ' +
           'total delta 29.19 (understated 29.19, overstated 0)'
@@ -219,6 +219,14 @@ describe('runUnexportedTonnageReport', () => {
   const estateWithUnreadableTonnage = () =>
     estateApp([submittedFebReport()], [receivedRow(1.234)])
 
+  const estateWithADeletedReport = () => {
+    const app = estateApp([submittedFebReport()], [receivedRow(10)])
+    app.reportsRepository.findReportById.mockRejectedValue(
+      new Error('Report not found: report-1')
+    )
+    return app
+  }
+
   it.each([
     [
       'source-missing',
@@ -229,6 +237,11 @@ describe('runUnexportedTonnageReport', () => {
       'recompute-failed',
       'unexported_tonnage_recompute_failed',
       estateWithUnreadableTonnage
+    ],
+    [
+      'lookup-failed',
+      'unexported_tonnage_lookup_failed',
+      estateWithADeletedReport
     ]
   ])(
     'tags a %s finding with its own action, so one kind can be read apart from the others',
@@ -338,10 +351,43 @@ describe('runUnexportedTonnageReport', () => {
       infoLine(
         'unexported_tonnage_summary',
         'Unexported tonnage: scanned 3, mismatches 3, source-missing 0, ' +
-          'recompute-failed 0, affected exporters 2 across 2 organisations, ' +
+          'recompute-failed 0, lookup-failed 0, affected exporters 2 across 2 organisations, ' +
           'unresolved exporters 0, ' +
           'rows 3 in period / 3 unexported / 0 over-exported, ' +
           'total delta 30 (understated 30, overstated 0)'
+      )
+    )
+  })
+
+  it('still logs a summary when one report cannot be read, rather than losing the run', async () => {
+    const app = estateApp(
+      [
+        submittedFebReport(),
+        submittedFebReport({
+          organisationId: 'org-2',
+          registrationId: 'reg-2',
+          reportId: 'report-2'
+        })
+      ],
+      [receivedRow(29.19)]
+    )
+    app.reportsRepository.findReportById.mockRejectedValueOnce(
+      new Error('Report not found: report-1')
+    )
+    const server = buildServer(app)
+
+    await runUnexportedTonnageReport(server)
+
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith(
+      infoLine(
+        'unexported_tonnage_summary',
+        'Unexported tonnage: scanned 2, mismatches 1, source-missing 0, ' +
+          'recompute-failed 0, lookup-failed 1, ' +
+          'affected exporters 1 across 1 organisations, ' +
+          'unresolved exporters 1, ' +
+          'rows 1 in period / 1 unexported / 0 over-exported, ' +
+          'total delta 29.19 (understated 29.19, overstated 0)'
       )
     )
   })

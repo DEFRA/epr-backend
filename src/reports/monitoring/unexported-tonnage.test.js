@@ -208,8 +208,10 @@ describe('unexported-tonnage', () => {
   })
 
   describe('diagnoseReportRow', () => {
+    const diagnoseWithRows = (row, states) => diagnoseReportRow(row, { states })
+
     it('reports a mismatch when a received load has no exported tonnage', () => {
-      const finding = diagnoseReportRow(buildRow(), [
+      const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 29.19 })
       ])
 
@@ -219,7 +221,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('reports the unexported remainder of a partly exported load', () => {
-      const finding = diagnoseReportRow(buildRow(), [
+      const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({
           TONNAGE_RECEIVED_FOR_EXPORT: 10,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 6
@@ -230,7 +232,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('returns nothing when a fully exported load already agrees with the stored zero', () => {
-      const finding = diagnoseReportRow(buildRow(), [
+      const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({
           TONNAGE_RECEIVED_FOR_EXPORT: 10,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 10
@@ -241,7 +243,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('clamps a row exporting more than it received rather than crediting it back', () => {
-      const finding = diagnoseReportRow(buildRow({ storedUnexported: 5 }), [
+      const finding = diagnoseWithRows(buildRow({ storedUnexported: 5 }), [
         buildReceivedRow({
           TONNAGE_RECEIVED_FOR_EXPORT: 10,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12
@@ -265,7 +267,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('counts the rows behind the figure, so the scale of a backfill is visible', () => {
-      const finding = diagnoseReportRow(buildRow(), [
+      const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 10 }),
         buildReceivedRow({
           TONNAGE_RECEIVED_FOR_EXPORT: 8,
@@ -289,7 +291,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('counts a load whose export date falls inside the period, which the live calc drops', () => {
-      const finding = diagnoseReportRow(buildRow(), [
+      const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({
           DATE_OF_EXPORT: '2026-02-16',
           TONNAGE_RECEIVED_FOR_EXPORT: 29.19
@@ -302,7 +304,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('ignores loads received outside the reporting period', () => {
-      const finding = diagnoseReportRow(buildRow(), [
+      const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({
           DATE_RECEIVED_FOR_EXPORT: '2026-03-02',
           TONNAGE_RECEIVED_FOR_EXPORT: 29.19
@@ -313,7 +315,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('reports a negative delta when the stored figure overstates what is on site', () => {
-      const finding = diagnoseReportRow(buildRow({ storedUnexported: 30 }), [
+      const finding = diagnoseWithRows(buildRow({ storedUnexported: 30 }), [
         buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 29.19 })
       ])
 
@@ -322,17 +324,32 @@ describe('unexported-tonnage', () => {
       )
     })
 
-    it('marks a report whose source rows could not be resolved', () => {
-      const finding = diagnoseReportRow(buildRow(), null)
+    it('marks a report whose source rows could not be resolved, saying why', () => {
+      const finding = diagnoseReportRow(buildRow(), {
+        unresolved: 'no source summary log recorded on the report'
+      })
 
       expect(finding).toStrictEqual({
         kind: 'source-missing',
-        ...FEB_2026_IDENTITY
+        ...FEB_2026_IDENTITY,
+        reason: 'no source summary log recorded on the report'
+      })
+    })
+
+    it('distinguishes rows that were never recorded from rows that could not be found', () => {
+      const finding = diagnoseReportRow(buildRow(), {
+        unresolved: 'no rows found under the registration ledgers'
+      })
+
+      expect(finding).toStrictEqual({
+        kind: 'source-missing',
+        ...FEB_2026_IDENTITY,
+        reason: 'no rows found under the registration ledgers'
       })
     })
 
     it('marks a report whose row data cannot be read as a tonnage', () => {
-      const finding = diagnoseReportRow(buildRow(), [
+      const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 1.234 })
       ])
 
@@ -363,16 +380,30 @@ describe('unexported-tonnage', () => {
       )
     })
 
-    it('renders a source-missing finding as one reviewable line', () => {
+    it('renders a source-missing finding with the cause that made it unresolvable', () => {
       const line = formatUnexportedTonnageFinding({
         kind: 'source-missing',
-        ...FEB_2026_IDENTITY
+        ...FEB_2026_IDENTITY,
+        reason: 'no source summary log recorded on the report'
       })
 
       expect(line).toBe(
         'Unexported tonnage source-missing: org org-1 / registration reg-1, ' +
-          'report report-1 (Feb 2026, submitted) - source rows could not be resolved, ' +
-          'cannot recompute'
+          'report report-1 (Feb 2026, submitted) - ' +
+          'no source summary log recorded on the report'
+      )
+    })
+
+    it('renders a lookup-failed finding with the error that stopped it', () => {
+      const line = formatUnexportedTonnageFinding({
+        kind: 'lookup-failed',
+        ...FEB_2026_IDENTITY,
+        reason: 'Report not found: report-1'
+      })
+
+      expect(line).toBe(
+        'Unexported tonnage lookup-failed: org org-1 / registration reg-1, ' +
+          'report report-1 (Feb 2026, submitted) - Report not found: report-1'
       )
     })
 
@@ -424,6 +455,11 @@ describe('unexported-tonnage', () => {
           kind: 'recompute-failed',
           organisationId: 'org-4',
           registrationId: 'reg-5'
+        },
+        {
+          kind: 'lookup-failed',
+          organisationId: 'org-5',
+          registrationId: 'reg-6'
         }
       ])
     )
@@ -435,9 +471,10 @@ describe('unexported-tonnage', () => {
         mismatches: 3,
         sourceMissing: 1,
         recomputeFailed: 1,
+        lookupFailed: 1,
         affectedExporters: 3,
         affectedOrganisations: 2,
-        unresolvedExporters: 2,
+        unresolvedExporters: 3,
         rowsInPeriod: 7,
         rowsUnexported: 6,
         rowsOverExported: 1,
@@ -763,7 +800,11 @@ describe('unexported-tonnage', () => {
       )
 
       expect(findings).toStrictEqual([
-        { kind: 'source-missing', ...FEB_2026_IDENTITY }
+        {
+          kind: 'source-missing',
+          ...FEB_2026_IDENTITY,
+          reason: 'no source summary log recorded on the report'
+        }
       ])
     })
 
@@ -771,21 +812,64 @@ describe('unexported-tonnage', () => {
       const { findings } = await scan(buildDeps({ rowStates: [] }))
 
       expect(findings).toStrictEqual([
-        { kind: 'source-missing', ...FEB_2026_IDENTITY }
+        {
+          kind: 'source-missing',
+          ...FEB_2026_IDENTITY,
+          reason: 'no rows found under the registration ledgers'
+        }
       ])
     })
 
-    it('marks a report whose registration can no longer be looked up', async () => {
+    it('reports a failed registration lookup as a failure, not as absent data', async () => {
       const deps = buildDeps()
       deps.organisationsRepository.findRegistrationById.mockRejectedValue(
-        new Error('gone')
+        new Error('connection timed out')
       )
 
       const { findings } = await scan(deps)
 
       expect(findings).toStrictEqual([
-        { kind: 'source-missing', ...FEB_2026_IDENTITY }
+        {
+          kind: 'lookup-failed',
+          ...FEB_2026_IDENTITY,
+          reason: 'connection timed out'
+        }
       ])
+    })
+
+    it('reports a deleted report as a failure rather than abandoning the scan', async () => {
+      const deps = buildDeps({
+        periodicReports: [
+          submittedFebReport(0),
+          {
+            ...submittedFebReport(0),
+            organisationId: 'org-2',
+            registrationId: 'reg-2'
+          }
+        ]
+      })
+      deps.reportsRepository.findReportById.mockRejectedValueOnce(
+        new Error('Report not found: report-1')
+      )
+
+      const { scanned, findings } = await scan(deps)
+
+      expect({ scanned, findings }).toStrictEqual({
+        scanned: 2,
+        findings: [
+          {
+            kind: 'lookup-failed',
+            ...FEB_2026_IDENTITY,
+            reason: 'Report not found: report-1'
+          },
+          mismatch({
+            organisationId: 'org-2',
+            registrationId: 'reg-2',
+            recomputed: 12,
+            delta: 12
+          })
+        ]
+      })
     })
 
     it('counts every scanned report even when none is wrong', async () => {

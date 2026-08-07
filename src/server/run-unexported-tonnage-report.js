@@ -29,7 +29,9 @@ const ACTION_BY_FINDING_KIND = Object.freeze({
   [FINDING_KIND.SOURCE_MISSING]:
     LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_SOURCE_MISSING,
   [FINDING_KIND.RECOMPUTE_FAILED]:
-    LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_RECOMPUTE_FAILED
+    LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_RECOMPUTE_FAILED,
+  [FINDING_KIND.LOOKUP_FAILED]:
+    LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_LOOKUP_FAILED
 })
 
 /**
@@ -100,6 +102,7 @@ const logSummary = (scanned, findings) => {
     mismatches,
     sourceMissing,
     recomputeFailed,
+    lookupFailed,
     affectedExporters,
     affectedOrganisations,
     unresolvedExporters,
@@ -115,6 +118,7 @@ const logSummary = (scanned, findings) => {
     LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_SUMMARY,
     `Unexported tonnage: scanned ${scanned}, mismatches ${mismatches}, ` +
       `source-missing ${sourceMissing}, recompute-failed ${recomputeFailed}, ` +
+      `lookup-failed ${lookupFailed}, ` +
       `affected exporters ${affectedExporters} across ` +
       `${affectedOrganisations} organisations, ` +
       `unresolved exporters ${unresolvedExporters}, ` +
