@@ -58,6 +58,23 @@ const FEB_2026_IDENTITY = {
   reportStatus: 'submitted'
 }
 
+/**
+ * @param {Partial<UnexportedTonnageFinding>} [overrides]
+ * @returns {UnexportedTonnageFinding}
+ */
+const mismatch = (overrides = {}) =>
+  /** @type {UnexportedTonnageFinding} */ ({
+    kind: 'mismatch',
+    ...FEB_2026_IDENTITY,
+    stored: 0,
+    recomputed: 0,
+    delta: 0,
+    rowsInPeriod: 1,
+    rowsUnexported: 1,
+    rowsOverExported: 0,
+    ...overrides
+  })
+
 describe('unexported-tonnage', () => {
   describe('findReviewableReportRows', () => {
     /**
@@ -192,13 +209,9 @@ describe('unexported-tonnage', () => {
         buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 29.19 })
       ])
 
-      expect(finding).toStrictEqual({
-        kind: 'mismatch',
-        ...FEB_2026_IDENTITY,
-        stored: 0,
-        recomputed: 29.19,
-        delta: 29.19
-      })
+      expect(finding).toStrictEqual(
+        mismatch({ recomputed: 29.19, delta: 29.19 })
+      )
     })
 
     it('reports the unexported remainder of a partly exported load', () => {
@@ -209,13 +222,7 @@ describe('unexported-tonnage', () => {
         })
       ])
 
-      expect(finding).toStrictEqual({
-        kind: 'mismatch',
-        ...FEB_2026_IDENTITY,
-        stored: 0,
-        recomputed: 4,
-        delta: 4
-      })
+      expect(finding).toStrictEqual(mismatch({ recomputed: 4, delta: 4 }))
     })
 
     it('returns nothing when a fully exported load already agrees with the stored zero', () => {
@@ -241,13 +248,40 @@ describe('unexported-tonnage', () => {
         })
       ])
 
-      expect(finding).toStrictEqual({
-        kind: 'mismatch',
-        ...FEB_2026_IDENTITY,
-        stored: 5,
-        recomputed: 3,
-        delta: -2
-      })
+      expect(finding).toStrictEqual(
+        mismatch({
+          stored: 5,
+          recomputed: 3,
+          delta: -2,
+          rowsInPeriod: 2,
+          rowsUnexported: 1,
+          rowsOverExported: 1
+        })
+      )
+    })
+
+    it('counts the rows behind the figure, so the scale of a backfill is visible', () => {
+      const finding = diagnoseReportRow(buildRow(), [
+        buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 10 }),
+        buildReceivedRow({
+          TONNAGE_RECEIVED_FOR_EXPORT: 8,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 8
+        }),
+        buildReceivedRow({
+          DATE_RECEIVED_FOR_EXPORT: '2026-03-02',
+          TONNAGE_RECEIVED_FOR_EXPORT: 4
+        })
+      ])
+
+      expect(finding).toStrictEqual(
+        mismatch({
+          recomputed: 10,
+          delta: 10,
+          rowsInPeriod: 2,
+          rowsUnexported: 1,
+          rowsOverExported: 0
+        })
+      )
     })
 
     it('counts a load whose export date falls inside the period, which the live calc drops', () => {
@@ -258,13 +292,9 @@ describe('unexported-tonnage', () => {
         })
       ])
 
-      expect(finding).toStrictEqual({
-        kind: 'mismatch',
-        ...FEB_2026_IDENTITY,
-        stored: 0,
-        recomputed: 29.19,
-        delta: 29.19
-      })
+      expect(finding).toStrictEqual(
+        mismatch({ recomputed: 29.19, delta: 29.19 })
+      )
     })
 
     it('ignores loads received outside the reporting period', () => {
@@ -283,13 +313,9 @@ describe('unexported-tonnage', () => {
         buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 29.19 })
       ])
 
-      expect(finding).toStrictEqual({
-        kind: 'mismatch',
-        ...FEB_2026_IDENTITY,
-        stored: 30,
-        recomputed: 29.19,
-        delta: -0.81
-      })
+      expect(finding).toStrictEqual(
+        mismatch({ stored: 30, recomputed: 29.19, delta: -0.81 })
+      )
     })
 
     it('marks a report whose source rows could not be resolved', () => {
@@ -315,18 +341,21 @@ describe('unexported-tonnage', () => {
   })
 
   describe('formatUnexportedTonnageFinding', () => {
-    it('renders a mismatch as one reviewable line', () => {
-      const line = formatUnexportedTonnageFinding({
-        kind: 'mismatch',
-        ...FEB_2026_IDENTITY,
-        stored: 0,
-        recomputed: 29.19,
-        delta: 29.19
-      })
+    it('renders a mismatch as one reviewable line, with the rows behind it', () => {
+      const line = formatUnexportedTonnageFinding(
+        mismatch({
+          recomputed: 29.19,
+          delta: 29.19,
+          rowsInPeriod: 3,
+          rowsUnexported: 2,
+          rowsOverExported: 1
+        })
+      )
 
       expect(line).toBe(
         'Unexported tonnage mismatch: org org-1 / registration reg-1, ' +
-          'report report-1 (Feb 2026, submitted) - stored 0, recomputed 29.19, delta 29.19'
+          'report report-1 (Feb 2026, submitted) - stored 0, recomputed 29.19, ' +
+          'delta 29.19, rows 3 in period / 2 unexported / 1 over-exported'
       )
     })
 
@@ -359,24 +388,41 @@ describe('unexported-tonnage', () => {
   })
 
   describe('summariseUnexportedTonnageFindings', () => {
-    it('splits findings by kind and totals the correctable delta', () => {
-      const findings = /** @type {UnexportedTonnageFinding[]} */ (
-        /** @type {unknown} */ ([
-          { kind: 'mismatch', organisationId: 'org-1', delta: 29.19 },
-          { kind: 'mismatch', organisationId: 'org-1', delta: -0.81 },
-          { kind: 'mismatch', organisationId: 'org-2', delta: 4 },
-          { kind: 'source-missing', organisationId: 'org-3' },
-          { kind: 'recompute-failed', organisationId: 'org-4' }
-        ])
-      )
+    const mismatchOf = (organisationId, delta, rows = {}) => ({
+      kind: 'mismatch',
+      organisationId,
+      delta,
+      rowsInPeriod: 1,
+      rowsUnexported: 1,
+      rowsOverExported: 0,
+      ...rows
+    })
 
-      const summary = summariseUnexportedTonnageFindings(findings)
+    const SPREAD_OF_FINDINGS = /** @type {UnexportedTonnageFinding[]} */ (
+      /** @type {unknown} */ ([
+        mismatchOf('org-1', 29.19, {
+          rowsInPeriod: 4,
+          rowsUnexported: 3,
+          rowsOverExported: 1
+        }),
+        mismatchOf('org-1', -0.81),
+        mismatchOf('org-2', 4, { rowsInPeriod: 2, rowsUnexported: 2 }),
+        { kind: 'source-missing', organisationId: 'org-3' },
+        { kind: 'recompute-failed', organisationId: 'org-4' }
+      ])
+    )
+
+    it('splits findings by kind and totals the correctable delta', () => {
+      const summary = summariseUnexportedTonnageFindings(SPREAD_OF_FINDINGS)
 
       expect(summary).toStrictEqual({
         mismatches: 3,
         sourceMissing: 1,
         recomputeFailed: 1,
         affectedOrganisations: 4,
+        rowsInPeriod: 7,
+        rowsUnexported: 6,
+        rowsOverExported: 1,
         totalDelta: 32.38
       })
     })
@@ -447,15 +493,7 @@ describe('unexported-tonnage', () => {
 
       expect(result).toStrictEqual({
         scanned: 1,
-        findings: [
-          {
-            kind: 'mismatch',
-            ...FEB_2026_IDENTITY,
-            stored: 0,
-            recomputed: 12,
-            delta: 12
-          }
-        ]
+        findings: [mismatch({ recomputed: 12, delta: 12 })]
       })
     })
 
@@ -508,15 +546,7 @@ describe('unexported-tonnage', () => {
         },
         'log-1'
       )
-      expect(findings).toStrictEqual([
-        {
-          kind: 'mismatch',
-          ...FEB_2026_IDENTITY,
-          stored: 0,
-          recomputed: 12,
-          delta: 12
-        }
-      ])
+      expect(findings).toStrictEqual([mismatch({ recomputed: 12, delta: 12 })])
     })
 
     it('marks a report that records no source summary log', async () => {

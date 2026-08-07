@@ -1,6 +1,8 @@
 import { isNil } from '#common/helpers/is-nil.js'
 import {
+  equals,
   greaterThan,
+  isZero,
   subtract,
   toNumber
 } from '#common/helpers/decimal-utils.js'
@@ -60,7 +62,10 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   kind: typeof FINDING_KIND.MISMATCH,
  *   stored: number,
  *   recomputed: number,
- *   delta: number
+ *   delta: number,
+ *   rowsInPeriod: number,
+ *   rowsUnexported: number,
+ *   rowsOverExported: number
  * }} MismatchFinding
  *
  * @typedef {FindingIdentity & {
@@ -158,44 +163,69 @@ export const findReviewableReportRows = (periodicReports) =>
 
 /**
  * A load's contribution to the figure: the tonnage received for export that has
- * not yet been exported. Clamped at zero, since a row reporting more exported
- * than received is a data error rather than a negative amount on site — how that
- * row should be handled at all is still open with the business, so the sizing
- * run takes the conservative reading.
+ * not yet been exported, and whether the row claims more exported than it
+ * received. The contribution is clamped at zero for such a row, since it is a
+ * data error rather than a negative amount on site — how it should be handled at
+ * all is still open with the business, so the sizing run takes the conservative
+ * reading and counts the rows so the decision has a number behind it.
  *
  * @param {Record<string, any>} data
- * @returns {import('#common/helpers/rounded-tonnage.js').RoundedTonnage}
+ * @returns {{
+ *   notExported: import('#common/helpers/rounded-tonnage.js').RoundedTonnage,
+ *   overExported: boolean
+ * }}
  */
-const notExportedForLoad = (data) => {
+const classifyLoad = (data) => {
   const received = toRoundedTonnage(data[TONNAGE_RECEIVED_FIELD])
   const exported = toRoundedTonnage(data[TONNAGE_EXPORTED_FIELD])
-  return greaterThan(received, exported)
-    ? subtractTonnage(received, exported)
-    : ZERO_TONNAGE
+  return greaterThan(exported, received)
+    ? { notExported: ZERO_TONNAGE, overExported: true }
+    : { notExported: subtractTonnage(received, exported), overExported: false }
 }
+
+/**
+ * @typedef {{
+ *   total: number,
+ *   rowsInPeriod: number,
+ *   rowsUnexported: number,
+ *   rowsOverExported: number
+ * }} Recomputation
+ */
 
 /**
  * The corrected figure for a period: per load received in that period, column S
  * minus column T, summed. Unlike the live calculation, no load is dropped for
  * carrying an export date.
  *
+ * Reports the rows behind the figure alongside it, so a finding says how much
+ * data a backfill would move and not only how much tonnage.
+ *
  * @param {WasteRecordState[]} wasteRecordStates
  * @param {string} startDate
  * @param {string} endDate
- * @returns {number}
+ * @returns {Recomputation}
  */
-const recomputeUnexported = (wasteRecordStates, startDate, endDate) =>
-  toNumber(
-    filterRecordsByDateField(
-      wasteRecordStates,
-      RECEIVED_DATE_FIELD,
-      startDate,
-      endDate
-    ).reduce(
-      (sum, { data }) => addTonnage(sum, notExportedForLoad(data)),
-      ZERO_TONNAGE
-    )
-  )
+const recomputeUnexported = (wasteRecordStates, startDate, endDate) => {
+  const loads = filterRecordsByDateField(
+    wasteRecordStates,
+    RECEIVED_DATE_FIELD,
+    startDate,
+    endDate
+  ).map(({ data }) => classifyLoad(data))
+
+  return {
+    total: toNumber(
+      loads.reduce(
+        (sum, { notExported }) => addTonnage(sum, notExported),
+        ZERO_TONNAGE
+      )
+    ),
+    rowsInPeriod: loads.length,
+    rowsUnexported: loads.filter(({ notExported }) => !isZero(notExported))
+      .length,
+    rowsOverExported: loads.filter(({ overExported }) => overExported).length
+  }
+}
 
 /**
  * @param {ReviewableReportRow} row
@@ -226,9 +256,9 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
     return { kind: FINDING_KIND.SOURCE_MISSING, ...identityOf(row) }
   }
 
-  let recomputed
+  let recomputation
   try {
-    recomputed = recomputeUnexported(
+    recomputation = recomputeUnexported(
       wasteRecordStates,
       row.startDate,
       row.endDate
@@ -241,7 +271,9 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
     }
   }
 
-  if (recomputed === row.storedUnexported) {
+  const { total, rowsInPeriod, rowsUnexported, rowsOverExported } =
+    recomputation
+  if (equals(total, row.storedUnexported)) {
     return null
   }
 
@@ -249,8 +281,11 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
     kind: FINDING_KIND.MISMATCH,
     ...identityOf(row),
     stored: row.storedUnexported,
-    recomputed,
-    delta: toNumber(subtract(recomputed, row.storedUnexported))
+    recomputed: total,
+    delta: toNumber(subtract(total, row.storedUnexported)),
+    rowsInPeriod,
+    rowsUnexported,
+    rowsOverExported
   }
 }
 
@@ -264,7 +299,11 @@ export const diagnoseReportRow = (row, wasteRecordStates) => {
  */
 const detailOf = (finding) => {
   if (finding.kind === FINDING_KIND.MISMATCH) {
-    return `stored ${finding.stored}, recomputed ${finding.recomputed}, delta ${finding.delta}`
+    return (
+      `stored ${finding.stored}, recomputed ${finding.recomputed}, ` +
+      `delta ${finding.delta}, rows ${finding.rowsInPeriod} in period / ` +
+      `${finding.rowsUnexported} unexported / ${finding.rowsOverExported} over-exported`
+    )
   }
   if (finding.kind === FINDING_KIND.RECOMPUTE_FAILED) {
     return finding.reason
@@ -284,8 +323,20 @@ export const formatUnexportedTonnageFinding = (finding) =>
   `(${finding.month}, ${finding.reportStatus}) - ${detailOf(finding)}`
 
 /**
- * The scale figures the run's summary line reports. `totalDelta` covers the
- * mismatches only — the tonnage a backfill would move.
+ * The mismatches among a set of findings — the reports a backfill could correct
+ * in place, and the only ones carrying figures to total.
+ *
+ * @param {UnexportedTonnageFinding[]} findings
+ * @returns {MismatchFinding[]}
+ */
+const mismatchesOf = (findings) =>
+  /** @type {MismatchFinding[]} */ (
+    findings.filter(({ kind }) => kind === FINDING_KIND.MISMATCH)
+  )
+
+/**
+ * The scale figures the run's summary line reports. `totalDelta` and the row
+ * counts cover the mismatches only — the tonnage and data a backfill would move.
  *
  * @param {UnexportedTonnageFinding[]} findings
  * @returns {{
@@ -293,23 +344,29 @@ export const formatUnexportedTonnageFinding = (finding) =>
  *   sourceMissing: number,
  *   recomputeFailed: number,
  *   affectedOrganisations: number,
+ *   rowsInPeriod: number,
+ *   rowsUnexported: number,
+ *   rowsOverExported: number,
  *   totalDelta: number
  * }}
  */
 export const summariseUnexportedTonnageFindings = (findings) => {
   const countOf = (kind) => findings.filter((f) => f.kind === kind).length
+  const mismatches = mismatchesOf(findings)
+  const sumOf = (field) =>
+    mismatches.reduce((total, finding) => total + finding[field], 0)
 
   return {
-    mismatches: countOf(FINDING_KIND.MISMATCH),
+    mismatches: mismatches.length,
     sourceMissing: countOf(FINDING_KIND.SOURCE_MISSING),
     recomputeFailed: countOf(FINDING_KIND.RECOMPUTE_FAILED),
     affectedOrganisations: new Set(findings.map((f) => f.organisationId)).size,
+    rowsInPeriod: sumOf('rowsInPeriod'),
+    rowsUnexported: sumOf('rowsUnexported'),
+    rowsOverExported: sumOf('rowsOverExported'),
     totalDelta: toNumber(
-      findings.reduce(
-        (total, finding) =>
-          finding.kind === FINDING_KIND.MISMATCH
-            ? addTonnage(total, toRoundedTonnage(finding.delta))
-            : total,
+      mismatches.reduce(
+        (total, { delta }) => addTonnage(total, toRoundedTonnage(delta)),
         ZERO_TONNAGE
       )
     )

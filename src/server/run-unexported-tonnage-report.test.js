@@ -144,7 +144,8 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Unexported tonnage: scanned 0, mismatches 0, source-missing 0, ' +
-        'recompute-failed 0, affected organisations 0, total delta 0'
+        'recompute-failed 0, affected organisations 0, ' +
+        'rows 0 in period / 0 unexported / 0 over-exported, total delta 0'
     })
   })
 
@@ -158,12 +159,14 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Unexported tonnage mismatch: org org-1 / registration reg-1, ' +
-        'report report-1 (Feb 2026, submitted) - stored 0, recomputed 29.19, delta 29.19'
+        'report report-1 (Feb 2026, submitted) - stored 0, recomputed 29.19, ' +
+        'delta 29.19, rows 1 in period / 1 unexported / 0 over-exported'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Unexported tonnage: scanned 1, mismatches 1, source-missing 0, ' +
-        'recompute-failed 0, affected organisations 1, total delta 29.19'
+        'recompute-failed 0, affected organisations 1, ' +
+        'rows 1 in period / 1 unexported / 0 over-exported, total delta 29.19'
     })
     expect(logger.warn).not.toHaveBeenCalled()
   })
@@ -189,7 +192,8 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Unexported tonnage: scanned 3, mismatches 3, source-missing 0, ' +
-        'recompute-failed 0, affected organisations 2, total delta 30'
+        'recompute-failed 0, affected organisations 2, ' +
+        'rows 3 in period / 3 unexported / 0 over-exported, total delta 30'
     })
   })
 
