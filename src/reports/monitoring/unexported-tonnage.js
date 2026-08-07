@@ -12,6 +12,7 @@ import {
   subtractTonnage,
   toRoundedTonnage
 } from '#common/helpers/rounded-tonnage.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -54,7 +55,8 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   organisationId: string,
  *   registrationId: string,
  *   reportId: string,
- *   month: string,
+ *   year: number,
+ *   period: number,
  *   reportStatus: string
  * }} FindingIdentity
  *
@@ -125,10 +127,11 @@ const TONNAGE_EXPORTED_FIELD = 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
  * The monthly reports this diagnostic reviews, flattened out of the
  * estate-wide periodic report groupings.
  *
- * A non-null `exportActivity.tonnageReceivedNotExported` identifies an
- * accredited exporter on its own: a registered-only exporter's figure is typed
- * in by hand and stored as null, and a reprocessor has no export activity at
- * all. No registration lookup is needed to filter the population.
+ * Only monthly reports are read, which is what confines the population to
+ * accredited exporters: a registration reports monthly once it holds an
+ * accreditation number and quarterly before that, so a registered-only
+ * exporter's hand-typed figure only ever lands on a quarterly report. A
+ * reprocessor has no export activity at all, and its figure reads as null.
  *
  * @param {PeriodicReport[]} periodicReports
  * @returns {ReviewableReportRow[]}
@@ -235,7 +238,8 @@ const identityOf = (row) => ({
   organisationId: row.organisationId,
   registrationId: row.registrationId,
   reportId: row.reportId,
-  month: formatPeriodLabel('monthly', row.period, row.year),
+  year: row.year,
+  period: row.period,
   reportStatus: row.reportStatus
 })
 
@@ -320,7 +324,8 @@ const detailOf = (finding) => {
 export const formatUnexportedTonnageFinding = (finding) =>
   `Unexported tonnage ${finding.kind}: org ${finding.organisationId} / ` +
   `registration ${finding.registrationId}, report ${finding.reportId} ` +
-  `(${finding.month}, ${finding.reportStatus}) - ${detailOf(finding)}`
+  `(${formatPeriodLabel(CADENCE.monthly, finding.period, finding.year)}, ` +
+  `${finding.reportStatus}) - ${detailOf(finding)}`
 
 /**
  * The mismatches among a set of findings — the reports a backfill could correct
@@ -341,6 +346,67 @@ const mismatchesOf = (findings) =>
  */
 const distinctCount = (findings, field) =>
   new Set(findings.map((finding) => finding[field])).size
+
+/**
+ * The tonnage a set of mismatches moves, split by direction. Reporting the two
+ * halves alongside the net keeps a month whose understatements and
+ * overstatements cancel from reading as a month with nothing wrong in it.
+ *
+ * `overstated` is returned positive — it is an amount of tonnage, not a signed
+ * correction.
+ *
+ * @param {MismatchFinding[]} mismatches
+ * @returns {{ delta: number, understated: number, overstated: number }}
+ */
+const deltaTotalsOf = (mismatches) => {
+  const sum = (subset) =>
+    subset.reduce(
+      (total, { delta }) => addTonnage(total, toRoundedTonnage(delta)),
+      ZERO_TONNAGE
+    )
+  const understated = sum(mismatches.filter(({ delta }) => delta > 0))
+  const overstated = sum(mismatches.filter(({ delta }) => delta < 0))
+
+  return {
+    delta: toNumber(addTonnage(understated, overstated)),
+    understated: toNumber(understated),
+    overstated: toNumber(subtract(ZERO_TONNAGE, overstated))
+  }
+}
+
+const MONTHS_IN_YEAR = 12
+
+/**
+ * The correctable tonnage broken down by the month each report covers, oldest
+ * first — the shape the business asked the sizing run for. Only mismatches
+ * carry a figure, so the other finding kinds contribute no months.
+ *
+ * @param {UnexportedTonnageFinding[]} findings
+ * @returns {{
+ *   month: string,
+ *   reports: number,
+ *   delta: number,
+ *   understated: number,
+ *   overstated: number
+ * }[]}
+ */
+export const summariseUnexportedTonnageByMonth = (findings) =>
+  [
+    ...Map.groupBy(
+      mismatchesOf(findings),
+      ({ year, period }) => year * MONTHS_IN_YEAR + period
+    ).entries()
+  ]
+    .sort(([a], [b]) => a - b)
+    .map(([, mismatches]) => ({
+      month: formatPeriodLabel(
+        CADENCE.monthly,
+        mismatches[0].period,
+        mismatches[0].year
+      ),
+      reports: mismatches.length,
+      ...deltaTotalsOf(mismatches)
+    }))
 
 /**
  * The scale figures the run's summary line reports. `totalDelta` and the row
@@ -364,7 +430,9 @@ const distinctCount = (findings, field) =>
  *   rowsInPeriod: number,
  *   rowsUnexported: number,
  *   rowsOverExported: number,
- *   totalDelta: number
+ *   totalDelta: number,
+ *   totalUnderstated: number,
+ *   totalOverstated: number
  * }}
  */
 export const summariseUnexportedTonnageFindings = (findings) => {
@@ -375,6 +443,7 @@ export const summariseUnexportedTonnageFindings = (findings) => {
   )
   const sumOf = (field) =>
     mismatches.reduce((total, finding) => total + finding[field], 0)
+  const { delta, understated, overstated } = deltaTotalsOf(mismatches)
 
   return {
     mismatches: mismatches.length,
@@ -386,12 +455,9 @@ export const summariseUnexportedTonnageFindings = (findings) => {
     rowsInPeriod: sumOf('rowsInPeriod'),
     rowsUnexported: sumOf('rowsUnexported'),
     rowsOverExported: sumOf('rowsOverExported'),
-    totalDelta: toNumber(
-      mismatches.reduce(
-        (total, { delta }) => addTonnage(total, toRoundedTonnage(delta)),
-        ZERO_TONNAGE
-      )
-    )
+    totalDelta: delta,
+    totalUnderstated: understated,
+    totalOverstated: overstated
   }
 }
 

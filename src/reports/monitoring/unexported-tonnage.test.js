@@ -5,6 +5,7 @@ import {
   findUnexportedTonnageReports,
   findReviewableReportRows,
   formatUnexportedTonnageFinding,
+  summariseUnexportedTonnageByMonth,
   summariseUnexportedTonnageFindings
 } from './unexported-tonnage.js'
 
@@ -54,7 +55,8 @@ const FEB_2026_IDENTITY = {
   organisationId: 'org-1',
   registrationId: 'reg-1',
   reportId: 'report-1',
-  month: 'Feb 2026',
+  year: 2026,
+  period: 2,
   reportStatus: 'submitted'
 }
 
@@ -437,7 +439,9 @@ describe('unexported-tonnage', () => {
         rowsInPeriod: 7,
         rowsUnexported: 6,
         rowsOverExported: 1,
-        totalDelta: 32.38
+        totalDelta: 32.38,
+        totalUnderstated: 33.19,
+        totalOverstated: 0.81
       })
     })
 
@@ -481,6 +485,72 @@ describe('unexported-tonnage', () => {
         affectedOrganisations: 0,
         unresolvedExporters: 1
       })
+    })
+  })
+
+  describe('summariseUnexportedTonnageByMonth', () => {
+    const mismatchIn = (year, period, delta) => ({
+      kind: 'mismatch',
+      year,
+      period,
+      delta
+    })
+
+    it('totals the delta for each month a mismatch falls in, oldest first', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          mismatchIn(2026, 3, 29.19),
+          mismatchIn(2025, 12, 4),
+          mismatchIn(2026, 3, 0.81)
+        ])
+      )
+
+      expect(summariseUnexportedTonnageByMonth(findings)).toStrictEqual([
+        {
+          month: 'Dec 2025',
+          reports: 1,
+          delta: 4,
+          understated: 4,
+          overstated: 0
+        },
+        {
+          month: 'Mar 2026',
+          reports: 2,
+          delta: 30,
+          understated: 30,
+          overstated: 0
+        }
+      ])
+    })
+
+    it('splits a month understated and overstated, so opposing reports do not cancel out of sight', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          mismatchIn(2026, 3, 29.19),
+          mismatchIn(2026, 3, -29.19)
+        ])
+      )
+
+      expect(summariseUnexportedTonnageByMonth(findings)).toStrictEqual([
+        {
+          month: 'Mar 2026',
+          reports: 2,
+          delta: 0,
+          understated: 29.19,
+          overstated: 29.19
+        }
+      ])
+    })
+
+    it('ignores findings with no figure to total', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          { kind: 'source-missing', year: 2026, period: 3 },
+          { kind: 'recompute-failed', year: 2026, period: 3 }
+        ])
+      )
+
+      expect(summariseUnexportedTonnageByMonth(findings)).toStrictEqual([])
     })
   })
 

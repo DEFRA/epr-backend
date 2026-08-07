@@ -11,10 +11,13 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-const submittedFebReport = ({
+const submittedMonthlyReport = ({
   organisationId = 'org-1',
   registrationId = 'reg-1',
   reportId = 'report-1',
+  period = 2,
+  startDate = '2026-02-01',
+  endDate = '2026-02-28',
   tonnageReceivedNotExported = 0
 } = {}) => ({
   organisationId,
@@ -22,9 +25,9 @@ const submittedFebReport = ({
   year: 2026,
   reports: {
     monthly: {
-      2: {
-        startDate: '2026-02-01',
-        endDate: '2026-02-28',
+      [period]: {
+        startDate,
+        endDate,
         current: {
           id: reportId,
           status: 'submitted',
@@ -36,12 +39,22 @@ const submittedFebReport = ({
   }
 })
 
-const receivedRow = (tonnageReceived) => ({
-  rowId: 'row-1',
+const submittedFebReport = (overrides = {}) => submittedMonthlyReport(overrides)
+
+const submittedMarchReport = (overrides = {}) =>
+  submittedMonthlyReport({
+    period: 3,
+    startDate: '2026-03-01',
+    endDate: '2026-03-31',
+    ...overrides
+  })
+
+const receivedRow = (tonnageReceived, dateReceived = '2026-02-11') => ({
+  rowId: `row-${dateReceived}`,
   wasteRecordType: 'RECEIVED',
   processingType: 'EXPORTER',
   data: {
-    DATE_RECEIVED_FOR_EXPORT: '2026-02-11',
+    DATE_RECEIVED_FOR_EXPORT: dateReceived,
     TONNAGE_RECEIVED_FOR_EXPORT: tonnageReceived,
     TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: null
   }
@@ -146,7 +159,8 @@ describe('runUnexportedTonnageReport', () => {
         'Unexported tonnage: scanned 0, mismatches 0, source-missing 0, ' +
         'recompute-failed 0, affected exporters 0 across 0 organisations, ' +
         'unresolved exporters 0, ' +
-        'rows 0 in period / 0 unexported / 0 over-exported, total delta 0'
+        'rows 0 in period / 0 unexported / 0 over-exported, ' +
+        'total delta 0 (understated 0, overstated 0)'
     })
   })
 
@@ -168,9 +182,32 @@ describe('runUnexportedTonnageReport', () => {
         'Unexported tonnage: scanned 1, mismatches 1, source-missing 0, ' +
         'recompute-failed 0, affected exporters 1 across 1 organisations, ' +
         'unresolved exporters 0, ' +
-        'rows 1 in period / 1 unexported / 0 over-exported, total delta 29.19'
+        'rows 1 in period / 1 unexported / 0 over-exported, ' +
+        'total delta 29.19 (understated 29.19, overstated 0)'
     })
     expect(logger.warn).not.toHaveBeenCalled()
+  })
+
+  it('logs the delta broken down by the month each report covers', async () => {
+    const server = buildServer(
+      estateApp(
+        [submittedFebReport(), submittedMarchReport({ reportId: 'report-2' })],
+        [receivedRow(29.19), receivedRow(4, '2026-03-09')]
+      )
+    )
+
+    await runUnexportedTonnageReport(server)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Unexported tonnage by month: Feb 2026 - 1 report(s), delta 29.19, ' +
+        'understated 29.19, overstated 0'
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Unexported tonnage by month: Mar 2026 - 1 report(s), delta 4, ' +
+        'understated 4, overstated 0'
+    })
   })
 
   it('counts distinct affected exporters and organisations, and totals the delta across them', async () => {
@@ -196,7 +233,8 @@ describe('runUnexportedTonnageReport', () => {
         'Unexported tonnage: scanned 3, mismatches 3, source-missing 0, ' +
         'recompute-failed 0, affected exporters 2 across 2 organisations, ' +
         'unresolved exporters 0, ' +
-        'rows 3 in period / 3 unexported / 0 over-exported, total delta 30'
+        'rows 3 in period / 3 unexported / 0 over-exported, ' +
+        'total delta 30 (understated 30, overstated 0)'
     })
   })
 

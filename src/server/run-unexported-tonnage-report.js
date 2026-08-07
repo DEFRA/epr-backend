@@ -2,6 +2,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import {
   findUnexportedTonnageReports,
   formatUnexportedTonnageFinding,
+  summariseUnexportedTonnageByMonth,
   summariseUnexportedTonnageFindings
 } from '#reports/monitoring/unexported-tonnage.js'
 
@@ -26,6 +27,20 @@ const runReport = async (server) => {
     logger.info({ message: formatUnexportedTonnageFinding(finding) })
   }
 
+  for (const {
+    month,
+    reports,
+    delta,
+    understated,
+    overstated
+  } of summariseUnexportedTonnageByMonth(findings)) {
+    logger.info({
+      message:
+        `Unexported tonnage by month: ${month} - ${reports} report(s), ` +
+        `delta ${delta}, understated ${understated}, overstated ${overstated}`
+    })
+  }
+
   const {
     mismatches,
     sourceMissing,
@@ -36,7 +51,9 @@ const runReport = async (server) => {
     rowsInPeriod,
     rowsUnexported,
     rowsOverExported,
-    totalDelta
+    totalDelta,
+    totalUnderstated,
+    totalOverstated
   } = summariseUnexportedTonnageFindings(findings)
 
   logger.info({
@@ -47,7 +64,8 @@ const runReport = async (server) => {
       `${affectedOrganisations} organisations, ` +
       `unresolved exporters ${unresolvedExporters}, ` +
       `rows ${rowsInPeriod} in period / ${rowsUnexported} unexported / ` +
-      `${rowsOverExported} over-exported, total delta ${totalDelta}`
+      `${rowsOverExported} over-exported, total delta ${totalDelta} ` +
+      `(understated ${totalUnderstated}, overstated ${totalOverstated})`
   })
 }
 
