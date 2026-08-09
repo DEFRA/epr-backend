@@ -227,9 +227,7 @@ async function createServer(options = {}) {
     runOrganisationValidationSweep(server)
     runStaleIssuedTonnageReport(server)
     runPreCpaResubmissionBackfill(server)
-    runUnexportedTonnageReport(
-      /** @type {StartedServer} */ (/** @type {unknown} */ (server))
-    )
+    runUnexportedTonnageReport(/** @type {StartedServer} */ (server))
   })
 
   return server

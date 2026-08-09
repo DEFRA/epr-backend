@@ -5,6 +5,10 @@ import { randomUUID } from 'node:crypto'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { unexportedTonnageDependencies } from './run-unexported-tonnage-report.js'
 
+/**
+ * @import { StartedServer } from '#common/hapi-types.js'
+ */
+
 vi.mock(
   '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
   async () => import('#adapters/sqs-command-executor/mock.plugin.js')
@@ -15,13 +19,7 @@ vi.mock(
 )
 
 const startMongo = async () => {
-  await setupMongo(
-    /** @type {*} */ ({
-      binary: { version: 'latest' },
-      serverOptions: {},
-      autoStart: false
-    })
-  )
+  await setupMongo()
   process.env.MONGO_URI = globalThis.__MONGO_URI__
 }
 
@@ -30,9 +28,8 @@ const bootServer = async () => {
   const { createServer } = await import('#server/server.js')
   const server = await createServer()
   await server.initialize()
-  // The mongoDb plugin decorates `db` and repository plugins decorate `app`;
-  // neither is on Hapi's Server type, so project to the test's dynamic shape.
-  return /** @type {*} */ (server)
+
+  return /** @type {StartedServer} */ (server)
 }
 
 describe('unexported tonnage diagnostic wiring', () => {

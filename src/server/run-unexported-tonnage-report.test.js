@@ -102,14 +102,13 @@ const buildServer = (
     lock = { free: vi.fn().mockResolvedValue(undefined) },
     reportEnabled = true
   } = {}
-) =>
-  /** @type {*} */ ({
-    app,
-    featureFlags: {
-      isUnexportedTonnageReportEnabled: () => reportEnabled
-    },
-    locker: { lock: vi.fn().mockResolvedValue(lock) }
-  })
+) => ({
+  app,
+  featureFlags: {
+    isUnexportedTonnageReportEnabled: () => reportEnabled
+  },
+  locker: { lock: vi.fn().mockResolvedValue(lock) }
+})
 
 const infoLine = (action, message, reference) => ({
   message,
@@ -149,11 +148,11 @@ describe('runUnexportedTonnageReport', () => {
 
   it('skips the report and reads nothing when the lock is held by another instance', async () => {
     const app = emptyEstateApp()
-    const server = /** @type {*} */ ({
+    const server = {
       app,
       featureFlags: { isUnexportedTonnageReportEnabled: () => true },
       locker: { lock: vi.fn().mockResolvedValue(null) }
-    })
+    }
 
     await runUnexportedTonnageReport(server)
 

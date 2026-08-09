@@ -14,8 +14,25 @@ import {
 } from '#reports/monitoring/unexported-tonnage.js'
 
 /**
- * @import { HapiServer, StartedServer } from '#common/hapi-types.js'
- * @import { UnexportedTonnageFinding } from '#reports/monitoring/unexported-tonnage.js'
+ * @import { LockManager } from 'mongo-locks'
+ * @import { FeatureFlags } from '#feature-flags/feature-flags.port.js'
+ * @import {
+ *   UnexportedTonnageDeps,
+ *   UnexportedTonnageFinding
+ * } from '#reports/monitoring/unexported-tonnage.js'
+ */
+
+/**
+ * @typedef {{
+ *   app: {
+ *     organisationsRepository: UnexportedTonnageDeps['organisationsRepository'],
+ *     reportsRepository: UnexportedTonnageDeps['reportsRepository'],
+ *     summaryLogRowStatesRepository:
+ *       UnexportedTonnageDeps['summaryLogRowStateRepository']
+ *   },
+ *   featureFlags: Pick<FeatureFlags, 'isUnexportedTonnageReportEnabled'>,
+ *   locker: Pick<LockManager, 'lock'>
+ * }} UnexportedTonnageServer
  */
 
 const LOCK_NAME = 'unexported-tonnage-report'
@@ -137,7 +154,7 @@ const logSummary = (scanned, findings) => {
  * Named so the integration test can assert each one resolves against a real
  * booted server, which a unit test's double cannot.
  *
- * @param {HapiServer} server
+ * @param {UnexportedTonnageServer} server
  */
 export const unexportedTonnageDependencies = (server) => ({
   reportsRepository: server.app.reportsRepository,
@@ -151,7 +168,7 @@ export const unexportedTonnageDependencies = (server) => ({
  * minus column T) and logs the reports whose stored value disagrees. Read-only,
  * safe under live traffic.
  *
- * @param {HapiServer} server
+ * @param {UnexportedTonnageServer} server
  */
 const runReport = async (server) => {
   const { scanned, findings } = await findUnexportedTonnageReports(
@@ -178,7 +195,7 @@ const runReport = async (server) => {
  * Gated by the unexported-tonnage-report feature flag: with it off this
  * returns before touching the locker or any repository.
  *
- * @param {StartedServer} server
+ * @param {UnexportedTonnageServer} server
  */
 export const runUnexportedTonnageReport = async (server) => {
   if (!server.featureFlags.isUnexportedTonnageReportEnabled()) {
