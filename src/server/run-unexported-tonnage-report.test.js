@@ -75,7 +75,7 @@ const emptyEstateApp = () => ({
   organisationsRepository: {
     findRegistrationById: vi.fn()
   },
-  summaryLogRowStateRepository: {
+  summaryLogRowStatesRepository: {
     findRowStatesForSummaryLog: vi.fn()
   }
 })
@@ -91,7 +91,7 @@ const estateApp = (periodicReports, rowStates) => ({
   organisationsRepository: {
     findRegistrationById: vi.fn().mockResolvedValue({ accreditationId: null })
   },
-  summaryLogRowStateRepository: {
+  summaryLogRowStatesRepository: {
     findRowStatesForSummaryLog: vi.fn().mockResolvedValue(rowStates)
   }
 })
@@ -102,13 +102,14 @@ const buildServer = (
     lock = { free: vi.fn().mockResolvedValue(undefined) },
     reportEnabled = true
   } = {}
-) => ({
-  app,
-  featureFlags: {
-    isUnexportedTonnageReportEnabled: () => reportEnabled
-  },
-  locker: { lock: vi.fn().mockResolvedValue(lock) }
-})
+) =>
+  /** @type {*} */ ({
+    app,
+    featureFlags: {
+      isUnexportedTonnageReportEnabled: () => reportEnabled
+    },
+    locker: { lock: vi.fn().mockResolvedValue(lock) }
+  })
 
 const infoLine = (action, message, reference) => ({
   message,
@@ -148,11 +149,11 @@ describe('runUnexportedTonnageReport', () => {
 
   it('skips the report and reads nothing when the lock is held by another instance', async () => {
     const app = emptyEstateApp()
-    const server = {
+    const server = /** @type {*} */ ({
       app,
       featureFlags: { isUnexportedTonnageReportEnabled: () => true },
       locker: { lock: vi.fn().mockResolvedValue(null) }
-    }
+    })
 
     await runUnexportedTonnageReport(server)
 

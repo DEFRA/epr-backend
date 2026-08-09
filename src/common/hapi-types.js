@@ -5,6 +5,8 @@
  * @import {Db} from 'mongodb'
  * @import {LockManager} from 'mongo-locks'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {ReportsRepository} from '#reports/repository/port.js'
+ * @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
  * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService
@@ -115,7 +117,17 @@
  */
 
 /**
- * @typedef {{ [key: string]: unknown }} ServerApp
+ * Dependencies `registerDependency` decorates onto `server.app`. Naming one
+ * types its reads, so a property name no plugin registers fails the type check;
+ * the index signature keeps the rest readable.
+ *
+ * @typedef {{
+ *   organisationsRepository: OrganisationsRepository,
+ *   reportsRepository: ReportsRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStateRepository,
+ *   systemLogsRepository: SystemLogsRepository,
+ *   [key: string]: unknown
+ * }} ServerApp
  */
 
 /**
@@ -136,6 +148,13 @@
  * @property {Function} initialize - Initialize the server without starting
  * @property {Function} inject - Inject a request for testing
  * @property {Function} ext - Register extension points
+ */
+
+/**
+ * A server past `onPostStart`, where the mongodb plugin has decorated the
+ * locker HapiServer types as optional.
+ *
+ * @typedef {HapiServer & { locker: LockManager }} StartedServer
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
