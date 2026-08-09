@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { logger } from '#common/helpers/logging/logger.js'
 import { runUnexportedTonnageReport } from './run-unexported-tonnage-report.js'
 
+/**
+ * @import { StartedServer } from '#common/hapi-types.js'
+ */
+
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: vi.fn(),
@@ -102,13 +106,16 @@ const buildServer = (
     lock = { free: vi.fn().mockResolvedValue(undefined) },
     reportEnabled = true
   } = {}
-) => ({
-  app,
-  featureFlags: {
-    isUnexportedTonnageReportEnabled: () => reportEnabled
-  },
-  locker: { lock: vi.fn().mockResolvedValue(lock) }
-})
+) =>
+  /** @type {StartedServer} */ (
+    /** @type {unknown} */ ({
+      app,
+      featureFlags: {
+        isUnexportedTonnageReportEnabled: () => reportEnabled
+      },
+      locker: { lock: vi.fn().mockResolvedValue(lock) }
+    })
+  )
 
 const infoLine = (action, message, reference) => ({
   message,
@@ -148,11 +155,13 @@ describe('runUnexportedTonnageReport', () => {
 
   it('skips the report and reads nothing when the lock is held by another instance', async () => {
     const app = emptyEstateApp()
-    const server = {
-      app,
-      featureFlags: { isUnexportedTonnageReportEnabled: () => true },
-      locker: { lock: vi.fn().mockResolvedValue(null) }
-    }
+    const server = /** @type {StartedServer} */ (
+      /** @type {unknown} */ ({
+        app,
+        featureFlags: { isUnexportedTonnageReportEnabled: () => true },
+        locker: { lock: vi.fn().mockResolvedValue(null) }
+      })
+    )
 
     await runUnexportedTonnageReport(server)
 

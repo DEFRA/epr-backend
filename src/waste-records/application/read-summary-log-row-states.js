@@ -1,11 +1,6 @@
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 
 /**
- * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
- * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
- */
-
-/**
  * @typedef {import('#waste-records/repository/schema.js').SummaryLogRowState} SummaryLogRowState
  */
 
@@ -56,8 +51,8 @@ export const toWasteRecordState = ({
  * stay consistent with it), this is the whole read;
  * `summaryLogRowStatesForRegistration` composes it with the head resolution.
  *
- * @param {Pick<SummaryLogRowStateRepository, 'findRowStatesForSummaryLog'>} summaryLogRowStateRepository
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} summaryLogRowStateRepository
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
  * @param {string | null} head
  * @returns {Promise<WasteRecordState[]>}
  */

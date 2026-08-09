@@ -2,7 +2,6 @@
  * @typedef {import('./helpers/logging/logger.js').TypedLogger} TypedLogger
  * @typedef {import('./helpers/logging/logger.js').IndexedLogProperties} IndexedLogProperties
  * @typedef {import('../feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags
- * @import {Server} from '@hapi/hapi'
  * @import {Db} from 'mongodb'
  * @import {LockManager} from 'mongo-locks'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
@@ -151,15 +150,11 @@
  */
 
 /**
- * A booted server, as its plugins have decorated it. Intersecting Hapi's own
- * Server keeps it assignable from what `Hapi.server()` returns.
+ * A booted server, as its plugins have decorated it. Built on HapiServer rather
+ * than hapi's own Server: intersecting the latter resolves `app` reads to `any`,
+ * which drops the check that a dependency is read under a registered name.
  *
- * @typedef {Server & {
- *   app: ServerApp,
- *   db: Db,
- *   featureFlags: FeatureFlags,
- *   locker: LockManager
- * }} StartedServer
+ * @typedef {HapiServer & { db: Db, locker: LockManager }} StartedServer
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

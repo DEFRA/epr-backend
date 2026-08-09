@@ -29,7 +29,7 @@ const bootServer = async () => {
   const server = await createServer()
   await server.initialize()
 
-  return /** @type {StartedServer} */ (server)
+  return /** @type {StartedServer} */ (/** @type {unknown} */ (server))
 }
 
 describe('unexported tonnage diagnostic wiring', () => {

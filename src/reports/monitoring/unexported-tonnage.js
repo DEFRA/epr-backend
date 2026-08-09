@@ -31,21 +31,6 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  */
 
 /**
- * The repository surface the scan reads, narrowed to the calls it makes so a
- * caller need not hold a whole repository to drive it.
- *
- * @typedef {{
- *   reportsRepository: Pick<
- *     ReportsRepository, 'findAllPeriodicReports' | 'findReportById'
- *   >,
- *   organisationsRepository: Pick<OrganisationsRepository, 'findRegistrationById'>,
- *   summaryLogRowStateRepository: Pick<
- *     SummaryLogRowStateRepository, 'findRowStatesForSummaryLog'
- *   >
- * }} UnexportedTonnageDeps
- */
-
-/**
  * Startup diagnostic (PAE-1783): sizes how many accredited-exporter monthly
  * reports carry a wrong `exportActivity.tonnageReceivedNotExported`, and splits
  * them into the ones a later backfill could correct in place and the ones whose
@@ -616,7 +601,7 @@ export const summariseUnexportedTonnageFindings = (findings) => {
  * Errors propagate: a registration that cannot be read is a fact about the run,
  * not about the exporter's data, and the caller records it as such.
  *
- * @param {UnexportedTonnageDeps['organisationsRepository']} organisationsRepository
+ * @param {OrganisationsRepository} organisationsRepository
  * @param {string} organisationId
  * @param {string} registrationId
  * @returns {Promise<import('#waste-records/repository/port.js').WasteBalanceLedgerId[]>}
@@ -651,7 +636,11 @@ const NO_ROWS = 'no rows found under the registration ledgers'
  * either one is stable across re-runs; anything that throws on the way is not,
  * and is left to propagate.
  *
- * @param {UnexportedTonnageDeps} deps
+ * @param {{
+ *   reportsRepository: ReportsRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   summaryLogRowStateRepository: SummaryLogRowStateRepository
+ * }} deps
  * @param {ReviewableReportRow} row
  * @returns {Promise<SourceRowStates>}
  */
@@ -696,7 +685,11 @@ const loadSourceRowStates = async (
  * single failure must not cost the run every figure it has already computed,
  * since the diagnostic gets one pass per deploy.
  *
- * @param {UnexportedTonnageDeps} deps
+ * @param {{
+ *   reportsRepository: ReportsRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   summaryLogRowStateRepository: SummaryLogRowStateRepository
+ * }} deps
  * @returns {Promise<{ scanned: number, findings: UnexportedTonnageFinding[] }>}
  */
 export const findUnexportedTonnageReports = async (deps) => {
