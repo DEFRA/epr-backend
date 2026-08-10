@@ -54,8 +54,8 @@ const isTemplateRow = (rowIdValue) => {
  * coerce-waste-record.js), so the persisted record preserves the
  * user's original input.
  *
- * @param {Array<string|null>} headers - Array of header names
- * @param {Array<{rowNumber: number, values: Array<*>}>} rows - Array of row objects with row number and values
+ * @param {(string | null)[]} headers - Array of header names
+ * @param {{rowNumber: number, values: *[]}[]} rows - Array of row objects with row number and values
  * @param {string} rowIdField - The header name used to identify the row ID
  * @returns {TransformableRow[]} Array of rows with data objects built
  */
@@ -159,7 +159,7 @@ const resolveAccreditation = async (
  * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
- * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
+ * @param {{ record: import('#domain/waste-records/model.js').WasteRecord }[]} params.wasteRecords
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {string} params.summaryLogId

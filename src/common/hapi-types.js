@@ -4,7 +4,9 @@
  * @typedef {import('../feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags
  * @import {Db} from 'mongodb'
  * @import {LockManager} from 'mongo-locks'
+ * @import {PublicRegisterRepository} from '#domain/public-register/repository/port.js'
  * @import {UploadsRepository} from '#domain/uploads/repository/port.js'
+ * @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js'
  * @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js'
  * @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js'
  * @import {PrnEvents} from '#packaging-recycling-notes/application/prn-events.plugin.js'
@@ -16,8 +18,6 @@
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
  * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
- * @typedef {ReturnType<typeof import('#adapters/repositories/public-register/public-register.js').createPublicRegisterRepository>} PublicRegisterRepository
- * @typedef {ReturnType<typeof import('#non-prod-data-reset/mongodb.js').createNonProdDataReset>} NonProdDataReset
  * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService
  */
 

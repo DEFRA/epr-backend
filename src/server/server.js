@@ -226,7 +226,7 @@ async function createServer(options = {}) {
     const startedServer = /** @type {StartedServer} */ (
       /** @type {unknown} */ (server)
     )
-    runFormsDataMigration(server)
+    runFormsDataMigration(startedServer)
     runOrganisationValidationSweep(startedServer)
     runStaleIssuedTonnageReport(startedServer)
     runPreCpaResubmissionBackfill(startedServer)

@@ -119,7 +119,7 @@ const logUnexpectedlyFlagged = (reportIds) => {
  * threw, so the run's log makes clear which groups still need a retry rather
  * than only a generic top-level failure message. Expected empty.
  *
- * @param {Array<{ organisationId: string, registrationId: string, summaryLogId: string, error: Error }>} failed
+ * @param {{ organisationId: string, registrationId: string, summaryLogId: string, error: Error }[]} failed
  */
 const logFailedGroups = (failed) => {
   for (const group of failed) {

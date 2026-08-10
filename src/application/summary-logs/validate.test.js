@@ -29,7 +29,7 @@ import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-dat
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {string} params.summaryLogId
  * @param {number} params.number - the submission's ledger position
- * @param {Array<{ rowId: string, wasteRecordType?: string }>} params.rows
+ * @param {{ rowId: string, wasteRecordType?: string }[]} params.rows
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  */
@@ -135,7 +135,7 @@ const rowToArray = (rowObject) =>
 
 /**
  * @param {{
- *   rows?: Array<unknown[] | Record<string, unknown>>,
+ *   rows?: (unknown[] | Record<string, unknown>)[],
  *   headers?: string[]
  * }} [options]
  */

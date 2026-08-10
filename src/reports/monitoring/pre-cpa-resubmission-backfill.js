@@ -769,7 +769,7 @@ const unexpectedlyFlaggedReportIds = (expectedReportIds, flaggedReports) =>
  *   reportsMissingSubmittedAt: ReportIdentity[],
  *   flagged: MarkSubmittedReportRequiringResubmissionResult[],
  *   unexpectedlyFlaggedReportIds: string[],
- *   failed: Array<{ organisationId: string, registrationId: string, summaryLogId: string, error: Error }>
+ *   failed: { organisationId: string, registrationId: string, summaryLogId: string, error: Error }[]
  * }>}
  */
 export const backfillPreCpaResubmissionReports = async ({

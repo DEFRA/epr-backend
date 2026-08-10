@@ -40,7 +40,7 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
 
 /** @import { Lifecycle, Plugin } from '@hapi/hapi' */
 /** @import { Db } from 'mongodb' */
-/** @import { FeatureFlags } from '#common/hapi-types.js' */
+/** @import { FeatureFlags, ServerApp } from '#common/hapi-types.js' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
 /** @import { Mock } from 'vitest' */
 
@@ -69,7 +69,7 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
  * Creates a plugin that wraps a repository for request access.
  * Supports both factory functions (per-request instantiation) and direct instances.
  *
- * @param {string} name - Repository name
+ * @param {keyof ServerApp} name - Repository name
  * @param {Function|Object} repositoryOrFactory - Repository instance OR factory function
  * @returns {import('@hapi/hapi').Plugin<void>}
  */
@@ -106,6 +106,7 @@ const createDbPlugin = (db) => ({
   }
 })
 
+/** @type {{name: keyof ServerApp, createDefault: Function}[]} */
 const repositoryConfigs = [
   {
     name: 'organisationsRepository',
@@ -161,6 +162,7 @@ const repositoryConfigs = [
   }
 ]
 
+/** @type {{name: keyof ServerApp, createDefault: Function}[]} */
 const devEndpointsRepositoryConfigs = [
   {
     name: 'nonProdDataReset',
@@ -170,7 +172,7 @@ const devEndpointsRepositoryConfigs = [
 
 /**
  * Builds repository plugins from config, applying any overrides.
- * @param {Array<{name: string, createDefault: Function}>} configs - Repository configurations
+ * @param {{name: keyof ServerApp, createDefault: Function}[]} configs - Repository configurations
  * @param {Object} repoOverrides - Repository overrides keyed by name
  * @returns {import('@hapi/hapi').Plugin<void>[]}
  */
