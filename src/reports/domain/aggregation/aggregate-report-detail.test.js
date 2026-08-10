@@ -1147,53 +1147,6 @@ describe('#aggregateReportDetail', () => {
         expect(result.exportActivity?.tonnageReceivedNotExported).toBe(0)
       })
 
-      it('records how many loads were clamped, so the silently discarded tonnage stays visible', () => {
-        const records = [
-          buildAccreditedExportedRecord({
-            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-            TONNAGE_RECEIVED_FOR_EXPORT: 10,
-            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12
-          }),
-          buildAccreditedExportedRecord({
-            DATE_RECEIVED_FOR_EXPORT: '2026-02-10',
-            TONNAGE_RECEIVED_FOR_EXPORT: 8,
-            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
-          })
-        ]
-
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
-
-        expect(result.diagnostics.overExportedLoads).toBe(1)
-      })
-
-      it('does not count a load with no received tonnage as over-exported, which is a different defect', () => {
-        const records = [
-          buildAccreditedExportedRecord({
-            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-            TONNAGE_RECEIVED_FOR_EXPORT: null,
-            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 7
-          })
-        ]
-
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
-
-        expect(result.diagnostics.overExportedLoads).toBe(0)
-      })
-
-      it('records no clamped loads when every load exported no more than it received', () => {
-        const records = [
-          buildAccreditedExportedRecord({
-            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-            TONNAGE_RECEIVED_FOR_EXPORT: 10,
-            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 6
-          })
-        ]
-
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
-
-        expect(result.diagnostics.overExportedLoads).toBe(0)
-      })
-
       it('sums the unexported remainder across every load received in the period', () => {
         const records = [
           buildAccreditedExportedRecord({

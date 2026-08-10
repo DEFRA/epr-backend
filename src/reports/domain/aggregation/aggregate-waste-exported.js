@@ -1,5 +1,4 @@
 import { greaterThan, toNumber } from '#common/helpers/decimal-utils.js'
-import { isNil } from '#common/helpers/is-nil.js'
 import {
   ZERO_TONNAGE,
   addTonnage,
@@ -102,41 +101,6 @@ function getTonnageRepatriated(repatriatedRecords) {
         ZERO_TONNAGE
       )
   )
-}
-
-/**
- * Whether a load claims to have exported more than it received. Physically
- * impossible, so it marks a data error rather than a quantity.
- *
- * A load with no received tonnage recorded is excluded: every field on the
- * received-loads table is optional, so a blank reads as zero and would
- * otherwise present as an over-export. That is a different defect with a
- * different remedy, and folding the two together would misreport both.
- *
- * @param {Record<string, any>} data
- * @returns {boolean}
- */
-function isOverExported(data) {
-  return (
-    !isNil(data.TONNAGE_RECEIVED_FOR_EXPORT) &&
-    greaterThan(
-      toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED),
-      toRoundedTonnage(data.TONNAGE_RECEIVED_FOR_EXPORT)
-    )
-  )
-}
-
-/**
- * How many loads received in the period were clamped by
- * {@link tonnageStillOnSite}. The clamp discards tonnage silently, and how such
- * a row should be handled is still open with the business, so the count is
- * carried as a diagnostic rather than left invisible.
- *
- * @param {ReportableWasteRecordState[]} wasteReceivedRecords
- * @returns {number}
- */
-export function countOverExportedLoads(wasteReceivedRecords) {
-  return wasteReceivedRecords.filter(({ data }) => isOverExported(data)).length
 }
 
 /**

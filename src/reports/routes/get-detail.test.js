@@ -956,7 +956,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
       })
 
-      it('reports how many loads were clamped for exporting more than they received', async () => {
+      it('clamps a load exporting more than it received to zero', async () => {
         const { server, organisationId, registrationId } = await createServer(
           {
             wasteProcessingType: 'exporter',
@@ -986,7 +986,6 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(payload.diagnostics.overExportedLoads).toBe(1)
         expect(payload.exportActivity.tonnageReceivedNotExported).toBe(0)
       })
     })

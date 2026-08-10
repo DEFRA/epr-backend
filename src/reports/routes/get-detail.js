@@ -55,38 +55,6 @@ function warnIfWasteRecordsExcluded(
   })
 }
 
-/**
- * A load exporting more than it received is physically impossible, so its
- * contribution to "received but not exported" is clamped to zero. The clamp
- * discards tonnage silently, and how such a row should be handled is still open
- * with the business — warning here keeps the condition visible in the meantime.
- *
- * @param {HapiRequest} request
- * @param {AggregatedReportDetail | Report} report
- * @param {string} organisationId
- * @param {string} registrationId
- */
-function warnIfLoadsOverExported(
-  request,
-  report,
-  organisationId,
-  registrationId
-) {
-  if (!('diagnostics' in report) || !report.diagnostics.overExportedLoads) {
-    return
-  }
-
-  const { overExportedLoads } = report.diagnostics
-  request.logger.warn({
-    message:
-      'Loads reporting more tonnage exported than received were clamped to zero in the not-exported figure (PAE-1783)',
-    event: {
-      action: 'fetch_or_generate_report',
-      reason: `organisationId=${organisationId} registrationId=${registrationId} operatorCategory=${report.operatorCategory} overExportedLoads=${overExportedLoads}`
-    }
-  })
-}
-
 export const reportsGetDetail = {
   method: 'GET',
   path: reportsGetDetailPath,
@@ -153,7 +121,6 @@ export const reportsGetDetail = {
     })
 
     warnIfWasteRecordsExcluded(request, report, organisationId, registrationId)
-    warnIfLoadsOverExported(request, report, organisationId, registrationId)
 
     return h
       .response({
