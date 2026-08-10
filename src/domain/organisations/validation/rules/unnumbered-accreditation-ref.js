@@ -12,11 +12,12 @@ const CODE = 'UNNUMBERED_ACCREDITATION_REF'
 const SEVERITY_LEVEL = SEVERITY.ERROR
 
 /**
- * An accreditation is numbered only while approved or suspended, so a
- * registration linked to one still awaiting a decision is the ordinary case.
- * The status history is what separates the two: an accreditation that reached
- * an active status was numbered at that point, and a number missing afterwards
- * means the value was lost rather than never issued.
+ * An accreditation must carry a number while approved or suspended, and a
+ * registration is linked to one before it is approved, so a registration
+ * linked to an unnumbered accreditation still awaiting a decision is the
+ * ordinary case. The status history separates the two: an accreditation that
+ * reached an active status was numbered at that point, so a number missing
+ * afterwards means the value was lost rather than never issued.
  *
  * @param {Accreditation} accreditation
  * @returns {boolean}
