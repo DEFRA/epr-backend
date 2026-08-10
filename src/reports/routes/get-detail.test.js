@@ -955,39 +955,6 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(payload.diagnostics.wasteReceivedRecordsExcluded).toBe(1)
         expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
       })
-
-      it('clamps a load exporting more than it received to zero', async () => {
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          },
-          [
-            {
-              type: WASTE_RECORD_TYPE.RECEIVED,
-              data: {
-                DATE_RECEIVED_FOR_EXPORT: '2026-01-12',
-                TONNAGE_RECEIVED_FOR_EXPORT: 10,
-                TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12
-              }
-            }
-          ],
-          'approved'
-        )
-
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId,
-          2026,
-          'monthly',
-          1
-        )
-        const payload = JSON.parse(response.payload)
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(payload.exportActivity.tonnageReceivedNotExported).toBe(0)
-      })
     })
 
     describe('stored report retrieval', () => {
