@@ -6,6 +6,7 @@ import {
   findReviewableReportRows,
   formatUnexportedTonnageFinding,
   largestUnexportedTonnageDeltas,
+  summariseOverExport,
   summariseUnexportedTonnageByMaterial,
   summariseUnexportedTonnageByMonth,
   summariseUnexportedTonnageByStatus,
@@ -15,7 +16,7 @@ import {
 /**
  * @import { PeriodicReport } from '#reports/repository/port.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
- * @import { UnexportedTonnageFinding, ReviewableReportRow } from './unexported-tonnage.js'
+ * @import { OverExportRecord, UnexportedTonnageFinding, ReviewableReportRow } from './unexported-tonnage.js'
  */
 
 /**
@@ -212,7 +213,8 @@ describe('unexported-tonnage', () => {
   })
 
   describe('diagnoseReportRow', () => {
-    const diagnoseWithRows = (row, states) => diagnoseReportRow(row, { states })
+    const diagnoseWithRows = (row, states) =>
+      diagnoseReportRow(row, { states }).finding
 
     it('reports a mismatch when a received load has no exported tonnage', () => {
       const finding = diagnoseWithRows(buildRow(), [
@@ -393,7 +395,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('marks a report whose source rows could not be resolved, saying why', () => {
-      const finding = diagnoseReportRow(buildRow(), {
+      const { finding } = diagnoseReportRow(buildRow(), {
         unresolved: 'no source summary log recorded on the report'
       })
 
@@ -405,7 +407,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('distinguishes rows that were never recorded from rows that could not be found', () => {
-      const finding = diagnoseReportRow(buildRow(), {
+      const { finding } = diagnoseReportRow(buildRow(), {
         unresolved: 'no rows found under the registration ledgers'
       })
 
@@ -828,6 +830,83 @@ describe('unexported-tonnage', () => {
     })
   })
 
+  describe('summariseOverExport', () => {
+    /**
+     * @param {Partial<OverExportRecord>} [overrides]
+     * @returns {OverExportRecord}
+     */
+    const record = (overrides = {}) => ({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      material: 'plastic',
+      rowsNegative: 0,
+      negativeMagnitude: 0,
+      netNegative: false,
+      ...overrides
+    })
+
+    it('counts a summary log that masks a negative row behind loads that net it out', () => {
+      const records = [
+        // one +50 / -30 summary log: carries a negative row but nets positive
+        record({ rowsNegative: 1, negativeMagnitude: 30, netNegative: false }),
+        // a summary log whose over-exports drag the whole log negative
+        record({
+          registrationId: 'reg-2',
+          material: 'paper',
+          rowsNegative: 2,
+          negativeMagnitude: 88,
+          netNegative: true
+        }),
+        // a clean summary log: no negative row, contributes nothing
+        record()
+      ]
+
+      expect(summariseOverExport(records)).toStrictEqual({
+        rowsNegative: 3,
+        summaryLogsWithNegativeRow: 2,
+        summaryLogsNetNegative: 1,
+        summaryLogsMasking: 1,
+        affectedExporters: 2,
+        magnitudeByMaterial: { plastic: 30, paper: 88 }
+      })
+    })
+
+    it('counts a log that nets negative on a blank received row alone, which carries no over-exporting row to mask', () => {
+      const records = [
+        record({ rowsNegative: 0, negativeMagnitude: 0, netNegative: true })
+      ]
+
+      expect(summariseOverExport(records)).toStrictEqual({
+        rowsNegative: 0,
+        summaryLogsWithNegativeRow: 0,
+        summaryLogsNetNegative: 1,
+        summaryLogsMasking: 0,
+        affectedExporters: 0,
+        magnitudeByMaterial: {}
+      })
+    })
+
+    it('sums an exporters over-export across its summary logs but counts the exporter once', () => {
+      const records = [
+        record({ rowsNegative: 1, negativeMagnitude: 12.5 }),
+        record({ rowsNegative: 2, negativeMagnitude: 7.5 })
+      ]
+
+      const { rowsNegative, affectedExporters, magnitudeByMaterial } =
+        summariseOverExport(records)
+
+      expect({
+        rowsNegative,
+        affectedExporters,
+        magnitudeByMaterial
+      }).toStrictEqual({
+        rowsNegative: 3,
+        affectedExporters: 1,
+        magnitudeByMaterial: { plastic: 20 }
+      })
+    })
+  })
+
   describe('findUnexportedTonnageReports', () => {
     const submittedFebReport = (tonnageReceivedNotExported) => ({
       organisationId: 'org-1',
@@ -855,8 +934,9 @@ describe('unexported-tonnage', () => {
         id: 'report-1',
         source: { summaryLogId: 'log-1' }
       }),
-      registration = /** @type {{ accreditationId: string } | null} */ ({
-        accreditationId: 'acc-1'
+      registration = /** @type {{ accreditationId: string, material: string } | null} */ ({
+        accreditationId: 'acc-1',
+        material: 'plastic'
       }),
       rowStates = [buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 12 })]
     } = {}) => ({
@@ -888,12 +968,27 @@ describe('unexported-tonnage', () => {
         )
       )
 
+    /**
+     * @param {Partial<OverExportRecord>} [overrides]
+     * @returns {OverExportRecord}
+     */
+    const overExportRecord = (overrides = {}) => ({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      material: 'plastic',
+      rowsNegative: 0,
+      negativeMagnitude: 0,
+      netNegative: false,
+      ...overrides
+    })
+
     it('reports a mismatch against the rows the report was built from', async () => {
       const result = await scan(buildDeps())
 
       expect(result).toStrictEqual({
         scanned: 1,
-        findings: [mismatch({ recomputed: 12, delta: 12 })]
+        findings: [mismatch({ recomputed: 12, delta: 12 })],
+        overExportRecords: [overExportRecord()]
       })
     })
 
@@ -909,6 +1004,40 @@ describe('unexported-tonnage', () => {
 
       expect(findings).toStrictEqual([
         mismatch({ material: 'plastic', recomputed: 12, delta: 12 })
+      ])
+    })
+
+    it('records an over-exporting row against its material even when the stored figure already agrees', async () => {
+      const { findings, overExportRecords } = await scan(
+        buildDeps({
+          rowStates: [
+            buildReceivedRow({
+              TONNAGE_RECEIVED_FOR_EXPORT: 10,
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12
+            })
+          ]
+        })
+      )
+
+      expect({ findings, overExportRecords }).toStrictEqual({
+        findings: [],
+        overExportRecords: [
+          overExportRecord({
+            rowsNegative: 1,
+            negativeMagnitude: 2,
+            netNegative: true
+          })
+        ]
+      })
+    })
+
+    it('falls back to an unknown material when the registration cannot be read for one', async () => {
+      const { overExportRecords } = await scan(
+        buildDeps({ registration: null })
+      )
+
+      expect(overExportRecords).toStrictEqual([
+        overExportRecord({ material: '(material unknown)' })
       ])
     })
 
@@ -1049,7 +1178,11 @@ describe('unexported-tonnage', () => {
         buildDeps({ periodicReports: [submittedFebReport(12)] })
       )
 
-      expect(result).toStrictEqual({ scanned: 1, findings: [] })
+      expect(result).toStrictEqual({
+        scanned: 1,
+        findings: [],
+        overExportRecords: [overExportRecord()]
+      })
     })
   })
 })

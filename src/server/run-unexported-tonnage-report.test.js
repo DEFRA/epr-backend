@@ -93,7 +93,9 @@ const estateApp = (periodicReports, rowStates) => ({
     }))
   },
   organisationsRepository: {
-    findRegistrationById: vi.fn().mockResolvedValue({ accreditationId: null })
+    findRegistrationById: vi
+      .fn()
+      .mockResolvedValue({ accreditationId: null, material: 'plastic' })
   },
   summaryLogRowStatesRepository: {
     findRowStatesForSummaryLog: vi.fn().mockResolvedValue(rowStates)
@@ -370,6 +372,38 @@ describe('runUnexportedTonnageReport', () => {
         'Unexported tonnage by month: Feb 2026 - 2 report(s), delta 58.38, ' +
           'understated 58.38, overstated 0; ' +
           'by material: plastic 1 report(s) delta 29.19, steel 1 report(s) delta 29.19'
+      )
+    )
+  })
+
+  it('sizes the over-exports validation lets through, splitting the negative tonnage by material', async () => {
+    const server = buildServer(
+      estateApp([submittedFebReport()], [partlyExportedRow(10, 12)])
+    )
+
+    await runUnexportedTonnageReport(server)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      infoLine(
+        'unexported_tonnage_over_export',
+        'Over-export sizing: 1 rows over-exported (T>S) in 1 summary logs, ' +
+          'of which 1 net negative and 0 masked; affected exporters 1; ' +
+          'magnitude by material: plastic 2'
+      )
+    )
+  })
+
+  it('states a clean estate on the over-export line rather than leaving it silent', async () => {
+    const server = buildServer(emptyEstateApp())
+
+    await runUnexportedTonnageReport(server)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      infoLine(
+        'unexported_tonnage_over_export',
+        'Over-export sizing: 0 rows over-exported (T>S) in 0 summary logs, ' +
+          'of which 0 net negative and 0 masked; affected exporters 0; ' +
+          'magnitude by material: none'
       )
     )
   })

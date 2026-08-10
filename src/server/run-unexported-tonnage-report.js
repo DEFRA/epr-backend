@@ -8,6 +8,7 @@ import {
   findUnexportedTonnageReports,
   formatUnexportedTonnageFinding,
   largestUnexportedTonnageDeltas,
+  summariseOverExport,
   summariseUnexportedTonnageByMaterial,
   summariseUnexportedTonnageByMonth,
   summariseUnexportedTonnageByStatus,
@@ -16,7 +17,7 @@ import {
 
 /**
  * @import { StartedServer } from '#common/hapi-types.js'
- * @import { MaterialBreakdown, UnexportedTonnageFinding } from '#reports/monitoring/unexported-tonnage.js'
+ * @import { MaterialBreakdown, OverExportRecord, UnexportedTonnageFinding } from '#reports/monitoring/unexported-tonnage.js'
  */
 
 const LOCK_NAME = 'unexported-tonnage-report'
@@ -121,6 +122,39 @@ const logBreakdowns = (findings) => {
 }
 
 /**
+ * Sizes the over-exports validation lets through: rows that exported more than
+ * they received, how many summary logs mask such a row behind loads that net it
+ * out, and the negative tonnage split by material. Logged whatever the count so
+ * a clean estate is stated rather than left silent.
+ *
+ * @param {OverExportRecord[]} overExportRecords
+ */
+const logOverExport = (overExportRecords) => {
+  const {
+    rowsNegative,
+    summaryLogsWithNegativeRow,
+    summaryLogsNetNegative,
+    summaryLogsMasking,
+    affectedExporters,
+    magnitudeByMaterial
+  } = summariseOverExport(overExportRecords)
+
+  const byMaterial =
+    Object.entries(magnitudeByMaterial)
+      .map(([material, tonnage]) => `${material} ${tonnage}`)
+      .join(', ') || 'none'
+
+  log(
+    LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_OVER_EXPORT,
+    `Over-export sizing: ${rowsNegative} rows over-exported (T>S) in ` +
+      `${summaryLogsWithNegativeRow} summary logs, of which ` +
+      `${summaryLogsNetNegative} net negative and ${summaryLogsMasking} masked; ` +
+      `affected exporters ${affectedExporters}; ` +
+      `magnitude by material: ${byMaterial}`
+  )
+}
+
+/**
  * @param {number} scanned
  * @param {UnexportedTonnageFinding[]} findings
  */
@@ -180,9 +214,8 @@ export const unexportedTonnageDependencies = (server) => ({
  * @param {StartedServer} server
  */
 const runReport = async (server) => {
-  const { scanned, findings } = await findUnexportedTonnageReports(
-    unexportedTonnageDependencies(server)
-  )
+  const { scanned, findings, overExportRecords } =
+    await findUnexportedTonnageReports(unexportedTonnageDependencies(server))
 
   findings.forEach((finding) =>
     log(
@@ -192,6 +225,7 @@ const runReport = async (server) => {
     )
   )
   logBreakdowns(findings)
+  logOverExport(overExportRecords)
   logSummary(scanned, findings)
 }
 

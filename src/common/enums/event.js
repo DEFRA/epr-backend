@@ -48,6 +48,7 @@ export const LOGGING_EVENT_ACTIONS = {
   UNEXPORTED_TONNAGE_BY_MATERIAL: 'unexported_tonnage_by_material',
   UNEXPORTED_TONNAGE_BY_STATUS: 'unexported_tonnage_by_status',
   UNEXPORTED_TONNAGE_LARGEST_DELTAS: 'unexported_tonnage_largest_deltas',
+  UNEXPORTED_TONNAGE_OVER_EXPORT: 'unexported_tonnage_over_export',
   UNEXPORTED_TONNAGE_SUMMARY: 'unexported_tonnage_summary'
 }
 

@@ -126,6 +126,26 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  */
 
 /**
+ * The over-export tally for one scanned summary log: how many of its loads
+ * exported more than they received (column T over column S — impossible on site,
+ * which validation nonetheless lets through), the tonnage that over-export comes
+ * to, and whether it drags the whole log's column S minus column T negative.
+ *
+ * Collected for every recomputed report, not only the ones the fix would move, so
+ * the sizing counts the real population rather than the mismatches alone. Carries
+ * the registration's material so the negative tonnage can be split by stream.
+ *
+ * @typedef {{
+ *   organisationId: string,
+ *   registrationId: string,
+ *   material: string,
+ *   rowsNegative: number,
+ *   negativeMagnitude: number,
+ *   netNegative: boolean
+ * }} OverExportRecord
+ */
+
+/**
  * What a finding says about its report: the stored figure disagrees with the
  * corrected rule, the source rows are not there to recompute from, they were
  * resolved but could not be read as tonnages, or reading them failed outright.
@@ -219,11 +239,22 @@ export const findReviewableReportRows = (periodicReports) =>
  * open with the business, so the sizing run takes the conservative reading and
  * counts the rows so the decision has a number behind it.
  *
+ * `overExported` carries the over-exported tonnage itself (column T minus column
+ * S) rather than a flag, so the sizing can total the impossible amount and not
+ * only count the rows. It is zero for every row that did not over-export.
+ *
+ * `net` is the signed column S minus column T with a blank received read as
+ * zero, kept so a whole summary log's net can be tested for going negative. It
+ * differs from `notExported`, which is clamped: a row exporting more than it
+ * received, or carrying no received tonnage against an export, pulls `net`
+ * negative while `notExported` stays at zero.
+ *
  * @param {Record<string, any>} data
  * @returns {{
  *   notExported: import('#common/helpers/rounded-tonnage.js').RoundedTonnage,
- *   overExported: boolean,
- *   missingReceived: boolean
+ *   overExported: import('#common/helpers/rounded-tonnage.js').RoundedTonnage,
+ *   missingReceived: boolean,
+ *   net: import('#common/helpers/rounded-tonnage.js').RoundedTonnage
  * }}
  */
 const classifyLoad = (data) => {
@@ -231,18 +262,26 @@ const classifyLoad = (data) => {
   if (isNil(data[TONNAGE_RECEIVED_FIELD])) {
     return {
       notExported: ZERO_TONNAGE,
-      overExported: false,
-      missingReceived: true
+      overExported: ZERO_TONNAGE,
+      missingReceived: true,
+      net: subtractTonnage(ZERO_TONNAGE, exported)
     }
   }
 
   const received = toRoundedTonnage(data[TONNAGE_RECEIVED_FIELD])
+  const net = subtractTonnage(received, exported)
   return greaterThan(exported, received)
-    ? { notExported: ZERO_TONNAGE, overExported: true, missingReceived: false }
+    ? {
+        notExported: ZERO_TONNAGE,
+        overExported: subtractTonnage(exported, received),
+        missingReceived: false,
+        net
+      }
     : {
-        notExported: subtractTonnage(received, exported),
-        overExported: false,
-        missingReceived: false
+        notExported: net,
+        overExported: ZERO_TONNAGE,
+        missingReceived: false,
+        net
       }
 }
 
@@ -268,12 +307,18 @@ const liveContribution = (data, startDate, endDate) =>
 
 /**
  * @typedef {{
- *   total: number,
  *   rowsInPeriod: number,
  *   rowsUnexported: number,
  *   rowsOverExported: number,
  *   rowsMissingReceived: number,
  *   rowsMiscounted: number
+ * }} RecomputationRowCounts
+ *
+ * @typedef {{
+ *   total: number,
+ *   rowCounts: RecomputationRowCounts,
+ *   negativeMagnitude: number,
+ *   netNegative: boolean
  * }} Recomputation
  */
 
@@ -283,7 +328,11 @@ const liveContribution = (data, startDate, endDate) =>
  * carrying an export date.
  *
  * Reports the rows behind the figure alongside it, so a finding says how much
- * data a backfill would move and not only how much tonnage.
+ * data a backfill would move and not only how much tonnage. Alongside those it
+ * carries the over-export sizing: `negativeMagnitude` totals the tonnage of the
+ * rows that exported more than they received, and `netNegative` says whether the
+ * whole log's column S minus column T came out below zero — the figure that
+ * would surface a negative rather than one masked by other loads on the log.
  *
  * @param {WasteRecordState[]} wasteRecordStates
  * @param {string} startDate
@@ -301,22 +350,30 @@ const recomputeUnexported = (wasteRecordStates, startDate, endDate) => {
     live: liveContribution(data, startDate, endDate)
   }))
 
+  const sumTonnage = (pick) =>
+    loads.reduce((sum, load) => addTonnage(sum, pick(load)), ZERO_TONNAGE)
+
   return {
-    total: toNumber(
-      loads.reduce(
-        (sum, { notExported }) => addTonnage(sum, notExported),
-        ZERO_TONNAGE
-      )
-    ),
-    rowsInPeriod: loads.length,
-    rowsUnexported: loads.filter(({ notExported }) => !isZero(notExported))
-      .length,
-    rowsOverExported: loads.filter(({ overExported }) => overExported).length,
-    rowsMissingReceived: loads.filter(({ missingReceived }) => missingReceived)
-      .length,
-    rowsMiscounted: loads.filter(
-      ({ notExported, live }) => !equals(live, notExported)
-    ).length
+    total: toNumber(sumTonnage(({ notExported }) => notExported)),
+    rowCounts: {
+      rowsInPeriod: loads.length,
+      rowsUnexported: loads.filter(({ notExported }) => !isZero(notExported))
+        .length,
+      rowsOverExported: loads.filter(
+        ({ overExported }) => !isZero(overExported)
+      ).length,
+      rowsMissingReceived: loads.filter(
+        ({ missingReceived }) => missingReceived
+      ).length,
+      rowsMiscounted: loads.filter(
+        ({ notExported, live }) => !equals(live, notExported)
+      ).length
+    },
+    negativeMagnitude: toNumber(sumTonnage(({ overExported }) => overExported)),
+    netNegative: greaterThan(
+      ZERO_TONNAGE,
+      sumTonnage(({ net }) => net)
+    )
   }
 }
 
@@ -343,16 +400,28 @@ const identityOf = (row) => ({
  * own. The reason rides onto the finding so the reader knows which of the
  * causes they are looking at.
  *
+ * Returns the recomputation alongside the finding whenever the rows could be
+ * read, whether or not they disagreed with the stored figure. The over-export
+ * sizing is counted over every recomputed report — a log whose stored figure
+ * happens to agree still carries rows that exported more than they received — so
+ * the caller needs the recomputation even when there is no finding to log.
+ *
  * @param {ReviewableReportRow} row
  * @param {SourceRowStates} sourceRowStates
- * @returns {UnexportedTonnageFinding | null}
+ * @returns {{
+ *   finding: UnexportedTonnageFinding | null,
+ *   recomputation: Recomputation | null
+ * }}
  */
 export const diagnoseReportRow = (row, sourceRowStates) => {
   if ('unresolved' in sourceRowStates) {
     return {
-      kind: FINDING_KIND.SOURCE_MISSING,
-      ...identityOf(row),
-      reason: sourceRowStates.unresolved
+      finding: {
+        kind: FINDING_KIND.SOURCE_MISSING,
+        ...identityOf(row),
+        reason: sourceRowStates.unresolved
+      },
+      recomputation: null
     }
   }
 
@@ -365,25 +434,31 @@ export const diagnoseReportRow = (row, sourceRowStates) => {
     )
   } catch (error) {
     return {
-      kind: FINDING_KIND.RECOMPUTE_FAILED,
-      ...identityOf(row),
-      reason: /** @type {Error} */ (error).message
+      finding: {
+        kind: FINDING_KIND.RECOMPUTE_FAILED,
+        ...identityOf(row),
+        reason: /** @type {Error} */ (error).message
+      },
+      recomputation: null
     }
   }
 
-  const { total, ...rowCounts } = recomputation
+  const { total, rowCounts } = recomputation
   if (equals(total, row.storedUnexported)) {
-    return null
+    return { finding: null, recomputation }
   }
 
   return {
-    kind: FINDING_KIND.MISMATCH,
-    ...identityOf(row),
-    material: sourceRowStates.material ?? UNKNOWN_MATERIAL,
-    stored: row.storedUnexported,
-    recomputed: total,
-    delta: toNumber(subtract(total, row.storedUnexported)),
-    ...rowCounts
+    finding: {
+      kind: FINDING_KIND.MISMATCH,
+      ...identityOf(row),
+      material: sourceRowStates.material ?? UNKNOWN_MATERIAL,
+      stored: row.storedUnexported,
+      recomputed: total,
+      delta: toNumber(subtract(total, row.storedUnexported)),
+      ...rowCounts
+    },
+    recomputation
   }
 }
 
@@ -645,6 +720,65 @@ export const summariseUnexportedTonnageFindings = (findings) => {
 }
 
 /**
+ * The estate-wide over-export sizing: how many loads exported more than they
+ * received, how many summary logs carry such a row, and — the number the whole
+ * enhancement turns on — how many of those logs hide it, netting non-negative
+ * because other loads on the log offset the impossible one.
+ *
+ * `summaryLogsMasking` is counted directly rather than subtracted from
+ * `summaryLogsNetNegative`: a summary log can net negative on a blank-received
+ * row alone, carrying no over-exporting row at all, so the two are not
+ * complements. Masking is precisely a log with an over-exporting row whose total
+ * still absorbs it.
+ *
+ * The negative tonnage is split by the registration's material, summed row by
+ * row so a masked row still lands in its stream's total — a log netting positive
+ * never hides the over-export from the material breakdown.
+ *
+ * @param {OverExportRecord[]} records
+ * @returns {{
+ *   rowsNegative: number,
+ *   summaryLogsWithNegativeRow: number,
+ *   summaryLogsNetNegative: number,
+ *   summaryLogsMasking: number,
+ *   affectedExporters: number,
+ *   magnitudeByMaterial: Record<string, number>
+ * }}
+ */
+export const summariseOverExport = (records) => {
+  const withNegativeRow = records.filter(({ rowsNegative }) => rowsNegative > 0)
+
+  const magnitudeByMaterial = Object.fromEntries(
+    [...Map.groupBy(withNegativeRow, ({ material }) => material).entries()].map(
+      ([material, group]) => [
+        material,
+        toNumber(
+          group.reduce(
+            (sum, { negativeMagnitude }) =>
+              addTonnage(sum, toRoundedTonnage(negativeMagnitude)),
+            ZERO_TONNAGE
+          )
+        )
+      ]
+    )
+  )
+
+  return {
+    rowsNegative: withNegativeRow.reduce((sum, r) => sum + r.rowsNegative, 0),
+    summaryLogsWithNegativeRow: withNegativeRow.length,
+    summaryLogsNetNegative: records.filter(({ netNegative }) => netNegative)
+      .length,
+    summaryLogsMasking: withNegativeRow.filter(
+      ({ netNegative }) => !netNegative
+    ).length,
+    affectedExporters: new Set(
+      withNegativeRow.map(({ registrationId }) => registrationId)
+    ).size,
+    magnitudeByMaterial
+  }
+}
+
+/**
  * The ledgers a registration's uploads may sit under: null (its registered-only
  * phase) and its current accreditation id. Reading both means a report built
  * before accreditation still resolves its rows. A row commits under exactly one
@@ -660,7 +794,8 @@ export const summariseUnexportedTonnageFindings = (findings) => {
  * not about the exporter's data, and the caller records it as such.
  *
  * Reads the registration's material off the same fetch, so a resolved report's
- * mismatch can be split by stream without a second lookup.
+ * mismatch can be split by stream and the over-export sizing can split the
+ * negative tonnage by material, both without a second lookup.
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {string} organisationId
@@ -750,6 +885,26 @@ const loadSourceRowStates = async (
 }
 
 /**
+ * The over-export record for a recomputed report: the exporter it belongs to,
+ * its material, and the negative-tonnage counts lifted off the recomputation.
+ * `rowsNegative` is the recomputation's over-exported row count under the name
+ * the sizing reads it by.
+ *
+ * @param {ReviewableReportRow} row
+ * @param {string} material
+ * @param {Recomputation} recomputation
+ * @returns {OverExportRecord}
+ */
+const overExportRecordOf = (row, material, recomputation) => ({
+  organisationId: row.organisationId,
+  registrationId: row.registrationId,
+  material,
+  rowsNegative: recomputation.rowCounts.rowsOverExported,
+  negativeMagnitude: recomputation.negativeMagnitude,
+  netNegative: recomputation.netNegative
+})
+
+/**
  * Scans every reviewable accredited-exporter monthly report across the estate
  * and returns the ones whose stored unexported tonnage disagrees with the
  * corrected rule, alongside those that cannot be recomputed at all. Read-only.
@@ -760,26 +915,42 @@ const loadSourceRowStates = async (
  * single failure must not cost the run every figure it has already computed,
  * since the diagnostic gets one pass per deploy.
  *
+ * Alongside the findings it collects an over-export record for every report it
+ * could recompute — not only the mismatches — so the sizing counts the real
+ * population of rows that exported more than they received.
+ *
  * @param {{
  *   reportsRepository: ReportsRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
  * }} deps
- * @returns {Promise<{ scanned: number, findings: UnexportedTonnageFinding[] }>}
+ * @returns {Promise<{
+ *   scanned: number,
+ *   findings: UnexportedTonnageFinding[],
+ *   overExportRecords: OverExportRecord[]
+ * }>}
  */
 export const findUnexportedTonnageReports = async (deps) => {
   const periodicReports = await deps.reportsRepository.findAllPeriodicReports()
   const rows = findReviewableReportRows(periodicReports)
 
   const findings = []
+  const overExportRecords = []
   for (const row of rows) {
     try {
-      const finding = diagnoseReportRow(
-        row,
-        await loadSourceRowStates(deps, row)
-      )
+      const source = await loadSourceRowStates(deps, row)
+      const { finding, recomputation } = diagnoseReportRow(row, source)
       if (finding) {
         findings.push(finding)
+      }
+      if (recomputation) {
+        overExportRecords.push(
+          overExportRecordOf(
+            row,
+            /** @type {{ material: string }} */ (source).material,
+            recomputation
+          )
+        )
       }
     } catch (error) {
       findings.push({
@@ -790,5 +961,5 @@ export const findUnexportedTonnageReports = async (deps) => {
     }
   }
 
-  return { scanned: rows.length, findings }
+  return { scanned: rows.length, findings, overExportRecords }
 }
