@@ -1,8 +1,4 @@
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import {
-  OPERATOR_CATEGORY,
-  getOperatorCategory
-} from '#reports/domain/operator-category.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 
 /**
@@ -66,19 +62,7 @@ const resolveLedgers = (registration, organisationId, registrationId) => {
   }))
 }
 
-export const NOT_ACCREDITED_EXPORTER =
-  'registration is not an accredited exporter'
-
-/**
- * `wasteProcessingType` is checked first because `getOperatorCategory` throws on
- * an unrecognised one, which the scan would record as a lookup failure.
- *
- * @param {Registration} registration
- * @returns {boolean}
- */
-const isAccreditedExporter = (registration) =>
-  registration?.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER &&
-  getOperatorCategory(registration) === OPERATOR_CATEGORY.EXPORTER
+export const NOT_AN_EXPORTER = 'registration is not an exporter'
 export const NO_SUMMARY_LOG = 'no source summary log recorded on the report'
 export const NO_ROWS = 'no rows found under the registration ledgers'
 
@@ -86,6 +70,13 @@ export const NO_ROWS = 'no rows found under the registration ledgers'
  * The row states the report was built from, or why there are none. `outOfScope`
  * is not a finding; the two `unresolved` reasons are, and both are stable across
  * re-runs. Anything that throws is not, and is left to propagate.
+ *
+ * Accreditation status is deliberately not part of the gate. It describes the
+ * registration today, while a report is a historic document: an exporter whose
+ * accreditation has since lapsed, been cancelled or rolled over to a successor
+ * still submitted these reports while accredited. The monthly cadence is what
+ * confines the population to reports made under an accreditation, leaving
+ * reprocessors as the only exclusion to make here.
  *
  * @param {SourceRowStateDeps} deps
  * @param {ReportIdentity} row
@@ -100,8 +91,8 @@ export const loadSourceRowStates = async (
     row.registrationId
   )
 
-  if (!isAccreditedExporter(registration)) {
-    return { outOfScope: NOT_ACCREDITED_EXPORTER }
+  if (registration.wasteProcessingType !== WASTE_PROCESSING_TYPE.EXPORTER) {
+    return { outOfScope: NOT_AN_EXPORTER }
   }
 
   const report = await reportsRepository.findReportById(row.reportId)

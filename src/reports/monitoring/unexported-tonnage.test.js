@@ -760,7 +760,7 @@ describe('unexported-tonnage', () => {
         id: 'report-1',
         source: { summaryLogId: 'log-1' }
       }),
-      registration = /** @type {Registration | null} */ (
+      registration = /** @type {Registration} */ (
         buildExporterRegistration({ accreditationId: 'acc-1' })
       ),
       rowStates = [buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 12 })]
@@ -776,7 +776,7 @@ describe('unexported-tonnage', () => {
         findRowStatesForSummaryLog: vi
           .fn()
           .mockImplementation(async ({ accreditationId }) =>
-            accreditationId === (registration?.accreditationId ?? null)
+            accreditationId === (registration.accreditationId ?? null)
               ? rowStates
               : []
           )
@@ -836,27 +836,33 @@ describe('unexported-tonnage', () => {
       )
     })
 
-    it.each([
-      ['a registration that cannot be resolved', null],
-      [
-        'a reprocessor',
-        buildExporterRegistration({ wasteProcessingType: 'reprocessor' })
-      ],
-      [
-        'a registered-only exporter',
-        buildExporterRegistration({ accreditationStatus: null })
-      ],
-      [
-        'an exporter whose accreditation was cancelled',
-        buildExporterRegistration({ accreditationStatus: 'cancelled' })
-      ]
-    ])('does not scan %s', async (_case, registration) => {
-      const deps = buildDeps({ registration })
+    it('does not scan a reprocessor', async () => {
+      const deps = buildDeps({
+        registration: buildExporterRegistration({
+          wasteProcessingType: 'reprocessor'
+        })
+      })
 
       const { scanned, findings } = await scan(deps)
 
       expect(scanned).toBe(0)
       expect(findings).toStrictEqual([])
+    })
+
+    it('scans an exporter whose accreditation has since lapsed, because the report was made under it', async () => {
+      const deps = buildDeps({
+        registration: buildExporterRegistration({
+          accreditationStatus: 'cancelled',
+          accreditationId: 'acc-1'
+        })
+      })
+
+      const result = await scan(deps)
+
+      expect(result).toStrictEqual({
+        scanned: 1,
+        findings: [mismatch({ recomputed: 12, delta: 12 })]
+      })
     })
 
     it('marks a report that records no source summary log', async () => {

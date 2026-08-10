@@ -201,23 +201,28 @@ describe('overExportedLoads', () => {
       expect(unreadable).toStrictEqual([])
     })
 
-    it.each([
-      ['a reprocessor', { wasteProcessingType: 'reprocessor' }],
-      ['a registered-only exporter', { accreditationStatus: null }],
-      [
-        'an exporter whose accreditation was cancelled',
-        { accreditationStatus: 'cancelled' }
-      ]
-    ])('does not scan %s', async (_case, registrationOverrides) => {
+    it('does not scan a reprocessor', async () => {
       const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
       deps.organisationsRepository.findRegistrationById.mockResolvedValue(
-        buildExporterRegistration(registrationOverrides)
+        buildExporterRegistration({ wasteProcessingType: 'reprocessor' })
       )
 
       const { scanned, findings } = await findOverExportedLoads(deps)
 
       expect(scanned).toBe(0)
       expect(findings).toStrictEqual([])
+    })
+
+    it('scans an exporter whose accreditation has since lapsed, because the report was made under it', async () => {
+      const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
+      deps.organisationsRepository.findRegistrationById.mockResolvedValue(
+        buildExporterRegistration({ accreditationStatus: 'cancelled' })
+      )
+
+      const { scanned, findings } = await findOverExportedLoads(deps)
+
+      expect(scanned).toBe(1)
+      expect(findings).toHaveLength(1)
     })
 
     it('reports nothing for a report with no source summary log', async () => {
