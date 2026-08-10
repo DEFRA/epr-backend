@@ -50,6 +50,7 @@ import { runUnexportedTonnageReport } from '#server/run-unexported-tonnage-repor
 import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
+/** @import { StartedServer } from '#common/hapi-types.js' */
 
 function getServerConfig(config) {
   return {
@@ -226,7 +227,9 @@ async function createServer(options = {}) {
     runOrganisationValidationSweep(server)
     runStaleIssuedTonnageReport(server)
     runPreCpaResubmissionBackfill(server)
-    runUnexportedTonnageReport(server)
+    runUnexportedTonnageReport(
+      /** @type {StartedServer} */ (/** @type {unknown} */ (server))
+    )
   })
 
   return server

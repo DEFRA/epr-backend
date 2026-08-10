@@ -14,6 +14,7 @@ import {
 } from '#reports/monitoring/unexported-tonnage.js'
 
 /**
+ * @import { StartedServer } from '#common/hapi-types.js'
  * @import { UnexportedTonnageFinding } from '#reports/monitoring/unexported-tonnage.js'
  */
 
@@ -133,19 +134,29 @@ const logSummary = (scanned, findings) => {
 }
 
 /**
+ * Named so the integration test can assert each one resolves against a real
+ * booted server, which a unit test's double cannot.
+ *
+ * @param {StartedServer} server
+ */
+export const unexportedTonnageDependencies = (server) => ({
+  reportsRepository: server.app.reportsRepository,
+  organisationsRepository: server.app.organisationsRepository,
+  summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository
+})
+
+/**
  * Recomputes every accredited-exporter monthly report's "packaging waste
  * received but not exported" figure under the PAE-1783 rule (per load, column S
  * minus column T) and logs the reports whose stored value disagrees. Read-only,
  * safe under live traffic.
  *
- * @param {Object} server - Hapi server instance
+ * @param {StartedServer} server
  */
 const runReport = async (server) => {
-  const { scanned, findings } = await findUnexportedTonnageReports({
-    reportsRepository: server.app.reportsRepository,
-    organisationsRepository: server.app.organisationsRepository,
-    summaryLogRowStateRepository: server.app.summaryLogRowStateRepository
-  })
+  const { scanned, findings } = await findUnexportedTonnageReports(
+    unexportedTonnageDependencies(server)
+  )
 
   findings.forEach((finding) =>
     log(
@@ -167,7 +178,7 @@ const runReport = async (server) => {
  * Gated by the unexported-tonnage-report feature flag: with it off this
  * returns before touching the locker or any repository.
  *
- * @param {Object} server - Hapi server instance
+ * @param {StartedServer} server
  */
 export const runUnexportedTonnageReport = async (server) => {
   if (!server.featureFlags.isUnexportedTonnageReportEnabled()) {
