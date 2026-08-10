@@ -10,14 +10,39 @@ const DEFAULT_PAGE_SIZE = 50
 const MAX_PAGE_SIZE = 200
 const MAX_SEARCH_LENGTH = 200
 
+/**
+ * Search criteria are bounded strings rather than numbers or object ids on
+ * purpose: a mistyped or truncated identifier must return an empty result set,
+ * not a validation error. Parsing happens in the repository, which turns an
+ * unparseable value into zero results.
+ */
+const criterionSchema = () =>
+  Joi.string().trim().allow('').max(MAX_SEARCH_LENGTH).optional()
+
+const CRITERIA_KEYS = [
+  'search',
+  'orgId',
+  'registrationId',
+  'registrationNumber',
+  'accreditationId',
+  'accreditationNumber'
+]
+
 const querySchema = Joi.object({
-  search: Joi.string().trim().allow('').max(MAX_SEARCH_LENGTH).optional(),
+  search: criterionSchema(),
+  orgId: criterionSchema(),
+  registrationId: criterionSchema(),
+  registrationNumber: criterionSchema(),
+  accreditationId: criterionSchema(),
+  accreditationNumber: criterionSchema(),
   page: Joi.number().integer().min(1).optional(),
   pageSize: Joi.number().integer().min(1).max(MAX_PAGE_SIZE).optional()
 }).unknown(false)
 
 const isPaginatedRequest = (query) =>
-  'search' in query || 'page' in query || 'pageSize' in query
+  'page' in query ||
+  'pageSize' in query ||
+  CRITERIA_KEYS.some((key) => key in query)
 
 export const organisationsGetAll = {
   method: 'GET',
@@ -31,7 +56,16 @@ export const organisationsGetAll = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   query: { search?: string, page?: number, pageSize?: number }
+   *   query: {
+   *     search?: string,
+   *     orgId?: string,
+   *     registrationId?: string,
+   *     registrationNumber?: string,
+   *     accreditationId?: string,
+   *     accreditationNumber?: string,
+   *     page?: number,
+   *     pageSize?: number
+   *   }
    * }} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
@@ -43,6 +77,11 @@ export const organisationsGetAll = {
 
     const result = await organisationsRepository.findPage({
       search: query.search,
+      orgId: query.orgId,
+      registrationId: query.registrationId,
+      registrationNumber: query.registrationNumber,
+      accreditationId: query.accreditationId,
+      accreditationNumber: query.accreditationNumber,
       page: query.page ?? DEFAULT_PAGE,
       pageSize: query.pageSize ?? DEFAULT_PAGE_SIZE
     })

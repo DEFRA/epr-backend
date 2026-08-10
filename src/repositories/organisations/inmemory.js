@@ -8,8 +8,8 @@ import {
 } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
+  buildFindPageMatcher,
   createInitialStatusHistory,
-  escapeRegex,
   mapDocumentWithCurrentStatuses,
   prepareForReplace
 } from './helpers.js'
@@ -159,15 +159,10 @@ const performFindAllBySchemaVersion = (staleCache) => async (schemaVersion) => {
 
 const performFindPage =
   (staleCache) =>
-  async (/** @type {FindPageParams} */ { search, page, pageSize }) => {
-    const trimmedSearch = (search ?? '').trim()
-
-    let matches = structuredClone(staleCache)
-
-    if (trimmedSearch !== '') {
-      const pattern = new RegExp(escapeRegex(trimmedSearch), 'i')
-      matches = matches.filter((org) => pattern.test(org.companyDetails.name))
-    }
+  async (/** @type {FindPageParams} */ { page, pageSize, ...criteria }) => {
+    const matches = structuredClone(staleCache).filter(
+      buildFindPageMatcher(criteria)
+    )
 
     matches.sort((a, b) => {
       const aName = a.companyDetails.name

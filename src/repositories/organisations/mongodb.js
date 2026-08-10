@@ -7,6 +7,7 @@ import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { errorCodes } from './enums/error-codes.js'
 import {
+  buildFindPageFilter,
   createInitialStatusHistory,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
@@ -216,17 +217,8 @@ const performFindAllBySchemaVersion = (db) => async (schemaVersion) => {
 
 const performFindPage =
   (db) =>
-  async (/** @type {FindPageParams} */ { search, page, pageSize }) => {
-    const trimmedSearch = (search ?? '').trim()
-    const filter =
-      trimmedSearch === ''
-        ? {}
-        : {
-            'companyDetails.name': {
-              $regex: escapeRegex(trimmedSearch),
-              $options: 'i'
-            }
-          }
+  async (/** @type {FindPageParams} */ { page, pageSize, ...criteria }) => {
+    const filter = buildFindPageFilter(criteria)
 
     const collection = db.collection(COLLECTION_NAME)
     const totalItems = await collection.countDocuments(filter)

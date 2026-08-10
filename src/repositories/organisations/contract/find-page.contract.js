@@ -15,6 +15,45 @@ const insertNamed = async (repository, names) => {
   }
 }
 
+/**
+ * Builds an organisation carrying known search criteria: the first registration
+ * gets the given registration number and the first accreditation the given
+ * accreditation number. Everything else is left as buildOrganisation makes it,
+ * so the registration/accreditation links stay intact.
+ *
+ * @param {{
+ *   name?: string,
+ *   orgId?: number,
+ *   registrationNumber?: string,
+ *   accreditationNumber?: string
+ * }} [overrides]
+ * @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>}
+ */
+const buildOrgWithCriteria = ({
+  name = 'Criteria Ltd',
+  orgId,
+  registrationNumber,
+  accreditationNumber
+} = {}) => {
+  const base = buildOrganisation(orgId === undefined ? {} : { orgId })
+  return {
+    ...base,
+    companyDetails: { ...base.companyDetails, name },
+    registrations: base.registrations.map((registration, index) =>
+      index === 0 && registrationNumber !== undefined
+        ? { ...registration, registrationNumber }
+        : registration
+    ),
+    accreditations: base.accreditations.map((accreditation, index) =>
+      index === 0 && accreditationNumber !== undefined
+        ? { ...accreditation, accreditationNumber }
+        : accreditation
+    )
+  }
+}
+
+const namesOf = (result) => result.items.map((o) => o.companyDetails.name)
+
 export const testFindPageBehaviour = (it) => {
   describe('findPage', () => {
     let repository
@@ -220,6 +259,235 @@ export const testFindPageBehaviour = (it) => {
         ])
         expect(result.totalItems).toBe(5)
         expect(result.totalPages).toBe(3)
+      })
+    })
+
+    describe('criteria', () => {
+      const HOLDER_ORG_ID = 700001
+      const OTHER_ORG_ID = 700002
+
+      let holder
+      let other
+
+      beforeEach(async () => {
+        holder = buildOrgWithCriteria({
+          name: 'Holder Ltd',
+          orgId: HOLDER_ORG_ID,
+          registrationNumber: 'REG001',
+          accreditationNumber: 'ACC001'
+        })
+        other = buildOrgWithCriteria({
+          name: 'Other Ltd',
+          orgId: OTHER_ORG_ID,
+          registrationNumber: 'REG002',
+          accreditationNumber: 'ACC444'
+        })
+        await repository.insert(holder)
+        await repository.insert(other)
+      })
+
+      it('finds the organisation holding the numeric orgId', async () => {
+        const result = await repository.findPage({
+          orgId: String(HOLDER_ORG_ID),
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(result)).toEqual(['Holder Ltd'])
+        expect(result.totalItems).toBe(1)
+      })
+
+      it('finds the organisation whose document id is the orgId criterion', async () => {
+        const result = await repository.findPage({
+          orgId: holder.id,
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(result)).toEqual(['Holder Ltd'])
+      })
+
+      it('finds the organisation holding the registration id', async () => {
+        const result = await repository.findPage({
+          registrationId: holder.registrations[0].id,
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(result)).toEqual(['Holder Ltd'])
+      })
+
+      it('finds the organisation holding the registration number', async () => {
+        const result = await repository.findPage({
+          registrationNumber: 'REG001',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(result)).toEqual(['Holder Ltd'])
+      })
+
+      it('finds the organisation holding the accreditation id', async () => {
+        const result = await repository.findPage({
+          accreditationId: holder.accreditations[0].id,
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(result)).toEqual(['Holder Ltd'])
+      })
+
+      it('finds the organisation holding the accreditation number', async () => {
+        const result = await repository.findPage({
+          accreditationNumber: 'ACC001',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(result)).toEqual(['Holder Ltd'])
+      })
+
+      it('returns the organisation satisfying every criterion', async () => {
+        const result = await repository.findPage({
+          registrationNumber: 'REG001',
+          accreditationNumber: 'ACC001',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(result)).toEqual(['Holder Ltd'])
+      })
+
+      it('returns nothing when criteria are satisfied by different organisations', async () => {
+        const result = await repository.findPage({
+          registrationNumber: 'REG001',
+          accreditationNumber: 'ACC444',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(result.items).toEqual([])
+        expect(result.totalItems).toBe(0)
+      })
+
+      it('ANDs a criterion with the name search', async () => {
+        const matching = await repository.findPage({
+          search: 'holder',
+          registrationNumber: 'REG001',
+          page: 1,
+          pageSize: 50
+        })
+        const mismatched = await repository.findPage({
+          search: 'other',
+          registrationNumber: 'REG001',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(matching)).toEqual(['Holder Ltd'])
+        expect(mismatched.items).toEqual([])
+      })
+
+      it('returns no results for an orgId that is neither a number nor a document id', async () => {
+        const result = await repository.findPage({
+          orgId: 'not-an-id',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(result.items).toEqual([])
+        expect(result.totalItems).toBe(0)
+      })
+
+      it('matches numbers case-insensitively', async () => {
+        const result = await repository.findPage({
+          registrationNumber: 'reg001',
+          accreditationNumber: 'acc001',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(result)).toEqual(['Holder Ltd'])
+      })
+
+      it('does not match a number by prefix', async () => {
+        const result = await repository.findPage({
+          registrationNumber: 'REG00',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(result.items).toEqual([])
+      })
+
+      it('escapes regex special characters in a number criterion', async () => {
+        await repository.insert(
+          buildOrgWithCriteria({
+            name: 'Dotted Ltd',
+            registrationNumber: 'REG.01'
+          })
+        )
+        await repository.insert(
+          buildOrgWithCriteria({
+            name: 'Undotted Ltd',
+            registrationNumber: 'REGX01'
+          })
+        )
+
+        const result = await repository.findPage({
+          registrationNumber: 'REG.01',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(namesOf(result)).toEqual(['Dotted Ltd'])
+      })
+
+      it('treats empty-string criteria as absent', async () => {
+        const result = await repository.findPage({
+          search: '',
+          orgId: '',
+          registrationId: '',
+          registrationNumber: '',
+          accreditationId: '',
+          accreditationNumber: '',
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(result.totalItems).toBe(2)
+      })
+
+      it('treats undefined criteria as absent', async () => {
+        const result = await repository.findPage({
+          orgId: undefined,
+          registrationId: undefined,
+          registrationNumber: undefined,
+          accreditationId: undefined,
+          accreditationNumber: undefined,
+          page: 1,
+          pageSize: 50
+        })
+
+        expect(result.totalItems).toBe(2)
+      })
+
+      it('counts and pages only the organisations matching a criterion', async () => {
+        for (const name of ['Shared A', 'Shared B', 'Shared C']) {
+          await repository.insert(
+            buildOrgWithCriteria({ name, accreditationNumber: 'ACC777' })
+          )
+        }
+
+        const result = await repository.findPage({
+          accreditationNumber: 'ACC777',
+          page: 2,
+          pageSize: 2
+        })
+
+        expect(namesOf(result)).toEqual(['Shared C'])
+        expect(result.totalItems).toBe(3)
+        expect(result.totalPages).toBe(2)
       })
     })
 

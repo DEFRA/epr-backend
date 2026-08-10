@@ -61,7 +61,20 @@
  */
 
 /**
- * @typedef {{ search?: string, page: number, pageSize: number }} FindPageParams
+ * Paging plus the optional search criteria. Every criterion that carries a
+ * value is ANDed with the others; an empty string or undefined is treated as
+ * absent. Criteria match anywhere on the organisation's registrations and
+ * accreditations — a registration and an accreditation criterion are not
+ * required to describe a linked pair.
+ * @typedef {Object} FindPageParams
+ * @property {number} page
+ * @property {number} pageSize
+ * @property {string} [search] - case-insensitive substring on companyDetails.name
+ * @property {string} [orgId] - business orgId or the organisation's document id; unparseable values match nothing
+ * @property {string} [registrationId] - exact match on registrations[].id
+ * @property {string} [registrationNumber] - case-insensitive exact match on registrations[].registrationNumber
+ * @property {string} [accreditationId] - exact match on accreditations[].id
+ * @property {string} [accreditationNumber] - case-insensitive exact match on accreditations[].accreditationNumber
  */
 
 /**
@@ -74,7 +87,7 @@
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
  * @property {() => Promise<Organisation[]>} findAll
  * @property {(schemaVersion: number) => Promise<Organisation[]>} findAllBySchemaVersion - Find all organisations with a specific schema version
- * @property {(params: FindPageParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} findPage - Paginated organisations query with optional case-insensitive substring search on companyDetails.name; results sorted alphabetically by name
+ * @property {(params: FindPageParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} findPage - Paginated organisations query filtered by the optional criteria in FindPageParams, all ANDed together; results sorted alphabetically by name
  * @property {() => Promise<OrganisationsOverseasSitesAdminListItem[]>} [findAllForOverseasSitesAdminList] - Lightweight projection for ORS admin list endpoint
  * @property {(params: FindPageForOverseasSitesAdminListParams) => Promise<OrganisationsOverseasSitesAdminListPage>} [findPageForOverseasSitesAdminList] - Paginated ORS admin list query optimized for MongoDB-backed reads
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
