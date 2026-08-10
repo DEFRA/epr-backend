@@ -5,13 +5,14 @@ import {
   TARGET_TYPE
 } from '#domain/organisations/validation/issue.js'
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, Organisation } from '#domain/organisations/model.js' */
 
 const organisation = (registrations, accreditations) =>
   /** @type {Organisation} */ (
     /** @type {unknown} */ ({ id: 'org-1', registrations, accreditations })
   )
 
+/** @param {AccreditationStatus[]} statuses */
 const historyOf = (...statuses) =>
   statuses.map((status) => ({ status, updatedAt: '2026-01-01' }))
 
