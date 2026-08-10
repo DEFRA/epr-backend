@@ -1,14 +1,14 @@
 import { ACTIVE_ACCREDITATION_STATUSES } from '#domain/organisations/model.js'
 import {
   SEVERITY,
-  createIssue,
-  registrationTarget
+  accreditationTarget,
+  createIssue
 } from '#domain/organisations/validation/issue.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
-const CODE = 'UNNUMBERED_ACCREDITATION_REF'
+const CODE = 'UNNUMBERED_ACCREDITATION'
 const SEVERITY_LEVEL = SEVERITY.ERROR
 
 /**
@@ -40,40 +40,31 @@ const isNumbered = (accreditation) =>
   accreditation.accreditationNumber.trim() !== ''
 
 /**
+ * The number is a property of the accreditation, and the reports that fail on
+ * a missing one reach the accreditation through the identifiers recorded on a
+ * PRN rather than through the registration that links to it. An accreditation
+ * a registration has since been pointed away from keeps its PRNs and still
+ * breaks those reports, so the accreditation is what this rule walks.
+ *
  * @param {Organisation} org
  * @returns {import('#domain/organisations/validation/issue.js').ValidationIssue[]}
  */
-const evaluate = (org) => {
-  const accreditationsById = new Map(
-    org.accreditations.map((acc) => [acc.id, acc])
-  )
-
-  return org.registrations.flatMap((reg) => {
-    const accreditation =
-      reg.accreditationId === undefined
-        ? undefined
-        : accreditationsById.get(reg.accreditationId)
-
-    if (
-      !accreditation ||
-      !hasBeenAccredited(accreditation) ||
-      isNumbered(accreditation)
-    ) {
-      return []
-    }
-
-    return [
+const evaluate = (org) =>
+  org.accreditations
+    .filter(
+      (accreditation) =>
+        hasBeenAccredited(accreditation) && !isNumbered(accreditation)
+    )
+    .map((accreditation) =>
       createIssue({
         code: CODE,
         severity: SEVERITY_LEVEL,
-        target: registrationTarget(reg.id),
-        message: `Registration ${reg.id} references accreditation ${accreditation.id}, which has been accredited but carries no valid accreditation number`
+        target: accreditationTarget(accreditation.id),
+        message: `Accreditation ${accreditation.id} has been accredited but carries no valid accreditation number`
       })
-    ]
-  })
-}
+    )
 
-export const unnumberedAccreditationRefRule = {
+export const unnumberedAccreditationRule = {
   code: CODE,
   severity: SEVERITY_LEVEL,
   evaluate

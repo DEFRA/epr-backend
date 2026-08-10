@@ -5,7 +5,7 @@ import { sharedAccreditationRule } from './shared-accreditation.js'
 import { orphanAccreditationRule } from './orphan-accreditation.js'
 import { materialMismatchRule } from './material-mismatch.js'
 import { invalidAccreditationLinkRule } from './invalid-accreditation-link.js'
-import { unnumberedAccreditationRefRule } from './unnumbered-accreditation-ref.js'
+import { unnumberedAccreditationRule } from './unnumbered-accreditation.js'
 
 /**
  * @typedef {{
@@ -25,5 +25,5 @@ export const rules = [
   orphanAccreditationRule,
   materialMismatchRule,
   invalidAccreditationLinkRule,
-  unnumberedAccreditationRefRule
+  unnumberedAccreditationRule
 ]

@@ -43,8 +43,7 @@ describe('validateOrganisation', () => {
     const org = organisation(
       [
         { id: 'reg-1', accreditationId: 'acc-missing', material: 'glass' },
-        { id: 'reg-1', accreditationId: 'acc-1', material: 'plastic' },
-        { id: 'reg-2', accreditationId: 'acc-unnumbered', material: 'glass' }
+        { id: 'reg-1', accreditationId: 'acc-1', material: 'plastic' }
       ],
       [
         { id: 'acc-1', material: 'glass' },
@@ -67,7 +66,7 @@ describe('validateOrganisation', () => {
     expect(codes).toContain('DUPLICATE_REGISTRATION_ID')
     expect(codes).toContain('ORPHAN_ACCREDITATION')
     expect(codes).toContain('MATERIAL_MISMATCH')
-    expect(codes).toContain('UNNUMBERED_ACCREDITATION_REF')
+    expect(codes).toContain('UNNUMBERED_ACCREDITATION')
   })
 
   it('classifies structural breakages as errors and relationship oddities as warnings', () => {
