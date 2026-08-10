@@ -24,7 +24,7 @@ import { getCurrentStatus } from './status.js'
 /** @import { WithId } from 'mongodb' */
 /** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
-/** @import { FindPageForOverseasSitesAdminListParams } from './port.js' */
+/** @import { FindPageForOverseasSitesAdminListParams, SearchCriteria } from './port.js' */
 
 /**
  * A status history entry as it reaches the repository: stored entries carry a
@@ -224,19 +224,6 @@ export const escapeRegex = (string) =>
   string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 /**
- * The optional criteria a findPage query can be narrowed by. Every criterion
- * that carries a value is ANDed with the others; an empty string or undefined
- * is treated as absent.
- * @typedef {Object} FindPageCriteria
- * @property {string} [search] - case-insensitive substring on companyDetails.name
- * @property {string} [orgId] - business orgId or the organisation's document id
- * @property {string} [registrationId] - exact match on registrations[].id
- * @property {string} [registrationNumber] - case-insensitive exact match on registrations[].registrationNumber
- * @property {string} [accreditationId] - exact match on accreditations[].id
- * @property {string} [accreditationNumber] - case-insensitive exact match on accreditations[].accreditationNumber
- */
-
-/**
  * An organisation as it is stored, before the read path maps `_id` to `id` and
  * derives the current statuses. The in-memory adapter keeps `_id` as the plain
  * id string.
@@ -247,8 +234,8 @@ const INTEGER_PATTERN = /^\d+$/
 const DOCUMENT_ID_PATTERN = /^[0-9a-fA-F]{24}$/
 
 /**
- * @param {FindPageCriteria} criteria
- * @returns {Required<FindPageCriteria>} - every criterion trimmed, absent ones as ''
+ * @param {SearchCriteria} criteria
+ * @returns {Required<SearchCriteria>} - every criterion trimmed, absent ones as ''
  */
 export const normaliseCriteria = ({
   search,

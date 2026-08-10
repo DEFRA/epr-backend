@@ -251,7 +251,7 @@ const buildOrgIdFilter = (value) => {
  * own equivalent; the shared criteria semantics live in helpers.js and the
  * findPage contract tests hold the two implementations to the same behaviour.
  *
- * @param {import('./helpers.js').FindPageCriteria} criteria
+ * @param {import('./port.js').SearchCriteria} criteria
  * @returns {object} - a filter matching organisations satisfying every criterion
  */
 const buildFindPageFilter = (criteria) => {
