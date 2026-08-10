@@ -13,7 +13,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -486,13 +486,13 @@ export const createTestInfrastructure = async (
   const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
   const overseasSitesRepository = createInMemoryOverseasSitesRepository([])()
   const ledgerRepository = createInMemoryLedgerRepository()()
-  const summaryLogRowStateRepository =
-    createInMemorySummaryLogRowStateRepository()()
+  const summaryLogRowStatesRepository =
+    createInMemorySummaryLogRowStatesRepository()()
 
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: /** @type {any} */ ({
       findPeriodicReports: async () => []
@@ -551,8 +551,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
   const ledgerRepository = createInMemoryLedgerRepository()()
-  const summaryLogRowStateRepository =
-    createInMemorySummaryLogRowStateRepository()()
+  const summaryLogRowStatesRepository =
+    createInMemorySummaryLogRowStatesRepository()()
 
   const systemLogsForBalanceAudit = {
     insert: vi.fn().mockResolvedValue(undefined),
@@ -609,7 +609,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: createReportsService(reportsRepository),
     overseasSitesRepository,
@@ -622,7 +622,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     ledgerRepository,
     logger: mockLogger
   })
@@ -664,7 +664,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     accreditationId,
     fileDataMap,
     ledgerRepository,
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     systemLogsForBalanceAudit,
     reportsRepository
   }

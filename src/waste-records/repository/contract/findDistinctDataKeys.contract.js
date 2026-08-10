@@ -9,8 +9,8 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
   describe('findDistinctDataKeys', () => {
     let repository
 
-    beforeEach((/** @type {*} */ { summaryLogRowStateRepository }) => {
-      repository = summaryLogRowStateRepository()
+    beforeEach((/** @type {*} */ { summaryLogRowStatesRepository }) => {
+      repository = summaryLogRowStatesRepository()
     })
 
     it('returns an empty array when no row states exist', async () => {

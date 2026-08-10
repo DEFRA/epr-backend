@@ -31,7 +31,7 @@
  */
 
 /**
- * @typedef {Object} SummaryLogRowStateRepository
+ * @typedef {Object} SummaryLogRowStatesRepository
  * @property {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>} upsertSummaryLogRowStates
  *   For each row, find the existing state document for that row identity whose
  *   coerced `data` and `classification` equal the incoming entry. If one
@@ -53,7 +53,7 @@
  */
 
 /**
- * @typedef {() => SummaryLogRowStateRepository} SummaryLogRowStateRepositoryFactory
+ * @typedef {() => SummaryLogRowStatesRepository} SummaryLogRowStatesRepositoryFactory
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

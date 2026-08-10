@@ -21,7 +21,7 @@ import { toWasteRecordState } from './read-summary-log-row-states.js'
  *
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & {
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
- *   summaryLogRowStateRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
  *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository
  * }} context
@@ -29,7 +29,7 @@ import { toWasteRecordState } from './read-summary-log-row-states.js'
  */
 export const liveClassifiedRowStatesForRegistration = async ({
   ledgerRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   organisationsRepository,
   overseasSitesRepository,
   organisationId,
@@ -44,7 +44,7 @@ export const liveClassifiedRowStatesForRegistration = async ({
   }
 
   const rowStates =
-    await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+    await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
       ledgerId,
       head
     )

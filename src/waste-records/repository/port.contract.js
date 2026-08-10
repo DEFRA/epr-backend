@@ -3,7 +3,7 @@ import { testFindRowStatesForSummaryLogBehaviour } from './contract/findRowState
 import { testFindRowHistoryBehaviour } from './contract/findRowHistory.contract.js'
 import { testFindDistinctDataKeysBehaviour } from './contract/findDistinctDataKeys.contract.js'
 
-export const testSummaryLogRowStateRepositoryContract = (it) => {
+export const testSummaryLogRowStatesRepositoryContract = (it) => {
   testUpsertSummaryLogRowStatesBehaviour(it)
   testFindRowStatesForSummaryLogBehaviour(it)
   testFindRowHistoryBehaviour(it)

@@ -22,7 +22,7 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
 /** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
-/** @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js' */
+/** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository, LatestSubmittedSummaryLogPerLedger} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
@@ -30,7 +30,7 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 /**
  * @typedef {Object} StreamCsvExportDeps
  * @property {Pick<OrganisationsRepository, 'findAll' | 'findById'>} organisationsRepository
- * @property {Pick<SummaryLogRowStateRepository, 'findRowStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
+ * @property {Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
  * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
@@ -109,7 +109,7 @@ const sortEntriesByAccreditationId = (a, b) =>
  * @param {LatestSubmittedSummaryLogPerLedger[]} input.entries - The registration's per-partition latest submissions.
  * @param {Map<string, OverseasSite>} input.sitesById
  * @param {string[]} input.dataFieldColumns
- * @param {Pick<SummaryLogRowStateRepository, 'findRowStatesForSummaryLog'>} input.summaryLogRowStatesRepository
+ * @param {Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog'>} input.summaryLogRowStatesRepository
  * @param {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} input.summaryLogsRepository
  * @returns {AsyncGenerator<string>}
  */

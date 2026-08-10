@@ -13,7 +13,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
  * @import { Report, ReportsRepository } from '#reports/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
- * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
@@ -74,7 +74,7 @@ export const reportsGetDetail = {
    *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
-   *   summaryLogRowStatesRepository: SummaryLogRowStateRepository,
+   *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   reportsRepository: ReportsRepository,
    *   overseasSitesRepository: OverseasSitesRepository
@@ -108,7 +108,7 @@ export const reportsGetDetail = {
     const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,
       ledgerRepository,
-      summaryLogRowStateRepository: summaryLogRowStatesRepository,
+      summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository,
       overseasSitesRepository,
       organisationId,

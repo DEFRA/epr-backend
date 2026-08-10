@@ -6,7 +6,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import {
@@ -44,7 +44,7 @@ const seedRepositories = async (org, registration, wasteRecordOverrides) => {
     accreditationId
   }
   const summaryLogRowStatesRepository =
-    createInMemorySummaryLogRowStateRepository()()
+    createInMemorySummaryLogRowStatesRepository()()
   const ledgerEvents = []
   if (wasteRecordOverrides.length > 0) {
     const entries = wasteRecordOverrides.map((override, index) =>

@@ -17,7 +17,7 @@ import { auditMarkReportsRequiringResubmission } from '#reports/application/audi
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#reports/repository/port.js').MarkSubmittedReportRequiringResubmissionResult} MarkSubmittedReportRequiringResubmissionResult
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowState} SummaryLogRowState
- * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} SummaryLogRowStateRepository
+ * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
  * @typedef {import('#waste-records/repository/port.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  * @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
@@ -327,18 +327,18 @@ const cadenceForRow = (row) =>
  * registered-only/accredited transition still pairs with its predecessor (within
  * the ledgers read -- see residual 1).
  *
- * @param {SummaryLogRowStateRepository} summaryLogRowStateRepository
+ * @param {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  * @param {WasteBalanceLedgerId[]} ledgers
  * @param {{ id: string, fileId: string, submittedAt: string }[]} logs
  * @returns {Promise<{ id: string, fileId: string, submittedAt: string, rows: SummaryLogRowState[] }[]>}
  */
-const loadSnapshots = async (summaryLogRowStateRepository, ledgers, logs) => {
+const loadSnapshots = async (summaryLogRowStatesRepository, ledgers, logs) => {
   const snapshots = []
   for (const log of logs) {
     const rows = []
     for (const ledger of ledgers) {
       rows.push(
-        ...(await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+        ...(await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
           ledger,
           log.fileId
         ))
@@ -538,7 +538,7 @@ const diffFindings = ({
  *   registrationId: string,
  *   reports: SubmittedReport[],
  *   summaryLogsRepository: SummaryLogsRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   organisationsRepository: OrganisationsRepository
  * }} params
  * @returns {Promise<{ findings: PreCpaResubmissionFinding[], ignored: PreCpaResubmissionFinding[] }>}
@@ -548,7 +548,7 @@ const findForRegistration = async ({
   registrationId,
   reports,
   summaryLogsRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   organisationsRepository
 }) => {
   const ledgers = await resolveLedgers(
@@ -570,7 +570,7 @@ const findForRegistration = async ({
     return { findings: [], ignored: [] }
   }
   const snapshots = await loadSnapshots(
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     ledgers,
     logs
   )
@@ -616,7 +616,7 @@ const dedupeByReportId = (findings) => {
  * @param {{
  *   reportsRepository: ReportsRepository,
  *   summaryLogsRepository: SummaryLogsRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   organisationsRepository: OrganisationsRepository
  * }} deps
  * @returns {Promise<{ scanned: number, findings: PreCpaResubmissionFinding[], ignoredInClosedPeriods: PreCpaResubmissionFinding[], reportsMissingSubmittedAt: ReportIdentity[] }>}
@@ -624,7 +624,7 @@ const dedupeByReportId = (findings) => {
 export const findPreCpaResubmissionReports = async ({
   reportsRepository,
   summaryLogsRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   organisationsRepository
 }) => {
   const periodicReports = await reportsRepository.findAllPeriodicReports()
@@ -640,7 +640,7 @@ export const findPreCpaResubmissionReports = async ({
       registrationId,
       reports,
       summaryLogsRepository,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       organisationsRepository
     })
     findings.push(...result.findings)
@@ -759,7 +759,7 @@ const unexpectedlyFlaggedReportIds = (expectedReportIds, flaggedReports) =>
  * @param {{
  *   reportsRepository: ReportsRepository,
  *   summaryLogsRepository: SummaryLogsRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   systemLogsRepository: SystemLogsRepository
  * }} deps
@@ -769,13 +769,13 @@ const unexpectedlyFlaggedReportIds = (expectedReportIds, flaggedReports) =>
  *   reportsMissingSubmittedAt: ReportIdentity[],
  *   flagged: MarkSubmittedReportRequiringResubmissionResult[],
  *   unexpectedlyFlaggedReportIds: string[],
- *   failed: Array<{ organisationId: string, registrationId: string, summaryLogId: string, error: Error }>
+ *   failed: { organisationId: string, registrationId: string, summaryLogId: string, error: Error }[]
  * }>}
  */
 export const backfillPreCpaResubmissionReports = async ({
   reportsRepository,
   summaryLogsRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   organisationsRepository,
   systemLogsRepository
 }) => {
@@ -783,7 +783,7 @@ export const backfillPreCpaResubmissionReports = async ({
     await findPreCpaResubmissionReports({
       reportsRepository,
       summaryLogsRepository,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       organisationsRepository
     })
 
