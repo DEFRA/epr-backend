@@ -151,7 +151,7 @@ describe('runOverExportedLoadsReport', () => {
       infoLine(
         'over_exported_loads_summary',
         'Over-exported loads: scanned 0, reports 0, loads 0, ' +
-          'exporters 0 across 0 organisations, total overshoot 0'
+          'exporters 0 across 0 organisations, masked 0, total overshoot 0'
       )
     )
   })
@@ -176,7 +176,22 @@ describe('runOverExportedLoadsReport', () => {
       infoLine(
         'over_exported_loads_summary',
         'Over-exported loads: scanned 1, reports 1, loads 1, ' +
-          'exporters 1 across 1 organisations, total overshoot 2'
+          'exporters 1 across 1 organisations, masked 0, total overshoot 2'
+      )
+    )
+  })
+
+  it('logs the overshoot broken down by material', async () => {
+    const server = buildServer(
+      estateApp([monthlyReport()], [receivedRow('row-1', 10, 12)])
+    )
+
+    await runOverExportedLoadsReport(server)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      infoLine(
+        'over_exported_loads_by_material',
+        'Over-exported loads by material: plastic - overshoot 2'
       )
     )
   })

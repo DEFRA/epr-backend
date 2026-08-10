@@ -18,7 +18,7 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * The rows a report was built from, or the reason they are not there. A reason
  * here means the data genuinely is not present, which a re-run will not change.
  *
- * @typedef {{ states: WasteRecordState[] }
+ * @typedef {{ states: WasteRecordState[], registration: Registration }
  *   | { unresolved: string }
  *   | { outOfScope: string }} SourceRowStates
  */
@@ -127,5 +127,5 @@ export const loadSourceRowStates = async (
     )
   }
 
-  return states.length > 0 ? { states } : { unresolved: NO_ROWS }
+  return states.length > 0 ? { states, registration } : { unresolved: NO_ROWS }
 }

@@ -26,7 +26,6 @@ import { loadSourceRowStates } from './source-row-states.js'
 /**
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js'
- * @import { SourceRowStates } from './source-row-states.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
  * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  */
@@ -330,7 +329,7 @@ const identityOf = (row) => ({
  * causes they are looking at.
  *
  * @param {ReviewableReportRow} row
- * @param {Exclude<SourceRowStates, { outOfScope: string }>} sourceRowStates
+ * @param {{ states: WasteRecordState[] } | { unresolved: string }} sourceRowStates
  * @returns {UnexportedTonnageFinding | null}
  */
 export const diagnoseReportRow = (row, sourceRowStates) => {

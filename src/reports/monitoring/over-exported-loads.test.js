@@ -4,6 +4,7 @@ import {
   findOverExportedLoads,
   formatOverExportedLoadsFinding,
   largestOverExportedLoads,
+  summariseOverExportedLoadsByMaterial,
   summariseOverExportedLoadsByMonth,
   summariseOverExportedLoadsFindings
 } from './over-exported-loads.js'
@@ -84,8 +85,10 @@ describe('overExportedLoads', () => {
           year: 2026,
           period: 2,
           reportStatus: 'submitted',
+          material: 'plastic',
           loads: [{ rowId: 'row-1', received: 10, exported: 12, overshoot: 2 }],
-          totalOvershoot: 2
+          totalOvershoot: 2,
+          net: -2
         }
       ])
     })
@@ -230,6 +233,7 @@ describe('overExportedLoads', () => {
         loads: 3,
         exporters: 2,
         organisations: 2,
+        masked: 0,
         totalOvershoot: 6
       })
     })
@@ -240,8 +244,92 @@ describe('overExportedLoads', () => {
         loads: 0,
         exporters: 0,
         organisations: 0,
+        masked: 0,
         totalOvershoot: 0
       })
+    })
+  })
+
+  describe('masking', () => {
+    it('reports a log as masked when other loads net its over-export away', async () => {
+      const deps = estate(
+        [monthlyReport()],
+        [receivedRow('row-1', 10, 12), receivedRow('row-2', 50, 10)]
+      )
+
+      const { findings } = await findOverExportedLoads(deps)
+
+      expect(findings[0].net).toBe(38)
+      expect(summariseOverExportedLoadsFindings(findings).masked).toBe(1)
+    })
+
+    it('does not report a log as masked when its own net goes negative', async () => {
+      const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
+
+      const { findings } = await findOverExportedLoads(deps)
+
+      expect(findings[0].net).toBe(-2)
+      expect(summariseOverExportedLoadsFindings(findings).masked).toBe(0)
+    })
+
+    it('counts a blank received tonnage against the net, which the over-export loads exclude', async () => {
+      const deps = estate(
+        [monthlyReport()],
+        [receivedRow('row-1', 10, 12), receivedRow('row-2', null, 30)]
+      )
+
+      const { findings } = await findOverExportedLoads(deps)
+
+      expect(findings[0].loads).toHaveLength(1)
+      expect(findings[0].net).toBe(-32)
+    })
+  })
+
+  describe('summariseOverExportedLoadsByMaterial', () => {
+    it('sums the overshoot of the loads themselves into each material', async () => {
+      const deps = estate(
+        [monthlyReport(), monthlyReport({ reportId: 'report-2' })],
+        [receivedRow('row-1', 10, 12)]
+      )
+      const { findings } = await findOverExportedLoads(deps)
+
+      expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
+        { material: 'plastic', overshoot: 4 }
+      ])
+    })
+
+    it('splits the overshoot across materials, ordered by material', async () => {
+      const deps = estate(
+        [
+          monthlyReport({ registrationId: 'reg-wood' }),
+          monthlyReport({ registrationId: 'reg-glass', reportId: 'report-2' })
+        ],
+        [receivedRow('row-1', 10, 12)]
+      )
+      deps.organisationsRepository.findRegistrationById.mockImplementation(
+        async (_organisationId, registrationId) =>
+          buildExporterRegistration({
+            material: registrationId === 'reg-wood' ? 'wood' : 'glass'
+          })
+      )
+      const { findings } = await findOverExportedLoads(deps)
+
+      expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
+        { material: 'glass', overshoot: 2 },
+        { material: 'wood', overshoot: 2 }
+      ])
+    })
+
+    it('groups a registration with no material under unknown', async () => {
+      const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
+      deps.organisationsRepository.findRegistrationById.mockResolvedValue(
+        buildExporterRegistration({ material: null })
+      )
+      const { findings } = await findOverExportedLoads(deps)
+
+      expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
+        { material: 'unknown', overshoot: 2 }
+      ])
     })
   })
 

@@ -7,6 +7,7 @@ import {
   findOverExportedLoads,
   formatOverExportedLoadsFinding,
   largestOverExportedLoads,
+  summariseOverExportedLoadsByMaterial,
   summariseOverExportedLoadsByMonth,
   summariseOverExportedLoadsFindings
 } from '#reports/monitoring/over-exported-loads.js'
@@ -43,6 +44,14 @@ const log = (action, message, reference) =>
  * @param {OverExportedLoadsFinding[]} findings
  */
 const logBreakdowns = (findings) => {
+  summariseOverExportedLoadsByMaterial(findings).forEach(
+    ({ material, overshoot }) =>
+      log(
+        LOGGING_EVENT_ACTIONS.OVER_EXPORTED_LOADS_BY_MATERIAL,
+        `Over-exported loads by material: ${material} - overshoot ${overshoot}`
+      )
+  )
+
   summariseOverExportedLoadsByMonth(findings).forEach(
     ({ month, reports, loads, overshoot }) =>
       log(
@@ -72,14 +81,15 @@ const logBreakdowns = (findings) => {
  * @param {OverExportedLoadsFinding[]} findings
  */
 const logSummary = (scanned, findings) => {
-  const { reports, loads, exporters, organisations, totalOvershoot } =
+  const { reports, loads, exporters, organisations, masked, totalOvershoot } =
     summariseOverExportedLoadsFindings(findings)
 
   log(
     LOGGING_EVENT_ACTIONS.OVER_EXPORTED_LOADS_SUMMARY,
     `Over-exported loads: scanned ${scanned}, reports ${reports}, ` +
       `loads ${loads}, exporters ${exporters} across ` +
-      `${organisations} organisations, total overshoot ${totalOvershoot}`
+      `${organisations} organisations, masked ${masked}, ` +
+      `total overshoot ${totalOvershoot}`
   )
 }
 

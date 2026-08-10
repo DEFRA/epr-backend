@@ -1,5 +1,6 @@
 import {
   ACCREDITATION_STATUS,
+  MATERIAL,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
@@ -15,14 +16,16 @@ import {
  * @param {{
  *   wasteProcessingType?: string,
  *   accreditationStatus?: string | null,
- *   accreditationId?: string | null
+ *   accreditationId?: string | null,
+ *   material?: string | null
  * }} [options]
  * @returns {Registration}
  */
 export const buildExporterRegistration = ({
   wasteProcessingType = WASTE_PROCESSING_TYPE.EXPORTER,
   accreditationStatus = ACCREDITATION_STATUS.APPROVED,
-  accreditationId = null
+  accreditationId = null,
+  material = MATERIAL.PLASTIC
 } = {}) =>
   /** @type {Registration} */ (
     /** @type {unknown} */ ({
@@ -30,6 +33,7 @@ export const buildExporterRegistration = ({
       accreditation: accreditationStatus
         ? { status: accreditationStatus }
         : null,
-      accreditationId
+      accreditationId,
+      material
     })
   )

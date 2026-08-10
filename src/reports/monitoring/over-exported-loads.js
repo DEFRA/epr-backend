@@ -15,7 +15,8 @@ import { findReviewableReportRows } from './unexported-tonnage.js'
 import { loadSourceRowStates } from './source-row-states.js'
 
 /**
- * @import { PeriodicReport } from '#reports/repository/port.js'
+ * @import { RoundedTonnage } from '#common/helpers/rounded-tonnage.js'
+ * @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js'
  * @import { SourceRowStateDeps } from './source-row-states.js'
  * @import { ReviewableReportRow } from './unexported-tonnage.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
@@ -39,10 +40,14 @@ import { loadSourceRowStates } from './source-row-states.js'
  *   year: number,
  *   period: number,
  *   reportStatus: string,
+ *   material: string,
  *   loads: OverExportedLoad[],
- *   totalOvershoot: number
+ *   totalOvershoot: number,
+ *   net: number
  * }} OverExportedLoadsFinding
  */
+
+export const UNKNOWN_MATERIAL = 'unknown'
 
 const RECEIVED_DATE_FIELD =
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[OPERATOR_CATEGORY.EXPORTER]
@@ -60,7 +65,7 @@ const TONNAGE_EXPORTED_FIELD = 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
  * different remedy, and folding the two together would misreport both.
  *
  * @param {Record<string, any>} data
- * @returns {import('#common/helpers/rounded-tonnage.js').RoundedTonnage | null}
+ * @returns {RoundedTonnage | null}
  */
 const overshootOf = (data) => {
   if (isNil(data[TONNAGE_RECEIVED_FIELD])) {
@@ -79,15 +84,17 @@ const overshootOf = (data) => {
  * @param {WasteRecordState[]} states
  * @param {string} startDate
  * @param {string} endDate
+ * @returns {WasteRecordState[]}
+ */
+const loadsIn = (states, startDate, endDate) =>
+  filterRecordsByDateField(states, RECEIVED_DATE_FIELD, startDate, endDate)
+
+/**
+ * @param {WasteRecordState[]} loads
  * @returns {OverExportedLoad[]}
  */
-const overExportedLoadsIn = (states, startDate, endDate) =>
-  filterRecordsByDateField(
-    states,
-    RECEIVED_DATE_FIELD,
-    startDate,
-    endDate
-  ).flatMap(({ rowId, data }) => {
+const overExportedAmong = (loads) =>
+  loads.flatMap(({ rowId, data }) => {
     const overshoot = overshootOf(data)
     return overshoot === null
       ? []
@@ -102,24 +109,30 @@ const overExportedLoadsIn = (states, startDate, endDate) =>
   })
 
 /**
- * Scans every reviewable accredited-exporter monthly report across the estate
- * and returns the loads reporting more tonnage exported than received, with the
- * size of each overshoot. Read-only, safe under live traffic.
+ * The summary log's own net across every load received in the period: the sum
+ * of column S less the sum of column T. A blank received tonnage still
+ * contributes its `-T`, so a log can net negative with no over-exported load of
+ * its own.
  *
- * A report whose rows cannot be read is skipped rather than failing the run:
- * the diagnostic gets one pass per deploy, and a single unreadable report must
- * not cost it everything already found. Unlike the unexported-tonnage sizing,
- * an unreadable report is not itself a finding here — this run is about loads
- * that exist, not reports that cannot be assessed.
- *
- * @param {SourceRowStateDeps & {
- *   reportsRepository: Pick<
- *     import('#reports/repository/port.js').ReportsRepository,
- *     'findAllPeriodicReports' | 'findReportById'
- *   >
- * }} deps
- * @returns {Promise<{ scanned: number, findings: OverExportedLoadsFinding[] }>}
+ * @param {WasteRecordState[]} loads
+ * @returns {number}
  */
+const netOf = (loads) =>
+  toNumber(
+    subtractTonnage(
+      loads.reduce(
+        (sum, { data }) =>
+          addTonnage(sum, toRoundedTonnage(data[TONNAGE_RECEIVED_FIELD])),
+        ZERO_TONNAGE
+      ),
+      loads.reduce(
+        (sum, { data }) =>
+          addTonnage(sum, toRoundedTonnage(data[TONNAGE_EXPORTED_FIELD])),
+        ZERO_TONNAGE
+      )
+    )
+  )
+
 /**
  * @param {SourceRowStateDeps} deps
  * @param {ReviewableReportRow} row
@@ -138,11 +151,8 @@ const assessReportRow = async (deps, row) => {
       return { inScope: true }
     }
 
-    const loads = overExportedLoadsIn(
-      sourceRowStates.states,
-      row.startDate,
-      row.endDate
-    )
+    const inPeriod = loadsIn(sourceRowStates.states, row.startDate, row.endDate)
+    const loads = overExportedAmong(inPeriod)
 
     return {
       inScope: true,
@@ -156,6 +166,8 @@ const assessReportRow = async (deps, row) => {
               year: row.year,
               period: row.period,
               reportStatus: row.reportStatus,
+              material:
+                sourceRowStates.registration?.material ?? UNKNOWN_MATERIAL,
               loads,
               totalOvershoot: toNumber(
                 loads.reduce(
@@ -163,7 +175,8 @@ const assessReportRow = async (deps, row) => {
                     addTonnage(sum, toRoundedTonnage(overshoot)),
                   ZERO_TONNAGE
                 )
-              )
+              ),
+              net: netOf(inPeriod)
             }
     }
   } catch {
@@ -171,6 +184,23 @@ const assessReportRow = async (deps, row) => {
   }
 }
 
+/**
+ * Scans every reviewable accredited-exporter monthly report across the estate
+ * and returns the loads reporting more tonnage exported than received, with the
+ * size of each overshoot. Read-only, safe under live traffic.
+ *
+ * A report whose rows cannot be read is skipped rather than failing the run:
+ * the diagnostic gets one pass per deploy, and a single unreadable report must
+ * not cost it everything already found.
+ *
+ * @param {SourceRowStateDeps & {
+ *   reportsRepository: Pick<
+ *     ReportsRepository,
+ *     'findAllPeriodicReports' | 'findReportById'
+ *   >
+ * }} deps
+ * @returns {Promise<{ scanned: number, findings: OverExportedLoadsFinding[] }>}
+ */
 export const findOverExportedLoads = async (deps) => {
   /** @type {PeriodicReport[]} */
   const periodicReports = await deps.reportsRepository.findAllPeriodicReports()
@@ -216,6 +246,7 @@ export const summariseOverExportedLoadsFindings = (findings) => ({
   exporters: new Set(findings.map(({ registrationId }) => registrationId)).size,
   organisations: new Set(findings.map(({ organisationId }) => organisationId))
     .size,
+  masked: findings.filter(({ net }) => net >= 0).length,
   totalOvershoot: toNumber(
     findings.reduce(
       (sum, { totalOvershoot }) =>
@@ -224,6 +255,29 @@ export const summariseOverExportedLoadsFindings = (findings) => ({
     )
   )
 })
+
+/**
+ * Overshoot rolled up by the registration's material, summed from the loads
+ * themselves. Splitting a summary log's netted figure would fold away the very
+ * rows this run exists to count.
+ *
+ * @param {OverExportedLoadsFinding[]} findings
+ */
+export const summariseOverExportedLoadsByMaterial = (findings) =>
+  Object.entries(
+    findings.reduce((byMaterial, { material, loads }) => {
+      byMaterial[material] = loads.reduce(
+        (sum, { overshoot }) => addTonnage(sum, toRoundedTonnage(overshoot)),
+        byMaterial[material] ?? ZERO_TONNAGE
+      )
+      return byMaterial
+    }, /** @type {Record<string, ReturnType<typeof toRoundedTonnage>>} */ ({}))
+  )
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([material, overshoot]) => ({
+      material,
+      overshoot: toNumber(overshoot)
+    }))
 
 /**
  * @param {OverExportedLoadsFinding[]} findings
