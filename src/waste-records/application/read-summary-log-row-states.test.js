@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
   buildSummaryLogRowStateEntry,
@@ -45,8 +45,8 @@ describe('summaryLogRowStatesForRegistration', () => {
   it('returns an empty array when the stream has no submission', async () => {
     const states = await summaryLogRowStatesForRegistration({
       ledgerRepository: createInMemoryLedgerRepository()(),
-      summaryLogRowStateRepository:
-        createInMemorySummaryLogRowStateRepository()(),
+      summaryLogRowStatesRepository:
+        createInMemorySummaryLogRowStatesRepository()(),
       ...registration
     })
 
@@ -54,9 +54,9 @@ describe('summaryLogRowStatesForRegistration', () => {
   })
 
   it('returns the full committed snapshot at the head submission', async () => {
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
-    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    const summaryLogRowStatesRepository =
+      createInMemorySummaryLogRowStatesRepository()()
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       DEFAULT_LEDGER_ID,
       [
         buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } }),
@@ -64,7 +64,7 @@ describe('summaryLogRowStatesForRegistration', () => {
       ],
       'log-1'
     )
-    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       DEFAULT_LEDGER_ID,
       [
         buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } }),
@@ -80,7 +80,7 @@ describe('summaryLogRowStatesForRegistration', () => {
 
     const states = await summaryLogRowStatesForRegistration({
       ledgerRepository,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ...registration
     })
 
@@ -94,14 +94,14 @@ describe('summaryLogRowStatesForRegistration', () => {
   })
 
   it('reads the row states of its own ledger when another ledger shares the summary log id', async () => {
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
-    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    const summaryLogRowStatesRepository =
+      createInMemorySummaryLogRowStatesRepository()()
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       DEFAULT_LEDGER_ID,
       [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
       'log-1'
     )
-    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       { ...DEFAULT_LEDGER_ID, organisationId: 'org-2' },
       [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 20 } })],
       'log-1'
@@ -112,7 +112,7 @@ describe('summaryLogRowStatesForRegistration', () => {
 
     const states = await summaryLogRowStatesForRegistration({
       ledgerRepository,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ...registration
     })
 
@@ -122,9 +122,9 @@ describe('summaryLogRowStatesForRegistration', () => {
   })
 
   it('projects to domain content, keeping the template the row reported under and dropping storage id, membership and ledger identity', async () => {
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
-    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    const summaryLogRowStatesRepository =
+      createInMemorySummaryLogRowStatesRepository()()
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       DEFAULT_LEDGER_ID,
       [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
       'log-1'
@@ -135,7 +135,7 @@ describe('summaryLogRowStatesForRegistration', () => {
 
     const [state] = await summaryLogRowStatesForRegistration({
       ledgerRepository,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ...registration
     })
 
@@ -157,8 +157,8 @@ describe('latestSubmittedSummaryLogRowStates', () => {
   it('returns null when the stream has no submission', async () => {
     const previousSubmission = await latestSubmittedSummaryLogRowStates({
       ledgerRepository: createInMemoryLedgerRepository()(),
-      summaryLogRowStateRepository:
-        createInMemorySummaryLogRowStateRepository()(),
+      summaryLogRowStatesRepository:
+        createInMemorySummaryLogRowStatesRepository()(),
       ...registration
     })
 
@@ -166,14 +166,14 @@ describe('latestSubmittedSummaryLogRowStates', () => {
   })
 
   it('names the latest submitted summary log with when it was submitted and its row states', async () => {
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
-    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    const summaryLogRowStatesRepository =
+      createInMemorySummaryLogRowStatesRepository()()
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       DEFAULT_LEDGER_ID,
       [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
       'log-1'
     )
-    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       DEFAULT_LEDGER_ID,
       [
         buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } }),
@@ -190,7 +190,7 @@ describe('latestSubmittedSummaryLogRowStates', () => {
 
     const previousSubmission = await latestSubmittedSummaryLogRowStates({
       ledgerRepository,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ...registration
     })
 

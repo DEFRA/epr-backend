@@ -27,7 +27,7 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
- * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  */
 
 /**
@@ -639,13 +639,13 @@ const NO_ROWS = 'no rows found under the registration ledgers'
  * @param {{
  *   reportsRepository: ReportsRepository,
  *   organisationsRepository: OrganisationsRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
  * }} deps
  * @param {ReviewableReportRow} row
  * @returns {Promise<SourceRowStates>}
  */
 const loadSourceRowStates = async (
-  { reportsRepository, organisationsRepository, summaryLogRowStateRepository },
+  { reportsRepository, organisationsRepository, summaryLogRowStatesRepository },
   row
 ) => {
   const report = await reportsRepository.findReportById(row.reportId)
@@ -664,7 +664,7 @@ const loadSourceRowStates = async (
   for (const ledger of ledgers) {
     states.push(
       ...(await wasteRecordStatesForHead(
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledger,
         summaryLogId
       ))
@@ -688,7 +688,7 @@ const loadSourceRowStates = async (
  * @param {{
  *   reportsRepository: ReportsRepository,
  *   organisationsRepository: OrganisationsRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
  * }} deps
  * @returns {Promise<{ scanned: number, findings: UnexportedTonnageFinding[] }>}
  */

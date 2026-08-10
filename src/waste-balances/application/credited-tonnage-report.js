@@ -9,7 +9,7 @@ import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
- * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} SummaryLogRowStateRepository
+ * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
@@ -153,7 +153,7 @@ const compareRows = (a, b) =>
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {TypedLogger} params.logger
@@ -162,7 +162,7 @@ const compareRows = (a, b) =>
  */
 export const buildCreditedTonnageReport = async ({
   ledgerRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   organisationsRepository,
   overseasSitesRepository,
   logger,
@@ -215,7 +215,7 @@ export const buildCreditedTonnageReport = async ({
     const { organisation, registration, accreditation } = context
 
     const storedRowStates =
-      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
         ledgerId,
         summaryLogId
       )

@@ -17,7 +17,7 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * states whichever path it arrives through.
  *
  * @param {Object} params
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {{ id: string, validFrom?: string, validTo?: string } | null} params.accreditation
  * @param {import('#waste-records/repository/schema.js').WasteBalanceLedgerId} params.ledgerId
@@ -26,7 +26,7 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * @returns {Promise<void>}
  */
 export const writeSummaryLogRowStates = async ({
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   wasteRecords,
   accreditation,
   ledgerId,
@@ -37,7 +37,7 @@ export const writeSummaryLogRowStates = async ({
     projectSummaryLogRowState(record, accreditation, overseasSites)
   )
 
-  await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+  await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     ledgerId,
     classifiedRows,
     summaryLogId

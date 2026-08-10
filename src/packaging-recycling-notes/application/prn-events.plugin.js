@@ -12,6 +12,10 @@ import { registerDependency } from '#plugins/register-dependency.js'
  */
 
 /**
+ * @typedef {{ onCancelled: OnPrnCancelledHandler }} PrnEvents
+ */
+
+/**
  * Generic PRN lifecycle event plugin: exposes `request.prnEvents` so any
  * route can notify interested domains of a PRN transition without knowing
  * who's listening. Each event fans out to every registered handler, so a

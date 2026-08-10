@@ -91,9 +91,9 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
 
 /**
  * @param {SummaryLogRowState[]} [initialSummaryLogRowStates]
- * @returns {import('./port.js').SummaryLogRowStateRepositoryFactory}
+ * @returns {import('./port.js').SummaryLogRowStatesRepositoryFactory}
  */
-export const createInMemorySummaryLogRowStateRepository = (
+export const createInMemorySummaryLogRowStatesRepository = (
   initialSummaryLogRowStates = []
 ) => {
   const storage = initialSummaryLogRowStates
