@@ -4,8 +4,8 @@ import { SEVERITY } from './issue.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 
-const accredited = (accreditation) => ({
-  statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }],
+const withStatusHistory = (accreditation) => ({
+  statusHistory: [{ status: 'created', updatedAt: '2026-01-01' }],
   ...accreditation
 })
 
@@ -14,7 +14,7 @@ const organisation = (registrations, accreditations) =>
     /** @type {unknown} */ ({
       id: 'org-1',
       registrations,
-      accreditations: accreditations.map(accredited)
+      accreditations: accreditations.map(withStatusHistory)
     })
   )
 
@@ -29,14 +29,7 @@ describe('validateOrganisation', () => {
           material: 'glass'
         }
       ],
-      [
-        {
-          id: 'acc-1',
-          accreditationNumber: 'EA-1234',
-          wasteProcessingType: 'exporter',
-          material: 'glass'
-        }
-      ]
+      [{ id: 'acc-1', wasteProcessingType: 'exporter', material: 'glass' }]
     )
 
     expect(validateOrganisation(org)).toEqual([])
@@ -54,12 +47,16 @@ describe('validateOrganisation', () => {
         { id: 'reg-2', accreditationId: 'acc-unnumbered', material: 'glass' }
       ],
       [
-        { id: 'acc-1', material: 'glass', accreditationNumber: 'EA-1234' },
-        { id: 'acc-orphan', material: 'glass', accreditationNumber: 'EA-5678' },
+        { id: 'acc-1', material: 'glass' },
+        { id: 'acc-orphan', material: 'glass' },
         {
           id: 'acc-unnumbered',
           material: 'glass',
-          accreditationNumber: null
+          accreditationNumber: null,
+          statusHistory: [
+            { status: 'created', updatedAt: '2026-01-01' },
+            { status: 'approved', updatedAt: '2026-02-01' }
+          ]
         }
       ]
     )
@@ -80,8 +77,8 @@ describe('validateOrganisation', () => {
         { id: 'reg-2', accreditationId: 'acc-1', material: 'glass' }
       ],
       [
-        { id: 'acc-1', material: 'glass', accreditationNumber: 'EA-1234' },
-        { id: 'acc-1', material: 'glass', accreditationNumber: 'EA-1234' }
+        { id: 'acc-1', material: 'glass' },
+        { id: 'acc-1', material: 'glass' }
       ]
     )
 

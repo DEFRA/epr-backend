@@ -229,10 +229,14 @@ describe('runOrganisationValidationSweep', () => {
 
     await runOrganisationValidationSweep(mockServer)
 
+    const [linkedRegistration] = org.registrations
+    const [linkedAccreditation] = org.accreditations
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
-      message: expect.stringContaining(
-        'code=UNNUMBERED_ACCREDITATION_REF severity=error'
-      )
+      message: `Organisation validation issue: organisationId=${org.id} code=UNNUMBERED_ACCREDITATION_REF severity=error targetType=registration targetId=${linkedRegistration.id} message="Registration ${linkedRegistration.id} references accreditation ${linkedAccreditation.id}, which has been accredited but carries no valid accreditation number"`
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Organisation validation sweep: scanned=1 flagged=1 issues=1'
     })
   })
 
@@ -255,6 +259,9 @@ describe('runOrganisationValidationSweep', () => {
 
     expect(logger.info).not.toHaveBeenCalledWith({
       message: expect.stringContaining('code=UNNUMBERED_ACCREDITATION_REF')
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Organisation validation sweep: scanned=1 flagged=0 issues=0'
     })
   })
 })

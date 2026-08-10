@@ -19,6 +19,10 @@ const SEVERITY_LEVEL = SEVERITY.ERROR
  * reached an active status was numbered at that point, so a number missing
  * afterwards means the value was lost rather than never issued.
  *
+ * The history is evidence, not proof: the admin editor accepts a corrected
+ * status on a stored entry, so an edit that replaces the active entry with one
+ * the transition rules also allow silences this rule for that accreditation.
+ *
  * @param {Accreditation} accreditation
  * @returns {boolean}
  */
