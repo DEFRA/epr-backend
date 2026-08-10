@@ -17,6 +17,7 @@ import {
  *   wasteProcessingType?: string,
  *   accreditationStatus?: string | null,
  *   accreditationId?: string | null,
+ *   glassRecyclingProcess?: string[] | null,
  *   material?: string | null
  * }} [options]
  * @returns {Registration}
@@ -25,6 +26,7 @@ export const buildExporterRegistration = ({
   wasteProcessingType = WASTE_PROCESSING_TYPE.EXPORTER,
   accreditationStatus = ACCREDITATION_STATUS.APPROVED,
   accreditationId = null,
+  glassRecyclingProcess = null,
   material = MATERIAL.PLASTIC
 } = {}) =>
   /** @type {Registration} */ (
@@ -34,6 +36,7 @@ export const buildExporterRegistration = ({
         ? { status: accreditationStatus }
         : null,
       accreditationId,
+      glassRecyclingProcess,
       material
     })
   )

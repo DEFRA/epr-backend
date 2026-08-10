@@ -369,6 +369,22 @@ describe('overExportedLoads', () => {
       ])
     })
 
+    it('splits glass by its recycling process, which the business reads separately', async () => {
+      const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
+      deps.organisationsRepository.findRegistrationById.mockResolvedValue(
+        buildExporterRegistration({
+          material: 'glass',
+          glassRecyclingProcess: ['glass_re_melt']
+        })
+      )
+
+      const { findings } = await findOverExportedLoads(deps)
+
+      expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
+        { material: 'glass_re_melt', overshoot: 2 }
+      ])
+    })
+
     it('groups a registration with no material under unknown', async () => {
       const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
       deps.organisationsRepository.findRegistrationById.mockResolvedValue(

@@ -1,5 +1,6 @@
 import { isNil } from '#common/helpers/is-nil.js'
 import { greaterThan, toNumber } from '#common/helpers/decimal-utils.js'
+import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 import {
   ZERO_TONNAGE,
   addTonnage,
@@ -192,7 +193,8 @@ const assessReportRow = async (deps, row) => {
               period: row.period,
               reportStatus: row.reportStatus,
               material:
-                sourceRowStates.registration.material ?? UNKNOWN_MATERIAL,
+                resolveDetailedMaterial(sourceRowStates.registration) ??
+                UNKNOWN_MATERIAL,
               loads,
               totalOvershoot: toNumber(
                 loads.reduce(
