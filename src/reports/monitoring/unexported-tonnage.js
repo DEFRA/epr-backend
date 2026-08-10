@@ -639,10 +639,10 @@ export const findUnexportedTonnageReports = async (deps) => {
     outcomes.push(await assessReportRow(deps, row))
   }
 
-  const inScope = outcomes.filter(({ inScope }) => inScope)
+  const covered = outcomes.filter((outcome) => outcome.inScope)
 
   return {
-    scanned: inScope.length,
-    findings: inScope.flatMap(({ finding }) => (finding ? [finding] : []))
+    scanned: covered.length,
+    findings: covered.flatMap(({ finding }) => (finding ? [finding] : []))
   }
 }

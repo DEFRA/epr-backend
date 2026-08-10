@@ -66,15 +66,16 @@ const logBreakdowns = (findings) => {
 
   const largest = largestOverExportedLoads(findings, LARGEST_REPORTED)
   if (largest.length > 0) {
+    const listed = largest
+      .map(
+        ({ reportId, rowId, overshoot }) =>
+          `${rowId} (${reportId}) ${overshoot}`
+      )
+      .join('; ')
+
     log(
       LOGGING_EVENT_ACTIONS.OVER_EXPORTED_LOADS_LARGEST,
-      'Over-exported loads largest: ' +
-        largest
-          .map(
-            ({ reportId, rowId, overshoot }) =>
-              `${rowId} (${reportId}) ${overshoot}`
-          )
-          .join('; ')
+      `Over-exported loads largest: ${listed}`
     )
   }
 }

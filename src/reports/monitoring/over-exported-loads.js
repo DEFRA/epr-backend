@@ -228,14 +228,14 @@ export const findOverExportedLoads = async (deps) => {
     outcomes.push(await assessReportRow(deps, row))
   }
 
-  const inScope = outcomes.filter(({ inScope }) => inScope)
+  const covered = outcomes.filter((outcome) => outcome.inScope)
 
   return {
-    scanned: inScope.length,
-    unreadable: inScope.flatMap(({ unreadable }) =>
+    scanned: covered.length,
+    unreadable: covered.flatMap(({ unreadable }) =>
       unreadable ? [unreadable] : []
     ),
-    findings: inScope.flatMap(({ finding }) => (finding ? [finding] : []))
+    findings: covered.flatMap(({ finding }) => (finding ? [finding] : []))
   }
 }
 
@@ -243,19 +243,26 @@ export const findOverExportedLoads = async (deps) => {
  * @param {OverExportedLoadsFinding} finding
  * @returns {string}
  */
-export const formatOverExportedLoadsFinding = (finding) =>
-  `Over-exported loads: org ${finding.organisationId} / ` +
-  `registration ${finding.registrationId}, report ${finding.reportId} ` +
-  `(${formatPeriodLabel(CADENCE.monthly, finding.period, finding.year)}, ` +
-  `${finding.reportStatus}) - ${finding.loads.length} load(s), ` +
-  `overshoot ${finding.totalOvershoot} (` +
-  finding.loads
+export const formatOverExportedLoadsFinding = (finding) => {
+  const period = formatPeriodLabel(
+    CADENCE.monthly,
+    finding.period,
+    finding.year
+  )
+  const loads = finding.loads
     .map(
       ({ rowId, received, exported }) =>
         `${rowId} received ${received} exported ${exported}`
     )
-    .join('; ') +
-  ')'
+    .join('; ')
+
+  return [
+    `Over-exported loads: org ${finding.organisationId} /`,
+    `registration ${finding.registrationId}, report ${finding.reportId}`,
+    `(${period}, ${finding.reportStatus}) - ${finding.loads.length} load(s),`,
+    `overshoot ${finding.totalOvershoot} (${loads})`
+  ].join(' ')
+}
 
 /**
  * @param {OverExportedLoadsFinding[]} findings
