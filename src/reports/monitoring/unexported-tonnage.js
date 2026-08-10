@@ -319,6 +319,17 @@ const identityOf = (row) => ({
 })
 
 /**
+ * @param {ReviewableReportRow} row
+ * @param {string} reason
+ * @returns {UnexportedTonnageFinding}
+ */
+const lookupFailed = (row, reason) => ({
+  kind: FINDING_KIND.LOOKUP_FAILED,
+  ...identityOf(row),
+  reason
+})
+
+/**
  * Compares a report's stored figure against a fresh recomputation under the
  * corrected rule. Returns null when they already agree — the report the fix
  * would leave untouched.
@@ -614,18 +625,21 @@ export const summariseUnexportedTonnageFindings = (findings) => {
 const assessReportRow = async (deps, row) => {
   try {
     const sourceRowStates = await loadSourceRowStates(deps, row)
+    if ('outOfScope' in sourceRowStates) {
+      return { inScope: false }
+    }
+    if ('unclassified' in sourceRowStates) {
+      return {
+        inScope: false,
+        finding: lookupFailed(row, sourceRowStates.unclassified)
+      }
+    }
 
-    return 'outOfScope' in sourceRowStates
-      ? { inScope: false }
-      : { inScope: true, finding: diagnoseReportRow(row, sourceRowStates) }
+    return { inScope: true, finding: diagnoseReportRow(row, sourceRowStates) }
   } catch (error) {
     return {
       inScope: true,
-      finding: {
-        kind: FINDING_KIND.LOOKUP_FAILED,
-        ...identityOf(row),
-        reason: /** @type {Error} */ (error).message
-      }
+      finding: lookupFailed(row, /** @type {Error} */ (error).message)
     }
   }
 }
@@ -643,6 +657,6 @@ export const findUnexportedTonnageReports = async (deps) => {
 
   return {
     scanned: covered.length,
-    findings: covered.flatMap(({ finding }) => (finding ? [finding] : []))
+    findings: outcomes.flatMap(({ finding }) => (finding ? [finding] : []))
   }
 }

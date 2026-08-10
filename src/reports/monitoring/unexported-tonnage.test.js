@@ -893,21 +893,24 @@ describe('unexported-tonnage', () => {
       ])
     })
 
-    it('reports a failed registration lookup as a failure, not as absent data', async () => {
+    it('reports a failed registration lookup as a failure, without counting it in scope', async () => {
       const deps = buildDeps()
       deps.organisationsRepository.findRegistrationById.mockRejectedValue(
         new Error('connection timed out')
       )
 
-      const { findings } = await scan(deps)
+      const { scanned, findings } = await scan(deps)
 
-      expect(findings).toStrictEqual([
-        {
-          kind: 'lookup-failed',
-          ...FEB_2026_IDENTITY,
-          reason: 'connection timed out'
-        }
-      ])
+      expect({ scanned, findings }).toStrictEqual({
+        scanned: 0,
+        findings: [
+          {
+            kind: 'lookup-failed',
+            ...FEB_2026_IDENTITY,
+            reason: 'connection timed out'
+          }
+        ]
+      })
     })
 
     it('reports a deleted report as a failure rather than abandoning the scan', async () => {

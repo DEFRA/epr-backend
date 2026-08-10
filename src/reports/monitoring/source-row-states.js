@@ -13,11 +13,14 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
 /**
  * The rows a report was built from, or why they are not there. `unresolved`
  * means the data genuinely is not present, which a re-run will not change;
- * `outOfScope` means the report was never this scan's to read.
+ * `outOfScope` means the report was never this scan's to read; `unclassified`
+ * means the registration would not read, so which of the two applies is not
+ * known.
  *
  * @typedef {{ states: WasteRecordState[], registration: Registration }
  *   | { unresolved: string }
- *   | { outOfScope: string }} SourceRowStates
+ *   | { outOfScope: string }
+ *   | { unclassified: string }} SourceRowStates
  */
 
 /**
@@ -65,9 +68,25 @@ export const NO_SUMMARY_LOG = 'no source summary log recorded on the report'
 export const NO_ROWS = 'no rows found under the registration ledgers'
 
 /**
+ * The registration the gate is applied to, or the reason it would not read.
+ * Caught here rather than left to propagate because the gate has not run yet:
+ * the caller must not attribute the failure to a population the report may
+ * never have belonged to.
+ *
+ * @param {SourceRowStateDeps['organisationsRepository']} organisationsRepository
+ * @param {ReportIdentity} row
+ * @returns {Promise<{ registration: Registration } | { unclassified: string }>}
+ */
+const readRegistration = (organisationsRepository, row) =>
+  organisationsRepository
+    .findRegistrationById(row.organisationId, row.registrationId)
+    .then((registration) => ({ registration }))
+    .catch((error) => ({ unclassified: /** @type {Error} */ (error).message }))
+
+/**
  * The row states the report was built from, or why there are none. `outOfScope`
  * is not a finding; the two `unresolved` reasons are, and both are stable across
- * re-runs. Anything that throws is not, and is left to propagate.
+ * re-runs. Anything thrown past the gate is not, and is left to propagate.
  *
  * Accreditation status is deliberately not part of the gate. It describes the
  * registration today, while a report is a historic document: an exporter whose
@@ -84,11 +103,12 @@ export const loadSourceRowStates = async (
   { reportsRepository, organisationsRepository, summaryLogRowStatesRepository },
   row
 ) => {
-  const registration = await organisationsRepository.findRegistrationById(
-    row.organisationId,
-    row.registrationId
-  )
+  const read = await readRegistration(organisationsRepository, row)
+  if ('unclassified' in read) {
+    return read
+  }
 
+  const { registration } = read
   if (registration.wasteProcessingType !== WASTE_PROCESSING_TYPE.EXPORTER) {
     return { outOfScope: NOT_AN_EXPORTER }
   }

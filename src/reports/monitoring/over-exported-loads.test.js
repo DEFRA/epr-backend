@@ -193,6 +193,22 @@ describe('overExportedLoads', () => {
       ])
     })
 
+    it('records a report whose registration cannot be read as unreadable, without counting it in scope', async () => {
+      const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
+      deps.organisationsRepository.findRegistrationById.mockRejectedValue(
+        new Error('connection timed out')
+      )
+
+      const { scanned, unreadable, findings } =
+        await findOverExportedLoads(deps)
+
+      expect(scanned).toBe(0)
+      expect(unreadable).toStrictEqual([
+        { reportId: 'report-1', reason: 'connection timed out' }
+      ])
+      expect(findings).toStrictEqual([])
+    })
+
     it('reports nothing unreadable when every report reads cleanly', async () => {
       const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
 

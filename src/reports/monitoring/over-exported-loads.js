@@ -157,6 +157,15 @@ const assessReportRow = async (deps, row) => {
     if ('outOfScope' in sourceRowStates) {
       return { inScope: false }
     }
+    if ('unclassified' in sourceRowStates) {
+      return {
+        inScope: false,
+        unreadable: {
+          reportId: row.reportId,
+          reason: sourceRowStates.unclassified
+        }
+      }
+    }
     if ('unresolved' in sourceRowStates) {
       return {
         inScope: true,
@@ -241,7 +250,7 @@ export const findOverExportedLoads = async (deps) => {
 
   return {
     scanned: covered.length,
-    unreadable: covered.flatMap(({ unreadable }) =>
+    unreadable: outcomes.flatMap(({ unreadable }) =>
       unreadable ? [unreadable] : []
     ),
     findings: covered.flatMap(({ finding }) => (finding ? [finding] : []))
