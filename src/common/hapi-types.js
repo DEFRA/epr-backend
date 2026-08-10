@@ -4,11 +4,20 @@
  * @typedef {import('../feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags
  * @import {Db} from 'mongodb'
  * @import {LockManager} from 'mongo-locks'
- * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {PublicRegisterRepository} from '#domain/public-register/repository/port.js'
+ * @import {UploadsRepository} from '#domain/uploads/repository/port.js'
+ * @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js'
+ * @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js'
+ * @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js'
+ * @import {PrnEvents} from '#packaging-recycling-notes/application/prn-events.plugin.js'
+ * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
  * @import {ReportsRepository} from '#reports/repository/port.js'
- * @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js'
+ * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
+ * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
+ * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
  * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService
  */
 
@@ -117,15 +126,26 @@
  */
 
 /**
- * Dependencies `registerDependency` decorates onto `server.app`. Naming one
- * types its reads, so a property name no plugin registers fails the type check;
- * the index signature keeps the rest readable.
+ * Every dependency `registerDependency` decorates onto `server.app`. The shape
+ * is closed, so reading a property no plugin registers fails the type check.
+ * Adding a `registerDependency` call means adding its name here too.
  *
  * @typedef {{
+ *   formSubmissionsRepository: FormSubmissionsRepository,
+ *   ledgerRepository: WasteBalanceLedgerRepository,
+ *   nonProdDataReset: NonProdDataReset,
  *   organisationsRepository: OrganisationsRepository,
+ *   orsImportsRepository: OrsImportsRepository,
+ *   overseasSitesRepository: OverseasSitesRepository,
+ *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+ *   prnEvents: PrnEvents,
+ *   publicRegisterRepository: PublicRegisterRepository,
  *   reportsRepository: ReportsRepository,
- *   summaryLogRowStatesRepository: SummaryLogRowStateRepository,
- *   [key: string]: unknown
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   systemLogsRepository: SystemLogsRepository,
+ *   uploadsRepository: UploadsRepository,
+ *   wasteBalanceService: WasteBalanceService
  * }} ServerApp
  */
 

@@ -62,7 +62,7 @@ const estate = (periodicReports, rowStates) => ({
   organisationsRepository: {
     findRegistrationById: vi.fn().mockResolvedValue({ accreditationId: null })
   },
-  summaryLogRowStateRepository: {
+  summaryLogRowStatesRepository: {
     findRowStatesForSummaryLog: vi.fn().mockResolvedValue(rowStates)
   }
 })

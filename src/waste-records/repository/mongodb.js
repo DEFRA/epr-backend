@@ -299,9 +299,9 @@ const performFindDistinctDataKeys = (collection) => async () => {
  * Creates a MongoDB-backed summary-log row state repository.
  *
  * @param {Db} db
- * @returns {Promise<import('./port.js').SummaryLogRowStateRepositoryFactory>}
+ * @returns {Promise<import('./port.js').SummaryLogRowStatesRepositoryFactory>}
  */
-export const createMongoSummaryLogRowStateRepository = async (db) => {
+export const createMongoSummaryLogRowStatesRepository = async (db) => {
   const collection = await ensureSummaryLogRowStatesCollection(db)
 
   return () => ({

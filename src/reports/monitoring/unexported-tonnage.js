@@ -28,7 +28,7 @@ import { loadSourceRowStates } from './source-row-states.js'
  * @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js'
  * @import { SourceRowStates } from './source-row-states.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
- * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  */
 
 /**
@@ -582,6 +582,7 @@ export const summariseUnexportedTonnageFindings = (findings) => {
 }
 
 /**
+/**
  * Scans every reviewable accredited-exporter monthly report across the estate
  * and returns the ones whose stored unexported tonnage disagrees with the
  * corrected rule, alongside those that cannot be recomputed at all. Read-only.
@@ -595,7 +596,7 @@ export const summariseUnexportedTonnageFindings = (findings) => {
  * @param {{
  *   reportsRepository: ReportsRepository,
  *   organisationsRepository: OrganisationsRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
  * }} deps
  * @returns {Promise<{ scanned: number, findings: UnexportedTonnageFinding[] }>}
  */

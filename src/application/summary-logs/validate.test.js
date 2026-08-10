@@ -15,7 +15,7 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
@@ -29,8 +29,8 @@ import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-dat
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {string} params.summaryLogId
  * @param {number} params.number - the submission's ledger position
- * @param {Array<{ rowId: string, wasteRecordType?: string }>} params.rows
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {{ rowId: string, wasteRecordType?: string }[]} params.rows
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  */
 const seedSubmittedSummaryLog = async ({
@@ -38,10 +38,10 @@ const seedSubmittedSummaryLog = async ({
   summaryLogId,
   number,
   rows,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   ledgerRepository
 }) => {
-  await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+  await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     ledgerId,
     rows.map((row) => buildSummaryLogRowStateEntry(row)),
     summaryLogId
@@ -135,7 +135,7 @@ const rowToArray = (rowObject) =>
 
 /**
  * @param {{
- *   rows?: Array<unknown[] | Record<string, unknown>>,
+ *   rows?: (unknown[] | Record<string, unknown>)[],
  *   headers?: string[]
  * }} [options]
  */
@@ -193,7 +193,7 @@ describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
   let summaryLogsRepository
   let organisationsRepository
-  let summaryLogRowStateRepository
+  let summaryLogRowStatesRepository
   let ledgerRepository
   let validateSummaryLog
   let summaryLogId
@@ -201,8 +201,8 @@ describe('SummaryLogsValidator', () => {
 
   beforeEach(async () => {
     ledgerRepository = createInMemoryLedgerRepository()()
-    summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
+    summaryLogRowStatesRepository =
+      createInMemorySummaryLogRowStatesRepository()()
 
     summaryLogExtractor = {
       extract: vi.fn().mockResolvedValue({
@@ -262,7 +262,7 @@ describe('SummaryLogsValidator', () => {
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
@@ -690,7 +690,7 @@ describe('SummaryLogsValidator', () => {
       logger,
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
@@ -736,7 +736,7 @@ describe('SummaryLogsValidator', () => {
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
@@ -2101,7 +2101,7 @@ describe('SummaryLogsValidator', () => {
         summaryLogId: 'previous-summary-log',
         number: 1,
         rows: [{ rowId: '99999' }],
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository
       })
 
@@ -2144,7 +2144,7 @@ describe('SummaryLogsValidator', () => {
         summaryLogId: 'previous-log',
         number: 1,
         rows: [{ rowId: 'A' }],
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository
       })
 
@@ -2168,7 +2168,7 @@ describe('SummaryLogsValidator', () => {
         summaryLogId: 'previous-log',
         number: 1,
         rows: [{ rowId: 'A' }],
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository
       })
 
@@ -2190,7 +2190,7 @@ describe('SummaryLogsValidator', () => {
         summaryLogId: 'log-1',
         number: 1,
         rows: [{ rowId: 'A' }],
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository
       })
       await seedSubmittedSummaryLog({
@@ -2198,7 +2198,7 @@ describe('SummaryLogsValidator', () => {
         summaryLogId: 'log-2',
         number: 2,
         rows: [{ rowId: 'A' }],
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository
       })
 

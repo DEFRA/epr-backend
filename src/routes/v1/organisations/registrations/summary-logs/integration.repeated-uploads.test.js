@@ -14,7 +14,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -60,7 +60,7 @@ describe('Repeated uploads of identical data', () => {
     const secondFileId = 'file-second-upload'
 
     let server
-    let summaryLogRowStateRepository
+    let summaryLogRowStatesRepository
     let ledgerRepository
     let accreditationId
     let secondUploadResponse
@@ -248,14 +248,14 @@ describe('Repeated uploads of identical data', () => {
       // Validate reads and submit writes the same latest-submitted row states,
       // so both paths must share one ledger and one row-state repository.
       ledgerRepository = createInMemoryLedgerRepository()()
-      summaryLogRowStateRepository =
-        createInMemorySummaryLogRowStateRepository()()
+      summaryLogRowStatesRepository =
+        createInMemorySummaryLogRowStatesRepository()()
       const featureFlags = createInMemoryFeatureFlags()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor,
         logger: mockLogger,
@@ -270,7 +270,7 @@ describe('Repeated uploads of identical data', () => {
       const syncWasteRecords = syncFromSummaryLog({
         extractor: summaryLogExtractor,
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository,
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
@@ -412,7 +412,7 @@ describe('Repeated uploads of identical data', () => {
         const committedBefore = await summaryLogRowStatesForRegistration({
           ...ledgerId,
           ledgerRepository,
-          summaryLogRowStateRepository
+          summaryLogRowStatesRepository
         })
 
         await server.inject({
@@ -436,7 +436,7 @@ describe('Repeated uploads of identical data', () => {
         const committedAfter = await summaryLogRowStatesForRegistration({
           ...ledgerId,
           ledgerRepository,
-          summaryLogRowStateRepository
+          summaryLogRowStatesRepository
         })
 
         const rowIdsBefore = committedBefore.map((state) => state.rowId).sort()

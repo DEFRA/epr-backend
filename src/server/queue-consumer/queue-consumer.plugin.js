@@ -18,19 +18,6 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  */
 
 /**
- * @typedef {{
- *   uploadsRepository: import('#domain/uploads/repository/port.js').UploadsRepository,
- *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository,
- *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
- *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository,
- *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
- *   wasteBalanceService: ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>,
- *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
- *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
- * }} QueueConsumerRepositories
- */
-
-/**
  * Builds the base consumer dependencies from server app and config.
  * @param {import('#common/hapi-types.js').HapiServer} server
  * @param {CommandQueueConsumerPluginOptions} options
@@ -50,7 +37,7 @@ function buildConsumerDeps(server, { config }) {
     wasteBalanceService,
     reportsRepository,
     systemLogsRepository
-  } = /** @type {QueueConsumerRepositories} */ (server.app)
+  } = server.app
 
   const onSummaryLogUploaded = createOnSummaryLogUploaded({
     reportsRepository,

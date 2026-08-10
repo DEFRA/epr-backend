@@ -21,7 +21,7 @@ import {
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
@@ -129,7 +129,7 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
     summaryLogsRepository,
     organisationsRepository,
     summaryLogRowStatesRepository:
-      createInMemorySummaryLogRowStateRepository()(),
+      createInMemorySummaryLogRowStatesRepository()(),
     ledgerRepository,
     wasteBalanceService: createWasteBalanceService(ledgerRepository),
     summaryLogExtractor,
@@ -206,7 +206,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       registrationId,
       accreditationId: 'acc-123',
       ledgerRepository: deps.ledgerRepository,
-      summaryLogRowStateRepository: deps.summaryLogRowStatesRepository
+      summaryLogRowStatesRepository: deps.summaryLogRowStatesRepository
     })
     expect(rowStates.map((state) => state.rowId).sort()).toEqual([
       '1001',

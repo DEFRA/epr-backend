@@ -4,7 +4,7 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
- * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  */
 
 /**
@@ -18,8 +18,8 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * @typedef {{
  *   reportsRepository: Pick<ReportsRepository, 'findReportById'>,
  *   organisationsRepository: Pick<OrganisationsRepository, 'findRegistrationById'>,
- *   summaryLogRowStateRepository: Pick<
- *     SummaryLogRowStateRepository, 'findRowStatesForSummaryLog'
+ *   summaryLogRowStatesRepository: Pick<
+ *     SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog'
  *   >
  * }} SourceRowStateDeps
  */
@@ -80,7 +80,7 @@ export const NO_ROWS = 'no rows found under the registration ledgers'
  * @returns {Promise<SourceRowStates>}
  */
 export const loadSourceRowStates = async (
-  { reportsRepository, organisationsRepository, summaryLogRowStateRepository },
+  { reportsRepository, organisationsRepository, summaryLogRowStatesRepository },
   row
 ) => {
   const report = await reportsRepository.findReportById(row.reportId)
@@ -99,7 +99,7 @@ export const loadSourceRowStates = async (
   for (const ledger of ledgers) {
     states.push(
       ...(await wasteRecordStatesForHead(
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledger,
         summaryLogId
       ))
