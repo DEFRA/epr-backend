@@ -10,6 +10,10 @@ import {
 } from './over-exported-loads.js'
 import { buildExporterRegistration } from './monitoring-test-helpers.js'
 
+/**
+ * @import { OverExportedLoadsFinding } from './over-exported-loads.js'
+ */
+
 const receivedRow = (
   rowId,
   received,
@@ -51,6 +55,27 @@ const monthlyReport = ({
       }
     }
   }
+})
+
+/**
+ * A finding as the scan produces one. The pure formatters and summarisers take
+ * these directly, so their tests do not run the scan to build their input.
+ *
+ * @param {Partial<OverExportedLoadsFinding>} [overrides]
+ * @returns {OverExportedLoadsFinding}
+ */
+const finding = (overrides = {}) => ({
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  reportId: 'report-1',
+  year: 2026,
+  period: 2,
+  reportStatus: 'submitted',
+  material: 'plastic',
+  loads: [{ rowId: 'row-1', received: 10, exported: 12, overshoot: 2 }],
+  totalOvershoot: 2,
+  net: -2,
+  ...overrides
 })
 
 const estate = (periodicReports, rowStates) => ({
@@ -197,14 +222,18 @@ describe('overExportedLoads', () => {
   })
 
   describe('formatOverExportedLoadsFinding', () => {
-    it('names the report, its loads and the overshoot', async () => {
-      const deps = estate(
-        [monthlyReport()],
-        [receivedRow('row-1', 10, 12), receivedRow('row-2', 8, 11.5)]
+    it('names the report, its loads and the overshoot', () => {
+      const result = formatOverExportedLoadsFinding(
+        finding({
+          loads: [
+            { rowId: 'row-1', received: 10, exported: 12, overshoot: 2 },
+            { rowId: 'row-2', received: 8, exported: 11.5, overshoot: 3.5 }
+          ],
+          totalOvershoot: 5.5
+        })
       )
-      const { findings } = await findOverExportedLoads(deps)
 
-      expect(formatOverExportedLoadsFinding(findings[0])).toBe(
+      expect(result).toBe(
         'Over-exported loads: org org-1 / registration reg-1, report report-1 ' +
           '(Feb 2026, submitted) - 2 load(s), overshoot 5.5 ' +
           '(row-1 received 10 exported 12; row-2 received 8 exported 11.5)'
@@ -213,20 +242,16 @@ describe('overExportedLoads', () => {
   })
 
   describe('summariseOverExportedLoadsFindings', () => {
-    it('counts the reports, loads, exporters and organisations behind them', async () => {
-      const deps = estate(
-        [
-          monthlyReport(),
-          monthlyReport({ reportId: 'report-2' }),
-          monthlyReport({
-            organisationId: 'org-2',
-            registrationId: 'reg-2',
-            reportId: 'report-3'
-          })
-        ],
-        [receivedRow('row-1', 10, 12)]
-      )
-      const { findings } = await findOverExportedLoads(deps)
+    it('counts the reports, loads, exporters and organisations behind them', () => {
+      const findings = [
+        finding(),
+        finding({ reportId: 'report-2' }),
+        finding({
+          organisationId: 'org-2',
+          registrationId: 'reg-2',
+          reportId: 'report-3'
+        })
+      ]
 
       expect(summariseOverExportedLoadsFindings(findings)).toStrictEqual({
         reports: 3,
@@ -251,7 +276,7 @@ describe('overExportedLoads', () => {
   })
 
   describe('masking', () => {
-    it('reports a log as masked when other loads net its over-export away', async () => {
+    it('computes the net across every load, so other loads can absorb an over-export', async () => {
       const deps = estate(
         [monthlyReport()],
         [receivedRow('row-1', 10, 12), receivedRow('row-2', 50, 10)]
@@ -260,16 +285,15 @@ describe('overExportedLoads', () => {
       const { findings } = await findOverExportedLoads(deps)
 
       expect(findings[0].net).toBe(38)
-      expect(summariseOverExportedLoadsFindings(findings).masked).toBe(1)
     })
 
-    it('does not report a log as masked when its own net goes negative', async () => {
-      const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
-
-      const { findings } = await findOverExportedLoads(deps)
-
-      expect(findings[0].net).toBe(-2)
-      expect(summariseOverExportedLoadsFindings(findings).masked).toBe(0)
+    it.each([
+      ['counts a log whose net stays positive as masked', 38, 1],
+      ['does not count a log whose own net goes negative', -2, 0]
+    ])('%s', (_case, net, masked) => {
+      expect(
+        summariseOverExportedLoadsFindings([finding({ net })]).masked
+      ).toBe(masked)
     })
 
     it('counts a blank received tonnage against the net, which the over-export loads exclude', async () => {
@@ -286,33 +310,19 @@ describe('overExportedLoads', () => {
   })
 
   describe('summariseOverExportedLoadsByMaterial', () => {
-    it('sums the overshoot of the loads themselves into each material', async () => {
-      const deps = estate(
-        [monthlyReport(), monthlyReport({ reportId: 'report-2' })],
-        [receivedRow('row-1', 10, 12)]
-      )
-      const { findings } = await findOverExportedLoads(deps)
+    it('sums the overshoot of the loads themselves into each material', () => {
+      const findings = [finding(), finding({ reportId: 'report-2' })]
 
       expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
         { material: 'plastic', overshoot: 4 }
       ])
     })
 
-    it('splits the overshoot across materials, ordered by material', async () => {
-      const deps = estate(
-        [
-          monthlyReport({ registrationId: 'reg-wood' }),
-          monthlyReport({ registrationId: 'reg-glass', reportId: 'report-2' })
-        ],
-        [receivedRow('row-1', 10, 12)]
-      )
-      deps.organisationsRepository.findRegistrationById.mockImplementation(
-        async (_organisationId, registrationId) =>
-          buildExporterRegistration({
-            material: registrationId === 'reg-wood' ? 'wood' : 'glass'
-          })
-      )
-      const { findings } = await findOverExportedLoads(deps)
+    it('splits the overshoot across materials, ordered by material', () => {
+      const findings = [
+        finding({ material: 'wood' }),
+        finding({ material: 'glass', reportId: 'report-2' })
+      ]
 
       expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
         { material: 'glass', overshoot: 2 },
@@ -325,6 +335,7 @@ describe('overExportedLoads', () => {
       deps.organisationsRepository.findRegistrationById.mockResolvedValue(
         buildExporterRegistration({ material: null })
       )
+
       const { findings } = await findOverExportedLoads(deps)
 
       expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
@@ -334,20 +345,16 @@ describe('overExportedLoads', () => {
   })
 
   describe('summariseOverExportedLoadsByMonth', () => {
-    it('groups the overshoot by the month each report covers', async () => {
-      const deps = estate(
-        [
-          monthlyReport(),
-          monthlyReport({
-            reportId: 'report-2',
-            period: 3,
-            startDate: '2026-03-01',
-            endDate: '2026-03-31'
-          })
-        ],
-        [receivedRow('row-1', 10, 12), receivedRow('row-2', 4, 9, '2026-03-09')]
-      )
-      const { findings } = await findOverExportedLoads(deps)
+    it('groups the overshoot by the month each report covers', () => {
+      const findings = [
+        finding(),
+        finding({
+          reportId: 'report-2',
+          period: 3,
+          loads: [{ rowId: 'row-2', received: 4, exported: 9, overshoot: 5 }],
+          totalOvershoot: 5
+        })
+      ]
 
       expect(summariseOverExportedLoadsByMonth(findings)).toStrictEqual([
         { month: 'Feb 2026', reports: 1, loads: 1, overshoot: 2 },
@@ -357,16 +364,16 @@ describe('overExportedLoads', () => {
   })
 
   describe('largestOverExportedLoads', () => {
-    it('returns the biggest overshoots first, limited to the count asked for', async () => {
-      const deps = estate(
-        [monthlyReport()],
-        [
-          receivedRow('row-1', 10, 12),
-          receivedRow('row-2', 1, 20),
-          receivedRow('row-3', 8, 11.5)
-        ]
-      )
-      const { findings } = await findOverExportedLoads(deps)
+    it('returns the biggest overshoots first, limited to the count asked for', () => {
+      const findings = [
+        finding({
+          loads: [
+            { rowId: 'row-1', received: 10, exported: 12, overshoot: 2 },
+            { rowId: 'row-2', received: 1, exported: 20, overshoot: 19 },
+            { rowId: 'row-3', received: 8, exported: 11.5, overshoot: 3.5 }
+          ]
+        })
+      ]
 
       expect(largestOverExportedLoads(findings, 2)).toStrictEqual([
         { reportId: 'report-1', rowId: 'row-2', overshoot: 19 },

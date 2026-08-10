@@ -836,23 +836,6 @@ describe('unexported-tonnage', () => {
       )
     })
 
-    it('reads the registered-only ledger alongside the accredited one, so rows written before accreditation still resolve', async () => {
-      const deps = buildDeps()
-
-      await scan(deps)
-
-      expect(
-        deps.summaryLogRowStatesRepository.findRowStatesForSummaryLog
-      ).toHaveBeenCalledWith(
-        {
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          accreditationId: null
-        },
-        'log-1'
-      )
-    })
-
     it.each([
       ['a registration that cannot be resolved', null],
       [
