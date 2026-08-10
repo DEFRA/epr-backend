@@ -142,7 +142,7 @@ const logSummary = (scanned, findings) => {
 export const unexportedTonnageDependencies = (server) => ({
   reportsRepository: server.app.reportsRepository,
   organisationsRepository: server.app.organisationsRepository,
-  summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository
+  summaryLogRowStatesRepository: server.app.summaryLogRowStatesRepository
 })
 
 /**

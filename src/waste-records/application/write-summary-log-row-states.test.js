@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 
 import { writeSummaryLogRowStates } from './write-summary-log-row-states.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
@@ -81,16 +81,16 @@ const accreditedLedgerId = {
 }
 
 describe('writeSummaryLogRowStates', () => {
-  let summaryLogRowStateRepository
+  let summaryLogRowStatesRepository
 
   beforeEach(() => {
-    summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
+    summaryLogRowStatesRepository =
+      createInMemorySummaryLogRowStatesRepository()()
   })
 
   it('writes a row state per record under the registered-only ledger', async () => {
     await writeSummaryLogRowStates({
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       wasteRecords: [
         buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 }),
         buildRegisteredOnlyRecord({ rowId: '2', tonnage: 20 })
@@ -102,7 +102,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const committed =
-      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )
@@ -123,7 +123,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores tonnages coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       wasteRecords: [buildReceivedRecord({ rowId: '1', tonnage: 1.005 })],
       accreditation: null,
       ledgerId: registeredOnlyLedgerId,
@@ -132,7 +132,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const [committed] =
-      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )
@@ -141,7 +141,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores weight quantities coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 7.536 })],
       accreditation: null,
       ledgerId: registeredOnlyLedgerId,
@@ -150,7 +150,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const [committed] =
-      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )
@@ -159,7 +159,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores tonnages so round-each-then-sum no longer drifts from sum-then-round', async () => {
     await writeSummaryLogRowStates({
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       wasteRecords: [
         buildReceivedRecord({ rowId: '1', tonnage: 1.005 }),
         buildReceivedRecord({ rowId: '2', tonnage: 1.005 }),
@@ -172,7 +172,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const committed =
-      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )
@@ -188,7 +188,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('carries the supplied accreditation id onto the ledger', async () => {
     await writeSummaryLogRowStates({
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
       accreditation: {
         id: 'acc-1',
@@ -201,7 +201,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const [committed] =
-      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
         accreditedLedgerId,
         'log-A'
       )
@@ -210,7 +210,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stamps the missing field on a row excluded for incomplete data', async () => {
     await writeSummaryLogRowStates({
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
       accreditation: {
         id: 'acc-1',
@@ -223,7 +223,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const [committed] =
-      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
         accreditedLedgerId,
         'log-A'
       )
@@ -240,7 +240,7 @@ describe('writeSummaryLogRowStates', () => {
   it('is idempotent — re-running the same submission adds no duplicate', async () => {
     const submit = () =>
       writeSummaryLogRowStates({
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
         accreditation: null,
         ledgerId: registeredOnlyLedgerId,
@@ -252,7 +252,7 @@ describe('writeSummaryLogRowStates', () => {
     await submit()
 
     const committed =
-      await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )

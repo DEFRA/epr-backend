@@ -21,7 +21,7 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -71,7 +71,7 @@ describe('Submission and placeholder tests', () => {
     const secondSummaryLogId = 'summary-submit-test-2'
     const secondFileId = 'file-submit-456'
     const secondFilename = 'waste-data-2.xlsx'
-    let summaryLogRowStateRepository
+    let summaryLogRowStatesRepository
     let ledgerRepository
     let accreditationId
     let submitResponse
@@ -360,14 +360,14 @@ describe('Submission and placeholder tests', () => {
       // Validate reads and submit writes the same latest-submitted row states,
       // so both paths must share one ledger and one row-state repository.
       ledgerRepository = createInMemoryLedgerRepository()()
-      summaryLogRowStateRepository =
-        createInMemorySummaryLogRowStateRepository()()
+      summaryLogRowStatesRepository =
+        createInMemorySummaryLogRowStatesRepository()()
       const featureFlags = createInMemoryFeatureFlags()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor: validationExtractor,
         logger: mockLogger,
@@ -380,7 +380,7 @@ describe('Submission and placeholder tests', () => {
       const syncWasteRecords = syncFromSummaryLog({
         extractor: transformationExtractor,
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository,
         organisationsRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
@@ -485,7 +485,7 @@ describe('Submission and placeholder tests', () => {
         registrationId,
         accreditationId,
         ledgerRepository,
-        summaryLogRowStateRepository
+        summaryLogRowStatesRepository
       })
 
       expect(rowStates.map((state) => state.rowId).sort()).toEqual([
@@ -804,8 +804,8 @@ describe('Submission and placeholder tests', () => {
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
-        summaryLogRowStateRepository:
-          createInMemorySummaryLogRowStateRepository()(),
+        summaryLogRowStatesRepository:
+          createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
         summaryLogExtractor,
         logger: mockLogger,

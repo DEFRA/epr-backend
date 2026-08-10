@@ -5,11 +5,11 @@ import { MongoClient } from 'mongodb'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 import {
-  createMongoSummaryLogRowStateRepository,
+  createMongoSummaryLogRowStatesRepository,
   ensureSummaryLogRowStatesCollection,
   SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
 } from './mongodb.js'
-import { testSummaryLogRowStateRepositoryContract } from './port.contract.js'
+import { testSummaryLogRowStatesRepositoryContract } from './port.contract.js'
 import { buildSummaryLogRowStateEntry, DEFAULT_LEDGER_ID } from './test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
@@ -37,7 +37,7 @@ const it = mongoIt.extend({
     await use(database.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME))
   },
 
-  summaryLogRowStateRepository: async (
+  summaryLogRowStatesRepository: async (
     /** @type {*} */ { mongoClient },
     use
   ) => {
@@ -45,7 +45,7 @@ const it = mongoIt.extend({
     await database
       .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
       .deleteMany({})
-    const factory = await createMongoSummaryLogRowStateRepository(database)
+    const factory = await createMongoSummaryLogRowStatesRepository(database)
     await use(factory)
   }
 })
@@ -117,7 +117,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
   }) => {
     const database = mongoClient.db(DATABASE_NAME)
     const repository = (
-      await createMongoSummaryLogRowStateRepository(database)
+      await createMongoSummaryLogRowStatesRepository(database)
     )()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
     expect(repository.findRowStatesForSummaryLog).toBeTypeOf('function')
@@ -125,16 +125,16 @@ describe('summary-log row states repository - mongodb implementation', () => {
   })
 
   describe('row-state repository contract', () => {
-    testSummaryLogRowStateRepositoryContract(it)
+    testSummaryLogRowStatesRepositoryContract(it)
   })
 
   describe('concurrent same-ledger writes', () => {
     const CONCURRENT_WRITERS = 20
 
     it('collapses concurrent identical submissions into a single document with all memberships accreted', async (/** @type {*} */ {
-      summaryLogRowStateRepository
+      summaryLogRowStatesRepository
     }) => {
-      const repository = summaryLogRowStateRepository()
+      const repository = summaryLogRowStatesRepository()
       const entry = buildSummaryLogRowStateEntry()
       const summaryLogIds = Array.from(
         { length: CONCURRENT_WRITERS },
@@ -164,9 +164,9 @@ describe('summary-log row states repository - mongodb implementation', () => {
     })
 
     it('keeps a concurrently-redelivered submission to a single summary-log-row-state row', async (/** @type {*} */ {
-      summaryLogRowStateRepository
+      summaryLogRowStatesRepository
     }) => {
-      const repository = summaryLogRowStateRepository()
+      const repository = summaryLogRowStatesRepository()
       const entry = buildSummaryLogRowStateEntry()
 
       await Promise.all(
@@ -205,7 +205,9 @@ describe('summary-log row states repository - mongodb implementation', () => {
       }
       const stubDb = { collection: () => stubCollection }
       const repository = (
-        await createMongoSummaryLogRowStateRepository(/** @type {*} */ (stubDb))
+        await createMongoSummaryLogRowStatesRepository(
+          /** @type {*} */ (stubDb)
+        )
       )()
 
       await expect(
@@ -240,7 +242,7 @@ describe('write round-trip count', () => {
       SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
     )
     const repository = (
-      await createMongoSummaryLogRowStateRepository(database)
+      await createMongoSummaryLogRowStatesRepository(database)
     )()
 
     const roundTripsFor = async (rowCount, summaryLogId) => {

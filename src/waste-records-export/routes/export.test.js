@@ -7,7 +7,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -88,7 +88,7 @@ const createServerWithRepos = async ({
   )()
 
   const summaryLogRowStatesRepository =
-    createInMemorySummaryLogRowStateRepository()()
+    createInMemorySummaryLogRowStatesRepository()()
   for (const seed of seeds) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       {

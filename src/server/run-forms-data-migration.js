@@ -7,6 +7,11 @@ import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createFormsFileUploadsRepository } from '#adapters/repositories/forms-submissions/forms-file-uploads.js'
 import { config } from '../config.js'
 
+/** @import { StartedServer } from '#common/hapi-types.js' */
+
+/**
+ * @param {StartedServer} server
+ */
 export const runFormsDataMigration = async (server) => {
   try {
     logger.info({

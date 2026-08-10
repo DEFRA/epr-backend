@@ -17,7 +17,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 
 const collect = async (gen) => {
   const out = []
@@ -169,7 +169,7 @@ const buildDeps = async ({
   )()
 
   const summaryLogRowStatesRepository =
-    createInMemorySummaryLogRowStateRepository()()
+    createInMemorySummaryLogRowStatesRepository()()
   for (const seed of seeds) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       {

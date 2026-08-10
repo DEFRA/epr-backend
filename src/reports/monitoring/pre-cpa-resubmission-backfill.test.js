@@ -7,7 +7,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import {
   findPreCpaResubmissionReports,
   backfillPreCpaResubmissionReports,
@@ -167,8 +167,8 @@ const buildRepos = async (registrations) => {
   return {
     reportsRepository: createInMemoryReportsRepository(reportDocs)(),
     summaryLogsRepository,
-    summaryLogRowStateRepository:
-      createInMemorySummaryLogRowStateRepository(rowStateDocs)(),
+    summaryLogRowStatesRepository:
+      createInMemorySummaryLogRowStatesRepository(rowStateDocs)(),
     organisationsRepository:
       createInMemoryOrganisationsRepository(organisations)()
   }

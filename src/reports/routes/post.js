@@ -23,7 +23,7 @@ import { reportResponseFailAction } from './response-fail-action.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
- * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
@@ -71,7 +71,7 @@ export const reportsPost = {
    *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
-   *   summaryLogRowStatesRepository: SummaryLogRowStateRepository,
+   *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   reportsRepository: ReportsRepository,
    *   overseasSitesRepository: OverseasSitesRepository
@@ -109,7 +109,7 @@ export const reportsPost = {
       const createdReport = await createReportForPeriod({
         reportsRepository,
         ledgerRepository,
-        summaryLogRowStateRepository: summaryLogRowStatesRepository,
+        summaryLogRowStatesRepository,
         packagingRecyclingNotesRepository,
         overseasSitesRepository,
         organisationId,

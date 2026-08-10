@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { logger } from '#common/helpers/logging/logger.js'
 import { runStaleIssuedTonnageReport } from './run-stale-issued-tonnage-report.js'
 
+/** @import { StartedServer } from '#common/hapi-types.js' */
+
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: vi.fn(),
@@ -23,19 +25,31 @@ const emptyEstateApp = () => ({
   }
 })
 
+/**
+ * @param {*} app
+ * @param {{ lock?: { free: () => Promise<void> } | null, lockError?: Error, reportEnabled?: boolean }} [overrides]
+ */
 const buildServer = (
   app,
   {
     lock = { free: vi.fn().mockResolvedValue(undefined) },
+    lockError,
     reportEnabled = true
   } = {}
-) => ({
-  app,
-  featureFlags: {
-    isStaleIssuedTonnageReportEnabled: () => reportEnabled
-  },
-  locker: { lock: vi.fn().mockResolvedValue(lock) }
-})
+) =>
+  /** @type {StartedServer} */ (
+    /** @type {unknown} */ ({
+      app,
+      featureFlags: {
+        isStaleIssuedTonnageReportEnabled: () => reportEnabled
+      },
+      locker: {
+        lock: lockError
+          ? vi.fn().mockRejectedValue(lockError)
+          : vi.fn().mockResolvedValue(lock)
+      }
+    })
+  )
 
 describe('runStaleIssuedTonnageReport', () => {
   beforeEach(() => {
@@ -69,11 +83,7 @@ describe('runStaleIssuedTonnageReport', () => {
 
   it('skips the report and reads nothing when the lock is held by another instance', async () => {
     const app = emptyEstateApp()
-    const server = {
-      app,
-      featureFlags: { isStaleIssuedTonnageReportEnabled: () => true },
-      locker: { lock: vi.fn().mockResolvedValue(null) }
-    }
+    const server = buildServer(app, { lock: null })
 
     await runStaleIssuedTonnageReport(server)
 
@@ -229,11 +239,7 @@ describe('runStaleIssuedTonnageReport', () => {
 
   it('tolerates the locker itself throwing', async () => {
     const error = new Error('locker unavailable')
-    const server = {
-      app: emptyEstateApp(),
-      featureFlags: { isStaleIssuedTonnageReportEnabled: () => true },
-      locker: { lock: vi.fn().mockRejectedValue(error) }
-    }
+    const server = buildServer(emptyEstateApp(), { lockError: error })
 
     await runStaleIssuedTonnageReport(server)
 

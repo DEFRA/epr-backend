@@ -6,6 +6,8 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { logger } from '#common/helpers/logging/logger.js'
 import { runPreCpaResubmissionBackfill } from './run-pre-cpa-resubmission-backfill.js'
 
+/** @import { StartedServer } from '#common/hapi-types.js' */
+
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: vi.fn(),
@@ -149,21 +151,33 @@ const missingSubmittedAtApp = () => ({
   }
 })
 
+/**
+ * @param {*} app
+ * @param {{ lock?: { free: () => Promise<void> } | null, lockError?: Error, reportEnabled?: boolean, backfillEnabled?: boolean }} [overrides]
+ */
 const buildServer = (
   app,
   {
     lock = { free: vi.fn().mockResolvedValue(undefined) },
+    lockError,
     reportEnabled = true,
     backfillEnabled = false
   } = {}
-) => ({
-  app,
-  featureFlags: {
-    isPreCpaResubmissionReportEnabled: () => reportEnabled,
-    isPreCpaResubmissionBackfillEnabled: () => backfillEnabled
-  },
-  locker: { lock: vi.fn().mockResolvedValue(lock) }
-})
+) =>
+  /** @type {StartedServer} */ (
+    /** @type {unknown} */ ({
+      app,
+      featureFlags: {
+        isPreCpaResubmissionReportEnabled: () => reportEnabled,
+        isPreCpaResubmissionBackfillEnabled: () => backfillEnabled
+      },
+      locker: {
+        lock: lockError
+          ? vi.fn().mockRejectedValue(lockError)
+          : vi.fn().mockResolvedValue(lock)
+      }
+    })
+  )
 
 describe('runPreCpaResubmissionBackfill', () => {
   beforeEach(() => {
@@ -202,14 +216,7 @@ describe('runPreCpaResubmissionBackfill', () => {
 
     it('skips the report and reads nothing when the lock is held by another instance', async () => {
       const app = emptyEstateApp()
-      const server = {
-        app,
-        featureFlags: {
-          isPreCpaResubmissionReportEnabled: () => true,
-          isPreCpaResubmissionBackfillEnabled: () => false
-        },
-        locker: { lock: vi.fn().mockResolvedValue(null) }
-      }
+      const server = buildServer(app, { lock: null })
 
       await runPreCpaResubmissionBackfill(server)
 
@@ -323,14 +330,7 @@ describe('runPreCpaResubmissionBackfill', () => {
 
     it('tolerates the locker itself throwing', async () => {
       const error = new Error('locker unavailable')
-      const server = {
-        app: emptyEstateApp(),
-        featureFlags: {
-          isPreCpaResubmissionReportEnabled: () => true,
-          isPreCpaResubmissionBackfillEnabled: () => false
-        },
-        locker: { lock: vi.fn().mockRejectedValue(error) }
-      }
+      const server = buildServer(emptyEstateApp(), { lockError: error })
 
       await runPreCpaResubmissionBackfill(server)
 

@@ -6,7 +6,7 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js' */
+/** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 
@@ -19,7 +19,7 @@ import { ledgerIdFor } from './ledger-id.js'
  *   summaryLog: SubmittedSummaryLog,
  *   validatedData: ValidatedSummaryLog,
  *   registration: Registration | undefined,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} params
  * @returns {Promise<{
@@ -31,13 +31,13 @@ export const transformAndValidateData = async ({
   summaryLog,
   validatedData,
   registration,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   ledgerRepository
 }) => {
   const previousSubmission = await latestSubmittedSummaryLogRowStates({
     ...ledgerIdFor(summaryLog, registration),
     ledgerRepository,
-    summaryLogRowStateRepository
+    summaryLogRowStatesRepository
   })
 
   /** @type {ValidatedWasteRecord[]} */
