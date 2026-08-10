@@ -5,6 +5,9 @@ export const createConfigFeatureFlags = (config) => ({
   isDevEndpointsEnabled() {
     return config.get('featureFlags.devEndpoints')
   },
+  isOverExportedLoadsReportEnabled() {
+    return config.get('featureFlags.overExportedLoadsReport')
+  },
   isPreCpaResubmissionBackfillEnabled() {
     return config.get('featureFlags.preCpaResubmissionBackfill')
   },

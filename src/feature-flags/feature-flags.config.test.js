@@ -4,6 +4,7 @@ import { createConfigFeatureFlags } from './feature-flags.config.js'
 /** @type {Array<[keyof import('./feature-flags.port.js').FeatureFlags, string]>} */
 const FLAGS = [
   ['isDevEndpointsEnabled', 'featureFlags.devEndpoints'],
+  ['isOverExportedLoadsReportEnabled', 'featureFlags.overExportedLoadsReport'],
   [
     'isPreCpaResubmissionBackfillEnabled',
     'featureFlags.preCpaResubmissionBackfill'

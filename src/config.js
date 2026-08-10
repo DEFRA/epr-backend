@@ -370,6 +370,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
     },
+    overExportedLoadsReport: {
+      doc: 'Feature Flag: Run the estate-wide over-exported loads diagnostic on startup (PAE-1783)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_OVER_EXPORTED_LOADS_REPORT'
+    },
     unexportedTonnageReport: {
       doc: 'Feature Flag: Run the estate-wide unexported tonnage sizing diagnostic on startup (PAE-1783)',
       format: Boolean,

@@ -47,7 +47,11 @@ export const LOGGING_EVENT_ACTIONS = {
   UNEXPORTED_TONNAGE_BY_MONTH: 'unexported_tonnage_by_month',
   UNEXPORTED_TONNAGE_BY_STATUS: 'unexported_tonnage_by_status',
   UNEXPORTED_TONNAGE_LARGEST_DELTAS: 'unexported_tonnage_largest_deltas',
-  UNEXPORTED_TONNAGE_SUMMARY: 'unexported_tonnage_summary'
+  UNEXPORTED_TONNAGE_SUMMARY: 'unexported_tonnage_summary',
+  OVER_EXPORTED_LOADS_FINDING: 'over_exported_loads_finding',
+  OVER_EXPORTED_LOADS_BY_MONTH: 'over_exported_loads_by_month',
+  OVER_EXPORTED_LOADS_LARGEST: 'over_exported_loads_largest',
+  OVER_EXPORTED_LOADS_SUMMARY: 'over_exported_loads_summary'
 }
 
 export const AUDIT_EVENT_CATEGORIES = {

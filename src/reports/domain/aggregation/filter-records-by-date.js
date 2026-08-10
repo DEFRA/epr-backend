@@ -1,6 +1,10 @@
 import { YEAR_MONTH_LENGTH } from '#common/helpers/dates/year-month.js'
 
 /**
+ * @import { ReportableWasteRecordState } from './aggregate-report-detail.js'
+ */
+
+/**
  * Returns true when value is a string containing a valid ISO date that falls
  * within [startDate, endDate] (both inclusive, compared lexicographically).
  *
@@ -27,11 +31,15 @@ export function isDateInRange(value, startDate, endDate) {
 }
 
 /**
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} wasteRecords
+ * Filtering preserves the record type it was given, so a caller holding richer
+ * records than the aggregation's slice keeps its own fields.
+ *
+ * @template {ReportableWasteRecordState} T
+ * @param {T[]} wasteRecords
  * @param {string | undefined} dateField
  * @param {string} startDate
  * @param {string} endDate
- * @returns {import('./aggregate-report-detail.js').ReportableWasteRecordState[]}
+ * @returns {T[]}
  */
 export function filterRecordsByDateField(
   wasteRecords,

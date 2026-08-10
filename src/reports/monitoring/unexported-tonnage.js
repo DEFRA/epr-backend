@@ -21,11 +21,12 @@ import {
   filterRecordsByDateField,
   isDateInRange
 } from '#reports/domain/aggregation/filter-records-by-date.js'
-import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
+import { loadSourceRowStates } from './source-row-states.js'
 
 /**
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js'
+ * @import { SourceRowStates } from './source-row-states.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
  * @import { SummaryLogRowStateRepository } from '#waste-records/repository/port.js'
  */
@@ -94,12 +95,6 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   | SourceMissingFinding
  *   | RecomputeFailedFinding
  *   | LookupFailedFinding} UnexportedTonnageFinding
- *
- * The rows a report was built from, or the reason they are not there. A reason
- * here means the data genuinely is not present, which a re-run will not change
- * — an error while reading is a `LOOKUP_FAILED` finding instead.
- *
- * @typedef {{ states: WasteRecordState[] } | { unresolved: string }} SourceRowStates
  */
 
 /**
@@ -584,94 +579,6 @@ export const summariseUnexportedTonnageFindings = (findings) => {
     totalUnderstated: understated,
     totalOverstated: overstated
   }
-}
-
-/**
- * The ledgers a registration's uploads may sit under: null (its registered-only
- * phase) and its current accreditation id. Reading both means a report built
- * before accreditation still resolves its rows. A row commits under exactly one
- * ledger, so concatenating the two yields the submission's rows without
- * duplication.
- *
- * Only the registration's *current* accreditation is probed, so a report built
- * under an accreditation that has since been superseded resolves no rows and
- * reads as source-missing. Reaching those would need the accreditation history,
- * which the sizing run does not carry.
- *
- * Errors propagate: a registration that cannot be read is a fact about the run,
- * not about the exporter's data, and the caller records it as such.
- *
- * @param {OrganisationsRepository} organisationsRepository
- * @param {string} organisationId
- * @param {string} registrationId
- * @returns {Promise<import('#waste-records/repository/port.js').WasteBalanceLedgerId[]>}
- */
-const resolveLedgers = async (
-  organisationsRepository,
-  organisationId,
-  registrationId
-) => {
-  const registration = await organisationsRepository.findRegistrationById(
-    organisationId,
-    registrationId
-  )
-
-  const accreditationIds = registration?.accreditationId
-    ? [null, registration.accreditationId]
-    : [null]
-
-  return accreditationIds.map((accreditationId) => ({
-    organisationId,
-    registrationId,
-    accreditationId
-  }))
-}
-
-const NO_SUMMARY_LOG = 'no source summary log recorded on the report'
-const NO_ROWS = 'no rows found under the registration ledgers'
-
-/**
- * The row states the report was built from, or the reason there are none. Both
- * reasons are statements about the stored data rather than about this run, so
- * either one is stable across re-runs; anything that throws on the way is not,
- * and is left to propagate.
- *
- * @param {{
- *   reportsRepository: ReportsRepository,
- *   organisationsRepository: OrganisationsRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository
- * }} deps
- * @param {ReviewableReportRow} row
- * @returns {Promise<SourceRowStates>}
- */
-const loadSourceRowStates = async (
-  { reportsRepository, organisationsRepository, summaryLogRowStateRepository },
-  row
-) => {
-  const report = await reportsRepository.findReportById(row.reportId)
-  const summaryLogId = report.source?.summaryLogId ?? null
-  if (summaryLogId === null) {
-    return { unresolved: NO_SUMMARY_LOG }
-  }
-
-  const ledgers = await resolveLedgers(
-    organisationsRepository,
-    row.organisationId,
-    row.registrationId
-  )
-
-  const states = []
-  for (const ledger of ledgers) {
-    states.push(
-      ...(await wasteRecordStatesForHead(
-        summaryLogRowStateRepository,
-        ledger,
-        summaryLogId
-      ))
-    )
-  }
-
-  return states.length > 0 ? { states } : { unresolved: NO_ROWS }
 }
 
 /**

@@ -6,6 +6,9 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
   },
+  isOverExportedLoadsReportEnabled() {
+    return flags.overExportedLoadsReport ?? false
+  },
   isPreCpaResubmissionBackfillEnabled() {
     return flags.preCpaResubmissionBackfill ?? false
   },

@@ -46,6 +46,7 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
 import { runPreCpaResubmissionBackfill } from '#server/run-pre-cpa-resubmission-backfill.js'
+import { runOverExportedLoadsReport } from '#server/run-over-exported-loads-report.js'
 import { runUnexportedTonnageReport } from '#server/run-unexported-tonnage-report.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 
@@ -227,9 +228,11 @@ async function createServer(options = {}) {
     runOrganisationValidationSweep(server)
     runStaleIssuedTonnageReport(server)
     runPreCpaResubmissionBackfill(server)
-    runUnexportedTonnageReport(
-      /** @type {StartedServer} */ (/** @type {unknown} */ (server))
+    const startedServer = /** @type {StartedServer} */ (
+      /** @type {unknown} */ (server)
     )
+    runUnexportedTonnageReport(startedServer)
+    runOverExportedLoadsReport(startedServer)
   })
 
   return server
