@@ -77,6 +77,7 @@ const mismatch = (overrides = {}) =>
     rowsUnexported: 1,
     rowsOverExported: 0,
     rowsMissingReceived: 0,
+    rowsMiscounted: 0,
     ...overrides
   })
 
@@ -229,7 +230,9 @@ describe('unexported-tonnage', () => {
         })
       ])
 
-      expect(finding).toStrictEqual(mismatch({ recomputed: 4, delta: 4 }))
+      expect(finding).toStrictEqual(
+        mismatch({ recomputed: 4, delta: 4, rowsMiscounted: 1 })
+      )
     })
 
     it('returns nothing when a fully exported load already agrees with the stored zero', () => {
@@ -262,7 +265,8 @@ describe('unexported-tonnage', () => {
           delta: -2,
           rowsInPeriod: 2,
           rowsUnexported: 1,
-          rowsOverExported: 1
+          rowsOverExported: 1,
+          rowsMiscounted: 2
         })
       )
     })
@@ -287,7 +291,28 @@ describe('unexported-tonnage', () => {
           rowsInPeriod: 2,
           rowsUnexported: 0,
           rowsOverExported: 1,
-          rowsMissingReceived: 1
+          rowsMissingReceived: 1,
+          rowsMiscounted: 1
+        })
+      )
+    })
+
+    it('counts no miscount for a fully exported load dropped on its export date, which both rules score as zero', () => {
+      const finding = diagnoseWithRows(buildRow({ storedUnexported: 5 }), [
+        buildReceivedRow({
+          DATE_OF_EXPORT: '2026-02-16',
+          TONNAGE_RECEIVED_FOR_EXPORT: 10,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 10
+        })
+      ])
+
+      expect(finding).toStrictEqual(
+        mismatch({
+          stored: 5,
+          recomputed: 0,
+          delta: -5,
+          rowsUnexported: 0,
+          rowsMiscounted: 0
         })
       )
     })
@@ -311,7 +336,8 @@ describe('unexported-tonnage', () => {
           delta: 10,
           rowsInPeriod: 2,
           rowsUnexported: 1,
-          rowsOverExported: 0
+          rowsOverExported: 0,
+          rowsMiscounted: 1
         })
       )
     })
@@ -325,7 +351,7 @@ describe('unexported-tonnage', () => {
       ])
 
       expect(finding).toStrictEqual(
-        mismatch({ recomputed: 29.19, delta: 29.19 })
+        mismatch({ recomputed: 29.19, delta: 29.19, rowsMiscounted: 1 })
       )
     })
 
@@ -396,15 +422,16 @@ describe('unexported-tonnage', () => {
           rowsInPeriod: 4,
           rowsUnexported: 2,
           rowsOverExported: 1,
-          rowsMissingReceived: 1
+          rowsMissingReceived: 1,
+          rowsMiscounted: 3
         })
       )
 
       expect(line).toBe(
         'Unexported tonnage mismatch: org org-1 / registration reg-1, ' +
           'report report-1 (Feb 2026, submitted) - stored 0, recomputed 29.19, ' +
-          'delta 29.19, rows 4 in period / 2 unexported / 1 over-exported / ' +
-          '1 missing received'
+          'delta 29.19, rows 4 in period / 3 miscounted / 2 unexported / ' +
+          '1 over-exported / 1 missing received'
       )
     })
 
@@ -460,6 +487,7 @@ describe('unexported-tonnage', () => {
       rowsUnexported: 1,
       rowsOverExported: 0,
       rowsMissingReceived: 0,
+      rowsMiscounted: 1,
       ...rows
     })
 
@@ -509,6 +537,7 @@ describe('unexported-tonnage', () => {
         rowsUnexported: 6,
         rowsOverExported: 1,
         rowsMissingReceived: 1,
+        rowsMiscounted: 3,
         totalDelta: 32.38,
         totalUnderstated: 33.19,
         totalOverstated: 0.81

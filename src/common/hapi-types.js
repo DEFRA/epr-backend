@@ -5,6 +5,8 @@
  * @import {Db} from 'mongodb'
  * @import {LockManager} from 'mongo-locks'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {ReportsRepository} from '#reports/repository/port.js'
+ * @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
  * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService
@@ -115,7 +117,16 @@
  */
 
 /**
- * @typedef {{ [key: string]: unknown }} ServerApp
+ * Dependencies `registerDependency` decorates onto `server.app`. Naming one
+ * types its reads, so a property name no plugin registers fails the type check;
+ * the index signature keeps the rest readable.
+ *
+ * @typedef {{
+ *   organisationsRepository: OrganisationsRepository,
+ *   reportsRepository: ReportsRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStateRepository,
+ *   [key: string]: unknown
+ * }} ServerApp
  */
 
 /**
@@ -136,6 +147,14 @@
  * @property {Function} initialize - Initialize the server without starting
  * @property {Function} inject - Inject a request for testing
  * @property {Function} ext - Register extension points
+ */
+
+/**
+ * A booted server, as its plugins have decorated it. Built on HapiServer rather
+ * than hapi's own Server: intersecting the latter resolves `app` reads to `any`,
+ * which drops the check that a dependency is read under a registered name.
+ *
+ * @typedef {HapiServer & { db: Db, locker: LockManager }} StartedServer
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
