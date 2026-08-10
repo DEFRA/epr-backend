@@ -45,6 +45,12 @@ import { loadSourceRowStates } from './source-row-states.js'
  *   totalOvershoot: number,
  *   net: number
  * }} OverExportedLoadsFinding
+ *
+ * A report in scope that could not be read. Kept apart from the findings: it
+ * says nothing about the exporter's data, and without it a systematic failure
+ * reads the same as a clean estate.
+ *
+ * @typedef {{ reportId: string, reason: string }} UnreadableReport
  */
 
 export const UNKNOWN_MATERIAL = 'unknown'
@@ -138,7 +144,8 @@ const netOf = (loads) =>
  * @param {ReviewableReportRow} row
  * @returns {Promise<{
  *   inScope: boolean,
- *   finding?: OverExportedLoadsFinding | null
+ *   finding?: OverExportedLoadsFinding | null,
+ *   unreadable?: UnreadableReport
  * }>}
  */
 const assessReportRow = async (deps, row) => {
@@ -167,7 +174,7 @@ const assessReportRow = async (deps, row) => {
               period: row.period,
               reportStatus: row.reportStatus,
               material:
-                sourceRowStates.registration?.material ?? UNKNOWN_MATERIAL,
+                sourceRowStates.registration.material ?? UNKNOWN_MATERIAL,
               loads,
               totalOvershoot: toNumber(
                 loads.reduce(
@@ -179,8 +186,14 @@ const assessReportRow = async (deps, row) => {
               net: netOf(inPeriod)
             }
     }
-  } catch {
-    return { inScope: true }
+  } catch (error) {
+    return {
+      inScope: true,
+      unreadable: {
+        reportId: row.reportId,
+        reason: /** @type {Error} */ (error).message
+      }
+    }
   }
 }
 
@@ -199,7 +212,11 @@ const assessReportRow = async (deps, row) => {
  *     'findAllPeriodicReports' | 'findReportById'
  *   >
  * }} deps
- * @returns {Promise<{ scanned: number, findings: OverExportedLoadsFinding[] }>}
+ * @returns {Promise<{
+ *   scanned: number,
+ *   unreadable: UnreadableReport[],
+ *   findings: OverExportedLoadsFinding[]
+ * }>}
  */
 export const findOverExportedLoads = async (deps) => {
   /** @type {PeriodicReport[]} */
@@ -215,6 +232,9 @@ export const findOverExportedLoads = async (deps) => {
 
   return {
     scanned: inScope.length,
+    unreadable: inScope.flatMap(({ unreadable }) =>
+      unreadable ? [unreadable] : []
+    ),
     findings: inScope.flatMap(({ finding }) => (finding ? [finding] : []))
   }
 }

@@ -55,7 +55,7 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * @returns {WasteBalanceLedgerId[]}
  */
 const resolveLedgers = (registration, organisationId, registrationId) => {
-  const accreditationIds = registration?.accreditationId
+  const accreditationIds = registration.accreditationId
     ? [null, registration.accreditationId]
     : [null]
 

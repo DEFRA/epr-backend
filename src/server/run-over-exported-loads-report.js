@@ -14,7 +14,10 @@ import {
 
 /**
  * @import { StartedServer } from '#common/hapi-types.js'
- * @import { OverExportedLoadsFinding } from '#reports/monitoring/over-exported-loads.js'
+ * @import {
+ *   OverExportedLoadsFinding,
+ *   UnreadableReport
+ * } from '#reports/monitoring/over-exported-loads.js'
  */
 
 const LOCK_NAME = 'over-exported-loads-report'
@@ -77,10 +80,26 @@ const logBreakdowns = (findings) => {
 }
 
 /**
+ * @param {UnreadableReport[]} unreadable
+ */
+const warnUnreadable = (unreadable) =>
+  unreadable.forEach(({ reportId, reason }) =>
+    logger.warn({
+      message: `Over-exported loads: could not read report ${reportId} - ${reason}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.OVER_EXPORTED_LOADS_UNREADABLE,
+        reference: reportId
+      }
+    })
+  )
+
+/**
  * @param {number} scanned
+ * @param {UnreadableReport[]} unreadable
  * @param {OverExportedLoadsFinding[]} findings
  */
-const logSummary = (scanned, findings) => {
+const logSummary = (scanned, unreadable, findings) => {
   const { reports, loads, exporters, organisations, masked, totalOvershoot } =
     summariseOverExportedLoadsFindings(findings)
 
@@ -89,7 +108,7 @@ const logSummary = (scanned, findings) => {
     `Over-exported loads: scanned ${scanned}, reports ${reports}, ` +
       `loads ${loads}, exporters ${exporters} across ` +
       `${organisations} organisations, masked ${masked}, ` +
-      `total overshoot ${totalOvershoot}`
+      `unreadable ${unreadable.length}, total overshoot ${totalOvershoot}`
   )
 }
 
@@ -97,7 +116,7 @@ const logSummary = (scanned, findings) => {
  * @param {StartedServer} server
  */
 const runReport = async (server) => {
-  const { scanned, findings } = await findOverExportedLoads({
+  const { scanned, unreadable, findings } = await findOverExportedLoads({
     reportsRepository: server.app.reportsRepository,
     organisationsRepository: server.app.organisationsRepository,
     summaryLogRowStatesRepository: server.app.summaryLogRowStatesRepository
@@ -110,8 +129,9 @@ const runReport = async (server) => {
       finding.reportId
     )
   )
+  warnUnreadable(unreadable)
   logBreakdowns(findings)
-  logSummary(scanned, findings)
+  logSummary(scanned, unreadable, findings)
 }
 
 /**

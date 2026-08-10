@@ -181,12 +181,24 @@ describe('overExportedLoads', () => {
         new Error('Report not found: report-1')
       )
 
-      const { scanned, findings } = await findOverExportedLoads(deps)
+      const { scanned, unreadable, findings } =
+        await findOverExportedLoads(deps)
 
       expect(scanned).toBe(2)
+      expect(unreadable).toStrictEqual([
+        { reportId: 'report-1', reason: 'Report not found: report-1' }
+      ])
       expect(findings.map(({ reportId }) => reportId)).toStrictEqual([
         'report-2'
       ])
+    })
+
+    it('reports nothing unreadable when every report reads cleanly', async () => {
+      const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
+
+      const { unreadable } = await findOverExportedLoads(deps)
+
+      expect(unreadable).toStrictEqual([])
     })
 
     it.each([

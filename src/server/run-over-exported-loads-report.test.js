@@ -11,6 +11,7 @@ import { runOverExportedLoadsReport } from './run-over-exported-loads-report.js'
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: vi.fn(),
+    warn: vi.fn(),
     error: vi.fn()
   }
 }))
@@ -151,7 +152,8 @@ describe('runOverExportedLoadsReport', () => {
       infoLine(
         'over_exported_loads_summary',
         'Over-exported loads: scanned 0, reports 0, loads 0, ' +
-          'exporters 0 across 0 organisations, masked 0, total overshoot 0'
+          'exporters 0 across 0 organisations, masked 0, unreadable 0, ' +
+          'total overshoot 0'
       )
     )
   })
@@ -176,7 +178,36 @@ describe('runOverExportedLoadsReport', () => {
       infoLine(
         'over_exported_loads_summary',
         'Over-exported loads: scanned 1, reports 1, loads 1, ' +
-          'exporters 1 across 1 organisations, masked 0, total overshoot 2'
+          'exporters 1 across 1 organisations, masked 0, unreadable 0, ' +
+          'total overshoot 2'
+      )
+    )
+  })
+
+  it('warns about a report it could not read, and counts it in the summary', async () => {
+    const app = estateApp([monthlyReport()], [receivedRow('row-1', 10, 12)])
+    app.reportsRepository.findReportById.mockRejectedValue(
+      new Error('Report not found: report-1')
+    )
+    const server = buildServer(app)
+
+    await runOverExportedLoadsReport(server)
+
+    expect(logger.warn).toHaveBeenCalledWith({
+      message:
+        'Over-exported loads: could not read report report-1 - Report not found: report-1',
+      event: {
+        category: 'server',
+        action: 'over_exported_loads_unreadable',
+        reference: 'report-1'
+      }
+    })
+    expect(logger.info).toHaveBeenCalledWith(
+      infoLine(
+        'over_exported_loads_summary',
+        'Over-exported loads: scanned 1, reports 0, loads 0, ' +
+          'exporters 0 across 0 organisations, masked 0, unreadable 1, ' +
+          'total overshoot 0'
       )
     )
   })
