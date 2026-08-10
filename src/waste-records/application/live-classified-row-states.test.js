@@ -9,7 +9,7 @@ import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -167,10 +167,10 @@ const readLiveStates = async ({
   submitted = true,
   overseasSites = /** @type {import('#overseas-sites/repository/port.js').OverseasSite[]} */ ([])
 }) => {
-  const summaryLogRowStateRepository =
-    createInMemorySummaryLogRowStateRepository()()
+  const summaryLogRowStatesRepository =
+    createInMemorySummaryLogRowStatesRepository()()
   if (submitted) {
-    await summaryLogRowStateRepository.upsertSummaryLogRowStates(
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       ledgerId,
       entries,
       SUMMARY_LOG_ID
@@ -191,7 +191,7 @@ const readLiveStates = async ({
           ]
         : []
     )(),
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     organisationsRepository: createInMemoryOrganisationsRepository([
       organisation
     ])(),

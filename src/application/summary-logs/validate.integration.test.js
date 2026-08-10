@@ -16,7 +16,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemorySummaryLogRowStateRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 
 /** @import {DataSection, MetadataEntry, SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
 /** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
@@ -121,14 +121,14 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogExtractor || createExtractor(summaryLog.file.id, metadata, data)
 
     const ledgerRepository = createInMemoryLedgerRepository()()
-    const summaryLogRowStateRepository =
-      createInMemorySummaryLogRowStateRepository()()
+    const summaryLogRowStatesRepository =
+      createInMemorySummaryLogRowStatesRepository()()
 
     const validateSummaryLog = createSummaryLogsValidator({
       logger,
       summaryLogsRepository,
       organisationsRepository,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: async () => []

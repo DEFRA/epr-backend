@@ -137,7 +137,7 @@ function buildReportData(aggregated, registration) {
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
@@ -152,7 +152,7 @@ function buildReportData(aggregated, registration) {
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
   ledgerRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   organisationId,
@@ -198,7 +198,7 @@ export async function fetchOrGenerateReportForPeriod({
 
   const aggregatedReportDetail = await getAggregatedReportDetail({
     ledgerRepository,
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
     operatorCategory,
@@ -234,7 +234,7 @@ function toSource(latestSubmission) {
  * summary log into a report and appends issued PRN tonnage.
  * @param {object} params
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.operatorCategory
@@ -248,7 +248,7 @@ function toSource(latestSubmission) {
  */
 async function getAggregatedReportDetail({
   ledgerRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   operatorCategory,
@@ -271,7 +271,7 @@ async function getAggregatedReportDetail({
   )
 
   const wasteRecordStates = await wasteRecordStatesForHead(
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     ledgerId,
     latestSubmission === null ? null : latestSubmission.summaryLogId
   )
@@ -310,7 +310,7 @@ async function getAggregatedReportDetail({
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
@@ -326,7 +326,7 @@ async function getAggregatedReportDetail({
 export async function createReportForPeriod({
   reportsRepository,
   ledgerRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   organisationId,
@@ -372,7 +372,7 @@ export async function createReportForPeriod({
 
   const aggregatedReportData = await getAggregatedReportDetail({
     ledgerRepository,
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
     operatorCategory,

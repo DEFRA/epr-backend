@@ -770,7 +770,7 @@ describe('unexported-tonnage', () => {
       organisationsRepository: {
         findRegistrationById: vi.fn().mockResolvedValue(registration)
       },
-      summaryLogRowStateRepository: {
+      summaryLogRowStatesRepository: {
         findRowStatesForSummaryLog: vi
           .fn()
           .mockImplementation(async ({ accreditationId }) =>
@@ -806,7 +806,7 @@ describe('unexported-tonnage', () => {
       await scan(deps)
 
       expect(
-        deps.summaryLogRowStateRepository.findRowStatesForSummaryLog
+        deps.summaryLogRowStatesRepository.findRowStatesForSummaryLog
       ).toHaveBeenCalledWith(
         {
           organisationId: 'org-1',
@@ -823,7 +823,7 @@ describe('unexported-tonnage', () => {
       await scan(deps)
 
       expect(
-        deps.summaryLogRowStateRepository.findRowStatesForSummaryLog
+        deps.summaryLogRowStatesRepository.findRowStatesForSummaryLog
       ).toHaveBeenCalledWith(
         {
           organisationId: 'org-1',
@@ -840,7 +840,7 @@ describe('unexported-tonnage', () => {
       const { findings } = await scan(deps)
 
       expect(
-        deps.summaryLogRowStateRepository.findRowStatesForSummaryLog
+        deps.summaryLogRowStatesRepository.findRowStatesForSummaryLog
       ).toHaveBeenCalledExactlyOnceWith(
         {
           organisationId: 'org-1',

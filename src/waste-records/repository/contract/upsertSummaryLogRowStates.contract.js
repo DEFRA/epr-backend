@@ -18,8 +18,8 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
   describe('upsertSummaryLogRowStates', () => {
     let repository
 
-    beforeEach((/** @type {*} */ { summaryLogRowStateRepository }) => {
-      repository = summaryLogRowStateRepository()
+    beforeEach((/** @type {*} */ { summaryLogRowStatesRepository }) => {
+      repository = summaryLogRowStatesRepository()
     })
 
     it('inserts a new state document for a previously unseen row', async () => {

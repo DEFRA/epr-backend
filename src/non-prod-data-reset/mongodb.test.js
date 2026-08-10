@@ -21,7 +21,7 @@ import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
-import { createMongoSummaryLogRowStateRepository } from '#waste-records/repository/mongodb.js'
+import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 
 import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'
@@ -111,7 +111,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       const overseasSitesFactory = await createOverseasSitesRepository(database)
       const systemLogsFactory = await createSystemLogsRepository(database)
       const summaryLogRowStatesFactory =
-        await createMongoSummaryLogRowStateRepository(database)
+        await createMongoSummaryLogRowStatesRepository(database)
 
       await use({
         organisations: organisationsFactory(),

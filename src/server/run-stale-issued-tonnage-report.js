@@ -4,6 +4,8 @@ import {
   formatStaleIssuedTonnageFinding
 } from '#reports/monitoring/stale-issued-tonnage.js'
 
+/** @import { StartedServer } from '#common/hapi-types.js' */
+
 const LOCK_NAME = 'stale-issued-tonnage-report'
 
 /**
@@ -12,7 +14,7 @@ const LOCK_NAME = 'stale-issued-tonnage-report'
  * PAE-1665 rule change (excluding PRNs cancelled after issuance) stales any
  * report computed before the fix. Read-only, safe under live traffic.
  *
- * @param {Object} server - Hapi server instance
+ * @param {StartedServer} server - Hapi server instance
  */
 const runReport = async (server) => {
   const { scanned, findings } = await findStaleIssuedTonnageReports({
@@ -44,7 +46,7 @@ const runReport = async (server) => {
  * Gated by the stale-issued-tonnage-report feature flag: with it off this
  * returns before touching the locker or any repository.
  *
- * @param {Object} server - Hapi server instance
+ * @param {StartedServer} server - Hapi server instance
  */
 export const runStaleIssuedTonnageReport = async (server) => {
   if (!server.featureFlags.isStaleIssuedTonnageReportEnabled()) {

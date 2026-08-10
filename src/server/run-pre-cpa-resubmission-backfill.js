@@ -6,6 +6,8 @@ import {
   summarisePreCpaResubmissionFindings
 } from '#reports/monitoring/pre-cpa-resubmission-backfill.js'
 
+/** @import { StartedServer } from '#common/hapi-types.js' */
+
 const LOCK_NAME = 'pre-cpa-resubmission'
 
 /**
@@ -57,7 +59,7 @@ const logMissingSubmittedAt = (missing) => {
  * an already-closed period, then logs each affected report, a sizing summary,
  * and the invariant probe result. Read-only.
  *
- * @param {Object} server - Hapi server instance
+ * @param {StartedServer} server - Hapi server instance
  */
 const runReport = async (server) => {
   const {
@@ -68,7 +70,7 @@ const runReport = async (server) => {
   } = await findPreCpaResubmissionReports({
     reportsRepository: server.app.reportsRepository,
     summaryLogsRepository: server.app.summaryLogsRepository,
-    summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository,
+    summaryLogRowStatesRepository: server.app.summaryLogRowStatesRepository,
     organisationsRepository: server.app.organisationsRepository
   })
 
@@ -117,7 +119,7 @@ const logUnexpectedlyFlagged = (reportIds) => {
  * threw, so the run's log makes clear which groups still need a retry rather
  * than only a generic top-level failure message. Expected empty.
  *
- * @param {Array<{ organisationId: string, registrationId: string, summaryLogId: string, error: Error }>} failed
+ * @param {{ organisationId: string, registrationId: string, summaryLogId: string, error: Error }[]} failed
  */
 const logFailedGroups = (failed) => {
   for (const group of failed) {
@@ -142,7 +144,7 @@ const logFailedGroups = (failed) => {
  * also logs its own invariant probe and missing-submittedAt anomalies, and
  * any group whose write failed.
  *
- * @param {Object} server - Hapi server instance
+ * @param {StartedServer} server - Hapi server instance
  */
 const runBackfill = async (server) => {
   const {
@@ -155,7 +157,7 @@ const runBackfill = async (server) => {
   } = await backfillPreCpaResubmissionReports({
     reportsRepository: server.app.reportsRepository,
     summaryLogsRepository: server.app.summaryLogsRepository,
-    summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository,
+    summaryLogRowStatesRepository: server.app.summaryLogRowStatesRepository,
     organisationsRepository: server.app.organisationsRepository,
     systemLogsRepository: server.app.systemLogsRepository
   })
@@ -196,7 +198,7 @@ const runBackfill = async (server) => {
  * With both flags off, this returns before touching the locker or any
  * repository.
  *
- * @param {Object} server - Hapi server instance
+ * @param {StartedServer} server - Hapi server instance
  */
 export const runPreCpaResubmissionBackfill = async (server) => {
   const reportEnabled = server.featureFlags.isPreCpaResubmissionReportEnabled()
