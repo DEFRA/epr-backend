@@ -18,7 +18,6 @@ import {
   assertAccreditationStatusTransitionValid,
   assertRegistrationStatusTransitionValid
 } from '#domain/organisations/status.js'
-import { ObjectId } from 'mongodb'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
@@ -247,14 +246,11 @@ export const escapeRegex = (string) =>
 const INTEGER_PATTERN = /^\d+$/
 const DOCUMENT_ID_PATTERN = /^[0-9a-fA-F]{24}$/
 
-/** Matches no organisation, used when a criterion cannot be parsed. */
-const UNSATISFIABLE_FILTER = { _id: { $in: [] } }
-
 /**
  * @param {FindPageCriteria} criteria
  * @returns {Required<FindPageCriteria>} - every criterion trimmed, absent ones as ''
  */
-const normaliseCriteria = ({
+export const normaliseCriteria = ({
   search,
   orgId,
   registrationId,
@@ -277,171 +273,20 @@ const normaliseCriteria = ({
  * @param {string} value
  * @returns {{ businessOrgId: number | null, documentId: string | null }}
  */
-const parseOrgIdCriterion = (value) => ({
+export const parseOrgIdCriterion = (value) => ({
   businessOrgId: INTEGER_PATTERN.test(value) ? Number(value) : null,
   documentId: DOCUMENT_ID_PATTERN.test(value) ? value : null
 })
 
 /**
  * The pattern both adapters match numbers with: the whole value, escaped.
+ * Each adapter turns this into its own form — a Mongo `$regex` fragment or a
+ * JavaScript RegExp — so the matching semantics stay defined in one place.
+ *
  * @param {string} value
  * @returns {string}
  */
-const anchoredPattern = (value) => `^${escapeRegex(value)}$`
-
-/**
- * @param {string} value
- * @returns {{ $regex: string, $options: string }} - anchored, case-insensitive
- */
-const anchoredCaseInsensitive = (value) => ({
-  $regex: anchoredPattern(value),
-  $options: 'i'
-})
-
-/**
- * @param {string} value
- * @returns {object} - the organisation-id fragment, unsatisfiable when unparseable
- */
-const buildOrgIdFilter = (value) => {
-  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
-  const branches = []
-  if (businessOrgId !== null) {
-    branches.push({ orgId: businessOrgId })
-  }
-  if (documentId !== null) {
-    branches.push({ _id: ObjectId.createFromHexString(documentId) })
-  }
-
-  return branches.length === 0 ? UNSATISFIABLE_FILTER : { $or: branches }
-}
-
-/**
- * Builds the MongoDB filter for a findPage query.
- *
- * @param {FindPageCriteria} criteria
- * @returns {object} - a filter matching organisations satisfying every criterion
- */
-export const buildFindPageFilter = (criteria) => {
-  const {
-    search,
-    orgId,
-    registrationId,
-    registrationNumber,
-    accreditationId,
-    accreditationNumber
-  } = normaliseCriteria(criteria)
-
-  const conditions = []
-  if (search !== '') {
-    conditions.push({
-      'companyDetails.name': { $regex: escapeRegex(search), $options: 'i' }
-    })
-  }
-  if (orgId !== '') {
-    conditions.push(buildOrgIdFilter(orgId))
-  }
-  if (registrationId !== '') {
-    conditions.push({ 'registrations.id': registrationId })
-  }
-  if (registrationNumber !== '') {
-    conditions.push({
-      'registrations.registrationNumber':
-        anchoredCaseInsensitive(registrationNumber)
-    })
-  }
-  if (accreditationId !== '') {
-    conditions.push({ 'accreditations.id': accreditationId })
-  }
-  if (accreditationNumber !== '') {
-    conditions.push({
-      'accreditations.accreditationNumber':
-        anchoredCaseInsensitive(accreditationNumber)
-    })
-  }
-
-  return conditions.length === 0 ? {} : { $and: conditions }
-}
-
-/**
- * @param {string} value
- * @returns {(candidate: string | null | undefined) => boolean}
- */
-const anchoredMatcher = (value) => {
-  const pattern = new RegExp(anchoredPattern(value), 'i')
-  return (candidate) => pattern.test(candidate ?? '')
-}
-
-/**
- * @param {string} value
- * @returns {Array<(org: StoredOrganisation) => boolean>} - one predicate per parseable
- *   interpretation; empty when the value parses as neither, so nothing matches
- */
-const buildOrgIdMatchers = (value) => {
-  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
-  const matchers = []
-  if (businessOrgId !== null) {
-    matchers.push((org) => org.orgId === businessOrgId)
-  }
-  if (documentId !== null) {
-    // The in-memory store keeps _id as the plain id string, unlike MongoDB
-    matchers.push((org) => org._id === documentId)
-  }
-
-  return matchers
-}
-
-/**
- * Builds the in-memory equivalent of {@link buildFindPageFilter}, applied to
- * raw stored documents — so `_id` rather than `id`.
- *
- * @param {FindPageCriteria} criteria
- * @returns {(org: StoredOrganisation) => boolean} - true when the organisation satisfies every criterion
- */
-export const buildFindPageMatcher = (criteria) => {
-  const {
-    search,
-    orgId,
-    registrationId,
-    registrationNumber,
-    accreditationId,
-    accreditationNumber
-  } = normaliseCriteria(criteria)
-
-  /** @type {Array<(org: StoredOrganisation) => boolean>} */
-  const checks = []
-  if (search !== '') {
-    const pattern = new RegExp(escapeRegex(search), 'i')
-    checks.push((org) => pattern.test(org.companyDetails.name))
-  }
-  if (orgId !== '') {
-    const matchers = buildOrgIdMatchers(orgId)
-    checks.push((org) => matchers.some((matches) => matches(org)))
-  }
-  if (registrationId !== '') {
-    checks.push((org) =>
-      org.registrations.some((reg) => reg.id === registrationId)
-    )
-  }
-  if (registrationNumber !== '') {
-    const matchesNumber = anchoredMatcher(registrationNumber)
-    checks.push((org) =>
-      org.registrations.some((reg) => matchesNumber(reg.registrationNumber))
-    )
-  }
-  if (accreditationId !== '') {
-    checks.push((org) =>
-      org.accreditations.some((acc) => acc.id === accreditationId)
-    )
-  }
-  if (accreditationNumber !== '') {
-    const matchesNumber = anchoredMatcher(accreditationNumber)
-    checks.push((org) =>
-      org.accreditations.some((acc) => matchesNumber(acc.accreditationNumber))
-    )
-  }
-
-  return (org) => checks.every((check) => check(org))
-}
+export const anchoredPattern = (value) => `^${escapeRegex(value)}$`
 
 const buildOrsAdminListBasePipeline = ({ registrationNumber }) => [
   {

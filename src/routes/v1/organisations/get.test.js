@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  buildOrgWithCriteria,
+  buildOrgWithName
+} from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -10,49 +14,6 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
-
-/**
- * @param {string} name
- * @returns
- */
-const buildOrgWithName = (name) => {
-  const base = buildOrganisation()
-  return {
-    ...base,
-    companyDetails: { ...base.companyDetails, name }
-  }
-}
-
-/**
- * Builds an organisation carrying known search criteria on its first
- * registration and first accreditation.
- *
- * @param {{
- *   name: string,
- *   orgId: number,
- *   registrationNumber: string,
- *   accreditationNumber: string
- * }} criteria
- * @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>}
- */
-const buildOrgWithCriteria = ({
-  name,
-  orgId,
-  registrationNumber,
-  accreditationNumber
-}) => {
-  const base = buildOrganisation({ orgId })
-  return {
-    ...base,
-    companyDetails: { ...base.companyDetails, name },
-    registrations: base.registrations.map((registration, index) =>
-      index === 0 ? { ...registration, registrationNumber } : registration
-    ),
-    accreditations: base.accreditations.map((accreditation, index) =>
-      index === 0 ? { ...accreditation, accreditationNumber } : accreditation
-    )
-  }
-}
 
 const authHeaders = { Authorization: `Bearer ${validToken}` }
 

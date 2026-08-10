@@ -8,9 +8,12 @@ import {
 } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
-  buildFindPageMatcher,
+  anchoredPattern,
   createInitialStatusHistory,
+  escapeRegex,
   mapDocumentWithCurrentStatuses,
+  normaliseCriteria,
+  parseOrgIdCriterion,
   prepareForReplace
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
@@ -155,6 +158,91 @@ const performFindAllBySchemaVersion = (staleCache) => async (schemaVersion) => {
   return structuredClone(staleCache)
     .filter((org) => org.schemaVersion === schemaVersion)
     .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
+}
+
+/**
+ * @param {string} value
+ * @returns {(candidate: string | null | undefined) => boolean}
+ */
+const anchoredMatcher = (value) => {
+  const pattern = new RegExp(anchoredPattern(value), 'i')
+  return (candidate) => pattern.test(candidate ?? '')
+}
+
+/**
+ * @param {string} value
+ * @returns {Array<(org: import('./helpers.js').StoredOrganisation) => boolean>} - one
+ *   predicate per parseable interpretation; empty when the value parses as
+ *   neither, so nothing matches
+ */
+const buildOrgIdMatchers = (value) => {
+  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
+  const matchers = []
+  if (businessOrgId !== null) {
+    matchers.push((org) => org.orgId === businessOrgId)
+  }
+  if (documentId !== null) {
+    // The in-memory store keeps _id as the plain id string, unlike MongoDB
+    matchers.push((org) => org._id === documentId)
+  }
+
+  return matchers
+}
+
+/**
+ * The in-memory equivalent of the MongoDB adapter's findPage filter, applied to
+ * raw stored documents — so `_id` rather than `id`. The shared criteria
+ * semantics live in helpers.js and the findPage contract tests hold the two
+ * implementations to the same behaviour.
+ *
+ * @param {import('./helpers.js').FindPageCriteria} criteria
+ * @returns {(org: import('./helpers.js').StoredOrganisation) => boolean} - true when
+ *   the organisation satisfies every criterion
+ */
+const buildFindPageMatcher = (criteria) => {
+  const {
+    search,
+    orgId,
+    registrationId,
+    registrationNumber,
+    accreditationId,
+    accreditationNumber
+  } = normaliseCriteria(criteria)
+
+  /** @type {Array<(org: import('./helpers.js').StoredOrganisation) => boolean>} */
+  const checks = []
+  if (search !== '') {
+    const pattern = new RegExp(escapeRegex(search), 'i')
+    checks.push((org) => pattern.test(org.companyDetails.name))
+  }
+  if (orgId !== '') {
+    const matchers = buildOrgIdMatchers(orgId)
+    checks.push((org) => matchers.some((matches) => matches(org)))
+  }
+  if (registrationId !== '') {
+    checks.push((org) =>
+      org.registrations.some((reg) => reg.id === registrationId)
+    )
+  }
+  if (registrationNumber !== '') {
+    const matchesNumber = anchoredMatcher(registrationNumber)
+    checks.push((org) =>
+      org.registrations.some((reg) => matchesNumber(reg.registrationNumber))
+    )
+  }
+  if (accreditationId !== '') {
+    checks.push((org) =>
+      org.accreditations.some((acc) => acc.id === accreditationId)
+    )
+  }
+  if (accreditationNumber !== '') {
+    const matchesNumber = anchoredMatcher(accreditationNumber)
+    checks.push((org) =>
+      org.accreditations.some((acc) => matchesNumber(acc.accreditationNumber))
+    )
+  }
+
+  return (org) => checks.every((check) => check(org))
 }
 
 const performFindPage =

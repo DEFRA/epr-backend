@@ -7,10 +7,12 @@ import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { errorCodes } from './enums/error-codes.js'
 import {
-  buildFindPageFilter,
+  anchoredPattern,
   createInitialStatusHistory,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
+  normaliseCriteria,
+  parseOrgIdCriterion,
   performFindAllForOverseasSitesAdminList,
   performFindPageForOrsAdminList,
   prepareForReplace
@@ -213,6 +215,84 @@ const performFindAllBySchemaVersion = (db) => async (schemaVersion) => {
     .find({ schemaVersion })
     .toArray()
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
+/** Matches no organisation, used when a criterion cannot be parsed. */
+const UNSATISFIABLE_FILTER = { _id: { $in: [] } }
+
+/**
+ * @param {string} value
+ * @returns {{ $regex: string, $options: string }} - anchored, case-insensitive
+ */
+const anchoredCaseInsensitive = (value) => ({
+  $regex: anchoredPattern(value),
+  $options: 'i'
+})
+
+/**
+ * @param {string} value
+ * @returns {object} - the organisation-id fragment, unsatisfiable when unparseable
+ */
+const buildOrgIdFilter = (value) => {
+  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
+  const branches = []
+  if (businessOrgId !== null) {
+    branches.push({ orgId: businessOrgId })
+  }
+  if (documentId !== null) {
+    branches.push({ _id: ObjectId.createFromHexString(documentId) })
+  }
+
+  return branches.length === 0 ? UNSATISFIABLE_FILTER : { $or: branches }
+}
+
+/**
+ * Builds the MongoDB filter for a findPage query. The in-memory adapter has its
+ * own equivalent; the shared criteria semantics live in helpers.js and the
+ * findPage contract tests hold the two implementations to the same behaviour.
+ *
+ * @param {import('./helpers.js').FindPageCriteria} criteria
+ * @returns {object} - a filter matching organisations satisfying every criterion
+ */
+const buildFindPageFilter = (criteria) => {
+  const {
+    search,
+    orgId,
+    registrationId,
+    registrationNumber,
+    accreditationId,
+    accreditationNumber
+  } = normaliseCriteria(criteria)
+
+  const conditions = []
+  if (search !== '') {
+    conditions.push({
+      'companyDetails.name': { $regex: escapeRegex(search), $options: 'i' }
+    })
+  }
+  if (orgId !== '') {
+    conditions.push(buildOrgIdFilter(orgId))
+  }
+  if (registrationId !== '') {
+    conditions.push({ 'registrations.id': registrationId })
+  }
+  if (registrationNumber !== '') {
+    conditions.push({
+      'registrations.registrationNumber':
+        anchoredCaseInsensitive(registrationNumber)
+    })
+  }
+  if (accreditationId !== '') {
+    conditions.push({ 'accreditations.id': accreditationId })
+  }
+  if (accreditationNumber !== '') {
+    conditions.push({
+      'accreditations.accreditationNumber':
+        anchoredCaseInsensitive(accreditationNumber)
+    })
+  }
+
+  return conditions.length === 0 ? {} : { $and: conditions }
 }
 
 const performFindPage =
