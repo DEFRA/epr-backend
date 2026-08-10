@@ -82,7 +82,7 @@
 
 /**
  * @typedef {AccreditationBase & {
- *  accreditationNumber?: string | null;
+ *  accreditationNumber: string | null;
  *  status: Extract<AccreditationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string
