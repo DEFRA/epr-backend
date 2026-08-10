@@ -1,3 +1,4 @@
+import { ACTIVE_ACCREDITATION_STATUSES } from '#domain/organisations/model.js'
 import {
   SEVERITY,
   createIssue,
@@ -9,6 +10,21 @@ import {
 
 const CODE = 'UNNUMBERED_ACCREDITATION_REF'
 const SEVERITY_LEVEL = SEVERITY.ERROR
+
+/**
+ * An accreditation is numbered only while approved or suspended, so a
+ * registration linked to one still awaiting a decision is the ordinary case.
+ * The status history is what separates the two: an accreditation that reached
+ * an active status was numbered at that point, and a number missing afterwards
+ * means the value was lost rather than never issued.
+ *
+ * @param {Accreditation} accreditation
+ * @returns {boolean}
+ */
+const hasBeenAccredited = (accreditation) =>
+  accreditation.statusHistory.some((entry) =>
+    ACTIVE_ACCREDITATION_STATUSES.has(entry.status)
+  )
 
 /**
  * @param {Accreditation} accreditation
@@ -33,7 +49,11 @@ const evaluate = (org) => {
         ? undefined
         : accreditationsById.get(reg.accreditationId)
 
-    if (!accreditation || isNumbered(accreditation)) {
+    if (
+      !accreditation ||
+      !hasBeenAccredited(accreditation) ||
+      isNumbered(accreditation)
+    ) {
       return []
     }
 
@@ -42,7 +62,7 @@ const evaluate = (org) => {
         code: CODE,
         severity: SEVERITY_LEVEL,
         target: registrationTarget(reg.id),
-        message: `Registration ${reg.id} references accreditation ${accreditation.id}, which carries no accreditation number`
+        message: `Registration ${reg.id} references accreditation ${accreditation.id}, which has been accredited but carries no valid accreditation number`
       })
     ]
   })

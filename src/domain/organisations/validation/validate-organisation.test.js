@@ -4,9 +4,18 @@ import { SEVERITY } from './issue.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 
+const accredited = (accreditation) => ({
+  statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }],
+  ...accreditation
+})
+
 const organisation = (registrations, accreditations) =>
   /** @type {Organisation} */ (
-    /** @type {unknown} */ ({ id: 'org-1', registrations, accreditations })
+    /** @type {unknown} */ ({
+      id: 'org-1',
+      registrations,
+      accreditations: accreditations.map(accredited)
+    })
   )
 
 describe('validateOrganisation', () => {
@@ -41,11 +50,17 @@ describe('validateOrganisation', () => {
     const org = organisation(
       [
         { id: 'reg-1', accreditationId: 'acc-missing', material: 'glass' },
-        { id: 'reg-1', accreditationId: 'acc-1', material: 'plastic' }
+        { id: 'reg-1', accreditationId: 'acc-1', material: 'plastic' },
+        { id: 'reg-2', accreditationId: 'acc-unnumbered', material: 'glass' }
       ],
       [
-        { id: 'acc-1', material: 'glass' },
-        { id: 'acc-orphan', material: 'glass' }
+        { id: 'acc-1', material: 'glass', accreditationNumber: 'EA-1234' },
+        { id: 'acc-orphan', material: 'glass', accreditationNumber: 'EA-5678' },
+        {
+          id: 'acc-unnumbered',
+          material: 'glass',
+          accreditationNumber: null
+        }
       ]
     )
 
@@ -65,8 +80,8 @@ describe('validateOrganisation', () => {
         { id: 'reg-2', accreditationId: 'acc-1', material: 'glass' }
       ],
       [
-        { id: 'acc-1', material: 'glass' },
-        { id: 'acc-1', material: 'glass' }
+        { id: 'acc-1', material: 'glass', accreditationNumber: 'EA-1234' },
+        { id: 'acc-1', material: 'glass', accreditationNumber: 'EA-1234' }
       ]
     )
 

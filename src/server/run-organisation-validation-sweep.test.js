@@ -208,4 +208,53 @@ describe('runOrganisationValidationSweep', () => {
       )
     })
   })
+
+  it('logs an UNNUMBERED_ACCREDITATION_REF issue when a registration is linked to an accredited accreditation that lost its number', async () => {
+    const accreditation = buildAccreditation({
+      accreditationNumber: null,
+      statusHistory: [
+        { status: 'created', updatedAt: '2024-01-01' },
+        { status: 'approved', updatedAt: '2024-02-01' }
+      ]
+    })
+    const registration = buildRegistration({
+      accreditationId: accreditation.id,
+      wasteProcessingType: accreditation.wasteProcessingType
+    })
+    const org = buildOrganisation({
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+    seedRepositoryWith([org])
+
+    await runOrganisationValidationSweep(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message: expect.stringContaining(
+        'code=UNNUMBERED_ACCREDITATION_REF severity=error'
+      )
+    })
+  })
+
+  it('leaves an accreditation still awaiting a decision unflagged', async () => {
+    const accreditation = buildAccreditation({
+      accreditationNumber: null,
+      statusHistory: [{ status: 'created', updatedAt: '2024-01-01' }]
+    })
+    const registration = buildRegistration({
+      accreditationId: accreditation.id,
+      wasteProcessingType: accreditation.wasteProcessingType
+    })
+    const org = buildOrganisation({
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+    seedRepositoryWith([org])
+
+    await runOrganisationValidationSweep(mockServer)
+
+    expect(logger.info).not.toHaveBeenCalledWith({
+      message: expect.stringContaining('code=UNNUMBERED_ACCREDITATION_REF')
+    })
+  })
 })
