@@ -1,4 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { runUnderLock } from './diagnostic-run.js'
 import {
   findPreCpaResubmissionReports,
   backfillPreCpaResubmissionReports,
@@ -209,28 +210,17 @@ export const runPreCpaResubmissionBackfill = async (server) => {
     return
   }
 
-  try {
-    const lock = await server.locker.lock(LOCK_NAME)
-    if (!lock) {
-      logger.info({
-        message: 'Unable to obtain lock, skipping pre-CPA resubmission'
-      })
-      return
-    }
-    try {
+  await runUnderLock({
+    locker: server.locker,
+    lockName: LOCK_NAME,
+    label: 'pre-CPA resubmission',
+    run: async () => {
       if (reportEnabled) {
         await runReport(server)
       }
       if (backfillEnabled) {
         await runBackfill(server)
       }
-    } finally {
-      await lock.free()
     }
-  } catch (error) {
-    logger.error({
-      err: error,
-      message: 'Failed to run pre-CPA resubmission'
-    })
-  }
+  })
 }

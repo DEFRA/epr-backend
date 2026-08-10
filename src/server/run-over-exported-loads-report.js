@@ -3,6 +3,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { log, runUnderLock } from './diagnostic-run.js'
 import {
   findOverExportedLoads,
   formatOverExportedLoadsFinding,
@@ -22,26 +23,6 @@ import {
 
 const LOCK_NAME = 'over-exported-loads-report'
 const LARGEST_REPORTED = 5
-
-/**
- * CDP indexes only an allowlisted set of ECS fields, so a figure logged as a
- * property is dropped at ingest. The figures therefore stay in the message;
- * `event.action` is what makes a line findable without a regex, and
- * `event.reference` ties it to the report it is about.
- *
- * @param {string} action
- * @param {string} message
- * @param {string} [reference]
- */
-const log = (action, message, reference) =>
-  logger.info({
-    message,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action,
-      ...(reference ? { reference } : {})
-    }
-  })
 
 /**
  * @param {OverExportedLoadsFinding[]} findings
@@ -152,24 +133,10 @@ export const runOverExportedLoadsReport = async (server) => {
     return
   }
 
-  try {
-    const lock = await server.locker.lock(LOCK_NAME)
-    if (!lock) {
-      log(
-        LOGGING_EVENT_ACTIONS.LOCK_ACQUISITION_FAILED,
-        'Unable to obtain lock, skipping over-exported loads report'
-      )
-      return
-    }
-    try {
-      await runReport(server)
-    } finally {
-      await lock.free()
-    }
-  } catch (error) {
-    logger.error({
-      err: error,
-      message: 'Failed to run over-exported loads report'
-    })
-  }
+  await runUnderLock({
+    locker: server.locker,
+    lockName: LOCK_NAME,
+    label: 'over-exported loads report',
+    run: () => runReport(server)
+  })
 }

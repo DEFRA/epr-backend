@@ -224,7 +224,11 @@ describe('runPreCpaResubmissionBackfill', () => {
         app.reportsRepository.findAllPeriodicReports
       ).not.toHaveBeenCalled()
       expect(logger.info).toHaveBeenCalledWith({
-        message: 'Unable to obtain lock, skipping pre-CPA resubmission'
+        message: 'Unable to obtain lock, skipping pre-CPA resubmission',
+        event: {
+          category: 'server',
+          action: 'lock_acquisition_failed'
+        }
       })
       expect(logger.error).not.toHaveBeenCalled()
     })

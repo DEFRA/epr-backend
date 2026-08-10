@@ -89,7 +89,11 @@ describe('runStaleIssuedTonnageReport', () => {
 
     expect(app.reportsRepository.findAllPeriodicReports).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
-      message: 'Unable to obtain lock, skipping stale issued tonnage report'
+      message: 'Unable to obtain lock, skipping stale issued tonnage report',
+      event: {
+        category: 'server',
+        action: 'lock_acquisition_failed'
+      }
     })
     expect(logger.error).not.toHaveBeenCalled()
   })

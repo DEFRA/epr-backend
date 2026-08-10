@@ -1,4 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { runUnderLock } from './diagnostic-run.js'
 import {
   findStaleIssuedTonnageReports,
   formatStaleIssuedTonnageFinding
@@ -53,23 +54,10 @@ export const runStaleIssuedTonnageReport = async (server) => {
     return
   }
 
-  try {
-    const lock = await server.locker.lock(LOCK_NAME)
-    if (!lock) {
-      logger.info({
-        message: 'Unable to obtain lock, skipping stale issued tonnage report'
-      })
-      return
-    }
-    try {
-      await runReport(server)
-    } finally {
-      await lock.free()
-    }
-  } catch (error) {
-    logger.error({
-      err: error,
-      message: 'Failed to run stale issued tonnage report'
-    })
-  }
+  await runUnderLock({
+    locker: server.locker,
+    lockName: LOCK_NAME,
+    label: 'stale issued tonnage report',
+    run: () => runReport(server)
+  })
 }

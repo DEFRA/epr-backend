@@ -1,8 +1,5 @@
-import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/event.js'
-import { logger } from '#common/helpers/logging/logger.js'
+import { LOGGING_EVENT_ACTIONS } from '#common/enums/event.js'
+import { log, runUnderLock } from './diagnostic-run.js'
 import {
   FINDING_KIND,
   findUnexportedTonnageReports,
@@ -36,27 +33,6 @@ const ACTION_BY_FINDING_KIND = Object.freeze({
   [FINDING_KIND.LOOKUP_FAILED]:
     LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_LOOKUP_FAILED
 })
-
-/**
- * CDP indexes only an allowlisted set of ECS fields, so a figure logged as a
- * property is dropped at ingest and cannot be aggregated in OpenSearch. The
- * figures therefore stay in the message and every breakdown is rolled up before
- * it is logged; `event.action` is what makes a line findable without a regex,
- * and `event.reference` ties it to the report it is about.
- *
- * @param {string} action
- * @param {string} message
- * @param {string} [reference]
- */
-const log = (action, message, reference) =>
-  logger.info({
-    message,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action,
-      ...(reference ? { reference } : {})
-    }
-  })
 
 /**
  * @param {UnexportedTonnageFinding[]} findings
@@ -189,24 +165,10 @@ export const runUnexportedTonnageReport = async (server) => {
     return
   }
 
-  try {
-    const lock = await server.locker.lock(LOCK_NAME)
-    if (!lock) {
-      log(
-        LOGGING_EVENT_ACTIONS.LOCK_ACQUISITION_FAILED,
-        'Unable to obtain lock, skipping unexported tonnage report'
-      )
-      return
-    }
-    try {
-      await runReport(server)
-    } finally {
-      await lock.free()
-    }
-  } catch (error) {
-    logger.error({
-      err: error,
-      message: 'Failed to run unexported tonnage report'
-    })
-  }
+  await runUnderLock({
+    locker: server.locker,
+    lockName: LOCK_NAME,
+    label: 'unexported tonnage report',
+    run: () => runReport(server)
+  })
 }
