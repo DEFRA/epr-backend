@@ -111,6 +111,9 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
         ],
         unapprovedOverseasSites: [],
         totalTonnageExported: 89.03,
+        // One January load reports 50t exported against 44t received. Its
+        // contribution is clamped to zero rather than credited back, so the
+        // other two loads alone make up this total.
         tonnageReceivedNotExported: 63.67,
         tonnageRefusedAtDestination: 50,
         tonnageStoppedDuringExport: 50,
@@ -130,8 +133,6 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
           }
         ]
       },
-      // One January load reports 50t exported against 44t received. Its
-      // contribution is clamped to zero, and the clamp is counted here.
       diagnostics: { wasteReceivedRecordsExcluded: 0 }
     })
   })
