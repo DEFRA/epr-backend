@@ -592,25 +592,6 @@ export const summariseUnexportedTonnageFindings = (findings) => {
 }
 
 /**
-/**
- * Scans every reviewable exporter monthly report across the estate and returns
- * the ones whose stored unexported tonnage disagrees with the corrected rule,
- * alongside those that cannot be recomputed at all. Read-only.
- *
- * A report is read individually after the estate-wide snapshot is taken, so one
- * of them going away under live traffic — or any transient read failure — is
- * expected rather than exceptional. Each is contained to its own finding: a
- * single failure must not cost the run every figure it has already computed,
- * since the diagnostic gets one pass per deploy.
- *
- * @param {{
- *   reportsRepository: ReportsRepository,
- *   organisationsRepository: OrganisationsRepository,
- *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
- * }} deps
- * @returns {Promise<{ scanned: number, findings: UnexportedTonnageFinding[] }>}
- */
-/**
  * @param {{
  *   reportsRepository: ReportsRepository,
  *   organisationsRepository: OrganisationsRepository,
@@ -644,6 +625,24 @@ const assessReportRow = async (deps, row) => {
   }
 }
 
+/**
+ * Scans every reviewable exporter monthly report across the estate and returns
+ * the ones whose stored unexported tonnage disagrees with the corrected rule,
+ * alongside those that cannot be recomputed at all. Read-only.
+ *
+ * A report is read individually after the estate-wide snapshot is taken, so one
+ * of them going away under live traffic - or any transient read failure - is
+ * expected rather than exceptional. Each is contained to its own finding: a
+ * single failure must not cost the run every figure it has already computed,
+ * since the diagnostic gets one pass per deploy.
+ *
+ * @param {{
+ *   reportsRepository: ReportsRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
+ * }} deps
+ * @returns {Promise<{ scanned: number, findings: UnexportedTonnageFinding[] }>}
+ */
 export const findUnexportedTonnageReports = async (deps) => {
   const periodicReports = await deps.reportsRepository.findAllPeriodicReports()
   const rows = findReviewableReportRows(periodicReports)
