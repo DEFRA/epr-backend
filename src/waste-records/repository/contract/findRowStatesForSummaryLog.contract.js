@@ -14,8 +14,8 @@ export const testFindRowStatesForSummaryLogBehaviour = (it) => {
   describe('findRowStatesForSummaryLog', () => {
     let repository
 
-    beforeEach((/** @type {*} */ { summaryLogRowStateRepository }) => {
-      repository = summaryLogRowStateRepository()
+    beforeEach((/** @type {*} */ { summaryLogRowStatesRepository }) => {
+      repository = summaryLogRowStatesRepository()
     })
 
     it('returns an empty list for a summary log with no row states', async () => {

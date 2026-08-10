@@ -68,7 +68,7 @@ const runReport = async (server) => {
   } = await findPreCpaResubmissionReports({
     reportsRepository: server.app.reportsRepository,
     summaryLogsRepository: server.app.summaryLogsRepository,
-    summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository,
+    summaryLogRowStatesRepository: server.app.summaryLogRowStatesRepository,
     organisationsRepository: server.app.organisationsRepository
   })
 
@@ -155,7 +155,7 @@ const runBackfill = async (server) => {
   } = await backfillPreCpaResubmissionReports({
     reportsRepository: server.app.reportsRepository,
     summaryLogsRepository: server.app.summaryLogsRepository,
-    summaryLogRowStateRepository: server.app.summaryLogRowStatesRepository,
+    summaryLogRowStatesRepository: server.app.summaryLogRowStatesRepository,
     organisationsRepository: server.app.organisationsRepository,
     systemLogsRepository: server.app.systemLogsRepository
   })

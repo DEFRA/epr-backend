@@ -49,7 +49,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
-/** @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js' */
+/** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
@@ -232,7 +232,7 @@ const markIgnoredByDateRange = (
  *   logger: TypedLogger,
  *   summaryLogExtractor: SummaryLogExtractor,
  *   organisationsRepository: OrganisationsRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   validateDataSyntax: (parsed: ParsedSummaryLog) => { issues: ValidationIssuesCollector, validatedData: ValidatedSummaryLog }
  * }} params
@@ -244,7 +244,7 @@ const performValidationChecks = async ({
   logger,
   summaryLogExtractor,
   organisationsRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   ledgerRepository,
   validateDataSyntax
 }) => {
@@ -305,7 +305,7 @@ const performValidationChecks = async ({
       summaryLog,
       validatedData,
       registration,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ledgerRepository
     })
 
@@ -496,7 +496,7 @@ const persistValidationResult = async ({
  *
  * @param {{
  *   ledgerRepository: WasteBalanceLedgerRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   summaryLog: SubmittedSummaryLog,
  *   registration: Registration | undefined
  * }} params
@@ -504,14 +504,14 @@ const persistValidationResult = async ({
  */
 const loadSubmittedRowStatesByKey = async ({
   ledgerRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   summaryLog,
   registration
 }) => {
   const submittedRowStates = await summaryLogRowStatesForRegistration({
     ...ledgerIdFor(summaryLog, registration),
     ledgerRepository,
-    summaryLogRowStateRepository
+    summaryLogRowStatesRepository
   })
 
   return new Map(
@@ -536,7 +536,7 @@ const classifyAndPersistResult = async ({
   meta,
   summaryLog,
   summaryLogsRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   ledgerRepository,
   version,
   reportsService,
@@ -559,7 +559,7 @@ const classifyAndPersistResult = async ({
 
   const submittedRowStatesByKey = await loadSubmittedRowStatesByKey({
     ledgerRepository,
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     summaryLog,
     registration
   })
@@ -595,7 +595,7 @@ const classifyAndPersistResult = async ({
  *   logger: TypedLogger,
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationsRepository: OrganisationsRepository,
- *   summaryLogRowStateRepository: SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
  *   overseasSitesRepository: OverseasSitesRepository,
@@ -607,7 +607,7 @@ export const createSummaryLogsValidator = ({
   logger,
   summaryLogsRepository,
   organisationsRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   ledgerRepository,
   reportsService,
   overseasSitesRepository,
@@ -641,7 +641,7 @@ export const createSummaryLogsValidator = ({
         logger,
         summaryLogExtractor,
         organisationsRepository,
-        summaryLogRowStateRepository,
+        summaryLogRowStatesRepository,
         ledgerRepository,
         validateDataSyntax
       })
@@ -676,7 +676,7 @@ export const createSummaryLogsValidator = ({
       meta,
       summaryLog,
       summaryLogsRepository,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       ledgerRepository,
       version,
       reportsService,

@@ -1,8 +1,8 @@
-import { createInMemorySummaryLogRowStateRepository } from './inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from './inmemory.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 
 export function createInMemorySummaryLogRowStatesRepositoryPlugin() {
-  const repository = createInMemorySummaryLogRowStateRepository()()
+  const repository = createInMemorySummaryLogRowStatesRepository()()
 
   return {
     name: 'summaryLogRowStatesRepository',

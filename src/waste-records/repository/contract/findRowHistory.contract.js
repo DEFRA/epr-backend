@@ -11,8 +11,8 @@ export const testFindRowHistoryBehaviour = (it) => {
   describe('findRowHistory', () => {
     let repository
 
-    beforeEach((/** @type {*} */ { summaryLogRowStateRepository }) => {
-      repository = summaryLogRowStateRepository()
+    beforeEach((/** @type {*} */ { summaryLogRowStatesRepository }) => {
+      repository = summaryLogRowStatesRepository()
     })
 
     it('returns an empty list for a row that has never committed', async () => {

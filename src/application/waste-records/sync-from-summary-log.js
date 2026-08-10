@@ -201,7 +201,7 @@ const updateWasteBalances = async ({
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @returns {Promise<{ created: number, updated: number }>}
  */
 const countRecordChanges = async ({
@@ -210,12 +210,12 @@ const countRecordChanges = async ({
   overseasSites,
   ledgerId,
   ledgerRepository,
-  summaryLogRowStateRepository
+  summaryLogRowStatesRepository
 }) => {
   const previousRowStates = await summaryLogRowStatesForRegistration({
     ...ledgerId,
     ledgerRepository,
-    summaryLogRowStateRepository
+    summaryLogRowStatesRepository
   })
 
   const submittedRowStatesByKey = new Map(
@@ -259,7 +259,7 @@ const countRecordChanges = async ({
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} params.summaryLogRowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {ReturnType<typeof createWasteBalanceService>} params.wasteBalanceService
  */
 const commitStateAndBalance = async ({
@@ -270,11 +270,11 @@ const commitStateAndBalance = async ({
   overseasSites,
   parsedData,
   user,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   wasteBalanceService
 }) => {
   await writeSummaryLogRowStates({
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
     accreditation,
     ledgerId: {
@@ -323,7 +323,7 @@ const commitStateAndBalance = async ({
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} dependencies.wasteBalanceService - The waste balance application service
  * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} dependencies.summaryLogRowStateRepository - The summary-log row states repository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} dependencies.summaryLogRowStatesRepository - The summary-log row states repository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} dependencies.ledgerRepository - The ledger repository, read to classify created/updated against the committed head
  * @param {TypedLogger} dependencies.logger - Logger forwarded to extractor for trace correlation
  * @returns {Function} A function that accepts a summary log and returns a Promise
@@ -334,7 +334,7 @@ export const syncFromSummaryLog = (dependencies) => {
     wasteBalanceService,
     organisationsRepository,
     overseasSitesRepository,
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     ledgerRepository,
     logger
   } = dependencies
@@ -400,7 +400,7 @@ export const syncFromSummaryLog = (dependencies) => {
         accreditationId: accreditationId ?? null
       },
       ledgerRepository,
-      summaryLogRowStateRepository
+      summaryLogRowStatesRepository
     })
 
     // 6. Commit per-row state for every submission and the balance for
@@ -413,7 +413,7 @@ export const syncFromSummaryLog = (dependencies) => {
       overseasSites,
       parsedData,
       user,
-      summaryLogRowStateRepository,
+      summaryLogRowStatesRepository,
       wasteBalanceService
     })
 

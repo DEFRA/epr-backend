@@ -51,13 +51,13 @@ export const toWasteRecordState = ({
  * stay consistent with it), this is the whole read;
  * `summaryLogRowStatesForRegistration` composes it with the head resolution.
  *
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} summaryLogRowStateRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
  * @param {string | null} head
  * @returns {Promise<WasteRecordState[]>}
  */
 export const wasteRecordStatesForHead = async (
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   ledgerId,
   head
 ) => {
@@ -65,7 +65,7 @@ export const wasteRecordStatesForHead = async (
     return []
   }
   const summaryLogRowStates =
-    await summaryLogRowStateRepository.findRowStatesForSummaryLog(
+    await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
       ledgerId,
       head
     )
@@ -84,7 +84,7 @@ export const wasteRecordStatesForHead = async (
 /**
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & {
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
- *   summaryLogRowStateRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository
+ *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository
  * }} RegistrationRowStateContext
  */
 
@@ -99,7 +99,7 @@ export const wasteRecordStatesForHead = async (
  */
 export const latestSubmittedSummaryLogRowStates = async ({
   ledgerRepository,
-  summaryLogRowStateRepository,
+  summaryLogRowStatesRepository,
   organisationId,
   registrationId,
   accreditationId
@@ -113,7 +113,7 @@ export const latestSubmittedSummaryLogRowStates = async ({
   }
 
   const wasteRecordStates = await wasteRecordStatesForHead(
-    summaryLogRowStateRepository,
+    summaryLogRowStatesRepository,
     ledgerId,
     summaryLog.summaryLogId
   )

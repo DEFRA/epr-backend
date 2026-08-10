@@ -22,7 +22,7 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  *   uploadsRepository: import('#domain/uploads/repository/port.js').UploadsRepository,
  *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository,
  *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
- *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
  *   wasteBalanceService: ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>,
  *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,

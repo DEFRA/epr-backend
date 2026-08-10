@@ -6,7 +6,7 @@
  * @import {LockManager} from 'mongo-locks'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
  * @import {ReportsRepository} from '#reports/repository/port.js'
- * @import {SummaryLogRowStateRepository} from '#waste-records/repository/port.js'
+ * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
  * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService
@@ -124,7 +124,7 @@
  * @typedef {{
  *   organisationsRepository: OrganisationsRepository,
  *   reportsRepository: ReportsRepository,
- *   summaryLogRowStatesRepository: SummaryLogRowStateRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   [key: string]: unknown
  * }} ServerApp
  */
