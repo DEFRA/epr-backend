@@ -225,15 +225,21 @@ describe('overExportedLoads', () => {
       expect(findings).toHaveLength(1)
     })
 
-    it('reports nothing for a report with no source summary log', async () => {
+    it('records a report with no source summary log as unreadable, not as a clean scan', async () => {
       const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
       deps.reportsRepository.findReportById.mockResolvedValue({
         id: 'report-1',
         source: { summaryLogId: null }
       })
 
-      const { findings } = await findOverExportedLoads(deps)
+      const { unreadable, findings } = await findOverExportedLoads(deps)
 
+      expect(unreadable).toStrictEqual([
+        {
+          reportId: 'report-1',
+          reason: 'no source summary log recorded on the report'
+        }
+      ])
       expect(findings).toStrictEqual([])
     })
   })

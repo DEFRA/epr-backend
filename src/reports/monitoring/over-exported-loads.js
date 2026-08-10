@@ -46,9 +46,12 @@ import { loadSourceRowStates } from './source-row-states.js'
  *   net: number
  * }} OverExportedLoadsFinding
  *
- * A report in scope that could not be read. Kept apart from the findings: it
- * says nothing about the exporter's data, and without it a systematic failure
- * reads the same as a clean estate.
+ * A report in scope whose loads could not be read: the source log is not
+ * recorded, nothing resolves under the registration's ledgers, or the read
+ * itself failed. All three subtract from the run's coverage in the same way, so
+ * they share one bucket and the reason names which. Kept apart from the
+ * findings: it says nothing about the exporter's data, and without it a
+ * systematic failure reads the same as a clean estate.
  *
  * @typedef {{ reportId: string, reason: string }} UnreadableReport
  */
@@ -155,7 +158,13 @@ const assessReportRow = async (deps, row) => {
       return { inScope: false }
     }
     if ('unresolved' in sourceRowStates) {
-      return { inScope: true }
+      return {
+        inScope: true,
+        unreadable: {
+          reportId: row.reportId,
+          reason: sourceRowStates.unresolved
+        }
+      }
     }
 
     const inPeriod = loadsIn(sourceRowStates.states, row.startDate, row.endDate)
