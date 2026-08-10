@@ -76,6 +76,11 @@ import { loadSourceRowStates } from './source-row-states.js'
  * }} MismatchFinding
  *
  * @typedef {FindingIdentity & {
+ *   kind: typeof FINDING_KIND.FIGURE_MISSING,
+ *   reason: string
+ * }} FigureMissingFinding
+ *
+ * @typedef {FindingIdentity & {
  *   kind: typeof FINDING_KIND.SOURCE_MISSING,
  *   reason: string
  * }} SourceMissingFinding
@@ -91,6 +96,7 @@ import { loadSourceRowStates } from './source-row-states.js'
  * }} LookupFailedFinding
  *
  * @typedef {MismatchFinding
+ *   | FigureMissingFinding
  *   | SourceMissingFinding
  *   | RecomputeFailedFinding
  *   | LookupFailedFinding} UnexportedTonnageFinding
@@ -106,27 +112,31 @@ import { loadSourceRowStates } from './source-row-states.js'
  *   endDate: string,
  *   reportId: string,
  *   reportStatus: string,
- *   storedUnexported: number
+ *   storedUnexported: number | null
  * }} ReviewableReportRow
  */
 
 /**
  * What a finding says about its report: the stored figure disagrees with the
- * corrected rule, the source rows are not there to recompute from, they were
- * resolved but could not be read as tonnages, or reading them failed outright.
+ * corrected rule, there is no stored figure to disagree, the source rows are not
+ * there to recompute from, they were resolved but could not be read as tonnages,
+ * or reading them failed outright.
  *
  * The last is kept apart from the others because it says nothing about the
- * exporter's data — a Mongo timeout or a report deleted mid-scan is a fact
+ * exporter's data - a Mongo timeout or a report deleted mid-scan is a fact
  * about the run, and a re-run may well resolve it. Folding those into
  * `SOURCE_MISSING` would inflate the population the business is told it cannot
  * account for.
  */
 export const FINDING_KIND = Object.freeze({
   MISMATCH: 'mismatch',
+  FIGURE_MISSING: 'figure-missing',
   SOURCE_MISSING: 'source-missing',
   RECOMPUTE_FAILED: 'recompute-failed',
   LOOKUP_FAILED: 'lookup-failed'
 })
+
+export const NO_STORED_FIGURE = 'no unexported tonnage stored on the report'
 
 /** @typedef {(typeof FINDING_KIND)[keyof typeof FINDING_KIND]} FindingKind */
 
@@ -149,14 +159,18 @@ const TONNAGE_RECEIVED_FIELD = 'TONNAGE_RECEIVED_FOR_EXPORT'
 const TONNAGE_EXPORTED_FIELD = 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
 
 /**
- * The monthly reports this diagnostic reviews, flattened out of the
- * estate-wide periodic report groupings.
+ * The monthly reports both diagnostics review, flattened out of the estate-wide
+ * periodic report groupings.
  *
  * Only monthly reports are read, which is what confines the population to
- * accredited exporters: a registration reports monthly once it holds an
- * accreditation number and quarterly before that, so a registered-only
- * exporter's hand-typed figure only ever lands on a quarterly report. A
- * reprocessor has no export activity at all, and its figure reads as null.
+ * reports made under an accreditation: a registration reports monthly once it
+ * holds an accreditation number and quarterly before that, and the cadence is
+ * checked against the accreditation at submission.
+ *
+ * A missing stored figure does not exclude a report. Scope is the operator
+ * category's to decide, and a report with nothing stored is itself worth
+ * counting; dropping it here would hide it from both diagnostics, one of which
+ * never reads the figure at all.
  *
  * @param {PeriodicReport[]} periodicReports
  * @returns {ReviewableReportRow[]}
@@ -170,9 +184,6 @@ export const findReviewableReportRows = (periodicReports) =>
       }
       const storedUnexported =
         current.exportActivity?.tonnageReceivedNotExported
-      if (isNil(storedUnexported)) {
-        return []
-      }
       return [
         {
           organisationId,
@@ -183,7 +194,7 @@ export const findReviewableReportRows = (periodicReports) =>
           endDate: periodInfo.endDate,
           reportId: current.id,
           reportStatus: current.status,
-          storedUnexported
+          storedUnexported: isNil(storedUnexported) ? null : storedUnexported
         }
       ]
     })
@@ -331,8 +342,12 @@ const lookupFailed = (row, reason) => ({
 
 /**
  * Compares a report's stored figure against a fresh recomputation under the
- * corrected rule. Returns null when they already agree — the report the fix
+ * corrected rule. Returns null when they already agree - the report the fix
  * would leave untouched.
+ *
+ * A report with nothing stored is reported before anything is recomputed: there
+ * is no figure to correct, so it is a gap in the data rather than a
+ * miscalculation of it.
  *
  * `sourceRowStates` carries a reason instead of rows when the report's source
  * rows are not there, which is the one case a backfill could not correct on its
@@ -344,6 +359,14 @@ const lookupFailed = (row, reason) => ({
  * @returns {UnexportedTonnageFinding | null}
  */
 export const diagnoseReportRow = (row, sourceRowStates) => {
+  if (row.storedUnexported === null) {
+    return {
+      kind: FINDING_KIND.FIGURE_MISSING,
+      ...identityOf(row),
+      reason: NO_STORED_FIGURE
+    }
+  }
+
   if ('unresolved' in sourceRowStates) {
     return {
       kind: FINDING_KIND.SOURCE_MISSING,
@@ -546,6 +569,7 @@ export const largestUnexportedTonnageDeltas = (findings, limit) =>
  * @param {UnexportedTonnageFinding[]} findings
  * @returns {{
  *   mismatches: number,
+ *   figureMissing: number,
  *   sourceMissing: number,
  *   recomputeFailed: number,
  *   lookupFailed: number,
@@ -574,6 +598,7 @@ export const summariseUnexportedTonnageFindings = (findings) => {
 
   return {
     mismatches: mismatches.length,
+    figureMissing: countOf(FINDING_KIND.FIGURE_MISSING),
     sourceMissing: countOf(FINDING_KIND.SOURCE_MISSING),
     recomputeFailed: countOf(FINDING_KIND.RECOMPUTE_FAILED),
     lookupFailed: countOf(FINDING_KIND.LOOKUP_FAILED),

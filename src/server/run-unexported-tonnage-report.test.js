@@ -185,7 +185,8 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'unexported_tonnage_summary',
-        'Unexported tonnage: scanned 0, mismatches 0, source-missing 0, ' +
+        'Unexported tonnage: scanned 0, mismatches 0, figure-missing 0, ' +
+          'source-missing 0, ' +
           'recompute-failed 0, lookup-failed 0, affected exporters 0 across 0 organisations, ' +
           'unresolved exporters 0, ' +
           'rows 0 in period / 0 miscounted / 0 unexported / 0 over-exported / 0 missing received, ' +
@@ -213,7 +214,8 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'unexported_tonnage_summary',
-        'Unexported tonnage: scanned 1, mismatches 1, source-missing 0, ' +
+        'Unexported tonnage: scanned 1, mismatches 1, figure-missing 0, ' +
+          'source-missing 0, ' +
           'recompute-failed 0, lookup-failed 0, affected exporters 1 across 1 organisations, ' +
           'unresolved exporters 0, ' +
           'rows 1 in period / 0 miscounted / 1 unexported / 0 over-exported / 0 missing received, ' +
@@ -232,7 +234,8 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'unexported_tonnage_summary',
-        'Unexported tonnage: scanned 1, mismatches 1, source-missing 0, ' +
+        'Unexported tonnage: scanned 1, mismatches 1, figure-missing 0, ' +
+          'source-missing 0, ' +
           'recompute-failed 0, lookup-failed 0, affected exporters 1 across 1 organisations, ' +
           'unresolved exporters 0, ' +
           'rows 1 in period / 1 miscounted / 1 unexported / 0 over-exported / 0 missing received, ' +
@@ -388,7 +391,8 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'unexported_tonnage_summary',
-        'Unexported tonnage: scanned 3, mismatches 3, source-missing 0, ' +
+        'Unexported tonnage: scanned 3, mismatches 3, figure-missing 0, ' +
+          'source-missing 0, ' +
           'recompute-failed 0, lookup-failed 0, affected exporters 2 across 2 organisations, ' +
           'unresolved exporters 0, ' +
           'rows 3 in period / 0 miscounted / 3 unexported / 0 over-exported / 0 missing received, ' +
@@ -420,7 +424,8 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'unexported_tonnage_summary',
-        'Unexported tonnage: scanned 2, mismatches 1, source-missing 0, ' +
+        'Unexported tonnage: scanned 2, mismatches 1, figure-missing 0, ' +
+          'source-missing 0, ' +
           'recompute-failed 0, lookup-failed 1, ' +
           'affected exporters 1 across 1 organisations, ' +
           'unresolved exporters 1, ' +

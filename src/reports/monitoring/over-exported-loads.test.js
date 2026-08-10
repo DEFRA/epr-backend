@@ -30,13 +30,25 @@ const receivedRow = (
   }
 })
 
+/**
+ * @param {{
+ *   organisationId?: string,
+ *   registrationId?: string,
+ *   reportId?: string,
+ *   period?: number,
+ *   startDate?: string,
+ *   endDate?: string,
+ *   storedUnexported?: number | null
+ * }} [options]
+ */
 const monthlyReport = ({
   organisationId = 'org-1',
   registrationId = 'reg-1',
   reportId = 'report-1',
   period = 2,
   startDate = '2026-02-01',
-  endDate = '2026-02-28'
+  endDate = '2026-02-28',
+  storedUnexported = 0
 } = {}) => ({
   organisationId,
   registrationId,
@@ -49,7 +61,7 @@ const monthlyReport = ({
         current: {
           id: reportId,
           status: 'submitted',
-          exportActivity: { tonnageReceivedNotExported: 0 }
+          exportActivity: { tonnageReceivedNotExported: storedUnexported }
         },
         previousSubmissions: []
       }
@@ -116,6 +128,18 @@ describe('overExportedLoads', () => {
           net: -2
         }
       ])
+    })
+
+    it('finds a load on a report carrying no stored unexported figure, which this scan never reads', async () => {
+      const deps = estate(
+        [monthlyReport({ storedUnexported: null })],
+        [receivedRow('row-1', 10, 12)]
+      )
+
+      const { scanned, findings } = await findOverExportedLoads(deps)
+
+      expect(scanned).toBe(1)
+      expect(findings).toHaveLength(1)
     })
 
     it('reports nothing for a load exporting exactly what it received', async () => {

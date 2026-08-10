@@ -27,6 +27,8 @@ const LARGEST_DELTAS_REPORTED = 5
  */
 const ACTION_BY_FINDING_KIND = Object.freeze({
   [FINDING_KIND.MISMATCH]: LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_MISMATCH,
+  [FINDING_KIND.FIGURE_MISSING]:
+    LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_FIGURE_MISSING,
   [FINDING_KIND.SOURCE_MISSING]:
     LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_SOURCE_MISSING,
   [FINDING_KIND.RECOMPUTE_FAILED]:
@@ -101,6 +103,7 @@ const logBreakdowns = (findings) => {
 const logSummary = (scanned, findings) => {
   const {
     mismatches,
+    figureMissing,
     sourceMissing,
     recomputeFailed,
     lookupFailed,
@@ -120,6 +123,7 @@ const logSummary = (scanned, findings) => {
   log(
     LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_SUMMARY,
     `Unexported tonnage: scanned ${scanned}, mismatches ${mismatches}, ` +
+      `figure-missing ${figureMissing}, ` +
       `source-missing ${sourceMissing}, recompute-failed ${recomputeFailed}, ` +
       `lookup-failed ${lookupFailed}, ` +
       `affected exporters ${affectedExporters} across ` +

@@ -138,29 +138,21 @@ describe('unexported-tonnage', () => {
       }
     )
 
-    it('excludes a registered-only exporter, whose figure is entered by hand and stored as null', () => {
-      const rows = findReviewableReportRows([
-        basePeriodicReport({
-          current: {
-            id: 'report-1',
-            status: 'submitted',
-            exportActivity: { tonnageReceivedNotExported: null }
-          }
-        })
-      ])
+    it.each([
+      ['a stored figure of null', { tonnageReceivedNotExported: null }],
+      ['no export activity at all', undefined]
+    ])(
+      'includes a report with %s, leaving scope to the gate',
+      (_case, exportActivity) => {
+        const rows = findReviewableReportRows([
+          basePeriodicReport({
+            current: { id: 'report-1', status: 'submitted', exportActivity }
+          })
+        ])
 
-      expect(rows).toStrictEqual([])
-    })
-
-    it('excludes a reprocessor, which has no export activity at all', () => {
-      const rows = findReviewableReportRows([
-        basePeriodicReport({
-          current: { id: 'report-1', status: 'submitted' }
-        })
-      ])
-
-      expect(rows).toStrictEqual([])
-    })
+        expect(rows).toStrictEqual([buildRow({ storedUnexported: null })])
+      }
+    )
 
     it('excludes a report in a status the fix would never regenerate', () => {
       const rows = findReviewableReportRows([
@@ -507,6 +499,11 @@ describe('unexported-tonnage', () => {
           rowsUnexported: 2
         }),
         {
+          kind: 'figure-missing',
+          organisationId: 'org-6',
+          registrationId: 'reg-7'
+        },
+        {
           kind: 'source-missing',
           organisationId: 'org-3',
           registrationId: 'reg-4'
@@ -529,12 +526,13 @@ describe('unexported-tonnage', () => {
 
       expect(summary).toStrictEqual({
         mismatches: 3,
+        figureMissing: 1,
         sourceMissing: 1,
         recomputeFailed: 1,
         lookupFailed: 1,
         affectedExporters: 3,
         affectedOrganisations: 2,
-        unresolvedExporters: 3,
+        unresolvedExporters: 4,
         rowsInPeriod: 8,
         rowsUnexported: 6,
         rowsOverExported: 1,
@@ -891,6 +889,25 @@ describe('unexported-tonnage', () => {
           reason: 'no rows found under the registration ledgers'
         }
       ])
+    })
+
+    it('reports a monthly report carrying no stored figure, which nothing can be compared against', async () => {
+      const deps = buildDeps({
+        periodicReports: [submittedFebReport(null)]
+      })
+
+      const { scanned, findings } = await scan(deps)
+
+      expect({ scanned, findings }).toStrictEqual({
+        scanned: 1,
+        findings: [
+          {
+            kind: 'figure-missing',
+            ...FEB_2026_IDENTITY,
+            reason: 'no unexported tonnage stored on the report'
+          }
+        ]
+      })
     })
 
     it('reports a failed registration lookup as a failure, without counting it in scope', async () => {

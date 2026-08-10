@@ -41,6 +41,7 @@ export const LOGGING_EVENT_ACTIONS = {
   REPORT_RESPONSE_SCHEMA_VIOLATION: 'report_response_schema_violation',
   LEGACY_STALE_SHAPE_NORMALISED: 'legacy_stale_shape_normalised',
   UNEXPORTED_TONNAGE_MISMATCH: 'unexported_tonnage_mismatch',
+  UNEXPORTED_TONNAGE_FIGURE_MISSING: 'unexported_tonnage_figure_missing',
   UNEXPORTED_TONNAGE_SOURCE_MISSING: 'unexported_tonnage_source_missing',
   UNEXPORTED_TONNAGE_RECOMPUTE_FAILED: 'unexported_tonnage_recompute_failed',
   UNEXPORTED_TONNAGE_LOOKUP_FAILED: 'unexported_tonnage_lookup_failed',
