@@ -15,13 +15,7 @@ vi.mock(
 )
 
 const startMongo = async () => {
-  await setupMongo(
-    /** @type {*} */ ({
-      binary: { version: 'latest' },
-      serverOptions: {},
-      autoStart: false
-    })
-  )
+  await setupMongo()
   process.env.MONGO_URI = globalThis.__MONGO_URI__
 }
 
