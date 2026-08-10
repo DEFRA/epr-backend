@@ -12,6 +12,7 @@ import {
   validateAccreditationLinkExists,
   validateAccreditationLinkMatches,
   validateAccreditationLinkUniqueness,
+  validateAccreditationNumbersRetained,
   validateApprovals
 } from './schema/helpers.js'
 import {
@@ -171,11 +172,51 @@ function prepareRegAccForReplace(validated, existing) {
     assertAccreditationStatusTransitionValid,
     cascadeCancelledIds
   )
+  validateAccreditationNumbersRetained(accreditations)
   return { registrations, accreditations }
 }
 
+/**
+ * A registration or accreditation carries its status only as a derived field,
+ * and the update schemas accept it as optional. The requiredness of a number,
+ * a validity date and a reprocessing type is conditional on that status, so an
+ * update that omits it resolves every one of them to the optional arm, where
+ * the schema default writes null over the stored value. Supplying the stored
+ * status keeps the conditions keyed to the record as it stands.
+ *
+ * @template {{ id: string, status?: string }} T
+ * @param {Array<{ id: string, status?: string }>} existingItems
+ * @param {T[] | undefined} itemUpdates
+ * @returns {T[] | undefined}
+ */
+const withStatusFromExisting = (existingItems, itemUpdates) => {
+  if (!itemUpdates) {
+    return itemUpdates
+  }
+
+  const existingById = new Map(existingItems.map((item) => [item.id, item]))
+
+  return itemUpdates.map((item) => ({
+    ...item,
+    status: item.status ?? existingById.get(item.id)?.status
+  }))
+}
+
 export const prepareForReplace = (existing, updates) => {
-  const validated = validateOrganisationUpdate(updates, existing)
+  const validated = validateOrganisationUpdate(
+    {
+      ...updates,
+      registrations: withStatusFromExisting(
+        existing.registrations,
+        updates.registrations
+      ),
+      accreditations: withStatusFromExisting(
+        existing.accreditations,
+        updates.accreditations
+      )
+    },
+    existing
+  )
   const { registrations, accreditations } = prepareRegAccForReplace(
     validated,
     existing

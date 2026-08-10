@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import {
   ACCREDITATION_STATUS,
+  ACTIVE_ACCREDITATION_STATUSES,
   REGISTRATION_STATUS,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
@@ -328,4 +329,33 @@ export const validateImmutableFields = (fields) => (value, helpers) => {
   }
 
   return value
+}
+
+/**
+ * A number is issued when an accreditation is granted and the status it is
+ * granted into is the only state that requires one, so an accreditation which
+ * leaves that state can otherwise be saved without the number it was issued.
+ * It keeps its PRNs, which carry the number forward, so the reports that join
+ * through them fail on the missing value.
+ *
+ * @param {Array<{ id: string, accreditationNumber?: string | null, statusHistory: Array<{ status: string }> }>} accreditations
+ */
+export function validateAccreditationNumbersRetained(accreditations) {
+  /** @type {ReadonlySet<string>} */
+  const activeStatuses = ACTIVE_ACCREDITATION_STATUSES
+
+  const unnumbered = accreditations.filter(
+    (acc) =>
+      acc.statusHistory.some((entry) => activeStatuses.has(entry.status)) &&
+      typeof acc.accreditationNumber !== 'string'
+  )
+
+  if (unnumbered.length === 0) {
+    return
+  }
+
+  const ids = unnumbered.map((acc) => acc.id).join(', ')
+  throw Boom.badData(
+    `Accreditations with id ${ids} have been accredited and cannot lose their accreditation number`
+  )
 }
