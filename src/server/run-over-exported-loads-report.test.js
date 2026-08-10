@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { buildExporterRegistration } from '#reports/monitoring/monitoring-test-helpers.js'
 import { runOverExportedLoadsReport } from './run-over-exported-loads-report.js'
 
 /**
@@ -63,7 +64,7 @@ const estateApp = (periodicReports, rowStates) => ({
     }))
   },
   organisationsRepository: {
-    findRegistrationById: vi.fn().mockResolvedValue({ accreditationId: null })
+    findRegistrationById: vi.fn().mockResolvedValue(buildExporterRegistration())
   },
   summaryLogRowStatesRepository: {
     findRowStatesForSummaryLog: vi.fn().mockResolvedValue(rowStates)

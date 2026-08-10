@@ -10,8 +10,10 @@ import {
   summariseUnexportedTonnageByStatus,
   summariseUnexportedTonnageFindings
 } from './unexported-tonnage.js'
+import { buildExporterRegistration } from './monitoring-test-helpers.js'
 
 /**
+ * @import { Registration } from '#domain/organisations/registration.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
  * @import { UnexportedTonnageFinding, ReviewableReportRow } from './unexported-tonnage.js'
@@ -758,9 +760,9 @@ describe('unexported-tonnage', () => {
         id: 'report-1',
         source: { summaryLogId: 'log-1' }
       }),
-      registration = /** @type {{ accreditationId: string } | null} */ ({
-        accreditationId: 'acc-1'
-      }),
+      registration = /** @type {Registration | null} */ (
+        buildExporterRegistration({ accreditationId: 'acc-1' })
+      ),
       rowStates = [buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 12 })]
     } = {}) => ({
       reportsRepository: {
@@ -834,14 +836,14 @@ describe('unexported-tonnage', () => {
       )
     })
 
-    it('resolves rows under the registered-only ledger alone when no accreditation is on the registration', async () => {
-      const deps = buildDeps({ registration: null })
+    it('reads the registered-only ledger alongside the accredited one, so rows written before accreditation still resolve', async () => {
+      const deps = buildDeps()
 
-      const { findings } = await scan(deps)
+      await scan(deps)
 
       expect(
         deps.summaryLogRowStatesRepository.findRowStatesForSummaryLog
-      ).toHaveBeenCalledExactlyOnceWith(
+      ).toHaveBeenCalledWith(
         {
           organisationId: 'org-1',
           registrationId: 'reg-1',
@@ -849,7 +851,29 @@ describe('unexported-tonnage', () => {
         },
         'log-1'
       )
-      expect(findings).toStrictEqual([mismatch({ recomputed: 12, delta: 12 })])
+    })
+
+    it.each([
+      ['a registration that cannot be resolved', null],
+      [
+        'a reprocessor',
+        buildExporterRegistration({ wasteProcessingType: 'reprocessor' })
+      ],
+      [
+        'a registered-only exporter',
+        buildExporterRegistration({ accreditationStatus: null })
+      ],
+      [
+        'an exporter whose accreditation was cancelled',
+        buildExporterRegistration({ accreditationStatus: 'cancelled' })
+      ]
+    ])('does not scan %s', async (_case, registration) => {
+      const deps = buildDeps({ registration })
+
+      const { scanned, findings } = await scan(deps)
+
+      expect(scanned).toBe(0)
+      expect(findings).toStrictEqual([])
     })
 
     it('marks a report that records no source summary log', async () => {

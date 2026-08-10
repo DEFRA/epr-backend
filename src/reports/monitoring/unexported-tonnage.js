@@ -330,7 +330,7 @@ const identityOf = (row) => ({
  * causes they are looking at.
  *
  * @param {ReviewableReportRow} row
- * @param {SourceRowStates} sourceRowStates
+ * @param {Exclude<SourceRowStates, { outOfScope: string }>} sourceRowStates
  * @returns {UnexportedTonnageFinding | null}
  */
 export const diagnoseReportRow = (row, sourceRowStates) => {
@@ -600,28 +600,50 @@ export const summariseUnexportedTonnageFindings = (findings) => {
  * }} deps
  * @returns {Promise<{ scanned: number, findings: UnexportedTonnageFinding[] }>}
  */
+/**
+ * @param {{
+ *   reportsRepository: ReportsRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
+ * }} deps
+ * @param {ReviewableReportRow} row
+ * @returns {Promise<{
+ *   inScope: boolean,
+ *   finding?: UnexportedTonnageFinding | null
+ * }>}
+ */
+const assessReportRow = async (deps, row) => {
+  try {
+    const sourceRowStates = await loadSourceRowStates(deps, row)
+
+    return 'outOfScope' in sourceRowStates
+      ? { inScope: false }
+      : { inScope: true, finding: diagnoseReportRow(row, sourceRowStates) }
+  } catch (error) {
+    return {
+      inScope: true,
+      finding: {
+        kind: FINDING_KIND.LOOKUP_FAILED,
+        ...identityOf(row),
+        reason: /** @type {Error} */ (error).message
+      }
+    }
+  }
+}
+
 export const findUnexportedTonnageReports = async (deps) => {
   const periodicReports = await deps.reportsRepository.findAllPeriodicReports()
   const rows = findReviewableReportRows(periodicReports)
 
-  const findings = []
+  const outcomes = []
   for (const row of rows) {
-    try {
-      const finding = diagnoseReportRow(
-        row,
-        await loadSourceRowStates(deps, row)
-      )
-      if (finding) {
-        findings.push(finding)
-      }
-    } catch (error) {
-      findings.push({
-        kind: FINDING_KIND.LOOKUP_FAILED,
-        ...identityOf(row),
-        reason: /** @type {Error} */ (error).message
-      })
-    }
+    outcomes.push(await assessReportRow(deps, row))
   }
 
-  return { scanned: rows.length, findings }
+  const inScope = outcomes.filter(({ inScope }) => inScope)
+
+  return {
+    scanned: inScope.length,
+    findings: inScope.flatMap(({ finding }) => (finding ? [finding] : []))
+  }
 }

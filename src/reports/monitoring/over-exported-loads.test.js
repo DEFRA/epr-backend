@@ -7,6 +7,7 @@ import {
   summariseOverExportedLoadsByMonth,
   summariseOverExportedLoadsFindings
 } from './over-exported-loads.js'
+import { buildExporterRegistration } from './monitoring-test-helpers.js'
 
 const receivedRow = (
   rowId,
@@ -60,7 +61,7 @@ const estate = (periodicReports, rowStates) => ({
     }))
   },
   organisationsRepository: {
-    findRegistrationById: vi.fn().mockResolvedValue({ accreditationId: null })
+    findRegistrationById: vi.fn().mockResolvedValue(buildExporterRegistration())
   },
   summaryLogRowStatesRepository: {
     findRowStatesForSummaryLog: vi.fn().mockResolvedValue(rowStates)
@@ -158,6 +159,25 @@ describe('overExportedLoads', () => {
       expect(findings.map(({ reportId }) => reportId)).toStrictEqual([
         'report-2'
       ])
+    })
+
+    it.each([
+      ['a reprocessor', { wasteProcessingType: 'reprocessor' }],
+      ['a registered-only exporter', { accreditationStatus: null }],
+      [
+        'an exporter whose accreditation was cancelled',
+        { accreditationStatus: 'cancelled' }
+      ]
+    ])('does not scan %s', async (_case, registrationOverrides) => {
+      const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
+      deps.organisationsRepository.findRegistrationById.mockResolvedValue(
+        buildExporterRegistration(registrationOverrides)
+      )
+
+      const { scanned, findings } = await findOverExportedLoads(deps)
+
+      expect(scanned).toBe(0)
+      expect(findings).toStrictEqual([])
     })
 
     it('reports nothing for a report with no source summary log', async () => {

@@ -17,6 +17,7 @@ import { loadSourceRowStates } from './source-row-states.js'
 /**
  * @import { PeriodicReport } from '#reports/repository/port.js'
  * @import { SourceRowStateDeps } from './source-row-states.js'
+ * @import { ReviewableReportRow } from './unexported-tonnage.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
  */
 
@@ -119,48 +120,73 @@ const overExportedLoadsIn = (states, startDate, endDate) =>
  * }} deps
  * @returns {Promise<{ scanned: number, findings: OverExportedLoadsFinding[] }>}
  */
+/**
+ * @param {SourceRowStateDeps} deps
+ * @param {ReviewableReportRow} row
+ * @returns {Promise<{
+ *   inScope: boolean,
+ *   finding?: OverExportedLoadsFinding | null
+ * }>}
+ */
+const assessReportRow = async (deps, row) => {
+  try {
+    const sourceRowStates = await loadSourceRowStates(deps, row)
+    if ('outOfScope' in sourceRowStates) {
+      return { inScope: false }
+    }
+    if ('unresolved' in sourceRowStates) {
+      return { inScope: true }
+    }
+
+    const loads = overExportedLoadsIn(
+      sourceRowStates.states,
+      row.startDate,
+      row.endDate
+    )
+
+    return {
+      inScope: true,
+      finding:
+        loads.length === 0
+          ? null
+          : {
+              organisationId: row.organisationId,
+              registrationId: row.registrationId,
+              reportId: row.reportId,
+              year: row.year,
+              period: row.period,
+              reportStatus: row.reportStatus,
+              loads,
+              totalOvershoot: toNumber(
+                loads.reduce(
+                  (sum, { overshoot }) =>
+                    addTonnage(sum, toRoundedTonnage(overshoot)),
+                  ZERO_TONNAGE
+                )
+              )
+            }
+    }
+  } catch {
+    return { inScope: true }
+  }
+}
+
 export const findOverExportedLoads = async (deps) => {
   /** @type {PeriodicReport[]} */
   const periodicReports = await deps.reportsRepository.findAllPeriodicReports()
   const rows = findReviewableReportRows(periodicReports)
 
-  const findings = []
+  const outcomes = []
   for (const row of rows) {
-    try {
-      const sourceRowStates = await loadSourceRowStates(deps, row)
-      if ('unresolved' in sourceRowStates) {
-        continue
-      }
-
-      const loads = overExportedLoadsIn(
-        sourceRowStates.states,
-        row.startDate,
-        row.endDate
-      )
-      if (loads.length > 0) {
-        findings.push({
-          organisationId: row.organisationId,
-          registrationId: row.registrationId,
-          reportId: row.reportId,
-          year: row.year,
-          period: row.period,
-          reportStatus: row.reportStatus,
-          loads,
-          totalOvershoot: toNumber(
-            loads.reduce(
-              (sum, { overshoot }) =>
-                addTonnage(sum, toRoundedTonnage(overshoot)),
-              ZERO_TONNAGE
-            )
-          )
-        })
-      }
-    } catch {
-      continue
-    }
+    outcomes.push(await assessReportRow(deps, row))
   }
 
-  return { scanned: rows.length, findings }
+  const inScope = outcomes.filter(({ inScope }) => inScope)
+
+  return {
+    scanned: inScope.length,
+    findings: inScope.flatMap(({ finding }) => (finding ? [finding] : []))
+  }
 }
 
 /**
