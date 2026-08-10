@@ -20,7 +20,14 @@ describe('validateOrganisation', () => {
           material: 'glass'
         }
       ],
-      [{ id: 'acc-1', wasteProcessingType: 'exporter', material: 'glass' }]
+      [
+        {
+          id: 'acc-1',
+          accreditationNumber: 'EA-1234',
+          wasteProcessingType: 'exporter',
+          material: 'glass'
+        }
+      ]
     )
 
     expect(validateOrganisation(org)).toEqual([])
@@ -48,6 +55,7 @@ describe('validateOrganisation', () => {
     expect(codes).toContain('DUPLICATE_REGISTRATION_ID')
     expect(codes).toContain('ORPHAN_ACCREDITATION')
     expect(codes).toContain('MATERIAL_MISMATCH')
+    expect(codes).toContain('UNNUMBERED_ACCREDITATION_REF')
   })
 
   it('classifies structural breakages as errors and relationship oddities as warnings', () => {
