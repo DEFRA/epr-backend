@@ -2,7 +2,6 @@ import Hapi from '@hapi/hapi'
 import { describe, it, expect, vi } from 'vitest'
 import { registerDependency } from './register-dependency.js'
 
-/** @import { ServerApp } from '#common/hapi-types.js' */
 /** @import { Request } from '@hapi/hapi' */
 
 describe('registerDependency', () => {
@@ -13,7 +12,7 @@ describe('registerDependency', () => {
 
     registerDependency(server, 'testDependency', getInstance)
 
-    const app = /** @type {ServerApp} */ (server.app)
+    const app = /** @type {{ testDependency: unknown }} */ (server.app)
     expect(app.testDependency).toBe(dependency)
     expect(getInstance).toHaveBeenCalledWith({ logger: server.logger })
   })

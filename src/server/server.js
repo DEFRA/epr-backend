@@ -223,13 +223,14 @@ async function createServer(options = {}) {
   await server.register(plugins)
 
   server.ext('onPostStart', () => {
-    runFormsDataMigration(server)
-    runOrganisationValidationSweep(server)
-    runStaleIssuedTonnageReport(server)
-    runPreCpaResubmissionBackfill(server)
-    runUnexportedTonnageReport(
-      /** @type {StartedServer} */ (/** @type {unknown} */ (server))
+    const startedServer = /** @type {StartedServer} */ (
+      /** @type {unknown} */ (server)
     )
+    runFormsDataMigration(server)
+    runOrganisationValidationSweep(startedServer)
+    runStaleIssuedTonnageReport(startedServer)
+    runPreCpaResubmissionBackfill(startedServer)
+    runUnexportedTonnageReport(startedServer)
   })
 
   return server
