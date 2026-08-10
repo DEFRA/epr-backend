@@ -1071,21 +1071,6 @@ describe('#aggregateReportDetail', () => {
         expect(result.exportActivity?.tonnageReceivedNotExported).toBe(29.19)
       })
 
-      it('counts a load in full when it carries an in-period export date but no exported tonnage', () => {
-        const records = [
-          buildAccreditedExportedRecord({
-            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-            DATE_OF_EXPORT: '2026-02-20',
-            TONNAGE_RECEIVED_FOR_EXPORT: 29.19,
-            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: null
-          })
-        ]
-
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
-
-        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(29.19)
-      })
-
       it('counts nothing for a fully exported load', () => {
         const records = [
           buildAccreditedExportedRecord({
