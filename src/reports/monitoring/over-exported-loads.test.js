@@ -278,6 +278,28 @@ describe('overExportedLoads', () => {
           '(row-1 received 10 exported 12; row-2 received 8 exported 11.5)'
       )
     })
+
+    it('lists at most five loads, so one report cannot outgrow the log pipeline', () => {
+      const result = formatOverExportedLoadsFinding(
+        finding({
+          loads: Array.from({ length: 7 }, (_, index) => ({
+            rowId: `row-${index + 1}`,
+            received: 10,
+            exported: 12,
+            overshoot: 2
+          })),
+          totalOvershoot: 14
+        })
+      )
+
+      expect(result).toBe(
+        'Over-exported loads: org org-1 / registration reg-1, report report-1 ' +
+          '(Feb 2026, submitted) - 7 load(s), overshoot 14 ' +
+          '(row-1 received 10 exported 12; row-2 received 10 exported 12; ' +
+          'row-3 received 10 exported 12; row-4 received 10 exported 12; ' +
+          'row-5 received 10 exported 12; +2 more)'
+      )
+    })
   })
 
   describe('summariseOverExportedLoadsFindings', () => {

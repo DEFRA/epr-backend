@@ -259,7 +259,14 @@ export const findOverExportedLoads = async (deps) => {
   }
 }
 
+const LOADS_LISTED = 5
+
 /**
+ * The load count and total overshoot carry the size of the defect, so the
+ * per-load detail is capped: a report concentrating hundreds of over-exported
+ * rows would otherwise emit a line long enough for the log pipeline to truncate
+ * or drop, losing the detail entirely.
+ *
  * @param {OverExportedLoadsFinding} finding
  * @returns {string}
  */
@@ -269,11 +276,14 @@ export const formatOverExportedLoadsFinding = (finding) => {
     finding.period,
     finding.year
   )
+  const remaining = finding.loads.length - LOADS_LISTED
   const loads = finding.loads
+    .slice(0, LOADS_LISTED)
     .map(
       ({ rowId, received, exported }) =>
         `${rowId} received ${received} exported ${exported}`
     )
+    .concat(remaining > 0 ? [`+${remaining} more`] : [])
     .join('; ')
 
   return [
