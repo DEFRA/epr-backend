@@ -146,10 +146,10 @@ export const unexportedTonnageDependencies = (server) => ({
 })
 
 /**
- * Recomputes every accredited-exporter monthly report's "packaging waste
- * received but not exported" figure under the PAE-1783 rule (per load, column S
- * minus column T) and logs the reports whose stored value disagrees. Read-only,
- * safe under live traffic.
+ * Recomputes every exporter monthly report's "packaging waste received but not
+ * exported" figure under the corrected rule (per load, column S minus column T)
+ * and logs the reports whose stored value disagrees. Read-only, safe under live
+ * traffic.
  *
  * @param {StartedServer} server
  */
@@ -170,8 +170,8 @@ const runReport = async (server) => {
 }
 
 /**
- * Startup diagnostic that sizes the PAE-1783 miscalculation: how many stored
- * reports the fix would change, by how much, and how many cannot be recomputed
+ * Startup diagnostic that sizes the miscalculation: how many stored reports
+ * the fix would change, by how much, and how many cannot be recomputed
  * because their source rows no longer resolve. Runs under a cross-instance lock
  * so a single pod per deploy executes and logs it. Read-only.
  *

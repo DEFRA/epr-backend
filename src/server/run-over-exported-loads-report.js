@@ -137,9 +137,9 @@ const runReport = async (server) => {
 
 /**
  * Startup diagnostic that sizes the loads reporting more tonnage exported than
- * received (PAE-1783): how many there are, by how much, and which reports carry
- * them. The not-exported figure clamps such a load to zero, so the overshoot is
- * discarded and this run is the only place the quantity stays visible.
+ * received: how many there are, by how much, and which reports carry them. The
+ * not-exported figure clamps such a load to zero, so the overshoot is discarded
+ * and this run is the only place the quantity stays visible.
  *
  * Runs under a cross-instance lock so a single pod per deploy executes it.
  * Read-only. Gated by the over-exported-loads-report feature flag: with it off

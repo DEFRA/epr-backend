@@ -11,8 +11,9 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  */
 
 /**
- * The rows a report was built from, or the reason they are not there. A reason
- * here means the data genuinely is not present, which a re-run will not change.
+ * The rows a report was built from, or why they are not there. `unresolved`
+ * means the data genuinely is not present, which a re-run will not change;
+ * `outOfScope` means the report was never this scan's to read.
  *
  * @typedef {{ states: WasteRecordState[], registration: Registration }
  *   | { unresolved: string }
@@ -39,11 +40,8 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * probed because a row written before accreditation stays on the first.
  *
  * Only the registration's *current* accreditation is probed, so a report built
- * under an accreditation that has since been superseded resolves no rows and
- * reads as source-missing.
- *
- * Errors propagate: a registration that cannot be read is a fact about the run,
- * not about the exporter's data, and the caller records it as such.
+ * under one that has since been superseded resolves no rows. The caller counts
+ * that against the run's coverage rather than reading it as a clean report.
  *
  * @param {Registration} registration
  * @param {string} organisationId

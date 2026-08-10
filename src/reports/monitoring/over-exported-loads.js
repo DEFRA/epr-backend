@@ -207,9 +207,9 @@ const assessReportRow = async (deps, row) => {
 }
 
 /**
- * Scans every reviewable accredited-exporter monthly report across the estate
- * and returns the loads reporting more tonnage exported than received, with the
- * size of each overshoot. Read-only, safe under live traffic.
+ * Scans every reviewable exporter monthly report across the estate and returns
+ * the loads reporting more tonnage exported than received, with the size of
+ * each overshoot. Read-only, safe under live traffic.
  *
  * A report whose rows cannot be read is skipped rather than failing the run:
  * the diagnostic gets one pass per deploy, and a single unreadable report must

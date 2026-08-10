@@ -31,8 +31,8 @@ import { loadSourceRowStates } from './source-row-states.js'
  */
 
 /**
- * Startup diagnostic (PAE-1783): sizes how many accredited-exporter monthly
- * reports carry a wrong `exportActivity.tonnageReceivedNotExported`, and splits
+ * Startup diagnostic: sizes how many exporter monthly reports carry a wrong
+ * `exportActivity.tonnageReceivedNotExported`, and splits
  * them into the ones a later backfill could correct in place and the ones whose
  * source rows can no longer be resolved.
  *
@@ -582,9 +582,9 @@ export const summariseUnexportedTonnageFindings = (findings) => {
 
 /**
 /**
- * Scans every reviewable accredited-exporter monthly report across the estate
- * and returns the ones whose stored unexported tonnage disagrees with the
- * corrected rule, alongside those that cannot be recomputed at all. Read-only.
+ * Scans every reviewable exporter monthly report across the estate and returns
+ * the ones whose stored unexported tonnage disagrees with the corrected rule,
+ * alongside those that cannot be recomputed at all. Read-only.
  *
  * A report is read individually after the estate-wide snapshot is taken, so one
  * of them going away under live traffic — or any transient read failure — is
