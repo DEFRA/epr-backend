@@ -1057,47 +1057,28 @@ describe('#aggregateReportDetail', () => {
     })
 
     describe('tonnageReceivedNotExported', () => {
-      it('counts a load in full when no tonnage has been exported', () => {
-        const records = [
-          buildAccreditedExportedRecord({
-            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-            TONNAGE_RECEIVED_FOR_EXPORT: 29.19,
-            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: null
-          })
-        ]
+      it.each([
+        { received: 29.19, exported: null, expected: 29.19 },
+        { received: 50, exported: 50, expected: 0 },
+        { received: 10, exported: 6, expected: 4 }
+      ])(
+        'counts $expected for a load receiving $received and exporting $exported',
+        ({ received, exported, expected }) => {
+          const records = [
+            buildAccreditedExportedRecord({
+              DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+              TONNAGE_RECEIVED_FOR_EXPORT: received,
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: exported
+            })
+          ]
 
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
+          const result = aggregateReportDetail(records, accreditedExporterArgs)
 
-        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(29.19)
-      })
-
-      it('counts nothing for a fully exported load', () => {
-        const records = [
-          buildAccreditedExportedRecord({
-            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-            TONNAGE_RECEIVED_FOR_EXPORT: 50,
-            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 50
-          })
-        ]
-
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
-
-        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(0)
-      })
-
-      it('counts the remainder of a partly exported load', () => {
-        const records = [
-          buildAccreditedExportedRecord({
-            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
-            TONNAGE_RECEIVED_FOR_EXPORT: 10,
-            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 6
-          })
-        ]
-
-        const result = aggregateReportDetail(records, accreditedExporterArgs)
-
-        expect(result.exportActivity?.tonnageReceivedNotExported).toBe(4)
-      })
+          expect(result.exportActivity?.tonnageReceivedNotExported).toBe(
+            expected
+          )
+        }
+      )
 
       it('counts nothing for a load exporting more than it received, rather than crediting it back', () => {
         const records = [
