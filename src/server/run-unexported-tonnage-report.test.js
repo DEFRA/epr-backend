@@ -320,14 +320,15 @@ describe('runUnexportedTonnageReport', () => {
         'unexported_tonnage_by_month',
         'Unexported tonnage by month: Feb 2026 - 1 report(s), delta 29.19, ' +
           'understated 29.19, overstated 0; ' +
-          'by material: unknown 1 report(s) delta 29.19'
+          'by material: (material unknown) 1 report(s) delta 29.19'
       )
     )
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'unexported_tonnage_by_month',
         'Unexported tonnage by month: Mar 2026 - 1 report(s), delta 4, ' +
-          'understated 4, overstated 0; by material: unknown 1 report(s) delta 4'
+          'understated 4, overstated 0; ' +
+          'by material: (material unknown) 1 report(s) delta 4'
       )
     )
   })
@@ -343,7 +344,7 @@ describe('runUnexportedTonnageReport', () => {
             reportId: 'report-2'
           })
         ],
-        { 'reg-1': 'Plastic', 'reg-2': 'Steel' }
+        { 'reg-1': 'plastic', 'reg-2': 'steel' }
       )
     )
 
@@ -352,14 +353,14 @@ describe('runUnexportedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'unexported_tonnage_by_material',
-        'Unexported tonnage by material: Plastic - 1 report(s), delta 29.19, ' +
+        'Unexported tonnage by material: plastic - 1 report(s), delta 29.19, ' +
           'understated 29.19, overstated 0'
       )
     )
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'unexported_tonnage_by_material',
-        'Unexported tonnage by material: Steel - 1 report(s), delta 29.19, ' +
+        'Unexported tonnage by material: steel - 1 report(s), delta 29.19, ' +
           'understated 29.19, overstated 0'
       )
     )
@@ -368,7 +369,7 @@ describe('runUnexportedTonnageReport', () => {
         'unexported_tonnage_by_month',
         'Unexported tonnage by month: Feb 2026 - 2 report(s), delta 58.38, ' +
           'understated 58.38, overstated 0; ' +
-          'by material: Plastic 1 report(s) delta 29.19, Steel 1 report(s) delta 29.19'
+          'by material: plastic 1 report(s) delta 29.19, steel 1 report(s) delta 29.19'
       )
     )
   })

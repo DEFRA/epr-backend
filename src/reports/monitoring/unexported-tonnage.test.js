@@ -71,7 +71,7 @@ const mismatch = (overrides = {}) =>
   /** @type {UnexportedTonnageFinding} */ ({
     kind: 'mismatch',
     ...FEB_2026_IDENTITY,
-    material: 'unknown',
+    material: '(material unknown)',
     stored: 0,
     recomputed: 0,
     delta: 0,
@@ -229,12 +229,12 @@ describe('unexported-tonnage', () => {
         buildRow(),
         /** @type {any} */ ({
           states: [buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 29.19 })],
-          material: 'Plastic'
+          material: 'plastic'
         })
       )
 
       expect(finding).toStrictEqual(
-        mismatch({ material: 'Plastic', recomputed: 29.19, delta: 29.19 })
+        mismatch({ material: 'plastic', recomputed: 29.19, delta: 29.19 })
       )
     })
 
@@ -604,7 +604,7 @@ describe('unexported-tonnage', () => {
   })
 
   describe('summariseUnexportedTonnageByMonth', () => {
-    const mismatchIn = (year, period, delta, material = 'Plastic') => ({
+    const mismatchIn = (year, period, delta, material = 'plastic') => ({
       kind: 'mismatch',
       year,
       period,
@@ -615,9 +615,9 @@ describe('unexported-tonnage', () => {
     it('totals the delta for each month a mismatch falls in, oldest first, split by material within the month', () => {
       const findings = /** @type {UnexportedTonnageFinding[]} */ (
         /** @type {unknown} */ ([
-          mismatchIn(2026, 3, 29.19, 'Plastic'),
-          mismatchIn(2025, 12, 4, 'Steel'),
-          mismatchIn(2026, 3, 0.81, 'Steel')
+          mismatchIn(2026, 3, 29.19, 'plastic'),
+          mismatchIn(2025, 12, 4, 'steel'),
+          mismatchIn(2026, 3, 0.81, 'steel')
         ])
       )
 
@@ -630,7 +630,7 @@ describe('unexported-tonnage', () => {
           overstated: 0,
           byMaterial: [
             {
-              material: 'Steel',
+              material: 'steel',
               reports: 1,
               delta: 4,
               understated: 4,
@@ -646,14 +646,14 @@ describe('unexported-tonnage', () => {
           overstated: 0,
           byMaterial: [
             {
-              material: 'Plastic',
+              material: 'plastic',
               reports: 1,
               delta: 29.19,
               understated: 29.19,
               overstated: 0
             },
             {
-              material: 'Steel',
+              material: 'steel',
               reports: 1,
               delta: 0.81,
               understated: 0.81,
@@ -681,7 +681,7 @@ describe('unexported-tonnage', () => {
           overstated: 29.19,
           byMaterial: [
             {
-              material: 'Plastic',
+              material: 'plastic',
               reports: 2,
               delta: 0,
               understated: 29.19,
@@ -710,22 +710,22 @@ describe('unexported-tonnage', () => {
     it('totals the correctable delta for each material, alphabetically, split understated and overstated', () => {
       const findings = /** @type {UnexportedTonnageFinding[]} */ (
         /** @type {unknown} */ ([
-          mismatchOf('Steel', 4),
-          mismatchOf('Plastic', 29.19),
-          mismatchOf('Plastic', -0.81)
+          mismatchOf('steel', 4),
+          mismatchOf('plastic', 29.19),
+          mismatchOf('plastic', -0.81)
         ])
       )
 
       expect(summariseUnexportedTonnageByMaterial(findings)).toStrictEqual([
         {
-          material: 'Plastic',
+          material: 'plastic',
           reports: 2,
           delta: 28.38,
           understated: 29.19,
           overstated: 0.81
         },
         {
-          material: 'Steel',
+          material: 'steel',
           reports: 1,
           delta: 4,
           understated: 4,
@@ -737,8 +737,8 @@ describe('unexported-tonnage', () => {
     it('ignores findings with no figure to total', () => {
       const findings = /** @type {UnexportedTonnageFinding[]} */ (
         /** @type {unknown} */ ([
-          { kind: 'source-missing', material: 'Plastic' },
-          { kind: 'lookup-failed', material: 'Steel' }
+          { kind: 'source-missing', material: 'plastic' },
+          { kind: 'lookup-failed', material: 'steel' }
         ])
       )
 
@@ -898,13 +898,13 @@ describe('unexported-tonnage', () => {
         buildDeps({
           registration: /** @type {any} */ ({
             accreditationId: 'acc-1',
-            material: 'Plastic'
+            material: 'plastic'
           })
         })
       )
 
       expect(findings).toStrictEqual([
-        mismatch({ material: 'Plastic', recomputed: 12, delta: 12 })
+        mismatch({ material: 'plastic', recomputed: 12, delta: 12 })
       ])
     })
 

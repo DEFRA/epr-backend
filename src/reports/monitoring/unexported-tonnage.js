@@ -696,7 +696,14 @@ const resolveLedgers = async (
 
 const NO_SUMMARY_LOG = 'no source summary log recorded on the report'
 const NO_ROWS = 'no rows found under the registration ledgers'
-const UNKNOWN_MATERIAL = 'unknown'
+
+/**
+ * The bucket a mismatch lands in when its registration carries no material. A
+ * material is logged as its raw lowercase code (`plastic`, `steel`), so the
+ * sentinel is parenthesised to read plainly as "unresolved" rather than as a
+ * stream literally named that, and to sort clear of the real codes.
+ */
+const UNKNOWN_MATERIAL = '(material unknown)'
 
 /**
  * The row states the report was built from, or the reason there are none. Both
