@@ -1297,9 +1297,37 @@ export const testReplaceBehaviour = (it) => {
               ]
             })
           )
-        ).rejects.toThrow(
-          'have been accredited and cannot lose their accreditation number'
+        ).rejects.toThrow('cannot lose their accreditation number')
+      })
+
+      it('rejects an update that would take the number off an accreditation that was never approved', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        await repository.replace(
+          organisation.id,
+          1,
+          prepareOrgUpdate(organisation, {
+            accreditations: [
+              {
+                ...organisation.accreditations[0],
+                accreditationNumber: 'ACC999'
+              }
+            ]
+          })
         )
+        const numbered = await repository.findById(organisation.id, 2)
+
+        const { accreditationNumber: _accreditationNumber, ...accreditation } =
+          numbered.accreditations[0]
+
+        await expect(
+          repository.replace(
+            organisation.id,
+            numbered.version,
+            prepareOrgUpdate(numbered, { accreditations: [accreditation] })
+          )
+        ).rejects.toThrow('cannot lose their accreditation number')
       })
     })
 

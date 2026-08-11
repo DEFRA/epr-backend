@@ -1,7 +1,6 @@
 import Joi from 'joi'
 import {
   ACCREDITATION_STATUS,
-  ACTIVE_ACCREDITATION_STATUSES,
   REGISTRATION_STATUS,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
@@ -332,22 +331,30 @@ export const validateImmutableFields = (fields) => (value, helpers) => {
 }
 
 /**
- * A number is issued when an accreditation is granted and the status it is
- * granted into is the only state that requires one, so an accreditation which
- * leaves that state can otherwise be saved without the number it was issued.
- * It keeps its PRNs, which carry the number forward, so the reports that join
- * through them fail on the missing value.
+ * An accreditation starts without a number, is issued one, and keeps it for
+ * the rest of its life whatever its status becomes. Only the status it is
+ * granted into requires the number, so every other state can otherwise be
+ * saved without it. The accreditation keeps its PRNs, which carry the number
+ * forward, so the reports that join through them fail on the missing value.
  *
- * @param {Array<{ id: string, accreditationNumber?: string | null, statusHistory: Array<{ status: string }> }>} accreditations
+ * A number that is already stored may be corrected, but it may not be removed.
+ *
+ * @param {Array<{ id: string, accreditationNumber?: string | null }>} accreditations
+ * @param {Array<{ id: string, accreditationNumber?: string | null }>} existingAccreditations
  */
-export function validateAccreditationNumbersRetained(accreditations) {
-  /** @type {ReadonlySet<string>} */
-  const activeStatuses = ACTIVE_ACCREDITATION_STATUSES
+export function validateAccreditationNumbersRetained(
+  accreditations,
+  existingAccreditations
+) {
+  const numberedById = new Map(
+    existingAccreditations
+      .filter((acc) => typeof acc.accreditationNumber === 'string')
+      .map((acc) => [acc.id, acc.accreditationNumber])
+  )
 
   const unnumbered = accreditations.filter(
     (acc) =>
-      acc.statusHistory.some((entry) => activeStatuses.has(entry.status)) &&
-      typeof acc.accreditationNumber !== 'string'
+      numberedById.has(acc.id) && typeof acc.accreditationNumber !== 'string'
   )
 
   if (unnumbered.length === 0) {
@@ -356,6 +363,6 @@ export function validateAccreditationNumbersRetained(accreditations) {
 
   const ids = unnumbered.map((acc) => acc.id).join(', ')
   throw Boom.badData(
-    `Accreditations with id ${ids} have been accredited and cannot lose their accreditation number`
+    `Accreditations with id ${ids} cannot lose their accreditation number`
   )
 }

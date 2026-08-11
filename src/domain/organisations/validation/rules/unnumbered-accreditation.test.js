@@ -57,6 +57,20 @@ describe('unnumberedAccreditationRule', () => {
     ])
   })
 
+  it('flags an accreditation cancelled after approval that lost its number', () => {
+    const org = organisation([
+      {
+        id: 'acc-1',
+        accreditationNumber: null,
+        statusHistory: historyOf('created', 'approved', 'cancelled')
+      }
+    ])
+
+    expect(unnumberedAccreditationRule.evaluate(org)).toEqual([
+      issueFor('acc-1')
+    ])
+  })
+
   it('flags a suspended accreditation whose number is absent', () => {
     const org = organisation([
       { id: 'acc-1', statusHistory: historyOf('approved', 'suspended') }

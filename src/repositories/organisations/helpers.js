@@ -172,7 +172,7 @@ function prepareRegAccForReplace(validated, existing) {
     assertAccreditationStatusTransitionValid,
     cascadeCancelledIds
   )
-  validateAccreditationNumbersRetained(accreditations)
+  validateAccreditationNumbersRetained(accreditations, existing.accreditations)
   return { registrations, accreditations }
 }
 
