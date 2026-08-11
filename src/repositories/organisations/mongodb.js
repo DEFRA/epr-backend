@@ -7,9 +7,12 @@ import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { errorCodes } from './enums/error-codes.js'
 import {
+  anchoredPattern,
   createInitialStatusHistory,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
+  normaliseCriteria,
+  parseOrgIdCriterion,
   performFindAllForOverseasSitesAdminList,
   performFindPageForOrsAdminList,
   prepareForReplace
@@ -19,7 +22,7 @@ import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpe
 import { getCurrentStatus } from './status.js'
 
 /** @import { Collection, Db } from 'mongodb' */
-/** @import { FindPageParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -214,19 +217,88 @@ const performFindAllBySchemaVersion = (db) => async (schemaVersion) => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
-const performFindPage =
+/** Matches no organisation, used when a criterion cannot be parsed. */
+const UNSATISFIABLE_FILTER = { _id: { $in: [] } }
+
+/**
+ * @param {string} value
+ * @returns {{ $regex: string, $options: string }} - anchored, case-insensitive
+ */
+const anchoredCaseInsensitive = (value) => ({
+  $regex: anchoredPattern(value),
+  $options: 'i'
+})
+
+/**
+ * @param {string} value
+ * @returns {object} - the organisation-id fragment, unsatisfiable when unparseable
+ */
+const buildOrgIdFilter = (value) => {
+  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
+  const branches = []
+  if (businessOrgId !== null) {
+    branches.push({ orgId: businessOrgId })
+  }
+  if (documentId !== null) {
+    branches.push({ _id: ObjectId.createFromHexString(documentId) })
+  }
+
+  return branches.length === 0 ? UNSATISFIABLE_FILTER : { $or: branches }
+}
+
+/**
+ * Builds the MongoDB filter for a find query. The in-memory adapter has its
+ * own equivalent; the shared criteria semantics live in helpers.js and the
+ * find contract tests hold the two implementations to the same behaviour.
+ *
+ * @param {import('./port.js').SearchCriteria} criteria
+ * @returns {object} - a filter matching organisations satisfying every criterion
+ */
+const buildFindFilter = (criteria) => {
+  const {
+    search,
+    orgId,
+    registrationId,
+    registrationNumber,
+    accreditationId,
+    accreditationNumber
+  } = normaliseCriteria(criteria)
+
+  const conditions = []
+  if (search !== '') {
+    conditions.push({
+      'companyDetails.name': { $regex: escapeRegex(search), $options: 'i' }
+    })
+  }
+  if (orgId !== '') {
+    conditions.push(buildOrgIdFilter(orgId))
+  }
+  if (registrationId !== '') {
+    conditions.push({ 'registrations.id': registrationId })
+  }
+  if (registrationNumber !== '') {
+    conditions.push({
+      'registrations.registrationNumber':
+        anchoredCaseInsensitive(registrationNumber)
+    })
+  }
+  if (accreditationId !== '') {
+    conditions.push({ 'accreditations.id': accreditationId })
+  }
+  if (accreditationNumber !== '') {
+    conditions.push({
+      'accreditations.accreditationNumber':
+        anchoredCaseInsensitive(accreditationNumber)
+    })
+  }
+
+  return conditions.length === 0 ? {} : { $and: conditions }
+}
+
+const performFind =
   (db) =>
-  async (/** @type {FindPageParams} */ { search, page, pageSize }) => {
-    const trimmedSearch = (search ?? '').trim()
-    const filter =
-      trimmedSearch === ''
-        ? {}
-        : {
-            'companyDetails.name': {
-              $regex: escapeRegex(trimmedSearch),
-              $options: 'i'
-            }
-          }
+  async (/** @type {FindParams} */ { page, pageSize, ...criteria }) => {
+    const filter = buildFindFilter(criteria)
 
     const collection = db.collection(COLLECTION_NAME)
     const totalItems = await collection.countDocuments(filter)
@@ -485,7 +557,7 @@ export const createOrganisationsRepository = async (
       findById,
       findAll: performFindAll(db),
       findAllBySchemaVersion: performFindAllBySchemaVersion(db),
-      findPage: performFindPage(db),
+      find: performFind(db),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(db),
       findPageForOverseasSitesAdminList: performFindPageForOrsAdminList(db),
