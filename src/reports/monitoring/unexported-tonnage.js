@@ -39,10 +39,13 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  * The live calculation drops any received load whose DATE_OF_EXPORT falls in the
  * reporting period and sums column S for the rest, so a load carrying an export
  * date but no exported tonnage reads as fully exported and contributes nothing.
- * The AC's rule is per load: column S minus column T. This module recomputes
- * under that rule, deliberately reimplementing it rather than calling the live
- * path, so it is valid both before the fix (as sizing) and after it (as the
- * remediation verifier).
+ * The AC's rule is per load: column S minus the tonnage exported within the
+ * period — column T when the load's DATE_OF_EXPORT falls in the period, nothing
+ * otherwise (so a blank export date, or one in a later period, leaves the whole
+ * column S standing as not yet exported). This module recomputes under that
+ * rule, deliberately reimplementing it rather than calling the live path, so it
+ * is valid both before the fix (as sizing) and after it (as the remediation
+ * verifier).
  *
  * Read-only throughout, and safe under live traffic.
  *
@@ -206,7 +209,14 @@ export const findReviewableReportRows = (periodicReports) =>
 
 /**
  * A load's contribution to the figure: the tonnage received for export that has
- * not yet been exported, and what is wrong with the row if anything.
+ * not yet been exported within the period, and what is wrong with the row if
+ * anything.
+ *
+ * Only tonnage that actually left within the period is subtracted: a load's
+ * exported tonnage counts only when its `DATE_OF_EXPORT` falls in the period.
+ * A load with no export date, or one whose export lands in a later period, has
+ * exported nothing this period, so its whole received tonnage reads as not yet
+ * exported — it only stops counting in the period the export lands in.
  *
  * Every field on the exporter received-loads table is optional, so a blank
  * received tonnage is possible and reads as zero. Left alone that row would
@@ -220,14 +230,18 @@ export const findReviewableReportRows = (periodicReports) =>
  * counts the rows so the decision has a number behind it.
  *
  * @param {Record<string, any>} data
+ * @param {string} startDate
+ * @param {string} endDate
  * @returns {{
  *   notExported: import('#common/helpers/rounded-tonnage.js').RoundedTonnage,
  *   overExported: boolean,
  *   missingReceived: boolean
  * }}
  */
-const classifyLoad = (data) => {
-  const exported = toRoundedTonnage(data[TONNAGE_EXPORTED_FIELD])
+const classifyLoad = (data, startDate, endDate) => {
+  const exported = isDateInRange(data[EXPORT_DATE_FIELD], startDate, endDate)
+    ? toRoundedTonnage(data[TONNAGE_EXPORTED_FIELD])
+    : ZERO_TONNAGE
   if (isNil(data[TONNAGE_RECEIVED_FIELD])) {
     return {
       notExported: ZERO_TONNAGE,
@@ -279,8 +293,11 @@ const liveContribution = (data, startDate, endDate) =>
 
 /**
  * The corrected figure for a period: per load received in that period, column S
- * minus column T, summed. Unlike the live calculation, no load is dropped for
- * carrying an export date.
+ * minus the tonnage it exported within the period (column T when its
+ * `DATE_OF_EXPORT` falls in the period, nothing otherwise), summed. Unlike the
+ * live calculation, a load is never dropped whole for carrying an export date —
+ * only the tonnage that actually left within the period is netted off, so a
+ * load exported in a later period still counts its full column S here.
  *
  * Reports the rows behind the figure alongside it, so a finding says how much
  * data a backfill would move and not only how much tonnage.
@@ -297,7 +314,7 @@ const recomputeUnexported = (wasteRecordStates, startDate, endDate) => {
     startDate,
     endDate
   ).map(({ data }) => ({
-    ...classifyLoad(data),
+    ...classifyLoad(data, startDate, endDate),
     live: liveContribution(data, startDate, endDate)
   }))
 

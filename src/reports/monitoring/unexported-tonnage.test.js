@@ -238,9 +238,10 @@ describe('unexported-tonnage', () => {
       )
     })
 
-    it('reports the unexported remainder of a partly exported load', () => {
+    it('reports the unexported remainder of a load partly exported in the period', () => {
       const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({
+          DATE_OF_EXPORT: '2026-02-16',
           TONNAGE_RECEIVED_FOR_EXPORT: 10,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 6
         })
@@ -251,9 +252,33 @@ describe('unexported-tonnage', () => {
       )
     })
 
-    it('returns nothing when a fully exported load already agrees with the stored zero', () => {
+    it('counts the full received tonnage when the export lands in a later period', () => {
       const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({
+          DATE_OF_EXPORT: '2026-03-05',
+          TONNAGE_RECEIVED_FOR_EXPORT: 10,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 10
+        })
+      ])
+
+      expect(finding).toStrictEqual(mismatch({ recomputed: 10, delta: 10 }))
+    })
+
+    it('counts the full received tonnage when a load carries exported tonnage but no export date', () => {
+      const finding = diagnoseWithRows(buildRow(), [
+        buildReceivedRow({
+          TONNAGE_RECEIVED_FOR_EXPORT: 10,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 10
+        })
+      ])
+
+      expect(finding).toStrictEqual(mismatch({ recomputed: 10, delta: 10 }))
+    })
+
+    it('returns nothing when a load fully exported in the period agrees with the stored zero', () => {
+      const finding = diagnoseWithRows(buildRow(), [
+        buildReceivedRow({
+          DATE_OF_EXPORT: '2026-02-16',
           TONNAGE_RECEIVED_FOR_EXPORT: 10,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 10
         })
@@ -262,13 +287,15 @@ describe('unexported-tonnage', () => {
       expect(finding).toBeNull()
     })
 
-    it('clamps a row exporting more than it received rather than crediting it back', () => {
+    it('clamps a row exporting more than it received in the period rather than crediting it back', () => {
       const finding = diagnoseWithRows(buildRow({ storedUnexported: 5 }), [
         buildReceivedRow({
+          DATE_OF_EXPORT: '2026-02-16',
           TONNAGE_RECEIVED_FOR_EXPORT: 10,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12
         }),
         buildReceivedRow({
+          DATE_OF_EXPORT: '2026-02-16',
           TONNAGE_RECEIVED_FOR_EXPORT: 8,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
         })
@@ -282,18 +309,19 @@ describe('unexported-tonnage', () => {
           rowsInPeriod: 2,
           rowsUnexported: 1,
           rowsOverExported: 1,
-          rowsMiscounted: 2
+          rowsMiscounted: 1
         })
       )
     })
 
-    it('counts a row with no received tonnage apart from one that over-exported', () => {
+    it('counts a row with no received tonnage apart from one that over-exported in the period', () => {
       const finding = diagnoseWithRows(buildRow({ storedUnexported: 5 }), [
         buildReceivedRow({
           TONNAGE_RECEIVED_FOR_EXPORT: null,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 7
         }),
         buildReceivedRow({
+          DATE_OF_EXPORT: '2026-02-16',
           TONNAGE_RECEIVED_FOR_EXPORT: 10,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 12
         })
@@ -308,7 +336,7 @@ describe('unexported-tonnage', () => {
           rowsUnexported: 0,
           rowsOverExported: 1,
           rowsMissingReceived: 1,
-          rowsMiscounted: 1
+          rowsMiscounted: 0
         })
       )
     })
@@ -337,6 +365,7 @@ describe('unexported-tonnage', () => {
       const finding = diagnoseWithRows(buildRow(), [
         buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 10 }),
         buildReceivedRow({
+          DATE_OF_EXPORT: '2026-02-16',
           TONNAGE_RECEIVED_FOR_EXPORT: 8,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 8
         }),
@@ -353,7 +382,7 @@ describe('unexported-tonnage', () => {
           rowsInPeriod: 2,
           rowsUnexported: 1,
           rowsOverExported: 0,
-          rowsMiscounted: 1
+          rowsMiscounted: 0
         })
       )
     })

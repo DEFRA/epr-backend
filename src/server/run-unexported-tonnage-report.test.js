@@ -67,6 +67,7 @@ const partlyExportedRow = (tonnageReceived, tonnageExported) => ({
   ...receivedRow(tonnageReceived),
   data: {
     ...receivedRow(tonnageReceived).data,
+    DATE_OF_EXPORT: '2026-02-16',
     TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: tonnageExported
   }
 })
