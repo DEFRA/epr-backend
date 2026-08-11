@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  buildOrgWithCriteria,
+  buildOrgWithName
+} from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -10,18 +14,6 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
-
-/**
- * @param {string} name
- * @returns
- */
-const buildOrgWithName = (name) => {
-  const base = buildOrganisation()
-  return {
-    ...base,
-    companyDetails: { ...base.companyDetails, name }
-  }
-}
 
 const authHeaders = { Authorization: `Bearer ${validToken}` }
 
@@ -249,6 +241,120 @@ describe('GET /v1/organisations', () => {
     })
   })
 
+  describe('Mode B — criteria search', () => {
+    const HOLDER_ORG_ID = 700001
+    const OTHER_ORG_ID = 700002
+
+    /** @type {Omit<import('#domain/organisations/model.js').Organisation, 'status'>} */
+    let holder
+
+    beforeEach(async () => {
+      holder = buildOrgWithCriteria({
+        name: 'Holder Ltd',
+        orgId: HOLDER_ORG_ID,
+        registrationNumber: 'REG001',
+        accreditationNumber: 'ACC001'
+      })
+      await organisationsRepository.insert(holder)
+      await organisationsRepository.insert(
+        buildOrgWithCriteria({
+          name: 'Other Ltd',
+          orgId: OTHER_ORG_ID,
+          registrationNumber: 'REG002',
+          accreditationNumber: 'ACC444'
+        })
+      )
+    })
+
+    /**
+     * @param {string} queryString
+     * @returns {Promise<{ statusCode: number, body: any }>}
+     */
+    const get = async (queryString) => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations?${queryString}`,
+        headers: authHeaders
+      })
+      return {
+        statusCode: response.statusCode,
+        body: JSON.parse(response.payload)
+      }
+    }
+
+    it.each([
+      ['orgId as the business orgId', () => `orgId=${HOLDER_ORG_ID}`],
+      ['orgId as the document id', () => `orgId=${holder.id}`],
+      ['registrationId', () => `registrationId=${holder.registrations[0].id}`],
+      ['registrationNumber', () => 'registrationNumber=REG001'],
+      [
+        'accreditationId',
+        () => `accreditationId=${holder.accreditations[0].id}`
+      ],
+      ['accreditationNumber', () => 'accreditationNumber=ACC001']
+    ])(
+      'returns the paged envelope holding only the matching organisation for %s',
+      async (_description, buildQuery) => {
+        const { statusCode, body } = await get(buildQuery())
+
+        expect(statusCode).toBe(StatusCodes.OK)
+        expect(Array.isArray(body)).toBe(false)
+        expect(body.totalItems).toBe(1)
+        expect(body.items.map((o) => o.companyDetails.name)).toEqual([
+          'Holder Ltd'
+        ])
+      }
+    )
+
+    it('applies the page defaults to a criteria-only request', async () => {
+      const { body } = await get('registrationNumber=REG001')
+
+      expect(body.page).toBe(1)
+      expect(body.pageSize).toBe(50)
+    })
+
+    it('ANDs multiple criteria', async () => {
+      const { body } = await get(
+        'registrationNumber=REG001&accreditationNumber=ACC001'
+      )
+
+      expect(body.totalItems).toBe(1)
+      expect(body.items[0].companyDetails.name).toBe('Holder Ltd')
+    })
+
+    it('returns no items when criteria are satisfied by different organisations', async () => {
+      const { statusCode, body } = await get(
+        'registrationNumber=REG001&accreditationNumber=ACC444'
+      )
+
+      expect(statusCode).toBe(StatusCodes.OK)
+      expect(body.items).toEqual([])
+      expect(body.totalItems).toBe(0)
+    })
+
+    it('ANDs a criterion with the name search', async () => {
+      const { body } = await get('search=other&registrationNumber=REG001')
+
+      expect(body.items).toEqual([])
+    })
+
+    it('returns an empty result rather than an error for an unparseable orgId', async () => {
+      const { statusCode, body } = await get('orgId=not-an-id')
+
+      expect(statusCode).toBe(StatusCodes.OK)
+      expect(body.items).toEqual([])
+      expect(body.totalItems).toBe(0)
+    })
+
+    it('treats empty criteria as absent', async () => {
+      const { body } = await get(
+        'orgId=&registrationId=&registrationNumber=&accreditationId=&accreditationNumber='
+      )
+
+      expect(body.totalItems).toBe(2)
+    })
+  })
+
   describe('validation', () => {
     it.each([
       ['page=0', '/v1/organisations?page=0'],
@@ -261,6 +367,26 @@ describe('GET /v1/organisations', () => {
       [
         'search exceeds max length',
         `/v1/organisations?search=${'a'.repeat(201)}`
+      ],
+      [
+        'orgId exceeds max length',
+        `/v1/organisations?orgId=${'1'.repeat(201)}`
+      ],
+      [
+        'registrationId exceeds max length',
+        `/v1/organisations?registrationId=${'a'.repeat(201)}`
+      ],
+      [
+        'registrationNumber exceeds max length',
+        `/v1/organisations?registrationNumber=${'a'.repeat(201)}`
+      ],
+      [
+        'accreditationId exceeds max length',
+        `/v1/organisations?accreditationId=${'a'.repeat(201)}`
+      ],
+      [
+        'accreditationNumber exceeds max length',
+        `/v1/organisations?accreditationNumber=${'a'.repeat(201)}`
       ]
     ])('returns 422 for %s', async (_desc, url) => {
       const response = await server.inject({
