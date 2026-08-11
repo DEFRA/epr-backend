@@ -29,10 +29,11 @@ const LARGEST_REPORTED = 5
  */
 const logBreakdowns = (findings) => {
   summariseOverExportedLoadsByMaterial(findings).forEach(
-    ({ material, overshoot }) =>
+    ({ material, loads, exporters, overshoot }) =>
       log(
         LOGGING_EVENT_ACTIONS.OVER_EXPORTED_LOADS_BY_MATERIAL,
-        `Over-exported loads by material: ${material} - overshoot ${overshoot}`
+        `Over-exported loads by material: ${material} - ${loads} load(s) ` +
+          `across ${exporters} exporter(s), overshoot ${overshoot}`
       )
   )
 

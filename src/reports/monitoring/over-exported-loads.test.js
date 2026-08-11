@@ -399,7 +399,36 @@ describe('overExportedLoads', () => {
       const findings = [finding(), finding({ reportId: 'report-2' })]
 
       expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
-        { material: 'plastic', overshoot: 4 }
+        { material: 'plastic', loads: 2, exporters: 1, overshoot: 4 }
+      ])
+    })
+
+    it('counts the over-exported loads in each material, which is the instance count', () => {
+      const findings = [
+        finding({
+          loads: [
+            { rowId: 'row-1', received: 10, exported: 12, overshoot: 2 },
+            { rowId: 'row-2', received: 4, exported: 9, overshoot: 5 }
+          ]
+        }),
+        finding({ material: 'wood', reportId: 'report-2' })
+      ]
+
+      expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
+        { material: 'plastic', loads: 2, exporters: 1, overshoot: 7 },
+        { material: 'wood', loads: 1, exporters: 1, overshoot: 2 }
+      ])
+    })
+
+    it('counts an exporter once per material however many of its reports are affected', () => {
+      const findings = [
+        finding(),
+        finding({ reportId: 'report-2' }),
+        finding({ registrationId: 'reg-2', reportId: 'report-3' })
+      ]
+
+      expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
+        { material: 'plastic', loads: 3, exporters: 2, overshoot: 6 }
       ])
     })
 
@@ -410,8 +439,8 @@ describe('overExportedLoads', () => {
       ]
 
       expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
-        { material: 'glass', overshoot: 2 },
-        { material: 'wood', overshoot: 2 }
+        { material: 'glass', loads: 1, exporters: 1, overshoot: 2 },
+        { material: 'wood', loads: 1, exporters: 1, overshoot: 2 }
       ])
     })
 
@@ -427,7 +456,7 @@ describe('overExportedLoads', () => {
       const { findings } = await findOverExportedLoads(deps)
 
       expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
-        { material: 'glass_re_melt', overshoot: 2 }
+        { material: 'glass_re_melt', loads: 1, exporters: 1, overshoot: 2 }
       ])
     })
 
@@ -440,7 +469,7 @@ describe('overExportedLoads', () => {
       const { findings } = await findOverExportedLoads(deps)
 
       expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
-        { material: 'unknown', overshoot: 2 }
+        { material: 'unknown', loads: 1, exporters: 1, overshoot: 2 }
       ])
     })
   })

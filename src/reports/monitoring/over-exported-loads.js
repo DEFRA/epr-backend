@@ -314,25 +314,52 @@ export const summariseOverExportedLoadsFindings = (findings) => ({
 })
 
 /**
- * Overshoot rolled up by the registration's material, summed from the loads
- * themselves. Splitting a summary log's netted figure would fold away the very
- * rows this run exists to count.
+ * What one material accumulates as the findings are folded into it.
+ * `registrationIds` carries duplicates until the rollup is finished, since an
+ * exporter with several affected reports must still count once.
+ *
+ * @typedef {{
+ *   loads: number,
+ *   overshoot: RoundedTonnage,
+ *   registrationIds: string[]
+ * }} MaterialRollup
+ */
+
+/**
+ * Rolled up by the registration's material, summed from the loads themselves.
+ * Splitting a summary log's netted figure would fold away the very rows this
+ * run exists to count.
+ *
+ * `loads` is the instance count: how many rows report more exported than
+ * received. It is the figure the regulators are asking for, and it sums across
+ * materials to the run's own `loads` total.
  *
  * @param {OverExportedLoadsFinding[]} findings
  */
 export const summariseOverExportedLoadsByMaterial = (findings) =>
   Object.entries(
-    findings.reduce((byMaterial, { material, loads }) => {
-      byMaterial[material] = loads.reduce(
-        (sum, { overshoot }) => addTonnage(sum, toRoundedTonnage(overshoot)),
-        byMaterial[material] ?? ZERO_TONNAGE
-      )
+    findings.reduce((byMaterial, { material, registrationId, loads }) => {
+      const running = byMaterial[material] ?? {
+        loads: 0,
+        registrationIds: [],
+        overshoot: ZERO_TONNAGE
+      }
+      byMaterial[material] = {
+        loads: running.loads + loads.length,
+        registrationIds: [...running.registrationIds, registrationId],
+        overshoot: loads.reduce(
+          (sum, { overshoot }) => addTonnage(sum, toRoundedTonnage(overshoot)),
+          running.overshoot
+        )
+      }
       return byMaterial
-    }, /** @type {Record<string, ReturnType<typeof toRoundedTonnage>>} */ ({}))
+    }, /** @type {Record<string, MaterialRollup>} */ ({}))
   )
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([material, overshoot]) => ({
+    .map(([material, { loads, registrationIds, overshoot }]) => ({
       material,
+      loads,
+      exporters: new Set(registrationIds).size,
       overshoot: toNumber(overshoot)
     }))
 

@@ -222,7 +222,8 @@ describe('runOverExportedLoadsReport', () => {
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'over_exported_loads_by_material',
-        'Over-exported loads by material: plastic - overshoot 2'
+        'Over-exported loads by material: plastic - 1 load(s) across ' +
+          '1 exporter(s), overshoot 2'
       )
     )
   })
