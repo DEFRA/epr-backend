@@ -329,3 +329,40 @@ export const validateImmutableFields = (fields) => (value, helpers) => {
 
   return value
 }
+
+/**
+ * An accreditation starts without a number, is issued one, and keeps it for
+ * the rest of its life whatever its status becomes. Only the status it is
+ * granted into requires the number, so every other state can otherwise be
+ * saved without it. The accreditation keeps its PRNs, which carry the number
+ * forward, so the reports that join through them fail on the missing value.
+ *
+ * A number that is already stored may be corrected, but it may not be removed.
+ *
+ * @param {Array<{ id: string, accreditationNumber?: string | null }>} accreditations
+ * @param {Array<{ id: string, accreditationNumber?: string | null }>} existingAccreditations
+ */
+export function validateAccreditationNumbersRetained(
+  accreditations,
+  existingAccreditations
+) {
+  const numberedById = new Map(
+    existingAccreditations
+      .filter((acc) => typeof acc.accreditationNumber === 'string')
+      .map((acc) => [acc.id, acc.accreditationNumber])
+  )
+
+  const unnumbered = accreditations.filter(
+    (acc) =>
+      numberedById.has(acc.id) && typeof acc.accreditationNumber !== 'string'
+  )
+
+  if (unnumbered.length === 0) {
+    return
+  }
+
+  const ids = unnumbered.map((acc) => acc.id).join(', ')
+  throw Boom.badData(
+    `Accreditations with id ${ids} cannot lose their accreditation number`
+  )
+}
