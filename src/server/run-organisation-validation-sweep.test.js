@@ -208,4 +208,59 @@ describe('runOrganisationValidationSweep', () => {
       )
     })
   })
+
+  it('logs an UNNUMBERED_ACCREDITATION issue for an accredited accreditation that lost its number', async () => {
+    const accreditation = buildAccreditation({
+      accreditationNumber: null,
+      statusHistory: [
+        { status: 'created', updatedAt: '2024-01-01' },
+        { status: 'approved', updatedAt: '2024-02-01' }
+      ]
+    })
+    const registration = buildRegistration({
+      accreditationId: accreditation.id,
+      wasteProcessingType: accreditation.wasteProcessingType
+    })
+    const org = buildOrganisation({
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+    seedRepositoryWith([org])
+
+    await runOrganisationValidationSweep(mockServer)
+
+    const [unnumberedAccreditation] = org.accreditations
+    expect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith({
+      message: `Organisation validation issue: organisationId=${org.id} code=UNNUMBERED_ACCREDITATION severity=error targetType=accreditation targetId=${unnumberedAccreditation.id} message="Accreditation ${unnumberedAccreditation.id} has been accredited but carries no valid accreditation number"`
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Organisation validation sweep: scanned=1 flagged=1 issues=1'
+    })
+  })
+
+  it('leaves an accreditation still awaiting a decision unflagged', async () => {
+    const accreditation = buildAccreditation({
+      accreditationNumber: null,
+      statusHistory: [{ status: 'created', updatedAt: '2024-01-01' }]
+    })
+    const registration = buildRegistration({
+      accreditationId: accreditation.id,
+      wasteProcessingType: accreditation.wasteProcessingType
+    })
+    const org = buildOrganisation({
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+    seedRepositoryWith([org])
+
+    await runOrganisationValidationSweep(mockServer)
+
+    expect(logger.info).not.toHaveBeenCalledWith({
+      message: expect.stringContaining('code=UNNUMBERED_ACCREDITATION')
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Organisation validation sweep: scanned=1 flagged=0 issues=0'
+    })
+  })
 })
