@@ -30,10 +30,9 @@ vi.mock('@defra/cdp-auditing', () => ({
  * Builds an organisation with a target registration whose statusHistory ends
  * in the given status, plus an unrelated second (exporter) registration used
  * to assert that changing the target's status leaves other registrations
- * untouched. A created registration has no number or validFrom yet; validTo
- * is owned by the application data and, per registrationOverrides, defaults
- * to already being present so grant tests only need to supply the fields the
- * grant itself sets.
+ * untouched. A created registration has no number or validFrom yet. validTo
+ * defaults to already being present, mirroring the application data, so that
+ * grant tests can prove the granted window overwrites it.
  * @param {string} status
  * @param {{ registrationOverrides?: object }} [options]
  */
@@ -127,10 +126,14 @@ const buildOrgWithLinkedAccreditation = (accStatus) => {
 const statusHistoryUrl = ({ organisationId, registrationId }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/status-history`
 
+// validTo deliberately differs from the seeded fixture value so the grant
+// assertions prove the persisted window came from the request, not the
+// application data that was already there.
 const grantPayload = {
   fromStatus: 'created',
   toStatus: 'approved',
-  appliesFrom: '2026-08-01',
+  validFrom: '2026-08-01',
+  validTo: '2027-03-31',
   registrationNumber: 'REG999999'
 }
 
@@ -204,7 +207,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         )
       )
 
-    it('grants the registration, issuing the number and setting validFrom to appliesFrom, and returns 200 with { status: "approved" }', async () => {
+    it('grants the registration, issuing the number and setting the validity window from the payload, and returns 200 with { status: "approved" }', async () => {
       const ctx = await seedOrg('created')
 
       const response = await server.inject({
@@ -230,7 +233,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(registration.status).toBe('approved')
       expect(registration.registrationNumber).toBe('REG999999')
       expect(registration.validFrom).toBe('2026-08-01')
-      expect(registration.validTo).toBe('2026-12-31')
+      // Overwrites the seeded 2026-12-31, proving the window came from the
+      // request rather than the pre-existing application data.
+      expect(registration.validTo).toBe('2027-03-31')
       expect(registration.statusHistory.map((entry) => entry.status)).toEqual([
         'created',
         'approved'
@@ -384,24 +389,43 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(body.message).toMatch(/reprocessingType/)
     })
 
-    it('returns 422 when appliesFrom is after the registration validTo', async () => {
+    it('returns 422 when the supplied validFrom is after the supplied validTo', async () => {
       const ctx = await seedOrg('created')
 
       const response = await server.inject({
         method: 'POST',
         url: statusHistoryUrl(ctx),
-        payload: { ...grantPayload, appliesFrom: '2027-06-01' },
+        payload: { ...grantPayload, validFrom: '2027-06-01' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
       expect(body.message).toMatch(
-        /appliesFrom 2027-06-01 is after validTo 2026-12-31/
+        /validFrom 2027-06-01 is after validTo 2027-03-31/
       )
     })
 
-    it('returns 422 when the registration has no validTo, which granting does not set', async () => {
+    it('compares the supplied dates even when the registration has no stored validTo', async () => {
+      const ctx = await seedOrg('created', {
+        registrationOverrides: { validTo: null }
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: { ...grantPayload, validFrom: '2027-06-01' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /validFrom 2027-06-01 is after validTo 2027-03-31/
+      )
+    })
+
+    it('grants a registration that has no stored validTo, setting it from the payload', async () => {
       const ctx = await seedOrg('created', {
         registrationOverrides: { validTo: null }
       })
@@ -413,9 +437,20 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(/validTo/)
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const registration = JSON.parse(getResponse.payload).registrations.find(
+        (reg) => reg.id === ctx.registrationId
+      )
+
+      expect(registration.status).toBe('approved')
+      expect(registration.validFrom).toBe('2026-08-01')
+      expect(registration.validTo).toBe('2027-03-31')
     })
 
     it.each(['approved', 'rejected', 'cancelled'])(
@@ -732,20 +767,39 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       ],
       ['payload has unexpected fields', { ...grantPayload, reason: 'x' }],
       [
-        'a grant is missing appliesFrom',
-        { ...grantPayload, appliesFrom: undefined }
+        'a grant is missing validFrom',
+        { ...grantPayload, validFrom: undefined }
       ],
+      ['a grant is missing validTo', { ...grantPayload, validTo: undefined }],
       [
         'a grant is missing the registration number',
         { ...grantPayload, registrationNumber: undefined }
       ],
       [
-        'a grant has an invalid appliesFrom date',
-        { ...grantPayload, appliesFrom: '2026-13-45' }
+        'a grant has an invalid validFrom date',
+        { ...grantPayload, validFrom: '2026-13-45' }
       ],
       [
-        'a grant has an appliesFrom day that does not exist in that month',
-        { ...grantPayload, appliesFrom: '2026-02-30' }
+        'a grant has a validFrom day that does not exist in that month',
+        { ...grantPayload, validFrom: '2026-02-30' }
+      ],
+      [
+        'a grant has an invalid validTo date',
+        { ...grantPayload, validTo: '2027-13-45' }
+      ],
+      [
+        'a grant has a validTo day that does not exist in that month',
+        { ...grantPayload, validTo: '2027-02-30' }
+      ],
+      [
+        'a grant uses the legacy appliesFrom field name',
+        {
+          fromStatus: 'created',
+          toStatus: 'approved',
+          appliesFrom: '2026-08-01',
+          validTo: '2027-03-31',
+          registrationNumber: 'REG999999'
+        }
       ],
       [
         'a grant has an empty registration number',
