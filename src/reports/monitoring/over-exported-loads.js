@@ -362,18 +362,3 @@ export const summariseOverExportedLoadsByMaterial = (findings) =>
       exporters: new Set(registrationIds).size,
       overshoot: toNumber(overshoot)
     }))
-
-/**
- * The biggest overshoots across the estate, so one outlier is not read as
- * estate-wide drift.
- *
- * @param {OverExportedLoadsFinding[]} findings
- * @param {number} limit
- */
-export const largestOverExportedLoads = (findings, limit) =>
-  findings
-    .flatMap(({ reportId, loads }) =>
-      loads.map(({ rowId, overshoot }) => ({ reportId, rowId, overshoot }))
-    )
-    .sort((a, b) => b.overshoot - a.overshoot)
-    .slice(0, limit)

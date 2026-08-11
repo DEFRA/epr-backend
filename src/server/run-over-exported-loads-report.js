@@ -7,7 +7,6 @@ import { log, runUnderLock } from './diagnostic-run.js'
 import {
   findOverExportedLoads,
   formatOverExportedLoadsFinding,
-  largestOverExportedLoads,
   summariseOverExportedLoadsByMaterial,
   summariseOverExportedLoadsFindings
 } from '#reports/monitoring/over-exported-loads.js'
@@ -21,12 +20,11 @@ import {
  */
 
 const LOCK_NAME = 'over-exported-loads-report'
-const LARGEST_REPORTED = 5
 
 /**
  * @param {OverExportedLoadsFinding[]} findings
  */
-const logBreakdowns = (findings) => {
+const logByMaterial = (findings) =>
   summariseOverExportedLoadsByMaterial(findings).forEach(
     ({ material, loads, exporters, overshoot }) =>
       log(
@@ -35,22 +33,6 @@ const logBreakdowns = (findings) => {
           `across ${exporters} exporter(s), overshoot ${overshoot}`
       )
   )
-
-  const largest = largestOverExportedLoads(findings, LARGEST_REPORTED)
-  if (largest.length > 0) {
-    const listed = largest
-      .map(
-        ({ reportId, rowId, overshoot }) =>
-          `${rowId} (${reportId}) ${overshoot}`
-      )
-      .join('; ')
-
-    log(
-      LOGGING_EVENT_ACTIONS.OVER_EXPORTED_LOADS_LARGEST,
-      `Over-exported loads largest: ${listed}`
-    )
-  }
-}
 
 /**
  * @param {UnreadableReport[]} unreadable
@@ -103,7 +85,7 @@ const runReport = async (server) => {
     )
   )
   warnUnreadable(unreadable)
-  logBreakdowns(findings)
+  logByMaterial(findings)
   logSummary(scanned, unreadable, findings)
 }
 

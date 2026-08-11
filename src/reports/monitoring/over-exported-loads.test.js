@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   findOverExportedLoads,
   formatOverExportedLoadsFinding,
-  largestOverExportedLoads,
   summariseOverExportedLoadsByMaterial,
   summariseOverExportedLoadsFindings
 } from './over-exported-loads.js'
@@ -469,25 +468,6 @@ describe('overExportedLoads', () => {
 
       expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
         { material: 'unknown', loads: 1, exporters: 1, overshoot: 2 }
-      ])
-    })
-  })
-
-  describe('largestOverExportedLoads', () => {
-    it('returns the biggest overshoots first, limited to the count asked for', () => {
-      const findings = [
-        finding({
-          loads: [
-            { rowId: 'row-1', received: 10, exported: 12, overshoot: 2 },
-            { rowId: 'row-2', received: 1, exported: 20, overshoot: 19 },
-            { rowId: 'row-3', received: 8, exported: 11.5, overshoot: 3.5 }
-          ]
-        })
-      ]
-
-      expect(largestOverExportedLoads(findings, 2)).toStrictEqual([
-        { reportId: 'report-1', rowId: 'row-2', overshoot: 19 },
-        { reportId: 'report-1', rowId: 'row-3', overshoot: 3.5 }
       ])
     })
   })

@@ -228,38 +228,6 @@ describe('runOverExportedLoadsReport', () => {
     )
   })
 
-  it('logs the largest overshoots, so one outlier is not read as estate-wide drift', async () => {
-    const server = buildServer(
-      estateApp(
-        [monthlyReport()],
-        [receivedRow('row-1', 10, 12), receivedRow('row-2', 1, 20)]
-      )
-    )
-
-    await runOverExportedLoadsReport(server)
-
-    expect(logger.info).toHaveBeenCalledWith(
-      infoLine(
-        'over_exported_loads_largest',
-        'Over-exported loads largest: row-2 (report-1) 19; row-1 (report-1) 2'
-      )
-    )
-  })
-
-  it('logs no largest line when nothing is over-exported', async () => {
-    const server = buildServer(emptyEstateApp())
-
-    await runOverExportedLoadsReport(server)
-
-    expect(logger.info).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: expect.objectContaining({
-          action: 'over_exported_loads_largest'
-        })
-      })
-    )
-  })
-
   it('logs the failure and releases the lock when the scan throws', async () => {
     const lock = { free: vi.fn().mockResolvedValue(undefined) }
     const app = emptyEstateApp()
