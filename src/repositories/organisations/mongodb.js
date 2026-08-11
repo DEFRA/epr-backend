@@ -22,7 +22,7 @@ import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpe
 import { getCurrentStatus } from './status.js'
 
 /** @import { Collection, Db } from 'mongodb' */
-/** @import { FindPageParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -247,14 +247,14 @@ const buildOrgIdFilter = (value) => {
 }
 
 /**
- * Builds the MongoDB filter for a findPage query. The in-memory adapter has its
+ * Builds the MongoDB filter for a find query. The in-memory adapter has its
  * own equivalent; the shared criteria semantics live in helpers.js and the
- * findPage contract tests hold the two implementations to the same behaviour.
+ * find contract tests hold the two implementations to the same behaviour.
  *
  * @param {import('./port.js').SearchCriteria} criteria
  * @returns {object} - a filter matching organisations satisfying every criterion
  */
-const buildFindPageFilter = (criteria) => {
+const buildFindFilter = (criteria) => {
   const {
     search,
     orgId,
@@ -295,10 +295,10 @@ const buildFindPageFilter = (criteria) => {
   return conditions.length === 0 ? {} : { $and: conditions }
 }
 
-const performFindPage =
+const performFind =
   (db) =>
-  async (/** @type {FindPageParams} */ { page, pageSize, ...criteria }) => {
-    const filter = buildFindPageFilter(criteria)
+  async (/** @type {FindParams} */ { page, pageSize, ...criteria }) => {
+    const filter = buildFindFilter(criteria)
 
     const collection = db.collection(COLLECTION_NAME)
     const totalItems = await collection.countDocuments(filter)
@@ -557,7 +557,7 @@ export const createOrganisationsRepository = async (
       findById,
       findAll: performFindAll(db),
       findAllBySchemaVersion: performFindAllBySchemaVersion(db),
-      findPage: performFindPage(db),
+      find: performFind(db),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(db),
       findPageForOverseasSitesAdminList: performFindPageForOrsAdminList(db),

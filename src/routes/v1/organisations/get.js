@@ -75,7 +75,7 @@ export const organisationsGetAll = {
       return h.response(organisations).code(StatusCodes.OK)
     }
 
-    const result = await organisationsRepository.findPage({
+    const result = await organisationsRepository.find({
       search: query.search,
       orgId: query.orgId,
       registrationId: query.registrationId,

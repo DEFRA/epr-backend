@@ -79,7 +79,7 @@
 
 /**
  * A {@link SearchCriteria} query plus the page of results to return it in.
- * @typedef {SearchCriteria & { page: number, pageSize: number }} FindPageParams
+ * @typedef {SearchCriteria & { page: number, pageSize: number }} FindParams
  */
 
 /**
@@ -92,7 +92,7 @@
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
  * @property {() => Promise<Organisation[]>} findAll
  * @property {(schemaVersion: number) => Promise<Organisation[]>} findAllBySchemaVersion - Find all organisations with a specific schema version
- * @property {(params: FindPageParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} findPage - Paginated organisations query filtered by the optional criteria in FindPageParams, all ANDed together; results sorted alphabetically by name
+ * @property {(params: FindParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} find - Find organisations matching every criterion in SearchCriteria, ANDed together; results sorted alphabetically by name and returned a page at a time
  * @property {() => Promise<OrganisationsOverseasSitesAdminListItem[]>} [findAllForOverseasSitesAdminList] - Lightweight projection for ORS admin list endpoint
  * @property {(params: FindPageForOverseasSitesAdminListParams) => Promise<OrganisationsOverseasSitesAdminListPage>} [findPageForOverseasSitesAdminList] - Paginated ORS admin list query optimized for MongoDB-backed reads
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs

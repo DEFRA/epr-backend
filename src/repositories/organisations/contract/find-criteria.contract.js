@@ -9,8 +9,8 @@ const insertNamed = async (repository, names) => {
 
 const namesOf = (result) => result.items.map((o) => o.companyDetails.name)
 
-export const testFindPageBehaviour = (it) => {
-  describe('findPage', () => {
+export const testFindWithCriteriaBehaviour = (it) => {
+  describe('find', () => {
     let repository
 
     beforeEach(
@@ -25,7 +25,7 @@ export const testFindPageBehaviour = (it) => {
 
     describe('empty collection', () => {
       it('returns items=[], totalItems=0, totalPages=0', async () => {
-        const result = await repository.findPage({ page: 1, pageSize: 50 })
+        const result = await repository.find({ page: 1, pageSize: 50 })
 
         expect(result).toEqual({
           items: [],
@@ -41,7 +41,7 @@ export const testFindPageBehaviour = (it) => {
       it('sorts results alphabetically by companyDetails.name ascending', async () => {
         await insertNamed(repository, ['Charlie Ltd', 'Alpha Co', 'Bravo Inc'])
 
-        const result = await repository.findPage({ page: 1, pageSize: 10 })
+        const result = await repository.find({ page: 1, pageSize: 10 })
 
         expect(result.items.map((o) => o.companyDetails.name)).toEqual([
           'Alpha Co',
@@ -55,7 +55,7 @@ export const testFindPageBehaviour = (it) => {
       it('returns the requested page slice', async () => {
         await insertNamed(repository, ['A', 'B', 'C', 'D', 'E'])
 
-        const result = await repository.findPage({ page: 2, pageSize: 2 })
+        const result = await repository.find({ page: 2, pageSize: 2 })
 
         expect(result.items.map((o) => o.companyDetails.name)).toEqual([
           'C',
@@ -70,7 +70,7 @@ export const testFindPageBehaviour = (it) => {
       it('returns a partially filled last page', async () => {
         await insertNamed(repository, ['A', 'B', 'C', 'D', 'E'])
 
-        const result = await repository.findPage({ page: 3, pageSize: 2 })
+        const result = await repository.find({ page: 3, pageSize: 2 })
 
         expect(result.items.map((o) => o.companyDetails.name)).toEqual(['E'])
         expect(result.totalItems).toBe(5)
@@ -80,7 +80,7 @@ export const testFindPageBehaviour = (it) => {
       it('returns empty items when page is beyond end (no 404)', async () => {
         await insertNamed(repository, ['Only Org'])
 
-        const result = await repository.findPage({ page: 99, pageSize: 10 })
+        const result = await repository.find({ page: 99, pageSize: 10 })
 
         expect(result.items).toEqual([])
         expect(result.page).toBe(99)
@@ -92,7 +92,7 @@ export const testFindPageBehaviour = (it) => {
       it('computes totalPages correctly when totalItems is exactly divisible by pageSize', async () => {
         await insertNamed(repository, ['A', 'B', 'C', 'D'])
 
-        const result = await repository.findPage({ page: 1, pageSize: 2 })
+        const result = await repository.find({ page: 1, pageSize: 2 })
 
         expect(result.totalItems).toBe(4)
         expect(result.totalPages).toBe(2)
@@ -101,7 +101,7 @@ export const testFindPageBehaviour = (it) => {
       it('returns both organisations when two share the same name', async () => {
         await insertNamed(repository, ['Same Name Ltd', 'Same Name Ltd'])
 
-        const result = await repository.findPage({ page: 1, pageSize: 10 })
+        const result = await repository.find({ page: 1, pageSize: 10 })
 
         expect(result.totalItems).toBe(2)
         expect(result.items).toHaveLength(2)
@@ -115,7 +115,7 @@ export const testFindPageBehaviour = (it) => {
       it('filters case-insensitively by substring on companyDetails.name', async () => {
         await insertNamed(repository, ['Acme Ltd', 'ACME Corp', 'Globex Inc'])
 
-        const result = await repository.findPage({
+        const result = await repository.find({
           search: 'acme',
           page: 1,
           pageSize: 50
@@ -131,7 +131,7 @@ export const testFindPageBehaviour = (it) => {
       it('matches partial substrings (not just prefix)', async () => {
         await insertNamed(repository, ['Acme Holdings Ltd', 'Globex Inc'])
 
-        const result = await repository.findPage({
+        const result = await repository.find({
           search: 'holdings',
           page: 1,
           pageSize: 50
@@ -144,7 +144,7 @@ export const testFindPageBehaviour = (it) => {
       it('returns empty items and zero totals when no matches', async () => {
         await insertNamed(repository, ['Acme Ltd'])
 
-        const result = await repository.findPage({
+        const result = await repository.find({
           search: 'nonexistent',
           page: 1,
           pageSize: 50
@@ -158,7 +158,7 @@ export const testFindPageBehaviour = (it) => {
       it('treats empty string search as no filter', async () => {
         await insertNamed(repository, ['Acme Ltd', 'Globex Inc'])
 
-        const result = await repository.findPage({
+        const result = await repository.find({
           search: '',
           page: 1,
           pageSize: 50
@@ -170,7 +170,7 @@ export const testFindPageBehaviour = (it) => {
       it('treats undefined search as no filter', async () => {
         await insertNamed(repository, ['Acme Ltd', 'Globex Inc'])
 
-        const result = await repository.findPage({
+        const result = await repository.find({
           page: 1,
           pageSize: 50
         })
@@ -181,7 +181,7 @@ export const testFindPageBehaviour = (it) => {
       it('escapes regex special characters in the search term', async () => {
         await insertNamed(repository, ['A.B.C Ltd', 'AXBXC Ltd'])
 
-        const result = await repository.findPage({
+        const result = await repository.find({
           search: 'A.B.C',
           page: 1,
           pageSize: 50
@@ -202,7 +202,7 @@ export const testFindPageBehaviour = (it) => {
           'Globex B'
         ])
 
-        const result = await repository.findPage({
+        const result = await repository.find({
           search: 'acme',
           page: 2,
           pageSize: 2
@@ -242,7 +242,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('finds the organisation holding the numeric orgId', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           orgId: String(HOLDER_ORG_ID),
           page: 1,
           pageSize: 50
@@ -253,7 +253,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('finds the organisation whose document id is the orgId criterion', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           orgId: holder.id,
           page: 1,
           pageSize: 50
@@ -263,7 +263,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('finds the organisation holding the registration id', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           registrationId: holder.registrations[0].id,
           page: 1,
           pageSize: 50
@@ -273,7 +273,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('finds the organisation holding the registration number', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           registrationNumber: 'REG001',
           page: 1,
           pageSize: 50
@@ -283,7 +283,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('finds the organisation holding the accreditation id', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           accreditationId: holder.accreditations[0].id,
           page: 1,
           pageSize: 50
@@ -293,7 +293,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('finds the organisation holding the accreditation number', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           accreditationNumber: 'ACC001',
           page: 1,
           pageSize: 50
@@ -303,7 +303,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('returns the organisation satisfying every criterion', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           registrationNumber: 'REG001',
           accreditationNumber: 'ACC001',
           page: 1,
@@ -314,7 +314,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('returns nothing when criteria are satisfied by different organisations', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           registrationNumber: 'REG001',
           accreditationNumber: 'ACC444',
           page: 1,
@@ -326,13 +326,13 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('ANDs a criterion with the name search', async () => {
-        const matching = await repository.findPage({
+        const matching = await repository.find({
           search: 'holder',
           registrationNumber: 'REG001',
           page: 1,
           pageSize: 50
         })
-        const mismatched = await repository.findPage({
+        const mismatched = await repository.find({
           search: 'other',
           registrationNumber: 'REG001',
           page: 1,
@@ -344,7 +344,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('returns no results for an orgId that is neither a number nor a document id', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           orgId: 'not-an-id',
           page: 1,
           pageSize: 50
@@ -355,7 +355,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('matches numbers case-insensitively', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           registrationNumber: 'reg001',
           accreditationNumber: 'acc001',
           page: 1,
@@ -366,7 +366,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('does not match a number by prefix', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           registrationNumber: 'REG00',
           page: 1,
           pageSize: 50
@@ -389,7 +389,7 @@ export const testFindPageBehaviour = (it) => {
           })
         )
 
-        const result = await repository.findPage({
+        const result = await repository.find({
           registrationNumber: 'REG.01',
           page: 1,
           pageSize: 50
@@ -399,7 +399,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('treats empty-string criteria as absent', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           search: '',
           orgId: '',
           registrationId: '',
@@ -414,7 +414,7 @@ export const testFindPageBehaviour = (it) => {
       })
 
       it('treats undefined criteria as absent', async () => {
-        const result = await repository.findPage({
+        const result = await repository.find({
           orgId: undefined,
           registrationId: undefined,
           registrationNumber: undefined,
@@ -434,7 +434,7 @@ export const testFindPageBehaviour = (it) => {
           )
         }
 
-        const result = await repository.findPage({
+        const result = await repository.find({
           accreditationNumber: 'ACC777',
           page: 2,
           pageSize: 2
@@ -451,7 +451,7 @@ export const testFindPageBehaviour = (it) => {
         const org = buildOrgWithName('Acme Ltd')
         await repository.insert(org)
 
-        const result = await repository.findPage({ page: 1, pageSize: 10 })
+        const result = await repository.find({ page: 1, pageSize: 10 })
 
         const found = result.items[0]
         expect(found.id).toBe(org.id)

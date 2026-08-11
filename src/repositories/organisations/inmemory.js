@@ -1,5 +1,5 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import { FindPageParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
 
 import Boom from '@hapi/boom'
 import {
@@ -190,16 +190,16 @@ const buildOrgIdMatchers = (value) => {
 }
 
 /**
- * The in-memory equivalent of the MongoDB adapter's findPage filter, applied to
+ * The in-memory equivalent of the MongoDB adapter's find filter, applied to
  * raw stored documents — so `_id` rather than `id`. The shared criteria
- * semantics live in helpers.js and the findPage contract tests hold the two
+ * semantics live in helpers.js and the find contract tests hold the two
  * implementations to the same behaviour.
  *
  * @param {import('./port.js').SearchCriteria} criteria
  * @returns {(org: import('./helpers.js').StoredOrganisation) => boolean} - true when
  *   the organisation satisfies every criterion
  */
-const buildFindPageMatcher = (criteria) => {
+const buildFindMatcher = (criteria) => {
   const {
     search,
     orgId,
@@ -245,11 +245,11 @@ const buildFindPageMatcher = (criteria) => {
   return (org) => checks.every((check) => check(org))
 }
 
-const performFindPage =
+const performFind =
   (staleCache) =>
-  async (/** @type {FindPageParams} */ { page, pageSize, ...criteria }) => {
+  async (/** @type {FindParams} */ { page, pageSize, ...criteria }) => {
     const matches = structuredClone(staleCache).filter(
-      buildFindPageMatcher(criteria)
+      buildFindMatcher(criteria)
     )
 
     matches.sort((a, b) => {
@@ -523,7 +523,7 @@ export const createInMemoryOrganisationsRepository = (
       replace: replaceFn,
       findAll: performFindAll(staleCache),
       findAllBySchemaVersion: performFindAllBySchemaVersion(staleCache),
-      findPage: performFindPage(staleCache),
+      find: performFind(staleCache),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(staleCache),
       findAllLinked: performFindAllLinked(staleCache),
