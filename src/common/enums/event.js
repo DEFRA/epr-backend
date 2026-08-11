@@ -45,6 +45,7 @@ export const LOGGING_EVENT_ACTIONS = {
   UNEXPORTED_TONNAGE_RECOMPUTE_FAILED: 'unexported_tonnage_recompute_failed',
   UNEXPORTED_TONNAGE_LOOKUP_FAILED: 'unexported_tonnage_lookup_failed',
   UNEXPORTED_TONNAGE_BY_MONTH: 'unexported_tonnage_by_month',
+  UNEXPORTED_TONNAGE_BY_MATERIAL: 'unexported_tonnage_by_material',
   UNEXPORTED_TONNAGE_BY_STATUS: 'unexported_tonnage_by_status',
   UNEXPORTED_TONNAGE_LARGEST_DELTAS: 'unexported_tonnage_largest_deltas',
   UNEXPORTED_TONNAGE_SUMMARY: 'unexported_tonnage_summary'

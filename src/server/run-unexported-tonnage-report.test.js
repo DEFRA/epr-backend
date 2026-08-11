@@ -100,6 +100,20 @@ const estateApp = (periodicReports, rowStates) => ({
   }
 })
 
+const estateAppWithMaterials = (periodicReports, materialByRegistration) => {
+  const app = estateApp(periodicReports, [])
+  app.summaryLogRowStatesRepository.findRowStatesForSummaryLog.mockResolvedValue(
+    [receivedRow(29.19)]
+  )
+  app.organisationsRepository.findRegistrationById.mockImplementation(
+    async (_organisationId, registrationId) => ({
+      accreditationId: null,
+      material: materialByRegistration[registrationId]
+    })
+  )
+  return app
+}
+
 const buildServer = (
   app,
   {
@@ -305,14 +319,57 @@ describe('runUnexportedTonnageReport', () => {
       infoLine(
         'unexported_tonnage_by_month',
         'Unexported tonnage by month: Feb 2026 - 1 report(s), delta 29.19, ' +
-          'understated 29.19, overstated 0'
+          'understated 29.19, overstated 0; ' +
+          'by material: (material unknown) 1 report(s) delta 29.19'
       )
     )
     expect(logger.info).toHaveBeenCalledWith(
       infoLine(
         'unexported_tonnage_by_month',
         'Unexported tonnage by month: Mar 2026 - 1 report(s), delta 4, ' +
-          'understated 4, overstated 0'
+          'understated 4, overstated 0; ' +
+          'by material: (material unknown) 1 report(s) delta 4'
+      )
+    )
+  })
+
+  it('logs the delta broken down by material, and splits each month by material too', async () => {
+    const server = buildServer(
+      estateAppWithMaterials(
+        [
+          submittedFebReport({ registrationId: 'reg-1' }),
+          submittedFebReport({
+            organisationId: 'org-2',
+            registrationId: 'reg-2',
+            reportId: 'report-2'
+          })
+        ],
+        { 'reg-1': 'plastic', 'reg-2': 'steel' }
+      )
+    )
+
+    await runUnexportedTonnageReport(server)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      infoLine(
+        'unexported_tonnage_by_material',
+        'Unexported tonnage by material: plastic - 1 report(s), delta 29.19, ' +
+          'understated 29.19, overstated 0'
+      )
+    )
+    expect(logger.info).toHaveBeenCalledWith(
+      infoLine(
+        'unexported_tonnage_by_material',
+        'Unexported tonnage by material: steel - 1 report(s), delta 29.19, ' +
+          'understated 29.19, overstated 0'
+      )
+    )
+    expect(logger.info).toHaveBeenCalledWith(
+      infoLine(
+        'unexported_tonnage_by_month',
+        'Unexported tonnage by month: Feb 2026 - 2 report(s), delta 58.38, ' +
+          'understated 58.38, overstated 0; ' +
+          'by material: plastic 1 report(s) delta 29.19, steel 1 report(s) delta 29.19'
       )
     )
   })

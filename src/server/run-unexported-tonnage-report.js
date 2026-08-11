@@ -8,6 +8,7 @@ import {
   findUnexportedTonnageReports,
   formatUnexportedTonnageFinding,
   largestUnexportedTonnageDeltas,
+  summariseUnexportedTonnageByMaterial,
   summariseUnexportedTonnageByMonth,
   summariseUnexportedTonnageByStatus,
   summariseUnexportedTonnageFindings
@@ -15,7 +16,7 @@ import {
 
 /**
  * @import { StartedServer } from '#common/hapi-types.js'
- * @import { UnexportedTonnageFinding } from '#reports/monitoring/unexported-tonnage.js'
+ * @import { MaterialBreakdown, UnexportedTonnageFinding } from '#reports/monitoring/unexported-tonnage.js'
  */
 
 const LOCK_NAME = 'unexported-tonnage-report'
@@ -57,14 +58,39 @@ const log = (action, message, reference) =>
   })
 
 /**
+ * The compact per-material segment shared by the month lines, so a month's total
+ * reads down to the stream it came from on the same line.
+ *
+ * @param {MaterialBreakdown[]} byMaterial
+ * @returns {string}
+ */
+const materialSegment = (byMaterial) =>
+  byMaterial
+    .map(
+      ({ material, reports, delta }) =>
+        `${material} ${reports} report(s) delta ${delta}`
+    )
+    .join(', ')
+
+/**
  * @param {UnexportedTonnageFinding[]} findings
  */
 const logBreakdowns = (findings) => {
   summariseUnexportedTonnageByMonth(findings).forEach(
-    ({ month, reports, delta, understated, overstated }) =>
+    ({ month, reports, delta, understated, overstated, byMaterial }) =>
       log(
         LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_BY_MONTH,
         `Unexported tonnage by month: ${month} - ${reports} report(s), ` +
+          `delta ${delta}, understated ${understated}, overstated ${overstated}; ` +
+          `by material: ${materialSegment(byMaterial)}`
+      )
+  )
+
+  summariseUnexportedTonnageByMaterial(findings).forEach(
+    ({ material, reports, delta, understated, overstated }) =>
+      log(
+        LOGGING_EVENT_ACTIONS.UNEXPORTED_TONNAGE_BY_MATERIAL,
+        `Unexported tonnage by material: ${material} - ${reports} report(s), ` +
           `delta ${delta}, understated ${understated}, overstated ${overstated}`
       )
   )
