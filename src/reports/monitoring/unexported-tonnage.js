@@ -65,6 +65,7 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *
  * @typedef {FindingIdentity & {
  *   kind: typeof FINDING_KIND.MISMATCH,
+ *   material: string,
  *   stored: number,
  *   recomputed: number,
  *   delta: number,
@@ -95,11 +96,19 @@ import { wasteRecordStatesForHead } from '#waste-records/application/read-summar
  *   | RecomputeFailedFinding
  *   | LookupFailedFinding} UnexportedTonnageFinding
  *
- * The rows a report was built from, or the reason they are not there. A reason
- * here means the data genuinely is not present, which a re-run will not change
- * — an error while reading is a `LOOKUP_FAILED` finding instead.
+ * The rows a report was built from together with the registration's material,
+ * or the reason the rows are not there. A reason here means the data genuinely
+ * is not present, which a re-run will not change — an error while reading is a
+ * `LOOKUP_FAILED` finding instead. The material rides through so a resolved
+ * report's mismatch lands in the right stream when the figures are split by
+ * material; an unresolved report carries none, contributing no mismatch to split.
  *
- * @typedef {{ states: WasteRecordState[] } | { unresolved: string }} SourceRowStates
+ * The resolved branch's `material` is optional: production always supplies it,
+ * but a direct caller diagnosing hand-built rows need not, and an absent one
+ * reads as `unknown`.
+ *
+ * @typedef {{ states: WasteRecordState[], material?: string }
+ *   | { unresolved: string }} SourceRowStates
  */
 
 /**
@@ -370,6 +379,7 @@ export const diagnoseReportRow = (row, sourceRowStates) => {
   return {
     kind: FINDING_KIND.MISMATCH,
     ...identityOf(row),
+    material: sourceRowStates.material ?? UNKNOWN_MATERIAL,
     stored: row.storedUnexported,
     recomputed: total,
     delta: toNumber(subtract(total, row.storedUnexported)),
@@ -453,6 +463,35 @@ const deltaTotalsOf = (mismatches) => {
   }
 }
 
+/**
+ * @typedef {{
+ *   material: string,
+ *   reports: number,
+ *   delta: number,
+ *   understated: number,
+ *   overstated: number
+ * }} MaterialBreakdown
+ */
+
+/**
+ * A set of mismatches broken down by the material their registration carries,
+ * alphabetically. The unit shared by the standalone by-material breakdown and the
+ * per-material split nested inside each month, so both read the tonnage the same
+ * way. Every mismatch carries a material — an absent one resolves to `unknown`
+ * upstream — so no mismatch falls out of the breakdown.
+ *
+ * @param {MismatchFinding[]} mismatches
+ * @returns {MaterialBreakdown[]}
+ */
+const byMaterialOf = (mismatches) =>
+  [...Map.groupBy(mismatches, ({ material }) => material).entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([material, group]) => ({
+      material,
+      reports: group.length,
+      ...deltaTotalsOf(group)
+    }))
+
 const MONTHS_IN_YEAR = 12
 
 /**
@@ -460,13 +499,18 @@ const MONTHS_IN_YEAR = 12
  * first — the shape the business asked the sizing run for. Only mismatches
  * carry a figure, so the other finding kinds contribute no months.
  *
+ * Each month carries a `byMaterial` split of its own mismatches, so a month's
+ * total can be read down to the stream it came from without crossing the whole
+ * estate against a second breakdown by hand.
+ *
  * @param {UnexportedTonnageFinding[]} findings
  * @returns {{
  *   month: string,
  *   reports: number,
  *   delta: number,
  *   understated: number,
- *   overstated: number
+ *   overstated: number,
+ *   byMaterial: MaterialBreakdown[]
  * }[]}
  */
 export const summariseUnexportedTonnageByMonth = (findings) =>
@@ -484,8 +528,22 @@ export const summariseUnexportedTonnageByMonth = (findings) =>
         mismatches[0].year
       ),
       reports: mismatches.length,
-      ...deltaTotalsOf(mismatches)
+      ...deltaTotalsOf(mismatches),
+      byMaterial: byMaterialOf(mismatches)
     }))
+
+/**
+ * The correctable tonnage broken down by the material each report's registration
+ * carries, alphabetically. The estate-wide counterpart to the per-material split
+ * nested inside each month, for reading the total against one stream at a time.
+ * Only mismatches carry a figure, so the other finding kinds contribute no
+ * materials.
+ *
+ * @param {UnexportedTonnageFinding[]} findings
+ * @returns {MaterialBreakdown[]}
+ */
+export const summariseUnexportedTonnageByMaterial = (findings) =>
+  byMaterialOf(mismatchesOf(findings))
 
 /**
  * The mismatches split by the status their report sits in. A submitted report
@@ -601,10 +659,16 @@ export const summariseUnexportedTonnageFindings = (findings) => {
  * Errors propagate: a registration that cannot be read is a fact about the run,
  * not about the exporter's data, and the caller records it as such.
  *
+ * Reads the registration's material off the same fetch, so a resolved report's
+ * mismatch can be split by stream without a second lookup.
+ *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @returns {Promise<import('#waste-records/repository/port.js').WasteBalanceLedgerId[]>}
+ * @returns {Promise<{
+ *   ledgers: import('#waste-records/repository/port.js').WasteBalanceLedgerId[],
+ *   material: string
+ * }>}
  */
 const resolveLedgers = async (
   organisationsRepository,
@@ -620,15 +684,19 @@ const resolveLedgers = async (
     ? [null, registration.accreditationId]
     : [null]
 
-  return accreditationIds.map((accreditationId) => ({
-    organisationId,
-    registrationId,
-    accreditationId
-  }))
+  return {
+    ledgers: accreditationIds.map((accreditationId) => ({
+      organisationId,
+      registrationId,
+      accreditationId
+    })),
+    material: registration?.material ?? UNKNOWN_MATERIAL
+  }
 }
 
 const NO_SUMMARY_LOG = 'no source summary log recorded on the report'
 const NO_ROWS = 'no rows found under the registration ledgers'
+const UNKNOWN_MATERIAL = 'unknown'
 
 /**
  * The row states the report was built from, or the reason there are none. Both
@@ -654,7 +722,7 @@ const loadSourceRowStates = async (
     return { unresolved: NO_SUMMARY_LOG }
   }
 
-  const ledgers = await resolveLedgers(
+  const { ledgers, material } = await resolveLedgers(
     organisationsRepository,
     row.organisationId,
     row.registrationId
@@ -671,7 +739,7 @@ const loadSourceRowStates = async (
     )
   }
 
-  return states.length > 0 ? { states } : { unresolved: NO_ROWS }
+  return states.length > 0 ? { states, material } : { unresolved: NO_ROWS }
 }
 
 /**

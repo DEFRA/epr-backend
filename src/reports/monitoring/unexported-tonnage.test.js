@@ -6,6 +6,7 @@ import {
   findReviewableReportRows,
   formatUnexportedTonnageFinding,
   largestUnexportedTonnageDeltas,
+  summariseUnexportedTonnageByMaterial,
   summariseUnexportedTonnageByMonth,
   summariseUnexportedTonnageByStatus,
   summariseUnexportedTonnageFindings
@@ -70,6 +71,7 @@ const mismatch = (overrides = {}) =>
   /** @type {UnexportedTonnageFinding} */ ({
     kind: 'mismatch',
     ...FEB_2026_IDENTITY,
+    material: 'unknown',
     stored: 0,
     recomputed: 0,
     delta: 0,
@@ -219,6 +221,20 @@ describe('unexported-tonnage', () => {
 
       expect(finding).toStrictEqual(
         mismatch({ recomputed: 29.19, delta: 29.19 })
+      )
+    })
+
+    it('carries the resolved material onto a mismatch, so its figure can be split by stream', () => {
+      const finding = diagnoseReportRow(
+        buildRow(),
+        /** @type {any} */ ({
+          states: [buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 29.19 })],
+          material: 'Plastic'
+        })
+      )
+
+      expect(finding).toStrictEqual(
+        mismatch({ material: 'Plastic', recomputed: 29.19, delta: 29.19 })
       )
     })
 
@@ -588,19 +604,20 @@ describe('unexported-tonnage', () => {
   })
 
   describe('summariseUnexportedTonnageByMonth', () => {
-    const mismatchIn = (year, period, delta) => ({
+    const mismatchIn = (year, period, delta, material = 'Plastic') => ({
       kind: 'mismatch',
       year,
       period,
-      delta
+      delta,
+      material
     })
 
-    it('totals the delta for each month a mismatch falls in, oldest first', () => {
+    it('totals the delta for each month a mismatch falls in, oldest first, split by material within the month', () => {
       const findings = /** @type {UnexportedTonnageFinding[]} */ (
         /** @type {unknown} */ ([
-          mismatchIn(2026, 3, 29.19),
-          mismatchIn(2025, 12, 4),
-          mismatchIn(2026, 3, 0.81)
+          mismatchIn(2026, 3, 29.19, 'Plastic'),
+          mismatchIn(2025, 12, 4, 'Steel'),
+          mismatchIn(2026, 3, 0.81, 'Steel')
         ])
       )
 
@@ -610,14 +627,39 @@ describe('unexported-tonnage', () => {
           reports: 1,
           delta: 4,
           understated: 4,
-          overstated: 0
+          overstated: 0,
+          byMaterial: [
+            {
+              material: 'Steel',
+              reports: 1,
+              delta: 4,
+              understated: 4,
+              overstated: 0
+            }
+          ]
         },
         {
           month: 'Mar 2026',
           reports: 2,
           delta: 30,
           understated: 30,
-          overstated: 0
+          overstated: 0,
+          byMaterial: [
+            {
+              material: 'Plastic',
+              reports: 1,
+              delta: 29.19,
+              understated: 29.19,
+              overstated: 0
+            },
+            {
+              material: 'Steel',
+              reports: 1,
+              delta: 0.81,
+              understated: 0.81,
+              overstated: 0
+            }
+          ]
         }
       ])
     })
@@ -636,7 +678,16 @@ describe('unexported-tonnage', () => {
           reports: 2,
           delta: 0,
           understated: 29.19,
-          overstated: 29.19
+          overstated: 29.19,
+          byMaterial: [
+            {
+              material: 'Plastic',
+              reports: 2,
+              delta: 0,
+              understated: 29.19,
+              overstated: 29.19
+            }
+          ]
         }
       ])
     })
@@ -650,6 +701,48 @@ describe('unexported-tonnage', () => {
       )
 
       expect(summariseUnexportedTonnageByMonth(findings)).toStrictEqual([])
+    })
+  })
+
+  describe('summariseUnexportedTonnageByMaterial', () => {
+    const mismatchOf = (material, delta) => ({ kind: 'mismatch', material, delta })
+
+    it('totals the correctable delta for each material, alphabetically, split understated and overstated', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          mismatchOf('Steel', 4),
+          mismatchOf('Plastic', 29.19),
+          mismatchOf('Plastic', -0.81)
+        ])
+      )
+
+      expect(summariseUnexportedTonnageByMaterial(findings)).toStrictEqual([
+        {
+          material: 'Plastic',
+          reports: 2,
+          delta: 28.38,
+          understated: 29.19,
+          overstated: 0.81
+        },
+        {
+          material: 'Steel',
+          reports: 1,
+          delta: 4,
+          understated: 4,
+          overstated: 0
+        }
+      ])
+    })
+
+    it('ignores findings with no figure to total', () => {
+      const findings = /** @type {UnexportedTonnageFinding[]} */ (
+        /** @type {unknown} */ ([
+          { kind: 'source-missing', material: 'Plastic' },
+          { kind: 'lookup-failed', material: 'Steel' }
+        ])
+      )
+
+      expect(summariseUnexportedTonnageByMaterial(findings)).toStrictEqual([])
     })
   })
 
@@ -798,6 +891,21 @@ describe('unexported-tonnage', () => {
         scanned: 1,
         findings: [mismatch({ recomputed: 12, delta: 12 })]
       })
+    })
+
+    it("carries the registration's material onto the mismatch it produces", async () => {
+      const { findings } = await scan(
+        buildDeps({
+          registration: /** @type {any} */ ({
+            accreditationId: 'acc-1',
+            material: 'Plastic'
+          })
+        })
+      )
+
+      expect(findings).toStrictEqual([
+        mismatch({ material: 'Plastic', recomputed: 12, delta: 12 })
+      ])
     })
 
     it('reads the rows at the summary log the report was built from, not the current head', async () => {
