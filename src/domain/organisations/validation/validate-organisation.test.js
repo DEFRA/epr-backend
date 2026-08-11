@@ -4,9 +4,18 @@ import { SEVERITY } from './issue.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 
+const withStatusHistory = (accreditation) => ({
+  statusHistory: [{ status: 'created', updatedAt: '2026-01-01' }],
+  ...accreditation
+})
+
 const organisation = (registrations, accreditations) =>
   /** @type {Organisation} */ (
-    /** @type {unknown} */ ({ id: 'org-1', registrations, accreditations })
+    /** @type {unknown} */ ({
+      id: 'org-1',
+      registrations,
+      accreditations: accreditations.map(withStatusHistory)
+    })
   )
 
 describe('validateOrganisation', () => {
@@ -38,7 +47,16 @@ describe('validateOrganisation', () => {
       ],
       [
         { id: 'acc-1', material: 'glass' },
-        { id: 'acc-orphan', material: 'glass' }
+        { id: 'acc-orphan', material: 'glass' },
+        {
+          id: 'acc-unnumbered',
+          material: 'glass',
+          accreditationNumber: null,
+          statusHistory: [
+            { status: 'created', updatedAt: '2026-01-01' },
+            { status: 'approved', updatedAt: '2026-02-01' }
+          ]
+        }
       ]
     )
 
@@ -48,6 +66,7 @@ describe('validateOrganisation', () => {
     expect(codes).toContain('DUPLICATE_REGISTRATION_ID')
     expect(codes).toContain('ORPHAN_ACCREDITATION')
     expect(codes).toContain('MATERIAL_MISMATCH')
+    expect(codes).toContain('UNNUMBERED_ACCREDITATION')
   })
 
   it('classifies structural breakages as errors and relationship oddities as warnings', () => {
