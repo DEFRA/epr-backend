@@ -705,7 +705,11 @@ describe('unexported-tonnage', () => {
   })
 
   describe('summariseUnexportedTonnageByMaterial', () => {
-    const mismatchOf = (material, delta) => ({ kind: 'mismatch', material, delta })
+    const mismatchOf = (material, delta) => ({
+      kind: 'mismatch',
+      material,
+      delta
+    })
 
     it('totals the correctable delta for each material, alphabetically, split understated and overstated', () => {
       const findings = /** @type {UnexportedTonnageFinding[]} */ (
