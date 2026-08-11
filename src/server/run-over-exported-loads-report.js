@@ -81,7 +81,7 @@ const runReport = async (server) => {
     log(
       LOGGING_EVENT_ACTIONS.OVER_EXPORTED_LOADS_FINDING,
       formatOverExportedLoadsFinding(finding),
-      finding.reportId
+      { reference: finding.reportId, reason: finding.regulator }
     )
   )
   warnUnreadable(unreadable)

@@ -81,6 +81,7 @@ const finding = (overrides = {}) => ({
   year: 2026,
   period: 2,
   reportStatus: 'submitted',
+  regulator: 'ea',
   material: 'plastic',
   loads: [{ rowId: 'row-1', received: 10, exported: 12, overshoot: 2 }],
   totalOvershoot: 2,
@@ -120,12 +121,24 @@ describe('overExportedLoads', () => {
           year: 2026,
           period: 2,
           reportStatus: 'submitted',
+          regulator: 'ea',
           material: 'plastic',
           loads: [{ rowId: 'row-1', received: 10, exported: 12, overshoot: 2 }],
           totalOvershoot: 2,
           net: -2
         }
       ])
+    })
+
+    it('carries the regulator the registration was submitted to', async () => {
+      const deps = estate([monthlyReport()], [receivedRow('row-1', 10, 12)])
+      deps.organisationsRepository.findRegistrationById.mockResolvedValue(
+        buildExporterRegistration({ submittedToRegulator: 'sepa' })
+      )
+
+      const { findings } = await findOverExportedLoads(deps)
+
+      expect(findings[0].regulator).toBe('sepa')
     })
 
     it('finds a load on a report carrying no stored unexported figure, which this scan never reads', async () => {

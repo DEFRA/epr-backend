@@ -41,6 +41,7 @@ import { loadSourceRowStates } from './source-row-states.js'
  *   year: number,
  *   period: number,
  *   reportStatus: string,
+ *   regulator: string,
  *   material: string,
  *   loads: OverExportedLoad[],
  *   totalOvershoot: number,
@@ -192,6 +193,7 @@ const assessReportRow = async (deps, row) => {
               year: row.year,
               period: row.period,
               reportStatus: row.reportStatus,
+              regulator: sourceRowStates.registration.submittedToRegulator,
               material:
                 resolveDetailedMaterial(sourceRowStates.registration) ??
                 UNKNOWN_MATERIAL,

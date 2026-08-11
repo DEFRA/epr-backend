@@ -10,20 +10,25 @@ import { logger } from '#common/helpers/logging/logger.js'
  * CDP indexes only an allowlisted set of ECS fields, so a figure logged as a
  * property is dropped at ingest and cannot be aggregated in OpenSearch. The
  * figures therefore stay in the message and every breakdown is rolled up before
- * it is logged; `event.action` is what makes a line findable without a regex,
- * and `event.reference` ties it to the report it is about.
+ * it is logged.
+ *
+ * `action`, `reference` and `reason` are the three that do survive, so they
+ * carry anything a reader needs to filter on: `event.action` makes a line
+ * findable without a regex, `event.reference` ties it to the report it is
+ * about, and `event.reason` takes one dimension to slice that population by.
  *
  * @param {string} action
  * @param {string} message
- * @param {string} [reference]
+ * @param {{ reference?: string, reason?: string }} [fields]
  */
-export const log = (action, message, reference) =>
+export const log = (action, message, { reference, reason } = {}) =>
   logger.info({
     message,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action,
-      ...(reference ? { reference } : {})
+      ...(reference ? { reference } : {}),
+      ...(reason ? { reason } : {})
     }
   })
 

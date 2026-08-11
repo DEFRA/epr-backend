@@ -142,7 +142,7 @@ const runReport = async (server) => {
     log(
       ACTION_BY_FINDING_KIND[finding.kind],
       formatUnexportedTonnageFinding(finding),
-      finding.reportId
+      { reference: finding.reportId }
     )
   )
   logBreakdowns(findings)

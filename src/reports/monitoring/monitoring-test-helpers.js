@@ -1,6 +1,7 @@
 import {
   ACCREDITATION_STATUS,
   MATERIAL,
+  REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
@@ -18,7 +19,8 @@ import {
  *   accreditationStatus?: string | null,
  *   accreditationId?: string | null,
  *   glassRecyclingProcess?: string[] | null,
- *   material?: string | null
+ *   material?: string | null,
+ *   submittedToRegulator?: string
  * }} [options]
  * @returns {Registration}
  */
@@ -27,7 +29,8 @@ export const buildExporterRegistration = ({
   accreditationStatus = ACCREDITATION_STATUS.APPROVED,
   accreditationId = null,
   glassRecyclingProcess = null,
-  material = MATERIAL.PLASTIC
+  material = MATERIAL.PLASTIC,
+  submittedToRegulator = REGULATOR.EA
 } = {}) =>
   /** @type {Registration} */ (
     /** @type {unknown} */ ({
@@ -37,6 +40,7 @@ export const buildExporterRegistration = ({
         : null,
       accreditationId,
       glassRecyclingProcess,
-      material
+      material,
+      submittedToRegulator
     })
   )

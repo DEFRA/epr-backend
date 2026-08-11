@@ -84,12 +84,18 @@ const buildServer = (
     })
   )
 
-const infoLine = (action, message, reference) => ({
+/**
+ * @param {string} action
+ * @param {string} message
+ * @param {{ reference?: string, reason?: string }} [fields]
+ */
+const infoLine = (action, message, { reference, reason } = {}) => ({
   message,
   event: {
     category: 'server',
     action,
-    ...(reference ? { reference } : {})
+    ...(reference ? { reference } : {}),
+    ...(reason ? { reason } : {})
   }
 })
 
@@ -171,7 +177,7 @@ describe('runOverExportedLoadsReport', () => {
         'Over-exported loads: org org-1 / registration reg-1, report report-1 ' +
           '(Feb 2026, submitted) - 1 load(s), overshoot 2 ' +
           '(row-1 received 10 exported 12)',
-        'report-1'
+        { reference: 'report-1', reason: 'ea' }
       )
     )
     expect(logger.info).toHaveBeenCalledWith(
