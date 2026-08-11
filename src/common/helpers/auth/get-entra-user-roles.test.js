@@ -1,7 +1,13 @@
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
 
 import { getEntraUserRoles } from './get-entra-user-roles.js'
-import { ADMIN_ROLES, SCOPES } from './constants.js'
+import {
+  ADMIN_ROLES,
+  REGULATOR_APP_ROLE,
+  REGULATOR_ROLE,
+  REGULATOR_SCOPES,
+  SCOPES
+} from './constants.js'
 
 const mockConfigGet = vi.fn()
 
@@ -92,7 +98,129 @@ describe('#getEntraUserRoles', () => {
     })
   })
 
-  describe('first-match-wins precedence', () => {
+  describe('regulator app role', () => {
+    test('returns the regulator role for a token carrying the regulator app role', async () => {
+      const result = await getEntraUserRoles('regulator@test.gov.uk', [
+        REGULATOR_APP_ROLE
+      ])
+
+      expect(result).toEqual({
+        role: REGULATOR_ROLE,
+        scopes: [...REGULATOR_SCOPES]
+      })
+    })
+
+    test('grants a regulator organisation.read for any organisation, with no request in hand', async () => {
+      const result = await getEntraUserRoles('regulator@test.gov.uk', [
+        REGULATOR_APP_ROLE
+      ])
+
+      expect(result.scopes).toContain(SCOPES.organisationRead)
+    })
+
+    test('grants a regulator no write scope', async () => {
+      const result = await getEntraUserRoles('regulator@test.gov.uk', [
+        REGULATOR_APP_ROLE
+      ])
+
+      expect(result.scopes).not.toContain(SCOPES.organisationWrite)
+      expect(result.scopes).not.toContain(SCOPES.adminWrite)
+    })
+
+    test('resolves the regulator role alongside other app roles on the token', async () => {
+      const result = await getEntraUserRoles('regulator@test.gov.uk', [
+        'Some.Other.Role',
+        REGULATOR_APP_ROLE
+      ])
+
+      expect(result.role).toBe(REGULATOR_ROLE)
+    })
+
+    test('resolves the regulator role without an email on the token', async () => {
+      const result = await getEntraUserRoles(undefined, [REGULATOR_APP_ROLE])
+
+      expect(result.role).toBe(REGULATOR_ROLE)
+    })
+
+    test('ignores an unrelated app role and falls through to the email lists', async () => {
+      setListsForRole('support', 'support@example.com')
+
+      const result = await getEntraUserRoles('support@example.com', [
+        'EPR.Regulator'
+      ])
+
+      expect(result.role).toBe('support')
+    })
+
+    test('returns null role for an unrelated app role and an unlisted email', async () => {
+      const result = await getEntraUserRoles('nobody@example.com', [
+        'EPR.Regulator'
+      ])
+
+      expect(result).toEqual({ role: null, scopes: [] })
+    })
+
+    test('returns a fresh scopes array each call (mutation safe)', async () => {
+      const first = await getEntraUserRoles('regulator@test.gov.uk', [
+        REGULATOR_APP_ROLE
+      ])
+      first.scopes.push('extra')
+
+      const second = await getEntraUserRoles('regulator@test.gov.uk', [
+        REGULATOR_APP_ROLE
+      ])
+
+      expect(second.scopes).toEqual([...REGULATOR_SCOPES])
+    })
+  })
+
+  describe('an identity matching more than one rule', () => {
+    test('keeps the admin scopes of a service maintainer given the regulator app role', async () => {
+      setListsForRole('service_maintainer_write', 'both@example.com')
+
+      const result = await getEntraUserRoles('both@example.com', [
+        REGULATOR_APP_ROLE
+      ])
+
+      for (const scope of ADMIN_ROLES.service_maintainer_write) {
+        expect(result.scopes).toContain(scope)
+      }
+    })
+
+    test('adds the regulator scopes to a service maintainer given the regulator app role', async () => {
+      setListsForRole('service_maintainer_write', 'both@example.com')
+
+      const result = await getEntraUserRoles('both@example.com', [
+        REGULATOR_APP_ROLE
+      ])
+
+      for (const scope of REGULATOR_SCOPES) {
+        expect(result.scopes).toContain(scope)
+      }
+    })
+
+    test('keeps the admin tier as the role, so a regulator assignment only adds', async () => {
+      setListsForRole('support', 'both@example.com')
+
+      const result = await getEntraUserRoles('both@example.com', [
+        REGULATOR_APP_ROLE
+      ])
+
+      expect(result.role).toBe('support')
+    })
+
+    test('lists each scope once', async () => {
+      setListsForRole('support', 'both@example.com')
+
+      const result = await getEntraUserRoles('both@example.com', [
+        REGULATOR_APP_ROLE
+      ])
+
+      expect(result.scopes).toEqual([...new Set(result.scopes)])
+    })
+  })
+
+  describe('first-match-wins precedence between admin tiers', () => {
     test('write tier wins over maintainer tier when in both lists', async () => {
       setListsExplicit({
         write: ['shared@example.com'],

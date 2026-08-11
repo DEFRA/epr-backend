@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -164,6 +165,25 @@ describe(`POST ${reportsStatusPath}`, () => {
         payload,
         ...asOperator()
       })
+
+    it('refuses a regulator standard user, who reads but never writes', async () => {
+      const { server, organisationId, registrationId } =
+        await createServerWithReport({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1),
+        payload: { status: 'ready_to_submit', version: 1 },
+        headers: {
+          Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
 
     describe('successful transitions', () => {
       it('advances status to ready_to_submit', async () => {

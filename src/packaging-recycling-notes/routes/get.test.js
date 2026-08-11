@@ -13,6 +13,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testRegulatorCanRead } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { packagingRecyclingNotesListPath } from './get.js'
@@ -131,6 +132,14 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
     })
 
     describe('successful requests', () => {
+      testRegulatorCanRead({
+        server: () => server,
+        makeRequest: async () => ({
+          method: 'GET',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`
+        })
+      })
+
       it('returns 200 with list of PRNs for registration', async () => {
         const response = await server.inject({
           method: 'GET',

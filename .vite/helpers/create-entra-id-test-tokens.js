@@ -13,6 +13,13 @@ const SERVICE_MAINTAINER_EMAIL = 'me@example.com'
 // token resolves to the read-only `service_maintainer` tier.
 const READ_ONLY_MAINTAINER_EMAIL = 'readonly@example.com'
 
+// Must match no configured admin email list, so this token resolves through
+// the app role alone. Mirrors the regulator user the Entra stub serves.
+const REGULATOR_EMAIL = 'standard.regulator@test.gov.uk'
+
+// Must match REGULATOR_APP_ROLE in src/common/helpers/auth/constants.js
+const REGULATOR_APP_ROLE = 'Waste.Regulator.Standard'
+
 // Generate key pair once at module load time
 // @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format (incomplete fix in PR #63492)
 const keyPair = generateKeyPairSync('rsa', {
@@ -141,11 +148,26 @@ const generateEntraIdTokenForReadOnlyMaintainer = () => {
   return mockEntraIdToken
 }
 
+const generateEntraIdTokenForRegulator = () => {
+  const mockEntraIdToken = Jwt.token.generate(
+    {
+      ...baseValidObject,
+      preferred_username: REGULATOR_EMAIL,
+      roles: [REGULATOR_APP_ROLE]
+    },
+    validJwtSecretObject,
+    validGenerateTokenOptions
+  )
+
+  return mockEntraIdToken
+}
+
 export const entraIdMockAuthTokens = {
   validToken: generateValidEntraIdToken(),
   wrongSignatureToken: generateEntraIdTokenWithWrongSignature(),
   wrongIssuerToken: generateEntraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateEntraIdTokenWithWrongAudience(),
   nonServiceMaintainerUserToken: generateEntraIdTokenForUnauthorisedUser(),
-  readOnlyMaintainerToken: generateEntraIdTokenForReadOnlyMaintainer()
+  readOnlyMaintainerToken: generateEntraIdTokenForReadOnlyMaintainer(),
+  regulatorToken: generateEntraIdTokenForRegulator()
 }
