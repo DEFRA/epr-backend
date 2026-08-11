@@ -9,7 +9,6 @@ import {
   formatOverExportedLoadsFinding,
   largestOverExportedLoads,
   summariseOverExportedLoadsByMaterial,
-  summariseOverExportedLoadsByMonth,
   summariseOverExportedLoadsFindings
 } from '#reports/monitoring/over-exported-loads.js'
 
@@ -34,15 +33,6 @@ const logBreakdowns = (findings) => {
         LOGGING_EVENT_ACTIONS.OVER_EXPORTED_LOADS_BY_MATERIAL,
         `Over-exported loads by material: ${material} - ${loads} load(s) ` +
           `across ${exporters} exporter(s), overshoot ${overshoot}`
-      )
-  )
-
-  summariseOverExportedLoadsByMonth(findings).forEach(
-    ({ month, reports, loads, overshoot }) =>
-      log(
-        LOGGING_EVENT_ACTIONS.OVER_EXPORTED_LOADS_BY_MONTH,
-        `Over-exported loads by month: ${month} - ${reports} report(s), ` +
-          `${loads} load(s), overshoot ${overshoot}`
       )
   )
 

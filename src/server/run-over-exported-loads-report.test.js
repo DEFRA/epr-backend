@@ -228,21 +228,6 @@ describe('runOverExportedLoadsReport', () => {
     )
   })
 
-  it('logs the overshoot broken down by the month each report covers', async () => {
-    const server = buildServer(
-      estateApp([monthlyReport()], [receivedRow('row-1', 10, 12)])
-    )
-
-    await runOverExportedLoadsReport(server)
-
-    expect(logger.info).toHaveBeenCalledWith(
-      infoLine(
-        'over_exported_loads_by_month',
-        'Over-exported loads by month: Feb 2026 - 1 report(s), 1 load(s), overshoot 2'
-      )
-    )
-  })
-
   it('logs the largest overshoots, so one outlier is not read as estate-wide drift', async () => {
     const server = buildServer(
       estateApp(

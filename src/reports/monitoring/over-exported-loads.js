@@ -364,40 +364,6 @@ export const summariseOverExportedLoadsByMaterial = (findings) =>
     }))
 
 /**
- * @param {OverExportedLoadsFinding[]} findings
- */
-export const summariseOverExportedLoadsByMonth = (findings) =>
-  Object.entries(
-    findings.reduce((byPeriod, finding) => {
-      const key = `${finding.year}-${String(finding.period).padStart(2, '0')}`
-      const existing = byPeriod[key] ?? {
-        year: finding.year,
-        period: finding.period,
-        reports: 0,
-        loads: 0,
-        overshoot: ZERO_TONNAGE
-      }
-      byPeriod[key] = {
-        ...existing,
-        reports: existing.reports + 1,
-        loads: existing.loads + finding.loads.length,
-        overshoot: addTonnage(
-          existing.overshoot,
-          toRoundedTonnage(finding.totalOvershoot)
-        )
-      }
-      return byPeriod
-    }, /** @type {Record<string, *>} */ ({}))
-  )
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, { year, period, reports, loads, overshoot }]) => ({
-      month: formatPeriodLabel(CADENCE.monthly, period, year),
-      reports,
-      loads,
-      overshoot: toNumber(overshoot)
-    }))
-
-/**
  * The biggest overshoots across the estate, so one outlier is not read as
  * estate-wide drift.
  *

@@ -5,7 +5,6 @@ import {
   formatOverExportedLoadsFinding,
   largestOverExportedLoads,
   summariseOverExportedLoadsByMaterial,
-  summariseOverExportedLoadsByMonth,
   summariseOverExportedLoadsFindings
 } from './over-exported-loads.js'
 import { buildExporterRegistration } from './monitoring-test-helpers.js'
@@ -470,25 +469,6 @@ describe('overExportedLoads', () => {
 
       expect(summariseOverExportedLoadsByMaterial(findings)).toStrictEqual([
         { material: 'unknown', loads: 1, exporters: 1, overshoot: 2 }
-      ])
-    })
-  })
-
-  describe('summariseOverExportedLoadsByMonth', () => {
-    it('groups the overshoot by the month each report covers', () => {
-      const findings = [
-        finding(),
-        finding({
-          reportId: 'report-2',
-          period: 3,
-          loads: [{ rowId: 'row-2', received: 4, exported: 9, overshoot: 5 }],
-          totalOvershoot: 5
-        })
-      ]
-
-      expect(summariseOverExportedLoadsByMonth(findings)).toStrictEqual([
-        { month: 'Feb 2026', reports: 1, loads: 1, overshoot: 2 },
-        { month: 'Mar 2026', reports: 1, loads: 1, overshoot: 5 }
       ])
     })
   })
