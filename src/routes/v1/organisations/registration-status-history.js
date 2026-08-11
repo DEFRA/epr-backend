@@ -32,7 +32,8 @@ export const registrationStatusHistory = {
    *    {
    *      fromStatus: RegistrationStatus,
    *      toStatus: RegistrationStatus,
-   *      appliesFrom: string,
+   *      validFrom: string,
+   *      validTo: string,
    *      registrationNumber: string
    *    }
    * > & {
@@ -75,16 +76,11 @@ export const registrationStatusHistory = {
     assertRegistrationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
-      // Granting sets validFrom to appliesFrom but leaves validTo (owned by
-      // the application data) untouched, so reject a window that would be
-      // inverted. When validTo is absent the replace below 422s via the
-      // schema guard requiring it on approved registrations.
-      if (
-        registration.validTo &&
-        new Date(grant.appliesFrom) > new Date(registration.validTo)
-      ) {
+      // Granting sets the whole validity window, so compare the two supplied
+      // dates against each other and reject an inverted window.
+      if (new Date(grant.validFrom) > new Date(grant.validTo)) {
         throw Boom.badData(
-          `Cannot grant registration: appliesFrom ${grant.appliesFrom} is after validTo ${registration.validTo}`
+          `Cannot grant registration: validFrom ${grant.validFrom} is after validTo ${grant.validTo}`
         )
       }
 
@@ -106,7 +102,8 @@ export const registrationStatusHistory = {
     const grantFields = grant
       ? {
           registrationNumber: grant.registrationNumber,
-          validFrom: grant.appliesFrom
+          validFrom: grant.validFrom,
+          validTo: grant.validTo
         }
       : {}
 

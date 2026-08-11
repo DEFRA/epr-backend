@@ -18,31 +18,21 @@ export const accreditationStatusHistoryPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history'
 
 /**
- * Grant-only validations. Granting sets validFrom to appliesFrom but leaves
- * validTo (owned by the application data) untouched, so reject a window that
- * would be inverted — when validTo is absent the replace 422s via the schema
- * guard requiring it on approved accreditations. Granting also issues the
- * accreditation number, which must not already be in use by any
+ * Grant-only validations. Granting sets the whole validity window from the
+ * supplied dates, so reject a window that would be inverted. Granting also
+ * issues the accreditation number, which must not already be in use by any
  * accreditation in any organisation, whatever its status. This uniqueness is
  * enforced here only: there is no unique index on
  * accreditations.accreditationNumber, so concurrent grants of the same
  * number are not blocked by the database.
  * @param {OrganisationsRepository} organisationsRepository
- * @param {{ validTo?: string }} accreditation
- * @param {{ appliesFrom: string, accreditationNumber: string }} grant
+ * @param {{ validFrom: string, validTo: string, accreditationNumber: string }} grant
  * @returns {Promise<void>}
  */
-const assertGrantAllowed = async (
-  organisationsRepository,
-  accreditation,
-  grant
-) => {
-  if (
-    accreditation.validTo &&
-    new Date(grant.appliesFrom) > new Date(accreditation.validTo)
-  ) {
+const assertGrantAllowed = async (organisationsRepository, grant) => {
+  if (new Date(grant.validFrom) > new Date(grant.validTo)) {
     throw Boom.badData(
-      `Cannot grant accreditation: appliesFrom ${grant.appliesFrom} is after validTo ${accreditation.validTo}`
+      `Cannot grant accreditation: validFrom ${grant.validFrom} is after validTo ${grant.validTo}`
     )
   }
 
@@ -75,7 +65,8 @@ export const accreditationStatusHistory = {
    *    {
    *      fromStatus: AccreditationStatus,
    *      toStatus: AccreditationStatus,
-   *      appliesFrom: string,
+   *      validFrom: string,
+   *      validTo: string,
    *      accreditationNumber: string
    *    }
    * > & {
@@ -142,13 +133,14 @@ export const accreditationStatusHistory = {
     assertAccreditationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
-      await assertGrantAllowed(organisationsRepository, accreditation, grant)
+      await assertGrantAllowed(organisationsRepository, grant)
     }
 
     const grantFields = grant
       ? {
           accreditationNumber: grant.accreditationNumber,
-          validFrom: grant.appliesFrom
+          validFrom: grant.validFrom,
+          validTo: grant.validTo
         }
       : {}
 
