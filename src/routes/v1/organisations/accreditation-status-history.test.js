@@ -109,10 +109,14 @@ const reinstateAfterAppealPayload = {
   fromStatus: 'cancelled',
   toStatus: 'approved'
 }
+// validTo deliberately differs from the seeded fixture value so the grant
+// assertions prove the persisted window came from the request, not the
+// application data that was already there.
 const grantPayload = {
   fromStatus: 'created',
   toStatus: 'approved',
-  appliesFrom: '2026-08-01',
+  validFrom: '2026-08-01',
+  validTo: '2027-03-31',
   accreditationNumber: 'ACC999999'
 }
 const rejectPayload = { fromStatus: 'created', toStatus: 'rejected' }
@@ -553,8 +557,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
   })
 
   describe('granting a created accreditation', () => {
-    // A created accreditation has no number or validFrom yet; validTo is
-    // owned by the application data and must already be present.
+    // A created accreditation has no number or validFrom yet. validTo
+    // defaults to already being present, mirroring the application data, so
+    // that grant tests can prove the granted window overwrites it.
     const ungrantedAccreditation = {
       accreditationNumber: null,
       validFrom: null,
@@ -570,7 +575,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         )
       )
 
-    it('grants the accreditation, issuing the number and setting validFrom to appliesFrom', async () => {
+    it('grants the accreditation, issuing the number and setting the validity window from the payload', async () => {
       const ctx = await seedOrg('created', {
         registrationStatus: 'approved',
         accreditationOverrides: ungrantedAccreditation
@@ -599,7 +604,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(accreditation.status).toBe('approved')
       expect(accreditation.accreditationNumber).toBe('ACC999999')
       expect(accreditation.validFrom).toBe('2026-08-01')
-      expect(accreditation.validTo).toBe('2026-12-31')
+      // Overwrites the seeded 2026-12-31, proving the window came from the
+      // request rather than the pre-existing application data.
+      expect(accreditation.validTo).toBe('2027-03-31')
       expect(accreditation.statusHistory.map((e) => e.status)).toEqual([
         'created',
         'approved'
@@ -627,7 +634,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
     })
 
-    it('returns 422 when appliesFrom is after the accreditation validTo', async () => {
+    it('returns 422 when the supplied validFrom is after the supplied validTo', async () => {
       const ctx = await seedOrg('created', {
         registrationStatus: 'approved',
         accreditationOverrides: ungrantedAccreditation
@@ -636,15 +643,64 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const response = await server.inject({
         method: 'POST',
         url: statusHistoryUrl(ctx),
-        payload: { ...grantPayload, appliesFrom: '2027-06-01' },
+        payload: { ...grantPayload, validFrom: '2027-06-01' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
       expect(body.message).toMatch(
-        /appliesFrom 2027-06-01 is after validTo 2026-12-31/
+        /validFrom 2027-06-01 is after validTo 2027-03-31/
       )
+    })
+
+    it('compares the supplied dates even when the accreditation has no stored validTo', async () => {
+      const ctx = await seedOrg('created', {
+        registrationStatus: 'approved',
+        accreditationOverrides: { ...ungrantedAccreditation, validTo: null }
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: { ...grantPayload, validFrom: '2027-06-01' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(
+        /validFrom 2027-06-01 is after validTo 2027-03-31/
+      )
+    })
+
+    it('grants an accreditation that has no stored validTo, setting it from the payload', async () => {
+      const ctx = await seedOrg('created', {
+        registrationStatus: 'approved',
+        accreditationOverrides: { ...ungrantedAccreditation, validTo: null }
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: grantPayload,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${ctx.organisationId}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const accreditation = JSON.parse(getResponse.payload).accreditations.find(
+        (a) => a.id === ctx.accreditationId
+      )
+
+      expect(accreditation.status).toBe('approved')
+      expect(accreditation.validFrom).toBe('2026-08-01')
+      expect(accreditation.validTo).toBe('2027-03-31')
     })
 
     it('returns 422 when the linked registration is not approved', async () => {
@@ -664,24 +720,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(body.message).toBe(
         'Cannot transition accreditation to approved: its registration is created'
       )
-    })
-
-    it('returns 422 when the accreditation has no validTo, which granting does not set', async () => {
-      const ctx = await seedOrg('created', {
-        registrationStatus: 'approved',
-        accreditationOverrides: { ...ungrantedAccreditation, validTo: null }
-      })
-
-      const response = await server.inject({
-        method: 'POST',
-        url: statusHistoryUrl(ctx),
-        payload: grantPayload,
-        headers: { Authorization: `Bearer ${validToken}` }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(/validTo/)
     })
 
     it('returns 422 when the accreditation is not currently created', async () => {
@@ -896,25 +934,44 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         'a non-grant transition carries grant fields',
         {
           ...reinstatePayload,
-          appliesFrom: '2026-08-01',
+          validFrom: '2026-08-01',
           accreditationNumber: 'ACC999999'
         }
       ],
       [
-        'a grant is missing appliesFrom',
-        { ...grantPayload, appliesFrom: undefined }
+        'a grant is missing validFrom',
+        { ...grantPayload, validFrom: undefined }
       ],
+      ['a grant is missing validTo', { ...grantPayload, validTo: undefined }],
       [
         'a grant is missing the accreditation number',
         { ...grantPayload, accreditationNumber: undefined }
       ],
       [
-        'a grant has an invalid appliesFrom date',
-        { ...grantPayload, appliesFrom: '2026-13-45' }
+        'a grant has an invalid validFrom date',
+        { ...grantPayload, validFrom: '2026-13-45' }
       ],
       [
-        'a grant has an appliesFrom day that does not exist in that month',
-        { ...grantPayload, appliesFrom: '2026-02-30' }
+        'a grant has a validFrom day that does not exist in that month',
+        { ...grantPayload, validFrom: '2026-02-30' }
+      ],
+      [
+        'a grant has an invalid validTo date',
+        { ...grantPayload, validTo: '2027-13-45' }
+      ],
+      [
+        'a grant has a validTo day that does not exist in that month',
+        { ...grantPayload, validTo: '2027-02-30' }
+      ],
+      [
+        'a grant uses the legacy appliesFrom field name',
+        {
+          fromStatus: 'created',
+          toStatus: 'approved',
+          appliesFrom: '2026-08-01',
+          validTo: '2027-03-31',
+          accreditationNumber: 'ACC999999'
+        }
       ],
       [
         'a grant has an empty accreditation number',
