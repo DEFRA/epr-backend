@@ -227,7 +227,7 @@ describe('unexported-tonnage', () => {
     })
 
     it('carries the resolved material onto a mismatch, so its figure can be split by stream', () => {
-      const finding = diagnoseReportRow(
+      const { finding } = diagnoseReportRow(
         buildRow(),
         /** @type {any} */ ({
           states: [buildReceivedRow({ TONNAGE_RECEIVED_FOR_EXPORT: 29.19 })],
@@ -987,7 +987,9 @@ describe('unexported-tonnage', () => {
 
       expect(result).toStrictEqual({
         scanned: 1,
-        findings: [mismatch({ recomputed: 12, delta: 12 })],
+        findings: [
+          mismatch({ material: 'plastic', recomputed: 12, delta: 12 })
+        ],
         overExportRecords: [overExportRecord()]
       })
     })
@@ -1166,6 +1168,7 @@ describe('unexported-tonnage', () => {
           mismatch({
             organisationId: 'org-2',
             registrationId: 'reg-2',
+            material: 'plastic',
             recomputed: 12,
             delta: 12
           })

@@ -322,7 +322,7 @@ describe('runUnexportedTonnageReport', () => {
         'unexported_tonnage_by_month',
         'Unexported tonnage by month: Feb 2026 - 1 report(s), delta 29.19, ' +
           'understated 29.19, overstated 0; ' +
-          'by material: (material unknown) 1 report(s) delta 29.19'
+          'by material: plastic 1 report(s) delta 29.19'
       )
     )
     expect(logger.info).toHaveBeenCalledWith(
@@ -330,7 +330,7 @@ describe('runUnexportedTonnageReport', () => {
         'unexported_tonnage_by_month',
         'Unexported tonnage by month: Mar 2026 - 1 report(s), delta 4, ' +
           'understated 4, overstated 0; ' +
-          'by material: (material unknown) 1 report(s) delta 4'
+          'by material: plastic 1 report(s) delta 4'
       )
     )
   })
