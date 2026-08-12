@@ -11,6 +11,10 @@ import { isDateInRange } from './filter-records-by-date.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 
+/**
+ * @import { ReportableWasteRecordState } from './aggregate-report-detail.js'
+ */
+
 const ORS_ID_DIGITS = 3
 const ZERO = '0'
 
@@ -98,6 +102,15 @@ function getTonnageRepatriated(repatriatedRecords) {
   )
 }
 
+/**
+ * Sum the tonnage received for export whose export date falls outside the
+ * reporting period.
+ *
+ * @param {ReportableWasteRecordState[]} wasteReceivedRecords
+ * @param {string} startDate - ISO date string (YYYY-MM-DD)
+ * @param {string} endDate - ISO date string (YYYY-MM-DD)
+ * @returns {number}
+ */
 function calculateTonnageReceivedNotExported(
   wasteReceivedRecords,
   startDate,
@@ -120,7 +133,7 @@ function calculateTonnageReceivedNotExported(
  * Sum refused, stopped, and refused-or-stopped export tonnages. The row
  * tonnages are pre-rounded 2dp row-state values, so the sums are exact.
  *
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} exportedRecords
+ * @param {ReportableWasteRecordState[]} exportedRecords
  * @returns {{ tonnageRefusedAtDestination: number, tonnageStoppedDuringExport: number, totalTonnageRefusedOrStopped: number }}
  */
 function calculateRefusedAndStoppedTonnages(exportedRecords) {
@@ -161,9 +174,9 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
 
 /**
  * @param {object} params
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteExportedRecords
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.repatriatedRecords
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteReceivedRecords
+ * @param {ReportableWasteRecordState[]} params.wasteExportedRecords
+ * @param {ReportableWasteRecordState[]} params.repatriatedRecords
+ * @param {ReportableWasteRecordState[]} params.wasteReceivedRecords
  * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
  * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
  * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]
