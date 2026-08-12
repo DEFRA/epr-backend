@@ -18,6 +18,7 @@ import { findReportIdBySubmissionNumber } from './submission-lookup.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 
@@ -237,7 +238,7 @@ function toSource(latestSubmission) {
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
- * @param {string} params.operatorCategory
+ * @param {OperatorCategory} params.operatorCategory
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {Registration} params.registration

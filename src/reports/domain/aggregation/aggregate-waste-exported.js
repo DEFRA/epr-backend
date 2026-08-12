@@ -14,6 +14,7 @@ import { OPERATOR_CATEGORY } from '../operator-category.js'
 /**
  * @import { AggregatedExportActivity, ReportableWasteRecordState } from './aggregate-report-detail.js'
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ * @import { OperatorCategory } from '../operator-category.js'
  */
 
 const ORS_ID_DIGITS = 3
@@ -30,7 +31,7 @@ const summariseTonnage = (grouped) =>
 /**
  * @param {ReportableWasteRecordState[]} wasteExportedRecords
  * @param {Map<string, OrsDetails>} orsDetailsMap
- * @param {string} operatorCategory
+ * @param {OperatorCategory} operatorCategory
  * @returns {Pick<AggregatedExportActivity, 'overseasSites' | 'unapprovedOverseasSites'>}
  */
 const generateOverseasSiteSummaries = (
@@ -193,7 +194,7 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
  * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
  * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
  * @param {Map<string, OrsDetails>} [params.orsDetailsMap]
- * @param {string} params.operatorCategory
+ * @param {OperatorCategory} params.operatorCategory
  * @returns {AggregatedExportActivity}
  */
 export function aggregateWasteExported({

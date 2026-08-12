@@ -13,6 +13,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
 
 /**
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ * @import { OperatorCategory } from '../operator-category.js'
  */
 
 /**
@@ -78,7 +79,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  *
  * @param {ReportableWasteRecordState[]} wasteRecordStates
  * @param {object} options
- * @param {string} options.operatorCategory
+ * @param {OperatorCategory} options.operatorCategory
  * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
  * @param {number} options.year
  * @param {number} options.period
@@ -101,6 +102,7 @@ export function aggregateReportDetail(
   const startDate = formatDateISO(year, startMonth, 1)
   const endDate = formatDateISO(year, startMonth + monthsPerPeriod, 0)
 
+  /** @type {{ wasteReceived?: string, wasteExported?: string, wasteRepatriated?: string, wasteSentOn?: string }} */
   const sectionDateFields =
     SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
 
