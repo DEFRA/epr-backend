@@ -12,7 +12,8 @@ import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 
 /**
- * @import { ReportableWasteRecordState } from './aggregate-report-detail.js'
+ * @import { AggregatedExportActivity, ReportableWasteRecordState } from './aggregate-report-detail.js'
+ * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
  */
 
 const ORS_ID_DIGITS = 3
@@ -26,6 +27,12 @@ const summariseTonnage = (grouped) =>
     tonnageExported: toNumber(tonnageDecimal)
   }))
 
+/**
+ * @param {ReportableWasteRecordState[]} wasteExportedRecords
+ * @param {Map<string, OrsDetails>} orsDetailsMap
+ * @param {string} operatorCategory
+ * @returns {Pick<AggregatedExportActivity, 'overseasSites' | 'unapprovedOverseasSites'>}
+ */
 const generateOverseasSiteSummaries = (
   wasteExportedRecords,
   orsDetailsMap,
@@ -64,8 +71,8 @@ const generateOverseasSiteSummaries = (
         const details = orsDetailsMap.get(orsId)
         return {
           orsId,
-          siteName: details.siteName,
-          country: details.country,
+          siteName: details?.siteName,
+          country: details?.country,
           approved: isApproved({ data })
         }
       },
@@ -85,6 +92,12 @@ const generateOverseasSiteSummaries = (
   return { overseasSites, unapprovedOverseasSites }
 }
 
+/**
+ * Sum the exported tonnage across records repatriated in the reporting period.
+ *
+ * @param {ReportableWasteRecordState[]} repatriatedRecords
+ * @returns {number}
+ */
 function getTonnageRepatriated(repatriatedRecords) {
   return toNumber(
     repatriatedRecords
@@ -179,7 +192,7 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
  * @param {ReportableWasteRecordState[]} params.wasteReceivedRecords
  * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
  * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
- * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]
+ * @param {Map<string, OrsDetails>} [params.orsDetailsMap]
  * @param {string} params.operatorCategory
  */
 export function aggregateWasteExported({

@@ -1,12 +1,16 @@
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 
 /**
+ * @typedef {{ siteName: string|null, country: string|null, validFrom: Date|null }} OrsDetails
+ */
+
+/**
  * Builds a map from ORS key (e.g. "120") to site name, country, and
  * valid-from date, looked up from the overseas-sites repository.
  *
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {Record<string, { overseasSiteId: string }> | undefined} overseasSites
- * @returns {Promise<Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>>}
+ * @returns {Promise<Map<string, OrsDetails>>}
  */
 export async function getOrsDetailsMap(overseasSitesRepository, overseasSites) {
   const entries = Object.entries(overseasSites ?? {})

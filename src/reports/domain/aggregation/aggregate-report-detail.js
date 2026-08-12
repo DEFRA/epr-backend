@@ -12,6 +12,10 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
 import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
 
 /**
+ * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ */
+
+/**
  * The slice of a waste-record state the report aggregation reads: the row's
  * type and its coerced data. Narrower than the full `WasteRecordState` so the
  * type doesn't demand fields (classification, row identity) the aggregation
@@ -79,7 +83,7 @@ import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
  * @param {number} options.year
  * @param {number} options.period
  * @param {{ summaryLogId: string|null, lastUploadedAt: string|null }} options.source
- * @param {Map<string, {siteName: string|null, country: string|null, validFrom: Date|null}>} [options.orsDetailsMap]
+ * @param {Map<string, OrsDetails>} [options.orsDetailsMap]
  * @returns {AggregatedReportDetail}
  */
 export function aggregateReportDetail(
