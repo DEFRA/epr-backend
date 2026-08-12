@@ -1,6 +1,7 @@
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
+/** @import { Cadence } from '#reports/domain/cadence.js' */
 
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
@@ -134,7 +135,7 @@ function buildTonnageFields(report) {
 /**
  * @param {Organisation} org
  * @param {ReportableRegistration} registration
- * @param {string} cadence
+ * @param {Cadence} cadence
  * @param {MergedPeriod} mergedPeriod
  * @param {string} accreditationNumber
  * @param {import('#reports/repository/port.js').ReportSummary | null} report

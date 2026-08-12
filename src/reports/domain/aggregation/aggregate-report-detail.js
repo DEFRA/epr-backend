@@ -14,6 +14,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
 
 /**
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ * @import { Cadence } from '../cadence.js'
  * @import { OperatorCategory } from '../operator-category.js'
  */
 
@@ -81,7 +82,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * @param {ReportableWasteRecordState[]} wasteRecordStates
  * @param {object} options
  * @param {OperatorCategory} options.operatorCategory
- * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
+ * @param {Cadence} options.cadence
  * @param {number} options.year
  * @param {number} options.period
  * @param {{ summaryLogId: string|null, lastUploadedAt: string|null }} options.source
