@@ -1,6 +1,7 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { MONTHS_PER_PERIOD } from '../cadence.js'
+import { isExporterCategory } from '../operator-category.js'
 import { aggregateWasteExported } from './aggregate-waste-exported.js'
 import { aggregateWasteReceived } from './aggregate-waste-received.js'
 import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
@@ -102,12 +103,10 @@ export function aggregateReportDetail(
   const startDate = formatDateISO(year, startMonth, 1)
   const endDate = formatDateISO(year, startMonth + monthsPerPeriod, 0)
 
-  /** @type {{ wasteReceived?: string, wasteExported?: string, wasteRepatriated?: string, wasteSentOn?: string }} */
   const sectionDateFields =
     SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
 
   const wasteReceivedDateField = sectionDateFields.wasteReceived
-  const wasteExportedDateField = sectionDateFields.wasteExported
 
   const coercedRecords = coerceWasteRecordsForRead(wasteRecordStates)
 
@@ -154,7 +153,7 @@ export function aggregateReportDetail(
     endDate,
     source,
     recyclingActivity,
-    ...(wasteExportedDateField && {
+    ...(isExporterCategory(operatorCategory) && {
       exportActivity: aggregateWasteExported({
         wasteExportedRecords,
         repatriatedRecords: wasteRepatriatedRecords,
