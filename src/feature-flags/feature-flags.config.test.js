@@ -1,38 +1,31 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createConfigFeatureFlags } from './feature-flags.config.js'
 
+/** @type {Array<[keyof import('./feature-flags.port.js').FeatureFlags, string]>} */
+const FLAGS = [
+  ['isDevEndpointsEnabled', 'featureFlags.devEndpoints'],
+  [
+    'isPreCpaResubmissionBackfillEnabled',
+    'featureFlags.preCpaResubmissionBackfill'
+  ],
+  [
+    'isPreCpaResubmissionReportEnabled',
+    'featureFlags.preCpaResubmissionReport'
+  ],
+  [
+    'isStaleIssuedTonnageReportEnabled',
+    'featureFlags.staleIssuedTonnageReport'
+  ],
+  ['isUnexportedTonnageReportEnabled', 'featureFlags.unexportedTonnageReport']
+]
+
 describe('createConfigFeatureFlags', () => {
-  it('returns true when devEndpoints flag is enabled', () => {
+  it.each(FLAGS)('%s reads %s from config', (method, configKey) => {
     const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isDevEndpointsEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.devEndpoints')
-  })
 
-  it('returns true when staleIssuedTonnageReport flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
-    expect(flags.isStaleIssuedTonnageReportEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.staleIssuedTonnageReport'
-    )
-  })
 
-  it('returns true when preCpaResubmissionReport flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isPreCpaResubmissionReportEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.preCpaResubmissionReport'
-    )
-  })
-
-  it('returns true when preCpaResubmissionBackfill flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isPreCpaResubmissionBackfillEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.preCpaResubmissionBackfill'
-    )
+    expect(flags[method]()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(configKey)
   })
 })

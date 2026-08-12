@@ -154,6 +154,57 @@ export const buildOrganisation = (overrides = {}) => {
 }
 
 /**
+ * Builds an organisation with a known company name.
+ *
+ * @param {string} name
+ * @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>}
+ */
+export const buildOrgWithName = (name) => {
+  const base = buildOrganisation()
+  return {
+    ...base,
+    companyDetails: { ...base.companyDetails, name }
+  }
+}
+
+/**
+ * Builds an organisation carrying known search criteria: the first registration
+ * gets the given registration number and the first accreditation the given
+ * accreditation number. Everything else is left as buildOrganisation makes it,
+ * so the registration/accreditation links stay intact.
+ *
+ * @param {{
+ *   name?: string,
+ *   orgId?: number,
+ *   registrationNumber?: string,
+ *   accreditationNumber?: string
+ * }} [overrides]
+ * @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>}
+ */
+export const buildOrgWithCriteria = ({
+  name = 'Criteria Ltd',
+  orgId,
+  registrationNumber,
+  accreditationNumber
+} = {}) => {
+  const base = buildOrganisation(orgId === undefined ? {} : { orgId })
+  return {
+    ...base,
+    companyDetails: { ...base.companyDetails, name },
+    registrations: base.registrations.map((registration, index) =>
+      index === 0 && registrationNumber !== undefined
+        ? { ...registration, registrationNumber }
+        : registration
+    ),
+    accreditations: base.accreditations.map((accreditation, index) =>
+      index === 0 && accreditationNumber !== undefined
+        ? { ...accreditation, accreditationNumber }
+        : accreditation
+    )
+  }
+}
+
+/**
  * Builds an organisation as returned from a repository read, with the computed
  * top-level and nested 'status' fields the read path derives from statusHistory.
  * Use this for tests that consume an organisation (vs insert it).

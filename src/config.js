@@ -352,11 +352,11 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    staleIssuedTonnageReport: {
-      doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
+    preCpaResubmissionBackfill: {
+      doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768).',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
+      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
     },
     preCpaResubmissionReport: {
       doc: 'Feature Flag: Run the estate-wide pre-CPA resubmission sizing diagnostic on startup (PAE-1747)',
@@ -364,11 +364,17 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_REPORT'
     },
-    preCpaResubmissionBackfill: {
-      doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768).',
+    staleIssuedTonnageReport: {
+      doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
+      env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
+    },
+    unexportedTonnageReport: {
+      doc: 'Feature Flag: Run the estate-wide unexported tonnage sizing diagnostic on startup (PAE-1783)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_UNEXPORTED_TONNAGE_REPORT'
     }
   },
   formSubmissionOverrides: {

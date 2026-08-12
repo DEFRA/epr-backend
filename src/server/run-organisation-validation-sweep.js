@@ -2,6 +2,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { validateOrganisation } from '#domain/organisations/validation/validate-organisation.js'
 
+/** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { ValidationIssue } from '#domain/organisations/validation/issue.js' */
 
@@ -23,7 +24,7 @@ const formatIssueLine = (org, issue) =>
   ].join(' ')
 
 /**
- * @param {Object} server - Hapi server instance
+ * @param {StartedServer} server - Hapi server instance
  */
 const runSweep = async (server) => {
   const repository = (await createOrganisationsRepository(server.db))()
@@ -66,7 +67,7 @@ const runSweep = async (server) => {
  * export paths: organisations are a bounded top-level set, unlike the
  * per-transaction waste-balance population the sibling diagnostics stream.
  *
- * @param {Object} server - Hapi server instance
+ * @param {StartedServer} server - Hapi server instance
  */
 export const runOrganisationValidationSweep = async (server) => {
   try {

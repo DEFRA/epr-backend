@@ -12,6 +12,7 @@ import {
   validateAccreditationLinkExists,
   validateAccreditationLinkMatches,
   validateAccreditationLinkUniqueness,
+  validateAccreditationNumbersRetained,
   validateApprovals
 } from './schema/helpers.js'
 import {
@@ -24,7 +25,7 @@ import { getCurrentStatus } from './status.js'
 /** @import { WithId } from 'mongodb' */
 /** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
-/** @import { FindPageForOverseasSitesAdminListParams } from './port.js' */
+/** @import { FindPageForOverseasSitesAdminListParams, SearchCriteria } from './port.js' */
 
 /**
  * A status history entry as it reaches the repository: stored entries carry a
@@ -171,11 +172,51 @@ function prepareRegAccForReplace(validated, existing) {
     assertAccreditationStatusTransitionValid,
     cascadeCancelledIds
   )
+  validateAccreditationNumbersRetained(accreditations, existing.accreditations)
   return { registrations, accreditations }
 }
 
+/**
+ * A registration or accreditation carries its status only as a derived field,
+ * and the update schemas accept it as optional. The requiredness of a number,
+ * a validity date and a reprocessing type is conditional on that status, so an
+ * update that omits it resolves every one of them to the optional arm, where
+ * the schema default writes null over the stored value. Supplying the stored
+ * status keeps the conditions keyed to the record as it stands.
+ *
+ * @template {{ id: string, status?: string }} T
+ * @param {Array<{ id: string, status?: string }>} existingItems
+ * @param {T[] | undefined} itemUpdates
+ * @returns {T[] | undefined}
+ */
+const withStatusFromExisting = (existingItems, itemUpdates) => {
+  if (!itemUpdates) {
+    return itemUpdates
+  }
+
+  const existingById = new Map(existingItems.map((item) => [item.id, item]))
+
+  return itemUpdates.map((item) => ({
+    ...item,
+    status: item.status ?? existingById.get(item.id)?.status
+  }))
+}
+
 export const prepareForReplace = (existing, updates) => {
-  const validated = validateOrganisationUpdate(updates, existing)
+  const validated = validateOrganisationUpdate(
+    {
+      ...updates,
+      registrations: withStatusFromExisting(
+        existing.registrations,
+        updates.registrations
+      ),
+      accreditations: withStatusFromExisting(
+        existing.accreditations,
+        updates.accreditations
+      )
+    },
+    existing
+  )
   const { registrations, accreditations } = prepareRegAccForReplace(
     validated,
     existing
@@ -222,6 +263,58 @@ const ORS_ADMIN_LIST_PROJECTION = {
 
 export const escapeRegex = (string) =>
   string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+
+/**
+ * An organisation as it is stored, before the read path maps `_id` to `id` and
+ * derives the current statuses. The in-memory adapter keeps `_id` as the plain
+ * id string.
+ * @typedef {Omit<Organisation, 'id'|'status'> & { _id: string }} StoredOrganisation
+ */
+
+const INTEGER_PATTERN = /^\d+$/
+const DOCUMENT_ID_PATTERN = /^[0-9a-fA-F]{24}$/
+
+/**
+ * @param {SearchCriteria} criteria
+ * @returns {Required<SearchCriteria>} - every criterion trimmed, absent ones as ''
+ */
+export const normaliseCriteria = ({
+  search,
+  orgId,
+  registrationId,
+  registrationNumber,
+  accreditationId,
+  accreditationNumber
+}) => ({
+  search: (search ?? '').trim(),
+  orgId: (orgId ?? '').trim(),
+  registrationId: (registrationId ?? '').trim(),
+  registrationNumber: (registrationNumber ?? '').trim(),
+  accreditationId: (accreditationId ?? '').trim(),
+  accreditationNumber: (accreditationNumber ?? '').trim()
+})
+
+/**
+ * The interpretations an orgId criterion parses into. Both can apply at once —
+ * a 24-digit decimal string is a valid business orgId and a valid document id.
+ *
+ * @param {string} value
+ * @returns {{ businessOrgId: number | null, documentId: string | null }}
+ */
+export const parseOrgIdCriterion = (value) => ({
+  businessOrgId: INTEGER_PATTERN.test(value) ? Number(value) : null,
+  documentId: DOCUMENT_ID_PATTERN.test(value) ? value : null
+})
+
+/**
+ * The pattern both adapters match numbers with: the whole value, escaped.
+ * Each adapter turns this into its own form — a Mongo `$regex` fragment or a
+ * JavaScript RegExp — so the matching semantics stay defined in one place.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+export const anchoredPattern = (value) => `^${escapeRegex(value)}$`
 
 const buildOrsAdminListBasePipeline = ({ registrationNumber }) => [
   {

@@ -4,9 +4,20 @@
  * @typedef {import('../feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags
  * @import {Db} from 'mongodb'
  * @import {LockManager} from 'mongo-locks'
+ * @import {PublicRegisterRepository} from '#domain/public-register/repository/port.js'
+ * @import {UploadsRepository} from '#domain/uploads/repository/port.js'
+ * @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js'
+ * @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js'
+ * @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js'
+ * @import {PrnEvents} from '#packaging-recycling-notes/application/prn-events.plugin.js'
+ * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
+ * @import {ReportsRepository} from '#reports/repository/port.js'
+ * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
+ * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
  * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService
  */
 
@@ -115,7 +126,27 @@
  */
 
 /**
- * @typedef {{ [key: string]: unknown }} ServerApp
+ * Every dependency `registerDependency` decorates onto `server.app`. The shape
+ * is closed, so reading a property no plugin registers fails the type check.
+ * Adding a `registerDependency` call means adding its name here too.
+ *
+ * @typedef {{
+ *   formSubmissionsRepository: FormSubmissionsRepository,
+ *   ledgerRepository: WasteBalanceLedgerRepository,
+ *   nonProdDataReset: NonProdDataReset,
+ *   organisationsRepository: OrganisationsRepository,
+ *   orsImportsRepository: OrsImportsRepository,
+ *   overseasSitesRepository: OverseasSitesRepository,
+ *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+ *   prnEvents: PrnEvents,
+ *   publicRegisterRepository: PublicRegisterRepository,
+ *   reportsRepository: ReportsRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   systemLogsRepository: SystemLogsRepository,
+ *   uploadsRepository: UploadsRepository,
+ *   wasteBalanceService: WasteBalanceService
+ * }} ServerApp
  */
 
 /**
@@ -136,6 +167,14 @@
  * @property {Function} initialize - Initialize the server without starting
  * @property {Function} inject - Inject a request for testing
  * @property {Function} ext - Register extension points
+ */
+
+/**
+ * A booted server, as its plugins have decorated it. Built on HapiServer rather
+ * than hapi's own Server: intersecting the latter resolves `app` reads to `any`,
+ * which drops the check that a dependency is read under a registered name.
+ *
+ * @typedef {HapiServer & { db: Db, locker: LockManager }} StartedServer
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

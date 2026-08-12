@@ -1,3 +1,5 @@
+/** @import { ServerApp, TypedLogger } from '#common/hapi-types.js' */
+
 /**
  * Registers a named dependency on both server.app and request objects.
  *
@@ -8,9 +10,10 @@
  * - request[name]: Created lazily per-request using request.logger.
  *   Use this in HTTP route handlers to get correlation IDs in logs.
  *
+ * @template {keyof ServerApp} K
  * @param {import('@hapi/hapi').Server} server - Hapi server instance
- * @param {string} name - Property name to register (e.g. 'organisationsRepository')
- * @param {(request: {logger: import('#common/hapi-types.js').TypedLogger}) => unknown} getInstance - Factory function that returns the dependency instance
+ * @param {K} name - Property name to register (e.g. 'organisationsRepository')
+ * @param {(request: {logger: TypedLogger}) => ServerApp[K]} getInstance - Factory function that returns the dependency instance
  */
 export const registerDependency = (server, name, getInstance) => {
   // Register on server.app for background jobs (using server.logger)

@@ -12,11 +12,10 @@ import {
 } from '#domain/organisations/model.js'
 
 /**
- * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} LedgerRepository
- * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStateRepository} RowStateRepository
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
- * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
- * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
+ * @import {TypedLogger} from '#common/hapi-types.js'
+ * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
+ * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
  */
 
 // The test environment configures 999999 as a test organisation
@@ -229,7 +228,7 @@ const run = ({
   const ledgerRepository = {
     findLatestSubmittedSummaryLogPerLedger: async () => entries
   }
-  const summaryLogRowStateRepository = {
+  const summaryLogRowStatesRepository = {
     findRowStatesForSummaryLog: async (
       /** @type {{ accreditationId: string }} */ ledgerId
     ) => rowStatesByAccreditationId[ledgerId.accreditationId] ?? []
@@ -241,12 +240,13 @@ const run = ({
   return {
     logger,
     report: buildCreditedTonnageReport({
-      ledgerRepository: /** @type {LedgerRepository} */ (
+      ledgerRepository: /** @type {WasteBalanceLedgerRepository} */ (
         /** @type {unknown} */ (ledgerRepository)
       ),
-      summaryLogRowStateRepository: /** @type {RowStateRepository} */ (
-        /** @type {unknown} */ (summaryLogRowStateRepository)
-      ),
+      summaryLogRowStatesRepository:
+        /** @type {SummaryLogRowStatesRepository} */ (
+          /** @type {unknown} */ (summaryLogRowStatesRepository)
+        ),
       organisationsRepository: /** @type {OrganisationsRepository} */ (
         /** @type {unknown} */ (organisationsRepository)
       ),

@@ -18,7 +18,7 @@ describe('mock-repositories', () => {
         'replace',
         'findAll',
         'findAllBySchemaVersion',
-        'findPage',
+        'find',
         'findAllForOverseasSitesAdminList',
         'findPageForOverseasSitesAdminList',
         'findByIds',

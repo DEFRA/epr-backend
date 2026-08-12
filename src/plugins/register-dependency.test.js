@@ -2,8 +2,8 @@ import Hapi from '@hapi/hapi'
 import { describe, it, expect, vi } from 'vitest'
 import { registerDependency } from './register-dependency.js'
 
-/** @import { ServerApp } from '#common/hapi-types.js' */
 /** @import { Request } from '@hapi/hapi' */
+/** @import { ServerApp } from '#common/hapi-types.js' */
 
 describe('registerDependency', () => {
   it('registers the dependency on server.app built with server.logger', () => {
@@ -11,10 +11,10 @@ describe('registerDependency', () => {
     const dependency = { findById: vi.fn() }
     const getInstance = vi.fn().mockReturnValue(dependency)
 
-    registerDependency(server, 'testDependency', getInstance)
+    registerDependency(server, 'reportsRepository', getInstance)
 
     const app = /** @type {ServerApp} */ (server.app)
-    expect(app.testDependency).toBe(dependency)
+    expect(app.reportsRepository).toBe(dependency)
     expect(getInstance).toHaveBeenCalledWith({ logger: server.logger })
   })
 
@@ -23,7 +23,7 @@ describe('registerDependency', () => {
     const dependency = { findById: vi.fn() }
     const getInstance = vi.fn().mockReturnValue(dependency)
 
-    registerDependency(server, 'testDependency', getInstance)
+    registerDependency(server, 'reportsRepository', getInstance)
 
     /** @type {unknown[]} */
     const accesses = []
@@ -34,11 +34,11 @@ describe('registerDependency', () => {
       path: '/',
       handler: (request, h) => {
         handledRequest = request
-        const typed = /** @type {Request & { testDependency: unknown }} */ (
+        const typed = /** @type {Request & { reportsRepository: unknown }} */ (
           request
         )
         // Access twice so both the compute-and-cache and cached-read paths run.
-        accesses.push(typed.testDependency, typed.testDependency)
+        accesses.push(typed.reportsRepository, typed.reportsRepository)
         return h.response('ok')
       }
     })
