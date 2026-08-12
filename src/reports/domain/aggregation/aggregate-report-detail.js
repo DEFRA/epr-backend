@@ -14,6 +14,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
 
 /**
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Cadence } from '../cadence.js'
  * @import { OperatorCategory } from '../operator-category.js'
  */
@@ -81,8 +82,8 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * @property {string} cadence
  * @property {number} year
  * @property {number} period
- * @property {string} startDate
- * @property {string} endDate
+ * @property {CalendarDate} startDate
+ * @property {CalendarDate} endDate
  * @property {{ summaryLogId: string|null, lastUploadedAt: string|null }} source
  * @property {AggregatedRecyclingActivity} recyclingActivity
  * @property {AggregatedExportActivity} [exportActivity]
@@ -196,8 +197,8 @@ export function aggregateReportDetail(
  *
  * @param {ReportableWasteRecordState[]} wasteRecords
  * @param {{ wasteReceived?: string, wasteExported?: string, wasteRepatriated?: string, wasteSentOn?: string }} sectionDateFields
- * @param {string} startDate - ISO date string (YYYY-MM-DD)
- * @param {string} endDate - ISO date string (YYYY-MM-DD)
+ * @param {CalendarDate} startDate
+ * @param {CalendarDate} endDate
  */
 function sliceRecordsByPeriod(
   wasteRecords,

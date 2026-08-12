@@ -13,6 +13,7 @@ import { OPERATOR_CATEGORY } from '../operator-category.js'
 
 /**
  * @import { AggregatedExportActivity, ReportableWasteRecordState } from './aggregate-report-detail.js'
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
  * @import { ExporterCategory } from '../operator-category.js'
  * @import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
@@ -161,8 +162,8 @@ function getTonnageRepatriated(repatriatedRecords) {
  * reporting period.
  *
  * @param {ReceivedForExportRecordState[]} wasteReceivedRecords
- * @param {string} startDate - ISO date string (YYYY-MM-DD)
- * @param {string} endDate - ISO date string (YYYY-MM-DD)
+ * @param {CalendarDate} startDate
+ * @param {CalendarDate} endDate
  * @returns {number}
  */
 function calculateTonnageReceivedNotExported(
@@ -231,8 +232,8 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
  * @param {ReportableWasteRecordState[]} params.wasteExportedRecords
  * @param {ReportableWasteRecordState[]} params.repatriatedRecords
  * @param {ReportableWasteRecordState[]} params.wasteReceivedRecords
- * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
- * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
+ * @param {CalendarDate} params.startDate
+ * @param {CalendarDate} params.endDate
  * @param {Map<string, OrsDetails>} [params.orsDetailsMap]
  * @param {ExporterCategory} params.operatorCategory
  * @returns {AggregatedExportActivity}

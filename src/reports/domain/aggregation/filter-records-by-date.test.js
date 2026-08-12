@@ -1,8 +1,9 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { isDateInRange } from '#root/reports/domain/aggregation/filter-records-by-date.js'
 
 describe('#isDateInRange', () => {
-  const start = '2025-01-01'
-  const end = '2025-12-31'
+  const start = calendarDate('2025-01-01')
+  const end = calendarDate('2025-12-31')
 
   describe('invalid dates', () => {
     it.each([
@@ -65,8 +66,8 @@ describe('#isDateInRange', () => {
     })
 
     it('handles quarterly boundaries correctly', () => {
-      const q1Start = '2026-01-01'
-      const q1End = '2026-03-31'
+      const q1Start = calendarDate('2026-01-01')
+      const q1End = calendarDate('2026-03-31')
 
       expect(isDateInRange('2026-01', q1Start, q1End)).toBe(true)
       expect(isDateInRange('2026-02', q1Start, q1End)).toBe(true)

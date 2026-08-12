@@ -1,3 +1,4 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { isNil } from '#common/helpers/is-nil.js'
 import {
   equals,
@@ -24,6 +25,7 @@ import {
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 
 /**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
@@ -257,8 +259,8 @@ const classifyLoad = (data) => {
  * this way, and `rowsMiscounted` describes history rather than the estate.
  *
  * @param {Record<string, any>} data
- * @param {string} startDate
- * @param {string} endDate
+ * @param {CalendarDate} startDate
+ * @param {CalendarDate} endDate
  * @returns {import('#common/helpers/rounded-tonnage.js').RoundedTonnage}
  */
 const liveContribution = (data, startDate, endDate) =>
@@ -286,8 +288,8 @@ const liveContribution = (data, startDate, endDate) =>
  * data a backfill would move and not only how much tonnage.
  *
  * @param {WasteRecordState[]} wasteRecordStates
- * @param {string} startDate
- * @param {string} endDate
+ * @param {CalendarDate} startDate
+ * @param {CalendarDate} endDate
  * @returns {Recomputation}
  */
 const recomputeUnexported = (wasteRecordStates, startDate, endDate) => {
@@ -360,8 +362,8 @@ export const diagnoseReportRow = (row, sourceRowStates) => {
   try {
     recomputation = recomputeUnexported(
       sourceRowStates.states,
-      row.startDate,
-      row.endDate
+      calendarDate(row.startDate),
+      calendarDate(row.endDate)
     )
   } catch (error) {
     return {
