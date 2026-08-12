@@ -48,13 +48,14 @@
 
 /**
  * @typedef {Object} ExportActivity
- * @property {Array<{orsId: string, siteName: string, country: string|null, tonnageExported?: number}>} overseasSites
+ * @property {Array<{orsId: string, siteName: string|null, country: string|null, tonnageExported: number, approved: boolean}>} overseasSites
  * @property {Array<{orsId: string, tonnageExported: number}>} unapprovedOverseasSites
  * @property {number} totalTonnageExported
  * @property {number|null} tonnageReceivedNotExported
- * @property {number|null} tonnageRefusedAtDestination
- * @property {number|null} tonnageStoppedDuringExport
- * @property {number|null} tonnageRepatriated
+ * @property {number} tonnageRefusedAtDestination
+ * @property {number} tonnageStoppedDuringExport
+ * @property {number} totalTonnageRefusedOrStopped
+ * @property {number} tonnageRepatriated
  */
 
 /**
