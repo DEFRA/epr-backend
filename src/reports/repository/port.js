@@ -41,7 +41,7 @@
  * @typedef {Object} Supplier
  * @property {string} supplierName
  * @property {string} facilityType
- * @property {string} supplierAddress
+ * @property {string | null} supplierAddress
  * @property {string | null} supplierPhone
  * @property {string | null} supplierEmail
  * @property {number} tonnageReceived
@@ -51,7 +51,7 @@
  * @typedef {Object} FinalDestination
  * @property {string} recipientName
  * @property {string} facilityType
- * @property {string} address
+ * @property {string | null} address
  * @property {number} tonnageSentOn
  */
 

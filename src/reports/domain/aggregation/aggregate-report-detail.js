@@ -29,7 +29,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
 
 /**
  * @typedef {Object} AggregatedRecyclingActivity
- * @property {Array<{supplierName: string, facilityType: string, tonnageReceived: number, supplierAddress: string, supplierPhone: string|null, supplierEmail: string|null}>} suppliers
+ * @property {Array<{supplierName: string, facilityType: string, tonnageReceived: number, supplierAddress: string|null, supplierPhone: string|null, supplierEmail: string|null}>} suppliers
  * @property {number} totalTonnageReceived
  * @property {null} tonnageRecycled - Always null for computed reports (not yet entered)
  * @property {null} tonnageNotRecycled - Always null for computed reports (not yet entered)
@@ -52,7 +52,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * @property {number} tonnageSentToReprocessor
  * @property {number} tonnageSentToExporter
  * @property {number} tonnageSentToAnotherSite
- * @property {Array<{recipientName: string, facilityType: string, address: string, tonnageSentOn: number}>} finalDestinations
+ * @property {Array<{recipientName: string, facilityType: string, address: string|null, tonnageSentOn: number}>} finalDestinations
  */
 
 /**
