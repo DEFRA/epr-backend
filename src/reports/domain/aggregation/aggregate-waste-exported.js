@@ -15,6 +15,7 @@ import { OPERATOR_CATEGORY } from '../operator-category.js'
  * @import { AggregatedExportActivity, ReportableWasteRecordState } from './aggregate-report-detail.js'
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
  * @import { ExporterCategory } from '../operator-category.js'
+ * @import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
  */
 
 const ORS_ID_DIGITS = 3
@@ -117,10 +118,24 @@ function getTonnageRepatriated(repatriatedRecords) {
 }
 
 /**
+ * Only the EXPORTER template: registered-only reports its exports on a separate
+ * table and never reaches this calculation.
+ *
+ * @typedef {Partial<Record<keyof typeof RECEIVED_LOADS_FIELDS, unknown>> & {
+ *   DATE_OF_EXPORT?: string,
+ *   TONNAGE_RECEIVED_FOR_EXPORT?: number
+ * }} ReceivedForExportRowData
+ */
+
+/**
+ * @typedef {Omit<ReportableWasteRecordState, 'data'> & { data: ReceivedForExportRowData }} ReceivedForExportRecordState
+ */
+
+/**
  * Sum the tonnage received for export whose export date falls outside the
  * reporting period.
  *
- * @param {ReportableWasteRecordState[]} wasteReceivedRecords
+ * @param {ReceivedForExportRecordState[]} wasteReceivedRecords
  * @param {string} startDate - ISO date string (YYYY-MM-DD)
  * @param {string} endDate - ISO date string (YYYY-MM-DD)
  * @returns {number}
