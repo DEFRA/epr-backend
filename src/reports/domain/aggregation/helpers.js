@@ -1,6 +1,10 @@
 import { isZero } from '#common/helpers/decimal-utils.js'
 import { addTonnage } from '#common/helpers/rounded-tonnage.js'
 
+/**
+ * @import { RoundedTonnage } from '#common/helpers/rounded-tonnage.js'
+ */
+
 export function isTonnageGreaterThanZero(tonnage) {
   return Number.isFinite(tonnage) && !isZero(tonnage)
 }
@@ -26,10 +30,12 @@ export function formatAddress(address, postcode) {
  * Returns an array of `{ ...fields, tonnageDecimal }` objects.
  *
  * @template T
+ * @template {object} F
  * @param {T[]} items
  * @param {(item: T) => string} getKey
- * @param {(item: T) => object} getFields
- * @param {(item: T) => import('#common/helpers/rounded-tonnage.js').RoundedTonnage} getTonnage
+ * @param {(item: T) => F} getFields
+ * @param {(item: T) => RoundedTonnage} getTonnage
+ * @returns {Array<F & { tonnageDecimal: RoundedTonnage }>}
  */
 export function groupAndSum(items, getKey, getFields, getTonnage) {
   const map = new Map()

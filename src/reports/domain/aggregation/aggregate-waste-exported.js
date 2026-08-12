@@ -17,6 +17,7 @@ import { OPERATOR_CATEGORY } from '../operator-category.js'
  * @import { ExporterCategory } from '../operator-category.js'
  * @import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
  * @import { LOADS_EXPORTED_FIELDS } from '#domain/summary-logs/table-schemas/exporter-registered-only/fields.js'
+ * @import { RoundedTonnage } from '#common/helpers/rounded-tonnage.js'
  */
 
 /**
@@ -40,6 +41,23 @@ const ZERO = '0'
 
 const zeroPadOrsId = (orsId) => String(orsId).padStart(ORS_ID_DIGITS, ZERO)
 
+/**
+ * @typedef {{ record: ExportedWasteRecordState, orsId: string, details: OrsDetails | undefined }} OrsEntry
+ */
+
+/**
+ * A site the ORS import resolved to a name, so its details can be reported.
+ *
+ * @param {OrsEntry} entry
+ * @returns {entry is OrsEntry & { details: OrsDetails & { siteName: string } }}
+ */
+const isResolvedSite = (entry) => Boolean(entry.details?.siteName)
+
+/**
+ * @template {{ tonnageDecimal: RoundedTonnage }} G
+ * @param {G[]} grouped
+ * @returns {Array<Omit<G, 'tonnageDecimal'> & { tonnageExported: number }>}
+ */
 const summariseTonnage = (grouped) =>
   grouped.map(({ tonnageDecimal, ...rest }) => ({
     ...rest,
@@ -58,52 +76,42 @@ const generateOverseasSiteSummaries = (
   operatorCategory
 ) => {
   // OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
-  const recordsWithOrsId = wasteExportedRecords.filter(
-    ({ data }) => data.OSR_ID
-  )
+  const entries = wasteExportedRecords
+    .filter(({ data }) => data.OSR_ID)
+    .map((record) => {
+      const orsId = zeroPadOrsId(record.data.OSR_ID)
+      return { record, orsId, details: orsDetailsMap.get(orsId) }
+    })
 
-  const isResolvedSite = ({ data }) => {
-    const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
-    return Boolean(details?.siteName)
-  }
-
-  const isApproved = ({ data }) => {
+  const isApproved = ({ record, details }) => {
     if (operatorCategory === OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY) {
       return false
     }
-    const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
-    return isOrsApprovedAtDate(details?.validFrom, data.DATE_OF_EXPORT)
+    return isOrsApprovedAtDate(details?.validFrom, record.data.DATE_OF_EXPORT)
   }
 
-  const getTonnage = ({ data }) =>
-    toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
+  const getTonnage = ({ record }) =>
+    toRoundedTonnage(record.data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
 
   const overseasSites = summariseTonnage(
     groupAndSum(
-      recordsWithOrsId.filter(isResolvedSite),
-      ({ data }) => {
-        const approved = isApproved({ data })
-        return `${zeroPadOrsId(data.OSR_ID)}:${approved}`
-      },
-      ({ data }) => {
-        const orsId = zeroPadOrsId(data.OSR_ID)
-        const details = orsDetailsMap.get(orsId)
-        return {
-          orsId,
-          siteName: details?.siteName,
-          country: details?.country,
-          approved: isApproved({ data })
-        }
-      },
+      entries.filter(isResolvedSite),
+      (entry) => `${entry.orsId}:${isApproved(entry)}`,
+      (entry) => ({
+        orsId: entry.orsId,
+        siteName: entry.details.siteName,
+        country: entry.details.country,
+        approved: isApproved(entry)
+      }),
       getTonnage
     )
   )
 
   const unapprovedOverseasSites = summariseTonnage(
     groupAndSum(
-      recordsWithOrsId.filter((record) => !isResolvedSite(record)),
-      ({ data }) => zeroPadOrsId(data.OSR_ID),
-      ({ data }) => ({ orsId: zeroPadOrsId(data.OSR_ID) }),
+      entries.filter((entry) => !isResolvedSite(entry)),
+      (entry) => entry.orsId,
+      (entry) => ({ orsId: entry.orsId }),
       getTonnage
     )
   )
