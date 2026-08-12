@@ -16,6 +16,23 @@ import { OPERATOR_CATEGORY } from '../operator-category.js'
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
  * @import { ExporterCategory } from '../operator-category.js'
  * @import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
+ * @import { LOADS_EXPORTED_FIELDS } from '#domain/summary-logs/table-schemas/exporter-registered-only/fields.js'
+ */
+
+/**
+ * Both templates: an accredited exporter reports its exports on
+ * RECEIVED_LOADS_FOR_EXPORT, a registered-only one on LOADS_EXPORTED.
+ *
+ * @typedef {Partial<Record<keyof typeof RECEIVED_LOADS_FIELDS | keyof typeof LOADS_EXPORTED_FIELDS, unknown>> & {
+ *   DATE_OF_EXPORT?: string,
+ *   TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED?: number,
+ *   WAS_THE_WASTE_REFUSED?: string,
+ *   WAS_THE_WASTE_STOPPED?: string
+ * }} ExportedRowData
+ */
+
+/**
+ * @typedef {Omit<ReportableWasteRecordState, 'data'> & { data: ExportedRowData }} ExportedWasteRecordState
  */
 
 const ORS_ID_DIGITS = 3
@@ -30,7 +47,7 @@ const summariseTonnage = (grouped) =>
   }))
 
 /**
- * @param {ReportableWasteRecordState[]} wasteExportedRecords
+ * @param {ExportedWasteRecordState[]} wasteExportedRecords
  * @param {Map<string, OrsDetails>} orsDetailsMap
  * @param {ExporterCategory} operatorCategory
  * @returns {Pick<AggregatedExportActivity, 'overseasSites' | 'unapprovedOverseasSites'>}
@@ -97,7 +114,7 @@ const generateOverseasSiteSummaries = (
 /**
  * Sum the exported tonnage across records repatriated in the reporting period.
  *
- * @param {ReportableWasteRecordState[]} repatriatedRecords
+ * @param {ExportedWasteRecordState[]} repatriatedRecords
  * @returns {number}
  */
 function getTonnageRepatriated(repatriatedRecords) {
@@ -162,7 +179,7 @@ function calculateTonnageReceivedNotExported(
  * Sum refused, stopped, and refused-or-stopped export tonnages. The row
  * tonnages are pre-rounded 2dp row-state values, so the sums are exact.
  *
- * @param {ReportableWasteRecordState[]} exportedRecords
+ * @param {ExportedWasteRecordState[]} exportedRecords
  * @returns {{ tonnageRefusedAtDestination: number, tonnageStoppedDuringExport: number, totalTonnageRefusedOrStopped: number }}
  */
 function calculateRefusedAndStoppedTonnages(exportedRecords) {
