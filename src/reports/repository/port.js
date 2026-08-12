@@ -38,23 +38,6 @@
  */
 
 /**
- * @typedef {Object} Supplier
- * @property {string} supplierName
- * @property {string} facilityType
- * @property {string | null} supplierAddress
- * @property {string | null} supplierPhone
- * @property {string | null} supplierEmail
- * @property {number} tonnageReceived
- */
-
-/**
- * @typedef {Object} FinalDestination
- * @property {string} recipientName
- * @property {string} facilityType
- * @property {string | null} address
- * @property {number} tonnageSentOn
- */
-
 /**
  * @typedef {Object} RecyclingActivity
  * @property {Supplier[]} suppliers
@@ -400,6 +383,7 @@
 
 /**
  * @import { PeriodRef } from '#reports/domain/period-key.js'
+ * @import { FinalDestination, Supplier } from '#reports/domain/aggregation/aggregate-report-detail.js'
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
