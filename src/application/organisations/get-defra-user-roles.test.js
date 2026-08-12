@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getDefraUserRoles } from './get-defra-user-roles.js'
+import { getDefraUserRoles, OPERATOR_ROLE } from './get-defra-user-roles.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
 const mockGetOrgMatchingUsersToken = vi.fn()
@@ -54,6 +54,24 @@ describe('#getDefraUserRoles', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+  })
+
+  describe('the role', () => {
+    test('is the operator role, because Defra ID authenticates operators', async () => {
+      const tokenPayload = createTokenPayload({ email: 'user@example.com' })
+
+      const result = await getDefraUserRoles(tokenPayload, mockRequest)
+
+      expect(result.role).toBe(OPERATOR_ROLE)
+    })
+
+    test('is null when the identity cannot be named', async () => {
+      const tokenPayload = createTokenPayload({ email: '' })
+
+      const result = await getDefraUserRoles(tokenPayload, mockRequest)
+
+      expect(result.role).toBeNull()
+    })
   })
 
   describe('when email is missing', () => {
