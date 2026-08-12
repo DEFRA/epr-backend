@@ -194,6 +194,7 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
  * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
  * @param {Map<string, OrsDetails>} [params.orsDetailsMap]
  * @param {string} params.operatorCategory
+ * @returns {AggregatedExportActivity}
  */
 export function aggregateWasteExported({
   wasteExportedRecords,

@@ -1,15 +1,15 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { MONTHS_PER_PERIOD } from '../cadence.js'
+import { aggregateWasteExported } from './aggregate-waste-exported.js'
+import { aggregateWasteReceived } from './aggregate-waste-received.js'
+import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
+import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
 import {
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
   TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY
 } from './fields-by-operator-category.js'
 import { filterRecordsByDateField } from './filter-records-by-date.js'
-import { aggregateWasteReceived } from './aggregate-waste-received.js'
-import { aggregateWasteExported } from './aggregate-waste-exported.js'
-import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
-import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
 
 /**
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
@@ -37,7 +37,7 @@ import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
  * @property {Array<{orsId: string, siteName: string, country: string|null, tonnageExported: number, approved: boolean}>} overseasSites
  * @property {Array<{orsId: string, tonnageExported: number}>} unapprovedOverseasSites
  * @property {number} totalTonnageExported
- * @property {number} tonnageReceivedNotExported
+ * @property {number|null} tonnageReceivedNotExported
  * @property {number} tonnageRefusedAtDestination
  * @property {number} tonnageStoppedDuringExport
  * @property {number} totalTonnageRefusedOrStopped
