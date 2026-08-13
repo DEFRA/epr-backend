@@ -1,3 +1,4 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { randomUUID } from 'node:crypto'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { ObjectId } from 'mongodb'
@@ -9,9 +10,9 @@ import {
 
 export const DEFAULT_ORG_ID = new ObjectId().toString()
 export const DEFAULT_REG_ID = new ObjectId().toString()
-export const DEFAULT_REPORT_START_DATE = '2024-01-01'
-export const DEFAULT_REPORT_END_DATE = '2024-01-31'
-export const DEFAULT_REPORT_DUE_DATE = '2024-02-15'
+export const DEFAULT_REPORT_START_DATE = calendarDate('2024-01-01')
+export const DEFAULT_REPORT_END_DATE = calendarDate('2024-01-31')
+export const DEFAULT_REPORT_DUE_DATE = calendarDate('2024-02-15')
 export const DEFAULT_REPORT_YEAR = 2024
 export const DEFAULT_REPORT_PERIOD = MONTHLY_PERIODS.January
 

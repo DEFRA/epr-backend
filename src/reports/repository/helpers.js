@@ -13,6 +13,7 @@ import {
 import { randomUUID } from 'node:crypto'
 
 /**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import {
  *   PeriodicReport,
  *   PeriodicReportDoc,
@@ -20,8 +21,6 @@ import { randomUUID } from 'node:crypto'
  *   ReportSummary
  * } from './port.js'
  */
-
-const BARE_DATE_LENGTH = 10
 
 /**
  * Normalises a report's `stale` field to the current nested shape on read.
@@ -55,13 +54,12 @@ export const mapReport = (report) => {
 /**
  * Only reports persisted before the bare-date schema fix carry a full ISO
  * datetime here (historical Joi coercion); new reports are already bare, so
- * this only does work for the old-shape case. Safe to delete once no
+ * the truncation is a no-op for them. Safe to reduce to a plain read once no
  * pre-fix reports remain.
  * @param {string} dateString
- * @returns {string}
+ * @returns {CalendarDate}
  */
-const backCompatCalendarDate = (dateString) =>
-  dateString.length > BARE_DATE_LENGTH ? calendarDate(dateString) : dateString
+const backCompatCalendarDate = (dateString) => calendarDate(dateString)
 
 /**
  * Picks the latest submission (highest submissionNumber) per reporting period
