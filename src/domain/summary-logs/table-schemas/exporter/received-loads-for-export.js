@@ -97,6 +97,51 @@ const SUPPLEMENTARY_FIELDS = [
 ]
 
 /**
+ * Traceability / audit columns present in the template but not required for
+ * waste balance (PAE-1420).
+ *
+ * These are modelled as first-class columns — declared as field constants and
+ * added to requiredHeaders so they are a known part of the contract, with
+ * dropdown placeholders normalised via unfilledValues. They deliberately carry
+ * NO entry in validationSchema: they were previously accepted as unvalidated
+ * passthrough (.unknown(true)), and adding a VAL010 value rule would newly
+ * reject operator imports on malformed values. Later beads (e.g. report-creation
+ * gating) can build validation on these named fields where a business rule
+ * warrants it.
+ *
+ * WAS_THE_WASTE_REFUSED and WAS_THE_WASTE_STOPPED are read by
+ * classifyForWasteBalance below; the others carry supplier, loading-site,
+ * carrier and overseas-reprocessor traceability detail.
+ */
+const TRACEABILITY_FIELDS = [
+  FIELDS.SUPPLIER_NAME,
+  FIELDS.SUPPLIER_ADDRESS,
+  FIELDS.SUPPLIER_POSTCODE,
+  FIELDS.SUPPLIER_EMAIL,
+  FIELDS.SUPPLIER_PHONE_NUMBER,
+  FIELDS.ACTIVITIES_CARRIED_OUT_BY_SUPPLIER,
+  FIELDS.WAS_THE_WASTE_REFUSED,
+  FIELDS.WAS_THE_WASTE_STOPPED,
+  FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED,
+  FIELDS.YOUR_REFERENCE,
+  FIELDS.WEIGHBRIDGE_TICKET,
+  FIELDS.WASTE_TRANSFER_NOTE,
+  FIELDS.LOADING_SITE_NAME,
+  FIELDS.LOADING_SITE_ADDRESS,
+  FIELDS.LOADING_SITE_POSTCODE,
+  FIELDS.LOADING_SITE_EMAIL,
+  FIELDS.LOADING_SITE_PHONE_NUMBER,
+  FIELDS.CARRIER_NAME,
+  FIELDS.CBD,
+  FIELDS.CARRIER_VEHICLE_REGISTRATION_NUMBER,
+  FIELDS.OSR_NAME,
+  FIELDS.OSR_COUNTRY,
+  FIELDS.TONNAGE_RECEIVED_BY_OSR,
+  FIELDS.BILL_OF_LANDING_REFERENCE_NUMBER,
+  FIELDS.CUSTOMS_DECLARATION_NUMBER
+]
+
+/**
  * Table schema for RECEIVED_LOADS_FOR_EXPORT
  *
  * Tracks waste received for export. This schema defines:
@@ -117,7 +162,11 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     rowIdField: FIELDS.ROW_ID
   }),
 
-  requiredHeaders: [...WASTE_BALANCE_FIELDS, ...SUPPLEMENTARY_FIELDS],
+  requiredHeaders: [
+    ...WASTE_BALANCE_FIELDS,
+    ...SUPPLEMENTARY_FIELDS,
+    ...TRACEABILITY_FIELDS
+  ],
 
   /**
    * Per-field values that indicate "unfilled"
@@ -134,7 +183,12 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: DROPDOWN_PLACEHOLDER,
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: DROPDOWN_PLACEHOLDER,
     [FIELDS.EXPORT_CONTROLS]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.BASEL_EXPORT_CODE]: DROPDOWN_PLACEHOLDER
+    [FIELDS.BASEL_EXPORT_CODE]: DROPDOWN_PLACEHOLDER,
+    // Traceability dropdowns modelled in PAE-1420 (placeholder → null so later
+    // gating sees an empty value rather than the 'Choose option' placeholder)
+    [FIELDS.WAS_THE_WASTE_REFUSED]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.WAS_THE_WASTE_STOPPED]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.OSR_COUNTRY]: DROPDOWN_PLACEHOLDER
   },
 
   /**

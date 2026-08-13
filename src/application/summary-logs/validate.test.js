@@ -1195,7 +1195,34 @@ describe('SummaryLogsValidator', () => {
         'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
         'INTERIM_SITE_ID',
         'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
-        'EXPORT_CONTROLS'
+        'EXPORT_CONTROLS',
+        // Traceability columns modelled as required headers in PAE-1420
+        // (buildRow returns '' for these; they are optional and unvalidated)
+        'WAS_THE_WASTE_REFUSED',
+        'WAS_THE_WASTE_STOPPED',
+        'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+        'SUPPLIER_NAME',
+        'SUPPLIER_ADDRESS',
+        'SUPPLIER_POSTCODE',
+        'SUPPLIER_EMAIL',
+        'SUPPLIER_PHONE_NUMBER',
+        'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+        'YOUR_REFERENCE',
+        'WEIGHBRIDGE_TICKET',
+        'WASTE_TRANSFER_NOTE',
+        'LOADING_SITE_NAME',
+        'LOADING_SITE_ADDRESS',
+        'LOADING_SITE_POSTCODE',
+        'LOADING_SITE_EMAIL',
+        'LOADING_SITE_PHONE_NUMBER',
+        'CARRIER_NAME',
+        'CBD',
+        'CARRIER_VEHICLE_REGISTRATION_NUMBER',
+        'OSR_NAME',
+        'OSR_COUNTRY',
+        'TONNAGE_RECEIVED_BY_OSR',
+        'BILL_OF_LANDING_REFERENCE_NUMBER',
+        'CUSTOMS_DECLARATION_NUMBER'
       ]
 
       // All 25 fields must be filled for a row to be INCLUDED in waste balance
@@ -1465,7 +1492,16 @@ describe('SummaryLogsValidator', () => {
         'PRODUCT_TONNAGE',
         'UK_PACKAGING_WEIGHT_PERCENTAGE',
         'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-        'ADD_PRODUCT_WEIGHT'
+        'ADD_PRODUCT_WEIGHT',
+        // Product-detail columns modelled as required headers in PAE-1420
+        // (optional and unvalidated, so left empty here)
+        'PRODUCT_DESCRIPTION',
+        'END_OF_WASTE_STANDARDS',
+        'WEIGHBRIDGE_TICKET_NUMBER',
+        'HAULIER_NAME',
+        'HAULIER_VEHICLE_REGISTRATION_NUMBER',
+        'CUSTOMER_NAME',
+        'CUSTOMER_INVOICE_REFERENCE'
       ]
 
       summaryLogExtractor.extract.mockResolvedValue(
@@ -1478,11 +1514,39 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 {
                   rowNumber: 8,
-                  values: [3000, '2025-06-01', 10, 0.5, 5, 'No'] // In range
+                  values: [
+                    3000,
+                    '2025-06-01',
+                    10,
+                    0.5,
+                    5,
+                    'No',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    ''
+                  ] // In range
                 },
                 {
                   rowNumber: 9,
-                  values: [3001, '2024-12-31', 20, 0.5, 10, 'No'] // Out of range
+                  values: [
+                    3001,
+                    '2024-12-31',
+                    20,
+                    0.5,
+                    10,
+                    'No',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    ''
+                  ] // Out of range
                 }
               ]
             }
@@ -1529,7 +1593,10 @@ describe('SummaryLogsValidator', () => {
         'FINAL_DESTINATION_EMAIL',
         'FINAL_DESTINATION_PHONE',
         'YOUR_REFERENCE',
-        'DESCRIPTION_WASTE'
+        'DESCRIPTION_WASTE',
+        // Modelled as required headers in PAE-1420 (optional, unvalidated)
+        'EWC_CODE',
+        'WEIGHBRIDGE_TICKET'
       ]
 
       summaryLogExtractor.extract.mockResolvedValue(
@@ -1553,7 +1620,9 @@ describe('SummaryLogsValidator', () => {
                     'test@test.com',
                     '01234567890',
                     'REF',
-                    'Desc'
+                    'Desc',
+                    '',
+                    ''
                   ] // In range
                 },
                 {
@@ -1569,7 +1638,9 @@ describe('SummaryLogsValidator', () => {
                     'test@test.com',
                     '01234567890',
                     'REF',
-                    'Desc'
+                    'Desc',
+                    '',
+                    ''
                   ] // Out of range
                 }
               ]

@@ -28,8 +28,23 @@ describe('REPROCESSED_LOADS', () => {
       expect(schema.requiredHeaders).toContain('PRODUCT_TONNAGE')
     })
 
+    it('has requiredHeaders for the product-detail columns (PAE-1420)', () => {
+      expect(schema.requiredHeaders).toContain('PRODUCT_DESCRIPTION')
+      expect(schema.requiredHeaders).toContain('END_OF_WASTE_STANDARDS')
+      expect(schema.requiredHeaders).toContain('WEIGHBRIDGE_TICKET_NUMBER')
+      expect(schema.requiredHeaders).toContain('HAULIER_NAME')
+      expect(schema.requiredHeaders).toContain(
+        'HAULIER_VEHICLE_REGISTRATION_NUMBER'
+      )
+      expect(schema.requiredHeaders).toContain('CUSTOMER_NAME')
+      expect(schema.requiredHeaders).toContain('CUSTOMER_INVOICE_REFERENCE')
+    })
+
     it('has unfilledValues with dropdown placeholders matching template', () => {
       expect(schema.unfilledValues.ADD_PRODUCT_WEIGHT).toContain(
+        'Choose option'
+      )
+      expect(schema.unfilledValues.END_OF_WASTE_STANDARDS).toContain(
         'Choose option'
       )
     })
@@ -320,6 +335,21 @@ describe('REPROCESSED_LOADS', () => {
       it('rejects non-string values', () => {
         const { error } = validationSchema.validate({ ADD_PRODUCT_WEIGHT: 1 })
         expect(error).toBeDefined()
+      })
+    })
+
+    describe('modelled product-detail columns are not value-validated (PAE-1420)', () => {
+      it('accepts malformed values for the newly-modelled columns (name modelling only, no new import block)', () => {
+        const { error } = validationSchema.validate({
+          PRODUCT_DESCRIPTION: 'A'.repeat(500),
+          END_OF_WASTE_STANDARDS: 'Maybe',
+          WEIGHBRIDGE_TICKET_NUMBER: 'A'.repeat(500),
+          HAULIER_NAME: 'A'.repeat(500),
+          HAULIER_VEHICLE_REGISTRATION_NUMBER: 'A'.repeat(500),
+          CUSTOMER_NAME: 'A'.repeat(500),
+          CUSTOMER_INVOICE_REFERENCE: 'A'.repeat(500)
+        })
+        expect(error).toBeUndefined()
       })
     })
 

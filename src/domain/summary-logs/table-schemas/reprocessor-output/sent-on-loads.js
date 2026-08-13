@@ -20,7 +20,9 @@ const ALL_FIELDS = [
   FIELDS.FINAL_DESTINATION_EMAIL,
   FIELDS.FINAL_DESTINATION_PHONE,
   FIELDS.YOUR_REFERENCE,
-  FIELDS.DESCRIPTION_WASTE
+  FIELDS.DESCRIPTION_WASTE,
+  FIELDS.EWC_CODE,
+  FIELDS.WEIGHBRIDGE_TICKET
 ]
 
 /**
@@ -52,13 +54,19 @@ export const SENT_ON_LOADS = {
    */
   unfilledValues: {
     [FIELDS.FINAL_DESTINATION_FACILITY_TYPE]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.DESCRIPTION_WASTE]: DROPDOWN_PLACEHOLDER
+    [FIELDS.DESCRIPTION_WASTE]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.EWC_CODE]: DROPDOWN_PLACEHOLDER
   },
 
   /**
    * VAL010: Validation schema for filled fields
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
+   *
+   * EWC_CODE and WEIGHBRIDGE_TICKET are modelled as first-class columns
+   * (requiredHeaders + unfilledValues) but intentionally carry NO value-format
+   * rule here: they were previously passed through unvalidated, and adding a
+   * VAL010 rule would newly reject imports on malformed values (PAE-1420).
    */
   validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false })
 }

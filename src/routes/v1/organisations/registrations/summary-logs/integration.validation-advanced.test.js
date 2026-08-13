@@ -69,7 +69,14 @@ describe('Advanced validation scenarios', () => {
                       'PRODUCT_TONNAGE',
                       'UK_PACKAGING_WEIGHT_PERCENTAGE',
                       'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-                      'ADD_PRODUCT_WEIGHT'
+                      'ADD_PRODUCT_WEIGHT',
+                      'PRODUCT_DESCRIPTION',
+                      'END_OF_WASTE_STANDARDS',
+                      'WEIGHBRIDGE_TICKET_NUMBER',
+                      'HAULIER_NAME',
+                      'HAULIER_VEHICLE_REGISTRATION_NUMBER',
+                      'CUSTOMER_NAME',
+                      'CUSTOMER_INVOICE_REFERENCE'
                     ],
                     rows: [
                       {
@@ -80,7 +87,14 @@ describe('Advanced validation scenarios', () => {
                           1001,
                           0.5,
                           500.5,
-                          'Yes'
+                          'Yes',
+                          'Plastic pellets',
+                          'Yes',
+                          'WB123',
+                          'Haulier A',
+                          'AB12 CDE',
+                          'Customer A',
+                          'INV123'
                         ]
                       }
                     ]

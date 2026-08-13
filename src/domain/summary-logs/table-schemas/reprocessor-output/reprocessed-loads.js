@@ -54,20 +54,36 @@ export const REPROCESSED_LOADS = {
     FIELDS.PRODUCT_TONNAGE,
     FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
     FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
-    FIELDS.ADD_PRODUCT_WEIGHT
+    FIELDS.ADD_PRODUCT_WEIGHT,
+    FIELDS.PRODUCT_DESCRIPTION,
+    FIELDS.END_OF_WASTE_STANDARDS,
+    FIELDS.WEIGHBRIDGE_TICKET_NUMBER,
+    FIELDS.HAULIER_NAME,
+    FIELDS.HAULIER_VEHICLE_REGISTRATION_NUMBER,
+    FIELDS.CUSTOMER_NAME,
+    FIELDS.CUSTOMER_INVOICE_REFERENCE
   ],
 
   /**
    * Per-field values that indicate "unfilled"
    */
   unfilledValues: {
-    [FIELDS.ADD_PRODUCT_WEIGHT]: DROPDOWN_PLACEHOLDER
+    [FIELDS.ADD_PRODUCT_WEIGHT]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.END_OF_WASTE_STANDARDS]: DROPDOWN_PLACEHOLDER
   },
 
   /**
    * VAL010: Validation schema for filled fields
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
+   *
+   * The product-detail columns (PRODUCT_DESCRIPTION, END_OF_WASTE_STANDARDS,
+   * WEIGHBRIDGE_TICKET_NUMBER, HAULIER_NAME, HAULIER_VEHICLE_REGISTRATION_NUMBER,
+   * CUSTOMER_NAME, CUSTOMER_INVOICE_REFERENCE) are modelled as first-class
+   * columns (requiredHeaders + unfilledValues) but intentionally carry NO
+   * value-format rule here: they were previously passed through unvalidated,
+   * and adding a VAL010 rule would newly reject imports on malformed values
+   * (PAE-1420).
    */
   validationSchema: Joi.object({
     [FIELDS.ROW_ID]: createRowIdSchema(

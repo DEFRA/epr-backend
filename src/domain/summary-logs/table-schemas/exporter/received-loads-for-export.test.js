@@ -66,6 +66,39 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.requiredHeaders).toContain('EXPORT_CONTROLS')
     })
 
+    it('has requiredHeaders for the traceability columns (PAE-1420)', () => {
+      const traceabilityHeaders = [
+        'SUPPLIER_NAME',
+        'SUPPLIER_ADDRESS',
+        'SUPPLIER_POSTCODE',
+        'SUPPLIER_EMAIL',
+        'SUPPLIER_PHONE_NUMBER',
+        'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+        'WAS_THE_WASTE_REFUSED',
+        'WAS_THE_WASTE_STOPPED',
+        'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+        'YOUR_REFERENCE',
+        'WEIGHBRIDGE_TICKET',
+        'WASTE_TRANSFER_NOTE',
+        'LOADING_SITE_NAME',
+        'LOADING_SITE_ADDRESS',
+        'LOADING_SITE_POSTCODE',
+        'LOADING_SITE_EMAIL',
+        'LOADING_SITE_PHONE_NUMBER',
+        'CARRIER_NAME',
+        'CBD',
+        'CARRIER_VEHICLE_REGISTRATION_NUMBER',
+        'OSR_NAME',
+        'OSR_COUNTRY',
+        'TONNAGE_RECEIVED_BY_OSR',
+        'BILL_OF_LANDING_REFERENCE_NUMBER',
+        'CUSTOMS_DECLARATION_NUMBER'
+      ]
+      for (const header of traceabilityHeaders) {
+        expect(schema.requiredHeaders).toContain(header)
+      }
+    })
+
     it('has unfilledValues object with dropdown placeholders', () => {
       expect(typeof schema.unfilledValues).toBe('object')
       expect(schema.unfilledValues.BAILING_WIRE_PROTOCOL).toContain(
@@ -80,6 +113,16 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.unfilledValues.EXPORT_CONTROLS).toContain('Choose option')
       expect(schema.unfilledValues.BASEL_EXPORT_CODE).toContain('Choose option')
     })
+
+    it('normalises the traceability dropdown placeholders (PAE-1420)', () => {
+      expect(schema.unfilledValues.WAS_THE_WASTE_REFUSED).toContain(
+        'Choose option'
+      )
+      expect(schema.unfilledValues.WAS_THE_WASTE_STOPPED).toContain(
+        'Choose option'
+      )
+      expect(schema.unfilledValues.OSR_COUNTRY).toContain('Choose option')
+    })
   })
 
   describe('validationSchema (VAL010)', () => {
@@ -92,6 +135,21 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
     it('accepts unknown fields', () => {
       const { error } = validationSchema.validate({ UNKNOWN_FIELD: 'value' })
+      expect(error).toBeUndefined()
+    })
+
+    it('does not value-validate the modelled traceability columns (PAE-1420 - name modelling only, no new import block)', () => {
+      const { error } = validationSchema.validate({
+        SUPPLIER_NAME: 'A'.repeat(500),
+        SUPPLIER_EMAIL: 'not-an-email',
+        ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'anything at all',
+        WAS_THE_WASTE_REFUSED: 'Maybe',
+        WAS_THE_WASTE_STOPPED: 'Perhaps',
+        DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: 'not-a-date',
+        LOADING_SITE_POSTCODE: 'café',
+        OSR_COUNTRY: 'Somewhere-XX',
+        TONNAGE_RECEIVED_BY_OSR: 'heavy'
+      })
       expect(error).toBeUndefined()
     })
 
