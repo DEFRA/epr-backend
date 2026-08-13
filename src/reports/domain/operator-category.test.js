@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { OPERATOR_CATEGORY, getOperatorCategory } from './operator-category.js'
+import {
+  OPERATOR_CATEGORY,
+  getOperatorCategory,
+  isExporterCategory
+} from './operator-category.js'
 
 describe('OPERATOR_CATEGORY', () => {
   it('is frozen', () => {
@@ -141,5 +145,16 @@ describe('getOperatorCategory', () => {
         accreditation: null
       })
     }).toThrow('Unknown wasteProcessingType: unknown')
+  })
+})
+
+describe('isExporterCategory', () => {
+  it.each([
+    { category: OPERATOR_CATEGORY.EXPORTER, expected: true },
+    { category: OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY, expected: true },
+    { category: OPERATOR_CATEGORY.REPROCESSOR, expected: false },
+    { category: OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY, expected: false }
+  ])('returns $expected for $category', ({ category, expected }) => {
+    expect(isExporterCategory(category)).toBe(expected)
   })
 })

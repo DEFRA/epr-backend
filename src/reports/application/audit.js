@@ -8,6 +8,7 @@ import {
 
 /**
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { Cadence } from '#reports/domain/cadence.js'
  * @import {
  *   MarkReportStaleResult,
  *   MarkSubmittedReportRequiringResubmissionResult,
@@ -43,7 +44,7 @@ export const MARK_STALE_ACTION = Object.freeze({
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {number} params.year
- * @param {string} params.cadence
+ * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId
@@ -114,7 +115,7 @@ export async function auditReportStatusTransition(request, params) {
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {number} params.year
- * @param {string} params.cadence
+ * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId
@@ -283,7 +284,7 @@ export async function auditMarkReportsRequiringResubmission({
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {number} params.year
- * @param {string} params.cadence
+ * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId
@@ -333,7 +334,7 @@ export async function auditReportCreate(request, params) {
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {number} params.year
- * @param {string} params.cadence
+ * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {string} params.reportId

@@ -1,8 +1,10 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
+import { periodBounds } from './reporting-period.js'
 import { MONTHS_PER_PERIOD } from './cadence.js'
 import { filterPeriodsFromDate } from './filter-periods-from-date.js'
 
 /**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Cadence } from './cadence.js'
  */
 
@@ -14,7 +16,7 @@ const MONTHS_IN_YEAR = 12
  * Due date is the 20th of the month following the period end.
  * @param {number} year
  * @param {number} endMonth - 0-indexed month of the period end
- * @returns {string} ISO date string (YYYY-MM-DD)
+ * @returns {CalendarDate}
  */
 function computeDueDate(year, endMonth) {
   return formatDateISO(year, endMonth + 1, DUE_DAY)
@@ -25,22 +27,15 @@ function computeDueDate(year, endMonth) {
  *
  * @param {Cadence} cadence
  * @param {number} year
- * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report: null}>}
+ * @returns {Array<{year: number, period: number, startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate, report: null}>}
  */
 export function generateAllPeriodsForYear(cadence, year) {
   const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
-
-  if (!monthsPerPeriod) {
-    throw new TypeError(`Unknown cadence: ${cadence}`)
-  }
-
   const periodsPerYear = MONTHS_IN_YEAR / monthsPerPeriod
   return Array.from({ length: periodsPerYear }, (_, i) => {
     const period = i + 1
-    const startMonth = i * monthsPerPeriod
-    const endMonth = startMonth + monthsPerPeriod - 1
-    const startDate = formatDateISO(year, startMonth, 1)
-    const endDate = formatDateISO(year, endMonth + 1, 0)
+    const endMonth = i * monthsPerPeriod + monthsPerPeriod - 1
+    const { startDate, endDate } = periodBounds(cadence, year, period)
     const dueDate = computeDueDate(year, endMonth)
 
     return { year, period, startDate, endDate, dueDate, report: null }
@@ -58,7 +53,7 @@ export function generateAllPeriodsForYear(cadence, year) {
  * @param {number} year
  * @param {Date} [now] - Current date (defaults to new Date(), injectable for testing)
  * @param {string | null} [fromDate] - ISO `YYYY-MM-DD` lower bound; periods ending before it are dropped
- * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report: null}>}
+ * @returns {Array<{year: number, period: number, startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate, report: null}>}
  */
 export function generateReportingPeriods(
   cadence,

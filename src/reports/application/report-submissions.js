@@ -1,7 +1,10 @@
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
+/** @import { Cadence } from '#reports/domain/cadence.js' */
+/** @import { WasteSentSummary } from '#reports/repository/port.js' */
 
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import {
@@ -69,7 +72,7 @@ function formatTonnage(value) {
 }
 
 /**
- * @param {import('#reports/repository/port.js').WasteSent | undefined} wasteSent
+ * @param {WasteSentSummary | undefined} wasteSent
  * @returns {number | ''}
  */
 function sumSentOn(wasteSent) {
@@ -134,7 +137,7 @@ function buildTonnageFields(report) {
 /**
  * @param {Organisation} org
  * @param {ReportableRegistration} registration
- * @param {string} cadence
+ * @param {Cadence} cadence
  * @param {MergedPeriod} mergedPeriod
  * @param {string} accreditationNumber
  * @param {import('#reports/repository/port.js').ReportSummary | null} report
@@ -175,7 +178,7 @@ function buildRow(
     // Every report-derived field describes this one submitted report, so the
     // row stays internally consistent. An in-flight draft is never a `report`
     // here, so it produces no row until it is itself submitted.
-    submittedDate: report?.submittedAt?.slice(0, 10) ?? '',
+    submittedDate: report?.submittedAt ? calendarDate(report.submittedAt) : '',
     submittedBy: report?.submittedBy?.name ?? '',
     submissionNumber: report?.submissionNumber ?? '',
     ...buildTonnageFields(report)

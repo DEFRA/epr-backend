@@ -11,69 +11,108 @@ import { isDateInRange } from './filter-records-by-date.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 
+/**
+ * @import { AggregatedExportActivity, ReportableWasteRecordState } from './aggregate-report-detail.js'
+ * @import { ReportingPeriod } from '../reporting-period.js'
+ * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ * @import { ExporterCategory } from '../operator-category.js'
+ * @import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
+ * @import { LOADS_EXPORTED_FIELDS } from '#domain/summary-logs/table-schemas/exporter-registered-only/fields.js'
+ * @import { RoundedTonnage } from '#common/helpers/rounded-tonnage.js'
+ */
+
+/**
+ * Both templates: an accredited exporter reports its exports on
+ * RECEIVED_LOADS_FOR_EXPORT, a registered-only one on LOADS_EXPORTED.
+ *
+ * @typedef {Partial<Record<keyof typeof RECEIVED_LOADS_FIELDS | keyof typeof LOADS_EXPORTED_FIELDS, unknown>> & {
+ *   DATE_OF_EXPORT?: string,
+ *   TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED?: number,
+ *   WAS_THE_WASTE_REFUSED?: string,
+ *   WAS_THE_WASTE_STOPPED?: string
+ * }} ExportedRowData
+ */
+
+/**
+ * @typedef {Omit<ReportableWasteRecordState, 'data'> & { data: ExportedRowData }} ExportedWasteRecordState
+ */
+
 const ORS_ID_DIGITS = 3
 const ZERO = '0'
 
 const zeroPadOrsId = (orsId) => String(orsId).padStart(ORS_ID_DIGITS, ZERO)
 
+/**
+ * @typedef {{ record: ExportedWasteRecordState, orsId: string, details: OrsDetails | undefined }} OrsEntry
+ */
+
+/**
+ * A site the ORS import resolved to a name, so its details can be reported.
+ *
+ * @param {OrsEntry} entry
+ * @returns {entry is OrsEntry & { details: OrsDetails & { siteName: string } }}
+ */
+const isResolvedSite = (entry) => Boolean(entry.details?.siteName)
+
+/**
+ * @template {{ tonnageDecimal: RoundedTonnage }} G
+ * @param {G[]} grouped
+ * @returns {Array<Omit<G, 'tonnageDecimal'> & { tonnageExported: number }>}
+ */
 const summariseTonnage = (grouped) =>
   grouped.map(({ tonnageDecimal, ...rest }) => ({
     ...rest,
     tonnageExported: toNumber(tonnageDecimal)
   }))
 
+/**
+ * @param {ExportedWasteRecordState[]} wasteExportedRecords
+ * @param {Map<string, OrsDetails>} orsDetailsMap
+ * @param {ExporterCategory} operatorCategory
+ * @returns {Pick<AggregatedExportActivity, 'overseasSites' | 'unapprovedOverseasSites'>}
+ */
 const generateOverseasSiteSummaries = (
   wasteExportedRecords,
   orsDetailsMap,
   operatorCategory
 ) => {
   // OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
-  const recordsWithOrsId = wasteExportedRecords.filter(
-    ({ data }) => data.OSR_ID
-  )
+  const entries = wasteExportedRecords
+    .filter(({ data }) => data.OSR_ID)
+    .map((record) => {
+      const orsId = zeroPadOrsId(record.data.OSR_ID)
+      return { record, orsId, details: orsDetailsMap.get(orsId) }
+    })
 
-  const isResolvedSite = ({ data }) => {
-    const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
-    return Boolean(details?.siteName)
-  }
-
-  const isApproved = ({ data }) => {
+  const isApproved = ({ record, details }) => {
     if (operatorCategory === OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY) {
       return false
     }
-    const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
-    return isOrsApprovedAtDate(details?.validFrom, data.DATE_OF_EXPORT)
+    return isOrsApprovedAtDate(details?.validFrom, record.data.DATE_OF_EXPORT)
   }
 
-  const getTonnage = ({ data }) =>
-    toRoundedTonnage(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
+  const getTonnage = ({ record }) =>
+    toRoundedTonnage(record.data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
 
   const overseasSites = summariseTonnage(
     groupAndSum(
-      recordsWithOrsId.filter(isResolvedSite),
-      ({ data }) => {
-        const approved = isApproved({ data })
-        return `${zeroPadOrsId(data.OSR_ID)}:${approved}`
-      },
-      ({ data }) => {
-        const orsId = zeroPadOrsId(data.OSR_ID)
-        const details = orsDetailsMap.get(orsId)
-        return {
-          orsId,
-          siteName: details.siteName,
-          country: details.country,
-          approved: isApproved({ data })
-        }
-      },
+      entries.filter(isResolvedSite),
+      (entry) => `${entry.orsId}:${isApproved(entry)}`,
+      (entry) => ({
+        orsId: entry.orsId,
+        siteName: entry.details.siteName,
+        country: entry.details.country,
+        approved: isApproved(entry)
+      }),
       getTonnage
     )
   )
 
   const unapprovedOverseasSites = summariseTonnage(
     groupAndSum(
-      recordsWithOrsId.filter((record) => !isResolvedSite(record)),
-      ({ data }) => zeroPadOrsId(data.OSR_ID),
-      ({ data }) => ({ orsId: zeroPadOrsId(data.OSR_ID) }),
+      entries.filter((entry) => !isResolvedSite(entry)),
+      (entry) => entry.orsId,
+      (entry) => ({ orsId: entry.orsId }),
       getTonnage
     )
   )
@@ -81,6 +120,12 @@ const generateOverseasSiteSummaries = (
   return { overseasSites, unapprovedOverseasSites }
 }
 
+/**
+ * Sum the exported tonnage across records repatriated in the reporting period.
+ *
+ * @param {ExportedWasteRecordState[]} repatriatedRecords
+ * @returns {number}
+ */
 function getTonnageRepatriated(repatriatedRecords) {
   return toNumber(
     repatriatedRecords
@@ -98,15 +143,36 @@ function getTonnageRepatriated(repatriatedRecords) {
   )
 }
 
+/**
+ * Only the EXPORTER template: registered-only reports its exports on a separate
+ * table and never reaches this calculation.
+ *
+ * @typedef {Partial<Record<keyof typeof RECEIVED_LOADS_FIELDS, unknown>> & {
+ *   DATE_OF_EXPORT?: string,
+ *   TONNAGE_RECEIVED_FOR_EXPORT?: number
+ * }} ReceivedForExportRowData
+ */
+
+/**
+ * @typedef {Omit<ReportableWasteRecordState, 'data'> & { data: ReceivedForExportRowData }} ReceivedForExportRecordState
+ */
+
+/**
+ * Sum the tonnage received for export whose export date falls outside the
+ * reporting period.
+ *
+ * @param {ReceivedForExportRecordState[]} wasteReceivedRecords
+ * @param {ReportingPeriod} reportingPeriod
+ * @returns {number}
+ */
 function calculateTonnageReceivedNotExported(
   wasteReceivedRecords,
-  startDate,
-  endDate
+  reportingPeriod
 ) {
   return toNumber(
     wasteReceivedRecords
       .filter(
-        ({ data }) => !isDateInRange(data.DATE_OF_EXPORT, startDate, endDate)
+        ({ data }) => !isDateInRange(data.DATE_OF_EXPORT, reportingPeriod)
       )
       .reduce(
         (sum, { data }) =>
@@ -120,7 +186,7 @@ function calculateTonnageReceivedNotExported(
  * Sum refused, stopped, and refused-or-stopped export tonnages. The row
  * tonnages are pre-rounded 2dp row-state values, so the sums are exact.
  *
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} exportedRecords
+ * @param {ExportedWasteRecordState[]} exportedRecords
  * @returns {{ tonnageRefusedAtDestination: number, tonnageStoppedDuringExport: number, totalTonnageRefusedOrStopped: number }}
  */
 function calculateRefusedAndStoppedTonnages(exportedRecords) {
@@ -161,20 +227,19 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
 
 /**
  * @param {object} params
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteExportedRecords
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.repatriatedRecords
- * @param {import('./aggregate-report-detail.js').ReportableWasteRecordState[]} params.wasteReceivedRecords
- * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
- * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
- * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]
- * @param {string} params.operatorCategory
+ * @param {ReportableWasteRecordState[]} params.wasteExportedRecords
+ * @param {ReportableWasteRecordState[]} params.repatriatedRecords
+ * @param {ReportableWasteRecordState[]} params.wasteReceivedRecords
+ * @param {ReportingPeriod} params.reportingPeriod
+ * @param {Map<string, OrsDetails>} [params.orsDetailsMap]
+ * @param {ExporterCategory} params.operatorCategory
+ * @returns {AggregatedExportActivity}
  */
 export function aggregateWasteExported({
   wasteExportedRecords,
   repatriatedRecords,
   wasteReceivedRecords,
-  startDate,
-  endDate,
+  reportingPeriod,
   orsDetailsMap = new Map(),
   operatorCategory
 }) {
@@ -213,8 +278,7 @@ export function aggregateWasteExported({
         ? null
         : calculateTonnageReceivedNotExported(
             wasteReceivedRecords,
-            startDate,
-            endDate
+            reportingPeriod
           ),
     tonnageRefusedAtDestination,
     tonnageStoppedDuringExport,

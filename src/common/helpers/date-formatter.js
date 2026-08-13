@@ -3,6 +3,15 @@
  */
 
 /**
+ * A bare YYYY-MM-DD calendar date. Branded because the fields that carry one
+ * are compared lexicographically, so a full ISO datetime sorts after the bare
+ * date for the same day and silently drops records. `formatDateISO` and
+ * `calendarDate` are the only constructors.
+ *
+ * @typedef {string & { readonly __brand: 'CalendarDate' }} CalendarDate
+ */
+
+/**
  * Cached British date formatter (DD/MM/YYYY)
  * @type {Intl.DateTimeFormat}
  */
@@ -56,10 +65,12 @@ export function formatDateTimeDots(date) {
  * @param {number} year
  * @param {number} month - 0-indexed month
  * @param {number} day - day of month (0 = last day of previous month)
- * @returns {string}
+ * @returns {CalendarDate}
  */
 export function formatDateISO(year, month, day) {
-  return new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10)
+  return /** @type {CalendarDate} */ (
+    new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10)
+  )
 }
 
 /**
@@ -69,10 +80,10 @@ export function formatDateISO(year, month, day) {
  * the first 10 characters means callers never need to know or care which
  * shape a given stored value is in.
  * @param {string} dateString
- * @returns {string} YYYY-MM-DD
+ * @returns {CalendarDate}
  */
 export function calendarDate(dateString) {
-  return dateString.slice(0, 10)
+  return /** @type {CalendarDate} */ (dateString.slice(0, 10))
 }
 
 /**

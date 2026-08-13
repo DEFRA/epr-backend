@@ -1,3 +1,4 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodKey } from '#reports/domain/period-key.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
@@ -12,6 +13,10 @@ import {
   resolveAccreditation,
   resolveAccreditationNumber
 } from '#domain/organisations/registration-utils.js'
+
+/**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ */
 
 /**
  * @typedef {import('#reports/domain/compliance-reporting-periods.js').CompliancePeriod} CompliancePeriod
@@ -48,14 +53,14 @@ import {
  * later correction).
  *
  * @param {import('#reports/domain/merge-reporting-periods.js').MergedPeriod} mergedPeriod
- * @returns {string | null}
+ * @returns {CalendarDate | null}
  */
 function originalSubmittedDate(mergedPeriod) {
   const [original] = selectSubmittedReports({
     current: mergedPeriod.report,
     previousSubmissions: mergedPeriod.previousSubmissions
   })
-  return original?.submittedAt?.slice(0, 10) ?? null
+  return original?.submittedAt ? calendarDate(original.submittedAt) : null
 }
 
 /**
