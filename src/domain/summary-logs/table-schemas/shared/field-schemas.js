@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
+import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { customJoi } from '#common/validation/custom-joi.js'
 
 /**
@@ -22,9 +23,6 @@ const DATE_MIN = new Date('2000-01-01')
 const DATE_MAX = new Date('2100-01-01')
 const CALENDAR_DATE_ERROR = 'any.calendarDate'
 const CALENDAR_DATE_PATTERN = /^(\d{4}-\d{2}-\d{2})/
-
-/** @param {Date} date */
-const toCalendarDate = (date) => date.toISOString().slice(0, 10)
 
 /**
  * 3-digit ID constraints
@@ -126,12 +124,12 @@ export const createDateFieldSchema = () =>
     .custom((value, helpers) => {
       let dateStr
       if (value instanceof Date) {
-        dateStr = toCalendarDate(value)
+        dateStr = utcCalendarDate(value)
       } else if (typeof value === 'number') {
         if (Number.isNaN(value)) {
           return helpers.error(CALENDAR_DATE_ERROR)
         }
-        dateStr = toCalendarDate(new Date(value))
+        dateStr = utcCalendarDate(new Date(value))
       } else if (typeof value === 'string') {
         const match = CALENDAR_DATE_PATTERN.exec(value)
         if (!match) {
@@ -146,7 +144,7 @@ export const createDateFieldSchema = () =>
 
       // Reject if the parsed date doesn't round-trip to the same string
       // (catches values like "2024-13-01" that Date silently rolls over)
-      if (toCalendarDate(parsed) !== dateStr) {
+      if (utcCalendarDate(parsed) !== dateStr) {
         return helpers.error(CALENDAR_DATE_ERROR)
       }
 
