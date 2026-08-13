@@ -12,11 +12,7 @@ const FLAGS = [
     'isPreCpaResubmissionReportEnabled',
     'featureFlags.preCpaResubmissionReport'
   ],
-  [
-    'isStaleIssuedTonnageReportEnabled',
-    'featureFlags.staleIssuedTonnageReport'
-  ],
-  ['isUnexportedTonnageReportEnabled', 'featureFlags.unexportedTonnageReport']
+  ['isStaleIssuedTonnageReportEnabled', 'featureFlags.staleIssuedTonnageReport']
 ]
 
 describe('createConfigFeatureFlags', () => {
