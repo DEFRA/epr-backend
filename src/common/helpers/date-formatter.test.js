@@ -28,6 +28,10 @@ describe('formatDate', () => {
     expect(formatDate('2026-03-01')).toBe('01/03/2026')
   })
 
+  it('should format a full ISO datetime string as the calendar date it falls on', () => {
+    expect(formatDate('2026-03-01T23:59:59.999Z')).toBe('01/03/2026')
+  })
+
   it('should return empty string for null', () => {
     expect(formatDate(invalidArg(null))).toBe('')
   })

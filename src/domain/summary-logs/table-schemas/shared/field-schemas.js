@@ -1,6 +1,6 @@
 import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
-import { utcCalendarDate } from '#common/helpers/date-formatter.js'
+import { startOfDay, utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { customJoi } from '#common/validation/custom-joi.js'
 
 /**
@@ -140,7 +140,7 @@ export const createDateFieldSchema = () =>
         return helpers.error(CALENDAR_DATE_ERROR)
       }
 
-      const parsed = new Date(dateStr + 'T00:00:00.000Z')
+      const parsed = startOfDay(dateStr)
 
       // Reject if the parsed date doesn't round-trip to the same string
       // (catches values like "2024-13-01" that Date silently rolls over)

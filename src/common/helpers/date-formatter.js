@@ -37,15 +37,14 @@ const britishDateTimeDotsFormatter = new Intl.DateTimeFormat('en-GB', {
 
 /**
  * Formats a Date object or date string to British format (DD/MM/YYYY)
- * @param {Date|string|null|undefined} date - Date object or ISO date string (YYYY-MM-DD) to format
+ * @param {Date|string|null|undefined} date - Date object, or a date string that is either bare YYYY-MM-DD or a full ISO datetime
  * @returns {string} - Formatted date string (e.g., '22/01/2026'), or '' when date is null/undefined
  */
 export function formatDate(date) {
   if (!date) {
     return ''
   }
-  const dateObj =
-    typeof date === 'string' ? new Date(date + 'T00:00:00.000Z') : date
+  const dateObj = typeof date === 'string' ? startOfDay(date) : date
   return britishFormatter.format(dateObj)
 }
 

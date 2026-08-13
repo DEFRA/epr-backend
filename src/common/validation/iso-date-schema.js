@@ -1,4 +1,4 @@
-import { utcCalendarDate } from '#common/helpers/date-formatter.js'
+import { startOfDay, utcCalendarDate } from '#common/helpers/date-formatter.js'
 import Joi from 'joi'
 
 /**
@@ -15,7 +15,7 @@ export const isoDateString = () =>
   Joi.string()
     .pattern(/^\d{4}-\d{2}-\d{2}$/)
     .custom((value, helpers) => {
-      const date = new Date(`${value}T00:00:00.000Z`)
+      const date = startOfDay(value)
       if (Number.isNaN(date.getTime()) || utcCalendarDate(date) !== value) {
         return helpers.error('string.pattern.base')
       }
