@@ -3,6 +3,7 @@
 /** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
 /** @import { Cadence } from '#reports/domain/cadence.js' */
 
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import {
@@ -176,7 +177,7 @@ function buildRow(
     // Every report-derived field describes this one submitted report, so the
     // row stays internally consistent. An in-flight draft is never a `report`
     // here, so it produces no row until it is itself submitted.
-    submittedDate: report?.submittedAt?.slice(0, 10) ?? '',
+    submittedDate: report?.submittedAt ? calendarDate(report.submittedAt) : '',
     submittedBy: report?.submittedBy?.name ?? '',
     submissionNumber: report?.submissionNumber ?? '',
     ...buildTonnageFields(report)
