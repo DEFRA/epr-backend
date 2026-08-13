@@ -1,20 +1,19 @@
 import { YEAR_MONTH_LENGTH } from '#common/helpers/dates/year-month.js'
 
 /**
- * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { ReportingPeriod } from '../reporting-period.js'
  * @import { ReportableWasteRecordState } from './aggregate-report-detail.js'
  */
 
 /**
  * Returns true when value is a string containing a valid ISO date that falls
- * within [startDate, endDate] (both inclusive, compared lexicographically).
+ * within the period (both bounds inclusive, compared lexicographically).
  *
  * @param {unknown} value
- * @param {CalendarDate} startDate
- * @param {CalendarDate} endDate
+ * @param {ReportingPeriod} period
  * @returns {boolean}
  */
-export function isDateInRange(value, startDate, endDate) {
+export function isDateInRange(value, { startDate, endDate }) {
   if (typeof value !== 'string') {
     return false
   }
@@ -34,21 +33,15 @@ export function isDateInRange(value, startDate, endDate) {
 /**
  * @param {ReportableWasteRecordState[]} wasteRecords
  * @param {string | undefined} dateField
- * @param {CalendarDate} startDate
- * @param {CalendarDate} endDate
+ * @param {ReportingPeriod} period
  * @returns {ReportableWasteRecordState[]}
  */
-export function filterRecordsByDateField(
-  wasteRecords,
-  dateField,
-  startDate,
-  endDate
-) {
+export function filterRecordsByDateField(wasteRecords, dateField, period) {
   if (!dateField) {
     return []
   }
 
   return wasteRecords.filter((wasteRecord) =>
-    isDateInRange(wasteRecord.data[dateField], startDate, endDate)
+    isDateInRange(wasteRecord.data[dateField], period)
   )
 }

@@ -1,9 +1,13 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
+import { CADENCE } from '#reports/domain/cadence.js'
+import {
+  periodBounds,
+  reportingPeriodFromStoredDates
+} from '#reports/domain/reporting-period.js'
 import { isDateInRange } from '#root/reports/domain/aggregation/filter-records-by-date.js'
 
 describe('#isDateInRange', () => {
-  const start = calendarDate('2025-01-01')
-  const end = calendarDate('2025-12-31')
+  // A whole calendar year is no period, so it is built from bare bounds.
+  const wholeOf2025 = reportingPeriodFromStoredDates('2025-01-01', '2025-12-31')
 
   describe('invalid dates', () => {
     it.each([
@@ -18,62 +22,61 @@ describe('#isDateInRange', () => {
       ['number', 20250101],
       ['undefined', undefined]
     ])('returns false for %s (%s)', (_label, value) => {
-      expect(isDateInRange(value, start, end)).toBe(false)
+      expect(isDateInRange(value, wholeOf2025)).toBe(false)
     })
   })
 
   describe('valid dates', () => {
     it('returns true when date is within range', () => {
-      expect(isDateInRange('2025-06-15', start, end)).toBe(true)
+      expect(isDateInRange('2025-06-15', wholeOf2025)).toBe(true)
     })
 
     it('returns true for start boundary', () => {
-      expect(isDateInRange('2025-01-01', start, end)).toBe(true)
+      expect(isDateInRange('2025-01-01', wholeOf2025)).toBe(true)
     })
 
     it('returns true for end boundary', () => {
-      expect(isDateInRange('2025-12-31', start, end)).toBe(true)
+      expect(isDateInRange('2025-12-31', wholeOf2025)).toBe(true)
     })
 
     it('returns false when date is before range', () => {
-      expect(isDateInRange('2024-12-31', start, end)).toBe(false)
+      expect(isDateInRange('2024-12-31', wholeOf2025)).toBe(false)
     })
 
     it('returns false when date is after range', () => {
-      expect(isDateInRange('2026-01-01', start, end)).toBe(false)
+      expect(isDateInRange('2026-01-01', wholeOf2025)).toBe(false)
     })
   })
 
   describe('month-format dates (YYYY-MM)', () => {
     it('returns true for first month of range', () => {
-      expect(isDateInRange('2025-01', start, end)).toBe(true)
+      expect(isDateInRange('2025-01', wholeOf2025)).toBe(true)
     })
 
     it('returns true for middle month of range', () => {
-      expect(isDateInRange('2025-06', start, end)).toBe(true)
+      expect(isDateInRange('2025-06', wholeOf2025)).toBe(true)
     })
 
     it('returns true for last month of range', () => {
-      expect(isDateInRange('2025-12', start, end)).toBe(true)
+      expect(isDateInRange('2025-12', wholeOf2025)).toBe(true)
     })
 
     it('returns false for month before range', () => {
-      expect(isDateInRange('2024-12', start, end)).toBe(false)
+      expect(isDateInRange('2024-12', wholeOf2025)).toBe(false)
     })
 
     it('returns false for month after range', () => {
-      expect(isDateInRange('2026-01', start, end)).toBe(false)
+      expect(isDateInRange('2026-01', wholeOf2025)).toBe(false)
     })
 
     it('handles quarterly boundaries correctly', () => {
-      const q1Start = calendarDate('2026-01-01')
-      const q1End = calendarDate('2026-03-31')
+      const q1 = periodBounds(CADENCE.quarterly, 2026, 1)
 
-      expect(isDateInRange('2026-01', q1Start, q1End)).toBe(true)
-      expect(isDateInRange('2026-02', q1Start, q1End)).toBe(true)
-      expect(isDateInRange('2026-03', q1Start, q1End)).toBe(true)
-      expect(isDateInRange('2025-12', q1Start, q1End)).toBe(false)
-      expect(isDateInRange('2026-04', q1Start, q1End)).toBe(false)
+      expect(isDateInRange('2026-01', q1)).toBe(true)
+      expect(isDateInRange('2026-02', q1)).toBe(true)
+      expect(isDateInRange('2026-03', q1)).toBe(true)
+      expect(isDateInRange('2025-12', q1)).toBe(false)
+      expect(isDateInRange('2026-04', q1)).toBe(false)
     })
   })
 })

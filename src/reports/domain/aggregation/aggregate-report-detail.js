@@ -1,7 +1,6 @@
-import { formatDateISO } from '#common/helpers/date-formatter.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { MONTHS_PER_PERIOD } from '../cadence.js'
 import { isExporterCategory } from '../operator-category.js'
+import { periodBounds } from '../reporting-period.js'
 import { aggregateWasteExported } from './aggregate-waste-exported.js'
 import { aggregateWasteReceived } from './aggregate-waste-received.js'
 import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
@@ -18,6 +17,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * @import { Cadence } from '../cadence.js'
  * @import { OperatorCategory } from '../operator-category.js'
  * @import { ExporterSectionDateFields, SectionDateFields } from './fields-by-operator-category.js'
+ * @import { ReportingPeriod } from '../reporting-period.js'
  */
 
 /**
@@ -115,16 +115,7 @@ export function aggregateReportDetail(
   wasteRecordStates,
   { operatorCategory, cadence, year, period, source, orsDetailsMap }
 ) {
-  const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
-
-  if (!monthsPerPeriod) {
-    throw new TypeError(`Unknown cadence: ${cadence}`)
-  }
-
-  const startMonth = (period - 1) * monthsPerPeriod
-
-  const startDate = formatDateISO(year, startMonth, 1)
-  const endDate = formatDateISO(year, startMonth + monthsPerPeriod, 0)
+  const reportingPeriod = periodBounds(cadence, year, period)
 
   const sectionDateFields =
     SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
@@ -138,12 +129,7 @@ export function aggregateReportDetail(
     wasteExportedRecords,
     wasteRepatriatedRecords,
     wasteSentOnRecords
-  } = sliceRecordsByPeriod(
-    coercedRecords,
-    sectionDateFields,
-    startDate,
-    endDate
-  )
+  } = sliceRecordsByPeriod(coercedRecords, sectionDateFields, reportingPeriod)
 
   const tonnageReceivedField =
     TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY[operatorCategory]
@@ -172,8 +158,8 @@ export function aggregateReportDetail(
     cadence,
     year,
     period,
-    startDate,
-    endDate,
+    startDate: reportingPeriod.startDate,
+    endDate: reportingPeriod.endDate,
     source,
     recyclingActivity,
     ...(isExporterCategory(operatorCategory) && {
@@ -181,8 +167,7 @@ export function aggregateReportDetail(
         wasteExportedRecords,
         repatriatedRecords: wasteRepatriatedRecords,
         wasteReceivedRecords,
-        startDate,
-        endDate,
+        reportingPeriod,
         orsDetailsMap,
         operatorCategory
       })
@@ -198,15 +183,9 @@ export function aggregateReportDetail(
  *
  * @param {ReportableWasteRecordState[]} wasteRecords
  * @param {SectionDateFields} sectionDateFields
- * @param {CalendarDate} startDate
- * @param {CalendarDate} endDate
+ * @param {ReportingPeriod} period
  */
-function sliceRecordsByPeriod(
-  wasteRecords,
-  sectionDateFields,
-  startDate,
-  endDate
-) {
+function sliceRecordsByPeriod(wasteRecords, sectionDateFields, period) {
   /** @type {Partial<ExporterSectionDateFields>} */
   const { wasteExported, wasteRepatriated } = sectionDateFields
 
@@ -214,26 +193,22 @@ function sliceRecordsByPeriod(
     wasteReceivedRecords: filterRecordsByDateField(
       wasteRecords,
       sectionDateFields.wasteReceived,
-      startDate,
-      endDate
+      period
     ),
     wasteExportedRecords: filterRecordsByDateField(
       wasteRecords,
       wasteExported,
-      startDate,
-      endDate
+      period
     ),
     wasteRepatriatedRecords: filterRecordsByDateField(
       wasteRecords,
       wasteRepatriated,
-      startDate,
-      endDate
+      period
     ),
     wasteSentOnRecords: filterRecordsByDateField(
       wasteRecords,
       sectionDateFields.wasteSentOn,
-      startDate,
-      endDate
+      period
     )
   }
 }

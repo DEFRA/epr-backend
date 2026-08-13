@@ -13,7 +13,7 @@ import { OPERATOR_CATEGORY } from '../operator-category.js'
 
 /**
  * @import { AggregatedExportActivity, ReportableWasteRecordState } from './aggregate-report-detail.js'
- * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { ReportingPeriod } from '../reporting-period.js'
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
  * @import { ExporterCategory } from '../operator-category.js'
  * @import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
@@ -162,19 +162,17 @@ function getTonnageRepatriated(repatriatedRecords) {
  * reporting period.
  *
  * @param {ReceivedForExportRecordState[]} wasteReceivedRecords
- * @param {CalendarDate} startDate
- * @param {CalendarDate} endDate
+ * @param {ReportingPeriod} reportingPeriod
  * @returns {number}
  */
 function calculateTonnageReceivedNotExported(
   wasteReceivedRecords,
-  startDate,
-  endDate
+  reportingPeriod
 ) {
   return toNumber(
     wasteReceivedRecords
       .filter(
-        ({ data }) => !isDateInRange(data.DATE_OF_EXPORT, startDate, endDate)
+        ({ data }) => !isDateInRange(data.DATE_OF_EXPORT, reportingPeriod)
       )
       .reduce(
         (sum, { data }) =>
@@ -232,8 +230,7 @@ function calculateRefusedAndStoppedTonnages(exportedRecords) {
  * @param {ReportableWasteRecordState[]} params.wasteExportedRecords
  * @param {ReportableWasteRecordState[]} params.repatriatedRecords
  * @param {ReportableWasteRecordState[]} params.wasteReceivedRecords
- * @param {CalendarDate} params.startDate
- * @param {CalendarDate} params.endDate
+ * @param {ReportingPeriod} params.reportingPeriod
  * @param {Map<string, OrsDetails>} [params.orsDetailsMap]
  * @param {ExporterCategory} params.operatorCategory
  * @returns {AggregatedExportActivity}
@@ -242,8 +239,7 @@ export function aggregateWasteExported({
   wasteExportedRecords,
   repatriatedRecords,
   wasteReceivedRecords,
-  startDate,
-  endDate,
+  reportingPeriod,
   orsDetailsMap = new Map(),
   operatorCategory
 }) {
@@ -282,8 +278,7 @@ export function aggregateWasteExported({
         ? null
         : calculateTonnageReceivedNotExported(
             wasteReceivedRecords,
-            startDate,
-            endDate
+            reportingPeriod
           ),
     tonnageRefusedAtDestination,
     tonnageStoppedDuringExport,

@@ -1,4 +1,3 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
 import { isNil } from '#common/helpers/is-nil.js'
 import {
   equals,
@@ -17,6 +16,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { reportingPeriodFromStoredDates } from '#reports/domain/reporting-period.js'
 import { SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY } from '#reports/domain/aggregation/fields-by-operator-category.js'
 import {
   filterRecordsByDateField,
@@ -25,7 +25,7 @@ import {
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 
 /**
- * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { ReportingPeriod } from '#reports/domain/reporting-period.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
@@ -259,12 +259,11 @@ const classifyLoad = (data) => {
  * this way, and `rowsMiscounted` describes history rather than the estate.
  *
  * @param {Record<string, any>} data
- * @param {CalendarDate} startDate
- * @param {CalendarDate} endDate
+ * @param {ReportingPeriod} reportingPeriod
  * @returns {import('#common/helpers/rounded-tonnage.js').RoundedTonnage}
  */
-const liveContribution = (data, startDate, endDate) =>
-  isDateInRange(data[EXPORT_DATE_FIELD], startDate, endDate)
+const liveContribution = (data, reportingPeriod) =>
+  isDateInRange(data[EXPORT_DATE_FIELD], reportingPeriod)
     ? ZERO_TONNAGE
     : toRoundedTonnage(data[TONNAGE_RECEIVED_FIELD])
 
@@ -288,19 +287,17 @@ const liveContribution = (data, startDate, endDate) =>
  * data a backfill would move and not only how much tonnage.
  *
  * @param {WasteRecordState[]} wasteRecordStates
- * @param {CalendarDate} startDate
- * @param {CalendarDate} endDate
+ * @param {ReportingPeriod} reportingPeriod
  * @returns {Recomputation}
  */
-const recomputeUnexported = (wasteRecordStates, startDate, endDate) => {
+const recomputeUnexported = (wasteRecordStates, reportingPeriod) => {
   const loads = filterRecordsByDateField(
     wasteRecordStates,
     RECEIVED_DATE_FIELD,
-    startDate,
-    endDate
+    reportingPeriod
   ).map(({ data }) => ({
     ...classifyLoad(data),
-    live: liveContribution(data, startDate, endDate)
+    live: liveContribution(data, reportingPeriod)
   }))
 
   return {
@@ -362,8 +359,7 @@ export const diagnoseReportRow = (row, sourceRowStates) => {
   try {
     recomputation = recomputeUnexported(
       sourceRowStates.states,
-      calendarDate(row.startDate),
-      calendarDate(row.endDate)
+      reportingPeriodFromStoredDates(row.startDate, row.endDate)
     )
   } catch (error) {
     return {
