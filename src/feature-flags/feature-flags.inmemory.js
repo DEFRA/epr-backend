@@ -14,8 +14,5 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isStaleIssuedTonnageReportEnabled() {
     return flags.staleIssuedTonnageReport ?? false
-  },
-  isUnexportedTonnageReportEnabled() {
-    return flags.unexportedTonnageReport ?? false
   }
 })
