@@ -1,13 +1,9 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import {
-  periodBounds,
-  reportingPeriodFromStoredDates
-} from '#reports/domain/reporting-period.js'
+import { periodBounds } from '#reports/domain/reporting-period.js'
 import { isDateInRange } from '#root/reports/domain/aggregation/filter-records-by-date.js'
 
 describe('#isDateInRange', () => {
-  // A whole calendar year is no period, so it is built from bare bounds.
-  const wholeOf2025 = reportingPeriodFromStoredDates('2025-01-01', '2025-12-31')
+  const q1 = periodBounds(CADENCE.quarterly, 2025, 1)
 
   describe('invalid dates', () => {
     it.each([
@@ -22,7 +18,7 @@ describe('#isDateInRange', () => {
       ['number', 20250101],
       ['undefined', undefined]
     ])('returns false for %s (%s)', (_label, value) => {
-      expect(isDateInRange(value, wholeOf2025)).toBe(false)
+      expect(isDateInRange(value, q1)).toBe(false)
     })
   })
 
@@ -30,11 +26,11 @@ describe('#isDateInRange', () => {
     it.each([
       {
         scenario: 'a date inside the period',
-        value: '2025-06-15',
+        value: '2025-02-15',
         expected: true
       },
       { scenario: 'the start bound', value: '2025-01-01', expected: true },
-      { scenario: 'the end bound', value: '2025-12-31', expected: true },
+      { scenario: 'the end bound', value: '2025-03-31', expected: true },
       {
         scenario: 'a datetime on the start bound',
         value: '2025-01-01T00:00:00.000Z',
@@ -42,7 +38,7 @@ describe('#isDateInRange', () => {
       },
       {
         scenario: 'a datetime on the end bound, which sorts after it untrimmed',
-        value: '2025-12-31T10:00:00.000Z',
+        value: '2025-03-31T10:00:00.000Z',
         expected: true
       },
       {
@@ -52,11 +48,11 @@ describe('#isDateInRange', () => {
       },
       {
         scenario: 'the day after the period',
-        value: '2026-01-01',
+        value: '2025-04-01',
         expected: false
       }
     ])('returns $expected for $scenario', ({ value, expected }) => {
-      expect(isDateInRange(value, wholeOf2025)).toBe(expected)
+      expect(isDateInRange(value, q1)).toBe(expected)
     })
   })
 
@@ -69,12 +65,12 @@ describe('#isDateInRange', () => {
       },
       {
         scenario: 'a middle month of the period',
-        value: '2025-06',
+        value: '2025-02',
         expected: true
       },
       {
         scenario: 'the last month of the period',
-        value: '2025-12',
+        value: '2025-03',
         expected: true
       },
       {
@@ -84,45 +80,11 @@ describe('#isDateInRange', () => {
       },
       {
         scenario: 'the month after the period',
-        value: '2026-01',
+        value: '2025-04',
         expected: false
       }
     ])('returns $expected for $scenario', ({ value, expected }) => {
-      expect(isDateInRange(value, wholeOf2025)).toBe(expected)
-    })
-
-    describe('against a quarter', () => {
-      const q1 = periodBounds(CADENCE.quarterly, 2026, 1)
-
-      it.each([
-        {
-          scenario: 'the first month of the quarter',
-          value: '2026-01',
-          expected: true
-        },
-        {
-          scenario: 'a middle month of the quarter',
-          value: '2026-02',
-          expected: true
-        },
-        {
-          scenario: 'the last month of the quarter',
-          value: '2026-03',
-          expected: true
-        },
-        {
-          scenario: 'the month before the quarter',
-          value: '2025-12',
-          expected: false
-        },
-        {
-          scenario: 'the month after the quarter',
-          value: '2026-04',
-          expected: false
-        }
-      ])('returns $expected for $scenario', ({ value, expected }) => {
-        expect(isDateInRange(value, q1)).toBe(expected)
-      })
+      expect(isDateInRange(value, q1)).toBe(expected)
     })
   })
 })
