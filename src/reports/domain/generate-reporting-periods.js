@@ -31,11 +31,6 @@ function computeDueDate(year, endMonth) {
  */
 export function generateAllPeriodsForYear(cadence, year) {
   const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
-
-  if (!monthsPerPeriod) {
-    throw new TypeError(`Unknown cadence: ${cadence}`)
-  }
-
   const periodsPerYear = MONTHS_IN_YEAR / monthsPerPeriod
   return Array.from({ length: periodsPerYear }, (_, i) => {
     const period = i + 1

@@ -7,10 +7,6 @@ import { CADENCE } from '../cadence.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 import { aggregateReportDetail } from './aggregate-report-detail.js'
 
-/**
- * @import { Cadence } from '../cadence.js'
- */
-
 const DEFAULT_SOURCE = {
   summaryLogId: 'sl-1',
   lastUploadedAt: '2026-02-10T09:00:00.000Z'
@@ -1237,17 +1233,6 @@ describe('#aggregateReportDetail', () => {
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(50)
       expect(result.diagnostics.wasteReceivedRecordsExcluded).toBe(0)
-    })
-  })
-
-  describe('validation', () => {
-    it('throws TypeError for unknown cadence', () => {
-      expect(() =>
-        aggregateReportDetail([], {
-          ...defaultArgs,
-          cadence: /** @type {Cadence} */ ('biweekly')
-        })
-      ).toThrow(TypeError)
     })
   })
 })

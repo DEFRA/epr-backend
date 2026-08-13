@@ -30,11 +30,6 @@ import { MONTHS_PER_PERIOD } from './cadence.js'
  */
 export const periodBounds = (cadence, year, period) => {
   const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
-
-  if (!monthsPerPeriod) {
-    throw new TypeError(`Unknown cadence: ${cadence}`)
-  }
-
   const startMonth = (period - 1) * monthsPerPeriod
 
   return /** @type {ReportingPeriod} */ ({
