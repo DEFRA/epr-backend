@@ -80,7 +80,8 @@ const WASTE_BALANCE_CONTENT_FIELDS = [
 const WASTE_BALANCE_FIELDS = [FIELDS.ROW_ID, ...WASTE_BALANCE_CONTENT_FIELDS]
 
 /**
- * Supplementary fields - present in template but not required for waste balance.
+ * Validated supplementary fields - present in template, not required for waste
+ * balance, but carry a validationSchema (VAL010) value rule below.
  *
  * INTERIM_SITE_ID and TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR are
  * conditionally required when DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE == Yes,
@@ -90,15 +91,15 @@ const WASTE_BALANCE_FIELDS = [FIELDS.ROW_ID, ...WASTE_BALANCE_CONTENT_FIELDS]
  *
  * EXPORT_CONTROLS is an audit field, not required for tonnage calculation.
  */
-const SUPPLEMENTARY_FIELDS = [
+const VALIDATED_SUPPLEMENTARY_FIELDS = [
   FIELDS.INTERIM_SITE_ID,
   FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR,
   FIELDS.EXPORT_CONTROLS
 ]
 
 /**
- * Traceability / audit columns present in the template but not required for
- * waste balance (PAE-1420).
+ * Non-validated supplementary columns present in the template but not required
+ * for waste balance (PAE-1420).
  *
  * These are modelled as first-class columns — declared as field constants and
  * added to requiredHeaders so they are a known part of the contract, with
@@ -113,7 +114,7 @@ const SUPPLEMENTARY_FIELDS = [
  * classifyForWasteBalance below; the others carry supplier, loading-site,
  * carrier and overseas-reprocessor traceability detail.
  */
-const TRACEABILITY_FIELDS = [
+const NON_VALIDATED_SUPPLEMENTARY_FIELDS = [
   FIELDS.SUPPLIER_NAME,
   FIELDS.SUPPLIER_ADDRESS,
   FIELDS.SUPPLIER_POSTCODE,
@@ -164,8 +165,8 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
   requiredHeaders: [
     ...WASTE_BALANCE_FIELDS,
-    ...SUPPLEMENTARY_FIELDS,
-    ...TRACEABILITY_FIELDS
+    ...VALIDATED_SUPPLEMENTARY_FIELDS,
+    ...NON_VALIDATED_SUPPLEMENTARY_FIELDS
   ],
 
   /**
