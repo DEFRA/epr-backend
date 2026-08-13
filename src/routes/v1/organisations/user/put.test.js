@@ -12,6 +12,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { OPERATOR_ROLE } from '#application/organisations/get-defra-user-roles.js'
 
 const { validToken: serviceMaintainerToken } = entraIdMockAuthTokens
 const mockCdpAuditing = vi.fn()
@@ -184,7 +185,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
             SCOPES.organisationRead,
             SCOPES.organisationWrite
           ],
-          role: null
+          role: OPERATOR_ROLE
         })
 
         expect(auditPayload.context).toEqual({
@@ -243,7 +244,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
             SCOPES.organisationRead,
             SCOPES.organisationWrite
           ],
-          role: null
+          role: OPERATOR_ROLE
         })
 
         expect(new Date(log.createdAt).getTime()).toBeGreaterThanOrEqual(
@@ -307,7 +308,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
             SCOPES.organisationRead,
             SCOPES.organisationWrite
           ],
-          role: null
+          role: OPERATOR_ROLE
         })
 
         expect(auditPayload.context).toEqual({
@@ -374,7 +375,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
             SCOPES.organisationRead,
             SCOPES.organisationWrite
           ],
-          role: null
+          role: OPERATOR_ROLE
         })
 
         expect(new Date(log.createdAt).getTime()).toBeGreaterThanOrEqual(

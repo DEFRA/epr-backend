@@ -7,6 +7,13 @@ import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
 /**
+ * Defra ID authenticates operators, and only operators, so an identity this
+ * resolver can name is an operator. It lives here rather than in the shared
+ * scope constants because nothing outside this resolver decides it.
+ */
+export const OPERATOR_ROLE = 'operator'
+
+/**
  * Determines the roles for a Defra ID user based on their token and request context
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
  * @param {HapiRequest} request - The Hapi request object
@@ -37,7 +44,7 @@ export async function getDefraUserRoles(tokenPayload, request) {
       : [])
   ]
 
-  return { role: null, scopes }
+  return { role: OPERATOR_ROLE, scopes }
 }
 
 /**

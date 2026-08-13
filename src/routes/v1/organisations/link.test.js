@@ -23,6 +23,7 @@ import {
   asServiceMaintainerWrite
 } from '#test/inject-auth.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { OPERATOR_ROLE } from '#application/organisations/get-defra-user-roles.js'
 
 const mockCdpAuditing = vi.fn()
 const mockOrganisationLinkedMetric = vi.fn()
@@ -464,7 +465,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               SCOPES.organisationLinkedRead,
               SCOPES.organisationLinkedWrite
             ],
-            role: null
+            role: OPERATOR_ROLE
           })
 
           expect(
@@ -500,7 +501,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               SCOPES.organisationLinkedRead,
               SCOPES.organisationLinkedWrite
             ],
-            role: null
+            role: OPERATOR_ROLE
           })
 
           expect(auditPayload.event).toEqual({

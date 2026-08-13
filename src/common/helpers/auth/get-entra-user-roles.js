@@ -28,10 +28,10 @@ const ADMIN_ROLE_RESOLUTION_ORDER = [
  * The role is the audit label and stays a single value. Where both rules
  * match, the admin tier keeps it, so a regulator assignment only ever adds.
  * @param {string | undefined | null} userEmail - Email from the validated Entra access token.
- * @param {string[]} [appRoles] - App roles from the token's `roles` claim.
+ * @param {string[]} appRoles - App roles from the token's `roles` claim. A token carrying no claim resolves to the empty list at the boundary, so a caller states that rather than omitting it.
  * @returns {Promise<import('#auth/types.js').UserRoleAndScopes>}
  */
-export async function getEntraUserRoles(userEmail, appRoles = []) {
+export async function getEntraUserRoles(userEmail, appRoles) {
   const isRegulator = appRoles.includes(REGULATOR_APP_ROLE)
   const adminRole = resolveAdminRole(userEmail)
 
