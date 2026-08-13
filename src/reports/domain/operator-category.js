@@ -29,6 +29,20 @@ export const OPERATOR_CATEGORY = Object.freeze({
  * @typedef {keyof typeof OPERATOR_CATEGORY} OperatorCategory
  */
 
+/**
+ * @typedef {Extract<OperatorCategory, 'EXPORTER' | 'EXPORTER_REGISTERED_ONLY'>} ExporterCategory
+ */
+
+/**
+ * Exporters are the only categories whose templates carry an export section.
+ *
+ * @param {OperatorCategory} operatorCategory
+ * @returns {operatorCategory is ExporterCategory}
+ */
+export const isExporterCategory = (operatorCategory) =>
+  operatorCategory === OPERATOR_CATEGORY.EXPORTER ||
+  operatorCategory === OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
+
 const OPERATOR_CATEGORY_BY_WASTE_PROCESSING_TYPE = Object.freeze({
   [WASTE_PROCESSING_TYPE.EXPORTER]: {
     accredited: OPERATOR_CATEGORY.EXPORTER,
