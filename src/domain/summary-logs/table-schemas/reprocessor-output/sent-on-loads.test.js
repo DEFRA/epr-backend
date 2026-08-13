@@ -46,7 +46,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
         expect(schema.requiredHeaders).toContain('DESCRIPTION_WASTE')
       })
 
-      it('contains EWC_CODE and WEIGHBRIDGE_TICKET columns (PAE-1420)', () => {
+      it('contains EWC_CODE and WEIGHBRIDGE_TICKET columns', () => {
         expect(schema.requiredHeaders).toContain('EWC_CODE')
         expect(schema.requiredHeaders).toContain('WEIGHBRIDGE_TICKET')
       })
@@ -86,7 +86,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
       expect(error).toBeUndefined()
     })
 
-    it('does not add a value-format rule for EWC_CODE or WEIGHBRIDGE_TICKET (PAE-1420 - modelled name only, no new import block)', () => {
+    it('does not add a value-format rule for EWC_CODE or WEIGHBRIDGE_TICKET', () => {
       const { error } = validationSchema.validate({
         EWC_CODE: '99 99 99',
         WEIGHBRIDGE_TICKET: 'A'.repeat(500)

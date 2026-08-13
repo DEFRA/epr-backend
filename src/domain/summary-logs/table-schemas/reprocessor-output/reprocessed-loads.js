@@ -76,13 +76,9 @@ export const REPROCESSED_LOADS = {
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
    *
-   * The product-detail columns (PRODUCT_DESCRIPTION, END_OF_WASTE_STANDARDS,
-   * WEIGHBRIDGE_TICKET_NUMBER, HAULIER_NAME, HAULIER_VEHICLE_REGISTRATION_NUMBER,
-   * CUSTOMER_NAME, CUSTOMER_INVOICE_REFERENCE) are modelled as first-class
-   * columns (requiredHeaders only) but intentionally carry NO value-format rule
-   * here and NO unfilledValues entry: they were previously passed through
-   * unvalidated, and adding either a VAL010 rule or placeholder normalisation
-   * would change how existing imports are treated (PAE-1420).
+   * The product-detail columns are named in requiredHeaders only: no
+   * value-format rule and no unfilledValues entry, so they keep the pass-through
+   * behaviour they had before being named (asserted in the schema tests).
    */
   validationSchema: Joi.object({
     [FIELDS.ROW_ID]: createRowIdSchema(

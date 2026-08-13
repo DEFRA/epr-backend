@@ -1196,9 +1196,6 @@ describe('SummaryLogsValidator', () => {
         'INTERIM_SITE_ID',
         'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
         'EXPORT_CONTROLS',
-        // Traceability columns modelled in PAE-1420: their headers are now
-        // required (VAL008), but the values carry no VAL010 rule, so buildRow
-        // leaves them empty here.
         'WAS_THE_WASTE_REFUSED',
         'WAS_THE_WASTE_STOPPED',
         'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
@@ -1226,10 +1223,8 @@ describe('SummaryLogsValidator', () => {
         'CUSTOMS_DECLARATION_NUMBER'
       ]
 
-      // All waste-balance content fields must be filled for a row to be
-      // INCLUDED (per PAE-659 AC03: "has all mandatory fields completed"). The
-      // PAE-1420 traceability columns are NOT waste-balance fields, so buildRow
-      // leaves them empty and the row is still INCLUDED.
+      // The supplementary columns are not waste-balance fields, so leaving them
+      // empty still yields an INCLUDED row.
       const buildRow = (rowId, exportDate, receivedDate = '2025-01-01') =>
         headers.map((h) => {
           if (h === 'ROW_ID') {
@@ -1496,8 +1491,6 @@ describe('SummaryLogsValidator', () => {
         'UK_PACKAGING_WEIGHT_PERCENTAGE',
         'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
         'ADD_PRODUCT_WEIGHT',
-        // Product-detail columns modelled in PAE-1420: headers now required
-        // (VAL008), values carry no VAL010 rule, so left empty here.
         'PRODUCT_DESCRIPTION',
         'END_OF_WASTE_STANDARDS',
         'WEIGHBRIDGE_TICKET_NUMBER',
@@ -1597,7 +1590,6 @@ describe('SummaryLogsValidator', () => {
         'FINAL_DESTINATION_PHONE',
         'YOUR_REFERENCE',
         'DESCRIPTION_WASTE',
-        // Modelled in PAE-1420: headers required (VAL008), values unvalidated
         'EWC_CODE',
         'WEIGHBRIDGE_TICKET'
       ]

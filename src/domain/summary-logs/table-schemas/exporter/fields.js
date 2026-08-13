@@ -51,10 +51,7 @@ export const RECEIVED_LOADS_FIELDS = Object.freeze({
   EXPORT_CONTROLS: 'EXPORT_CONTROLS',
   WAS_THE_WASTE_STOPPED: 'WAS_THE_WASTE_STOPPED',
   WAS_THE_WASTE_REFUSED: 'WAS_THE_WASTE_REFUSED',
-  // Traceability / audit columns present in the template but not required for
-  // waste-balance calculation. Modelled as first-class field names (PAE-1420)
-  // so later beads reference constants rather than magic strings; no VAL010
-  // value rule is attached (see received-loads-for-export.js).
+  // Supplementary columns not required for waste balance; named, no value rule.
   DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED:
     'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
   SUPPLIER_NAME: 'SUPPLIER_NAME',

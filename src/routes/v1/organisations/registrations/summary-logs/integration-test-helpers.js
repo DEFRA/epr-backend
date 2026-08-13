@@ -101,7 +101,7 @@ export const REPROCESSED_LOADS_HEADERS = [
   'UK_PACKAGING_WEIGHT_PERCENTAGE',
   'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
   'ADD_PRODUCT_WEIGHT',
-  // Product-detail columns modelled as first-class headers in PAE-1420
+  // Product-detail columns: named headers, no value validation
   'PRODUCT_DESCRIPTION',
   'END_OF_WASTE_STANDARDS',
   'WEIGHBRIDGE_TICKET_NUMBER',
@@ -139,7 +139,7 @@ export const EXPORTER_HEADERS = [
   'CONTAINER_NUMBER',
   'WAS_THE_WASTE_REFUSED',
   'WAS_THE_WASTE_STOPPED',
-  // Traceability columns modelled as first-class headers in PAE-1420
+  // Supplementary columns: named headers, no value validation
   'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
   'SUPPLIER_NAME',
   'SUPPLIER_ADDRESS',
@@ -274,7 +274,7 @@ export const createReprocessedRowValues = (overrides = {}) => {
     ukPackagingWeightPercentage: 1,
     productUkPackagingWeightProportion: 100,
     addProductWeight: 'Yes',
-    // Product-detail columns modelled in PAE-1420 (no value validation)
+    // Product-detail columns (no value validation)
     productDescription: 'Plastic pellets',
     endOfWasteStandards: 'Yes',
     weighbridgeTicketNumber: 'WB123',
@@ -329,7 +329,7 @@ const EXPORTER_ROW_DEFAULTS = {
   containerNumber: 'CONT123456',
   wasteRefused: 'No',
   wasteStopped: 'No',
-  // Traceability columns modelled in PAE-1420 (no value validation)
+  // Supplementary columns (no value validation)
   dateRepatriated: null,
   supplierName: 'Supplier A',
   supplierAddress: '123 Street',

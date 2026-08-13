@@ -62,11 +62,9 @@ export const SENT_ON_LOADS = {
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
    *
-   * EWC_CODE and WEIGHBRIDGE_TICKET are modelled as first-class columns
-   * (requiredHeaders only) but intentionally carry NO value-format rule here and
-   * NO unfilledValues entry: they were previously passed through unvalidated,
-   * and adding either a VAL010 rule or placeholder normalisation would change
-   * how existing imports are treated (PAE-1420).
+   * EWC_CODE and WEIGHBRIDGE_TICKET are named in requiredHeaders only: no
+   * value-format rule and no unfilledValues entry, so they keep the pass-through
+   * behaviour they had before being named (asserted in the schema tests).
    */
   validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false })
 }

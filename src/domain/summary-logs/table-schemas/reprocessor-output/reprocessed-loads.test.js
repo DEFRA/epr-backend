@@ -28,7 +28,7 @@ describe('REPROCESSED_LOADS', () => {
       expect(schema.requiredHeaders).toContain('PRODUCT_TONNAGE')
     })
 
-    it('has requiredHeaders for the product-detail columns (PAE-1420)', () => {
+    it('has requiredHeaders for the product-detail columns', () => {
       expect(schema.requiredHeaders).toContain('PRODUCT_DESCRIPTION')
       expect(schema.requiredHeaders).toContain('END_OF_WASTE_STANDARDS')
       expect(schema.requiredHeaders).toContain('WEIGHBRIDGE_TICKET_NUMBER')
@@ -339,8 +339,8 @@ describe('REPROCESSED_LOADS', () => {
       })
     })
 
-    describe('modelled product-detail columns are not value-validated (PAE-1420)', () => {
-      it('accepts malformed values for the newly-modelled columns (name modelling only, no new import block)', () => {
+    describe('product-detail columns are not value-validated', () => {
+      it('accepts malformed values for the product-detail columns', () => {
         const { error } = validationSchema.validate({
           PRODUCT_DESCRIPTION: 'A'.repeat(500),
           END_OF_WASTE_STANDARDS: 'Maybe',

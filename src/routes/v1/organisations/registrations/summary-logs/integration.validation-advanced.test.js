@@ -302,12 +302,12 @@ describe('Advanced validation scenarios', () => {
     })
   })
 
-  // PAE-1420: the newly-modelled columns were added to requiredHeaders, so a
-  // file that omits one is now fatally rejected where it previously passed
-  // through via .unknown(true). This pins that contract: if the template ever
-  // drops one of these columns, ingestion must surface it (HEADER_REQUIRED)
-  // rather than silently accept it.
-  describe('data syntax validation when a modelled column header is missing (PAE-1420)', () => {
+  // The newly-named columns were added to requiredHeaders, so a file that omits
+  // one is now fatally rejected where it previously passed through via
+  // .unknown(true). This pins that contract: if the template ever drops one of
+  // these columns, ingestion must surface it (HEADER_REQUIRED) rather than
+  // silently accept it.
+  describe('data syntax validation when a modelled column header is missing', () => {
     const summaryLogId = 'summary-missing-modelled-header'
     const fileId = 'file-missing-modelled-header'
     const filename = 'missing-modelled-header.xlsx'

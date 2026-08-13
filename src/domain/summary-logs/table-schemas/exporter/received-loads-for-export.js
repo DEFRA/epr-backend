@@ -98,21 +98,11 @@ const VALIDATED_SUPPLEMENTARY_FIELDS = [
 ]
 
 /**
- * Non-validated supplementary columns present in the template but not required
- * for waste balance (PAE-1420).
- *
- * These are modelled as first-class columns — declared as field constants and
- * added to requiredHeaders so they are a known part of the contract. They
- * deliberately carry NO entry in validationSchema and NO entry in
- * unfilledValues: they were previously accepted as unvalidated passthrough
- * (.unknown(true)), and both a VAL010 value rule and placeholder normalisation
- * would change how existing operator imports are treated. Later beads (e.g.
- * report-creation gating) can build validation and placeholder handling on
- * these named fields where a business rule warrants it.
- *
- * WAS_THE_WASTE_REFUSED and WAS_THE_WASTE_STOPPED are read by
- * classifyForWasteBalance below; the others carry supplier, loading-site,
- * carrier and overseas-reprocessor traceability detail.
+ * Supplementary columns present in the template but not required for waste
+ * balance. Named in requiredHeaders only: no validationSchema rule and no
+ * unfilledValues entry, so they keep the pass-through behaviour they had before
+ * being named (asserted in the schema tests). WAS_THE_WASTE_REFUSED and
+ * WAS_THE_WASTE_STOPPED are read by classifyForWasteBalance below.
  */
 const NON_VALIDATED_SUPPLEMENTARY_FIELDS = [
   FIELDS.SUPPLIER_NAME,
@@ -185,10 +175,8 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: DROPDOWN_PLACEHOLDER,
     [FIELDS.EXPORT_CONTROLS]: DROPDOWN_PLACEHOLDER,
     [FIELDS.BASEL_EXPORT_CODE]: DROPDOWN_PLACEHOLDER
-    // The PAE-1420 non-validated columns deliberately have NO entry here: they
-    // keep the pass-through behaviour they had before being named, so a cell
-    // left on 'Choose option' persists verbatim rather than normalising to
-    // null. Placeholder normalisation is deferred to the bead that adds gating.
+    // The non-validated columns deliberately have no entry here, so a cell left
+    // on 'Choose option' persists verbatim rather than normalising to null.
   },
 
   /**

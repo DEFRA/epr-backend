@@ -66,7 +66,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.requiredHeaders).toContain('EXPORT_CONTROLS')
     })
 
-    it('has requiredHeaders for the traceability columns (PAE-1420)', () => {
+    it('has requiredHeaders for the supplementary columns', () => {
       const traceabilityHeaders = [
         'SUPPLIER_NAME',
         'SUPPLIER_ADDRESS',
@@ -114,7 +114,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.unfilledValues.BASEL_EXPORT_CODE).toContain('Choose option')
     })
 
-    it('leaves the non-validated PAE-1420 columns out of unfilledValues, preserving pass-through', () => {
+    it('leaves the non-validated columns out of unfilledValues, preserving pass-through', () => {
       expect(schema.unfilledValues.WAS_THE_WASTE_REFUSED).toBeUndefined()
       expect(schema.unfilledValues.WAS_THE_WASTE_STOPPED).toBeUndefined()
       expect(schema.unfilledValues.OSR_COUNTRY).toBeUndefined()
@@ -134,7 +134,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(error).toBeUndefined()
     })
 
-    it('does not value-validate the modelled traceability columns (PAE-1420 - name modelling only, no new import block)', () => {
+    it('does not value-validate the supplementary columns', () => {
       const { error } = validationSchema.validate({
         SUPPLIER_NAME: 'A'.repeat(500),
         SUPPLIER_EMAIL: 'not-an-email',
