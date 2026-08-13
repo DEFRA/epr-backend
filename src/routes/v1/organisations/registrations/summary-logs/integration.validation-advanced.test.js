@@ -25,7 +25,9 @@ import {
   buildPostUrl,
   pollForValidation,
   createStandardMeta,
-  createTestInfrastructure
+  createTestInfrastructure,
+  REPROCESSED_LOADS_HEADERS,
+  createReprocessedRowValues
 } from './integration-test-helpers.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
@@ -297,6 +299,88 @@ describe('Advanced validation scenarios', () => {
 
         expect(payload.validation.concerns).toEqual({})
       })
+    })
+  })
+
+  // PAE-1420: the newly-modelled columns were added to requiredHeaders, so a
+  // file that omits one is now fatally rejected where it previously passed
+  // through via .unknown(true). This pins that contract: if the template ever
+  // drops one of these columns, ingestion must surface it (HEADER_REQUIRED)
+  // rather than silently accept it.
+  describe('data syntax validation when a modelled column header is missing (PAE-1420)', () => {
+    const summaryLogId = 'summary-missing-modelled-header'
+    const fileId = 'file-missing-modelled-header'
+    const filename = 'missing-modelled-header.xlsx'
+    const OMITTED_HEADER = 'PRODUCT_DESCRIPTION'
+
+    let server
+    let response
+
+    beforeEach(async () => {
+      const omitIndex = REPROCESSED_LOADS_HEADERS.indexOf(OMITTED_HEADER)
+      const headers = REPROCESSED_LOADS_HEADERS.filter(
+        (_, i) => i !== omitIndex
+      )
+      const values = createReprocessedRowValues().filter(
+        (_, i) => i !== omitIndex
+      )
+
+      const result = await createTestInfrastructure(
+        organisationId,
+        registrationId,
+        {
+          [fileId]: {
+            meta: createStandardMeta('REPROCESSOR_OUTPUT'),
+            data: {
+              REPROCESSED_LOADS: {
+                location: { sheet: 'Reprocessed', row: 7, column: 'B' },
+                headers,
+                rows: [{ rowNumber: 8, values }]
+              }
+            }
+          }
+        },
+        { reprocessingType: 'output' }
+      )
+      server = result.server
+
+      await server.inject({
+        method: 'POST',
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        payload: createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          filename
+        )
+      })
+
+      await pollForValidation(
+        server,
+        organisationId,
+        registrationId,
+        summaryLogId
+      )
+
+      response = await server.inject({
+        method: 'GET',
+        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        ...asOperator()
+      })
+    })
+
+    it('rejects the file with a HEADER_REQUIRED fatal naming the omitted column', () => {
+      const payload = JSON.parse(response.payload)
+      expect(payload.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(payload.validation.failures).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: 'HEADER_REQUIRED',
+            expected: OMITTED_HEADER
+          })
+        ])
+      )
     })
   })
 
