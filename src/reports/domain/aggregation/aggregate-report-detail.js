@@ -17,6 +17,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Cadence } from '../cadence.js'
  * @import { OperatorCategory } from '../operator-category.js'
+ * @import { ExporterSectionDateFields, SectionDateFields } from './fields-by-operator-category.js'
  */
 
 /**
@@ -78,8 +79,8 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
 
 /**
  * @typedef {Object} AggregatedReportDetail
- * @property {string} operatorCategory
- * @property {string} cadence
+ * @property {OperatorCategory} operatorCategory
+ * @property {Cadence} cadence
  * @property {number} year
  * @property {number} period
  * @property {CalendarDate} startDate
@@ -196,7 +197,7 @@ export function aggregateReportDetail(
  * those whose section date field falls within [startDate, endDate].
  *
  * @param {ReportableWasteRecordState[]} wasteRecords
- * @param {{ wasteReceived?: string, wasteExported?: string, wasteRepatriated?: string, wasteSentOn?: string }} sectionDateFields
+ * @param {SectionDateFields} sectionDateFields
  * @param {CalendarDate} startDate
  * @param {CalendarDate} endDate
  */
@@ -206,6 +207,9 @@ function sliceRecordsByPeriod(
   startDate,
   endDate
 ) {
+  /** @type {Partial<ExporterSectionDateFields>} */
+  const { wasteExported, wasteRepatriated } = sectionDateFields
+
   return {
     wasteReceivedRecords: filterRecordsByDateField(
       wasteRecords,
@@ -215,13 +219,13 @@ function sliceRecordsByPeriod(
     ),
     wasteExportedRecords: filterRecordsByDateField(
       wasteRecords,
-      sectionDateFields.wasteExported,
+      wasteExported,
       startDate,
       endDate
     ),
     wasteRepatriatedRecords: filterRecordsByDateField(
       wasteRecords,
-      sectionDateFields.wasteRepatriated,
+      wasteRepatriated,
       startDate,
       endDate
     ),
