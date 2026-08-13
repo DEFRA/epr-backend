@@ -11,6 +11,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { testRegulatorCanRead } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -112,6 +113,14 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
             ]
           }
         ]
+      })
+    })
+
+    testRegulatorCanRead({
+      server: () => server,
+      makeRequest: async () => ({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`
       })
     })
 

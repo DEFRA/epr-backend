@@ -64,6 +64,55 @@ export function testOnlyServiceMaintainerCanAccess({
 }
 
 /**
+ * A regulator standard user holds `organisation.read` for every organisation,
+ * granted by the resolver rather than by anything the route declares. Use this
+ * on an operator read route the regulator is meant to reach.
+ * @param {Object} params
+ * @param {() => import('#test/create-test-server.js').TestServer} params.server
+ * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
+ * @param {number=} params.successStatus - Optional success status code (defaults to 200 OK)
+ */
+export function testRegulatorCanRead({
+  server,
+  makeRequest,
+  successStatus = StatusCodes.OK
+}) {
+  it('returns success for a regulator standard user', async () => {
+    const requestConfig = await makeRequest()
+    const response = await server().inject({
+      ...requestConfig,
+      headers: {
+        ...requestConfig.headers,
+        Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(successStatus)
+  })
+}
+
+/**
+ * A regulator standard user must be refused anywhere data changes.
+ * @param {Object} params
+ * @param {() => import('#test/create-test-server.js').TestServer} params.server
+ * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
+ */
+export function testRegulatorIsRefused({ server, makeRequest }) {
+  it('returns 403 for a regulator standard user', async () => {
+    const requestConfig = await makeRequest()
+    const response = await server().inject({
+      ...requestConfig,
+      headers: {
+        ...requestConfig.headers,
+        Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+  })
+}
+
+/**
  * @param {Object} params
  * @param {() => import('#test/create-test-server.js').TestServer} params.server
  * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest

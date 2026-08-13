@@ -14,6 +14,7 @@
  *   exp: number
  *   iat: number
  *   nbf?: number
+ *   roles?: string[]
  * }} EntraIdTokenPayload
  */
 

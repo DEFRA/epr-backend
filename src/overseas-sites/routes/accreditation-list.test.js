@@ -12,6 +12,7 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const SITE_ONE_ID = new ObjectId().toString()
@@ -288,6 +289,29 @@ describe('GET accreditation overseas-sites', () => {
         accreditationId: accreditation.id
       }),
       ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(Object.keys(JSON.parse(response.payload)).sort()).toEqual([
+      '001',
+      '002'
+    ])
+  })
+
+  it('allows a regulator standard user', async () => {
+    const { organisation, registration, accreditation } = buildScenario()
+    await startServer({ organisation, sites: [siteOne, siteTwo] })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: pathFor({
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId: accreditation.id
+      }),
+      headers: {
+        Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)

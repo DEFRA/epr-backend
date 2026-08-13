@@ -203,8 +203,78 @@ describe('#getJwtStrategyConfig', () => {
 
       await config.validate(artifacts)
 
-      expect(mockGetEntraUserRoles).toHaveBeenCalledWith('user@example.com')
+      expect(mockGetEntraUserRoles).toHaveBeenCalledWith('user@example.com', [])
       expect(mockGetEntraUserRoles).toHaveBeenCalledTimes(1)
+    })
+
+    test('passes the app roles claim to getEntraUserRoles', async () => {
+      const config = createStrategyConfig(mockOidcConfigs)
+
+      const artifacts = {
+        decoded: {
+          payload: {
+            iss: entraIdMockIssuer,
+            aud: mockEntraClientId,
+            oid: 'contact-123',
+            preferred_username: 'regulator@test.gov.uk',
+            roles: ['Waste.Regulator.Standard']
+          }
+        }
+      }
+
+      await config.validate(artifacts)
+
+      expect(mockGetEntraUserRoles).toHaveBeenCalledWith(
+        'regulator@test.gov.uk',
+        ['Waste.Regulator.Standard']
+      )
+    })
+
+    test('passes an empty app roles list when the token carries no roles claim', async () => {
+      const config = createStrategyConfig(mockOidcConfigs)
+
+      const artifacts = {
+        decoded: {
+          payload: {
+            iss: entraIdMockIssuer,
+            aud: mockEntraClientId,
+            oid: 'contact-123',
+            preferred_username: 'user@example.com'
+          }
+        }
+      }
+
+      await config.validate(artifacts)
+
+      expect(mockGetEntraUserRoles).toHaveBeenCalledWith('user@example.com', [])
+    })
+
+    test('credential carries the scope the Entra resolver returned for a regulator', async () => {
+      mockGetEntraUserRoles.mockResolvedValue({
+        role: 'regulator_standard',
+        scopes: [SCOPES.organisationRead, SCOPES.regulator]
+      })
+      const config = createStrategyConfig(mockOidcConfigs)
+
+      const artifacts = {
+        decoded: {
+          payload: {
+            iss: entraIdMockIssuer,
+            aud: mockEntraClientId,
+            oid: 'contact-123',
+            preferred_username: 'regulator@test.gov.uk',
+            roles: ['Waste.Regulator.Standard']
+          }
+        }
+      }
+
+      const result = await config.validate(artifacts)
+
+      expect(result.credentials.role).toBe('regulator_standard')
+      expect(result.credentials.scope).toEqual([
+        SCOPES.organisationRead,
+        SCOPES.regulator
+      ])
     })
 
     test.each([
@@ -231,7 +301,7 @@ describe('#getJwtStrategyConfig', () => {
 
         expect(result.credentials.email).toEqual(expected)
         expect(result.isValid).toBe(true)
-        expect(mockGetEntraUserRoles).toHaveBeenCalledWith(expected)
+        expect(mockGetEntraUserRoles).toHaveBeenCalledWith(expected, [])
         expect(mockGetEntraUserRoles).toHaveBeenCalledTimes(1)
       }
     )
