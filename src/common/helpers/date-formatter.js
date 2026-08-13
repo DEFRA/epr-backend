@@ -87,6 +87,17 @@ export function calendarDate(dateString) {
 }
 
 /**
+ * The calendar date an instant falls on **in UTC**. Named for the zone
+ * because the answer is zone-dependent: 00:30 on a British summer morning is
+ * still the previous day in UTC, so this is not always the date a UK user
+ * would name. Use it where the value is a stored or machine-derived instant;
+ * reach for a UK-local formatter where the value is shown to a user.
+ * @param {Date} date
+ * @returns {CalendarDate}
+ */
+export const utcCalendarDate = (date) => calendarDate(date.toISOString())
+
+/**
  * Expands a calendar-date string (bare YYYY-MM-DD or a full ISO datetime,
  * either accepted) into the Date representing UTC start-of-day
  * (00:00:00.000) for that calendar date.

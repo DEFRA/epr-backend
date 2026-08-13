@@ -8,6 +8,7 @@ import {
   formatDateTimeDots,
   startOfDay,
   toISOString,
+  utcCalendarDate,
   getMonthNames,
   getMonthRange
 } from './date-formatter.js'
@@ -68,6 +69,20 @@ describe('calendarDate', () => {
 
   it('extracts the calendar date from a full ISO datetime with end-of-day time', () => {
     expect(calendarDate('2025-01-31T23:59:59.999Z')).toBe('2025-01-31')
+  })
+})
+
+describe('utcCalendarDate', () => {
+  it('returns the calendar date a Date falls on in UTC', () => {
+    expect(utcCalendarDate(new Date('2025-01-31T12:00:00.000Z'))).toBe(
+      '2025-01-31'
+    )
+  })
+
+  it('returns the previous day for an instant just after midnight UK summer time', () => {
+    expect(utcCalendarDate(new Date('2025-07-01T00:30:00+01:00'))).toBe(
+      '2025-06-30'
+    )
   })
 })
 
