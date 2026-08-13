@@ -7,6 +7,7 @@ import {
   formatDateISO,
   formatDateTimeDots,
   startOfDay,
+  toCalendarDate,
   toISOString,
   utcCalendarDate,
   getMonthNames,
@@ -87,6 +88,16 @@ describe('utcCalendarDate', () => {
     expect(utcCalendarDate(new Date('2025-07-01T00:30:00+01:00'))).toBe(
       '2025-06-30'
     )
+  })
+})
+
+describe('toCalendarDate', () => {
+  it.each([
+    { value: new Date('2025-01-31T12:00:00.000Z'), desc: 'a Date' },
+    { value: '2025-01-31', desc: 'a bare date string' },
+    { value: '2025-01-31T12:00:00.000Z', desc: 'a full ISO datetime string' }
+  ])('returns the calendar date for $desc', ({ value }) => {
+    expect(toCalendarDate(value)).toBe('2025-01-31')
   })
 })
 

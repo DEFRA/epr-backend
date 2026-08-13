@@ -97,6 +97,17 @@ export function calendarDate(dateString) {
 export const utcCalendarDate = (date) => calendarDate(date.toISOString())
 
 /**
+ * The calendar date a value falls on, whichever shape it arrives in — a `Date`
+ * (read in UTC, see `utcCalendarDate`), a bare date string, or a full ISO
+ * datetime string. For call sites that compare against a bare date and cannot
+ * assume which of those they were handed.
+ * @param {Date | string} value
+ * @returns {CalendarDate}
+ */
+export const toCalendarDate = (value) =>
+  value instanceof Date ? utcCalendarDate(value) : calendarDate(value)
+
+/**
  * Expands a calendar-date string (bare YYYY-MM-DD or a full ISO datetime,
  * either accepted) into the Date representing UTC start-of-day
  * (00:00:00.000) for that calendar date.

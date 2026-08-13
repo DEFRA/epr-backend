@@ -1,27 +1,11 @@
-import {
-  calendarDate,
-  utcCalendarDate
-} from '#common/helpers/date-formatter.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { MONTHS_PER_PERIOD } from './cadence.js'
-
-/**
- * @import { CalendarDate } from '#common/helpers/date-formatter.js'
- */
 
 /** Position of the year portion end in an ISO date string (YYYY-MM-DD) */
 const YEAR_END = 4
 /** Start and end of the month portion in an ISO date string */
 const MONTH_START = 5
 const MONTH_END = 7
-
-/**
- * @param {string | Date} dateValue
- * @returns {CalendarDate}
- */
-const toCalendarDate = (dateValue) =>
-  dateValue instanceof Date
-    ? utcCalendarDate(dateValue)
-    : calendarDate(String(dateValue))
 
 /**
  * Maps a date to the reporting period it falls in for the given cadence.
