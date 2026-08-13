@@ -1,11 +1,6 @@
 import Joi from 'joi'
 
-import {
-  add,
-  roundToTwoDecimalPlaces,
-  subtract,
-  toDecimal
-} from './decimal-utils.js'
+import { add, roundToTwoDecimalPlaces, toDecimal } from './decimal-utils.js'
 
 /**
  * A tonnage held to two decimal places, carried as an exact Decimal. The
@@ -67,16 +62,3 @@ export const ZERO_TONNAGE = toRoundedTonnage(0)
  * @returns {RoundedTonnage}
  */
 export const addTonnage = (a, b) => /** @type {RoundedTonnage} */ (add(a, b))
-
-/**
- * Subtract one rounded tonnage from another, yielding a rounded tonnage.
- * Two-decimal-place values are closed under subtraction, so the difference
- * needs no re-rounding to hold the invariant. The result may be negative —
- * a caller for which that is meaningless clamps it itself.
- *
- * @param {RoundedTonnage} a
- * @param {RoundedTonnage} b
- * @returns {RoundedTonnage}
- */
-export const subtractTonnage = (a, b) =>
-  /** @type {RoundedTonnage} */ (subtract(a, b))

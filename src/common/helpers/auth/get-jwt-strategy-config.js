@@ -56,7 +56,10 @@ export function getJwtStrategyConfig(authConfig) {
 
         const email = tokenPayload.preferred_username
 
-        const { role, scopes } = await getEntraUserRoles(email)
+        const { role, scopes } = await getEntraUserRoles(
+          email,
+          tokenPayload.roles ?? []
+        )
 
         return {
           isValid: true,
