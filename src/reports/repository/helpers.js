@@ -122,11 +122,13 @@ export const groupAsPeriodicReports = (
     submittedAt: doc.status.submitted?.at ?? null,
     submittedBy: doc.status.submitted?.by ?? null,
     resubmissionRequired: doc.resubmissionRequired ?? null,
-    recyclingActivity: {
-      totalTonnageReceived: doc.recyclingActivity?.totalTonnageReceived,
-      tonnageRecycled: doc.recyclingActivity?.tonnageRecycled,
-      tonnageNotRecycled: doc.recyclingActivity?.tonnageNotRecycled
-    },
+    recyclingActivity: doc.recyclingActivity
+      ? {
+          totalTonnageReceived: doc.recyclingActivity.totalTonnageReceived,
+          tonnageRecycled: doc.recyclingActivity.tonnageRecycled,
+          tonnageNotRecycled: doc.recyclingActivity.tonnageNotRecycled
+        }
+      : undefined,
     exportActivity: doc.exportActivity
       ? {
           totalTonnageExported: doc.exportActivity.totalTonnageExported,
@@ -139,11 +141,13 @@ export const groupAsPeriodicReports = (
           tonnageRepatriated: doc.exportActivity.tonnageRepatriated
         }
       : undefined,
-    wasteSent: {
-      tonnageSentToReprocessor: doc.wasteSent?.tonnageSentToReprocessor,
-      tonnageSentToExporter: doc.wasteSent?.tonnageSentToExporter,
-      tonnageSentToAnotherSite: doc.wasteSent?.tonnageSentToAnotherSite
-    },
+    wasteSent: doc.wasteSent
+      ? {
+          tonnageSentToReprocessor: doc.wasteSent.tonnageSentToReprocessor,
+          tonnageSentToExporter: doc.wasteSent.tonnageSentToExporter,
+          tonnageSentToAnotherSite: doc.wasteSent.tonnageSentToAnotherSite
+        }
+      : undefined,
     prn: doc.prn
       ? {
           issuedTonnage: doc.prn.issuedTonnage,
