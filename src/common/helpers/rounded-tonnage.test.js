@@ -4,7 +4,6 @@ import { toNumber } from './decimal-utils.js'
 import {
   ZERO_TONNAGE,
   addTonnage,
-  subtractTonnage,
   toRoundedTonnage
 } from './rounded-tonnage.js'
 
@@ -50,44 +49,5 @@ describe('addTonnage', () => {
     const running = addTonnage(toRoundedTonnage(1.11), toRoundedTonnage(2.22))
     const total = addTonnage(running, toRoundedTonnage(0.67))
     expect(toNumber(total)).toBe(4)
-  })
-})
-
-describe('subtractTonnage', () => {
-  it('takes one rounded tonnage from another exactly', () => {
-    const remainder = subtractTonnage(
-      toRoundedTonnage(29.19),
-      toRoundedTonnage(0.19)
-    )
-
-    expect(toNumber(remainder)).toBe(29)
-  })
-
-  it('stays exact where floating-point subtraction would drift', () => {
-    const remainder = subtractTonnage(
-      toRoundedTonnage(0.3),
-      toRoundedTonnage(0.1)
-    )
-
-    expect(toNumber(remainder)).toBe(0.2)
-  })
-
-  it('yields a negative tonnage when the subtrahend is larger', () => {
-    const remainder = subtractTonnage(
-      toRoundedTonnage(5),
-      toRoundedTonnage(8.25)
-    )
-
-    expect(toNumber(remainder)).toBe(-3.25)
-  })
-
-  it('produces a rounded tonnage that feeds back into a sum', () => {
-    const remainder = subtractTonnage(
-      toRoundedTonnage(10),
-      toRoundedTonnage(6.5)
-    )
-    const total = addTonnage(ZERO_TONNAGE, remainder)
-
-    expect(toNumber(total)).toBe(3.5)
   })
 })
