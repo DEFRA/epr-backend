@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -73,6 +74,23 @@ describe(`GET ${reportsGetPath}`, () => {
         url: makeUrl(orgId, regId),
         ...asOperator()
       })
+
+    it('returns 200 for a regulator standard user', async () => {
+      const { server, organisationId, registrationId } = await createServer({
+        wasteProcessingType: 'exporter',
+        accreditationId: undefined
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makeUrl(organisationId, registrationId),
+        headers: {
+          Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
 
     describe('registered-only operator (no accreditation)', () => {
       it('returns 200', async () => {
