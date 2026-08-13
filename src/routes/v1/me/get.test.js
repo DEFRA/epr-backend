@@ -1,4 +1,8 @@
-import { SCOPES } from '#common/helpers/auth/constants.js'
+import {
+  REGULATOR_ROLE,
+  REGULATOR_SCOPES,
+  SCOPES
+} from '#common/helpers/auth/constants.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -148,6 +152,24 @@ describe('GET /v1/me', () => {
 
       expect(scopes).not.toContain(SCOPES.organisationRead)
       expect(scopes).not.toContain(SCOPES.organisationWrite)
+    })
+  })
+
+  describe('a regulator', () => {
+    it('receives the regulator role and the scopes that hold for every organisation', async () => {
+      const server = await createTestServer({})
+
+      const response = await server.inject({
+        method: 'GET',
+        url: ME_PATH,
+        ...asBearer(entraIdMockAuthTokens.regulatorToken)
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({
+        role: REGULATOR_ROLE,
+        scopes: REGULATOR_SCOPES
+      })
     })
   })
 
