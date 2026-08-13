@@ -27,56 +27,102 @@ describe('#isDateInRange', () => {
   })
 
   describe('valid dates', () => {
-    it('returns true when date is within range', () => {
-      expect(isDateInRange('2025-06-15', wholeOf2025)).toBe(true)
-    })
-
-    it('returns true for start boundary', () => {
-      expect(isDateInRange('2025-01-01', wholeOf2025)).toBe(true)
-    })
-
-    it('returns true for end boundary', () => {
-      expect(isDateInRange('2025-12-31', wholeOf2025)).toBe(true)
-    })
-
-    it('returns false when date is before range', () => {
-      expect(isDateInRange('2024-12-31', wholeOf2025)).toBe(false)
-    })
-
-    it('returns false when date is after range', () => {
-      expect(isDateInRange('2026-01-01', wholeOf2025)).toBe(false)
+    it.each([
+      {
+        scenario: 'a date inside the period',
+        value: '2025-06-15',
+        expected: true
+      },
+      { scenario: 'the start bound', value: '2025-01-01', expected: true },
+      { scenario: 'the end bound', value: '2025-12-31', expected: true },
+      {
+        scenario: 'a datetime on the start bound',
+        value: '2025-01-01T00:00:00.000Z',
+        expected: true
+      },
+      {
+        scenario: 'a datetime on the end bound, which sorts after it untrimmed',
+        value: '2025-12-31T10:00:00.000Z',
+        expected: true
+      },
+      {
+        scenario: 'the day before the period',
+        value: '2024-12-31',
+        expected: false
+      },
+      {
+        scenario: 'the day after the period',
+        value: '2026-01-01',
+        expected: false
+      }
+    ])('returns $expected for $scenario', ({ value, expected }) => {
+      expect(isDateInRange(value, wholeOf2025)).toBe(expected)
     })
   })
 
   describe('month-format dates (YYYY-MM)', () => {
-    it('returns true for first month of range', () => {
-      expect(isDateInRange('2025-01', wholeOf2025)).toBe(true)
+    it.each([
+      {
+        scenario: 'the first month of the period',
+        value: '2025-01',
+        expected: true
+      },
+      {
+        scenario: 'a middle month of the period',
+        value: '2025-06',
+        expected: true
+      },
+      {
+        scenario: 'the last month of the period',
+        value: '2025-12',
+        expected: true
+      },
+      {
+        scenario: 'the month before the period',
+        value: '2024-12',
+        expected: false
+      },
+      {
+        scenario: 'the month after the period',
+        value: '2026-01',
+        expected: false
+      }
+    ])('returns $expected for $scenario', ({ value, expected }) => {
+      expect(isDateInRange(value, wholeOf2025)).toBe(expected)
     })
 
-    it('returns true for middle month of range', () => {
-      expect(isDateInRange('2025-06', wholeOf2025)).toBe(true)
-    })
-
-    it('returns true for last month of range', () => {
-      expect(isDateInRange('2025-12', wholeOf2025)).toBe(true)
-    })
-
-    it('returns false for month before range', () => {
-      expect(isDateInRange('2024-12', wholeOf2025)).toBe(false)
-    })
-
-    it('returns false for month after range', () => {
-      expect(isDateInRange('2026-01', wholeOf2025)).toBe(false)
-    })
-
-    it('handles quarterly boundaries correctly', () => {
+    describe('against a quarter', () => {
       const q1 = periodBounds(CADENCE.quarterly, 2026, 1)
 
-      expect(isDateInRange('2026-01', q1)).toBe(true)
-      expect(isDateInRange('2026-02', q1)).toBe(true)
-      expect(isDateInRange('2026-03', q1)).toBe(true)
-      expect(isDateInRange('2025-12', q1)).toBe(false)
-      expect(isDateInRange('2026-04', q1)).toBe(false)
+      it.each([
+        {
+          scenario: 'the first month of the quarter',
+          value: '2026-01',
+          expected: true
+        },
+        {
+          scenario: 'a middle month of the quarter',
+          value: '2026-02',
+          expected: true
+        },
+        {
+          scenario: 'the last month of the quarter',
+          value: '2026-03',
+          expected: true
+        },
+        {
+          scenario: 'the month before the quarter',
+          value: '2025-12',
+          expected: false
+        },
+        {
+          scenario: 'the month after the quarter',
+          value: '2026-04',
+          expected: false
+        }
+      ])('returns $expected for $scenario', ({ value, expected }) => {
+        expect(isDateInRange(value, q1)).toBe(expected)
+      })
     })
   })
 })

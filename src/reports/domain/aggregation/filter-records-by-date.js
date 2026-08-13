@@ -1,3 +1,4 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { YEAR_MONTH_LENGTH } from '#common/helpers/dates/year-month.js'
 
 /**
@@ -18,12 +19,13 @@ export function isDateInRange(value, { startDate, endDate }) {
     return false
   }
 
-  const date = value.slice(0, 10)
+  const date = calendarDate(value)
   if (Number.isNaN(new Date(date).getTime())) {
     return false
   }
 
-  const normalised = date.length === YEAR_MONTH_LENGTH ? `${date}-01` : date
+  const normalised =
+    date.length === YEAR_MONTH_LENGTH ? calendarDate(`${date}-01`) : date
   return (
     normalised.localeCompare(startDate) >= 0 &&
     normalised.localeCompare(endDate) <= 0
