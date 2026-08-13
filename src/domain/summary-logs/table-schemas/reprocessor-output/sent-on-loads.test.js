@@ -61,7 +61,10 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
         'Choose option'
       )
       expect(schema.unfilledValues.DESCRIPTION_WASTE).toContain('Choose option')
-      expect(schema.unfilledValues.EWC_CODE).toContain('Choose option')
+    })
+
+    it('leaves EWC_CODE out of unfilledValues, preserving pass-through', () => {
+      expect(schema.unfilledValues.EWC_CODE).toBeUndefined()
     })
 
     it('has validationSchema (Joi schema for VAL010)', () => {

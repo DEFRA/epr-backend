@@ -44,9 +44,10 @@ describe('REPROCESSED_LOADS', () => {
       expect(schema.unfilledValues.ADD_PRODUCT_WEIGHT).toContain(
         'Choose option'
       )
-      expect(schema.unfilledValues.END_OF_WASTE_STANDARDS).toContain(
-        'Choose option'
-      )
+    })
+
+    it('leaves END_OF_WASTE_STANDARDS out of unfilledValues, preserving pass-through', () => {
+      expect(schema.unfilledValues.END_OF_WASTE_STANDARDS).toBeUndefined()
     })
   })
 

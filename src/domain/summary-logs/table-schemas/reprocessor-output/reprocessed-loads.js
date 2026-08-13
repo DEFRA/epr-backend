@@ -68,8 +68,7 @@ export const REPROCESSED_LOADS = {
    * Per-field values that indicate "unfilled"
    */
   unfilledValues: {
-    [FIELDS.ADD_PRODUCT_WEIGHT]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.END_OF_WASTE_STANDARDS]: DROPDOWN_PLACEHOLDER
+    [FIELDS.ADD_PRODUCT_WEIGHT]: DROPDOWN_PLACEHOLDER
   },
 
   /**
@@ -80,10 +79,10 @@ export const REPROCESSED_LOADS = {
    * The product-detail columns (PRODUCT_DESCRIPTION, END_OF_WASTE_STANDARDS,
    * WEIGHBRIDGE_TICKET_NUMBER, HAULIER_NAME, HAULIER_VEHICLE_REGISTRATION_NUMBER,
    * CUSTOMER_NAME, CUSTOMER_INVOICE_REFERENCE) are modelled as first-class
-   * columns (requiredHeaders + unfilledValues) but intentionally carry NO
-   * value-format rule here: they were previously passed through unvalidated,
-   * and adding a VAL010 rule would newly reject imports on malformed values
-   * (PAE-1420).
+   * columns (requiredHeaders only) but intentionally carry NO value-format rule
+   * here and NO unfilledValues entry: they were previously passed through
+   * unvalidated, and adding either a VAL010 rule or placeholder normalisation
+   * would change how existing imports are treated (PAE-1420).
    */
   validationSchema: Joi.object({
     [FIELDS.ROW_ID]: createRowIdSchema(

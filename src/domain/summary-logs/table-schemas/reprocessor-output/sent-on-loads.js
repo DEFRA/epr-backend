@@ -54,8 +54,7 @@ export const SENT_ON_LOADS = {
    */
   unfilledValues: {
     [FIELDS.FINAL_DESTINATION_FACILITY_TYPE]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.DESCRIPTION_WASTE]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.EWC_CODE]: DROPDOWN_PLACEHOLDER
+    [FIELDS.DESCRIPTION_WASTE]: DROPDOWN_PLACEHOLDER
   },
 
   /**
@@ -64,9 +63,10 @@ export const SENT_ON_LOADS = {
    * All fields are OPTIONAL - validation only applies to fields that have values.
    *
    * EWC_CODE and WEIGHBRIDGE_TICKET are modelled as first-class columns
-   * (requiredHeaders + unfilledValues) but intentionally carry NO value-format
-   * rule here: they were previously passed through unvalidated, and adding a
-   * VAL010 rule would newly reject imports on malformed values (PAE-1420).
+   * (requiredHeaders only) but intentionally carry NO value-format rule here and
+   * NO unfilledValues entry: they were previously passed through unvalidated,
+   * and adding either a VAL010 rule or placeholder normalisation would change
+   * how existing imports are treated (PAE-1420).
    */
   validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false })
 }

@@ -114,14 +114,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.unfilledValues.BASEL_EXPORT_CODE).toContain('Choose option')
     })
 
-    it('normalises the traceability dropdown placeholders (PAE-1420)', () => {
-      expect(schema.unfilledValues.WAS_THE_WASTE_REFUSED).toContain(
-        'Choose option'
-      )
-      expect(schema.unfilledValues.WAS_THE_WASTE_STOPPED).toContain(
-        'Choose option'
-      )
-      expect(schema.unfilledValues.OSR_COUNTRY).toContain('Choose option')
+    it('leaves the non-validated PAE-1420 columns out of unfilledValues, preserving pass-through', () => {
+      expect(schema.unfilledValues.WAS_THE_WASTE_REFUSED).toBeUndefined()
+      expect(schema.unfilledValues.WAS_THE_WASTE_STOPPED).toBeUndefined()
+      expect(schema.unfilledValues.OSR_COUNTRY).toBeUndefined()
     })
   })
 

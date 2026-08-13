@@ -102,13 +102,13 @@ const VALIDATED_SUPPLEMENTARY_FIELDS = [
  * for waste balance (PAE-1420).
  *
  * These are modelled as first-class columns — declared as field constants and
- * added to requiredHeaders so they are a known part of the contract, with
- * dropdown placeholders normalised via unfilledValues. They deliberately carry
- * NO entry in validationSchema: they were previously accepted as unvalidated
- * passthrough (.unknown(true)), and adding a VAL010 value rule would newly
- * reject operator imports on malformed values. Later beads (e.g. report-creation
- * gating) can build validation on these named fields where a business rule
- * warrants it.
+ * added to requiredHeaders so they are a known part of the contract. They
+ * deliberately carry NO entry in validationSchema and NO entry in
+ * unfilledValues: they were previously accepted as unvalidated passthrough
+ * (.unknown(true)), and both a VAL010 value rule and placeholder normalisation
+ * would change how existing operator imports are treated. Later beads (e.g.
+ * report-creation gating) can build validation and placeholder handling on
+ * these named fields where a business rule warrants it.
  *
  * WAS_THE_WASTE_REFUSED and WAS_THE_WASTE_STOPPED are read by
  * classifyForWasteBalance below; the others carry supplier, loading-site,
@@ -184,12 +184,11 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: DROPDOWN_PLACEHOLDER,
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: DROPDOWN_PLACEHOLDER,
     [FIELDS.EXPORT_CONTROLS]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.BASEL_EXPORT_CODE]: DROPDOWN_PLACEHOLDER,
-    // Traceability dropdowns modelled in PAE-1420 (placeholder → null so later
-    // gating sees an empty value rather than the 'Choose option' placeholder)
-    [FIELDS.WAS_THE_WASTE_REFUSED]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.WAS_THE_WASTE_STOPPED]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.OSR_COUNTRY]: DROPDOWN_PLACEHOLDER
+    [FIELDS.BASEL_EXPORT_CODE]: DROPDOWN_PLACEHOLDER
+    // The PAE-1420 non-validated columns deliberately have NO entry here: they
+    // keep the pass-through behaviour they had before being named, so a cell
+    // left on 'Choose option' persists verbatim rather than normalising to
+    // null. Placeholder normalisation is deferred to the bead that adds gating.
   },
 
   /**
