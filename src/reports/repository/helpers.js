@@ -12,6 +12,15 @@ import {
 } from '#common/enums/event.js'
 import { randomUUID } from 'node:crypto'
 
+/**
+ * @import {
+ *   PeriodicReport,
+ *   PeriodicReportDoc,
+ *   ReportPerPeriod,
+ *   ReportSummary
+ * } from './port.js'
+ */
+
 const BARE_DATE_LENGTH = 10
 
 /**
@@ -99,90 +108,102 @@ const groupTransform = (arr, keyFn, valueFn) =>
   )
 
 /**
+ * @param {PeriodicReportDoc} doc
+ * @returns {ReportSummary}
+ */
+const toSubmission = (doc) => ({
+  id: doc.id,
+  status: doc.status.currentStatus,
+  submissionNumber: doc.submissionNumber,
+  submittedAt: doc.status.submitted?.at ?? null,
+  submittedBy: doc.status.submitted?.by ?? null,
+  resubmissionRequired: doc.resubmissionRequired ?? null,
+  recyclingActivity: doc.recyclingActivity
+    ? {
+        totalTonnageReceived: doc.recyclingActivity.totalTonnageReceived,
+        tonnageRecycled: doc.recyclingActivity.tonnageRecycled,
+        tonnageNotRecycled: doc.recyclingActivity.tonnageNotRecycled
+      }
+    : undefined,
+  exportActivity: doc.exportActivity
+    ? {
+        totalTonnageExported: doc.exportActivity.totalTonnageExported,
+        tonnageReceivedNotExported:
+          doc.exportActivity.tonnageReceivedNotExported,
+        tonnageRefusedAtDestination:
+          doc.exportActivity.tonnageRefusedAtDestination,
+        tonnageStoppedDuringExport:
+          doc.exportActivity.tonnageStoppedDuringExport,
+        tonnageRepatriated: doc.exportActivity.tonnageRepatriated
+      }
+    : undefined,
+  wasteSent: doc.wasteSent
+    ? {
+        tonnageSentToReprocessor: doc.wasteSent.tonnageSentToReprocessor,
+        tonnageSentToExporter: doc.wasteSent.tonnageSentToExporter,
+        tonnageSentToAnotherSite: doc.wasteSent.tonnageSentToAnotherSite
+      }
+    : undefined,
+  prn: doc.prn
+    ? {
+        issuedTonnage: doc.prn.issuedTonnage,
+        freeTonnage: doc.prn.freeTonnage,
+        totalRevenue: doc.prn.totalRevenue,
+        averagePricePerTonne: doc.prn.averagePricePerTonne
+      }
+    : undefined,
+  supportingInformation: doc.supportingInformation
+})
+
+/**
+ * @param {PeriodicReportDoc[]} periodDocs
+ * @returns {ReportPerPeriod}
+ */
+const buildPeriodSummary = (periodDocs) => {
+  const [first, ...rest] = [...periodDocs].sort(
+    (a, b) => b.submissionNumber - a.submissionNumber
+  )
+  const { startDate, endDate, dueDate } = first
+  return {
+    startDate: backCompatCalendarDate(startDate),
+    endDate: backCompatCalendarDate(endDate),
+    dueDate: backCompatCalendarDate(dueDate),
+    current: toSubmission(first),
+    previousSubmissions: rest.map(toSubmission)
+  }
+}
+
+/**
  * Groups raw report documents into the PeriodicReport nested structure.
  *
- * Sorts by submissionNumber descending so the latest submission is processed first.
- * The highest-numbered report becomes `current`;
- * all previous submitted reports are collected in `previousSubmissions`.
+ * Sorts by submissionNumber descending so the latest submission is processed
+ * first. The highest-numbered report becomes `current`; all previous submitted
+ * reports are collected in `previousSubmissions`.
  *
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {Object[]} docs
- * @returns {import('./port.js').PeriodicReport[]}
+ * @param {PeriodicReportDoc[]} docs
+ * @returns {PeriodicReport[]}
  */
 export const groupAsPeriodicReports = (
   organisationId,
   registrationId,
   docs
 ) => {
-  const toSubmission = (doc) => ({
-    id: doc.id,
-    status: doc.status.currentStatus,
-    submissionNumber: doc.submissionNumber,
-    submittedAt: doc.status.submitted?.at ?? null,
-    submittedBy: doc.status.submitted?.by ?? null,
-    resubmissionRequired: doc.resubmissionRequired ?? null,
-    recyclingActivity: doc.recyclingActivity
-      ? {
-          totalTonnageReceived: doc.recyclingActivity.totalTonnageReceived,
-          tonnageRecycled: doc.recyclingActivity.tonnageRecycled,
-          tonnageNotRecycled: doc.recyclingActivity.tonnageNotRecycled
-        }
-      : undefined,
-    exportActivity: doc.exportActivity
-      ? {
-          totalTonnageExported: doc.exportActivity.totalTonnageExported,
-          tonnageReceivedNotExported:
-            doc.exportActivity.tonnageReceivedNotExported,
-          tonnageRefusedAtDestination:
-            doc.exportActivity.tonnageRefusedAtDestination,
-          tonnageStoppedDuringExport:
-            doc.exportActivity.tonnageStoppedDuringExport,
-          tonnageRepatriated: doc.exportActivity.tonnageRepatriated
-        }
-      : undefined,
-    wasteSent: doc.wasteSent
-      ? {
-          tonnageSentToReprocessor: doc.wasteSent.tonnageSentToReprocessor,
-          tonnageSentToExporter: doc.wasteSent.tonnageSentToExporter,
-          tonnageSentToAnotherSite: doc.wasteSent.tonnageSentToAnotherSite
-        }
-      : undefined,
-    prn: doc.prn
-      ? {
-          issuedTonnage: doc.prn.issuedTonnage,
-          freeTonnage: doc.prn.freeTonnage,
-          totalRevenue: doc.prn.totalRevenue,
-          averagePricePerTonne: doc.prn.averagePricePerTonne
-        }
-      : undefined,
-    supportingInformation: doc.supportingInformation
-  })
-
-  const buildPeriodSummary = (periodDocs) => {
-    const [first, ...rest] = [...periodDocs].sort(
-      (a, b) => b.submissionNumber - a.submissionNumber
-    )
-    const { startDate, endDate, dueDate } = first
-    return {
-      startDate: backCompatCalendarDate(startDate),
-      endDate: backCompatCalendarDate(endDate),
-      dueDate: backCompatCalendarDate(dueDate),
-      current: toSubmission(first),
-      previousSubmissions: rest.map(toSubmission)
-    }
-  }
-
   const byYear = Object.groupBy(docs, (doc) => doc.year)
   return Object.entries(byYear).map(([year, yearDocs]) => ({
     organisationId,
     registrationId,
     year: Number(year),
     reports: groupTransform(
-      /** @type {Object[]} */ (yearDocs),
+      /** @type {PeriodicReportDoc[]} */ (yearDocs),
       (doc) => doc.cadence,
       (cadenceDocs) =>
-        groupTransform(cadenceDocs, (doc) => doc.period, buildPeriodSummary)
+        groupTransform(
+          cadenceDocs,
+          (doc) => String(doc.period),
+          buildPeriodSummary
+        )
     )
   }))
 }

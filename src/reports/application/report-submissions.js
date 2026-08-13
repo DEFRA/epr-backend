@@ -2,6 +2,7 @@
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
 /** @import { Cadence } from '#reports/domain/cadence.js' */
+/** @import { WasteSentSummary } from '#reports/repository/port.js' */
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -71,7 +72,7 @@ function formatTonnage(value) {
 }
 
 /**
- * @param {import('#reports/repository/port.js').WasteSent | undefined} wasteSent
+ * @param {WasteSentSummary | undefined} wasteSent
  * @returns {number | ''}
  */
 function sumSentOn(wasteSent) {

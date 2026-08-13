@@ -230,18 +230,78 @@
  */
 
 /**
- * @typedef {Object} ReportSummary
- * @property {string} id
- * @property {ReportStatus} status
- * @property {number} submissionNumber
- * @property {string|null} submittedAt - ISO timestamp of submission, or null if not submitted
- * @property {UserSummary|null} submittedBy - User who submitted, or null if not submitted
- * @property {ReportResubmissionRequired|null} resubmissionRequired - set when a later summary log restated this submitted period
- * @property {RecyclingActivity} [recyclingActivity]
- * @property {ExportActivity} [exportActivity]
- * @property {WasteSent} [wasteSent]
- * @property {PrnData} [prn]
- * @property {string} [supportingInformation]
+ * The activity payloads a periodic-report projection selects — the totals only,
+ * never the per-row arrays. `groupAsPeriodicReports` carries through exactly
+ * what its caller projected, so each is absent when the projection omitted it.
+ *
+ * @typedef {Pick<
+ *   RecyclingActivity,
+ *   'tonnageNotRecycled' | 'tonnageRecycled' | 'totalTonnageReceived'
+ * >} RecyclingActivitySummary
+ */
+
+/**
+ * @typedef {Pick<
+ *   ExportActivity,
+ *   | 'tonnageReceivedNotExported'
+ *   | 'tonnageRefusedAtDestination'
+ *   | 'tonnageRepatriated'
+ *   | 'tonnageStoppedDuringExport'
+ *   | 'totalTonnageExported'
+ * >} ExportActivitySummary
+ */
+
+/**
+ * @typedef {Pick<
+ *   WasteSent,
+ *   | 'tonnageSentToAnotherSite'
+ *   | 'tonnageSentToExporter'
+ *   | 'tonnageSentToReprocessor'
+ * >} WasteSentSummary
+ */
+
+/**
+ * A raw report document as the periodic-report projections select it. The
+ * activity payloads are optional because the two projections differ: the
+ * calendar one (`findPeriodicReports`) omits them entirely, the estate-wide one
+ * (`findAllPeriodicReports`) selects the summary fields above. A full `Report`
+ * satisfies this too.
+ *
+ * @typedef {Pick<
+ *   Report,
+ *   | 'cadence'
+ *   | 'dueDate'
+ *   | 'endDate'
+ *   | 'id'
+ *   | 'period'
+ *   | 'startDate'
+ *   | 'submissionNumber'
+ *   | 'year'
+ * > & {
+ *   exportActivity?: ExportActivitySummary,
+ *   prn?: PrnData,
+ *   recyclingActivity?: RecyclingActivitySummary,
+ *   resubmissionRequired?: ReportResubmissionRequired | null,
+ *   status: Pick<ReportStatusObject, 'created' | 'currentStatus' | 'submitted'>,
+ *   supportingInformation?: string,
+ *   wasteSent?: WasteSentSummary
+ * }} PeriodicReportDoc
+ */
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   exportActivity?: ExportActivitySummary,
+ *   prn?: PrnData,
+ *   recyclingActivity?: RecyclingActivitySummary,
+ *   resubmissionRequired: ReportResubmissionRequired | null,
+ *   status: ReportStatus,
+ *   submissionNumber: number,
+ *   submittedAt: string | null,
+ *   submittedBy: UserSummary | null,
+ *   supportingInformation?: string,
+ *   wasteSent?: WasteSentSummary
+ * }} ReportSummary
  */
 
 /**
