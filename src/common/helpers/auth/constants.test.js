@@ -42,8 +42,12 @@ describe('ADMIN_ROLES', () => {
     }
   })
 
-  test('every tier that holds admin.read also holds organisation.search, so no role loses access it holds today', () => {
-    for (const scopes of Object.values(ADMIN_ROLES)) {
+  test('a tier that holds admin.read also holds organisation.search', () => {
+    const tiersWithAdminRead = Object.values(ADMIN_ROLES).filter((scopes) =>
+      scopes.includes(SCOPES.adminRead)
+    )
+
+    for (const scopes of tiersWithAdminRead) {
       expect(scopes).toContain(SCOPES.organisationSearch)
     }
   })
