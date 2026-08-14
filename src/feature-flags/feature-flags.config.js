@@ -13,5 +13,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isStaleIssuedTonnageReportEnabled() {
     return config.get('featureFlags.staleIssuedTonnageReport')
+  },
+  isExporterReportDataValidationEnabled() {
+    return config.get('featureFlags.exporterReportDataValidation')
   }
 })

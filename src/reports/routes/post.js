@@ -119,7 +119,8 @@ export const reportsPost = {
         cadence,
         period,
         submissionNumber,
-        changedBy: extractChangedBy(request.auth.credentials)
+        changedBy: extractChangedBy(request.auth.credentials),
+        featureFlags: request.featureFlags
       })
 
       await auditReportCreate(request, {

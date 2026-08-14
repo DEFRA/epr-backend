@@ -11,6 +11,7 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   REPORT_STATUS,
@@ -49,7 +50,15 @@ describe(`POST ${reportsPostPath}`, () => {
    * routes resolve one committed row at the latest submitted summary log for the
    * registration.
    */
-  const seedRepositories = async (org, registration) => {
+  const DEFAULT_ROWS = [
+    buildSummaryLogRowStateEntry({
+      rowId: 'row-0',
+      wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+      data: {}
+    })
+  ]
+
+  const seedRepositories = async (org, registration, rows = DEFAULT_ROWS) => {
     const accreditationId = registration.accreditationId ?? null
     const ledgerId = {
       organisationId: org.id,
@@ -60,13 +69,7 @@ describe(`POST ${reportsPostPath}`, () => {
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       ledgerId,
-      [
-        buildSummaryLogRowStateEntry({
-          rowId: 'row-0',
-          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-          data: {}
-        })
-      ],
+      rows,
       SUMMARY_LOG_ID
     )
     const ledgerRepository = createInMemoryLedgerRepository([
@@ -84,17 +87,58 @@ describe(`POST ${reportsPostPath}`, () => {
     return { ledgerRepository, summaryLogRowStatesRepository }
   }
 
-  const createServer = async (registrationOverrides = {}) => {
-    const registration = buildRegistration(registrationOverrides)
-    const org = buildOrganisation({ registrations: [registration] })
+  /**
+   * Builds an organisations repository seeded with one registration. An
+   * accredited registration is linked to an approved accreditation and passed
+   * as the repository's initial org (insert would reset its status history);
+   * a registered-only registration is inserted.
+   */
+  const buildOrganisationsRepository = async (registration, accredited) => {
+    if (accredited) {
+      const org = buildOrganisationWithRegistration(
+        partialMock(registration),
+        'approved'
+      )
+      return {
+        org,
+        factory: createInMemoryOrganisationsRepository([partialMock(org)])
+      }
+    }
 
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository()
-    const organisationsRepository = organisationsRepositoryFactory()
-    await organisationsRepository.insert(org)
+    const org = buildOrganisation({ registrations: [registration] })
+    const factory = createInMemoryOrganisationsRepository()
+    await factory().insert(org)
+    return { org, factory }
+  }
+
+  /**
+   * @param {object} [registrationOverrides]
+   * @param {object} [options]
+   * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [options.featureFlags]
+   * @param {any[]} [options.rows]
+   * @param {boolean} [options.accredited] - Link an approved accreditation (monthly cadence).
+   */
+  const createServer = async (
+    registrationOverrides = {},
+    {
+      featureFlags = createInMemoryFeatureFlags(),
+      rows,
+      accredited = false
+    } = {}
+  ) => {
+    const registration = buildRegistration(
+      accredited
+        ? {
+            accreditationId: new ObjectId().toString(),
+            ...registrationOverrides
+          }
+        : registrationOverrides
+    )
+    const { org, factory: organisationsRepositoryFactory } =
+      await buildOrganisationsRepository(registration, accredited)
 
     const { ledgerRepository, summaryLogRowStatesRepository } =
-      await seedRepositories(org, registration)
+      await seedRepositories(org, registration, rows)
     const reportsRepositoryFactory = createInMemoryReportsRepository()
 
     const server = await createTestServer({
@@ -104,7 +148,7 @@ describe(`POST ${reportsPostPath}`, () => {
         summaryLogRowStatesRepository,
         reportsRepository: reportsRepositoryFactory
       },
-      featureFlags: createInMemoryFeatureFlags()
+      featureFlags
     })
 
     return {
@@ -910,6 +954,202 @@ describe(`POST ${reportsPostPath}`, () => {
         period: 1,
         year: 2025
       })
+    })
+  })
+
+  describe('exporter report data completeness gate (PAE-1420)', () => {
+    const gateEnabled = createInMemoryFeatureFlags({
+      exporterReportDataValidation: true
+    })
+
+    // The six supplier fields AC1 makes mandatory, in the order the gate reports
+    // them. Kept as a list so the accredited/reg-only assertions read the same.
+    const SUPPLIER_FIELDS = [
+      'SUPPLIER_NAME',
+      'SUPPLIER_ADDRESS',
+      'SUPPLIER_POSTCODE',
+      'SUPPLIER_EMAIL',
+      'SUPPLIER_PHONE_NUMBER',
+      'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
+    ]
+
+    // Row-state entries are keyed by the canonical field names ingestion
+    // normalises both templates to; the gate reads only this data, never the
+    // template. Accredited packs everything onto one exported row; reg-only
+    // splits it across received/loads-exported/sent-on rows.
+    const accreditedRow = (
+      data,
+      wasteRecordType = WASTE_RECORD_TYPE.EXPORTED
+    ) =>
+      buildSummaryLogRowStateEntry({
+        rowId: 'row-1',
+        wasteRecordType,
+        processingType: PROCESSING_TYPES.EXPORTER,
+        data
+      })
+
+    const regOnlyRow = (rowId, wasteRecordType, data) =>
+      buildSummaryLogRowStateEntry({
+        rowId,
+        wasteRecordType,
+        processingType: PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY,
+        data
+      })
+
+    const regOnlyExporter = {
+      wasteProcessingType: 'exporter',
+      accreditationId: undefined
+    }
+
+    const postRegOnly = (server, organisationId, registrationId) =>
+      makeRequest(server, organisationId, registrationId, 2025, 'quarterly', 1)
+
+    const postAccredited = (server, organisationId, registrationId) =>
+      makeRequest(server, organisationId, registrationId, 2025, 'monthly', 1)
+
+    it('creates the report when the flag is off despite incomplete row data', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        {
+          rows: [
+            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+              TONNAGE_RECEIVED_FOR_EXPORT: '5'
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('creates the report when the flag is on but no completeness rule is triggered', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        { featureFlags: gateEnabled }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('does not gate a non-exporter (reprocessor) registration', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'reprocessor', accreditationId: undefined },
+        {
+          featureFlags: gateEnabled,
+          rows: [
+            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+              TONNAGE_RECEIVED_FOR_EXPORT: '5'
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('accredited: a single packed row fires the supplier, export and interim rules together', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'exporter' },
+        {
+          accredited: true,
+          featureFlags: gateEnabled,
+          rows: [
+            accreditedRow({
+              TONNAGE_RECEIVED_FOR_EXPORT: '5',
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: '3',
+              DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'Yes'
+            })
+          ]
+        }
+      )
+
+      const response = await postAccredited(
+        server,
+        organisationId,
+        registrationId
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.reason).toBe('report_data_incomplete')
+      expect(payload.incompleteRows).toEqual([
+        {
+          rowId: 'row-1',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          missingFields: [
+            ...SUPPLIER_FIELDS,
+            'OSR_ID',
+            'DATE_OF_EXPORT',
+            'INTERIM_SITE_ID'
+          ]
+        }
+      ])
+    })
+
+    it('registered-only: fires the applicable rule on each split row', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        {
+          featureFlags: gateEnabled,
+          rows: [
+            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+              TONNAGE_RECEIVED_FOR_EXPORT: '5'
+            }),
+            regOnlyRow('row-2', WASTE_RECORD_TYPE.EXPORTED, {
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: '3'
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.incompleteRows).toEqual([
+        {
+          rowId: 'row-1',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          missingFields: SUPPLIER_FIELDS
+        },
+        {
+          rowId: 'row-2',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          missingFields: ['OSR_ID', 'DATE_OF_EXPORT']
+        }
+      ])
+    })
+
+    it('treats a final-destination dropdown placeholder as unfilled when sent-on tonnage > 0', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        {
+          featureFlags: gateEnabled,
+          rows: [
+            regOnlyRow('row-1', WASTE_RECORD_TYPE.SENT_ON, {
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: '2',
+              FINAL_DESTINATION_NAME: 'Port Recyclers',
+              FINAL_DESTINATION_FACILITY_TYPE: 'Choose option',
+              FINAL_DESTINATION_ADDRESS: '2 Quay Street',
+              FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.incompleteRows[0].missingFields).toEqual([
+        'FINAL_DESTINATION_FACILITY_TYPE'
+      ])
     })
   })
 })
