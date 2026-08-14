@@ -80,7 +80,8 @@ const WASTE_BALANCE_CONTENT_FIELDS = [
 const WASTE_BALANCE_FIELDS = [FIELDS.ROW_ID, ...WASTE_BALANCE_CONTENT_FIELDS]
 
 /**
- * Supplementary fields - present in template but not required for waste balance.
+ * Validated supplementary fields - present in template, not required for waste
+ * balance, but carry a validationSchema (VAL010) value rule below.
  *
  * INTERIM_SITE_ID and TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR are
  * conditionally required when DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE == Yes,
@@ -90,10 +91,45 @@ const WASTE_BALANCE_FIELDS = [FIELDS.ROW_ID, ...WASTE_BALANCE_CONTENT_FIELDS]
  *
  * EXPORT_CONTROLS is an audit field, not required for tonnage calculation.
  */
-const SUPPLEMENTARY_FIELDS = [
+const VALIDATED_SUPPLEMENTARY_FIELDS = [
   FIELDS.INTERIM_SITE_ID,
   FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR,
   FIELDS.EXPORT_CONTROLS
+]
+
+/**
+ * Supplementary columns present in the template but not required for waste
+ * balance. Named in requiredHeaders only: no validationSchema rule and no
+ * unfilledValues entry, so they keep the pass-through behaviour they had before
+ * being named (asserted in the schema tests). WAS_THE_WASTE_REFUSED and
+ * WAS_THE_WASTE_STOPPED are read by classifyForWasteBalance below.
+ */
+const NON_VALIDATED_SUPPLEMENTARY_FIELDS = [
+  FIELDS.SUPPLIER_NAME,
+  FIELDS.SUPPLIER_ADDRESS,
+  FIELDS.SUPPLIER_POSTCODE,
+  FIELDS.SUPPLIER_EMAIL,
+  FIELDS.SUPPLIER_PHONE_NUMBER,
+  FIELDS.ACTIVITIES_CARRIED_OUT_BY_SUPPLIER,
+  FIELDS.WAS_THE_WASTE_REFUSED,
+  FIELDS.WAS_THE_WASTE_STOPPED,
+  FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED,
+  FIELDS.YOUR_REFERENCE,
+  FIELDS.WEIGHBRIDGE_TICKET,
+  FIELDS.WASTE_TRANSFER_NOTE,
+  FIELDS.LOADING_SITE_NAME,
+  FIELDS.LOADING_SITE_ADDRESS,
+  FIELDS.LOADING_SITE_POSTCODE,
+  FIELDS.LOADING_SITE_EMAIL,
+  FIELDS.LOADING_SITE_PHONE_NUMBER,
+  FIELDS.CARRIER_NAME,
+  FIELDS.CBD,
+  FIELDS.CARRIER_VEHICLE_REGISTRATION_NUMBER,
+  FIELDS.OSR_NAME,
+  FIELDS.OSR_COUNTRY,
+  FIELDS.TONNAGE_RECEIVED_BY_OSR,
+  FIELDS.BILL_OF_LANDING_REFERENCE_NUMBER,
+  FIELDS.CUSTOMS_DECLARATION_NUMBER
 ]
 
 /**
@@ -117,7 +153,11 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     rowIdField: FIELDS.ROW_ID
   }),
 
-  requiredHeaders: [...WASTE_BALANCE_FIELDS, ...SUPPLEMENTARY_FIELDS],
+  requiredHeaders: [
+    ...WASTE_BALANCE_FIELDS,
+    ...VALIDATED_SUPPLEMENTARY_FIELDS,
+    ...NON_VALIDATED_SUPPLEMENTARY_FIELDS
+  ],
 
   /**
    * Per-field values that indicate "unfilled"
@@ -135,6 +175,8 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: DROPDOWN_PLACEHOLDER,
     [FIELDS.EXPORT_CONTROLS]: DROPDOWN_PLACEHOLDER,
     [FIELDS.BASEL_EXPORT_CODE]: DROPDOWN_PLACEHOLDER
+    // The non-validated columns deliberately have no entry here, so a cell left
+    // on 'Choose option' persists verbatim rather than normalising to null.
   },
 
   /**
