@@ -351,7 +351,7 @@ describe('#getJwtStrategyConfig', () => {
       ])
     })
 
-    test('support tier credential carries only admin.read', async () => {
+    test('support tier credential carries the read scopes of that tier', async () => {
       mockGetEntraUserRoles.mockResolvedValue({
         role: 'support',
         scopes: [...ADMIN_ROLES.support]
@@ -372,7 +372,10 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.scope).toEqual([SCOPES.adminRead])
+      expect(result.credentials.scope).toEqual([
+        SCOPES.adminRead,
+        SCOPES.organisationSearch
+      ])
     })
 
     test('handles Entra ID token where user matches no admin tier (empty scope)', async () => {

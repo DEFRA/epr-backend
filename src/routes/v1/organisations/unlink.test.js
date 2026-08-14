@@ -48,7 +48,12 @@ vi.mock(
 const ADMIN_USER = {
   id: 'test-maintainer-id',
   email: 'maintainer@example.com',
-  scope: [SCOPES.adminRead, SCOPES.adminWrite, SCOPES.adminDlqPurge]
+  scope: [
+    SCOPES.adminRead,
+    SCOPES.adminWrite,
+    SCOPES.adminDlqPurge,
+    SCOPES.organisationSearch
+  ]
 }
 
 describe('DELETE /v1/organisations/{organisationId}/link', () => {
