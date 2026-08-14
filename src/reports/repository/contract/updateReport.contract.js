@@ -1,4 +1,5 @@
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { MATERIAL } from '#domain/materials.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { buildCreateReportParams } from './test-data.js'

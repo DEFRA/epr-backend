@@ -2,10 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { aggregateAvailableBalance } from './aggregate-available-balance.js'
-import {
-  MATERIAL,
-  GLASS_RECYCLING_PROCESS
-} from '#domain/organisations/model.js'
+import { MATERIAL, GLASS_RECYCLING_PROCESS } from '#domain/materials.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_BALANCE_EVENTS_COLLECTION = 'waste-balance-events'

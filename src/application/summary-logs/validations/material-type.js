@@ -3,6 +3,7 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,
@@ -16,22 +17,22 @@ import {
  * Mapping between spreadsheet material values and registration material types
  */
 const MATERIAL_MAP = Object.freeze({
-  Aluminium: 'aluminium',
-  Fibre_based_composite: 'fibre',
-  Glass_remelt: 'glass',
-  Glass_other: 'glass',
-  Paper_and_board: 'paper',
-  Plastic: 'plastic',
-  Steel: 'steel',
-  Wood: 'wood'
+  Aluminium: MATERIAL.ALUMINIUM,
+  Fibre_based_composite: MATERIAL.FIBRE,
+  Glass_remelt: MATERIAL.GLASS,
+  Glass_other: MATERIAL.GLASS,
+  Paper_and_board: MATERIAL.PAPER,
+  Plastic: MATERIAL.PLASTIC,
+  Steel: MATERIAL.STEEL,
+  Wood: MATERIAL.WOOD
 })
 
 /**
  * Maps glass spreadsheet values to the required glassRecyclingProcess value
  */
 const GLASS_PROCESS_MAP = Object.freeze({
-  Glass_remelt: 'glass_re_melt',
-  Glass_other: 'glass_other'
+  Glass_remelt: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+  Glass_other: GLASS_RECYCLING_PROCESS.GLASS_OTHER
 })
 
 const VALID_REGISTRATION_MATERIALS = Object.values(MATERIAL_MAP)

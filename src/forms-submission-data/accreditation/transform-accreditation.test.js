@@ -5,9 +5,8 @@ import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.js
 import exporterWithoutRegistration from '#data/fixtures/ea/accreditation/exporter-without-registration.json' with { type: 'json' }
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
 import { validateAccreditation } from '#repositories/organisations/schema/validation.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   REGULATOR,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE

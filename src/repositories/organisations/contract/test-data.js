@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import { ObjectId } from 'mongodb'
 import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
+import { MATERIAL } from '#domain/materials.js'
 import { createInitialStatusHistory } from '../helpers.js'
 import { getCurrentStatus } from '../status.js'
 
@@ -53,7 +54,7 @@ export const buildRegistration = (overrides = {}) => {
 
   if (registration.wasteProcessingType === 'exporter') {
     // Only delete glassRecyclingProcess for non-glass exporters
-    if (registration.material !== 'glass') {
+    if (registration.material !== MATERIAL.GLASS) {
       delete registration.glassRecyclingProcess
     }
     delete registration.site

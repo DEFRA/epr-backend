@@ -4,7 +4,7 @@
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'node:crypto'
 
-import { MATERIAL } from '#domain/organisations/model.js'
+import { MATERIAL } from '#domain/materials.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 /** @type {{ publicKey: JsonWebKey, privateKey: string }} */

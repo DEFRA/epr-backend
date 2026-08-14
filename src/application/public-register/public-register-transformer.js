@@ -15,11 +15,11 @@ import {
 import {
   capitalize,
   formatAddress,
-  formatMaterial,
   formatTonnageBand,
   getAnnexIIProcess,
   uppercaseString
 } from '#common/helpers/formatters.js'
+import { formatMaterialCsvLabel } from '#domain/material-csv-labels.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
@@ -82,7 +82,7 @@ function transformRegAcc(
     registrationNumber: registration.registrationNumber,
     tradingName: org.companyDetails.tradingName || '',
     reprocessingSite: formatAddress(registration.site?.address),
-    packagingWasteCategory: formatMaterial(
+    packagingWasteCategory: formatMaterialCsvLabel(
       registration.material,
       registration.glassRecyclingProcess
     ),

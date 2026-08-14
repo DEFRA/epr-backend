@@ -5,6 +5,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { MATERIAL } from '#domain/materials.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
@@ -54,7 +55,7 @@ const snapshotAccreditation = (accreditation) => {
   }
 
   if (
-    accreditation.material === 'glass' &&
+    accreditation.material === MATERIAL.GLASS &&
     accreditation.glassRecyclingProcess?.[0]
   ) {
     snapshot.glassRecyclingProcess = accreditation.glassRecyclingProcess[0]

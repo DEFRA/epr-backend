@@ -4,6 +4,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { capitalize } from '#common/helpers/formatters.js'
+import { materialCsvLabels } from '#domain/material-csv-labels.js'
 
 const summaryLogUploadReportRowSchema = Joi.object({
   appropriateAgency: Joi.string()
@@ -22,17 +23,7 @@ const summaryLogUploadReportRowSchema = Joi.object({
   accreditationNumber: Joi.string().allow('').required(),
   reprocessingSite: Joi.string().allow('').required(),
   packagingWasteCategory: Joi.string()
-    .valid(
-      'Aluminium',
-      'Fibre based composite',
-      'Paper and board',
-      'Plastic',
-      'Steel',
-      'Wood',
-      'Glass-remelt',
-      'Glass-other',
-      'Glass-remelt-other'
-    )
+    .valid(...materialCsvLabels)
     .required(),
   lastSuccessfulUpload: Joi.string().allow('').required(),
   lastFailedUpload: Joi.string().allow('').required(),

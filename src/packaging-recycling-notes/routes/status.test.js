@@ -16,8 +16,8 @@ import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { MATERIAL } from '#domain/materials.js'
 import {
-  MATERIAL,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'

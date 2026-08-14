@@ -1,5 +1,6 @@
 /** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
-/** @import {GlassRecyclingProcess, Material, RegistrationStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
+/** @import {GlassRecyclingProcess, Material} from '#domain/materials.js' */
+/** @import {RegistrationStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{

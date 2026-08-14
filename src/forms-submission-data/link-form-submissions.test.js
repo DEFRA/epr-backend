@@ -1,6 +1,6 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { MATERIAL } from '#domain/materials.js'
 import {
-  MATERIAL,
   ORGANISATION_STATUS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'

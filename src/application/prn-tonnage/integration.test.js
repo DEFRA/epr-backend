@@ -5,8 +5,8 @@ import {
   aggregatePrnTonnage,
   REGISTRATION_TYPE
 } from './aggregate-prn-tonnage.js'
+import { MATERIAL } from '#domain/materials.js'
 import {
-  MATERIAL,
   REPROCESSING_TYPE,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE

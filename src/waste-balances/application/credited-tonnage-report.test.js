@@ -3,10 +3,9 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#domain/materials.js'
 import {
   ACCREDITATION_STATUS,
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'

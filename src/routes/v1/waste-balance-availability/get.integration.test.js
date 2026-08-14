@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb'
 import { it } from '#vite/fixtures/server-with-real-db.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { MATERIAL } from '#domain/organisations/model.js'
+import { MATERIAL } from '#domain/materials.js'
 import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
 import { wasteBalanceAvailabilityPath } from './get.js'
 
