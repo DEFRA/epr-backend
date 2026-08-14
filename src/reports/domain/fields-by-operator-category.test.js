@@ -3,6 +3,7 @@ import {
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
   TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY
 } from './aggregation/fields-by-operator-category.js'
+import { OPERATOR_CATEGORY, isExporterCategory } from './operator-category.js'
 
 describe('SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY', () => {
   it('is frozen', () => {
@@ -55,6 +56,15 @@ describe('SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY', () => {
       wasteSentOn: 'DATE_LOAD_LEFT_SITE'
     })
   })
+
+  it.each(Object.values(OPERATOR_CATEGORY))(
+    'has a wasteExported field for %s only when it is an exporter category',
+    (category) => {
+      expect(
+        'wasteExported' in SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[category]
+      ).toBe(isExporterCategory(category))
+    }
+  )
 })
 
 describe('TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY', () => {

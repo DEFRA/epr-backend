@@ -9,6 +9,7 @@ export const SCOPES = {
   organisationWrite: 'organisation.write',
   organisationLinkedRead: 'organisation.linked.read',
   organisationLinkedWrite: 'organisation.linked.write',
+  organisationSearch: 'organisation.search',
   regulator: 'regulator'
 }
 
@@ -34,13 +35,22 @@ export const REGULATOR_ROLE = 'regulator_standard'
  * regulator, and a read route written later admits one without its author
  * knowing regulators exist.
  *
+ * `organisation.search` is separate from `organisation.read` because a search
+ * enumerates the population of operators: the caller holds no organisation id
+ * yet, so the condition an operator's `organisation.read` carries — their own
+ * linked organisation — cannot apply.
+ *
  * `regulator` is coarse on purpose. It stands for the whole set of functions
  * only a regulator performs, and subdivides when caseworking functions
  * arrive.
  *
  * A regulator reads and changes nothing, so no write scope appears here.
  */
-export const REGULATOR_SCOPES = [SCOPES.organisationRead, SCOPES.regulator]
+export const REGULATOR_SCOPES = [
+  SCOPES.organisationRead,
+  SCOPES.organisationSearch,
+  SCOPES.regulator
+]
 
 /**
  * Admin role → scope-bundle map. Used internally by getEntraUserRoles to
@@ -51,8 +61,13 @@ export const ADMIN_ROLES = {
   service_maintainer_write: [
     SCOPES.adminRead,
     SCOPES.adminWrite,
-    SCOPES.adminDlqPurge
+    SCOPES.adminDlqPurge,
+    SCOPES.organisationSearch
   ],
-  service_maintainer: [SCOPES.adminRead, SCOPES.adminDlqPurge],
-  support: [SCOPES.adminRead]
+  service_maintainer: [
+    SCOPES.adminRead,
+    SCOPES.adminDlqPurge,
+    SCOPES.organisationSearch
+  ],
+  support: [SCOPES.adminRead, SCOPES.organisationSearch]
 }

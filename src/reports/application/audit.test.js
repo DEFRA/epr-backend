@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
 /**
@@ -76,7 +77,7 @@ describe('auditReportStatusTransition', () => {
     organisationId: 'org-1',
     registrationId: 'reg-1',
     year: 2025,
-    cadence: 'quarterly',
+    cadence: CADENCE.quarterly,
     period: 1,
     submissionNumber: 1,
     reportId: 'rep-1',
@@ -128,7 +129,7 @@ describe('auditReportStatusTransition', () => {
       organisationId: 'org-1',
       registrationId: 'reg-1',
       year: 2025,
-      cadence: 'quarterly',
+      cadence: CADENCE.quarterly,
       period: 1,
       submissionNumber: 1,
       reportId: 'rep-1',
@@ -159,7 +160,7 @@ describe('auditReportStatusTransition', () => {
           organisationId: 'org-1',
           registrationId: 'reg-1',
           year: 2025,
-          cadence: 'quarterly',
+          cadence: CADENCE.quarterly,
           period: 1,
           submissionNumber: 1,
           reportId: 'rep-1',
@@ -184,7 +185,7 @@ describe('auditReportDelete', () => {
     organisationId: 'org-1',
     registrationId: 'reg-1',
     year: 2025,
-    cadence: 'quarterly',
+    cadence: CADENCE.quarterly,
     period: 1,
     submissionNumber: 1,
     reportId: 'rep-1',
@@ -231,7 +232,7 @@ describe('auditReportDelete', () => {
       organisationId: 'org-1',
       registrationId: 'reg-1',
       year: 2025,
-      cadence: 'quarterly',
+      cadence: CADENCE.quarterly,
       period: 1,
       submissionNumber: 1,
       reportId: 'rep-1',
@@ -256,7 +257,7 @@ describe('auditReportDelete', () => {
           organisationId: 'org-1',
           registrationId: 'reg-1',
           year: 2025,
-          cadence: 'quarterly',
+          cadence: CADENCE.quarterly,
           period: 1,
           submissionNumber: 1,
           reportId: 'rep-1',
@@ -310,7 +311,7 @@ const resubmissionRequired = {
 const flaggedReport = {
   reportId: 'rep-1',
   year: 2025,
-  cadence: 'quarterly',
+  cadence: CADENCE.quarterly,
   period: 1,
   submissionNumber: 1
 }
@@ -407,7 +408,7 @@ describe('auditReportCreate', () => {
     organisationId: 'org-1',
     registrationId: 'reg-1',
     year: 2025,
-    cadence: 'quarterly',
+    cadence: CADENCE.quarterly,
     period: 1,
     submissionNumber: 1,
     reportId: 'rep-1',
@@ -450,7 +451,7 @@ describe('auditReportRequestResubmission', () => {
     organisationId: 'org-1',
     registrationId: 'reg-1',
     year: 2025,
-    cadence: 'quarterly',
+    cadence: CADENCE.quarterly,
     period: 1,
     submissionNumber: 2,
     reportId: 'rep-1',

@@ -20,7 +20,9 @@ const ALL_FIELDS = [
   FIELDS.FINAL_DESTINATION_EMAIL,
   FIELDS.FINAL_DESTINATION_PHONE,
   FIELDS.YOUR_REFERENCE,
-  FIELDS.DESCRIPTION_WASTE
+  FIELDS.DESCRIPTION_WASTE,
+  FIELDS.EWC_CODE,
+  FIELDS.WEIGHBRIDGE_TICKET
 ]
 
 /**
@@ -59,6 +61,10 @@ export const SENT_ON_LOADS = {
    * VAL010: Validation schema for filled fields
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
+   *
+   * EWC_CODE and WEIGHBRIDGE_TICKET are named in requiredHeaders only: no
+   * value-format rule and no unfilledValues entry, so they keep the pass-through
+   * behaviour they had before being named (asserted in the schema tests).
    */
   validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false })
 }

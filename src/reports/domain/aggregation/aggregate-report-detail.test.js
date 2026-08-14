@@ -3,6 +3,7 @@ import { assertPresent } from '#test/type-helpers.js'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { CADENCE } from '../cadence.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 import { aggregateReportDetail } from './aggregate-report-detail.js'
 
@@ -38,7 +39,7 @@ const buildSentOnRecord = (overrides = {}) =>
 describe('#aggregateReportDetail', () => {
   const defaultArgs = {
     operatorCategory: OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY,
-    cadence: 'quarterly',
+    cadence: CADENCE.quarterly,
     year: 2026,
     period: 1,
     source: DEFAULT_SOURCE
@@ -376,7 +377,7 @@ describe('#aggregateReportDetail', () => {
   describe('registered-only exporter', () => {
     const exporterArgs = {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY,
-      cadence: 'quarterly',
+      cadence: CADENCE.quarterly,
       year: 2026,
       period: 1,
       source: DEFAULT_SOURCE
@@ -908,7 +909,7 @@ describe('#aggregateReportDetail', () => {
   describe('accredited exporter', () => {
     const accreditedExporterArgs = {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER,
-      cadence: 'monthly',
+      cadence: CADENCE.monthly,
       year: 2026,
       period: 2,
       source: DEFAULT_SOURCE
@@ -1184,7 +1185,7 @@ describe('#aggregateReportDetail', () => {
 
       const result = aggregateReportDetail([registeredOnlyRecord], {
         operatorCategory: OPERATOR_CATEGORY.REPROCESSOR,
-        cadence: 'monthly',
+        cadence: CADENCE.monthly,
         year: 2026,
         period: 1,
         source: DEFAULT_SOURCE
@@ -1212,7 +1213,7 @@ describe('#aggregateReportDetail', () => {
 
       const result = aggregateReportDetail([registeredOnlyRecord], {
         operatorCategory: OPERATOR_CATEGORY.EXPORTER,
-        cadence: 'monthly',
+        cadence: CADENCE.monthly,
         year: 2026,
         period: 2,
         source: DEFAULT_SOURCE
@@ -1232,14 +1233,6 @@ describe('#aggregateReportDetail', () => {
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(50)
       expect(result.diagnostics.wasteReceivedRecordsExcluded).toBe(0)
-    })
-  })
-
-  describe('validation', () => {
-    it('throws TypeError for unknown cadence', () => {
-      expect(() =>
-        aggregateReportDetail([], { ...defaultArgs, cadence: 'biweekly' })
-      ).toThrow(TypeError)
     })
   })
 })

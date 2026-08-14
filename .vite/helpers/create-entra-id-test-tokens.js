@@ -13,6 +13,10 @@ const SERVICE_MAINTAINER_EMAIL = 'me@example.com'
 // token resolves to the read-only `service_maintainer` tier.
 const READ_ONLY_MAINTAINER_EMAIL = 'readonly@example.com'
 
+// Must match the support email list and no other, so this token resolves to
+// the lowest admin tier, `support`.
+const SUPPORT_EMAIL = 'support@example.com'
+
 // Must match no configured admin email list, so this token resolves through
 // the app role alone. Mirrors the regulator user the Entra stub serves.
 const REGULATOR_EMAIL = 'standard.regulator@test.gov.uk'
@@ -148,6 +152,19 @@ const generateEntraIdTokenForReadOnlyMaintainer = () => {
   return mockEntraIdToken
 }
 
+const generateEntraIdTokenForSupport = () => {
+  const mockEntraIdToken = Jwt.token.generate(
+    {
+      ...baseValidObject,
+      preferred_username: SUPPORT_EMAIL
+    },
+    validJwtSecretObject,
+    validGenerateTokenOptions
+  )
+
+  return mockEntraIdToken
+}
+
 const generateEntraIdTokenForRegulator = () => {
   const mockEntraIdToken = Jwt.token.generate(
     {
@@ -169,5 +186,6 @@ export const entraIdMockAuthTokens = {
   wrongAudienceToken: generateEntraIdTokenWithWrongAudience(),
   nonServiceMaintainerUserToken: generateEntraIdTokenForUnauthorisedUser(),
   readOnlyMaintainerToken: generateEntraIdTokenForReadOnlyMaintainer(),
+  supportToken: generateEntraIdTokenForSupport(),
   regulatorToken: generateEntraIdTokenForRegulator()
 }

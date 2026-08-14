@@ -1,6 +1,42 @@
 import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 
 /**
+ * @import { ExporterCategory, OperatorCategory } from '../operator-category.js'
+ */
+
+/**
+ * @typedef {{
+ *   wasteReceived: string,
+ *   wasteSentOn: string
+ * }} ReprocessorSectionDateFields
+ */
+
+/**
+ * An exporter's template carries an export and a repatriation date as well.
+ *
+ * @typedef {{
+ *   wasteReceived: string,
+ *   wasteExported: string,
+ *   wasteRepatriated: string,
+ *   wasteSentOn: string
+ * }} ExporterSectionDateFields
+ */
+
+/**
+ * @typedef {Record<ExporterCategory, ExporterSectionDateFields> &
+ *   Record<Exclude<OperatorCategory, ExporterCategory>, ReprocessorSectionDateFields>
+ * } SectionDateFieldsByOperatorCategory
+ */
+
+/**
+ * The date fields for one category, derived from the map rather than restated:
+ * a reprocessor template carries no export or repatriation date at all, so the
+ * union is narrower than an all-optional shape would be.
+ *
+ * @typedef {(typeof SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY)[OperatorCategory]} SectionDateFields
+ */
+
+/**
  * Maps (operatorCategory, reportSection) to the single date field used
  * for filtering records into that section during aggregation.
  *
@@ -18,6 +54,9 @@ import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-field
 
 const RDF = REPORTING_DATE_FIELDS
 
+/**
+ * @satisfies {SectionDateFieldsByOperatorCategory}
+ */
 export const SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY = Object.freeze({
   EXPORTER: {
     wasteReceived:
@@ -60,6 +99,7 @@ export const SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY = Object.freeze({
  * Maps operatorCategory to the tonnage field name used in received records.
  * Reprocessors use TONNAGE_RECEIVED_FOR_RECYCLING; exporters use TONNAGE_RECEIVED_FOR_EXPORT.
  */
+/** @satisfies {Record<OperatorCategory, string>} */
 export const TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY = Object.freeze({
   REPROCESSOR: 'TONNAGE_RECEIVED_FOR_RECYCLING',
   REPROCESSOR_REGISTERED_ONLY: 'TONNAGE_RECEIVED_FOR_RECYCLING',

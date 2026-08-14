@@ -48,7 +48,7 @@ export const organisationsGetAll = {
   method: 'GET',
   path: organisationsGetAllPath,
   options: {
-    auth: getAuthConfig([SCOPES.adminRead]),
+    auth: getAuthConfig([SCOPES.organisationSearch]),
     tags: ['api', 'admin'],
     validate: {
       query: querySchema

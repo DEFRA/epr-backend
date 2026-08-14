@@ -46,8 +46,13 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
         expect(schema.requiredHeaders).toContain('DESCRIPTION_WASTE')
       })
 
-      it('has exactly 11 required headers (all optional for REPROCESSOR_OUTPUT)', () => {
-        expect(schema.requiredHeaders).toHaveLength(11)
+      it('contains EWC_CODE and WEIGHBRIDGE_TICKET columns', () => {
+        expect(schema.requiredHeaders).toContain('EWC_CODE')
+        expect(schema.requiredHeaders).toContain('WEIGHBRIDGE_TICKET')
+      })
+
+      it('has exactly 13 required headers (all optional for REPROCESSOR_OUTPUT)', () => {
+        expect(schema.requiredHeaders).toHaveLength(13)
       })
     })
 
@@ -56,6 +61,10 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
         'Choose option'
       )
       expect(schema.unfilledValues.DESCRIPTION_WASTE).toContain('Choose option')
+    })
+
+    it('leaves EWC_CODE out of unfilledValues, preserving pass-through', () => {
+      expect(schema.unfilledValues.EWC_CODE).toBeUndefined()
     })
 
     it('has validationSchema (Joi schema for VAL010)', () => {
@@ -74,6 +83,14 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
 
     it('accepts unknown fields', () => {
       const { error } = validationSchema.validate({ UNKNOWN_FIELD: 'value' })
+      expect(error).toBeUndefined()
+    })
+
+    it('does not add a value-format rule for EWC_CODE or WEIGHBRIDGE_TICKET', () => {
+      const { error } = validationSchema.validate({
+        EWC_CODE: '99 99 99',
+        WEIGHBRIDGE_TICKET: 'A'.repeat(500)
+      })
       expect(error).toBeUndefined()
     })
   })

@@ -100,7 +100,15 @@ export const REPROCESSED_LOADS_HEADERS = [
   'PRODUCT_TONNAGE',
   'UK_PACKAGING_WEIGHT_PERCENTAGE',
   'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-  'ADD_PRODUCT_WEIGHT'
+  'ADD_PRODUCT_WEIGHT',
+  // Product-detail columns: named headers, no value validation
+  'PRODUCT_DESCRIPTION',
+  'END_OF_WASTE_STANDARDS',
+  'WEIGHBRIDGE_TICKET_NUMBER',
+  'HAULIER_NAME',
+  'HAULIER_VEHICLE_REGISTRATION_NUMBER',
+  'CUSTOMER_NAME',
+  'CUSTOMER_INVOICE_REFERENCE'
 ]
 
 export const EXPORTER_HEADERS = [
@@ -130,7 +138,31 @@ export const EXPORTER_HEADERS = [
   'CUSTOMS_CODES',
   'CONTAINER_NUMBER',
   'WAS_THE_WASTE_REFUSED',
-  'WAS_THE_WASTE_STOPPED'
+  'WAS_THE_WASTE_STOPPED',
+  // Supplementary columns: named headers, no value validation
+  'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+  'SUPPLIER_NAME',
+  'SUPPLIER_ADDRESS',
+  'SUPPLIER_POSTCODE',
+  'SUPPLIER_EMAIL',
+  'SUPPLIER_PHONE_NUMBER',
+  'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+  'YOUR_REFERENCE',
+  'WEIGHBRIDGE_TICKET',
+  'WASTE_TRANSFER_NOTE',
+  'LOADING_SITE_NAME',
+  'LOADING_SITE_ADDRESS',
+  'LOADING_SITE_POSTCODE',
+  'LOADING_SITE_EMAIL',
+  'LOADING_SITE_PHONE_NUMBER',
+  'CARRIER_NAME',
+  'CBD',
+  'CARRIER_VEHICLE_REGISTRATION_NUMBER',
+  'OSR_NAME',
+  'OSR_COUNTRY',
+  'TONNAGE_RECEIVED_BY_OSR',
+  'BILL_OF_LANDING_REFERENCE_NUMBER',
+  'CUSTOMS_DECLARATION_NUMBER'
 ]
 
 const TARE_PLUS_PALLET_WEIGHT = 150
@@ -241,7 +273,15 @@ export const createReprocessedRowValues = (overrides = {}) => {
     productTonnage: 100,
     ukPackagingWeightPercentage: 1,
     productUkPackagingWeightProportion: 100,
-    addProductWeight: 'Yes'
+    addProductWeight: 'Yes',
+    // Product-detail columns (no value validation)
+    productDescription: 'Plastic pellets',
+    endOfWasteStandards: 'Yes',
+    weighbridgeTicketNumber: 'WB123',
+    haulierName: 'Haulier A',
+    haulierVehicleReg: 'AB12 CDE',
+    customerName: 'Customer A',
+    customerInvoiceReference: 'INV123'
   }
   const d = { ...defaults, ...overrides }
   return [
@@ -250,41 +290,73 @@ export const createReprocessedRowValues = (overrides = {}) => {
     d.productTonnage,
     d.ukPackagingWeightPercentage,
     d.productUkPackagingWeightProportion,
-    d.addProductWeight
+    d.addProductWeight,
+    d.productDescription,
+    d.endOfWasteStandards,
+    d.weighbridgeTicketNumber,
+    d.haulierName,
+    d.haulierVehicleReg,
+    d.customerName,
+    d.customerInvoiceReference
   ]
 }
 
+const EXPORTER_ROW_DEFAULTS = {
+  rowId: 1001,
+  dateReceived: '2025-01-15T00:00:00.000Z',
+  ewcCode: '03 03 08',
+  wasteDescription: 'Glass - pre-sorted',
+  prnIssued: 'No',
+  grossWeight: 1000,
+  tareWeight: 100,
+  palletWeight: 50,
+  netWeight: 850,
+  bailingWire: 'No',
+  recyclablePropMethod: 'Actual weight (100%)',
+  nonTargetWeight: 0,
+  recyclablePropPct: 1,
+  tonnageReceived: 850,
+  interimSite: 'No',
+  interimSiteId: 100,
+  interimTonnage: 0,
+  dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
+  osrId: 100,
+  exportTonnage: 100,
+  exportDate: '2025-01-20T00:00:00.000Z',
+  exportControls: 'Article 18 (Green list)',
+  baselCode: 'B3020',
+  customsCode: '123456',
+  containerNumber: 'CONT123456',
+  wasteRefused: 'No',
+  wasteStopped: 'No',
+  // Supplementary columns (no value validation)
+  dateRepatriated: null,
+  supplierName: 'Supplier A',
+  supplierAddress: '123 Street',
+  supplierPostcode: 'AB1 2CD',
+  supplierEmail: 'supplier@example.com',
+  supplierPhone: '0123456789',
+  activitiesCarriedOutBySupplier: 'Baling',
+  yourReference: 'REF123',
+  weighbridgeTicket: 'WB123',
+  wasteTransferNote: 'WTN123',
+  loadingSiteName: 'Loading Site A',
+  loadingSiteAddress: '456 Road',
+  loadingSitePostcode: 'EF3 4GH',
+  loadingSiteEmail: 'loading@example.com',
+  loadingSitePhone: '0987654321',
+  carrierName: 'Carrier A',
+  cbd: 'CBDU123456',
+  carrierVehicleReg: 'AB12 CDE',
+  osrName: 'Overseas Reprocessor A',
+  osrCountry: 'Vietnam-VN',
+  tonnageReceivedByOsr: 100,
+  billOfLadingReference: 'BOL123',
+  customsDeclarationNumber: 'CDN123'
+}
+
 export const createExporterRowValues = (overrides = {}) => {
-  const defaults = {
-    rowId: 1001,
-    dateReceived: '2025-01-15T00:00:00.000Z',
-    ewcCode: '03 03 08',
-    wasteDescription: 'Glass - pre-sorted',
-    prnIssued: 'No',
-    grossWeight: 1000,
-    tareWeight: 100,
-    palletWeight: 50,
-    netWeight: 850,
-    bailingWire: 'No',
-    recyclablePropMethod: 'Actual weight (100%)',
-    nonTargetWeight: 0,
-    recyclablePropPct: 1,
-    tonnageReceived: 850,
-    interimSite: 'No',
-    interimSiteId: 100,
-    interimTonnage: 0,
-    dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
-    osrId: 100,
-    exportTonnage: 100,
-    exportDate: '2025-01-20T00:00:00.000Z',
-    exportControls: 'Article 18 (Green list)',
-    baselCode: 'B3020',
-    customsCode: '123456',
-    containerNumber: 'CONT123456',
-    wasteRefused: 'No',
-    wasteStopped: 'No'
-  }
-  const d = { ...defaults, ...overrides }
+  const d = { ...EXPORTER_ROW_DEFAULTS, ...overrides }
   return [
     d.rowId,
     d.dateReceived,
@@ -312,7 +384,30 @@ export const createExporterRowValues = (overrides = {}) => {
     d.customsCode,
     d.containerNumber,
     d.wasteRefused,
-    d.wasteStopped
+    d.wasteStopped,
+    d.dateRepatriated,
+    d.supplierName,
+    d.supplierAddress,
+    d.supplierPostcode,
+    d.supplierEmail,
+    d.supplierPhone,
+    d.activitiesCarriedOutBySupplier,
+    d.yourReference,
+    d.weighbridgeTicket,
+    d.wasteTransferNote,
+    d.loadingSiteName,
+    d.loadingSiteAddress,
+    d.loadingSitePostcode,
+    d.loadingSiteEmail,
+    d.loadingSitePhone,
+    d.carrierName,
+    d.cbd,
+    d.carrierVehicleReg,
+    d.osrName,
+    d.osrCountry,
+    d.tonnageReceivedByOsr,
+    d.billOfLadingReference,
+    d.customsDeclarationNumber
   ]
 }
 

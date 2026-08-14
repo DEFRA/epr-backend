@@ -54,7 +54,14 @@ export const REPROCESSED_LOADS = {
     FIELDS.PRODUCT_TONNAGE,
     FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
     FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
-    FIELDS.ADD_PRODUCT_WEIGHT
+    FIELDS.ADD_PRODUCT_WEIGHT,
+    FIELDS.PRODUCT_DESCRIPTION,
+    FIELDS.END_OF_WASTE_STANDARDS,
+    FIELDS.WEIGHBRIDGE_TICKET_NUMBER,
+    FIELDS.HAULIER_NAME,
+    FIELDS.HAULIER_VEHICLE_REGISTRATION_NUMBER,
+    FIELDS.CUSTOMER_NAME,
+    FIELDS.CUSTOMER_INVOICE_REFERENCE
   ],
 
   /**
@@ -68,6 +75,10 @@ export const REPROCESSED_LOADS = {
    * VAL010: Validation schema for filled fields
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
+   *
+   * The product-detail columns are named in requiredHeaders only: no
+   * value-format rule and no unfilledValues entry, so they keep the pass-through
+   * behaviour they had before being named (asserted in the schema tests).
    */
   validationSchema: Joi.object({
     [FIELDS.ROW_ID]: createRowIdSchema(

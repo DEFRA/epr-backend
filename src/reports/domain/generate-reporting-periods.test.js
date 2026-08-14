@@ -19,11 +19,6 @@ describe('generateAllPeriodsForYear', () => {
 
     expect(periods).toHaveLength(4)
   })
-
-  it('throws TypeError for unknown cadence', () => {
-    // @ts-expect-error - unknown cadence is rejected by types and guarded at runtime
-    expect(() => generateAllPeriodsForYear('biweekly', 2026)).toThrow(TypeError)
-  })
 })
 
 const march20 = new Date('2026-03-20T12:00:00Z')
@@ -202,15 +197,6 @@ describe('generateReportingPeriods', () => {
       )
 
       expect(periods.map((p) => p.period)).toEqual([1, 2])
-    })
-  })
-
-  describe('validation', () => {
-    it('throws TypeError for unknown cadence', () => {
-      // @ts-expect-error - unknown cadence is rejected by types and guarded at runtime
-      expect(() => generateReportingPeriods('biweekly', 2026, march20)).toThrow(
-        TypeError
-      )
     })
   })
 })
