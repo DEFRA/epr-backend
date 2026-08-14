@@ -13,25 +13,38 @@ describe('ADMIN_ROLES', () => {
     expect(ADMIN_ROLES.service_maintainer_write).toEqual([
       SCOPES.adminRead,
       SCOPES.adminWrite,
-      SCOPES.adminDlqPurge
+      SCOPES.adminDlqPurge,
+      SCOPES.organisationSearch
     ])
   })
 
   test('service_maintainer carries admin.read and admin.dlq.purge but not admin.write', () => {
     expect(ADMIN_ROLES.service_maintainer).toEqual([
       SCOPES.adminRead,
-      SCOPES.adminDlqPurge
+      SCOPES.adminDlqPurge,
+      SCOPES.organisationSearch
     ])
     expect(ADMIN_ROLES.service_maintainer).not.toContain(SCOPES.adminWrite)
   })
 
-  test('support carries only admin.read', () => {
-    expect(ADMIN_ROLES.support).toEqual([SCOPES.adminRead])
+  test('support carries admin.read and no other admin scope', () => {
+    expect(ADMIN_ROLES.support).toEqual([
+      SCOPES.adminRead,
+      SCOPES.organisationSearch
+    ])
+    expect(ADMIN_ROLES.support).not.toContain(SCOPES.adminWrite)
+    expect(ADMIN_ROLES.support).not.toContain(SCOPES.adminDlqPurge)
   })
 
   test('every admin role includes admin.read so any tier can call read routes', () => {
     for (const scopes of Object.values(ADMIN_ROLES)) {
       expect(scopes).toContain(SCOPES.adminRead)
+    }
+  })
+
+  test('every tier that holds admin.read also holds organisation.search, so no role loses access it holds today', () => {
+    for (const scopes of Object.values(ADMIN_ROLES)) {
+      expect(scopes).toContain(SCOPES.organisationSearch)
     }
   })
 })
@@ -47,6 +60,10 @@ describe('the regulator role', () => {
 
   test('carries the coarse regulator scope for what only a regulator does', () => {
     expect(REGULATOR_SCOPES).toContain(SCOPES.regulator)
+  })
+
+  test('carries organisation.search, which enumerates operators the regulator holds no id for', () => {
+    expect(REGULATOR_SCOPES).toContain(SCOPES.organisationSearch)
   })
 
   test('carries no admin scope', () => {

@@ -11,7 +11,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
-import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
+import {
+  testOnlyServiceMaintainerCanAccess,
+  testRegulatorCanRead
+} from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -399,27 +402,43 @@ describe('GET /v1/organisations', () => {
     })
   })
 
+  const makeListRequest = async () => {
+    await organisationsRepository.insert(buildOrganisation())
+    return {
+      method: 'GET',
+      url: '/v1/organisations?page=1&pageSize=10'
+    }
+  }
+
   testInvalidTokenScenarios({
     server: () => server,
-    makeRequest: async () => {
-      const org1 = buildOrganisation()
-      await organisationsRepository.insert(org1)
-      return {
-        method: 'GET',
-        url: `/v1/organisations/${org1.id}`
-      }
-    }
+    makeRequest: makeListRequest
   })
 
   testOnlyServiceMaintainerCanAccess({
     server: () => server,
-    makeRequest: async () => {
-      const org1 = buildOrganisation()
-      await organisationsRepository.insert(org1)
-      return {
-        method: 'GET',
-        url: `/v1/organisations/${org1.id}`
-      }
-    }
+    makeRequest: makeListRequest
+  })
+
+  describe('the organisation.search scope', () => {
+    testRegulatorCanRead({
+      server: () => server,
+      makeRequest: makeListRequest
+    })
+
+    it.each([
+      ['service_maintainer_write', entraIdMockAuthTokens.validToken],
+      ['service_maintainer', entraIdMockAuthTokens.readOnlyMaintainerToken],
+      ['support', entraIdMockAuthTokens.supportToken]
+    ])('returns 200 for an admin user on the %s tier', async (_tier, token) => {
+      const requestConfig = await makeListRequest()
+
+      const response = await server.inject({
+        ...requestConfig,
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
   })
 })

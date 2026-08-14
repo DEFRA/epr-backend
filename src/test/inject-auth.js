@@ -79,19 +79,20 @@ export const asServiceMaintainer = (overrides = {}) =>
   adminCredential('service_maintainer_write', { overrides })
 
 /**
- * Carries admin.read, admin.write, and admin.dlq.purge.
+ * Carries admin.read, admin.write, admin.dlq.purge and organisation.search.
  */
 export const asServiceMaintainerWrite = (overrides = {}) =>
   adminCredential('service_maintainer_write', { overrides })
 
 /**
- * Carries admin.read and admin.dlq.purge (no admin.write).
+ * Carries admin.read, admin.dlq.purge and organisation.search (no admin.write).
  */
 export const asServiceMaintainerRead = (overrides = {}) =>
   adminCredential('service_maintainer', { overrides })
 
 /**
- * Carries only admin.read.
+ * Carries admin.read and organisation.search, the read scopes of the lowest
+ * admin tier.
  */
 export const asSupport = (overrides = {}) =>
   adminCredential('support', {
