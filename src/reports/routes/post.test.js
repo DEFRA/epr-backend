@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -701,9 +702,9 @@ describe(`POST ${reportsPostPath}`, () => {
       year: 2025,
       cadence: 'quarterly',
       period: 1,
-      startDate: '2025-01-01',
-      endDate: '2025-03-31',
-      dueDate: '2025-05-20',
+      startDate: calendarDate('2025-01-01'),
+      endDate: calendarDate('2025-03-31'),
+      dueDate: calendarDate('2025-05-20'),
       changedBy,
       submissionNumber,
       material: 'plastic',

@@ -7,7 +7,9 @@ import {
   formatDateISO,
   formatDateTimeDots,
   startOfDay,
+  toCalendarDate,
   toISOString,
+  utcCalendarDate,
   getMonthNames,
   getMonthRange
 } from './date-formatter.js'
@@ -25,6 +27,10 @@ describe('formatDate', () => {
 
   it('should format date string', () => {
     expect(formatDate('2026-03-01')).toBe('01/03/2026')
+  })
+
+  it('should format a full ISO datetime string as the calendar date it falls on', () => {
+    expect(formatDate('2026-03-01T23:59:59.999Z')).toBe('01/03/2026')
   })
 
   it('should return empty string for null', () => {
@@ -68,6 +74,30 @@ describe('calendarDate', () => {
 
   it('extracts the calendar date from a full ISO datetime with end-of-day time', () => {
     expect(calendarDate('2025-01-31T23:59:59.999Z')).toBe('2025-01-31')
+  })
+})
+
+describe('utcCalendarDate', () => {
+  it('returns the calendar date a Date falls on in UTC', () => {
+    expect(utcCalendarDate(new Date('2025-01-31T12:00:00.000Z'))).toBe(
+      '2025-01-31'
+    )
+  })
+
+  it('returns the previous day for an instant just after midnight UK summer time', () => {
+    expect(utcCalendarDate(new Date('2025-07-01T00:30:00+01:00'))).toBe(
+      '2025-06-30'
+    )
+  })
+})
+
+describe('toCalendarDate', () => {
+  it.each([
+    { value: new Date('2025-01-31T12:00:00.000Z'), desc: 'a Date' },
+    { value: '2025-01-31', desc: 'a bare date string' },
+    { value: '2025-01-31T12:00:00.000Z', desc: 'a full ISO datetime string' }
+  ])('returns the calendar date for $desc', ({ value }) => {
+    expect(toCalendarDate(value)).toBe('2025-01-31')
   })
 })
 

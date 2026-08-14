@@ -1,15 +1,10 @@
+import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { PERIOD_STATUS } from './period-status.js'
 
 /**
  * @import { ReportStatus } from './report-status.js'
  * @import { PeriodStatus } from './period-status.js'
  */
-
-/**
- * Current UTC date as an ISO `YYYY-MM-DD` string.
- * @returns {string}
- */
-const currentIsoDate = () => new Date().toISOString().split('T')[0]
 
 /**
  * Derive a reporting period's status from its stored report and period dates.
@@ -26,7 +21,7 @@ export const derivePeriodStatus = ({ endDate, dueDate, report }) => {
     return report.status
   }
 
-  const today = currentIsoDate()
+  const today = utcCalendarDate(new Date())
 
   const periodEnded = today.localeCompare(endDate) > 0
   if (!periodEnded) {

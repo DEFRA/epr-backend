@@ -17,33 +17,27 @@ describe('validateCreateReport', () => {
     expect(validated.dueDate).toBe('2024-02-15')
   })
 
-  it('rejects a full ISO datetime startDate instead of silently coercing it', () => {
-    const params = buildCreateReportParams({
-      startDate: '2024-01-01T00:00:00.000Z'
-    })
+  it.each(['startDate', 'endDate', 'dueDate'])(
+    'rejects a full ISO datetime %s instead of silently coercing it',
+    (field) => {
+      const params = buildCreateReportParams({
+        [field]: '2024-01-01T00:00:00.000Z'
+      })
 
-    expect(() => validateCreateReport(params)).toThrow(
-      /must be a bare YYYY-MM-DD date/
-    )
-  })
+      expect(() => validateCreateReport(params)).toThrow(
+        /must be a bare YYYY-MM-DD date/
+      )
+    }
+  )
 
-  it('rejects a full ISO datetime endDate instead of silently coercing it', () => {
-    const params = buildCreateReportParams({
-      endDate: '2024-01-31T00:00:00.000Z'
-    })
+  it.each(['startDate', 'endDate', 'dueDate'])(
+    'rejects a %s that matches the pattern but names no real date',
+    (field) => {
+      const params = buildCreateReportParams({ [field]: '2024-02-30' })
 
-    expect(() => validateCreateReport(params)).toThrow(
-      /must be a bare YYYY-MM-DD date/
-    )
-  })
-
-  it('rejects a full ISO datetime dueDate instead of silently coercing it', () => {
-    const params = buildCreateReportParams({
-      dueDate: '2024-02-15T00:00:00.000Z'
-    })
-
-    expect(() => validateCreateReport(params)).toThrow(
-      /must be a bare YYYY-MM-DD date/
-    )
-  })
+      expect(() => validateCreateReport(params)).toThrow(
+        /must be a bare YYYY-MM-DD date/
+      )
+    }
+  )
 })

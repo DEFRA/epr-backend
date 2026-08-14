@@ -212,7 +212,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -265,7 +265,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -306,7 +306,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
