@@ -977,6 +977,10 @@ describe(`POST ${reportsPostPath}`, () => {
     // normalises both templates to; the gate reads only this data, never the
     // template. Accredited packs everything onto one exported row; reg-only
     // splits it across received/loads-exported/sent-on rows.
+    /**
+     * @param {Record<string, any>} data
+     * @param {string} [wasteRecordType]
+     */
     const accreditedRow = (
       data,
       wasteRecordType = WASTE_RECORD_TYPE.EXPORTED
@@ -1007,13 +1011,23 @@ describe(`POST ${reportsPostPath}`, () => {
     const postAccredited = (server, organisationId, registrationId) =>
       makeRequest(server, organisationId, registrationId, 2025, 'monthly', 1)
 
-    it('creates the report when the flag is off despite incomplete row data', async () => {
+    // An incomplete cell in the error payload: canonical field name, the
+    // enumerated reason the frontend maps to copy, and the field's position in
+    // its table's requiredHeaders (an opaque non-negative integer here).
+    const missing = (field, requiredBy) => ({
+      field,
+      requiredBy,
+      columnIndex: expect.any(Number)
+    })
+
+    it('creates the report when the flag is off despite incomplete in-period data', async () => {
       const { server, organisationId, registrationId } = await createServer(
         regOnlyExporter,
         {
           rows: [
             regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
-              TONNAGE_RECEIVED_FOR_EXPORT: '5'
+              MONTH_RECEIVED_FOR_EXPORT: '2025-01',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5
             })
           ]
         }
@@ -1035,14 +1049,20 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
-    it('does not gate a non-exporter (reprocessor) registration', async () => {
+    it('does not gate rows whose processing type has no policy (reprocessor)', async () => {
       const { server, organisationId, registrationId } = await createServer(
         { wasteProcessingType: 'reprocessor', accreditationId: undefined },
         {
           featureFlags: gateEnabled,
           rows: [
-            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
-              TONNAGE_RECEIVED_FOR_EXPORT: '5'
+            buildSummaryLogRowStateEntry({
+              rowId: 'row-1',
+              wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+              processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2025-01-10',
+                TONNAGE_RECEIVED_FOR_RECYCLING: 5
+              }
             })
           ]
         }
@@ -1053,7 +1073,9 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
-    it('accredited: a single packed row fires the supplier, export and interim rules together', async () => {
+    it('creates the report when a triggered row falls outside the report period', async () => {
+      // Export tonnage with a June export date: the January report neither
+      // aggregates nor blocks on it, so a blank OSR_ID cannot fail creation.
       const { server, organisationId, registrationId } = await createServer(
         { wasteProcessingType: 'exporter' },
         {
@@ -1061,8 +1083,34 @@ describe(`POST ${reportsPostPath}`, () => {
           featureFlags: gateEnabled,
           rows: [
             accreditedRow({
-              TONNAGE_RECEIVED_FOR_EXPORT: '5',
-              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: '3',
+              DATE_OF_EXPORT: '2025-06-15',
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+            })
+          ]
+        }
+      )
+
+      const response = await postAccredited(
+        server,
+        organisationId,
+        registrationId
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('accredited: an in-period packed row fires the supplier, export and interim rules together', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'exporter' },
+        {
+          accredited: true,
+          featureFlags: gateEnabled,
+          rows: [
+            accreditedRow({
+              DATE_RECEIVED_FOR_EXPORT: '2025-01-10',
+              DATE_OF_EXPORT: '2025-01-20',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5,
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
               DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'Yes'
             })
           ]
@@ -1080,16 +1128,46 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(payload.reason).toBe('report_data_incomplete')
       expect(payload.incompleteRows).toEqual([
         {
+          sheet: 'Exported',
           rowId: 'row-1',
-          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-          missingFields: [
-            ...SUPPLIER_FIELDS,
-            'OSR_ID',
-            'DATE_OF_EXPORT',
-            'INTERIM_SITE_ID'
+          missing: [
+            ...SUPPLIER_FIELDS.map((field) =>
+              missing(field, 'supplier_details')
+            ),
+            missing('OSR_ID', 'overseas_site'),
+            missing('INTERIM_SITE_ID', 'interim_site')
           ]
         }
       ])
+    })
+
+    it('does not gate the report-detail retrieval path (GET) with the flag on', async () => {
+      // The gate lives only in report creation: retrieval must still return the
+      // on-the-fly report even when the same in-period data would block a POST.
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'exporter' },
+        {
+          accredited: true,
+          featureFlags: gateEnabled,
+          rows: [
+            accreditedRow({
+              DATE_RECEIVED_FOR_EXPORT: '2025-01-10',
+              DATE_OF_EXPORT: '2025-01-20',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5,
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+            })
+          ]
+        }
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makeUrl(organisationId, registrationId, 2025, 'monthly', 1, 1),
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload).reason).toBeUndefined()
     })
 
     it('registered-only: fires the applicable rule on each split row', async () => {
@@ -1099,10 +1177,12 @@ describe(`POST ${reportsPostPath}`, () => {
           featureFlags: gateEnabled,
           rows: [
             regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
-              TONNAGE_RECEIVED_FOR_EXPORT: '5'
+              MONTH_RECEIVED_FOR_EXPORT: '2025-01',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5
             }),
             regOnlyRow('row-2', WASTE_RECORD_TYPE.EXPORTED, {
-              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: '3'
+              DATE_OF_EXPORT: '2025-02-10',
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
             })
           ]
         }
@@ -1114,26 +1194,32 @@ describe(`POST ${reportsPostPath}`, () => {
       const payload = JSON.parse(response.payload)
       expect(payload.incompleteRows).toEqual([
         {
+          sheet: 'Received (section 1)',
           rowId: 'row-1',
-          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-          missingFields: SUPPLIER_FIELDS
+          missing: SUPPLIER_FIELDS.map((field) =>
+            missing(field, 'supplier_details')
+          )
         },
         {
+          sheet: 'Exported (sections 2 and 3)',
           rowId: 'row-2',
-          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
-          missingFields: ['OSR_ID', 'DATE_OF_EXPORT']
+          missing: [missing('OSR_ID', 'overseas_site')]
         }
       ])
     })
 
-    it('treats a final-destination dropdown placeholder as unfilled when sent-on tonnage > 0', async () => {
+    it('treats a registered-only final-destination dropdown placeholder as unfilled when sent-on tonnage > 0', async () => {
+      // The facility type is a 'Choose option' dropdown on the shared exporter
+      // Sent-on sheet, so registered-only must flag an unselected one exactly as
+      // the accredited schema does (defra-h9hv).
       const { server, organisationId, registrationId } = await createServer(
         regOnlyExporter,
         {
           featureFlags: gateEnabled,
           rows: [
             regOnlyRow('row-1', WASTE_RECORD_TYPE.SENT_ON, {
-              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: '2',
+              DATE_LOAD_LEFT_SITE: '2025-03-01',
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
               FINAL_DESTINATION_NAME: 'Port Recyclers',
               FINAL_DESTINATION_FACILITY_TYPE: 'Choose option',
               FINAL_DESTINATION_ADDRESS: '2 Quay Street',
@@ -1147,8 +1233,8 @@ describe(`POST ${reportsPostPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
-      expect(payload.incompleteRows[0].missingFields).toEqual([
-        'FINAL_DESTINATION_FACILITY_TYPE'
+      expect(payload.incompleteRows[0].missing).toEqual([
+        missing('FINAL_DESTINATION_FACILITY_TYPE', 'final_destination')
       ])
     })
   })

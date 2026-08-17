@@ -4,6 +4,7 @@ import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-iss
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
+import { periodBounds } from '#reports/domain/reporting-period.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import {
   assertNoExistingReport,
@@ -12,8 +13,7 @@ import {
 } from './create-report-validation.js'
 import { canRequestResubmission } from './resubmission-service.js'
 import { findReportIdBySubmissionNumber } from './submission-lookup.js'
-import { reportMandatorySpecFor } from './report-mandatory-rules.js'
-import { assertReportDataComplete } from './assert-report-data-complete.js'
+import { assertReportDataComplete } from './report-mandatory/assert-report-data-complete.js'
 
 /**
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
@@ -417,9 +417,16 @@ export async function createReportForPeriod({
     }
   )
 
-  const mandatorySpec = reportMandatorySpecFor(operatorCategory)
-  if (mandatorySpec && featureFlags?.isExporterReportDataValidationEnabled()) {
-    assertReportDataComplete(wasteRecordStates, mandatorySpec, registrationId)
+  // The gate scopes each row to the report period using the same bounds the
+  // aggregation slices by, so it can only block on rows this report includes.
+  // The per-row policy lookup skips any processing type without rules, so the
+  // exporter feature flag is the only guard needed here.
+  if (featureFlags?.isExporterReportDataValidationEnabled()) {
+    assertReportDataComplete(
+      wasteRecordStates,
+      periodBounds(cadence, year, period),
+      registrationId
+    )
   }
 
   const aggregatedReportData = await getAggregatedReportDetail({
