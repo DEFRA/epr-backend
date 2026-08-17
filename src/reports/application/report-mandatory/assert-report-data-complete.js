@@ -102,9 +102,20 @@ export const findIncompleteRows = (rows, period) =>
   })
 
 /**
+ * Upper bound on the number of incomplete rows carried in the error payload.
+ * The frontend renders "we found {total} but can only display {N}" when the
+ * true count exceeds this, so the payload stays bounded on a pathological
+ * summary log while `total` keeps the count truthful.
+ */
+export const MAX_INCOMPLETE_ROWS_REPORTED = 100
+
+/**
  * Throws a 400 Boom enriched with `code=report_data_incomplete` and a per-row
  * `incompleteRows` payload if any row is missing a mandatory field within the
  * report period. On success it returns silently and the report is created.
+ *
+ * `total` is the true number of incomplete rows; `incompleteRows` is capped at
+ * `MAX_INCOMPLETE_ROWS_REPORTED`, so `total` can exceed `incompleteRows.length`.
  *
  * @param {CompletenessRow[]} rows
  * @param {ReportingPeriod} period
@@ -113,19 +124,24 @@ export const findIncompleteRows = (rows, period) =>
  */
 export const assertReportDataComplete = (rows, period, reference) => {
   const incompleteRows = findIncompleteRows(rows, period)
-  if (incompleteRows.length) {
+  const total = incompleteRows.length
+  if (total) {
     throw badRequest(
-      `Report cannot be created; ${incompleteRows.length} row(s) have incomplete mandatory data`,
+      `Report cannot be created; ${total} row(s) have incomplete mandatory data`,
       errorCodes.reportDataIncomplete,
       {
         event: {
           action: 'create_report',
-          reason: `incompleteRows=${incompleteRows.length}`,
+          reason: `incompleteRows=${total}`,
           reference
         },
         // `reason` discriminates this 400 from other bad-request payloads for
         // the frontend, matching the resubmission-rejection convention.
-        payload: { reason: errorCodes.reportDataIncomplete, incompleteRows }
+        payload: {
+          reason: errorCodes.reportDataIncomplete,
+          total,
+          incompleteRows: incompleteRows.slice(0, MAX_INCOMPLETE_ROWS_REPORTED)
+        }
       }
     )
   }

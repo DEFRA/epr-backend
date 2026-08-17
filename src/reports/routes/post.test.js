@@ -29,6 +29,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { reportsPostPath } from './post.js'
+import { MAX_INCOMPLETE_ROWS_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
 
 vi.mock('#reports/application/audit.js', () => ({
@@ -1192,6 +1193,7 @@ describe(`POST ${reportsPostPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
+      expect(payload.total).toBe(2)
       expect(payload.incompleteRows).toEqual([
         {
           sheet: 'Received (section 1)',
@@ -1206,6 +1208,30 @@ describe(`POST ${reportsPostPath}`, () => {
           missing: [missing('OSR_ID', 'overseas_site')]
         }
       ])
+    })
+
+    it('caps the reported rows at the maximum while reporting the true total', async () => {
+      // A pathological summary log can breach the display cap: the payload stays
+      // bounded but `total` still tells the frontend the real number of issues.
+      const rowCount = MAX_INCOMPLETE_ROWS_REPORTED + 1
+      const rows = Array.from({ length: rowCount }, (_, index) =>
+        regOnlyRow(`row-${index + 1}`, WASTE_RECORD_TYPE.RECEIVED, {
+          MONTH_RECEIVED_FOR_EXPORT: '2025-01',
+          TONNAGE_RECEIVED_FOR_EXPORT: 5
+        })
+      )
+
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        { featureFlags: gateEnabled, rows }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.total).toBe(rowCount)
+      expect(payload.incompleteRows).toHaveLength(MAX_INCOMPLETE_ROWS_REPORTED)
     })
 
     it('treats a registered-only final-destination dropdown placeholder as unfilled when sent-on tonnage > 0', async () => {
