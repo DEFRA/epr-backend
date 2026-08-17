@@ -421,7 +421,7 @@ export async function createReportForPeriod({
   // aggregation slices by, so it can only block on rows this report includes.
   // The per-row policy lookup skips any processing type without rules, so the
   // exporter feature flag is the only guard needed here.
-  if (featureFlags?.isExporterReportDataValidationEnabled()) {
+  if (featureFlags?.isReportDataValidationEnabled()) {
     assertReportDataComplete(
       wasteRecordStates,
       periodBounds(cadence, year, period),

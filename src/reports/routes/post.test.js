@@ -959,7 +959,7 @@ describe(`POST ${reportsPostPath}`, () => {
 
   describe('exporter report data completeness gate (PAE-1420)', () => {
     const gateEnabled = createInMemoryFeatureFlags({
-      exporterReportDataValidation: true
+      reportDataValidation: true
     })
 
     // The six supplier fields AC1 makes mandatory, in the order the gate reports

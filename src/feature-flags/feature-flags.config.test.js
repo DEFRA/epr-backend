@@ -16,10 +16,7 @@ const FLAGS = [
     'isStaleIssuedTonnageReportEnabled',
     'featureFlags.staleIssuedTonnageReport'
   ],
-  [
-    'isExporterReportDataValidationEnabled',
-    'featureFlags.exporterReportDataValidation'
-  ]
+  ['isReportDataValidationEnabled', 'featureFlags.reportDataValidation']
 ]
 
 describe('createConfigFeatureFlags', () => {
