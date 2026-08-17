@@ -23,7 +23,7 @@ import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
-/** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { FindPageForOverseasSitesAdminListParams, SearchCriteria } from './port.js' */
 
@@ -130,7 +130,7 @@ export const mapDocumentWithCurrentStatuses = (org) => {
   )
   const { _id, ...rest } = normalised
 
-  rest.status = /** @type {OrganisationStatus} */ (getCurrentStatus(rest))
+  rest.status = getCurrentStatus(rest)
 
   for (const item of rest.registrations) {
     item.status = getCurrentStatus(item)

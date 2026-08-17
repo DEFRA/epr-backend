@@ -74,12 +74,14 @@ const makeStatusHistoryItemSchema = (statuses) =>
     updatedBy: idSchema.optional()
   })
 
-// Generic item schema: validateStatusHistory guards server-computed histories
-// for organisations, registrations and accreditations alike, so this accepts
-// the union of all three status sets.
+// validateStatusHistory guards server-computed histories for organisations,
+// registrations and accreditations alike, so this accepts all three sets.
 export const statusHistoryItemSchema = makeStatusHistoryItemSchema([
-  ...Object.values(ACCREDITATION_STATUS),
-  ORGANISATION_STATUS.ACTIVE
+  ...new Set([
+    ...Object.values(ORGANISATION_STATUS),
+    ...Object.values(REGISTRATION_STATUS),
+    ...Object.values(ACCREDITATION_STATUS)
+  ])
 ])
 
 // A registration can never have held suspended (PAE-1705); the admin raw-JSON

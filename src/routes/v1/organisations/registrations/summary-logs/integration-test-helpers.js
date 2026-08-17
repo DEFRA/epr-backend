@@ -28,7 +28,8 @@ import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
-/** @import { StatusHistoryEntry, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
+/** @import { StatusHistoryEntryOf } from '#domain/organisations/model.js' */
 /** @import { Material, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'

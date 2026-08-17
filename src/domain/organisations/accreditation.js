@@ -1,26 +1,7 @@
-/** @import {AccreditationStatus, GlassRecyclingProcess, ReprocessingType, User} from '#domain/organisations/model.js' */
-
-/**
- * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
- * getStatusHistoryDateTimes normalises string inputs via `new Date(...)`, so the
- * consumer contract genuinely accepts either.
- *
- * @template {string} S
- * @typedef {{
- *  status: S;
- *  updatedAt: Date | string;
- * }} StatusHistoryEntryOf
- */
+/** @import {AccreditationStatus, GlassRecyclingProcess, ReprocessingType, StatusHistoryEntryOf, StatusHistoryOf, User} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {StatusHistoryEntryOf<AccreditationStatus>} StatusHistoryEntry
- */
-
-/**
- * @template {string} S
- * @typedef {{
- *  statusHistory: StatusHistoryEntryOf<S>[];
- * }} StatusHistoryOf
  */
 
 /**
