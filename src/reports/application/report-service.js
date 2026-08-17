@@ -4,7 +4,6 @@ import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-iss
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
-import { periodBounds } from '#reports/domain/reporting-period.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import {
   assertNoExistingReport,
@@ -387,33 +386,23 @@ async function assertReportCreationAllowed({
 
 /**
  * Runs the report-data completeness gate when the feature flag is on. The gate
- * scopes each row to the report period using the same bounds the aggregation
- * slices by, so it can only block on rows this report includes; its per-row
+ * checks every row in the summary log, not just the rows this report
+ * aggregates, so an incomplete row from any period blocks creation; its per-row
  * policy lookup skips any processing type without rules, so the feature flag is
  * the only guard needed here.
  *
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags | undefined} featureFlags
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
- * @param {Cadence} cadence
- * @param {number} year
- * @param {number} period
  * @param {string} reference
  * @returns {void}
  */
 function assertReportDataCompleteIfEnabled(
   featureFlags,
   wasteRecordStates,
-  cadence,
-  year,
-  period,
   reference
 ) {
   if (featureFlags?.isReportDataValidationEnabled()) {
-    assertReportDataComplete(
-      wasteRecordStates,
-      periodBounds(cadence, year, period),
-      reference
-    )
+    assertReportDataComplete(wasteRecordStates, reference)
   }
 }
 
@@ -485,9 +474,6 @@ export async function createReportForPeriod({
   assertReportDataCompleteIfEnabled(
     featureFlags,
     wasteRecordStates,
-    cadence,
-    year,
-    period,
     registrationId
   )
 

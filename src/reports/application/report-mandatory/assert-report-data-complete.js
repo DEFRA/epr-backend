@@ -1,13 +1,11 @@
 import { isFilled } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
-import { isDateInRange } from '#reports/domain/aggregation/filter-records-by-date.js'
 import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index.js'
 
 /**
  * @import { TableSchema } from '#domain/summary-logs/table-schemas/index.js'
- * @import { ReportingPeriod } from '#reports/domain/reporting-period.js'
  * @import { ReportMandatoryRule } from '#reports/domain/report-mandatory/index.js'
  * @import { RequiredByCode } from '#reports/domain/report-mandatory/reason-codes.js'
  */
@@ -38,26 +36,22 @@ import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index
  */
 
 /**
- * Collects the unfilled mandatory fields for one row. A rule contributes only
- * when the row falls in the report period by that rule's section date field
- * (strict period scoping, mirroring the aggregation) and the rule's trigger
- * holds. The required fields across a template's rules for a single table are
- * disjoint, so no de-duplication is needed.
+ * Collects the unfilled mandatory fields for one row. A rule contributes when
+ * its trigger holds for the row, regardless of which report period the row
+ * belongs to: the gate checks the whole summary log, not just the rows this
+ * report aggregates. The required fields across a template's rules for a single
+ * table are disjoint, so no de-duplication is needed.
  *
  * @param {CompletenessRow} row
  * @param {TableSchema} schema
  * @param {ReportMandatoryRule[]} rules
- * @param {ReportingPeriod} period
  * @returns {MissingField[]}
  */
-const missingFieldsForRow = (row, schema, rules, period) => {
+const missingFieldsForRow = (row, schema, rules) => {
   /** @type {MissingField[]} */
   const missing = []
   for (const rule of rules) {
-    if (
-      !isDateInRange(row.data[rule.dateField], period) ||
-      !rule.trigger(row.data)
-    ) {
+    if (!rule.trigger(row.data)) {
       continue
     }
     for (const field of rule.requiredFields) {
@@ -75,16 +69,15 @@ const missingFieldsForRow = (row, schema, rules, period) => {
 
 /**
  * Applies the report-mandatory policy to every row state, returning one entry
- * per row that has at least one unfilled mandatory field within the report
- * period. Rows whose processing type has no policy (or whose record type has no
- * rules) are skipped. The row's table schema, drift-guarded against the policy,
- * supplies the sheet name, column order and per-field unfilled values.
+ * per row that has at least one unfilled mandatory field. Rows whose processing
+ * type has no policy (or whose record type has no rules) are skipped. The row's
+ * table schema, drift-guarded against the policy, supplies the sheet name,
+ * column order and per-field unfilled values.
  *
  * @param {CompletenessRow[]} rows
- * @param {ReportingPeriod} period
  * @returns {IncompleteRow[]}
  */
-export const findIncompleteRows = (rows, period) =>
+export const findIncompleteRows = (rows) =>
   rows.flatMap((row) => {
     const rules = reportMandatoryPolicyFor(row.processingType)?.[
       row.wasteRecordType
@@ -95,7 +88,7 @@ export const findIncompleteRows = (rows, period) =>
     const schema = /** @type {TableSchema} */ (
       findSchemaForProcessingType(row.processingType, row.wasteRecordType)
     )
-    const missing = missingFieldsForRow(row, schema, rules, period)
+    const missing = missingFieldsForRow(row, schema, rules)
     return missing.length
       ? [{ sheet: schema.sheetName, rowId: row.rowId, missing }]
       : []
@@ -111,19 +104,18 @@ export const MAX_INCOMPLETE_ROWS_REPORTED = 100
 
 /**
  * Throws a 400 Boom enriched with `code=report_data_incomplete` and a per-row
- * `incompleteRows` payload if any row is missing a mandatory field within the
- * report period. On success it returns silently and the report is created.
+ * `incompleteRows` payload if any row in the summary log is missing a mandatory
+ * field. On success it returns silently and the report is created.
  *
  * `total` is the true number of incomplete rows; `incompleteRows` is capped at
  * `MAX_INCOMPLETE_ROWS_REPORTED`, so `total` can exceed `incompleteRows.length`.
  *
  * @param {CompletenessRow[]} rows
- * @param {ReportingPeriod} period
  * @param {string} reference - Ledger/registration reference for CDP log indexing.
  * @returns {void}
  */
-export const assertReportDataComplete = (rows, period, reference) => {
-  const incompleteRows = findIncompleteRows(rows, period)
+export const assertReportDataComplete = (rows, reference) => {
+  const incompleteRows = findIncompleteRows(rows)
   const total = incompleteRows.length
   if (total) {
     throw badRequest(

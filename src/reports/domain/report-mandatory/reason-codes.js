@@ -10,5 +10,6 @@ export const REQUIRED_BY = Object.freeze({
   SUPPLIER_DETAILS: 'supplier_details',
   OVERSEAS_SITE: 'overseas_site',
   FINAL_DESTINATION: 'final_destination',
-  INTERIM_SITE: 'interim_site'
+  INTERIM_SITE: 'interim_site',
+  EXPORT_DATE: 'export_date'
 })

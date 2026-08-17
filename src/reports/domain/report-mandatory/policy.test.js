@@ -23,10 +23,10 @@ const ruleCases = EXPORTER_TEMPLATES.flatMap((processingType) => {
   )
 })
 
-// Guards the schema-sourced layout the engine depends on: a rule whose date or
-// required field is not a real column would slice on `undefined` (never firing)
-// or report `columnIndex: -1`, neither of which the integration tests notice
-// because they assert the column index only as an opaque number.
+// Guards the schema-sourced layout the engine depends on: a rule whose required
+// field is not a real column would report `columnIndex: -1`, which the
+// integration tests do not notice because they assert the column index only as
+// an opaque number.
 describe('report-mandatory policy references only real table columns', () => {
   it.each(ruleCases)(
     '$processingType/$wasteRecordType $rule.requiredBy',
@@ -35,7 +35,7 @@ describe('report-mandatory policy references only real table columns', () => {
         findSchemaForProcessingType(processingType, wasteRecordType)
           ?.requiredHeaders ?? []
 
-      for (const field of [rule.dateField, ...rule.requiredFields]) {
+      for (const field of rule.requiredFields) {
         expect(headers).toContain(field)
       }
     }

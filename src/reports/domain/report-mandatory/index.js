@@ -8,9 +8,10 @@ import { EXPORTER_REGISTERED_ONLY_POLICY } from './policy/exporter-registered-on
  */
 
 /**
- * A single conditional-required rule. When `trigger` holds for a row whose
- * `dateField` value falls in the report period, every field in `requiredFields`
- * must be filled for the report to be created.
+ * A single conditional-required rule. When `trigger` holds for a row, every
+ * field in `requiredFields` must be filled for the report to be created. The
+ * rule applies to a row anywhere in the summary log, not just the rows the
+ * report being created aggregates.
  *
  * `requiredFields` is deliberately distinct from a table's
  * `WASTE_BALANCE_CONTENT_FIELDS` (the set `checkRequiredFields` uses to decide
@@ -21,7 +22,6 @@ import { EXPORTER_REGISTERED_ONLY_POLICY } from './policy/exporter-registered-on
  *
  * @typedef {object} ReportMandatoryRule
  * @property {RequiredByCode} requiredBy - Why the fields are required (for the FE payload).
- * @property {string} dateField - Section date field that scopes the rule to the report period.
  * @property {RuleTrigger} trigger
  * @property {string[]} requiredFields
  */

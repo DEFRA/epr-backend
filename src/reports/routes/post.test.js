@@ -1050,6 +1050,33 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
+    it('creates the report when a triggered row has every mandatory field filled', async () => {
+      // The supplier rule fires (received tonnage > 0) but the row is complete,
+      // so the gate finds nothing missing and creation proceeds.
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        {
+          featureFlags: gateEnabled,
+          rows: [
+            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+              MONTH_RECEIVED_FOR_EXPORT: '2025-01',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5,
+              SUPPLIER_NAME: 'Acme Waste Ltd',
+              SUPPLIER_ADDRESS: '1 Depot Road',
+              SUPPLIER_POSTCODE: 'AB1 2CD',
+              SUPPLIER_EMAIL: 'ops@acme.example',
+              SUPPLIER_PHONE_NUMBER: '01234 567890',
+              ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baling'
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
     it('does not gate rows whose processing type has no policy (reprocessor)', async () => {
       const { server, organisationId, registrationId } = await createServer(
         { wasteProcessingType: 'reprocessor', accreditationId: undefined },
@@ -1074,9 +1101,10 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
-    it('creates the report when a triggered row falls outside the report period', async () => {
-      // Export tonnage with a June export date: the January report neither
-      // aggregates nor blocks on it, so a blank OSR_ID cannot fail creation.
+    it('blocks the report on an incomplete triggered row from outside the report period', async () => {
+      // Whole-summary-log scoping (PAE-1420 pivot): export tonnage with a June
+      // export date and a blank OSR_ID. The January report does not aggregate
+      // this row, but its incompleteness still blocks report creation.
       const { server, organisationId, registrationId } = await createServer(
         { wasteProcessingType: 'exporter' },
         {
@@ -1097,7 +1125,52 @@ describe(`POST ${reportsPostPath}`, () => {
         registrationId
       )
 
-      expect(response.statusCode).toBe(StatusCodes.CREATED)
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.reason).toBe('report_data_incomplete')
+      expect(payload.incompleteRows).toEqual([
+        {
+          sheet: 'Exported',
+          rowId: 'row-1',
+          missing: [missing('OSR_ID', 'overseas_site')]
+        }
+      ])
+    })
+
+    it('blocks when export tonnage is present but the export date is blank (AC4)', async () => {
+      // AC4: a positive export tonnage requires an export date. The OSR_ID is
+      // present so the overseas-site rule is satisfied; only the missing export
+      // date fails creation.
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'exporter' },
+        {
+          accredited: true,
+          featureFlags: gateEnabled,
+          rows: [
+            accreditedRow({
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+              OSR_ID: 'ORS-0001'
+            })
+          ]
+        }
+      )
+
+      const response = await postAccredited(
+        server,
+        organisationId,
+        registrationId
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.reason).toBe('report_data_incomplete')
+      expect(payload.incompleteRows).toEqual([
+        {
+          sheet: 'Exported',
+          rowId: 'row-1',
+          missing: [missing('DATE_OF_EXPORT', 'export_date')]
+        }
+      ])
     })
 
     it('accredited: an in-period packed row fires the supplier, export and interim rules together', async () => {
