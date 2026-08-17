@@ -12,6 +12,13 @@ import { EXPORTER_REGISTERED_ONLY_POLICY } from './policy/exporter-registered-on
  * `dateField` value falls in the report period, every field in `requiredFields`
  * must be filled for the report to be created.
  *
+ * `requiredFields` is deliberately distinct from a table's
+ * `WASTE_BALANCE_CONTENT_FIELDS` (the set `checkRequiredFields` uses to decide
+ * whether a row contributes to the waste balance). The two answer different
+ * questions (can this report be created vs does this tonnage count) and their
+ * field sets and consequences diverge, so they are kept as separate concepts
+ * rather than unified. See the classify helpers under `#domain/summary-logs`.
+ *
  * @typedef {object} ReportMandatoryRule
  * @property {RequiredByCode} requiredBy - Why the fields are required (for the FE payload).
  * @property {string} dateField - Section date field that scopes the rule to the report period.

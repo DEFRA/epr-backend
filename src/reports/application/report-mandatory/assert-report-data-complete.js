@@ -3,13 +3,13 @@ import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/
 import { isDateInRange } from '#reports/domain/aggregation/filter-records-by-date.js'
 import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
-import { reportMandatoryPolicyFor } from './index.js'
+import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index.js'
 
 /**
  * @import { TableSchema } from '#domain/summary-logs/table-schemas/index.js'
  * @import { ReportingPeriod } from '#reports/domain/reporting-period.js'
- * @import { ReportMandatoryRule } from './index.js'
- * @import { RequiredByCode } from './reason-codes.js'
+ * @import { ReportMandatoryRule } from '#reports/domain/report-mandatory/index.js'
+ * @import { RequiredByCode } from '#reports/domain/report-mandatory/reason-codes.js'
  */
 
 /**
