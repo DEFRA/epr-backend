@@ -339,6 +339,85 @@ async function getAggregatedReportDetail({
 }
 
 /**
+ * Asserts a report can be created for the period. Loads the registration's
+ * periodic reports and rejects a duplicate submission before a disallowed
+ * resubmission: existence is the more fundamental precondition, so a duplicate
+ * is reported as such regardless of whether a fresh create would have been
+ * permitted.
+ *
+ * @param {object} params
+ * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {number} params.year
+ * @param {Cadence} params.cadence
+ * @param {number} params.period
+ * @param {number} params.submissionNumber
+ * @returns {Promise<void>}
+ */
+async function assertReportCreationAllowed({
+  reportsRepository,
+  organisationId,
+  registrationId,
+  year,
+  cadence,
+  period,
+  submissionNumber
+}) {
+  const periodicReports = await reportsRepository.findPeriodicReports({
+    organisationId,
+    registrationId
+  })
+
+  assertNoExistingReport(
+    periodicReports,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  )
+  assertResubmissionAllowed(
+    periodicReports,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  )
+}
+
+/**
+ * Runs the report-data completeness gate when the feature flag is on. The gate
+ * scopes each row to the report period using the same bounds the aggregation
+ * slices by, so it can only block on rows this report includes; its per-row
+ * policy lookup skips any processing type without rules, so the feature flag is
+ * the only guard needed here.
+ *
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags | undefined} featureFlags
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @param {Cadence} cadence
+ * @param {number} year
+ * @param {number} period
+ * @param {string} reference
+ * @returns {void}
+ */
+function assertReportDataCompleteIfEnabled(
+  featureFlags,
+  wasteRecordStates,
+  cadence,
+  year,
+  period,
+  reference
+) {
+  if (featureFlags?.isReportDataValidationEnabled()) {
+    assertReportDataComplete(
+      wasteRecordStates,
+      periodBounds(cadence, year, period),
+      reference
+    )
+  }
+}
+
+/**
  * Creates a report for a given period. Validates the period has ended,
  * checks no report already exists, aggregates waste data, and persists.
  *
@@ -381,29 +460,15 @@ export async function createReportForPeriod({
     period
   )
 
-  const periodicReports = await reportsRepository.findPeriodicReports({
+  await assertReportCreationAllowed({
+    reportsRepository,
     organisationId,
-    registrationId
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber
   })
-
-  // Existence is the more fundamental precondition: a duplicate submission is
-  // reported as such regardless of whether a fresh create would have been
-  // permitted, so the duplicate check runs before the resubmission gate.
-  assertNoExistingReport(
-    periodicReports,
-    year,
-    cadence,
-    period,
-    submissionNumber
-  )
-
-  assertResubmissionAllowed(
-    periodicReports,
-    year,
-    cadence,
-    period,
-    submissionNumber
-  )
 
   const operatorCategory = getOperatorCategory(registration)
 
@@ -417,17 +482,14 @@ export async function createReportForPeriod({
     }
   )
 
-  // The gate scopes each row to the report period using the same bounds the
-  // aggregation slices by, so it can only block on rows this report includes.
-  // The per-row policy lookup skips any processing type without rules, so the
-  // exporter feature flag is the only guard needed here.
-  if (featureFlags?.isReportDataValidationEnabled()) {
-    assertReportDataComplete(
-      wasteRecordStates,
-      periodBounds(cadence, year, period),
-      registrationId
-    )
-  }
+  assertReportDataCompleteIfEnabled(
+    featureFlags,
+    wasteRecordStates,
+    cadence,
+    year,
+    period,
+    registrationId
+  )
 
   const aggregatedReportData = await getAggregatedReportDetail({
     packagingRecyclingNotesRepository,
