@@ -87,7 +87,7 @@ describe('the regulator role', () => {
     expect(REGULATOR_SCOPES).toContain(SCOPES.wasteBalanceLedgerRead)
   })
 
-  test('spells that scope the way the frontend declares it on its own gate', () => {
+  test('pins the exact string the ledger routes require', () => {
     expect(SCOPES.wasteBalanceLedgerRead).toBe('waste-balance.ledger.read')
   })
 
