@@ -27,6 +27,11 @@ const ANOTHER_ORGANISATION_ID = 'another-organisation-id'
  * longer changes the answer. They stay because a later change to the operator
  * resolver must break all three, not one.
  *
+ * The first of them also pins the shape of the route's scope array. That
+ * operator holds `organisation.read` for the organisation in the path, so a
+ * route that admitted either scope would answer 200. The 403 is what shows
+ * the route requires both.
+ *
  * @param {{ makeUrl: (organisationId: string) => string }} options
  */
 export const testLedgerEventsAccess = ({ makeUrl }) => {
@@ -84,13 +89,13 @@ export const testLedgerEventsAccess = ({ makeUrl }) => {
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
-    it('returns 200 for the support tier, the lowest tier that holds admin.read', async () => {
+    it('returns 200 for the support tier, the narrowest admin bundle', async () => {
       const response = await getWithToken(entraIdMockAuthTokens.supportToken)
 
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
-    it('returns 403 for an operator linked to the organisation in the path', async () => {
+    it('returns 403 for an operator who holds organisation.read for the organisation in the path but no ledger scope', async () => {
       const response = await getWithToken(defraIdMockAuthTokens.validToken)
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

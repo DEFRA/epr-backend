@@ -11,7 +11,10 @@ export const accreditationLedgerEventsGet = {
   path: accreditationLedgerEventsGetPath,
   options: {
     auth: {
-      scope: [SCOPES.adminRead, SCOPES.wasteBalanceLedgerRead]
+      scope: [
+        `+${SCOPES.organisationRead}`,
+        `+${SCOPES.wasteBalanceLedgerRead}`
+      ]
     },
     tags: ['api', 'admin']
   },

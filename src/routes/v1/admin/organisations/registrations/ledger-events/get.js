@@ -11,7 +11,10 @@ export const registrationLedgerEventsGet = {
   path: registrationLedgerEventsGetPath,
   options: {
     auth: {
-      scope: [SCOPES.adminRead, SCOPES.wasteBalanceLedgerRead]
+      scope: [
+        `+${SCOPES.organisationRead}`,
+        `+${SCOPES.wasteBalanceLedgerRead}`
+      ]
     },
     tags: ['api', 'admin']
   },

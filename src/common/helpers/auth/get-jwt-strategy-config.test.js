@@ -374,7 +374,9 @@ describe('#getJwtStrategyConfig', () => {
 
       expect(result.credentials.scope).toEqual([
         SCOPES.adminRead,
-        SCOPES.organisationSearch
+        SCOPES.organisationSearch,
+        SCOPES.organisationRead,
+        SCOPES.wasteBalanceLedgerRead
       ])
     })
 

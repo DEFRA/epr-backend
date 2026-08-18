@@ -45,9 +45,10 @@ export const REGULATOR_ROLE = 'regulator_standard'
  * service's own record of how the balance moved, event by event. An operator
  * reads the balance, and does not read the ledger.
  *
- * `organisation.read` cannot draw that line. An operator earns it for the
- * organisation named in the request, and the ledger routes name one, so a
- * ledger route that admits `organisation.read` admits the operator too.
+ * `organisation.read` cannot draw that line on its own. An operator earns it
+ * for the organisation named in the request, and the ledger routes name one.
+ * So a ledger route requires both scopes: `organisation.read` for the
+ * organisation, and `waste-balance.ledger.read` for the ledger behind it.
  *
  * `regulator` is coarse on purpose. It stands for the whole set of functions
  * only a regulator performs, and subdivides when caseworking functions
@@ -66,18 +67,31 @@ export const REGULATOR_SCOPES = [
  * Admin role → scope-bundle map. Used internally by getEntraUserRoles to
  * resolve an email-list match to its scope set; role names do not flow onto
  * credentials or out over the wire.
+ *
+ * Every tier reads, so every tier holds `organisation.read` and
+ * `waste-balance.ledger.read`. A tier reaches a route by holding the scopes
+ * that route requires, never by the route naming the tier.
  */
 export const ADMIN_ROLES = {
   service_maintainer_write: [
     SCOPES.adminRead,
     SCOPES.adminWrite,
     SCOPES.adminDlqPurge,
-    SCOPES.organisationSearch
+    SCOPES.organisationSearch,
+    SCOPES.organisationRead,
+    SCOPES.wasteBalanceLedgerRead
   ],
   service_maintainer: [
     SCOPES.adminRead,
     SCOPES.adminDlqPurge,
-    SCOPES.organisationSearch
+    SCOPES.organisationSearch,
+    SCOPES.organisationRead,
+    SCOPES.wasteBalanceLedgerRead
   ],
-  support: [SCOPES.adminRead, SCOPES.organisationSearch]
+  support: [
+    SCOPES.adminRead,
+    SCOPES.organisationSearch,
+    SCOPES.organisationRead,
+    SCOPES.wasteBalanceLedgerRead
+  ]
 }

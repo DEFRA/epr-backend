@@ -52,7 +52,9 @@ const ADMIN_USER = {
     SCOPES.adminRead,
     SCOPES.adminWrite,
     SCOPES.adminDlqPurge,
-    SCOPES.organisationSearch
+    SCOPES.organisationSearch,
+    SCOPES.organisationRead,
+    SCOPES.wasteBalanceLedgerRead
   ]
 }
 
