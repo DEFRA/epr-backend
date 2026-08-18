@@ -3,12 +3,12 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
-export const accreditationLedgerEventsGetPath =
-  '/v1/admin/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/waste-balance-events'
+export const registrationLedgerEventsGetPath =
+  '/v1/admin/organisations/{organisationId}/registrations/{registrationId}/waste-balance-events'
 
-export const accreditationLedgerEventsGet = {
+export const registrationLedgerEventsGet = {
   method: 'GET',
-  path: accreditationLedgerEventsGetPath,
+  path: registrationLedgerEventsGetPath,
   options: {
     auth: {
       scope: [SCOPES.adminRead, SCOPES.organisationRead]
@@ -17,18 +17,18 @@ export const accreditationLedgerEventsGet = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string, accreditationId: string }
+   *   params: { organisationId: string, registrationId: string }
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { ledgerRepository } = request
-    const { organisationId, registrationId, accreditationId } = request.params
+    const { organisationId, registrationId } = request.params
 
     const events = await ledgerRepository.findAllInLedger({
       organisationId,
       registrationId,
-      accreditationId
+      accreditationId: null
     })
 
     return h.response(events).code(StatusCodes.OK)

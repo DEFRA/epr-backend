@@ -87,6 +87,42 @@ export const testFindAllInLedgerBehaviour = (it) => {
       expect(result[0].accreditationId).toBe('acc-a')
     })
 
+    it('reads the ledger a registration holds with no accreditation', async () => {
+      await repository.appendEvents([
+        buildLedgerEvent({
+          registrationId: 'reg-registered-only',
+          accreditationId: null,
+          number: 1
+        })
+      ])
+
+      const result = await repository.findAllInLedger(
+        buildLedgerId({
+          registrationId: 'reg-registered-only',
+          accreditationId: null
+        })
+      )
+
+      expect(result).toHaveLength(1)
+      expect(result[0].accreditationId).toBeNull()
+    })
+
+    it('does not read an accreditation of the registration whose unaccredited ledger it names', async () => {
+      await repository.appendEvents([
+        buildLedgerEvent({
+          registrationId: 'reg-both',
+          accreditationId: 'acc-both',
+          number: 1
+        })
+      ])
+
+      const result = await repository.findAllInLedger(
+        buildLedgerId({ registrationId: 'reg-both', accreditationId: null })
+      )
+
+      expect(result).toEqual([])
+    })
+
     it('does not read a ledger named under a different organisation', async () => {
       await repository.appendEvents([
         buildLedgerEvent({

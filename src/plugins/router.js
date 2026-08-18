@@ -24,7 +24,8 @@ import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registra
 import * as reportsRoutes from '#reports/routes/index.js'
 import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
 import { adminMeGet } from '#routes/v1/admin/me/get.js'
-import { ledgerEventsGet } from '#routes/v1/admin/organisations/registrations/accreditations/ledger-events/get.js'
+import { accreditationLedgerEventsGet } from '#routes/v1/admin/organisations/registrations/accreditations/ledger-events/get.js'
+import { registrationLedgerEventsGet } from '#routes/v1/admin/organisations/registrations/ledger-events/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
@@ -69,7 +70,8 @@ const router = {
           ...Object.values(coreReportsRoutes),
           reportsUnsubmit,
           adminMeGet,
-          ledgerEventsGet,
+          accreditationLedgerEventsGet,
+          registrationLedgerEventsGet,
           dlqMessagesGet,
           dlqPurgePost
         ])
