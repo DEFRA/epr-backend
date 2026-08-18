@@ -6,6 +6,7 @@ import {
   formatTemplateSummary,
   summariseByMaterial,
   formatMaterialSummary,
+  formatFieldSummary,
   formatTotals,
   formatUnresolved
 } from '#reports/monitoring/report-data-completeness-diagnostic.js'
@@ -22,7 +23,7 @@ const LOCK_NAME = 'report-data-complete-diagnostic'
  * @param {StartedServer} server - Hapi server instance
  */
 const runDiagnostic = async (server) => {
-  const { scanned, findings, unresolved } =
+  const { scanned, findings, unresolved, missingFieldCounts } =
     await findReportDataCompletenessFindings({
       ledgerRepository: server.app.ledgerRepository,
       summaryLogRowStatesRepository: server.app.summaryLogRowStatesRepository,
@@ -37,6 +38,9 @@ const runDiagnostic = async (server) => {
   }
   for (const summary of summariseByMaterial(findings)) {
     logger.info({ message: formatMaterialSummary(summary) })
+  }
+  for (const summary of missingFieldCounts) {
+    logger.info({ message: formatFieldSummary(summary) })
   }
   logger.info({ message: formatTotals({ scanned, findings }) })
 

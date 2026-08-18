@@ -69,27 +69,30 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
 
   const LOCK_NAME = 'report-data-complete-diagnostic'
 
-  // Ledger A: accredited exporter, plastic. One Exported row with export tonnage
+  // Ledger A: accredited exporter, plastic. Two Exported rows with export tonnage
   // but a blank OSR_ID (violating) alongside one fully complete Exported row, so
-  // exactly one row of the two is counted. This asserts the diagnostic counts
-  // only violating rows, not every row in the log. The specific rule that fires
-  // is the gate engine's concern and is covered by the gate's own tests.
+  // two of the three rows are counted (complete rows excluded) and OSR_ID is
+  // missing twice. The specific rule that fires is the gate engine's concern and
+  // is covered by the gate's own tests.
   const ledgerA = buildLedgerFixture({
     material: 'plastic',
     processingType: PROCESSING_TYPES.EXPORTER,
     summaryLogId: 'sl-a',
     accredited: true
   })
-  const rowsA = [
+  const incompleteExportedRow = (rowId) =>
     buildSummaryLogRowStateEntry({
-      rowId: 'row-a-incomplete',
+      rowId,
       wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
       processingType: PROCESSING_TYPES.EXPORTER,
       data: {
         DATE_OF_EXPORT: '2025-06-15',
         TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
       }
-    }),
+    })
+  const rowsA = [
+    incompleteExportedRow('row-a-incomplete-1'),
+    incompleteExportedRow('row-a-incomplete-2'),
     buildSummaryLogRowStateEntry({
       rowId: 'row-a-complete',
       wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
@@ -204,13 +207,13 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     expect(lineA).toContain(ledgerA.ledgerId.organisationId)
     expect(lineA).toContain(ledgerA.ledgerId.registrationId)
     expect(lineA).toContain(ledgerA.ledgerId.accreditationId)
-    expect(lineA).toContain('1 incomplete row(s)')
+    expect(lineA).toContain('2 incomplete row(s), 2 missing field(s)')
 
     const lineB = messages().find((m) => m.includes('sl-b'))
     expect(lineB).toContain('template EXPORTER_REGISTERED_ONLY,')
     expect(lineB).toContain('material glass')
     expect(lineB).toContain('registered-only')
-    expect(lineB).toContain('1 incomplete row(s)')
+    expect(lineB).toContain('1 incomplete row(s), 6 missing field(s)')
 
     // The reprocessor summary log is scanned but has no policy, so it is not
     // flagged.
@@ -235,12 +238,21 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
       'Report-data diagnostic by material: aluminium -- 0 summary log(s) with incomplete data'
     )
 
-    // (4) the estate-wide totals.
+    // (4) one line per field that was missing, most-missing first. OSR_ID is
+    // missing on both of ledger A's violating rows; each supplier field once.
+    expect(messages()).toContain(
+      'Report-data diagnostic by field: OSR_ID -- missing 2 time(s)'
+    )
+    expect(messages()).toContain(
+      'Report-data diagnostic by field: SUPPLIER_NAME -- missing 1 time(s)'
+    )
+
+    // (5) the estate-wide totals.
     const summary = messages().find((m) =>
       m.startsWith('Report-data diagnostic summary:')
     )
     expect(summary).toContain('scanned 3 summary log(s)')
-    expect(summary).toContain('2 with incomplete data')
+    expect(summary).toContain('2 with incomplete data (8 missing field(s))')
     expect(summary).toContain('2 organisation(s)')
     expect(summary).toContain('2 registration(s)')
     expect(summary).toContain('1 accreditation(s)')
@@ -306,13 +318,13 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
 
     const lineD = messages().find((m) => m.includes('sl-d'))
     expect(lineD).toContain('material unknown')
-    expect(lineD).toContain('1 incomplete row(s)')
+    expect(lineD).toContain('1 incomplete row(s), 6 missing field(s)')
 
     // The finding still counts toward the estate totals and gets its own
     // material bucket, so the per-material rollup reconciles with the totals.
     expect(
       messages().find((m) => m.startsWith('Report-data diagnostic summary:'))
-    ).toContain('1 with incomplete data')
+    ).toContain('1 with incomplete data (6 missing field(s))')
     expect(messages()).toContain(
       'Report-data diagnostic by material: unknown -- 1 summary log(s) with incomplete data'
     )

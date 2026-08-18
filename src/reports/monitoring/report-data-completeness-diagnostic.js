@@ -22,6 +22,7 @@ import { MATERIAL } from '#domain/organisations/model.js'
  * @property {string} processingType - The SL's template (uniform across its rows).
  * @property {string} material
  * @property {number} violatingRows - Distinct rows with at least one missing field.
+ * @property {number} missingFields - Missing mandatory fields across all the SL's rows.
  */
 
 /**
@@ -65,7 +66,7 @@ export const evaluatedTemplates = () =>
  * @param {WasteBalanceLedgerRepository} deps.ledgerRepository
  * @param {SummaryLogRowStatesRepository} deps.summaryLogRowStatesRepository
  * @param {OrganisationsRepository} deps.organisationsRepository
- * @returns {Promise<{ scanned: number, findings: CompletenessFinding[], unresolved: UnresolvedRegistration[] }>}
+ * @returns {Promise<{ scanned: number, findings: CompletenessFinding[], unresolved: UnresolvedRegistration[], missingFieldCounts: { field: string, count: number }[] }>}
  */
 export const findReportDataCompletenessFindings = async ({
   ledgerRepository,
@@ -79,6 +80,8 @@ export const findReportDataCompletenessFindings = async ({
   const findings = []
   /** @type {UnresolvedRegistration[]} */
   const unresolved = []
+  /** @type {Map<string, number>} */
+  const fieldCounts = new Map()
   for (const { ledgerId, summaryLogId } of ledgers) {
     const rows = await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
       ledgerId,
@@ -87,6 +90,9 @@ export const findReportDataCompletenessFindings = async ({
     const issues = findIssues(rows)
     if (issues.length === 0) {
       continue
+    }
+    for (const issue of issues) {
+      fieldCounts.set(issue.field, (fieldCounts.get(issue.field) ?? 0) + 1)
     }
     // A deleted or re-versioned registration must not abort the estate scan:
     // record it, report the material as unknown, and keep the finding so the
@@ -112,10 +118,16 @@ export const findReportDataCompletenessFindings = async ({
       summaryLogId,
       processingType: rows[0].processingType,
       material,
-      violatingRows: new Set(issues.map((issue) => issue.rowId)).size
+      violatingRows: new Set(issues.map((issue) => issue.rowId)).size,
+      missingFields: issues.length
     })
   }
-  return { scanned: ledgers.length, findings, unresolved }
+  // Most-missing first so the worst offenders lead; field name breaks ties for a
+  // deterministic order.
+  const missingFieldCounts = [...fieldCounts.entries()]
+    .map(([field, count]) => ({ field, count }))
+    .sort((a, b) => b.count - a.count || (a.field < b.field ? -1 : 1))
+  return { scanned: ledgers.length, findings, unresolved, missingFieldCounts }
 }
 
 /**
@@ -128,7 +140,8 @@ export const formatFinding = (finding) => {
     `Report-data diagnostic: summary log ${finding.summaryLogId} ` +
     `(template ${finding.processingType}, material ${finding.material}) -- ` +
     `org ${finding.organisationId} / registration ${finding.registrationId} / ` +
-    `accreditation ${accreditation} -- ${finding.violatingRows} incomplete row(s)`
+    `accreditation ${accreditation} -- ${finding.violatingRows} incomplete row(s), ` +
+    `${finding.missingFields} missing field(s)`
   )
 }
 
@@ -179,6 +192,13 @@ export const formatMaterialSummary = ({ material, count }) =>
   `Report-data diagnostic by material: ${material} -- ${count} summary log(s) with incomplete data`
 
 /**
+ * @param {{ field: string, count: number }} summary
+ * @returns {string}
+ */
+export const formatFieldSummary = ({ field, count }) =>
+  `Report-data diagnostic by field: ${field} -- missing ${count} time(s)`
+
+/**
  * @param {UnresolvedRegistration} unresolved
  * @returns {string}
  */
@@ -201,10 +221,12 @@ export const formatTotals = ({ scanned, findings }) => {
   const accreditations = distinct(
     findings.map((f) => f.accreditationId).filter((id) => id !== null)
   )
+  const missingFields = findings.reduce((sum, f) => sum + f.missingFields, 0)
   return (
     `Report-data diagnostic summary: scanned ${scanned} summary log(s), ` +
-    `${findings.length} with incomplete data across ${organisations} organisation(s) / ` +
-    `${registrations} registration(s) / ${accreditations} accreditation(s). ` +
+    `${findings.length} with incomplete data (${missingFields} missing field(s)) ` +
+    `across ${organisations} organisation(s) / ${registrations} registration(s) / ` +
+    `${accreditations} accreditation(s). ` +
     `Evaluated templates: ${evaluatedTemplates().join(', ')} ` +
     `(other templates have no completeness rules yet).`
   )
