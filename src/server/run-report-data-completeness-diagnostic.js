@@ -6,7 +6,8 @@ import {
   formatTemplateSummary,
   summariseByMaterial,
   formatMaterialSummary,
-  formatTotals
+  formatTotals,
+  formatUnresolved
 } from '#reports/monitoring/report-data-completeness-diagnostic.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -21,11 +22,12 @@ const LOCK_NAME = 'report-data-complete-diagnostic'
  * @param {StartedServer} server - Hapi server instance
  */
 const runDiagnostic = async (server) => {
-  const { scanned, findings } = await findReportDataCompletenessFindings({
-    ledgerRepository: server.app.ledgerRepository,
-    summaryLogRowStatesRepository: server.app.summaryLogRowStatesRepository,
-    organisationsRepository: server.app.organisationsRepository
-  })
+  const { scanned, findings, unresolved } =
+    await findReportDataCompletenessFindings({
+      ledgerRepository: server.app.ledgerRepository,
+      summaryLogRowStatesRepository: server.app.summaryLogRowStatesRepository,
+      organisationsRepository: server.app.organisationsRepository
+    })
 
   for (const finding of findings) {
     logger.info({ message: formatFinding(finding) })
@@ -37,6 +39,10 @@ const runDiagnostic = async (server) => {
     logger.info({ message: formatMaterialSummary(summary) })
   }
   logger.info({ message: formatTotals({ scanned, findings }) })
+
+  for (const item of unresolved) {
+    logger.warn({ message: formatUnresolved(item) })
+  }
 }
 
 /**

@@ -25,6 +25,24 @@ import { MATERIAL } from '#domain/organisations/model.js'
  */
 
 /**
+ * A violating summary log whose registration could not be resolved (deleted or
+ * re-versioned away), so its material is unknown. Reported separately so a single
+ * missing registration degrades one line rather than aborting the whole scan.
+ *
+ * @typedef {object} UnresolvedRegistration
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {string} summaryLogId
+ */
+
+/**
+ * Material reported for a violating summary log whose registration could not be
+ * resolved. A real value would be one of the `MATERIAL` enum; this stands in so
+ * the finding still counts toward the estate totals and the per-material rollup.
+ */
+export const UNKNOWN_MATERIAL = 'unknown'
+
+/**
  * The templates the completeness gate can evaluate today, derived from the
  * policy registry rather than hard-coded. When the reprocessor templates plug in
  * (PAE-1280) they join automatically, so the diagnostic needs no change to work
@@ -47,7 +65,7 @@ export const evaluatedTemplates = () =>
  * @param {WasteBalanceLedgerRepository} deps.ledgerRepository
  * @param {SummaryLogRowStatesRepository} deps.summaryLogRowStatesRepository
  * @param {OrganisationsRepository} deps.organisationsRepository
- * @returns {Promise<{ scanned: number, findings: CompletenessFinding[] }>}
+ * @returns {Promise<{ scanned: number, findings: CompletenessFinding[], unresolved: UnresolvedRegistration[] }>}
  */
 export const findReportDataCompletenessFindings = async ({
   ledgerRepository,
@@ -59,6 +77,8 @@ export const findReportDataCompletenessFindings = async ({
 
   /** @type {CompletenessFinding[]} */
   const findings = []
+  /** @type {UnresolvedRegistration[]} */
+  const unresolved = []
   for (const { ledgerId, summaryLogId } of ledgers) {
     const rows = await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
       ledgerId,
@@ -68,21 +88,34 @@ export const findReportDataCompletenessFindings = async ({
     if (issues.length === 0) {
       continue
     }
-    const registration = await organisationsRepository.findRegistrationById(
-      ledgerId.organisationId,
-      ledgerId.registrationId
-    )
+    // A deleted or re-versioned registration must not abort the estate scan:
+    // record it, report the material as unknown, and keep the finding so the
+    // blast-radius count stays truthful.
+    let material = UNKNOWN_MATERIAL
+    try {
+      const registration = await organisationsRepository.findRegistrationById(
+        ledgerId.organisationId,
+        ledgerId.registrationId
+      )
+      material = registration.material
+    } catch {
+      unresolved.push({
+        organisationId: ledgerId.organisationId,
+        registrationId: ledgerId.registrationId,
+        summaryLogId
+      })
+    }
     findings.push({
       organisationId: ledgerId.organisationId,
       registrationId: ledgerId.registrationId,
       accreditationId: ledgerId.accreditationId,
       summaryLogId,
       processingType: rows[0].processingType,
-      material: registration.material,
+      material,
       violatingRows: new Set(issues.map((issue) => issue.rowId)).size
     })
   }
-  return { scanned: ledgers.length, findings }
+  return { scanned: ledgers.length, findings, unresolved }
 }
 
 /**
@@ -120,16 +153,23 @@ export const formatTemplateSummary = ({ processingType, count }) =>
   `Report-data diagnostic by template: ${processingType} -- ${count} summary log(s) with incomplete data`
 
 /**
- * Counts the violating summary logs per material, across every known material.
+ * Counts the violating summary logs per material, across every known material
+ * plus any material actually seen that is not in the enum (legacy or drifted
+ * values, and the unknown-registration placeholder). Emitting the seen-but-
+ * unmodelled materials keeps this rollup reconcilable with the estate totals.
  *
  * @param {CompletenessFinding[]} findings
  * @returns {{ material: string, count: number }[]}
  */
-export const summariseByMaterial = (findings) =>
-  Object.values(MATERIAL).map((material) => ({
+export const summariseByMaterial = (findings) => {
+  const materials = [
+    ...new Set([...Object.values(MATERIAL), ...findings.map((f) => f.material)])
+  ]
+  return materials.map((material) => ({
     material,
     count: findings.filter((f) => f.material === material).length
   }))
+}
 
 /**
  * @param {{ material: string, count: number }} summary
@@ -137,6 +177,18 @@ export const summariseByMaterial = (findings) =>
  */
 export const formatMaterialSummary = ({ material, count }) =>
   `Report-data diagnostic by material: ${material} -- ${count} summary log(s) with incomplete data`
+
+/**
+ * @param {UnresolvedRegistration} unresolved
+ * @returns {string}
+ */
+export const formatUnresolved = ({
+  organisationId,
+  registrationId,
+  summaryLogId
+}) =>
+  `Report-data diagnostic: could not resolve registration ${registrationId} ` +
+  `(org ${organisationId}) for summary log ${summaryLogId}; material reported as ${UNKNOWN_MATERIAL}`
 
 /**
  * @param {{ scanned: number, findings: CompletenessFinding[] }} result

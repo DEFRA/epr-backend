@@ -69,8 +69,11 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
 
   const LOCK_NAME = 'report-data-complete-diagnostic'
 
-  // Ledger A: accredited exporter, plastic, one Exported row with export tonnage
-  // and a blank OSR_ID -> one violating row (AC2).
+  // Ledger A: accredited exporter, plastic. One Exported row with export tonnage
+  // but a blank OSR_ID (violating) alongside one fully complete Exported row, so
+  // exactly one row of the two is counted. This asserts the diagnostic counts
+  // only violating rows, not every row in the log. The specific rule that fires
+  // is the gate engine's concern and is covered by the gate's own tests.
   const ledgerA = buildLedgerFixture({
     material: 'plastic',
     processingType: PROCESSING_TYPES.EXPORTER,
@@ -79,18 +82,29 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
   })
   const rowsA = [
     buildSummaryLogRowStateEntry({
-      rowId: 'row-a',
+      rowId: 'row-a-incomplete',
       wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
       processingType: PROCESSING_TYPES.EXPORTER,
       data: {
         DATE_OF_EXPORT: '2025-06-15',
         TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
       }
+    }),
+    buildSummaryLogRowStateEntry({
+      rowId: 'row-a-complete',
+      wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+      processingType: PROCESSING_TYPES.EXPORTER,
+      data: {
+        DATE_OF_EXPORT: '2025-06-15',
+        TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+        OSR_ID: 'ORS-0001'
+      }
     })
   ]
 
-  // Ledger B: registered-only exporter, glass, one Received row with received
-  // tonnage and no supplier details -> one violating row (AC1).
+  // Ledger B: registered-only exporter, glass. One Received row with received
+  // tonnage and no supplier details: several missing fields on a single row,
+  // which the diagnostic counts as one violating row.
   const ledgerB = buildLedgerFixture({
     material: 'glass',
     processingType: PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY,
@@ -168,8 +182,12 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
   const messages = () =>
     /** @type {Mock} */ (logger.info).mock.calls.map((call) => call[0].message)
 
+  const warnings = () =>
+    /** @type {Mock} */ (logger.warn).mock.calls.map((call) => call[0].message)
+
   beforeEach(() => {
     vi.spyOn(logger, 'info').mockImplementation(() => logger)
+    vi.spyOn(logger, 'warn').mockImplementation(() => logger)
   })
 
   it('logs the estate-wide report-data completeness blast radius', async () => {
@@ -232,6 +250,77 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
 
     expect(lock).toHaveBeenCalledWith(LOCK_NAME)
     expect(free).toHaveBeenCalled()
+  })
+
+  it('keeps scanning and reports unknown material when a registration cannot be resolved', async () => {
+    // A violating summary log whose registration is absent from the org repo
+    // (deleted or re-versioned away). The scan must degrade this one line, not
+    // abort: the finding is still counted, its material reported as unknown.
+    const ledgerId = {
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString(),
+      accreditationId: null
+    }
+    const rowStates = createInMemorySummaryLogRowStatesRepository()()
+    await rowStates.upsertSummaryLogRowStates(
+      ledgerId,
+      [
+        buildSummaryLogRowStateEntry({
+          rowId: 'row-d',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          processingType: PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY,
+          data: { TONNAGE_RECEIVED_FOR_EXPORT: 5 }
+        })
+      ],
+      'sl-d'
+    )
+    const ledgerRepository = createInMemoryLedgerRepository([
+      partialMock(
+        buildLedgerEvent({
+          organisationId: ledgerId.organisationId,
+          registrationId: ledgerId.registrationId,
+          accreditationId: null,
+          payload: { summaryLogId: 'sl-d', creditTotal: 100 }
+        })
+      )
+    ])()
+    const server = /** @type {StartedServer} */ (
+      /** @type {unknown} */ (
+        await createTestServer({
+          featureFlags: createInMemoryFeatureFlags({
+            reportDataCompleteDiagnostic: true
+          }),
+          repositories: {
+            organisationsRepository: createInMemoryOrganisationsRepository([]),
+            ledgerRepository,
+            summaryLogRowStatesRepository: rowStates
+          }
+        })
+      )
+    )
+    server.locker = partialMock({
+      lock: vi.fn().mockResolvedValue({ free: vi.fn() })
+    })
+
+    await runReportDataCompletenessDiagnostic(server)
+
+    const lineD = messages().find((m) => m.includes('sl-d'))
+    expect(lineD).toContain('material unknown')
+    expect(lineD).toContain('1 incomplete row(s)')
+
+    // The finding still counts toward the estate totals and gets its own
+    // material bucket, so the per-material rollup reconciles with the totals.
+    expect(
+      messages().find((m) => m.startsWith('Report-data diagnostic summary:'))
+    ).toContain('1 with incomplete data')
+    expect(messages()).toContain(
+      'Report-data diagnostic by material: unknown -- 1 summary log(s) with incomplete data'
+    )
+
+    // A warning names the registration that could not be resolved.
+    const warning = warnings().find((m) => m.includes('sl-d'))
+    expect(warning).toContain(ledgerId.registrationId)
+    expect(warning).toContain('material reported as unknown')
   })
 
   it('does nothing when the feature flag is off', async () => {
