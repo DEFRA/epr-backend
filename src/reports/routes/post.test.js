@@ -29,7 +29,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { reportsPostPath } from './post.js'
-import { MAX_INCOMPLETE_ROWS_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
+import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
 
 vi.mock('#reports/application/audit.js', () => ({
@@ -1012,14 +1012,10 @@ describe(`POST ${reportsPostPath}`, () => {
     const postAccredited = (server, organisationId, registrationId) =>
       makeRequest(server, organisationId, registrationId, 2025, 'monthly', 1)
 
-    // An incomplete cell in the error payload: canonical field name, the
-    // enumerated reason the frontend maps to copy, and the field's position in
-    // its table's requiredHeaders (an opaque non-negative integer here).
-    const missing = (field, requiredBy) => ({
-      field,
-      requiredBy,
-      columnIndex: expect.any(Number)
-    })
+    // The payload is a flat list of issues, one per missing field. Each issue
+    // locates the field by sheet and row; the frontend maps the field to copy.
+    const issuesFor = (sheet, rowId, fields) =>
+      fields.map((field) => ({ sheet, rowId, field }))
 
     it('creates the report when the flag is off despite incomplete in-period data', async () => {
       const { server, organisationId, registrationId } = await createServer(
@@ -1128,13 +1124,8 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
       expect(payload.reason).toBe('report_data_incomplete')
-      expect(payload.incompleteRows).toEqual([
-        {
-          sheet: 'Exported',
-          rowId: 'row-1',
-          missing: [missing('OSR_ID', 'overseas_site')]
-        }
-      ])
+      expect(payload.total).toBe(1)
+      expect(payload.issues).toEqual(issuesFor('Exported', 'row-1', ['OSR_ID']))
     })
 
     it('blocks when export tonnage is present but the export date is blank (AC4)', async () => {
@@ -1164,13 +1155,10 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
       expect(payload.reason).toBe('report_data_incomplete')
-      expect(payload.incompleteRows).toEqual([
-        {
-          sheet: 'Exported',
-          rowId: 'row-1',
-          missing: [missing('DATE_OF_EXPORT', 'export_date')]
-        }
-      ])
+      expect(payload.total).toBe(1)
+      expect(payload.issues).toEqual(
+        issuesFor('Exported', 'row-1', ['DATE_OF_EXPORT'])
+      )
     })
 
     it('accredited: an in-period packed row fires the supplier, export and interim rules together', async () => {
@@ -1200,19 +1188,14 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
       expect(payload.reason).toBe('report_data_incomplete')
-      expect(payload.incompleteRows).toEqual([
-        {
-          sheet: 'Exported',
-          rowId: 'row-1',
-          missing: [
-            ...SUPPLIER_FIELDS.map((field) =>
-              missing(field, 'supplier_details')
-            ),
-            missing('OSR_ID', 'overseas_site'),
-            missing('INTERIM_SITE_ID', 'interim_site')
-          ]
-        }
-      ])
+      expect(payload.total).toBe(SUPPLIER_FIELDS.length + 2)
+      expect(payload.issues).toEqual(
+        issuesFor('Exported', 'row-1', [
+          ...SUPPLIER_FIELDS,
+          'OSR_ID',
+          'INTERIM_SITE_ID'
+        ])
+      )
     })
 
     it('does not gate the report-detail retrieval path (GET) with the flag on', async () => {
@@ -1266,31 +1249,23 @@ describe(`POST ${reportsPostPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
-      expect(payload.total).toBe(2)
-      expect(payload.incompleteRows).toEqual([
-        {
-          sheet: 'Received (section 1)',
-          rowId: 'row-1',
-          missing: SUPPLIER_FIELDS.map((field) =>
-            missing(field, 'supplier_details')
-          )
-        },
-        {
-          sheet: 'Exported (sections 2 and 3)',
-          rowId: 'row-2',
-          missing: [missing('OSR_ID', 'overseas_site')]
-        }
+      expect(payload.total).toBe(SUPPLIER_FIELDS.length + 1)
+      expect(payload.issues).toEqual([
+        ...issuesFor('Received (section 1)', 'row-1', SUPPLIER_FIELDS),
+        ...issuesFor('Exported (sections 2 and 3)', 'row-2', ['OSR_ID'])
       ])
     })
 
-    it('caps the reported rows at the maximum while reporting the true total', async () => {
+    it('caps the reported issues at the maximum while reporting the true total', async () => {
       // A pathological summary log can breach the display cap: the payload stays
       // bounded but `total` still tells the frontend the real number of issues.
-      const rowCount = MAX_INCOMPLETE_ROWS_REPORTED + 1
-      const rows = Array.from({ length: rowCount }, (_, index) =>
-        regOnlyRow(`row-${index + 1}`, WASTE_RECORD_TYPE.RECEIVED, {
-          MONTH_RECEIVED_FOR_EXPORT: '2025-01',
-          TONNAGE_RECEIVED_FOR_EXPORT: 5
+      // Each row carries a filled OSR_ID but a blank export date, so it
+      // contributes exactly one issue and the total equals the row count.
+      const issueCount = MAX_ISSUES_REPORTED + 1
+      const rows = Array.from({ length: issueCount }, (_, index) =>
+        regOnlyRow(`row-${index + 1}`, WASTE_RECORD_TYPE.EXPORTED, {
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+          OSR_ID: 'ORS-0001'
         })
       )
 
@@ -1303,8 +1278,8 @@ describe(`POST ${reportsPostPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
-      expect(payload.total).toBe(rowCount)
-      expect(payload.incompleteRows).toHaveLength(MAX_INCOMPLETE_ROWS_REPORTED)
+      expect(payload.total).toBe(issueCount)
+      expect(payload.issues).toHaveLength(MAX_ISSUES_REPORTED)
     })
 
     it('treats a registered-only final-destination dropdown placeholder as unfilled when sent-on tonnage > 0', async () => {
@@ -1332,8 +1307,12 @@ describe(`POST ${reportsPostPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
-      expect(payload.incompleteRows[0].missing).toEqual([
-        missing('FINAL_DESTINATION_FACILITY_TYPE', 'final_destination')
+      expect(payload.total).toBe(1)
+      expect(payload.issues).toEqual([
+        expect.objectContaining({
+          rowId: 'row-1',
+          field: 'FINAL_DESTINATION_FACILITY_TYPE'
+        })
       ])
     })
   })

@@ -7,7 +7,6 @@ import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index
 /**
  * @import { TableSchema } from '#domain/summary-logs/table-schemas/index.js'
  * @import { ReportMandatoryRule } from '#reports/domain/report-mandatory/index.js'
- * @import { RequiredByCode } from '#reports/domain/report-mandatory/reason-codes.js'
  */
 
 /**
@@ -22,22 +21,21 @@ import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index
  */
 
 /**
- * @typedef {object} MissingField
- * @property {string} field - Canonical field name (FE maps to label + column via its language file).
- * @property {RequiredByCode} requiredBy
- * @property {number} columnIndex - 0-based position of the field within its table's requiredHeaders.
- */
-
-/**
- * @typedef {object} IncompleteRow
+ * One missing mandatory field: a single line item in the error payload. Each
+ * unfilled field is its own issue, so `total` and the rendered list agree at
+ * field granularity. `field` is the canonical name; the frontend maps it to a
+ * label. `sheet`/`rowId` locate it and let the frontend group issues by
+ * worksheet and row if it wants.
+ *
+ * @typedef {object} Issue
  * @property {string} sheet - The row's spreadsheet sheet name.
  * @property {string} rowId
- * @property {MissingField[]} missing
+ * @property {string} field
  */
 
 /**
- * Collects the unfilled mandatory fields for one row. A rule contributes when
- * its trigger holds for the row, regardless of which report period the row
+ * Collects one issue per unfilled mandatory field on a row. A rule contributes
+ * when its trigger holds for the row, regardless of which report period the row
  * belongs to: the gate checks the whole summary log, not just the rows this
  * report aggregates. The required fields across a template's rules for a single
  * table are disjoint, so no de-duplication is needed.
@@ -45,39 +43,35 @@ import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index
  * @param {CompletenessRow} row
  * @param {TableSchema} schema
  * @param {ReportMandatoryRule[]} rules
- * @returns {MissingField[]}
+ * @returns {Issue[]}
  */
-const missingFieldsForRow = (row, schema, rules) => {
-  /** @type {MissingField[]} */
-  const missing = []
+const issuesForRow = (row, schema, rules) => {
+  /** @type {Issue[]} */
+  const issues = []
   for (const rule of rules) {
     if (!rule.trigger(row.data)) {
       continue
     }
     for (const field of rule.requiredFields) {
       if (!isFilled(row.data[field], schema.unfilledValues[field] ?? [])) {
-        missing.push({
-          field,
-          requiredBy: rule.requiredBy,
-          columnIndex: schema.requiredHeaders.indexOf(field)
-        })
+        issues.push({ sheet: schema.sheetName, rowId: row.rowId, field })
       }
     }
   }
-  return missing
+  return issues
 }
 
 /**
- * Applies the report-mandatory policy to every row state, returning one entry
- * per row that has at least one unfilled mandatory field. Rows whose processing
- * type has no policy (or whose record type has no rules) are skipped. The row's
- * table schema, drift-guarded against the policy, supplies the sheet name,
- * column order and per-field unfilled values.
+ * Applies the report-mandatory policy to every row state, returning one issue
+ * per unfilled mandatory field across the whole summary log. Rows whose
+ * processing type has no policy (or whose record type has no rules) are skipped.
+ * The row's table schema, drift-guarded against the policy, supplies the sheet
+ * name and per-field unfilled values.
  *
  * @param {CompletenessRow[]} rows
- * @returns {IncompleteRow[]}
+ * @returns {Issue[]}
  */
-export const findIncompleteRows = (rows) =>
+export const findIssues = (rows) =>
   rows.flatMap((row) => {
     const rules = reportMandatoryPolicyFor(row.processingType)?.[
       row.wasteRecordType
@@ -88,43 +82,40 @@ export const findIncompleteRows = (rows) =>
     const schema = /** @type {TableSchema} */ (
       findSchemaForProcessingType(row.processingType, row.wasteRecordType)
     )
-    const missing = missingFieldsForRow(row, schema, rules)
-    return missing.length
-      ? [{ sheet: schema.sheetName, rowId: row.rowId, missing }]
-      : []
+    return issuesForRow(row, schema, rules)
   })
 
 /**
- * Upper bound on the number of incomplete rows carried in the error payload.
- * The frontend renders "we found {total} but can only display {N}" when the
- * true count exceeds this, so the payload stays bounded on a pathological
- * summary log while `total` keeps the count truthful.
+ * Upper bound on the number of issues carried in the error payload. The
+ * frontend renders "we found {total} but can only display {N}" when the true
+ * count exceeds this, so the payload stays bounded on a pathological summary log
+ * while `total` keeps the count truthful.
  */
-export const MAX_INCOMPLETE_ROWS_REPORTED = 100
+export const MAX_ISSUES_REPORTED = 100
 
 /**
- * Throws a 400 Boom enriched with `code=report_data_incomplete` and a per-row
- * `incompleteRows` payload if any row in the summary log is missing a mandatory
- * field. On success it returns silently and the report is created.
+ * Throws a 400 Boom enriched with `code=report_data_incomplete` and a flat
+ * `issues` payload if any mandatory field is missing anywhere in the summary
+ * log. On success it returns silently and the report is created.
  *
- * `total` is the true number of incomplete rows; `incompleteRows` is capped at
- * `MAX_INCOMPLETE_ROWS_REPORTED`, so `total` can exceed `incompleteRows.length`.
+ * `total` is the true number of missing fields; `issues` is capped at
+ * `MAX_ISSUES_REPORTED`, so `total` can exceed `issues.length`.
  *
  * @param {CompletenessRow[]} rows
  * @param {string} reference - Ledger/registration reference for CDP log indexing.
  * @returns {void}
  */
 export const assertReportDataComplete = (rows, reference) => {
-  const incompleteRows = findIncompleteRows(rows)
-  const total = incompleteRows.length
+  const issues = findIssues(rows)
+  const total = issues.length
   if (total) {
     throw badRequest(
-      `Report cannot be created; ${total} row(s) have incomplete mandatory data`,
+      `Report cannot be created; ${total} mandatory field(s) are missing`,
       errorCodes.reportDataIncomplete,
       {
         event: {
           action: 'create_report',
-          reason: `incompleteRows=${total}`,
+          reason: `missingFields=${total}`,
           reference
         },
         // `reason` discriminates this 400 from other bad-request payloads for
@@ -132,7 +123,7 @@ export const assertReportDataComplete = (rows, reference) => {
         payload: {
           reason: errorCodes.reportDataIncomplete,
           total,
-          incompleteRows: incompleteRows.slice(0, MAX_INCOMPLETE_ROWS_REPORTED)
+          issues: issues.slice(0, MAX_ISSUES_REPORTED)
         }
       }
     )

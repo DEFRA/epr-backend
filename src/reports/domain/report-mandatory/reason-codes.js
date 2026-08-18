@@ -1,8 +1,10 @@
 /**
- * Enumerated `requiredBy` codes carried on each incomplete-cell entry in the
- * report-completeness error payload. The frontend (PAE-1794) maps these to
- * operator-facing copy and section labels via its language file, so the codes
- * are a stable contract: rename with care.
+ * Enumerated `requiredBy` codes labelling why a rule makes its fields mandatory
+ * (which section of the return they belong to). This is internal rule identity:
+ * the codes are NOT serialised in the error payload — that lists field names
+ * only — but they group the rules and are the intended breakdown key for the
+ * prod-data diagnostic (defra-4ry0). Kept stable so that consumer can rely on
+ * them: rename with care.
  *
  * @typedef {(typeof REQUIRED_BY)[keyof typeof REQUIRED_BY]} RequiredByCode
  */
