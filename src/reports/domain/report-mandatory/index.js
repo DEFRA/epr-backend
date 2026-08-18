@@ -41,6 +41,12 @@ import { REPROCESSOR_REGISTERED_ONLY_POLICY } from './policy/reprocessor-registe
  * are populated: the two exporter templates (PAE-1420) and the three reprocessor
  * templates (PAE-1280).
  *
+ * The three reprocessor policies are kept as separate modules even though their
+ * rule bodies currently coincide: each sources its fields from its own template
+ * schema and the templates may diverge (a mandatory field added or dropped for
+ * one variant). The policy test guards that their field names stay real, so a
+ * drift in one module fails in isolation rather than silently.
+ *
  * @type {Partial<Record<string, ReportMandatoryPolicy>>}
  */
 const POLICY_BY_PROCESSING_TYPE = Object.freeze({

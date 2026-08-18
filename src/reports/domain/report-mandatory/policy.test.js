@@ -26,20 +26,25 @@ const ruleCases = POPULATED_TEMPLATES.flatMap((processingType) => {
   )
 })
 
-// Guards the schema-sourced layout the engine depends on: a rule whose required
-// field is not a real column would report `columnIndex: -1`, which the
-// integration tests do not notice because they assert the column index only as
-// an opaque number.
-describe('report-mandatory policy references only real table columns', () => {
+// Guards the schema-sourced layout the engine depends on. Two invariants: the
+// rule's `(processingType, wasteRecordType)` pair must resolve to a real schema
+// (the engine casts the lookup to non-null and dereferences `sheetName` and
+// `unfilledValues`, so a rule keyed under an unregistered record type would 500
+// the request), and every required field must be a real column (a phantom field
+// would report `columnIndex: -1`, which the integration tests miss because they
+// assert the column index only as an opaque number).
+describe('report-mandatory policy references only real table schemas', () => {
   it.each(ruleCases)(
     '$processingType/$wasteRecordType $rule.requiredBy',
     ({ processingType, wasteRecordType, rule }) => {
-      const headers =
-        findSchemaForProcessingType(processingType, wasteRecordType)
-          ?.requiredHeaders ?? []
+      const schema = findSchemaForProcessingType(
+        processingType,
+        wasteRecordType
+      )
+      expect(schema).not.toBeNull()
 
       for (const field of rule.requiredFields) {
-        expect(headers).toContain(field)
+        expect(schema?.requiredHeaders).toContain(field)
       }
     }
   )

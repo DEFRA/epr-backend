@@ -1299,7 +1299,8 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     // AC1: the six supplier fields a positive received-for-recycling tonnage
-    // makes mandatory, in the order the gate reports them.
+    // makes mandatory. Listed in the policy's declaration order so the expected
+    // issues below read naturally; the frontend does not depend on field order.
     const SUPPLIER_FIELDS = [
       'SUPPLIER_NAME',
       'SUPPLIER_ADDRESS',
@@ -1310,7 +1311,8 @@ describe(`POST ${reportsPostPath}`, () => {
     ]
 
     // AC2: the four final-destination fields a positive sent-on tonnage makes
-    // mandatory, in report order.
+    // mandatory. Listed in the policy's declaration order for readability; the
+    // frontend does not depend on field order.
     const DESTINATION_FIELDS = [
       'FINAL_DESTINATION_NAME',
       'FINAL_DESTINATION_FACILITY_TYPE',
@@ -1502,36 +1504,12 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
-    it('does not gate the report-detail retrieval path (GET) with the flag on', async () => {
-      const { server, organisationId, registrationId } = await createServer(
-        { wasteProcessingType: 'reprocessor', accreditationId: undefined },
-        {
-          featureFlags: gateEnabled,
-          rows: [
-            reprocessorRow(
-              PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
-              'row-1',
-              WASTE_RECORD_TYPE.RECEIVED,
-              { TONNAGE_RECEIVED_FOR_RECYCLING: 5 }
-            )
-          ]
-        }
-      )
-
-      const response = await server.inject({
-        method: 'GET',
-        url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1, 1),
-        ...asOperator()
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(JSON.parse(response.payload).reason).toBeUndefined()
-    })
-
-    it('treats a registered-only final-destination dropdown placeholder as unfilled when sent-on tonnage > 0 (defra-h9hv twin)', async () => {
+    it('blocks a registered-only placeholder facility type but never gates the GET retrieval path (defra-h9hv twin)', async () => {
       // The facility type is a 'Choose option' dropdown on the reprocessor
       // registered-only Sent-on sheet, so an unselected one must be flagged
-      // exactly as the accredited schemas do.
+      // exactly as the accredited schemas do. The same incomplete data must
+      // still return the on-the-fly report on GET: the gate lives only in
+      // report creation.
       const { server, organisationId, registrationId } = await createServer(
         { wasteProcessingType: 'reprocessor', accreditationId: undefined },
         {
@@ -1572,6 +1550,15 @@ describe(`POST ${reportsPostPath}`, () => {
           field: 'FINAL_DESTINATION_FACILITY_TYPE'
         })
       ])
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1, 1),
+        ...asOperator()
+      })
+
+      expect(getResponse.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(getResponse.payload).reason).toBeUndefined()
     })
   })
 })
