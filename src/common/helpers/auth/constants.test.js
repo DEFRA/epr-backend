@@ -42,6 +42,12 @@ describe('ADMIN_ROLES', () => {
     }
   })
 
+  test('no tier holds waste-balance.ledger.read, because admin.read admits a tier to a ledger', () => {
+    for (const scopes of Object.values(ADMIN_ROLES)) {
+      expect(scopes).not.toContain(SCOPES.wasteBalanceLedgerRead)
+    }
+  })
+
   test('a tier that holds admin.read also holds organisation.search', () => {
     const tiersWithAdminRead = Object.values(ADMIN_ROLES).filter((scopes) =>
       scopes.includes(SCOPES.adminRead)
@@ -68,6 +74,10 @@ describe('the regulator role', () => {
 
   test('carries organisation.search, which enumerates operators the regulator holds no id for', () => {
     expect(REGULATOR_SCOPES).toContain(SCOPES.organisationSearch)
+  })
+
+  test('carries waste-balance.ledger.read, which organisation.read must not admit', () => {
+    expect(REGULATOR_SCOPES).toContain(SCOPES.wasteBalanceLedgerRead)
   })
 
   test('carries no admin scope', () => {

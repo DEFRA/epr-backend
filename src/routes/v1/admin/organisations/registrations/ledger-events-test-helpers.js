@@ -17,10 +17,11 @@ const ANOTHER_ORGANISATION_ID = 'another-organisation-id'
  * Exercises who may read a waste balance ledger over the full auth stack.
  *
  * Real tokens are the point. `server.inject({ auth })` attaches credentials
- * directly, so it cannot show that an operator holds `organisation.read` only
- * for the organisation named in the path. The pair that pins that down is the
- * operator reading their own organisation and the same token refused another
- * one.
+ * directly, so it cannot show which scopes a caller actually earns. An
+ * operator earns `organisation.read` for the organisation named in the path,
+ * and the admin path carries an `{organisationId}`, so a route that admits
+ * `organisation.read` admits an operator reading their own ledger. The case
+ * that pins that down is the operator refused their own organisation.
  *
  * @param {{ makeUrl: (organisationId: string) => string }} options
  */
@@ -71,10 +72,24 @@ export const testLedgerEventsAccess = ({ makeUrl }) => {
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
-    it('returns 200 for an operator linked to the organisation in the path', async () => {
-      const response = await getWithToken(defraIdMockAuthTokens.validToken)
+    it('returns 200 for a read-only service maintainer', async () => {
+      const response = await getWithToken(
+        entraIdMockAuthTokens.readOnlyMaintainerToken
+      )
 
       expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('returns 200 for the support tier, the lowest tier that holds admin.read', async () => {
+      const response = await getWithToken(entraIdMockAuthTokens.supportToken)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('returns 403 for an operator linked to the organisation in the path', async () => {
+      const response = await getWithToken(defraIdMockAuthTokens.validToken)
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
     })
 
     it('returns 403 for an operator asked for an organisation that is not their own', async () => {
