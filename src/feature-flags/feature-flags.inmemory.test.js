@@ -11,7 +11,8 @@ const FLAGS = [
   ['isDevEndpointsEnabled', 'devEndpoints'],
   ['isPreCpaResubmissionBackfillEnabled', 'preCpaResubmissionBackfill'],
   ['isPreCpaResubmissionReportEnabled', 'preCpaResubmissionReport'],
-  ['isStaleIssuedTonnageReportEnabled', 'staleIssuedTonnageReport']
+  ['isStaleIssuedTonnageReportEnabled', 'staleIssuedTonnageReport'],
+  ['isReportDataCompleteDiagnosticEnabled', 'reportDataCompleteDiagnostic']
 ]
 
 describe('createInMemoryFeatureFlags', () => {
