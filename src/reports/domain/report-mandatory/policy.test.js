@@ -4,19 +4,22 @@ import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/
 import { reportMandatoryPolicyFor } from './index.js'
 
 /**
- * Every populated exporter template. The three reprocessor templates are
- * deliberately unpopulated until PAE-1280 and resolve to a null policy.
+ * Every template with a populated report-mandatory policy: both exporter
+ * templates (PAE-1420) and the three reprocessor templates (PAE-1280).
  */
-const EXPORTER_TEMPLATES = [
+const POPULATED_TEMPLATES = [
   PROCESSING_TYPES.EXPORTER,
-  PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
+  PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY,
+  PROCESSING_TYPES.REPROCESSOR_INPUT,
+  PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+  PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
 ]
 
 /**
  * Flattens each populated policy into one case per rule so a drifted field name
  * fails in isolation with a readable label.
  */
-const ruleCases = EXPORTER_TEMPLATES.flatMap((processingType) => {
+const ruleCases = POPULATED_TEMPLATES.flatMap((processingType) => {
   const policy = reportMandatoryPolicyFor(processingType) ?? {}
   return Object.entries(policy).flatMap(([wasteRecordType, rules]) =>
     rules.map((rule) => ({ processingType, wasteRecordType, rule }))
@@ -40,4 +43,10 @@ describe('report-mandatory policy references only real table columns', () => {
       }
     }
   )
+})
+
+describe('reportMandatoryPolicyFor', () => {
+  it('returns null for a processing type with no policy', () => {
+    expect(reportMandatoryPolicyFor('UNKNOWN_PROCESSING_TYPE')).toBeNull()
+  })
 })

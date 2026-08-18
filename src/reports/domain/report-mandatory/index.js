@@ -1,6 +1,9 @@
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { EXPORTER_POLICY } from './policy/exporter.js'
 import { EXPORTER_REGISTERED_ONLY_POLICY } from './policy/exporter-registered-only.js'
+import { REPROCESSOR_INPUT_POLICY } from './policy/reprocessor-input.js'
+import { REPROCESSOR_OUTPUT_POLICY } from './policy/reprocessor-output.js'
+import { REPROCESSOR_REGISTERED_ONLY_POLICY } from './policy/reprocessor-registered-only.js'
 
 /**
  * @import { RequiredByCode } from './reason-codes.js'
@@ -34,14 +37,19 @@ import { EXPORTER_REGISTERED_ONLY_POLICY } from './policy/exporter-registered-on
  */
 
 /**
- * Report-mandatory policy per processing type. Only the two exporter templates
- * are populated: the three reprocessor templates plug in under PAE-1280.
+ * Report-mandatory policy per processing type. All five summary-log templates
+ * are populated: the two exporter templates (PAE-1420) and the three reprocessor
+ * templates (PAE-1280).
  *
  * @type {Partial<Record<string, ReportMandatoryPolicy>>}
  */
 const POLICY_BY_PROCESSING_TYPE = Object.freeze({
   [PROCESSING_TYPES.EXPORTER]: EXPORTER_POLICY,
-  [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]: EXPORTER_REGISTERED_ONLY_POLICY
+  [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]: EXPORTER_REGISTERED_ONLY_POLICY,
+  [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT_POLICY,
+  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: REPROCESSOR_OUTPUT_POLICY,
+  [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]:
+    REPROCESSOR_REGISTERED_ONLY_POLICY
 })
 
 /**
