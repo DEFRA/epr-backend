@@ -369,6 +369,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
+    },
+    reportDataValidation: {
+      doc: 'Feature Flag: Block report creation when mandatory summary-log row data is incomplete (PAE-1420)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_REPORT_DATA_VALIDATION'
     }
   },
   formSubmissionOverrides: {

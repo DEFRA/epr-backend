@@ -11,6 +11,7 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   REPORT_STATUS,
@@ -28,6 +29,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { reportsPostPath } from './post.js'
+import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
 
 vi.mock('#reports/application/audit.js', () => ({
@@ -49,7 +51,15 @@ describe(`POST ${reportsPostPath}`, () => {
    * routes resolve one committed row at the latest submitted summary log for the
    * registration.
    */
-  const seedRepositories = async (org, registration) => {
+  const DEFAULT_ROWS = [
+    buildSummaryLogRowStateEntry({
+      rowId: 'row-0',
+      wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+      data: {}
+    })
+  ]
+
+  const seedRepositories = async (org, registration, rows = DEFAULT_ROWS) => {
     const accreditationId = registration.accreditationId ?? null
     const ledgerId = {
       organisationId: org.id,
@@ -60,13 +70,7 @@ describe(`POST ${reportsPostPath}`, () => {
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       ledgerId,
-      [
-        buildSummaryLogRowStateEntry({
-          rowId: 'row-0',
-          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-          data: {}
-        })
-      ],
+      rows,
       SUMMARY_LOG_ID
     )
     const ledgerRepository = createInMemoryLedgerRepository([
@@ -84,17 +88,58 @@ describe(`POST ${reportsPostPath}`, () => {
     return { ledgerRepository, summaryLogRowStatesRepository }
   }
 
-  const createServer = async (registrationOverrides = {}) => {
-    const registration = buildRegistration(registrationOverrides)
-    const org = buildOrganisation({ registrations: [registration] })
+  /**
+   * Builds an organisations repository seeded with one registration. An
+   * accredited registration is linked to an approved accreditation and passed
+   * as the repository's initial org (insert would reset its status history);
+   * a registered-only registration is inserted.
+   */
+  const buildOrganisationsRepository = async (registration, accredited) => {
+    if (accredited) {
+      const org = buildOrganisationWithRegistration(
+        partialMock(registration),
+        'approved'
+      )
+      return {
+        org,
+        factory: createInMemoryOrganisationsRepository([partialMock(org)])
+      }
+    }
 
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository()
-    const organisationsRepository = organisationsRepositoryFactory()
-    await organisationsRepository.insert(org)
+    const org = buildOrganisation({ registrations: [registration] })
+    const factory = createInMemoryOrganisationsRepository()
+    await factory().insert(org)
+    return { org, factory }
+  }
+
+  /**
+   * @param {object} [registrationOverrides]
+   * @param {object} [options]
+   * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [options.featureFlags]
+   * @param {any[]} [options.rows]
+   * @param {boolean} [options.accredited] - Link an approved accreditation (monthly cadence).
+   */
+  const createServer = async (
+    registrationOverrides = {},
+    {
+      featureFlags = createInMemoryFeatureFlags(),
+      rows,
+      accredited = false
+    } = {}
+  ) => {
+    const registration = buildRegistration(
+      accredited
+        ? {
+            accreditationId: new ObjectId().toString(),
+            ...registrationOverrides
+          }
+        : registrationOverrides
+    )
+    const { org, factory: organisationsRepositoryFactory } =
+      await buildOrganisationsRepository(registration, accredited)
 
     const { ledgerRepository, summaryLogRowStatesRepository } =
-      await seedRepositories(org, registration)
+      await seedRepositories(org, registration, rows)
     const reportsRepositoryFactory = createInMemoryReportsRepository()
 
     const server = await createTestServer({
@@ -104,7 +149,7 @@ describe(`POST ${reportsPostPath}`, () => {
         summaryLogRowStatesRepository,
         reportsRepository: reportsRepositoryFactory
       },
-      featureFlags: createInMemoryFeatureFlags()
+      featureFlags
     })
 
     return {
@@ -910,6 +955,365 @@ describe(`POST ${reportsPostPath}`, () => {
         period: 1,
         year: 2025
       })
+    })
+  })
+
+  describe('exporter report data completeness gate (PAE-1420)', () => {
+    const gateEnabled = createInMemoryFeatureFlags({
+      reportDataValidation: true
+    })
+
+    // The six supplier fields AC1 makes mandatory, in the order the gate reports
+    // them. Kept as a list so the accredited/reg-only assertions read the same.
+    const SUPPLIER_FIELDS = [
+      'SUPPLIER_NAME',
+      'SUPPLIER_ADDRESS',
+      'SUPPLIER_POSTCODE',
+      'SUPPLIER_EMAIL',
+      'SUPPLIER_PHONE_NUMBER',
+      'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
+    ]
+
+    // Row-state entries are keyed by the canonical field names ingestion
+    // normalises both templates to; the gate reads only this data, never the
+    // template. Accredited packs everything onto one exported row; reg-only
+    // splits it across received/loads-exported/sent-on rows.
+    /**
+     * @param {Record<string, any>} data
+     * @param {string} [wasteRecordType]
+     */
+    const accreditedRow = (
+      data,
+      wasteRecordType = WASTE_RECORD_TYPE.EXPORTED
+    ) =>
+      buildSummaryLogRowStateEntry({
+        rowId: 'row-1',
+        wasteRecordType,
+        processingType: PROCESSING_TYPES.EXPORTER,
+        data
+      })
+
+    const regOnlyRow = (rowId, wasteRecordType, data) =>
+      buildSummaryLogRowStateEntry({
+        rowId,
+        wasteRecordType,
+        processingType: PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY,
+        data
+      })
+
+    const regOnlyExporter = {
+      wasteProcessingType: 'exporter',
+      accreditationId: undefined
+    }
+
+    const postRegOnly = (server, organisationId, registrationId) =>
+      makeRequest(server, organisationId, registrationId, 2025, 'quarterly', 1)
+
+    const postAccredited = (server, organisationId, registrationId) =>
+      makeRequest(server, organisationId, registrationId, 2025, 'monthly', 1)
+
+    // The payload is a flat list of issues, one per missing field. Each issue
+    // locates the field by sheet and row; the frontend maps the field to copy.
+    const issuesFor = (sheet, rowId, fields) =>
+      fields.map((field) => ({ sheet, rowId, field }))
+
+    it('creates the report when the flag is off despite incomplete in-period data', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        {
+          rows: [
+            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+              MONTH_RECEIVED_FOR_EXPORT: '2025-01',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('creates the report when the flag is on but no completeness rule is triggered', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        { featureFlags: gateEnabled }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('creates the report when a triggered row has every mandatory field filled', async () => {
+      // The supplier rule fires (received tonnage > 0) but the row is complete,
+      // so the gate finds nothing missing and creation proceeds.
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        {
+          featureFlags: gateEnabled,
+          rows: [
+            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+              MONTH_RECEIVED_FOR_EXPORT: '2025-01',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5,
+              SUPPLIER_NAME: 'Acme Waste Ltd',
+              SUPPLIER_ADDRESS: '1 Depot Road',
+              SUPPLIER_POSTCODE: 'AB1 2CD',
+              SUPPLIER_EMAIL: 'ops@acme.example',
+              SUPPLIER_PHONE_NUMBER: '01234 567890',
+              ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baling'
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('does not gate rows whose processing type has no policy (reprocessor)', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'reprocessor', accreditationId: undefined },
+        {
+          featureFlags: gateEnabled,
+          rows: [
+            buildSummaryLogRowStateEntry({
+              rowId: 'row-1',
+              wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+              processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2025-01-10',
+                TONNAGE_RECEIVED_FOR_RECYCLING: 5
+              }
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('blocks the report on an incomplete triggered row from outside the report period', async () => {
+      // Whole-summary-log scoping (PAE-1420 pivot): export tonnage with a June
+      // export date and a blank OSR_ID. The January report does not aggregate
+      // this row, but its incompleteness still blocks report creation.
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'exporter' },
+        {
+          accredited: true,
+          featureFlags: gateEnabled,
+          rows: [
+            accreditedRow({
+              DATE_OF_EXPORT: '2025-06-15',
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+            })
+          ]
+        }
+      )
+
+      const response = await postAccredited(
+        server,
+        organisationId,
+        registrationId
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.reason).toBe('report_data_incomplete')
+      expect(payload.total).toBe(1)
+      expect(payload.issues).toEqual(issuesFor('Exported', 'row-1', ['OSR_ID']))
+    })
+
+    it('blocks when export tonnage is present but the export date is blank (AC4)', async () => {
+      // AC4: a positive export tonnage requires an export date. The OSR_ID is
+      // present so the overseas-site rule is satisfied; only the missing export
+      // date fails creation.
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'exporter' },
+        {
+          accredited: true,
+          featureFlags: gateEnabled,
+          rows: [
+            accreditedRow({
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+              OSR_ID: 'ORS-0001'
+            })
+          ]
+        }
+      )
+
+      const response = await postAccredited(
+        server,
+        organisationId,
+        registrationId
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.reason).toBe('report_data_incomplete')
+      expect(payload.total).toBe(1)
+      expect(payload.issues).toEqual(
+        issuesFor('Exported', 'row-1', ['DATE_OF_EXPORT'])
+      )
+    })
+
+    it('accredited: an in-period packed row fires the supplier, export and interim rules together', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'exporter' },
+        {
+          accredited: true,
+          featureFlags: gateEnabled,
+          rows: [
+            accreditedRow({
+              DATE_RECEIVED_FOR_EXPORT: '2025-01-10',
+              DATE_OF_EXPORT: '2025-01-20',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5,
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+              DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'Yes'
+            })
+          ]
+        }
+      )
+
+      const response = await postAccredited(
+        server,
+        organisationId,
+        registrationId
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.reason).toBe('report_data_incomplete')
+      expect(payload.total).toBe(SUPPLIER_FIELDS.length + 2)
+      expect(payload.issues).toEqual(
+        issuesFor('Exported', 'row-1', [
+          ...SUPPLIER_FIELDS,
+          'OSR_ID',
+          'INTERIM_SITE_ID'
+        ])
+      )
+    })
+
+    it('does not gate the report-detail retrieval path (GET) with the flag on', async () => {
+      // The gate lives only in report creation: retrieval must still return the
+      // on-the-fly report even when the same in-period data would block a POST.
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'exporter' },
+        {
+          accredited: true,
+          featureFlags: gateEnabled,
+          rows: [
+            accreditedRow({
+              DATE_RECEIVED_FOR_EXPORT: '2025-01-10',
+              DATE_OF_EXPORT: '2025-01-20',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5,
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+            })
+          ]
+        }
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makeUrl(organisationId, registrationId, 2025, 'monthly', 1, 1),
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload).reason).toBeUndefined()
+    })
+
+    it('registered-only: fires the applicable rule on each split row', async () => {
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        {
+          featureFlags: gateEnabled,
+          rows: [
+            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+              MONTH_RECEIVED_FOR_EXPORT: '2025-01',
+              TONNAGE_RECEIVED_FOR_EXPORT: 5
+            }),
+            regOnlyRow('row-2', WASTE_RECORD_TYPE.EXPORTED, {
+              DATE_OF_EXPORT: '2025-02-10',
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.total).toBe(SUPPLIER_FIELDS.length + 1)
+      expect(payload.issues).toEqual([
+        ...issuesFor('Received (section 1)', 'row-1', SUPPLIER_FIELDS),
+        ...issuesFor('Exported (sections 2 and 3)', 'row-2', ['OSR_ID'])
+      ])
+    })
+
+    it('caps the reported issues at the maximum while reporting the true total', async () => {
+      // A pathological summary log can breach the display cap: the payload stays
+      // bounded but `total` still tells the frontend the real number of issues.
+      // Each row carries a filled OSR_ID but a blank export date, so it
+      // contributes exactly one issue and the total equals the row count.
+      const issueCount = MAX_ISSUES_REPORTED + 1
+      const rows = Array.from({ length: issueCount }, (_, index) =>
+        regOnlyRow(`row-${index + 1}`, WASTE_RECORD_TYPE.EXPORTED, {
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+          OSR_ID: 'ORS-0001'
+        })
+      )
+
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        { featureFlags: gateEnabled, rows }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.total).toBe(issueCount)
+      expect(payload.issues).toHaveLength(MAX_ISSUES_REPORTED)
+    })
+
+    it('treats a registered-only final-destination dropdown placeholder as unfilled when sent-on tonnage > 0', async () => {
+      // The facility type is a 'Choose option' dropdown on the shared exporter
+      // Sent-on sheet, so registered-only must flag an unselected one exactly as
+      // the accredited schema does (defra-h9hv).
+      const { server, organisationId, registrationId } = await createServer(
+        regOnlyExporter,
+        {
+          featureFlags: gateEnabled,
+          rows: [
+            regOnlyRow('row-1', WASTE_RECORD_TYPE.SENT_ON, {
+              DATE_LOAD_LEFT_SITE: '2025-03-01',
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
+              FINAL_DESTINATION_NAME: 'Port Recyclers',
+              FINAL_DESTINATION_FACILITY_TYPE: 'Choose option',
+              FINAL_DESTINATION_ADDRESS: '2 Quay Street',
+              FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
+            })
+          ]
+        }
+      )
+
+      const response = await postRegOnly(server, organisationId, registrationId)
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.total).toBe(1)
+      expect(payload.issues).toEqual([
+        expect.objectContaining({
+          rowId: 'row-1',
+          field: 'FINAL_DESTINATION_FACILITY_TYPE'
+        })
+      ])
     })
   })
 })

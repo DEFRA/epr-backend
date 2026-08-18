@@ -3,7 +3,8 @@ import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import {
   createRowIdSchema,
   createUnboundedWeightFieldSchema,
-  createDateFieldSchema
+  createDateFieldSchema,
+  DROPDOWN_PLACEHOLDER
 } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
@@ -38,8 +39,16 @@ export const SENT_ON_LOADS = {
 
   /**
    * Per-field values that indicate "unfilled"
+   *
+   * The final-destination facility type is a dropdown ('Choose option, Exporter,
+   * Reprocessor, Other') on the shared exporter Sent-on sheet, so a cell left on
+   * the placeholder counts as unfilled, matching the accredited schema. Without
+   * this, an unselected facility type would read as a real value at upload and
+   * in the report-completeness gate (defra-h9hv).
    */
-  unfilledValues: {},
+  unfilledValues: {
+    [FIELDS.FINAL_DESTINATION_FACILITY_TYPE]: DROPDOWN_PLACEHOLDER
+  },
 
   /**
    * VAL010: Validation schema for filled fields
