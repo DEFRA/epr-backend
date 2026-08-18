@@ -121,6 +121,7 @@ const buildPrn = (currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE) => ({
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },
+  obligationYear: 2026,
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage: 100,
   isExport: false,

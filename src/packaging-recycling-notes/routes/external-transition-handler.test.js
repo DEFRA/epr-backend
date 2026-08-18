@@ -66,6 +66,7 @@ const buildPrn = (currentStatus) => ({
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },
+  obligationYear: 2026,
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: 50,
   isExport: false,

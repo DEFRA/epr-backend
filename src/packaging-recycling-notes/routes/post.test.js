@@ -132,6 +132,32 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
+      it('sets obligationYear from the accreditation year', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          status: 'approved',
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2027-01-01',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          submittedToRegulator: 'ea',
+          site: {
+            address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
+          }
+        })
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: validPayload
+        })
+
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({ obligationYear: 2027 })
+        )
+      })
+
       it('creates PRN with draft status and history but no created operation', async () => {
         await server.inject({
           method: 'POST',
