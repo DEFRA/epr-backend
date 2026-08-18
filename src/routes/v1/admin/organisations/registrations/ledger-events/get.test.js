@@ -5,21 +5,19 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testLedgerEventsAccess } from '../../ledger-events-test-helpers.js'
-import { accreditationLedgerEventsGetPath } from './get.js'
+import { testLedgerEventsAccess } from '../ledger-events-test-helpers.js'
+import { registrationLedgerEventsGetPath } from './get.js'
 
 /**
  * @param {string} orgId
  * @param {string} regId
- * @param {string} accId
  */
-const makePath = (orgId, regId, accId) =>
-  accreditationLedgerEventsGetPath
+const makePath = (orgId, regId) =>
+  registrationLedgerEventsGetPath
     .replace('{organisationId}', orgId)
     .replace('{registrationId}', regId)
-    .replace('{accreditationId}', accId)
 
-describe(`GET ${accreditationLedgerEventsGetPath}`, () => {
+describe(`GET ${registrationLedgerEventsGetPath}`, () => {
   setupAuthContext()
 
   /** @type {import('#test/create-test-server.js').TestServer} */
@@ -32,19 +30,19 @@ describe(`GET ${accreditationLedgerEventsGetPath}`, () => {
     ledgerRepository = server.app.ledgerRepository
   })
 
-  it('returns 200 with events for the ledger', async () => {
+  it('returns 200 with the events of the ledger held with no accreditation', async () => {
     await ledgerRepository.appendEvents([
       buildLedgerEvent({
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: null,
         number: 1
       })
     ])
 
     const response = await server.inject({
       method: 'GET',
-      url: makePath('org-1', 'reg-1', 'acc-1'),
+      url: makePath('org-1', 'reg-1'),
       ...asServiceMaintainer()
     })
 
@@ -52,30 +50,30 @@ describe(`GET ${accreditationLedgerEventsGetPath}`, () => {
     const result = JSON.parse(response.payload)
     expect(result).toHaveLength(1)
     expect(result[0].number).toBe(1)
-    expect(result[0].registrationId).toBe('reg-1')
+    expect(result[0].accreditationId).toBeNull()
   })
 
   it('returns events ordered by number ascending', async () => {
     await ledgerRepository.appendEvents([
       buildLedgerEvent({
-        registrationId: 'reg-2',
-        accreditationId: 'acc-2',
         organisationId: 'org-2',
+        registrationId: 'reg-2',
+        accreditationId: null,
         number: 1
       })
     ])
     await ledgerRepository.appendEvents([
       buildLedgerEvent({
-        registrationId: 'reg-2',
-        accreditationId: 'acc-2',
         organisationId: 'org-2',
+        registrationId: 'reg-2',
+        accreditationId: null,
         number: 2
       })
     ])
 
     const response = await server.inject({
       method: 'GET',
-      url: makePath('org-2', 'reg-2', 'acc-2'),
+      url: makePath('org-2', 'reg-2'),
       ...asServiceMaintainer()
     })
 
@@ -86,16 +84,35 @@ describe(`GET ${accreditationLedgerEventsGetPath}`, () => {
     expect(result[1].number).toBe(2)
   })
 
-  it('returns an empty array when no events exist', async () => {
+  it('returns an empty array when the registration holds no such events', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: makePath('org-none', 'reg-none', 'acc-none'),
+      url: makePath('org-none', 'reg-none'),
       ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    const result = JSON.parse(response.payload)
-    expect(result).toEqual([])
+    expect(JSON.parse(response.payload)).toEqual([])
+  })
+
+  it('does not return the events of an accreditation of the same registration', async () => {
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        organisationId: 'org-3',
+        registrationId: 'reg-3',
+        accreditationId: 'acc-3',
+        number: 1
+      })
+    ])
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath('org-3', 'reg-3'),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toEqual([])
   })
 
   it('returns no events for a registration named under a different organisation', async () => {
@@ -103,14 +120,14 @@ describe(`GET ${accreditationLedgerEventsGetPath}`, () => {
       buildLedgerEvent({
         organisationId: 'org-owner',
         registrationId: 'reg-owned',
-        accreditationId: 'acc-owned',
+        accreditationId: null,
         number: 1
       })
     ])
 
     const response = await server.inject({
       method: 'GET',
-      url: makePath('org-stranger', 'reg-owned', 'acc-owned'),
+      url: makePath('org-stranger', 'reg-owned'),
       ...asServiceMaintainer()
     })
 
@@ -120,5 +137,5 @@ describe(`GET ${accreditationLedgerEventsGetPath}`, () => {
 })
 
 testLedgerEventsAccess({
-  makeUrl: (organisationId) => makePath(organisationId, 'reg-1', 'acc-1')
+  makeUrl: (organisationId) => makePath(organisationId, 'reg-1')
 })
