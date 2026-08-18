@@ -372,12 +372,7 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.scope).toEqual([
-        SCOPES.adminRead,
-        SCOPES.organisationSearch,
-        SCOPES.organisationRead,
-        SCOPES.wasteBalanceLedgerRead
-      ])
+      expect(result.credentials.scope).toEqual([...ADMIN_ROLES.support])
     })
 
     test('handles Entra ID token where user matches no admin tier (empty scope)', async () => {

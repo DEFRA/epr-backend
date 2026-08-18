@@ -42,7 +42,7 @@ describe('ADMIN_ROLES', () => {
     expect(ADMIN_ROLES.support).not.toContain(SCOPES.adminDlqPurge)
   })
 
-  test('every admin role includes admin.read, which the read routes declare', () => {
+  test('every admin role includes admin.read', () => {
     for (const scopes of Object.values(ADMIN_ROLES)) {
       expect(scopes).toContain(SCOPES.adminRead)
     }

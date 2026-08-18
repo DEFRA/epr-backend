@@ -29,8 +29,10 @@ const ANOTHER_ORGANISATION_ID = 'another-organisation-id'
  *
  * The first of them also pins the shape of the route's scope array. That
  * operator holds `organisation.read` for the organisation in the path, so a
- * route that admitted either scope would answer 200. The 403 is what shows
- * the route requires both.
+ * route that admitted either scope would answer 200. The 403 shows the ledger
+ * scope is required rather than merely accepted. No identity holds the ledger
+ * scope without `organisation.read`, so no case here shows the first entry is
+ * enforced.
  *
  * @param {{ makeUrl: (organisationId: string) => string }} options
  */
