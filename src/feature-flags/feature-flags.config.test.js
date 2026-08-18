@@ -16,7 +16,11 @@ const FLAGS = [
     'isStaleIssuedTonnageReportEnabled',
     'featureFlags.staleIssuedTonnageReport'
   ],
-  ['isReportDataValidationEnabled', 'featureFlags.reportDataValidation']
+  ['isReportDataValidationEnabled', 'featureFlags.reportDataValidation'],
+  [
+    'isReportDataCompleteDiagnosticEnabled',
+    'featureFlags.reportDataCompleteDiagnostic'
+  ]
 ]
 
 describe('createConfigFeatureFlags', () => {
