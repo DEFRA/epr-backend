@@ -3,10 +3,10 @@ import {
   findReportDataCompletenessFindings,
   formatFinding,
   summariseByTemplate,
-  formatTemplateSummary,
+  formatTemplateBreakdown,
   summariseByMaterial,
-  formatMaterialSummary,
-  formatFieldSummary,
+  formatMaterialBreakdown,
+  formatFieldBreakdown,
   formatTotals,
   formatUnresolved
 } from '#reports/monitoring/report-data-completeness-diagnostic.js'
@@ -33,15 +33,13 @@ const runDiagnostic = async (server) => {
   for (const finding of findings) {
     logger.info({ message: formatFinding(finding) })
   }
-  for (const summary of summariseByTemplate(findings)) {
-    logger.info({ message: formatTemplateSummary(summary) })
-  }
-  for (const summary of summariseByMaterial(findings)) {
-    logger.info({ message: formatMaterialSummary(summary) })
-  }
-  for (const summary of missingFieldCounts) {
-    logger.info({ message: formatFieldSummary(summary) })
-  }
+  logger.info({
+    message: formatTemplateBreakdown(summariseByTemplate(findings))
+  })
+  logger.info({
+    message: formatMaterialBreakdown(summariseByMaterial(findings))
+  })
+  logger.info({ message: formatFieldBreakdown(missingFieldCounts) })
   logger.info({ message: formatTotals({ scanned, findings }) })
 
   for (const item of unresolved) {

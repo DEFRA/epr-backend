@@ -219,32 +219,20 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     // flagged.
     expect(messages().find((m) => m.includes('sl-c'))).toBeUndefined()
 
-    // (2) one line per evaluated template.
+    // (2) one line covering the evaluated templates.
     expect(messages()).toContain(
-      'Report-data diagnostic by template: EXPORTER -- 1 summary log(s) with incomplete data'
-    )
-    expect(messages()).toContain(
-      'Report-data diagnostic by template: EXPORTER_REGISTERED_ONLY -- 1 summary log(s) with incomplete data'
+      'Report-data diagnostic missing data by template: EXPORTER:1, EXPORTER_REGISTERED_ONLY:1'
     )
 
-    // (3) one line per material, including materials with no violations.
+    // (3) one line covering every material, including those with no violations.
     expect(messages()).toContain(
-      'Report-data diagnostic by material: plastic -- 1 summary log(s) with incomplete data'
-    )
-    expect(messages()).toContain(
-      'Report-data diagnostic by material: glass -- 1 summary log(s) with incomplete data'
-    )
-    expect(messages()).toContain(
-      'Report-data diagnostic by material: aluminium -- 0 summary log(s) with incomplete data'
+      'Report-data diagnostic missing data by material: aluminium:0, fibre:0, glass:1, paper:0, plastic:1, steel:0, wood:0'
     )
 
-    // (4) one line per field that was missing, most-missing first. OSR_ID is
+    // (4) one line covering every missing field, most-missing first. OSR_ID is
     // missing on both of ledger A's violating rows; each supplier field once.
     expect(messages()).toContain(
-      'Report-data diagnostic by field: OSR_ID -- missing 2 time(s)'
-    )
-    expect(messages()).toContain(
-      'Report-data diagnostic by field: SUPPLIER_NAME -- missing 1 time(s)'
+      'Report-data diagnostic missing data by field: OSR_ID:2, ACTIVITIES_CARRIED_OUT_BY_SUPPLIER:1, SUPPLIER_ADDRESS:1, SUPPLIER_EMAIL:1, SUPPLIER_NAME:1, SUPPLIER_PHONE_NUMBER:1, SUPPLIER_POSTCODE:1'
     )
 
     // (5) the estate-wide totals.
@@ -321,18 +309,91 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     expect(lineD).toContain('1 incomplete row(s), 6 missing field(s)')
 
     // The finding still counts toward the estate totals and gets its own
-    // material bucket, so the per-material rollup reconciles with the totals.
+    // material bucket appended after the known materials, so the per-material
+    // rollup reconciles with the totals.
     expect(
       messages().find((m) => m.startsWith('Report-data diagnostic summary:'))
     ).toContain('1 with incomplete data (6 missing field(s))')
     expect(messages()).toContain(
-      'Report-data diagnostic by material: unknown -- 1 summary log(s) with incomplete data'
+      'Report-data diagnostic missing data by material: aluminium:0, fibre:0, glass:0, paper:0, plastic:0, steel:0, wood:0, unknown:1'
     )
 
     // A warning names the registration that could not be resolved.
     const warning = warnings().find((m) => m.includes('sl-d'))
     expect(warning).toContain(ledgerId.registrationId)
     expect(warning).toContain('material reported as unknown')
+  })
+
+  it('reports all-zero breakdowns when nothing would be blocked', async () => {
+    // A single reprocessor summary log: it has no completeness policy, so it is
+    // scanned but never flagged. The rollups still report, all zero, and the
+    // field line reads (none).
+    const ledger = buildLedgerFixture({
+      material: 'steel',
+      processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+      summaryLogId: 'sl-z',
+      accredited: true
+    })
+    const rowStates = createInMemorySummaryLogRowStatesRepository()()
+    await rowStates.upsertSummaryLogRowStates(
+      ledger.ledgerId,
+      [
+        buildSummaryLogRowStateEntry({
+          rowId: 'row-z',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+          data: { TONNAGE_RECEIVED_FOR_RECYCLING: 5 }
+        })
+      ],
+      'sl-z'
+    )
+    const ledgerRepository = createInMemoryLedgerRepository([
+      partialMock(
+        buildLedgerEvent({
+          organisationId: ledger.ledgerId.organisationId,
+          registrationId: ledger.ledgerId.registrationId,
+          accreditationId: ledger.ledgerId.accreditationId,
+          payload: { summaryLogId: 'sl-z', creditTotal: 100 }
+        })
+      )
+    ])()
+    const server = /** @type {StartedServer} */ (
+      /** @type {unknown} */ (
+        await createTestServer({
+          featureFlags: createInMemoryFeatureFlags({
+            reportDataCompleteDiagnostic: true
+          }),
+          repositories: {
+            organisationsRepository: createInMemoryOrganisationsRepository([
+              partialMock(ledger.org)
+            ]),
+            ledgerRepository,
+            summaryLogRowStatesRepository: rowStates
+          }
+        })
+      )
+    )
+    server.locker = partialMock({
+      lock: vi.fn().mockResolvedValue({ free: vi.fn() })
+    })
+
+    await runReportDataCompletenessDiagnostic(server)
+
+    expect(messages().find((m) => m.includes('sl-z'))).toBeUndefined()
+    expect(messages()).toContain(
+      'Report-data diagnostic missing data by template: EXPORTER:0, EXPORTER_REGISTERED_ONLY:0'
+    )
+    expect(messages()).toContain(
+      'Report-data diagnostic missing data by material: aluminium:0, fibre:0, glass:0, paper:0, plastic:0, steel:0, wood:0'
+    )
+    expect(messages()).toContain(
+      'Report-data diagnostic missing data by field: (none)'
+    )
+    expect(
+      messages().find((m) => m.startsWith('Report-data diagnostic summary:'))
+    ).toContain(
+      'scanned 1 summary log(s), 0 with incomplete data (0 missing field(s))'
+    )
   })
 
   it('does nothing when the feature flag is off', async () => {

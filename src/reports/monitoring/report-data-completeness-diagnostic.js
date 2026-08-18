@@ -159,11 +159,13 @@ export const summariseByTemplate = (findings) =>
   }))
 
 /**
- * @param {{ processingType: string, count: number }} summary
+ * @param {{ processingType: string, count: number }[]} summaries
  * @returns {string}
  */
-export const formatTemplateSummary = ({ processingType, count }) =>
-  `Report-data diagnostic by template: ${processingType} -- ${count} summary log(s) with incomplete data`
+export const formatTemplateBreakdown = (summaries) =>
+  `Report-data diagnostic missing data by template: ${summaries
+    .map(({ processingType, count }) => `${processingType}:${count}`)
+    .join(', ')}`
 
 /**
  * Counts the violating summary logs per material, across every known material
@@ -185,18 +187,27 @@ export const summariseByMaterial = (findings) => {
 }
 
 /**
- * @param {{ material: string, count: number }} summary
+ * @param {{ material: string, count: number }[]} summaries
  * @returns {string}
  */
-export const formatMaterialSummary = ({ material, count }) =>
-  `Report-data diagnostic by material: ${material} -- ${count} summary log(s) with incomplete data`
+export const formatMaterialBreakdown = (summaries) =>
+  `Report-data diagnostic missing data by material: ${summaries
+    .map(({ material, count }) => `${material}:${count}`)
+    .join(', ')}`
 
 /**
- * @param {{ field: string, count: number }} summary
+ * One line listing how many times each field was missing, most-missing first,
+ * or `(none)` when nothing would be blocked.
+ *
+ * @param {{ field: string, count: number }[]} summaries
  * @returns {string}
  */
-export const formatFieldSummary = ({ field, count }) =>
-  `Report-data diagnostic by field: ${field} -- missing ${count} time(s)`
+export const formatFieldBreakdown = (summaries) =>
+  `Report-data diagnostic missing data by field: ${
+    summaries.length
+      ? summaries.map(({ field, count }) => `${field}:${count}`).join(', ')
+      : '(none)'
+  }`
 
 /**
  * @param {UnresolvedRegistration} unresolved
