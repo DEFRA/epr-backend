@@ -17,7 +17,9 @@ import { MATERIAL } from '#domain/organisations/model.js'
  * @typedef {object} CompletenessFinding
  * @property {string} organisationId
  * @property {string} registrationId
+ * @property {string} registrationNumber - Human-facing registration number ('unknown' if the registration could not be resolved).
  * @property {string | null} accreditationId
+ * @property {string | null} accreditationNumber - Human-facing accreditation number; null for registered-only or unresolved.
  * @property {string} summaryLogId
  * @property {string} processingType - The SL's template (uniform across its rows).
  * @property {string} material
@@ -37,11 +39,12 @@ import { MATERIAL } from '#domain/organisations/model.js'
  */
 
 /**
- * Material reported for a violating summary log whose registration could not be
- * resolved. A real value would be one of the `MATERIAL` enum; this stands in so
- * the finding still counts toward the estate totals and the per-material rollup.
+ * Placeholder reported for a violating summary log whose registration could not
+ * be resolved, standing in for its material and its registration/accreditation
+ * numbers. The finding still counts toward the estate totals and the per-material
+ * rollup so the blast-radius numbers stay truthful.
  */
-export const UNKNOWN_MATERIAL = 'unknown'
+export const UNKNOWN = 'unknown'
 
 /**
  * The templates the completeness gate can evaluate today, derived from the
@@ -95,15 +98,21 @@ export const findReportDataCompletenessFindings = async ({
       fieldCounts.set(issue.field, (fieldCounts.get(issue.field) ?? 0) + 1)
     }
     // A deleted or re-versioned registration must not abort the estate scan:
-    // record it, report the material as unknown, and keep the finding so the
-    // blast-radius count stays truthful.
-    let material = UNKNOWN_MATERIAL
+    // record it, report the material and numbers as unknown, and keep the
+    // finding so the blast-radius count stays truthful.
+    let material = UNKNOWN
+    let registrationNumber = UNKNOWN
+    /** @type {string | null} */
+    let accreditationNumber = null
     try {
       const registration = await organisationsRepository.findRegistrationById(
         ledgerId.organisationId,
         ledgerId.registrationId
       )
       material = registration.material
+      registrationNumber = registration.registrationNumber ?? UNKNOWN
+      accreditationNumber =
+        registration.accreditation?.accreditationNumber ?? null
     } catch {
       unresolved.push({
         organisationId: ledgerId.organisationId,
@@ -114,7 +123,9 @@ export const findReportDataCompletenessFindings = async ({
     findings.push({
       organisationId: ledgerId.organisationId,
       registrationId: ledgerId.registrationId,
+      registrationNumber,
       accreditationId: ledgerId.accreditationId,
+      accreditationNumber,
       summaryLogId,
       processingType: rows[0].processingType,
       material,
@@ -135,11 +146,15 @@ export const findReportDataCompletenessFindings = async ({
  * @returns {string}
  */
 export const formatFinding = (finding) => {
-  const accreditation = finding.accreditationId ?? 'registered-only'
+  const accreditation =
+    finding.accreditationId === null
+      ? 'registered-only'
+      : `${finding.accreditationId} (no. ${finding.accreditationNumber ?? UNKNOWN})`
   return (
     `Report-data diagnostic: summary log ${finding.summaryLogId} ` +
     `(template ${finding.processingType}, material ${finding.material}) -- ` +
-    `org ${finding.organisationId} / registration ${finding.registrationId} / ` +
+    `org ${finding.organisationId} / ` +
+    `registration ${finding.registrationId} (no. ${finding.registrationNumber}) / ` +
     `accreditation ${accreditation} -- ${finding.violatingRows} incomplete row(s), ` +
     `${finding.missingFields} missing field(s)`
   )
@@ -219,7 +234,7 @@ export const formatUnresolved = ({
   summaryLogId
 }) =>
   `Report-data diagnostic: could not resolve registration ${registrationId} ` +
-  `(org ${organisationId}) for summary log ${summaryLogId}; material reported as ${UNKNOWN_MATERIAL}`
+  `(org ${organisationId}) for summary log ${summaryLogId}; material reported as ${UNKNOWN}`
 
 /**
  * @param {{ scanned: number, findings: CompletenessFinding[] }} result

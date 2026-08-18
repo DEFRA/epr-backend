@@ -30,13 +30,14 @@ import { runReportDataCompletenessDiagnostic } from './run-report-data-completen
  * registration (with a chosen material and template) plus the ledger id and the
  * summary-log id the diagnostic will scan.
  *
- * @param {{ material: string, processingType: string, summaryLogId: string, accredited: boolean }} spec
+ * @param {{ material: string, processingType: string, summaryLogId: string, accredited: boolean, registrationNumber?: string }} spec
  */
 const buildLedgerFixture = ({
   material,
   processingType,
   summaryLogId,
-  accredited
+  accredited,
+  registrationNumber = 'REG-000'
 }) => {
   const wasteProcessingType =
     processingType === PROCESSING_TYPES.REPROCESSOR_INPUT
@@ -46,6 +47,7 @@ const buildLedgerFixture = ({
   const registration = buildRegistration({
     wasteProcessingType,
     material,
+    registrationNumber,
     ...(accredited ? { accreditationId } : {})
   })
   const org = accredited
@@ -78,7 +80,8 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     material: 'plastic',
     processingType: PROCESSING_TYPES.EXPORTER,
     summaryLogId: 'sl-a',
-    accredited: true
+    accredited: true,
+    registrationNumber: 'REG-A-001'
   })
   const incompleteExportedRow = (rowId) =>
     buildSummaryLogRowStateEntry({
@@ -112,7 +115,8 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     material: 'glass',
     processingType: PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY,
     summaryLogId: 'sl-b',
-    accredited: false
+    accredited: false,
+    registrationNumber: 'REG-B-002'
   })
   const rowsB = [
     buildSummaryLogRowStateEntry({
@@ -205,14 +209,24 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     expect(lineA).toContain('template EXPORTER,')
     expect(lineA).toContain('material plastic')
     expect(lineA).toContain(ledgerA.ledgerId.organisationId)
-    expect(lineA).toContain(ledgerA.ledgerId.registrationId)
-    expect(lineA).toContain(ledgerA.ledgerId.accreditationId)
+    // The human-facing registration number is logged beside the mongo id, and
+    // the accreditation number beside the accreditation id.
+    expect(lineA).toContain(
+      `registration ${ledgerA.ledgerId.registrationId} (no. REG-A-001)`
+    )
+    expect(lineA).toContain(
+      `accreditation ${ledgerA.ledgerId.accreditationId} (no. `
+    )
     expect(lineA).toContain('2 incomplete row(s), 2 missing field(s)')
 
     const lineB = messages().find((m) => m.includes('sl-b'))
     expect(lineB).toContain('template EXPORTER_REGISTERED_ONLY,')
     expect(lineB).toContain('material glass')
-    expect(lineB).toContain('registered-only')
+    expect(lineB).toContain(
+      `registration ${ledgerB.ledgerId.registrationId} (no. REG-B-002)`
+    )
+    // Registered-only ledgers have no accreditation number.
+    expect(lineB).toContain('accreditation registered-only')
     expect(lineB).toContain('1 incomplete row(s), 6 missing field(s)')
 
     // The reprocessor summary log is scanned but has no policy, so it is not
@@ -306,6 +320,10 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
 
     const lineD = messages().find((m) => m.includes('sl-d'))
     expect(lineD).toContain('material unknown')
+    // With no registration to read, the registration number is unknown too.
+    expect(lineD).toContain(
+      `registration ${ledgerId.registrationId} (no. unknown)`
+    )
     expect(lineD).toContain('1 incomplete row(s), 6 missing field(s)')
 
     // The finding still counts toward the estate totals and gets its own
@@ -394,6 +412,73 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     ).toContain(
       'scanned 1 summary log(s), 0 with incomplete data (0 missing field(s))'
     )
+  })
+
+  it('reports the registration number as unknown when the registration carries none', async () => {
+    // A summary log submitted against a registration that no longer carries a
+    // registration number (a cancelled or rejected registration). The material
+    // still resolves; only the number is unknown.
+    const registration = buildRegistration({
+      wasteProcessingType: 'exporter',
+      material: 'plastic',
+      registrationNumber: undefined
+    })
+    const org = buildOrganisation({ registrations: [registration] })
+    const ledgerId = {
+      organisationId: org.id,
+      registrationId: registration.id,
+      accreditationId: null
+    }
+    const rowStates = createInMemorySummaryLogRowStatesRepository()()
+    await rowStates.upsertSummaryLogRowStates(
+      ledgerId,
+      [
+        buildSummaryLogRowStateEntry({
+          rowId: 'row-n',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          processingType: PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY,
+          data: { TONNAGE_RECEIVED_FOR_EXPORT: 5 }
+        })
+      ],
+      'sl-n'
+    )
+    const ledgerRepository = createInMemoryLedgerRepository([
+      partialMock(
+        buildLedgerEvent({
+          organisationId: ledgerId.organisationId,
+          registrationId: ledgerId.registrationId,
+          accreditationId: null,
+          payload: { summaryLogId: 'sl-n', creditTotal: 100 }
+        })
+      )
+    ])()
+    const server = /** @type {StartedServer} */ (
+      /** @type {unknown} */ (
+        await createTestServer({
+          featureFlags: createInMemoryFeatureFlags({
+            reportDataCompleteDiagnostic: true
+          }),
+          repositories: {
+            organisationsRepository: createInMemoryOrganisationsRepository([
+              partialMock(org)
+            ]),
+            ledgerRepository,
+            summaryLogRowStatesRepository: rowStates
+          }
+        })
+      )
+    )
+    server.locker = partialMock({
+      lock: vi.fn().mockResolvedValue({ free: vi.fn() })
+    })
+
+    await runReportDataCompletenessDiagnostic(server)
+
+    const lineN = messages().find((m) => m.includes('sl-n'))
+    expect(lineN).toContain(
+      `registration ${ledgerId.registrationId} (no. unknown)`
+    )
+    expect(lineN).toContain('material plastic')
   })
 
   it('does nothing when the feature flag is off', async () => {
