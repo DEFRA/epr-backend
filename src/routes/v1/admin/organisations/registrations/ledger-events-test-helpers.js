@@ -17,11 +17,15 @@ const ANOTHER_ORGANISATION_ID = 'another-organisation-id'
  * Exercises who may read a waste balance ledger over the full auth stack.
  *
  * Real tokens are the point. `server.inject({ auth })` attaches credentials
- * directly, so it cannot show which scopes a caller actually earns. An
- * operator earns `organisation.read` for the organisation named in the path,
- * and the admin path carries an `{organisationId}`, so a route that admits
- * `organisation.read` admits an operator reading their own ledger. The case
- * that pins that down is the operator refused their own organisation.
+ * directly, so it cannot show which scopes a caller actually earns. Only a
+ * real Defra ID token shows that the operator resolver grants nothing that
+ * opens a ledger, and the case that pins that down is the operator refused
+ * their own organisation.
+ *
+ * The three operator cases are one assertion held three ways. An operator
+ * earns no ledger scope in any of them, so the organisation in the request no
+ * longer changes the answer. They stay because a later change to the operator
+ * resolver must break all three, not one.
  *
  * @param {{ makeUrl: (organisationId: string) => string }} options
  */

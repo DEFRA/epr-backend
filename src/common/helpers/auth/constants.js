@@ -41,12 +41,13 @@ export const REGULATOR_ROLE = 'regulator_standard'
  * yet, so the condition an operator's `organisation.read` carries — their own
  * linked organisation — cannot apply.
  *
- * `waste-balance.ledger.read` is separate from `organisation.read` because an
- * operator earns `organisation.read` for the organisation named in the path,
- * and the ledger routes carry an `{organisationId}`. A route that admits
- * `organisation.read` therefore admits an operator reading their own ledger.
- * The ledger is a supervisory view of a balance, so only a regulator and the
- * admin tiers may read it.
+ * `waste-balance.ledger.read` covers the ledger behind a waste balance: the
+ * service's own record of how the balance moved, event by event. An operator
+ * reads the balance, and does not read the ledger.
+ *
+ * `organisation.read` cannot draw that line. An operator earns it for the
+ * organisation named in the request, and the ledger routes name one, so a
+ * ledger route that admits `organisation.read` admits the operator too.
  *
  * `regulator` is coarse on purpose. It stands for the whole set of functions
  * only a regulator performs, and subdivides when caseworking functions

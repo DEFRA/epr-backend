@@ -42,7 +42,7 @@ describe('ADMIN_ROLES', () => {
     }
   })
 
-  test('no tier holds waste-balance.ledger.read, because admin.read admits a tier to a ledger', () => {
+  test('no tier holds waste-balance.ledger.read, which names a regulator bundle', () => {
     for (const scopes of Object.values(ADMIN_ROLES)) {
       expect(scopes).not.toContain(SCOPES.wasteBalanceLedgerRead)
     }
@@ -78,6 +78,10 @@ describe('the regulator role', () => {
 
   test('carries waste-balance.ledger.read, which organisation.read must not admit', () => {
     expect(REGULATOR_SCOPES).toContain(SCOPES.wasteBalanceLedgerRead)
+  })
+
+  test('spells that scope the way the frontend declares it on its own gate', () => {
+    expect(SCOPES.wasteBalanceLedgerRead).toBe('waste-balance.ledger.read')
   })
 
   test('carries no admin scope', () => {
