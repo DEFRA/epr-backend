@@ -229,6 +229,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   organisation: OrganisationNameAndId;
  *   registrationId: string;
  *   accreditation: AccreditationSnapshot;
+ *   obligationYear: number;
  *   issuedToOrganisation: OrganisationNameAndId;
  *   tonnage: number;
  *   isExport: boolean;

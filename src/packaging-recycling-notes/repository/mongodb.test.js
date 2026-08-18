@@ -692,6 +692,26 @@ describe('MongoDB packaging recycling notes repository', () => {
       expect(found?.version).toBe(1)
     })
 
+    it('defaults obligationYear to the accreditation year', async ({
+      mongoClient,
+      prnRepository
+    }) => {
+      const client = /** @type {MongoClient} */ (mongoClient)
+      const repo = /** @type {PrnRepository} */ (prnRepository)
+      const collection = client
+        .db(DATABASE_NAME)
+        .collection('packaging-recycling-notes')
+      const { obligationYear: _obligationYear, ...legacyPrn } =
+        buildAwaitingAuthorisationPrn()
+
+      const { insertedId } = await collection.insertOne(legacyPrn)
+      const found = await repo.findById(insertedId.toHexString())
+
+      expect(found?.obligationYear).toBe(
+        legacyPrn.accreditation.accreditationYear
+      )
+    })
+
     it('accepts a CAS update with version 1 and bumps to version 2', async ({
       mongoClient,
       prnRepository
