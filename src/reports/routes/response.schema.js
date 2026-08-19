@@ -72,6 +72,25 @@ export const reportDetailResponseSchema = Joi.object({
   })
     .unknown(true)
     .optional(),
+  // Present only on the generate branch (uncreated preview) when the report
+  // data validation flag is on and mandatory data is missing (PAE-1420). Same
+  // { total, issues } shape the POST create gate throws, so the frontend
+  // consumes it unchanged.
+  incompleteSummaryLogRows: Joi.object({
+    total: Joi.number().integer().required(),
+    issues: Joi.array()
+      .items(
+        // `.unknown(true)` keeps the field additive, matching the sibling
+        // sections above: a future locator added to an issue must not fail
+        // response validation and 500 a read for existing consumers.
+        Joi.object({
+          sheet: Joi.string().required(),
+          rowId: Joi.string().required(),
+          field: Joi.string().required()
+        }).unknown(true)
+      )
+      .required()
+  }).optional(),
   operatorCategory: Joi.string().optional(),
   period: periodSchema.optional(),
   prn: prnSchema.allow(null),
