@@ -64,3 +64,30 @@ process.env.TEST_ORGANISATIONS = '[999999]'
 process.env.TEST_ORGANISATIONS_SKIP_TRANSFORM = '["697a3c0e0587e4d4d7f3d533"]'
 
 process.env.MIGRATION_ACCREDITATIONS_SKIP = '["697a10349b947884b8407111"]'
+
+// Feature flags are read from the shared convict singleton via config.get, so a
+// test that enables one with config.set must not leak it into the next test.
+// Reset every flag to its schema default after each test as a safety net, so no
+// individual file can corrupt flag state by omitting its own afterEach. The
+// config module is imported dynamically because a static import would be hoisted
+// above the process.env assignments above, loading config.js before they run.
+const FEATURE_FLAG_KEYS = [
+  'featureFlags.devEndpoints',
+  'featureFlags.preCpaResubmissionBackfill',
+  'featureFlags.preCpaResubmissionReport',
+  'featureFlags.staleIssuedTonnageReport'
+]
+
+afterEach(async () => {
+  // Wrapped in try/catch because some files mock config.js (via #root or a
+  // relative path); accessing the absent `config` export then throws, and a
+  // mocked config has no real singleton flag state to reset.
+  try {
+    const { config } = await import('#root/config.js')
+    for (const key of FEATURE_FLAG_KEYS) {
+      config.set(key, config.default(key))
+    }
+  } catch {
+    // config.js is mocked in this file; nothing to reset.
+  }
+})

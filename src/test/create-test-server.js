@@ -280,6 +280,9 @@ export async function createTestServer(options = {}) {
     boomErrorLogger,
     externalApiErrorFormatter,
     ...buildRepositoryPlugins(repositoryConfigs, options.repositories ?? {}),
+    // Feature flags are read from the shared convict singleton, NOT the per-call
+    // `config` option. Enable one with config.set('featureFlags.<name>', true)
+    // before calling createTestServer (a global afterEach restores the defaults).
     ...buildRepositoryPlugins(
       globalConfig.get('featureFlags.devEndpoints')
         ? devEndpointsRepositoryConfigs
