@@ -87,7 +87,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
     const createServer = async (
       registrationOverrides = {},
       wasteRecordOverrides = [],
-      accreditationStatus
+      accreditationStatus,
+      featureFlags = createInMemoryFeatureFlags()
     ) => {
       const registration = /** @type {Registration} */ (
         buildRegistration(registrationOverrides)
@@ -113,7 +114,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           ledgerRepository,
           summaryLogRowStatesRepository
         },
-        featureFlags: createInMemoryFeatureFlags()
+        featureFlags
       })
 
       return {
@@ -1605,6 +1606,99 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
+      })
+    })
+
+    describe('incompleteSummaryLogRows (PAE-1420)', () => {
+      const gateEnabled = createInMemoryFeatureFlags({
+        reportDataValidation: true
+      })
+
+      // A received row whose positive tonnage triggers the supplier rule but
+      // carries none of the six mandatory supplier fields.
+      const incompleteReceived = {
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
+          TONNAGE_RECEIVED_FOR_RECYCLING: 5
+        }
+      }
+
+      it('returns 200 carrying incompleteSummaryLogRows on the generate branch when the flag is on and data is incomplete', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          { wasteProcessingType: 'reprocessor', accreditationId: undefined },
+          [incompleteReceived],
+          undefined,
+          gateEnabled
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.incompleteSummaryLogRows.total).toBe(6)
+        expect(payload.incompleteSummaryLogRows.issues).toHaveLength(6)
+        expect(payload.incompleteSummaryLogRows.issues[0]).toEqual(
+          expect.objectContaining({
+            sheet: expect.any(String),
+            rowId: 'row-0',
+            field: expect.any(String)
+          })
+        )
+      })
+
+      it('omits incompleteSummaryLogRows when the same data is complete', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          { wasteProcessingType: 'reprocessor', accreditationId: undefined },
+          [
+            {
+              type: WASTE_RECORD_TYPE.RECEIVED,
+              data: {
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
+                TONNAGE_RECEIVED_FOR_RECYCLING: 5,
+                SUPPLIER_NAME: 'Acme Waste Ltd',
+                SUPPLIER_ADDRESS: '1 Depot Road',
+                SUPPLIER_POSTCODE: 'AB1 2CD',
+                SUPPLIER_EMAIL: 'ops@acme.example',
+                SUPPLIER_PHONE_NUMBER: '01234 567890',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baling'
+              }
+            }
+          ],
+          undefined,
+          gateEnabled
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.incompleteSummaryLogRows).toBeUndefined()
+      })
+
+      it('omits incompleteSummaryLogRows when the flag is off despite incomplete data', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          { wasteProcessingType: 'reprocessor', accreditationId: undefined },
+          [incompleteReceived]
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.incompleteSummaryLogRows).toBeUndefined()
       })
     })
   })
