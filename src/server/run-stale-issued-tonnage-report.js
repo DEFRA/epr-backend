@@ -1,3 +1,4 @@
+import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   findStaleIssuedTonnageReports,
@@ -49,7 +50,7 @@ const runReport = async (server) => {
  * @param {StartedServer} server - Hapi server instance
  */
 export const runStaleIssuedTonnageReport = async (server) => {
-  if (!server.featureFlags.isStaleIssuedTonnageReportEnabled()) {
+  if (!config.get('featureFlags.staleIssuedTonnageReport')) {
     return
   }
 

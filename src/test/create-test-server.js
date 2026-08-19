@@ -17,10 +17,9 @@ import { basicAuthPlugin } from '#plugins/auth/basic-auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
-import { featureFlags as featureFlagsPlugin } from '#plugins/feature-flags.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import { router } from '#plugins/router.js'
-import { getConfig } from '#root/config.js'
+import { getConfig, config as globalConfig } from '#root/config.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
@@ -40,7 +39,7 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
 
 /** @import { Lifecycle, Plugin } from '@hapi/hapi' */
 /** @import { Db } from 'mongodb' */
-/** @import { FeatureFlags, ServerApp } from '#common/hapi-types.js' */
+/** @import { ServerApp } from '#common/hapi-types.js' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
 /** @import { Mock } from 'vitest' */
 
@@ -58,7 +57,6 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
  * @typedef {{
  *   config?: Record<string, any>
  *   db?: Db
- *   featureFlags?: FeatureFlags
  *   repositories?: object
  *   workers?: object
  *   dlqService?: import('#plugins/dlq-admin.js').DlqService
@@ -281,13 +279,9 @@ export async function createTestServer(options = {}) {
     authFailureLogger,
     boomErrorLogger,
     externalApiErrorFormatter,
-    {
-      plugin: featureFlagsPlugin,
-      options: { config, featureFlags: options.featureFlags }
-    },
     ...buildRepositoryPlugins(repositoryConfigs, options.repositories ?? {}),
     ...buildRepositoryPlugins(
-      options.featureFlags?.isDevEndpointsEnabled()
+      globalConfig.get('featureFlags.devEndpoints')
         ? devEndpointsRepositoryConfigs
         : [],
       options.repositories ?? {}

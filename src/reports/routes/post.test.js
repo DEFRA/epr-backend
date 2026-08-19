@@ -4,7 +4,6 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -103,8 +102,7 @@ describe(`POST ${reportsPostPath}`, () => {
         ledgerRepository,
         summaryLogRowStatesRepository,
         reportsRepository: reportsRepositoryFactory
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     return {
@@ -319,8 +317,7 @@ describe(`POST ${reportsPostPath}`, () => {
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         reportsRepository: createInMemoryReportsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const response = await makeRequest(
@@ -673,8 +670,7 @@ describe(`POST ${reportsPostPath}`, () => {
         reportsRepository: createInMemoryReportsRepository(),
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository([prn])
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const response = await server.inject({

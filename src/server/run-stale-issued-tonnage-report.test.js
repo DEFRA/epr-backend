@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
+import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { runStaleIssuedTonnageReport } from './run-stale-issued-tonnage-report.js'
 
@@ -36,13 +37,11 @@ const buildServer = (
     lockError,
     reportEnabled = true
   } = {}
-) =>
-  /** @type {StartedServer} */ (
+) => {
+  config.set('featureFlags.staleIssuedTonnageReport', reportEnabled)
+  return /** @type {StartedServer} */ (
     /** @type {unknown} */ ({
       app,
-      featureFlags: {
-        isStaleIssuedTonnageReportEnabled: () => reportEnabled
-      },
       locker: {
         lock: lockError
           ? vi.fn().mockRejectedValue(lockError)
@@ -50,10 +49,15 @@ const buildServer = (
       }
     })
   )
+}
 
 describe('runStaleIssuedTonnageReport', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    config.set('featureFlags.staleIssuedTonnageReport', false)
   })
 
   it('does not run and touches nothing when the feature flag is off', async () => {

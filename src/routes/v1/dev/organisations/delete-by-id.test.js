@@ -1,18 +1,20 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 
 describe('DELETE /v1/dev/organisations/{id}', () => {
   setupAuthContext()
 
+  afterEach(() => {
+    config.set('featureFlags.devEndpoints', false)
+  })
+
   describe('feature flag disabled', () => {
     it('returns 404 when devEndpoints feature flag is disabled', async () => {
-      const featureFlags = createInMemoryFeatureFlags({
-        devEndpoints: false
-      })
-      const server = await createTestServer({ featureFlags })
+      config.set('featureFlags.devEndpoints', false)
+      const server = await createTestServer()
 
       const response = await server.inject({
         method: 'DELETE',
@@ -34,14 +36,11 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
     }
 
     beforeEach(async () => {
-      const featureFlags = createInMemoryFeatureFlags({
-        devEndpoints: true
-      })
+      config.set('featureFlags.devEndpoints', true)
       const nonProdDataReset = {
         deleteByOrgId: async () => stubCounts
       }
       server = await createTestServer({
-        featureFlags,
         repositories: { nonProdDataReset }
       })
     })
@@ -92,11 +91,8 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
           return {}
         }
       }
-      const featureFlags = createInMemoryFeatureFlags({
-        devEndpoints: true
-      })
+      config.set('featureFlags.devEndpoints', true)
       const testServer = await createTestServer({
-        featureFlags,
         repositories: { nonProdDataReset }
       })
 

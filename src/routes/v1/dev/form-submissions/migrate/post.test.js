@@ -1,4 +1,4 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { config } from '#root/config.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -29,6 +29,10 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
+  })
+
+  afterEach(() => {
+    config.set('featureFlags.devEndpoints', false)
   })
 
   function createFormsRepo(
@@ -65,27 +69,25 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
 
   async function setupServer(formsRepoFactory) {
     formSubmissionsRepositoryFactory = formsRepoFactory
-    const featureFlags = createInMemoryFeatureFlags({ devEndpoints: true })
+    config.set('featureFlags.devEndpoints', true)
 
     server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         formSubmissionsRepository: formSubmissionsRepositoryFactory
-      },
-      featureFlags
+      }
     })
   }
 
   describe('feature flag disabled', () => {
     it('should return 404 when devEndpoints feature flag is disabled', async () => {
       const formsRepoFactory = createFormsRepo()
-      const featureFlags = createInMemoryFeatureFlags({ devEndpoints: false })
+      config.set('featureFlags.devEndpoints', false)
       const testServer = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           formSubmissionsRepository: formsRepoFactory
-        },
-        featureFlags
+        }
       })
 
       const response = await testServer.inject({

@@ -12,7 +12,6 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 
 describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}', () => {
   setupAuthContext()
@@ -29,8 +28,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     const server = await createTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     return { server, summaryLogsRepository }

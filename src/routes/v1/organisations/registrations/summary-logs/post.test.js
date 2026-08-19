@@ -2,7 +2,6 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -33,8 +32,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
         repositories: {
           summaryLogsRepository: () => summaryLogsRepository,
           uploadsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       await server.initialize()
@@ -138,8 +136,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
           uploadsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       await server.initialize()
@@ -199,8 +196,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
           uploadsRepository: createInMemoryUploadsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       await server.initialize()

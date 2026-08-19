@@ -1,4 +1,4 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { config } from '#root/config.js'
 import {
   buildOrganisation,
   buildRegistration
@@ -9,7 +9,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -32,9 +32,13 @@ const buildFixture = () =>
 describe('PUT /v1/dev/organisations/{id}', () => {
   setupAuthContext()
 
+  afterEach(() => {
+    config.set('featureFlags.devEndpoints', false)
+  })
+
   it('returns 404 when the devEndpoints feature flag is disabled', async () => {
-    const featureFlags = createInMemoryFeatureFlags({ devEndpoints: false })
-    const server = await createTestServer({ featureFlags })
+    config.set('featureFlags.devEndpoints', false)
+    const server = await createTestServer()
 
     const response = await server.inject({
       method: 'PUT',
@@ -50,9 +54,9 @@ describe('PUT /v1/dev/organisations/{id}', () => {
     let fixture
 
     beforeEach(async () => {
+      config.set('featureFlags.devEndpoints', true)
       fixture = buildFixture()
       server = await createTestServer({
-        featureFlags: createInMemoryFeatureFlags({ devEndpoints: true }),
         repositories: {
           organisationsRepository: createInMemoryOrganisationsRepository([
             fixture

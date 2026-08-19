@@ -3,7 +3,6 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -55,8 +54,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         reportsRepository: reportsRepositoryFactory
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     return {
@@ -662,8 +660,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           reportsRepository: reportsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await patchReport(server, org.id, registration.id, {

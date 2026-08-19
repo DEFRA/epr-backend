@@ -27,53 +27,49 @@ import { adminMeGet } from '#routes/v1/admin/me/get.js'
 import { ledgerEventsGet } from '#routes/v1/admin/organisations/registrations/accreditations/ledger-events/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
+import { config } from '#root/config.js'
 
 const router = {
   plugin: {
     name: 'router',
-    register: (server, options) => {
-      server.dependency('feature-flags', () => {
-        const featureFlags = options.featureFlags || server.featureFlags
+    register: (server) => {
+      const devRoutesBehindFeatureFlag = config.get('featureFlags.devEndpoints')
+        ? Object.values(devRoutes)
+        : []
 
-        const devRoutesBehindFeatureFlag = featureFlags.isDevEndpointsEnabled()
-          ? Object.values(devRoutes)
-          : []
+      const { reportsUnsubmit: _unsubmit, ...coreReportsRoutes } = reportsRoutes
 
-        const { reportsUnsubmit: _unsubmit, ...coreReportsRoutes } =
-          reportsRoutes
-
-        server.route([
-          health,
-          ...apply,
-          ...Object.values(meRoutes),
-          ...Object.values(summaryLogsRoutes),
-          ...devRoutesBehindFeatureFlag,
-          ...Object.values(organisationRoutes),
-          ...formSubmissionsRoutes,
-          ...Object.values(systemLogsRoutes),
-          ...Object.values(wasteBalanceRoutes),
-          ...Object.values(wasteRecordsExportRoutes),
-          ...Object.values(publicRegisterRoutes),
-          ...Object.values(tonnageMonitoringRoutes),
-          ...Object.values(prnTonnageRoutes),
-          ...Object.values(wasteBalanceAvailabilityRoutes),
-          ...Object.values(linkedOrganisationsRoutes),
-          ...Object.values(packagingRecyclingNotesRoutes),
-          packagingRecyclingNotesAccept,
-          packagingRecyclingNotesList,
-          packagingRecyclingNotesReject,
-          ...summaryLogUploadsReportRoutes,
-          adminAccreditationPackagingRecyclingNotesList,
-          adminPackagingRecyclingNotesList,
-          ...Object.values(overseasSitesRoutes),
-          ...Object.values(coreReportsRoutes),
-          reportsUnsubmit,
-          adminMeGet,
-          ledgerEventsGet,
-          dlqMessagesGet,
-          dlqPurgePost
-        ])
-      })
+      server.route([
+        health,
+        ...apply,
+        ...Object.values(meRoutes),
+        ...Object.values(summaryLogsRoutes),
+        ...devRoutesBehindFeatureFlag,
+        ...Object.values(organisationRoutes),
+        ...formSubmissionsRoutes,
+        ...Object.values(systemLogsRoutes),
+        ...Object.values(wasteBalanceRoutes),
+        ...Object.values(wasteRecordsExportRoutes),
+        ...Object.values(publicRegisterRoutes),
+        ...Object.values(tonnageMonitoringRoutes),
+        ...Object.values(prnTonnageRoutes),
+        ...Object.values(wasteBalanceAvailabilityRoutes),
+        ...Object.values(linkedOrganisationsRoutes),
+        ...Object.values(packagingRecyclingNotesRoutes),
+        packagingRecyclingNotesAccept,
+        packagingRecyclingNotesList,
+        packagingRecyclingNotesReject,
+        ...summaryLogUploadsReportRoutes,
+        adminAccreditationPackagingRecyclingNotesList,
+        adminPackagingRecyclingNotesList,
+        ...Object.values(overseasSitesRoutes),
+        ...Object.values(coreReportsRoutes),
+        reportsUnsubmit,
+        adminMeGet,
+        ledgerEventsGet,
+        dlqMessagesGet,
+        dlqPurgePost
+      ])
     }
   }
 }

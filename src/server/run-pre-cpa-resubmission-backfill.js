@@ -1,3 +1,4 @@
+import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   findPreCpaResubmissionReports,
@@ -201,9 +202,8 @@ const runBackfill = async (server) => {
  * @param {StartedServer} server - Hapi server instance
  */
 export const runPreCpaResubmissionBackfill = async (server) => {
-  const reportEnabled = server.featureFlags.isPreCpaResubmissionReportEnabled()
-  const backfillEnabled =
-    server.featureFlags.isPreCpaResubmissionBackfillEnabled()
+  const reportEnabled = config.get('featureFlags.preCpaResubmissionReport')
+  const backfillEnabled = config.get('featureFlags.preCpaResubmissionBackfill')
 
   if (!reportEnabled && !backfillEnabled) {
     return

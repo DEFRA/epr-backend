@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createTestServer } from './create-test-server.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -87,18 +86,6 @@ describe('createTestServer', () => {
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
         'some-id'
       )
-    })
-  })
-
-  describe('feature flags option', () => {
-    it('accepts featureFlags option for test overrides', async () => {
-      const customFlags = createInMemoryFeatureFlags({
-        devEndpoints: true
-      })
-
-      const server = await createTestServer({ featureFlags: customFlags })
-
-      expect(server.featureFlags.isDevEndpointsEnabled()).toBe(true)
     })
   })
 

@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
+import { config } from '#root/config.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
@@ -163,14 +164,12 @@ const buildServer = (
     reportEnabled = true,
     backfillEnabled = false
   } = {}
-) =>
-  /** @type {StartedServer} */ (
+) => {
+  config.set('featureFlags.preCpaResubmissionReport', reportEnabled)
+  config.set('featureFlags.preCpaResubmissionBackfill', backfillEnabled)
+  return /** @type {StartedServer} */ (
     /** @type {unknown} */ ({
       app,
-      featureFlags: {
-        isPreCpaResubmissionReportEnabled: () => reportEnabled,
-        isPreCpaResubmissionBackfillEnabled: () => backfillEnabled
-      },
       locker: {
         lock: lockError
           ? vi.fn().mockRejectedValue(lockError)
@@ -178,10 +177,16 @@ const buildServer = (
       }
     })
   )
+}
 
 describe('runPreCpaResubmissionBackfill', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    config.set('featureFlags.preCpaResubmissionReport', false)
+    config.set('featureFlags.preCpaResubmissionBackfill', false)
   })
 
   describe('diagnostic step (preCpaResubmissionReport)', () => {

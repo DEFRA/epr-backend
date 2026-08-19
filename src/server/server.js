@@ -30,7 +30,6 @@ import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js
 import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
-import { featureFlags } from '#plugins/feature-flags.js'
 import { router } from '#plugins/router.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
@@ -167,7 +166,6 @@ async function createServer(options = {}) {
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
   // mongo*Plugin   - individual repository plugins
   // s3*Plugin      - S3 repository plugins
-  // featureFlags   - sets up feature flag adapter and attaches to `request` objects
   // sqsCommandExecutor - sets up SQS command executor and attaches to `request` objects
   // dlqAdmin       - sets up DLQ admin service and attaches to `request` objects
   // router         - routes used in the app
@@ -200,14 +198,6 @@ async function createServer(options = {}) {
   if (config.get('isSwaggerEnabled')) {
     plugins.push(...getSwaggerPlugins())
   }
-
-  plugins.push({
-    plugin: featureFlags,
-    options: {
-      config,
-      featureFlags: options.featureFlags
-    }
-  })
 
   // LEGACY: Skip MongoDB, repositories and workers for tests of /v1/apply/* routes.
   // These routes use raw db.collection() access and need refactoring.

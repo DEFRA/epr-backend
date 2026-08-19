@@ -4,7 +4,6 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
@@ -493,7 +492,6 @@ describe('Advanced validation scenarios', () => {
           findPeriodicReports: async () => []
         })
       })
-      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {
@@ -502,8 +500,7 @@ describe('Advanced validation scenarios', () => {
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
+        }
       })
 
       uploadResponse = await server.inject({
@@ -679,7 +676,6 @@ describe('Advanced validation scenarios', () => {
           findPeriodicReports: async () => []
         })
       })
-      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {
@@ -688,8 +684,7 @@ describe('Advanced validation scenarios', () => {
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
+        }
       })
 
       uploadResponse = await server.inject({
@@ -900,13 +895,10 @@ describe('Advanced validation scenarios', () => {
         })
       )
 
-      const featureFlags = createInMemoryFeatureFlags()
-
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory
-        },
-        featureFlags
+        }
       })
     })
 

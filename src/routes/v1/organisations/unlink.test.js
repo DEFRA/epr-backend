@@ -1,6 +1,5 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildLinkedDefraOrg,
   buildOrganisation
@@ -67,14 +66,12 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
-      },
-      featureFlags
+      }
     })
   })
 
