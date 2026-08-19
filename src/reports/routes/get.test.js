@@ -6,7 +6,6 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -58,8 +57,7 @@ describe(`GET ${reportsGetPath}`, () => {
           ...(reportsRepositoryFactory && {
             reportsRepository: reportsRepositoryFactory
           })
-        },
-        featureFlags: createInMemoryFeatureFlags({})
+        }
       })
 
       return {
@@ -342,8 +340,7 @@ describe(`GET ${reportsGetPath}`, () => {
             organisationsRepository: createInMemoryOrganisationsRepository([
               partialMock(org)
             ])
-          },
-          featureFlags: createInMemoryFeatureFlags({})
+          }
         })
 
         return {
@@ -404,8 +401,7 @@ describe(`GET ${reportsGetPath}`, () => {
             organisationsRepository: createInMemoryOrganisationsRepository([
               partialMock(org)
             ])
-          },
-          featureFlags: createInMemoryFeatureFlags({})
+          }
         })
 
         const response = await makeRequest(server, org.id, registration.id)
@@ -1844,8 +1840,7 @@ describe(`GET ${reportsGetPath}`, () => {
       const registrationId = new ObjectId().toString()
 
       const server = await createTestServer({
-        repositories: {},
-        featureFlags: createInMemoryFeatureFlags({})
+        repositories: {}
       })
 
       const response = await server.inject({

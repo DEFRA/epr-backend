@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { getConfig } from '#root/config.js'
 import { runStaleIssuedTonnageReport } from './run-stale-issued-tonnage-report.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -36,13 +37,10 @@ const buildServer = (
     lockError,
     reportEnabled = true
   } = {}
-) =>
-  /** @type {StartedServer} */ (
+) => {
+  const server = /** @type {StartedServer} */ (
     /** @type {unknown} */ ({
       app,
-      featureFlags: {
-        isStaleIssuedTonnageReportEnabled: () => reportEnabled
-      },
       locker: {
         lock: lockError
           ? vi.fn().mockRejectedValue(lockError)
@@ -50,6 +48,11 @@ const buildServer = (
       }
     })
   )
+  const config = getConfig({
+    featureFlags: { staleIssuedTonnageReport: reportEnabled }
+  })
+  return { server, config }
+}
 
 describe('runStaleIssuedTonnageReport', () => {
   beforeEach(() => {
@@ -58,9 +61,9 @@ describe('runStaleIssuedTonnageReport', () => {
 
   it('does not run and touches nothing when the feature flag is off', async () => {
     const app = emptyEstateApp()
-    const server = buildServer(app, { reportEnabled: false })
+    const { server, config } = buildServer(app, { reportEnabled: false })
 
-    await runStaleIssuedTonnageReport(server)
+    await runStaleIssuedTonnageReport(server, config)
 
     expect(server.locker.lock).not.toHaveBeenCalled()
     expect(app.reportsRepository.findAllPeriodicReports).not.toHaveBeenCalled()
@@ -71,9 +74,9 @@ describe('runStaleIssuedTonnageReport', () => {
 
   it('acquires a lock scoped to the report and releases it afterwards', async () => {
     const lock = { free: vi.fn().mockResolvedValue(undefined) }
-    const server = buildServer(emptyEstateApp(), { lock })
+    const { server, config } = buildServer(emptyEstateApp(), { lock })
 
-    await runStaleIssuedTonnageReport(server)
+    await runStaleIssuedTonnageReport(server, config)
 
     expect(server.locker.lock).toHaveBeenCalledWith(
       'stale-issued-tonnage-report'
@@ -83,9 +86,9 @@ describe('runStaleIssuedTonnageReport', () => {
 
   it('skips the report and reads nothing when the lock is held by another instance', async () => {
     const app = emptyEstateApp()
-    const server = buildServer(app, { lock: null })
+    const { server, config } = buildServer(app, { lock: null })
 
-    await runStaleIssuedTonnageReport(server)
+    await runStaleIssuedTonnageReport(server, config)
 
     expect(app.reportsRepository.findAllPeriodicReports).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
@@ -95,9 +98,9 @@ describe('runStaleIssuedTonnageReport', () => {
   })
 
   it('logs a summary line and no findings when nothing is stale', async () => {
-    const server = buildServer(emptyEstateApp())
+    const { server, config } = buildServer(emptyEstateApp())
 
-    await runStaleIssuedTonnageReport(server)
+    await runStaleIssuedTonnageReport(server, config)
 
     expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.error).not.toHaveBeenCalled()
@@ -142,9 +145,9 @@ describe('runStaleIssuedTonnageReport', () => {
         findByAccreditation: vi.fn().mockResolvedValue([])
       }
     }
-    const server = buildServer(app)
+    const { server, config } = buildServer(app)
 
-    await runStaleIssuedTonnageReport(server)
+    await runStaleIssuedTonnageReport(server, config)
 
     expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringContaining(
@@ -207,9 +210,9 @@ describe('runStaleIssuedTonnageReport', () => {
         findByAccreditation: vi.fn().mockResolvedValue([])
       }
     }
-    const server = buildServer(app)
+    const { server, config } = buildServer(app)
 
-    await runStaleIssuedTonnageReport(server)
+    await runStaleIssuedTonnageReport(server, config)
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -226,9 +229,9 @@ describe('runStaleIssuedTonnageReport', () => {
         findAllPeriodicReports: vi.fn().mockRejectedValue(error)
       }
     }
-    const server = buildServer(app, { lock })
+    const { server, config } = buildServer(app, { lock })
 
-    await runStaleIssuedTonnageReport(server)
+    await runStaleIssuedTonnageReport(server, config)
 
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
@@ -239,9 +242,11 @@ describe('runStaleIssuedTonnageReport', () => {
 
   it('tolerates the locker itself throwing', async () => {
     const error = new Error('locker unavailable')
-    const server = buildServer(emptyEstateApp(), { lockError: error })
+    const { server, config } = buildServer(emptyEstateApp(), {
+      lockError: error
+    })
 
-    await runStaleIssuedTonnageReport(server)
+    await runStaleIssuedTonnageReport(server, config)
 
     expect(logger.error).toHaveBeenCalledWith({
       err: error,

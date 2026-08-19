@@ -47,9 +47,10 @@ const runReport = async (server) => {
  * returns before touching the locker or any repository.
  *
  * @param {StartedServer} server - Hapi server instance
+ * @param {import('convict').Config<Record<string, any>>} config
  */
-export const runStaleIssuedTonnageReport = async (server) => {
-  if (!server.featureFlags.isStaleIssuedTonnageReportEnabled()) {
+export const runStaleIssuedTonnageReport = async (server, config) => {
+  if (!config.get('featureFlags.staleIssuedTonnageReport')) {
     return
   }
 

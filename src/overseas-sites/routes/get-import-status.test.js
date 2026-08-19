@@ -9,7 +9,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -32,8 +31,7 @@ describe(`${orsImportStatusPath} route`, () => {
       server = await createTestServer({
         repositories: {
           orsImportsRepository: () => orsImportsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags({})
+        }
       })
     })
 

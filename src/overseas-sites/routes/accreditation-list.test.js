@@ -2,7 +2,6 @@ import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
@@ -92,8 +91,7 @@ describe('GET accreditation overseas-sites', () => {
           organisation
         ]),
         overseasSitesRepository: createInMemoryOverseasSitesRepository(sites)
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
     return server
   }
@@ -428,8 +426,7 @@ describe('GET accreditation overseas-sites', () => {
             Promise.reject(new Error('database unavailable')),
           findAccreditationById: () => Promise.resolve({})
         })
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const response = await server.inject({

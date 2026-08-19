@@ -1,7 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -70,8 +69,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
       },
       workers: {
         orsImportsWorker
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
   })
 
@@ -357,8 +355,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
         repositories: {
           orsImportsRepository: () => failingRepository
         },
-        workers: { orsImportsWorker },
-        featureFlags: createInMemoryFeatureFlags({})
+        workers: { orsImportsWorker }
       })
 
       const response = await failServer.inject({

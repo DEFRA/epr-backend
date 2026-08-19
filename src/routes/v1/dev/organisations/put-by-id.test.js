@@ -1,4 +1,3 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildOrganisation,
   buildRegistration
@@ -33,8 +32,9 @@ describe('PUT /v1/dev/organisations/{id}', () => {
   setupAuthContext()
 
   it('returns 404 when the devEndpoints feature flag is disabled', async () => {
-    const featureFlags = createInMemoryFeatureFlags({ devEndpoints: false })
-    const server = await createTestServer({ featureFlags })
+    const server = await createTestServer({
+      config: { featureFlags: { devEndpoints: false } }
+    })
 
     const response = await server.inject({
       method: 'PUT',
@@ -52,7 +52,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
     beforeEach(async () => {
       fixture = buildFixture()
       server = await createTestServer({
-        featureFlags: createInMemoryFeatureFlags({ devEndpoints: true }),
+        config: { featureFlags: { devEndpoints: true } },
         repositories: {
           organisationsRepository: createInMemoryOrganisationsRepository([
             fixture

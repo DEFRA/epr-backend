@@ -9,7 +9,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildAccreditation,
   buildOrganisation,
@@ -185,8 +184,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
       repositories: {
         organisationsRepository: () => organisationsRepository,
         overseasSitesRepository: () => overseasSitesRepository
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
     const response = await server.inject({
@@ -280,8 +278,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
         overseasSitesRepository: () => ({
           findAll: vi.fn().mockResolvedValue([])
         })
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
     const response = await emptyServer.inject({
@@ -438,8 +435,7 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
       repositories: {
         organisationsRepository: () => malformedOrganisationsRepository,
         overseasSitesRepository: () => emptyOverseasSitesRepository
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
     const response = await malformedServer.inject({
@@ -496,8 +492,7 @@ const defineProjectionSelectionTest = () => {
       repositories: {
         organisationsRepository: () => organisationsRepository,
         overseasSitesRepository: () => overseasSitesRepository
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
     const response = await server.inject({
@@ -580,8 +575,7 @@ const defineProjectionSelectionTest = () => {
       repositories: {
         organisationsRepository: () => organisationsRepository,
         overseasSitesRepository: () => overseasSitesRepository
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
     const response = await server.inject({
@@ -630,8 +624,7 @@ const defineProjectionSelectionTest = () => {
     const server = await createTestServer({
       repositories: {
         organisationsRepository: () => organisationsRepository
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
     const response = await server.inject({
@@ -662,9 +655,7 @@ const defineValidationTests = () => {
     `${adminOverseasSitesListPath}?pageSize=1.5`,
     `${adminOverseasSitesListPath}?all=maybe`
   ])('returns 400 for invalid query %s', async (url) => {
-    const server = await createTestServer({
-      featureFlags: createInMemoryFeatureFlags({})
-    })
+    const server = await createTestServer({})
 
     const response = await server.inject({
       method: 'GET',
@@ -693,8 +684,7 @@ const defineMissingOverseasSiteMappingsTest = () => {
       repositories: {
         organisationsRepository: () => malformedOrganisationsRepository,
         overseasSitesRepository: () => emptyOverseasSitesRepository
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
     const response = await malformedServer.inject({
@@ -745,8 +735,7 @@ const defineMissingMaterialAndOrgIdTest = () => {
       repositories: {
         organisationsRepository: () => organisationsRepository,
         overseasSitesRepository: () => overseasSitesRepository
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
     const response = await server.inject({
@@ -802,8 +791,7 @@ const defineMissingRegistrationsPropertyTest = () => {
       repositories: {
         organisationsRepository: () => malformedOrganisationsRepository,
         overseasSitesRepository: () => emptyOverseasSitesRepository
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
     const response = await malformedServer.inject({
@@ -898,8 +886,7 @@ const setupFeatureFlagEnabledScenario = async () => {
     repositories: {
       organisationsRepository: organisationsRepositoryFactory,
       overseasSitesRepository: () => overseasSitesRepository
-    },
-    featureFlags: createInMemoryFeatureFlags({})
+    }
   })
 
   return {
