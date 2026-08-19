@@ -14,7 +14,9 @@ describe('ADMIN_ROLES', () => {
       SCOPES.adminRead,
       SCOPES.adminWrite,
       SCOPES.adminDlqPurge,
-      SCOPES.organisationSearch
+      SCOPES.organisationSearch,
+      SCOPES.organisationRead,
+      SCOPES.wasteBalanceLedgerRead
     ])
   })
 
@@ -22,7 +24,9 @@ describe('ADMIN_ROLES', () => {
     expect(ADMIN_ROLES.service_maintainer).toEqual([
       SCOPES.adminRead,
       SCOPES.adminDlqPurge,
-      SCOPES.organisationSearch
+      SCOPES.organisationSearch,
+      SCOPES.organisationRead,
+      SCOPES.wasteBalanceLedgerRead
     ])
     expect(ADMIN_ROLES.service_maintainer).not.toContain(SCOPES.adminWrite)
   })
@@ -30,15 +34,24 @@ describe('ADMIN_ROLES', () => {
   test('support carries admin.read and no other admin scope', () => {
     expect(ADMIN_ROLES.support).toEqual([
       SCOPES.adminRead,
-      SCOPES.organisationSearch
+      SCOPES.organisationSearch,
+      SCOPES.organisationRead,
+      SCOPES.wasteBalanceLedgerRead
     ])
     expect(ADMIN_ROLES.support).not.toContain(SCOPES.adminWrite)
     expect(ADMIN_ROLES.support).not.toContain(SCOPES.adminDlqPurge)
   })
 
-  test('every admin role includes admin.read so any tier can call read routes', () => {
+  test('every admin role includes admin.read', () => {
     for (const scopes of Object.values(ADMIN_ROLES)) {
       expect(scopes).toContain(SCOPES.adminRead)
+    }
+  })
+
+  test('every tier reads, so every tier holds both scopes a ledger route requires', () => {
+    for (const scopes of Object.values(ADMIN_ROLES)) {
+      expect(scopes).toContain(SCOPES.organisationRead)
+      expect(scopes).toContain(SCOPES.wasteBalanceLedgerRead)
     }
   })
 
@@ -68,6 +81,14 @@ describe('the regulator role', () => {
 
   test('carries organisation.search, which enumerates operators the regulator holds no id for', () => {
     expect(REGULATOR_SCOPES).toContain(SCOPES.organisationSearch)
+  })
+
+  test('carries waste-balance.ledger.read, which organisation.read must not admit', () => {
+    expect(REGULATOR_SCOPES).toContain(SCOPES.wasteBalanceLedgerRead)
+  })
+
+  test('pins the exact string the ledger routes require', () => {
+    expect(SCOPES.wasteBalanceLedgerRead).toBe('waste-balance.ledger.read')
   })
 
   test('carries no admin scope', () => {

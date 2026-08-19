@@ -67,7 +67,9 @@ describe('GET /v1/me', () => {
           SCOPES.adminRead,
           SCOPES.adminWrite,
           SCOPES.adminDlqPurge,
-          SCOPES.organisationSearch
+          SCOPES.organisationSearch,
+          SCOPES.organisationRead,
+          SCOPES.wasteBalanceLedgerRead
         ]
       })
     })
