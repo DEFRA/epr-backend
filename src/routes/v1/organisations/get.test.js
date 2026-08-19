@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildOrganisation,
@@ -36,11 +35,9 @@ describe('GET /v1/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
   })
 

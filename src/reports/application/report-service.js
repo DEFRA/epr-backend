@@ -391,17 +391,17 @@ async function assertReportCreationAllowed({
  * policy lookup skips any processing type without rules, so the feature flag is
  * the only guard needed here.
  *
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags | undefined} featureFlags
+ * @param {boolean | undefined} reportDataValidationEnabled
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
  * @param {string} reference
  * @returns {void}
  */
 function assertReportDataCompleteIfEnabled(
-  featureFlags,
+  reportDataValidationEnabled,
   wasteRecordStates,
   reference
 ) {
-  if (featureFlags?.isReportDataValidationEnabled()) {
+  if (reportDataValidationEnabled) {
     assertReportDataComplete(wasteRecordStates, reference)
   }
 }
@@ -424,7 +424,7 @@ function assertReportDataCompleteIfEnabled(
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {import('#reports/repository/port.js').UserSummary} params.changedBy
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
+ * @param {boolean} [params.reportDataValidationEnabled]
  * @returns {Promise<import('#reports/repository/port.js').Report>}
  */
 export async function createReportForPeriod({
@@ -441,7 +441,7 @@ export async function createReportForPeriod({
   period,
   submissionNumber,
   changedBy,
-  featureFlags
+  reportDataValidationEnabled
 }) {
   const { startDate, endDate, dueDate } = getValidatedPeriodInfo(
     cadence,
@@ -472,7 +472,7 @@ export async function createReportForPeriod({
   )
 
   assertReportDataCompleteIfEnabled(
-    featureFlags,
+    reportDataValidationEnabled,
     wasteRecordStates,
     registrationId
   )

@@ -3,7 +3,6 @@ import {
   REGULATOR_SCOPES,
   SCOPES
 } from '#common/helpers/auth/constants.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
@@ -103,8 +102,7 @@ describe('GET /v1/me', () => {
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({
@@ -145,8 +143,7 @@ describe('GET /v1/me', () => {
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({

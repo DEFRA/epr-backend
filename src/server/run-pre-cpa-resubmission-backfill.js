@@ -199,11 +199,11 @@ const runBackfill = async (server) => {
  * repository.
  *
  * @param {StartedServer} server - Hapi server instance
+ * @param {import('convict').Config<Record<string, any>>} config
  */
-export const runPreCpaResubmissionBackfill = async (server) => {
-  const reportEnabled = server.featureFlags.isPreCpaResubmissionReportEnabled()
-  const backfillEnabled =
-    server.featureFlags.isPreCpaResubmissionBackfillEnabled()
+export const runPreCpaResubmissionBackfill = async (server, config) => {
+  const reportEnabled = config.get('featureFlags.preCpaResubmissionReport')
+  const backfillEnabled = config.get('featureFlags.preCpaResubmissionBackfill')
 
   if (!reportEnabled && !backfillEnabled) {
     return

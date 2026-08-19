@@ -4,7 +4,6 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -112,8 +111,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationsRepository: organisationsRepositoryFactory,
           ledgerRepository,
           summaryLogRowStatesRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       return {
@@ -991,8 +989,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           repositories: {
             organisationsRepository: organisationsRepositoryFactory,
             reportsRepository: reportsRepositoryFactory
-          },
-          featureFlags: createInMemoryFeatureFlags()
+          }
         })
 
         return {
@@ -1615,8 +1612,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       const registrationId = new ObjectId().toString()
 
       const server = await createTestServer({
-        repositories: {},
-        featureFlags: createInMemoryFeatureFlags()
+        repositories: {}
       })
 
       const response = await server.inject({

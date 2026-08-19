@@ -33,49 +33,46 @@ const router = {
   plugin: {
     name: 'router',
     register: (server, options) => {
-      server.dependency('feature-flags', () => {
-        const featureFlags = options.featureFlags || server.featureFlags
+      const devRoutesBehindFeatureFlag = options.config.get(
+        'featureFlags.devEndpoints'
+      )
+        ? Object.values(devRoutes)
+        : []
 
-        const devRoutesBehindFeatureFlag = featureFlags.isDevEndpointsEnabled()
-          ? Object.values(devRoutes)
-          : []
+      const { reportsUnsubmit: _unsubmit, ...coreReportsRoutes } = reportsRoutes
 
-        const { reportsUnsubmit: _unsubmit, ...coreReportsRoutes } =
-          reportsRoutes
-
-        server.route([
-          health,
-          ...apply,
-          ...Object.values(meRoutes),
-          ...Object.values(summaryLogsRoutes),
-          ...devRoutesBehindFeatureFlag,
-          ...Object.values(organisationRoutes),
-          ...formSubmissionsRoutes,
-          ...Object.values(systemLogsRoutes),
-          ...Object.values(wasteBalanceRoutes),
-          ...Object.values(wasteRecordsExportRoutes),
-          ...Object.values(publicRegisterRoutes),
-          ...Object.values(tonnageMonitoringRoutes),
-          ...Object.values(prnTonnageRoutes),
-          ...Object.values(wasteBalanceAvailabilityRoutes),
-          ...Object.values(linkedOrganisationsRoutes),
-          ...Object.values(packagingRecyclingNotesRoutes),
-          packagingRecyclingNotesAccept,
-          packagingRecyclingNotesList,
-          packagingRecyclingNotesReject,
-          ...summaryLogUploadsReportRoutes,
-          adminAccreditationPackagingRecyclingNotesList,
-          adminPackagingRecyclingNotesList,
-          ...Object.values(overseasSitesRoutes),
-          ...Object.values(coreReportsRoutes),
-          reportsUnsubmit,
-          adminMeGet,
-          accreditationLedgerEventsGet,
-          registrationLedgerEventsGet,
-          dlqMessagesGet,
-          dlqPurgePost
-        ])
-      })
+      server.route([
+        health,
+        ...apply,
+        ...Object.values(meRoutes),
+        ...Object.values(summaryLogsRoutes),
+        ...devRoutesBehindFeatureFlag,
+        ...Object.values(organisationRoutes),
+        ...formSubmissionsRoutes,
+        ...Object.values(systemLogsRoutes),
+        ...Object.values(wasteBalanceRoutes),
+        ...Object.values(wasteRecordsExportRoutes),
+        ...Object.values(publicRegisterRoutes),
+        ...Object.values(tonnageMonitoringRoutes),
+        ...Object.values(prnTonnageRoutes),
+        ...Object.values(wasteBalanceAvailabilityRoutes),
+        ...Object.values(linkedOrganisationsRoutes),
+        ...Object.values(packagingRecyclingNotesRoutes),
+        packagingRecyclingNotesAccept,
+        packagingRecyclingNotesList,
+        packagingRecyclingNotesReject,
+        ...summaryLogUploadsReportRoutes,
+        adminAccreditationPackagingRecyclingNotesList,
+        adminPackagingRecyclingNotesList,
+        ...Object.values(overseasSitesRoutes),
+        ...Object.values(coreReportsRoutes),
+        reportsUnsubmit,
+        adminMeGet,
+        accreditationLedgerEventsGet,
+        registrationLedgerEventsGet,
+        dlqMessagesGet,
+        dlqPurgePost
+      ])
     }
   }
 }

@@ -3,7 +3,6 @@ import {
   ORGANISATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildOrganisation,
   prepareOrgUpdate,
@@ -101,8 +100,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
   })
 
