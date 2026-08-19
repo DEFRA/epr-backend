@@ -172,8 +172,9 @@ describe('Migration Integration Tests with Fixtures', () => {
         0
       )
       // exporter-without-registration (org 503177) has both glass processes,
-      // so its single accreditation is split into remelt + other = 6 total
-      expect(totalAccreditations).toBe(6)
+      // so its single accreditation is split into remelt + other = 7 total
+      // (includes reprocessor-steel-blank-page-titles for org 503176 - PAE-1830)
+      expect(totalAccreditations).toBe(7)
 
       const org503181 = allOrgs.find((o) => o.orgId === 503181)
       expect(org503181.accreditations).toHaveLength(1)
@@ -190,7 +191,7 @@ describe('Migration Integration Tests with Fixtures', () => {
       expect(glassRemeltReg.accreditationId).toBeUndefined()
 
       const org503176 = allOrgs.find((o) => o.orgId === 503176)
-      expect(org503176.accreditations).toHaveLength(3)
+      expect(org503176.accreditations).toHaveLength(4)
       const glassReg = org503176.registrations.find(
         (r) => r.material === MATERIAL.GLASS
       )
@@ -199,7 +200,7 @@ describe('Migration Integration Tests with Fixtures', () => {
       )
 
       await verifyIncrementalMigrationAudit(org503181.id, 1)
-      await verifyIncrementalMigrationAudit(org503176.id, 3)
+      await verifyIncrementalMigrationAudit(org503176.id, 4)
     })
   })
 })

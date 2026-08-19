@@ -53,10 +53,40 @@ export function extractRepeaters(
 }
 
 /**
+ * Derive a unique key for a page: its own title, falling back to the title
+ * of its first non-Markdown component.
+ *
+ * DEFRA Forms used to backfill a blank page.title with the first
+ * non-Markdown question's title at form-display time, but removed that
+ * overwrite as part of Welsh translation work - it broke the translation
+ * framework and wasn't the correct way for them to do it (see
+ * https://defra-digital-team.slack.com/archives/C080WP62PJP/p1787136873848939).
+ * We reconstruct it here instead, from the question's own title.
+ *
+ * Returns undefined for pages with no title and no question component
+ * (e.g. summary pages), which callers should skip.
+ * @param {Object} page - A page from the form definition
+ * @returns {string|undefined} The derived page key, or undefined if none can be derived
+ */
+function derivePageKey(page) {
+  const title = page.title?.trim()
+  if (title) {
+    return title
+  }
+
+  return page.components
+    ?.find(
+      (component) => component.type !== 'Markdown' && component.title?.trim()
+    )
+    ?.title.trim()
+}
+
+/**
  * Extract all non-repeatable answers from form submission
  * @param {Object} rawSubmissionData - The raw submission data object
- * @returns {Object} Nested object grouped by page title with shortDescription as keys
- * @throws {Error} If required fields are missing, duplicate page title or shortDescription are detected within the same page
+ * @returns {Object} Nested object grouped by page key (title, or derived from the
+ *   first question's title when the page title is blank) with shortDescription as keys
+ * @throws {Error} If required fields are missing, duplicate page key or shortDescription are detected within the same page
  */
 export function extractAnswers(rawSubmissionData) {
   const pages = rawSubmissionData?.meta?.definition?.pages
@@ -77,13 +107,17 @@ export function extractAnswers(rawSubmissionData) {
   }
 
   return pages.reduce((result, page) => {
-    const pageTitle = page.title
+    const pageKey = derivePageKey(page)
 
-    if (result[pageTitle]) {
-      throw new Error(`Duplicate page title detected: "${pageTitle}"`)
+    if (isNil(pageKey)) {
+      return result
     }
 
-    result[pageTitle] = (page.components || [])
+    if (Object.hasOwn(result, pageKey)) {
+      throw new Error(`Duplicate page title detected: "${pageKey}"`)
+    }
+
+    result[pageKey] = (page.components || [])
       .filter(
         (component) =>
           component.shortDescription &&
@@ -95,7 +129,7 @@ export function extractAnswers(rawSubmissionData) {
         const { shortDescription, name } = component
         if (acc[shortDescription] !== undefined) {
           throw new Error(
-            `Duplicate shortDescription detected in page "${pageTitle}": ${shortDescription}`
+            `Duplicate shortDescription detected in page "${pageKey}": ${shortDescription}`
           )
         }
         acc[shortDescription] = mainData[name]
