@@ -127,8 +127,9 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     })
   ]
 
-  // Ledger C: reprocessor, steel, an incomplete-looking row that has no
-  // completeness policy yet -> scanned but never flagged (PAE-1280).
+  // Ledger C: accredited reprocessor, steel. One Received row with received
+  // tonnage and no supplier details: now flagged by the reprocessor policy
+  // (PAE-1280) as one violating row with six missing supplier fields.
   const ledgerC = buildLedgerFixture({
     material: 'steel',
     processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -229,24 +230,35 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     expect(lineB).toContain('accreditation registered-only')
     expect(lineB).toContain('1 incomplete row(s), 6 missing field(s)')
 
-    // The reprocessor summary log is scanned but has no policy, so it is not
-    // flagged.
-    expect(messages().find((m) => m.includes('sl-c'))).toBeUndefined()
+    // The reprocessor summary log is now flagged by the PAE-1280 policy: its
+    // Received row has tonnage but no supplier details.
+    const lineC = messages().find((m) => m.includes('sl-c'))
+    expect(lineC).toContain('template REPROCESSOR_INPUT,')
+    expect(lineC).toContain('material steel')
+    expect(lineC).toContain(ledgerC.ledgerId.organisationId)
+    expect(lineC).toContain(
+      `registration ${ledgerC.ledgerId.registrationId} (no. REG-000)`
+    )
+    expect(lineC).toContain(
+      `accreditation ${ledgerC.ledgerId.accreditationId} (no. `
+    )
+    expect(lineC).toContain('1 incomplete row(s), 6 missing field(s)')
 
     // (2) one line covering the evaluated templates.
     expect(messages()).toContain(
-      'Report-data diagnostic missing data by template: EXPORTER:1, EXPORTER_REGISTERED_ONLY:1'
+      'Report-data diagnostic missing data by template: REPROCESSOR_INPUT:1, REPROCESSOR_OUTPUT:0, EXPORTER:1, REPROCESSOR_REGISTERED_ONLY:0, EXPORTER_REGISTERED_ONLY:1'
     )
 
     // (3) one line covering every material, including those with no violations.
     expect(messages()).toContain(
-      'Report-data diagnostic missing data by material: aluminium:0, fibre:0, glass:1, paper:0, plastic:1, steel:0, wood:0'
+      'Report-data diagnostic missing data by material: aluminium:0, fibre:0, glass:1, paper:0, plastic:1, steel:1, wood:0'
     )
 
-    // (4) one line covering every missing field, most-missing first. OSR_ID is
-    // missing on both of ledger A's violating rows; each supplier field once.
+    // (4) one line covering every missing field, most-missing first, field name
+    // breaking ties. OSR_ID is missing on both of ledger A's violating rows; the
+    // six supplier fields are each missing twice (ledger B and ledger C).
     expect(messages()).toContain(
-      'Report-data diagnostic missing data by field: OSR_ID:2, ACTIVITIES_CARRIED_OUT_BY_SUPPLIER:1, SUPPLIER_ADDRESS:1, SUPPLIER_EMAIL:1, SUPPLIER_NAME:1, SUPPLIER_PHONE_NUMBER:1, SUPPLIER_POSTCODE:1'
+      'Report-data diagnostic missing data by field: ACTIVITIES_CARRIED_OUT_BY_SUPPLIER:2, OSR_ID:2, SUPPLIER_ADDRESS:2, SUPPLIER_EMAIL:2, SUPPLIER_NAME:2, SUPPLIER_PHONE_NUMBER:2, SUPPLIER_POSTCODE:2'
     )
 
     // (5) the estate-wide totals.
@@ -254,12 +266,12 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
       m.startsWith('Report-data diagnostic summary:')
     )
     expect(summary).toContain('scanned 3 summary log(s)')
-    expect(summary).toContain('2 with incomplete data (8 missing field(s))')
-    expect(summary).toContain('2 organisation(s)')
-    expect(summary).toContain('2 registration(s)')
-    expect(summary).toContain('1 accreditation(s)')
+    expect(summary).toContain('3 with incomplete data (14 missing field(s))')
+    expect(summary).toContain('3 organisation(s)')
+    expect(summary).toContain('3 registration(s)')
+    expect(summary).toContain('2 accreditation(s)')
     expect(summary).toContain(
-      'Evaluated templates: EXPORTER, EXPORTER_REGISTERED_ONLY'
+      'Evaluated templates: REPROCESSOR_INPUT, REPROCESSOR_OUTPUT, EXPORTER, REPROCESSOR_REGISTERED_ONLY, EXPORTER_REGISTERED_ONLY'
     )
 
     expect(lock).toHaveBeenCalledWith(LOCK_NAME)
@@ -343,7 +355,7 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
   })
 
   it('reports all-zero breakdowns when nothing would be blocked', async () => {
-    // A single reprocessor summary log: it has no completeness policy, so it is
+    // A single reprocessor summary log whose Received row is complete, so it is
     // scanned but never flagged. The rollups still report, all zero, and the
     // field line reads (none).
     const ledger = buildLedgerFixture({
@@ -360,7 +372,15 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
           rowId: 'row-z',
           wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-          data: { TONNAGE_RECEIVED_FOR_RECYCLING: 5 }
+          data: {
+            TONNAGE_RECEIVED_FOR_RECYCLING: 5,
+            SUPPLIER_NAME: 'Acme Ltd',
+            SUPPLIER_ADDRESS: '1 Mill Road',
+            SUPPLIER_POSTCODE: 'AB1 2CD',
+            SUPPLIER_EMAIL: 'supplier@example.com',
+            SUPPLIER_PHONE_NUMBER: '01234 567890',
+            ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting'
+          }
         })
       ],
       'sl-z'
@@ -399,7 +419,7 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
 
     expect(messages().find((m) => m.includes('sl-z'))).toBeUndefined()
     expect(messages()).toContain(
-      'Report-data diagnostic missing data by template: EXPORTER:0, EXPORTER_REGISTERED_ONLY:0'
+      'Report-data diagnostic missing data by template: REPROCESSOR_INPUT:0, REPROCESSOR_OUTPUT:0, EXPORTER:0, REPROCESSOR_REGISTERED_ONLY:0, EXPORTER_REGISTERED_ONLY:0'
     )
     expect(messages()).toContain(
       'Report-data diagnostic missing data by material: aluminium:0, fibre:0, glass:0, paper:0, plastic:0, steel:0, wood:0'

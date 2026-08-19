@@ -1073,30 +1073,6 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
-    it('does not gate rows whose processing type has no policy (reprocessor)', async () => {
-      const { server, organisationId, registrationId } = await createServer(
-        { wasteProcessingType: 'reprocessor', accreditationId: undefined },
-        {
-          featureFlags: gateEnabled,
-          rows: [
-            buildSummaryLogRowStateEntry({
-              rowId: 'row-1',
-              wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-              processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-              data: {
-                DATE_RECEIVED_FOR_REPROCESSING: '2025-01-10',
-                TONNAGE_RECEIVED_FOR_RECYCLING: 5
-              }
-            })
-          ]
-        }
-      )
-
-      const response = await postRegOnly(server, organisationId, registrationId)
-
-      expect(response.statusCode).toBe(StatusCodes.CREATED)
-    })
-
     it('blocks the report on an incomplete triggered row from outside the report period', async () => {
       // Whole-summary-log scoping (PAE-1420 pivot): export tonnage with a June
       // export date and a blank OSR_ID. The January report does not aggregate
@@ -1314,6 +1290,275 @@ describe(`POST ${reportsPostPath}`, () => {
           field: 'FINAL_DESTINATION_FACILITY_TYPE'
         })
       ])
+    })
+  })
+
+  describe('reprocessor report data completeness gate (PAE-1280)', () => {
+    const gateEnabled = createInMemoryFeatureFlags({
+      reportDataValidation: true
+    })
+
+    // AC1: the six supplier fields a positive received-for-recycling tonnage
+    // makes mandatory. Listed in the policy's declaration order so the expected
+    // issues below read naturally; the frontend does not depend on field order.
+    const SUPPLIER_FIELDS = [
+      'SUPPLIER_NAME',
+      'SUPPLIER_ADDRESS',
+      'SUPPLIER_POSTCODE',
+      'SUPPLIER_EMAIL',
+      'SUPPLIER_PHONE_NUMBER',
+      'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
+    ]
+
+    // AC2: the four final-destination fields a positive sent-on tonnage makes
+    // mandatory. Listed in the policy's declaration order for readability; the
+    // frontend does not depend on field order.
+    const DESTINATION_FIELDS = [
+      'FINAL_DESTINATION_NAME',
+      'FINAL_DESTINATION_FACILITY_TYPE',
+      'FINAL_DESTINATION_ADDRESS',
+      'FINAL_DESTINATION_POSTCODE'
+    ]
+
+    // Row states carry the canonical field names ingestion normalises every
+    // reprocessor template to; the gate reads only this data, never the template.
+    const reprocessorRow = (processingType, rowId, wasteRecordType, data) =>
+      buildSummaryLogRowStateEntry({
+        rowId,
+        wasteRecordType,
+        processingType,
+        data
+      })
+
+    // The payload is a flat list of issues, one per missing field. Each issue
+    // locates the field by sheet and row; the frontend maps the field to copy.
+    const issuesFor = (sheet, rowId, fields) =>
+      fields.map((field) => ({ sheet, rowId, field }))
+
+    // The three reprocessor templates share the same two rules but differ in
+    // registration shape and cadence: input and output are accredited (monthly),
+    // registered-only is quarterly. sheetNames are 'Received' and 'Sent on'
+    // across all three.
+    const TEMPLATES = [
+      {
+        name: 'accredited on input',
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+        registration: { wasteProcessingType: 'reprocessor' },
+        accredited: true,
+        post: (server, orgId, regId) =>
+          makeRequest(server, orgId, regId, 2025, 'monthly', 1)
+      },
+      {
+        name: 'accredited on output',
+        processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        registration: { wasteProcessingType: 'reprocessor' },
+        accredited: true,
+        post: (server, orgId, regId) =>
+          makeRequest(server, orgId, regId, 2025, 'monthly', 1)
+      },
+      {
+        name: 'registered-only',
+        processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
+        registration: {
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        },
+        accredited: false,
+        post: (server, orgId, regId) =>
+          makeRequest(server, orgId, regId, 2025, 'quarterly', 1)
+      }
+    ]
+
+    describe.each(TEMPLATES)(
+      '$name',
+      ({ processingType, registration, accredited, post }) => {
+        it('blocks report creation when a received row is missing supplier details (AC1)', async () => {
+          const { server, organisationId, registrationId } = await createServer(
+            registration,
+            {
+              accredited,
+              featureFlags: gateEnabled,
+              rows: [
+                reprocessorRow(
+                  processingType,
+                  'row-1',
+                  WASTE_RECORD_TYPE.RECEIVED,
+                  { TONNAGE_RECEIVED_FOR_RECYCLING: 5 }
+                )
+              ]
+            }
+          )
+
+          const response = await post(server, organisationId, registrationId)
+
+          expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+          const payload = JSON.parse(response.payload)
+          expect(payload.reason).toBe('report_data_incomplete')
+          expect(payload.total).toBe(SUPPLIER_FIELDS.length)
+          expect(payload.issues).toEqual(
+            issuesFor('Received', 'row-1', SUPPLIER_FIELDS)
+          )
+        })
+
+        it('blocks report creation when a sent-on row is missing the final destination (AC2)', async () => {
+          const { server, organisationId, registrationId } = await createServer(
+            registration,
+            {
+              accredited,
+              featureFlags: gateEnabled,
+              rows: [
+                reprocessorRow(
+                  processingType,
+                  'row-1',
+                  WASTE_RECORD_TYPE.SENT_ON,
+                  { TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2 }
+                )
+              ]
+            }
+          )
+
+          const response = await post(server, organisationId, registrationId)
+
+          expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+          const payload = JSON.parse(response.payload)
+          expect(payload.reason).toBe('report_data_incomplete')
+          expect(payload.total).toBe(DESTINATION_FIELDS.length)
+          expect(payload.issues).toEqual(
+            issuesFor('Sent on', 'row-1', DESTINATION_FIELDS)
+          )
+        })
+
+        it('creates the report when every triggered row is complete', async () => {
+          const { server, organisationId, registrationId } = await createServer(
+            registration,
+            {
+              accredited,
+              featureFlags: gateEnabled,
+              rows: [
+                reprocessorRow(
+                  processingType,
+                  'row-1',
+                  WASTE_RECORD_TYPE.RECEIVED,
+                  {
+                    TONNAGE_RECEIVED_FOR_RECYCLING: 5,
+                    SUPPLIER_NAME: 'Acme Waste Ltd',
+                    SUPPLIER_ADDRESS: '1 Depot Road',
+                    SUPPLIER_POSTCODE: 'AB1 2CD',
+                    SUPPLIER_EMAIL: 'ops@acme.example',
+                    SUPPLIER_PHONE_NUMBER: '01234 567890',
+                    ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baling'
+                  }
+                ),
+                reprocessorRow(
+                  processingType,
+                  'row-2',
+                  WASTE_RECORD_TYPE.SENT_ON,
+                  {
+                    TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
+                    FINAL_DESTINATION_NAME: 'Port Recyclers',
+                    FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
+                    FINAL_DESTINATION_ADDRESS: '2 Quay Street',
+                    FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
+                  }
+                )
+              ]
+            }
+          )
+
+          const response = await post(server, organisationId, registrationId)
+
+          expect(response.statusCode).toBe(StatusCodes.CREATED)
+        })
+      }
+    )
+
+    it('does not gate a record type that carries no completeness rule', async () => {
+      // The reprocessed-loads (processed) record type has no report-mandatory
+      // rule, so the gate skips it: a processing type with a policy still leaves
+      // unruled record types untouched.
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'reprocessor' },
+        {
+          accredited: true,
+          featureFlags: gateEnabled,
+          rows: [
+            reprocessorRow(
+              PROCESSING_TYPES.REPROCESSOR_INPUT,
+              'row-1',
+              WASTE_RECORD_TYPE.PROCESSED,
+              { PRODUCT_TONNAGE: 5 }
+            )
+          ]
+        }
+      )
+
+      const response = await makeRequest(
+        server,
+        organisationId,
+        registrationId,
+        2025,
+        'monthly',
+        1
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('blocks a registered-only placeholder facility type but never gates the GET retrieval path (defra-h9hv twin)', async () => {
+      // The facility type is a 'Choose option' dropdown on the reprocessor
+      // registered-only Sent-on sheet, so an unselected one must be flagged
+      // exactly as the accredited schemas do. The same incomplete data must
+      // still return the on-the-fly report on GET: the gate lives only in
+      // report creation.
+      const { server, organisationId, registrationId } = await createServer(
+        { wasteProcessingType: 'reprocessor', accreditationId: undefined },
+        {
+          featureFlags: gateEnabled,
+          rows: [
+            reprocessorRow(
+              PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
+              'row-1',
+              WASTE_RECORD_TYPE.SENT_ON,
+              {
+                DATE_LOAD_LEFT_SITE: '2025-03-01',
+                TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
+                FINAL_DESTINATION_NAME: 'Port Recyclers',
+                FINAL_DESTINATION_FACILITY_TYPE: 'Choose option',
+                FINAL_DESTINATION_ADDRESS: '2 Quay Street',
+                FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
+              }
+            )
+          ]
+        }
+      )
+
+      const response = await makeRequest(
+        server,
+        organisationId,
+        registrationId,
+        2025,
+        'quarterly',
+        1
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const payload = JSON.parse(response.payload)
+      expect(payload.total).toBe(1)
+      expect(payload.issues).toEqual([
+        expect.objectContaining({
+          rowId: 'row-1',
+          field: 'FINAL_DESTINATION_FACILITY_TYPE'
+        })
+      ])
+
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1, 1),
+        ...asOperator()
+      })
+
+      expect(getResponse.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(getResponse.payload).reason).toBeUndefined()
     })
   })
 })
