@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -84,8 +83,7 @@ const startServer = async (prn) => {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
       organisationsRepository: () => ({})
-    },
-    featureFlags: createInMemoryFeatureFlags()
+    }
   })
   return server
 }
@@ -255,8 +253,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
           }
         }),
         organisationsRepository: () => ({})
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const response = await server.inject({

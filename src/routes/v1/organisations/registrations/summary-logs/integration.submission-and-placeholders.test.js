@@ -13,7 +13,6 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -362,7 +361,6 @@ describe('Submission and placeholder tests', () => {
       ledgerRepository = createInMemoryLedgerRepository()()
       summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
-      const featureFlags = createInMemoryFeatureFlags()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
@@ -425,8 +423,7 @@ describe('Submission and placeholder tests', () => {
         },
         workers: {
           summaryLogsWorker: submitterWorker
-        },
-        featureFlags
+        }
       })
 
       await server.inject({
@@ -814,8 +811,6 @@ describe('Submission and placeholder tests', () => {
         ),
         overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
-      const featureFlags = createInMemoryFeatureFlags()
-
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
@@ -823,8 +818,7 @@ describe('Submission and placeholder tests', () => {
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
+        }
       })
 
       uploadResponse = await server.inject({

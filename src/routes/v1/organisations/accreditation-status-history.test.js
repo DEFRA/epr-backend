@@ -1,4 +1,3 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { buildAwaitingAuthorisationPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
@@ -136,8 +135,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const getResponse = await server.inject({
@@ -1100,8 +1098,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const suspendResponse = await integrationServer.inject({
@@ -1190,8 +1187,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           ledgerRepository: () => ledgerRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const reinstateResponse = await integrationServer.inject({
@@ -1257,8 +1253,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const cancelResponse = await integrationServer.inject({
@@ -1347,8 +1342,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           ledgerRepository: () => ledgerRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const reinstateResponse = await integrationServer.inject({

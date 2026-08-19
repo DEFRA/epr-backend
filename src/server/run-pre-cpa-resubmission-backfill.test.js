@@ -4,6 +4,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { getConfig } from '#root/config.js'
 import { runPreCpaResubmissionBackfill } from './run-pre-cpa-resubmission-backfill.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -163,14 +164,10 @@ const buildServer = (
     reportEnabled = true,
     backfillEnabled = false
   } = {}
-) =>
-  /** @type {StartedServer} */ (
+) => {
+  const server = /** @type {StartedServer} */ (
     /** @type {unknown} */ ({
       app,
-      featureFlags: {
-        isPreCpaResubmissionReportEnabled: () => reportEnabled,
-        isPreCpaResubmissionBackfillEnabled: () => backfillEnabled
-      },
       locker: {
         lock: lockError
           ? vi.fn().mockRejectedValue(lockError)
@@ -178,6 +175,14 @@ const buildServer = (
       }
     })
   )
+  const config = getConfig({
+    featureFlags: {
+      preCpaResubmissionReport: reportEnabled,
+      preCpaResubmissionBackfill: backfillEnabled
+    }
+  })
+  return { server, config }
+}
 
 describe('runPreCpaResubmissionBackfill', () => {
   beforeEach(() => {
@@ -187,12 +192,12 @@ describe('runPreCpaResubmissionBackfill', () => {
   describe('diagnostic step (preCpaResubmissionReport)', () => {
     it('does not run and touches nothing when both flags are off', async () => {
       const app = emptyEstateApp()
-      const server = buildServer(app, {
+      const { server, config } = buildServer(app, {
         reportEnabled: false,
         backfillEnabled: false
       })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(server.locker.lock).not.toHaveBeenCalled()
       expect(
@@ -205,9 +210,9 @@ describe('runPreCpaResubmissionBackfill', () => {
 
     it('acquires the shared lock and releases it afterwards', async () => {
       const lock = { free: vi.fn().mockResolvedValue(undefined) }
-      const server = buildServer(emptyEstateApp(), { lock })
+      const { server, config } = buildServer(emptyEstateApp(), { lock })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(server.locker.lock).toHaveBeenCalledWith('pre-cpa-resubmission')
       expect(server.locker.lock).toHaveBeenCalledTimes(1)
@@ -216,9 +221,9 @@ describe('runPreCpaResubmissionBackfill', () => {
 
     it('skips the report and reads nothing when the lock is held by another instance', async () => {
       const app = emptyEstateApp()
-      const server = buildServer(app, { lock: null })
+      const { server, config } = buildServer(app, { lock: null })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(
         app.reportsRepository.findAllPeriodicReports
@@ -230,9 +235,9 @@ describe('runPreCpaResubmissionBackfill', () => {
     })
 
     it('logs a sizing summary and a clean invariant probe when nothing is affected', async () => {
-      const server = buildServer(emptyEstateApp())
+      const { server, config } = buildServer(emptyEstateApp())
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(logger.error).not.toHaveBeenCalled()
       expect(logger.warn).not.toHaveBeenCalled()
@@ -249,9 +254,9 @@ describe('runPreCpaResubmissionBackfill', () => {
     })
 
     it('logs a retrospective line per affected report and a sizing summary', async () => {
-      const server = buildServer(oneFindingApp())
+      const { server, config } = buildServer(oneFindingApp())
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(logger.info).toHaveBeenCalledWith({
         message: expect.stringContaining(
@@ -269,11 +274,11 @@ describe('runPreCpaResubmissionBackfill', () => {
     })
 
     it('warns with report ids when an IGNORED restatement lands in a closed period', async () => {
-      const server = buildServer(
+      const { server, config } = buildServer(
         oneFindingApp({ restatingOutcome: WASTE_BALANCE_OUTCOME.IGNORED })
       )
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(logger.info).toHaveBeenCalledWith({
         message:
@@ -289,9 +294,9 @@ describe('runPreCpaResubmissionBackfill', () => {
     })
 
     it('warns with report ids when a submitted report is missing its submittedAt', async () => {
-      const server = buildServer(missingSubmittedAtApp())
+      const { server, config } = buildServer(missingSubmittedAtApp())
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(logger.error).not.toHaveBeenCalled()
       expect(logger.info).toHaveBeenCalledWith({
@@ -317,9 +322,9 @@ describe('runPreCpaResubmissionBackfill', () => {
           findAllPeriodicReports: vi.fn().mockRejectedValue(error)
         }
       }
-      const server = buildServer(app, { lock })
+      const { server, config } = buildServer(app, { lock })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(logger.error).toHaveBeenCalledWith({
         err: error,
@@ -330,9 +335,11 @@ describe('runPreCpaResubmissionBackfill', () => {
 
     it('tolerates the locker itself throwing', async () => {
       const error = new Error('locker unavailable')
-      const server = buildServer(emptyEstateApp(), { lockError: error })
+      const { server, config } = buildServer(emptyEstateApp(), {
+        lockError: error
+      })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(logger.error).toHaveBeenCalledWith({
         err: error,
@@ -344,12 +351,12 @@ describe('runPreCpaResubmissionBackfill', () => {
   describe('backfill step (preCpaResubmissionBackfill)', () => {
     it('does not write when the backfill flag is off, even with findings', async () => {
       const app = oneFindingApp()
-      const server = buildServer(app, {
+      const { server, config } = buildServer(app, {
         reportEnabled: false,
         backfillEnabled: false
       })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(server.locker.lock).not.toHaveBeenCalled()
       expect(
@@ -376,12 +383,12 @@ describe('runPreCpaResubmissionBackfill', () => {
             }
           }
         ])
-      const server = buildServer(app, {
+      const { server, config } = buildServer(app, {
         reportEnabled: false,
         backfillEnabled: true
       })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(server.locker.lock).toHaveBeenCalledWith('pre-cpa-resubmission')
       expect(server.locker.lock).toHaveBeenCalledTimes(1)
@@ -415,12 +422,12 @@ describe('runPreCpaResubmissionBackfill', () => {
 
     it('runs both steps under a single shared lock when both flags are on', async () => {
       const app = oneFindingApp()
-      const server = buildServer(app, {
+      const { server, config } = buildServer(app, {
         reportEnabled: true,
         backfillEnabled: true
       })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(server.locker.lock).toHaveBeenCalledTimes(1)
       expect(logger.info).toHaveBeenCalledWith({
@@ -439,12 +446,12 @@ describe('runPreCpaResubmissionBackfill', () => {
       app.reportsRepository.markSubmittedReportsRequiringResubmission = vi
         .fn()
         .mockResolvedValue([])
-      const server = buildServer(app, {
+      const { server, config } = buildServer(app, {
         reportEnabled: false,
         backfillEnabled: true
       })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(logger.error).not.toHaveBeenCalled()
       expect(logger.info).toHaveBeenCalledWith({
@@ -473,12 +480,12 @@ describe('runPreCpaResubmissionBackfill', () => {
             }
           }
         ])
-      const server = buildServer(app, {
+      const { server, config } = buildServer(app, {
         reportEnabled: false,
         backfillEnabled: true
       })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(logger.warn).toHaveBeenCalledWith({
         message: expect.stringContaining(
@@ -496,13 +503,13 @@ describe('runPreCpaResubmissionBackfill', () => {
         .fn()
         .mockRejectedValue(writeError)
       const lock = { free: vi.fn().mockResolvedValue(undefined) }
-      const server = buildServer(app, {
+      const { server, config } = buildServer(app, {
         lock,
         reportEnabled: false,
         backfillEnabled: true
       })
 
-      await runPreCpaResubmissionBackfill(server)
+      await runPreCpaResubmissionBackfill(server, config)
 
       expect(logger.error).toHaveBeenCalledWith({
         err: writeError,

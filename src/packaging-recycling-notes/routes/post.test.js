@@ -9,7 +9,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -72,8 +71,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           organisationsRepository: () => organisationsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       await server.initialize()

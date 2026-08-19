@@ -10,7 +10,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -130,8 +129,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             packagingRecyclingNotesRepository,
           ledgerRepository: () => ledgerRepository,
           organisationsRepository: () => organisationsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       await server.initialize()

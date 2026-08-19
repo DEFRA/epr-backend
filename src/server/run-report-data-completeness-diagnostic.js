@@ -59,9 +59,10 @@ const runDiagnostic = async (server) => {
  * touching the locker or any repository.
  *
  * @param {StartedServer} server - Hapi server instance
+ * @param {import('convict').Config<Record<string, any>>} config
  */
-export const runReportDataCompletenessDiagnostic = async (server) => {
-  if (!server.featureFlags.isReportDataCompleteDiagnosticEnabled()) {
+export const runReportDataCompletenessDiagnostic = async (server, config) => {
+  if (!config.get('featureFlags.reportDataCompleteDiagnostic')) {
     return
   }
 

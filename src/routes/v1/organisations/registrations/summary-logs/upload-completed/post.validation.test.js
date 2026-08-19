@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -20,8 +19,7 @@ describe('POST upload-completed validation', () => {
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
   })
 

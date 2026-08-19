@@ -4,7 +4,6 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -115,17 +114,13 @@ describe(`POST ${reportsPostPath}`, () => {
   /**
    * @param {object} [registrationOverrides]
    * @param {object} [options]
-   * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [options.featureFlags]
+   * @param {boolean} [options.reportDataValidationEnabled]
    * @param {any[]} [options.rows]
    * @param {boolean} [options.accredited] - Link an approved accreditation (monthly cadence).
    */
   const createServer = async (
     registrationOverrides = {},
-    {
-      featureFlags = createInMemoryFeatureFlags(),
-      rows,
-      accredited = false
-    } = {}
+    { reportDataValidationEnabled = false, rows, accredited = false } = {}
   ) => {
     const registration = buildRegistration(
       accredited
@@ -149,7 +144,9 @@ describe(`POST ${reportsPostPath}`, () => {
         summaryLogRowStatesRepository,
         reportsRepository: reportsRepositoryFactory
       },
-      featureFlags
+      config: {
+        featureFlags: { reportDataValidation: reportDataValidationEnabled }
+      }
     })
 
     return {
@@ -364,8 +361,7 @@ describe(`POST ${reportsPostPath}`, () => {
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         reportsRepository: createInMemoryReportsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const response = await makeRequest(
@@ -718,8 +714,7 @@ describe(`POST ${reportsPostPath}`, () => {
         reportsRepository: createInMemoryReportsRepository(),
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository([prn])
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const response = await server.inject({
@@ -959,10 +954,6 @@ describe(`POST ${reportsPostPath}`, () => {
   })
 
   describe('exporter report data completeness gate (PAE-1420)', () => {
-    const gateEnabled = createInMemoryFeatureFlags({
-      reportDataValidation: true
-    })
-
     // The six supplier fields AC1 makes mandatory, in the order the gate reports
     // them. Kept as a list so the accredited/reg-only assertions read the same.
     const SUPPLIER_FIELDS = [
@@ -1038,7 +1029,7 @@ describe(`POST ${reportsPostPath}`, () => {
     it('creates the report when the flag is on but no completeness rule is triggered', async () => {
       const { server, organisationId, registrationId } = await createServer(
         regOnlyExporter,
-        { featureFlags: gateEnabled }
+        { reportDataValidationEnabled: true }
       )
 
       const response = await postRegOnly(server, organisationId, registrationId)
@@ -1052,7 +1043,7 @@ describe(`POST ${reportsPostPath}`, () => {
       const { server, organisationId, registrationId } = await createServer(
         regOnlyExporter,
         {
-          featureFlags: gateEnabled,
+          reportDataValidationEnabled: true,
           rows: [
             regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
               MONTH_RECEIVED_FOR_EXPORT: '2025-01',
@@ -1081,7 +1072,7 @@ describe(`POST ${reportsPostPath}`, () => {
         { wasteProcessingType: 'exporter' },
         {
           accredited: true,
-          featureFlags: gateEnabled,
+          reportDataValidationEnabled: true,
           rows: [
             accreditedRow({
               DATE_OF_EXPORT: '2025-06-15',
@@ -1112,7 +1103,7 @@ describe(`POST ${reportsPostPath}`, () => {
         { wasteProcessingType: 'exporter' },
         {
           accredited: true,
-          featureFlags: gateEnabled,
+          reportDataValidationEnabled: true,
           rows: [
             accreditedRow({
               TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
@@ -1142,7 +1133,7 @@ describe(`POST ${reportsPostPath}`, () => {
         { wasteProcessingType: 'exporter' },
         {
           accredited: true,
-          featureFlags: gateEnabled,
+          reportDataValidationEnabled: true,
           rows: [
             accreditedRow({
               DATE_RECEIVED_FOR_EXPORT: '2025-01-10',
@@ -1181,7 +1172,7 @@ describe(`POST ${reportsPostPath}`, () => {
         { wasteProcessingType: 'exporter' },
         {
           accredited: true,
-          featureFlags: gateEnabled,
+          reportDataValidationEnabled: true,
           rows: [
             accreditedRow({
               DATE_RECEIVED_FOR_EXPORT: '2025-01-10',
@@ -1207,7 +1198,7 @@ describe(`POST ${reportsPostPath}`, () => {
       const { server, organisationId, registrationId } = await createServer(
         regOnlyExporter,
         {
-          featureFlags: gateEnabled,
+          reportDataValidationEnabled: true,
           rows: [
             regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
               MONTH_RECEIVED_FOR_EXPORT: '2025-01',
@@ -1247,7 +1238,7 @@ describe(`POST ${reportsPostPath}`, () => {
 
       const { server, organisationId, registrationId } = await createServer(
         regOnlyExporter,
-        { featureFlags: gateEnabled, rows }
+        { reportDataValidationEnabled: true, rows }
       )
 
       const response = await postRegOnly(server, organisationId, registrationId)
@@ -1265,7 +1256,7 @@ describe(`POST ${reportsPostPath}`, () => {
       const { server, organisationId, registrationId } = await createServer(
         regOnlyExporter,
         {
-          featureFlags: gateEnabled,
+          reportDataValidationEnabled: true,
           rows: [
             regOnlyRow('row-1', WASTE_RECORD_TYPE.SENT_ON, {
               DATE_LOAD_LEFT_SITE: '2025-03-01',
@@ -1294,10 +1285,6 @@ describe(`POST ${reportsPostPath}`, () => {
   })
 
   describe('reprocessor report data completeness gate (PAE-1280)', () => {
-    const gateEnabled = createInMemoryFeatureFlags({
-      reportDataValidation: true
-    })
-
     // AC1: the six supplier fields a positive received-for-recycling tonnage
     // makes mandatory. Listed in the policy's declaration order so the expected
     // issues below read naturally; the frontend does not depend on field order.
@@ -1377,7 +1364,7 @@ describe(`POST ${reportsPostPath}`, () => {
             registration,
             {
               accredited,
-              featureFlags: gateEnabled,
+              reportDataValidationEnabled: true,
               rows: [
                 reprocessorRow(
                   processingType,
@@ -1405,7 +1392,7 @@ describe(`POST ${reportsPostPath}`, () => {
             registration,
             {
               accredited,
-              featureFlags: gateEnabled,
+              reportDataValidationEnabled: true,
               rows: [
                 reprocessorRow(
                   processingType,
@@ -1433,7 +1420,7 @@ describe(`POST ${reportsPostPath}`, () => {
             registration,
             {
               accredited,
-              featureFlags: gateEnabled,
+              reportDataValidationEnabled: true,
               rows: [
                 reprocessorRow(
                   processingType,
@@ -1480,7 +1467,7 @@ describe(`POST ${reportsPostPath}`, () => {
         { wasteProcessingType: 'reprocessor' },
         {
           accredited: true,
-          featureFlags: gateEnabled,
+          reportDataValidationEnabled: true,
           rows: [
             reprocessorRow(
               PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -1513,7 +1500,7 @@ describe(`POST ${reportsPostPath}`, () => {
       const { server, organisationId, registrationId } = await createServer(
         { wasteProcessingType: 'reprocessor', accreditationId: undefined },
         {
-          featureFlags: gateEnabled,
+          reportDataValidationEnabled: true,
           rows: [
             reprocessorRow(
               PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,

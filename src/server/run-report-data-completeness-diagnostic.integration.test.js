@@ -4,7 +4,7 @@ import { ObjectId } from 'mongodb'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { getConfig } from '#root/config.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -145,7 +145,7 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     })
   ]
 
-  const buildServer = async (featureFlags) => {
+  const buildServer = async (diagnosticEnabled) => {
     const rowStates = createInMemorySummaryLogRowStatesRepository()()
     await rowStates.upsertSummaryLogRowStates(ledgerA.ledgerId, rowsA, 'sl-a')
     await rowStates.upsertSummaryLogRowStates(ledgerB.ledgerId, rowsB, 'sl-b')
@@ -165,7 +165,9 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     )()
 
     const server = await createTestServer({
-      featureFlags,
+      config: {
+        featureFlags: { reportDataCompleteDiagnostic: diagnosticEnabled }
+      },
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
           partialMock(ledgerA.org),
@@ -182,6 +184,9 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     server.locker = partialMock({ lock })
     return {
       server: /** @type {StartedServer} */ (/** @type {unknown} */ (server)),
+      config: getConfig({
+        featureFlags: { reportDataCompleteDiagnostic: diagnosticEnabled }
+      }),
       lock,
       free
     }
@@ -199,11 +204,9 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
   })
 
   it('logs the estate-wide report-data completeness blast radius', async () => {
-    const { server, lock, free } = await buildServer(
-      createInMemoryFeatureFlags({ reportDataCompleteDiagnostic: true })
-    )
+    const { server, config, lock, free } = await buildServer(true)
 
-    await runReportDataCompletenessDiagnostic(server)
+    await runReportDataCompletenessDiagnostic(server, config)
 
     // (1) one line per violating summary log, with its counts and ids.
     const lineA = messages().find((m) => m.includes('sl-a'))
@@ -313,9 +316,9 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     const server = /** @type {StartedServer} */ (
       /** @type {unknown} */ (
         await createTestServer({
-          featureFlags: createInMemoryFeatureFlags({
-            reportDataCompleteDiagnostic: true
-          }),
+          config: {
+            featureFlags: { reportDataCompleteDiagnostic: true }
+          },
           repositories: {
             organisationsRepository: createInMemoryOrganisationsRepository([]),
             ledgerRepository,
@@ -328,7 +331,10 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
       lock: vi.fn().mockResolvedValue({ free: vi.fn() })
     })
 
-    await runReportDataCompletenessDiagnostic(server)
+    await runReportDataCompletenessDiagnostic(
+      server,
+      getConfig({ featureFlags: { reportDataCompleteDiagnostic: true } })
+    )
 
     const lineD = messages().find((m) => m.includes('sl-d'))
     expect(lineD).toContain('material unknown')
@@ -398,9 +404,9 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     const server = /** @type {StartedServer} */ (
       /** @type {unknown} */ (
         await createTestServer({
-          featureFlags: createInMemoryFeatureFlags({
-            reportDataCompleteDiagnostic: true
-          }),
+          config: {
+            featureFlags: { reportDataCompleteDiagnostic: true }
+          },
           repositories: {
             organisationsRepository: createInMemoryOrganisationsRepository([
               partialMock(ledger.org)
@@ -415,7 +421,10 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
       lock: vi.fn().mockResolvedValue({ free: vi.fn() })
     })
 
-    await runReportDataCompletenessDiagnostic(server)
+    await runReportDataCompletenessDiagnostic(
+      server,
+      getConfig({ featureFlags: { reportDataCompleteDiagnostic: true } })
+    )
 
     expect(messages().find((m) => m.includes('sl-z'))).toBeUndefined()
     expect(messages()).toContain(
@@ -475,9 +484,9 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
     const server = /** @type {StartedServer} */ (
       /** @type {unknown} */ (
         await createTestServer({
-          featureFlags: createInMemoryFeatureFlags({
-            reportDataCompleteDiagnostic: true
-          }),
+          config: {
+            featureFlags: { reportDataCompleteDiagnostic: true }
+          },
           repositories: {
             organisationsRepository: createInMemoryOrganisationsRepository([
               partialMock(org)
@@ -492,7 +501,10 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
       lock: vi.fn().mockResolvedValue({ free: vi.fn() })
     })
 
-    await runReportDataCompletenessDiagnostic(server)
+    await runReportDataCompletenessDiagnostic(
+      server,
+      getConfig({ featureFlags: { reportDataCompleteDiagnostic: true } })
+    )
 
     const lineN = messages().find((m) => m.includes('sl-n'))
     expect(lineN).toContain(
@@ -502,9 +514,9 @@ describe('runReportDataCompletenessDiagnostic (integration)', () => {
   })
 
   it('does nothing when the feature flag is off', async () => {
-    const { server, lock } = await buildServer(createInMemoryFeatureFlags())
+    const { server, config, lock } = await buildServer(false)
 
-    await runReportDataCompletenessDiagnostic(server)
+    await runReportDataCompletenessDiagnostic(server, config)
 
     expect(lock).not.toHaveBeenCalled()
     expect(

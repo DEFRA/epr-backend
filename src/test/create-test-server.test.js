@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
+import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from './create-test-server.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -90,15 +90,29 @@ describe('createTestServer', () => {
     })
   })
 
-  describe('feature flags option', () => {
-    it('accepts featureFlags option for test overrides', async () => {
-      const customFlags = createInMemoryFeatureFlags({
-        devEndpoints: true
+  describe('feature flags via config option', () => {
+    it('registers dev endpoints when devEndpoints is enabled through config', async () => {
+      const server = await createTestServer({
+        config: { featureFlags: { devEndpoints: true } }
       })
 
-      const server = await createTestServer({ featureFlags: customFlags })
+      const response = await server.inject({
+        method: 'DELETE',
+        url: '/v1/dev/organisations/506544'
+      })
 
-      expect(server.featureFlags.isDevEndpointsEnabled()).toBe(true)
+      expect(response.statusCode).not.toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('omits dev endpoints by default', async () => {
+      const server = await createTestServer()
+
+      const response = await server.inject({
+        method: 'DELETE',
+        url: '/v1/dev/organisations/506544'
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
   })
 
