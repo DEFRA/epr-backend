@@ -254,12 +254,12 @@ describe(`GET ${registrationGetPath}`, () => {
       }
     }
 
-    it('refuses an operator holding only their own organisation read', async () => {
+    it('shows an operator the registration of their own organisation', async () => {
       const request = await serveOrganisation()
 
       const response = await server.inject({ ...request, ...asOperator() })
 
-      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
     testRegulatorCanRead({
@@ -470,12 +470,12 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
       }
     }
 
-    it('refuses an operator holding only their own organisation read', async () => {
+    it('shows an operator the accreditations of their own organisation', async () => {
       const request = await serveOrganisation()
 
       const response = await server.inject({ ...request, ...asOperator() })
 
-      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
     testRegulatorCanRead({

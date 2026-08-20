@@ -28,7 +28,7 @@ import { accreditationLedgerEventsGet } from '#routes/v1/admin/organisations/reg
 import {
   registrationAccreditationsGet,
   registrationGet
-} from '#routes/v1/admin/organisations/registrations/get.js'
+} from '#routes/v1/organisations/registrations/get.js'
 import { registrationLedgerEventsGet } from '#routes/v1/admin/organisations/registrations/ledger-events/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'

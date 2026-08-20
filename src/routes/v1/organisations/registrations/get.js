@@ -13,19 +13,17 @@ import {
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 export const registrationGetPath =
-  '/v1/admin/organisations/{organisationId}/registrations/{registrationId}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}'
 
 export const registrationAccreditationsGetPath = `${registrationGetPath}/accreditations`
 
-const adminAuth = {
-  scope: [`+${SCOPES.organisationRead}`, `+${SCOPES.organisationSearch}`]
-}
+const registrationAuth = { scope: [SCOPES.organisationRead] }
 
 export const registrationGet = {
   method: 'GET',
   path: registrationGetPath,
   options: {
-    auth: adminAuth,
+    auth: registrationAuth,
     tags: ['api', 'admin'],
     response: {
       schema: registrationResponseSchema
@@ -57,7 +55,7 @@ export const registrationAccreditationsGet = {
   method: 'GET',
   path: registrationAccreditationsGetPath,
   options: {
-    auth: adminAuth,
+    auth: registrationAuth,
     tags: ['api', 'admin'],
     response: {
       schema: registrationAccreditationsResponseSchema
