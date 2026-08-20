@@ -35,17 +35,56 @@ export const registrationSummarySchema = Joi.object({
  * @returns {RegistrationSummary}
  */
 export function toRegistrationSummary(registration) {
-  const isExporter =
-    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-
   return {
     id: registration.id,
     registrationNumber: registration.registrationNumber ?? null,
     status: registration.status,
     material: registration.material,
     processingType: getProcessingType(registration),
-    site: isExporter ? null : (registration.site.address.line1 ?? null)
+    site: isExporter(registration)
+      ? null
+      : (registration.site.address.line1 ?? null)
   }
+}
+
+/**
+ * @typedef {{ town: string | null; postcode: string | null }} SiteLocation
+ */
+
+/**
+ * The wire shape of a SiteLocation.
+ */
+export const siteLocationSchema = Joi.object({
+  town: Joi.string().allow(null).required(),
+  postcode: Joi.string().allow(null).required()
+})
+
+/**
+ * Names the site by where it is, for a page whose heading gives the town and
+ * postcode rather than the first line of the address. An exporter processes
+ * waste abroad and holds no site here, so it has no location to give.
+ *
+ * @param {Registration} registration
+ * @returns {SiteLocation}
+ */
+export function toSiteLocation(registration) {
+  if (isExporter(registration)) {
+    return { town: null, postcode: null }
+  }
+
+  const { address } = registration.site
+  return {
+    town: address.town ?? null,
+    postcode: address.postcode ?? null
+  }
+}
+
+/**
+ * @param {{ wasteProcessingType: string }} registration
+ * @returns {boolean}
+ */
+function isExporter(registration) {
+  return registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 }
 
 /**
@@ -53,7 +92,7 @@ export function toRegistrationSummary(registration) {
  * @returns {string}
  */
 function getProcessingType(registration) {
-  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
+  if (isExporter(registration)) {
     return WASTE_PROCESSING_TYPE.EXPORTER
   }
   return registration.reprocessingType

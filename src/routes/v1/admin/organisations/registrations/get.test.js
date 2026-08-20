@@ -137,7 +137,9 @@ describe(`GET ${registrationDetailsGetPath}`, () => {
       status: 'created',
       material: registration.material,
       processingType: 'reprocessor - input',
-      site: registration.site.address.line1
+      site: registration.site.address.line1,
+      town: registration.site.address.town,
+      postcode: registration.site.address.postcode
     })
   })
 
@@ -254,6 +256,8 @@ describe(`GET ${registrationDetailsGetPath}`, () => {
 
     const { registration: summary } = JSON.parse(response.payload)
     expect(summary.site).toBeNull()
+    expect(summary.town).toBeNull()
+    expect(summary.postcode).toBeNull()
     expect(summary.processingType).toBe('exporter')
   })
 

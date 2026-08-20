@@ -1,7 +1,10 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { toRegistrationSummary } from '#application/organisations/registration-summary.js'
+import {
+  toRegistrationSummary,
+  toSiteLocation
+} from '#application/organisations/registration-summary.js'
 import { resolveNumberedAccreditations } from '#domain/organisations/registration-utils.js'
 import { registrationDetailsResponseSchema } from './response.schema.js'
 
@@ -64,7 +67,10 @@ export const registrationDetailsGet = {
       .response({
         organisationId: organisation.id,
         companyName: organisation.companyDetails.name,
-        registration: toRegistrationSummary(registration),
+        registration: {
+          ...toRegistrationSummary(registration),
+          ...toSiteLocation(registration)
+        },
         accreditations: resolveNumberedAccreditations(
           registration,
           organisation

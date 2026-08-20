@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { toRegistrationSummary } from './registration-summary.js'
+import {
+  toRegistrationSummary,
+  toSiteLocation
+} from './registration-summary.js'
 
 /** @import { Registration } from '#domain/organisations/registration.js' */
 
@@ -89,5 +92,41 @@ describe('toRegistrationSummary', () => {
     const created = { ...withoutNumber, status: 'created' }
 
     expect(toRegistrationSummary(created).registrationNumber).toBeNull()
+  })
+})
+
+describe('toSiteLocation', () => {
+  it('projects the town and postcode the site sits in', () => {
+    expect(
+      toSiteLocation(
+        buildRegistration({
+          site: {
+            address: { line1: 'Unit 1', town: 'Leeds', postcode: 'LS10 1AB' },
+            gridReference: 'TQ123456',
+            siteCapacity: []
+          }
+        })
+      )
+    ).toEqual({ town: 'Leeds', postcode: 'LS10 1AB' })
+  })
+
+  it('carries no location for an exporter', () => {
+    expect(
+      toSiteLocation(buildRegistration({ wasteProcessingType: 'exporter' }))
+    ).toEqual({ town: null, postcode: null })
+  })
+
+  it('carries nulls when a stored address names neither', () => {
+    expect(
+      toSiteLocation(
+        buildRegistration({
+          site: {
+            address: { line1: 'Unit 1' },
+            gridReference: 'TQ123456',
+            siteCapacity: []
+          }
+        })
+      )
+    ).toEqual({ town: null, postcode: null })
   })
 })
