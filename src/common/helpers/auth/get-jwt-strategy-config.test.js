@@ -252,7 +252,7 @@ describe('#getJwtStrategyConfig', () => {
     test('credential carries the scope the Entra resolver returned for a regulator', async () => {
       mockGetEntraUserRoles.mockResolvedValue({
         role: 'regulator_standard',
-        scopes: [SCOPES.organisationRead, SCOPES.regulator]
+        scopes: [SCOPES.organisationRead, SCOPES.organisationSearch]
       })
       const config = createStrategyConfig(mockOidcConfigs)
 
@@ -273,7 +273,7 @@ describe('#getJwtStrategyConfig', () => {
       expect(result.credentials.role).toBe('regulator_standard')
       expect(result.credentials.scope).toEqual([
         SCOPES.organisationRead,
-        SCOPES.regulator
+        SCOPES.organisationSearch
       ])
     })
 

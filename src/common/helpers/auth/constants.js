@@ -10,8 +10,7 @@ export const SCOPES = {
   organisationLinkedRead: 'organisation.linked.read',
   organisationLinkedWrite: 'organisation.linked.write',
   organisationSearch: 'organisation.search',
-  wasteBalanceLedgerRead: 'waste-balance.ledger.read',
-  regulator: 'regulator'
+  wasteBalanceLedgerRead: 'waste-balance.ledger.read'
 }
 
 /**
@@ -50,17 +49,12 @@ export const REGULATOR_ROLE = 'regulator_standard'
  * So a ledger route requires both scopes: `organisation.read` for the
  * organisation, and `waste-balance.ledger.read` for the ledger behind it.
  *
- * `regulator` is coarse on purpose. It stands for the whole set of functions
- * only a regulator performs, and subdivides when caseworking functions
- * arrive.
- *
  * A regulator reads and changes nothing, so no write scope appears here.
  */
 export const REGULATOR_SCOPES = [
   SCOPES.organisationRead,
   SCOPES.organisationSearch,
-  SCOPES.wasteBalanceLedgerRead,
-  SCOPES.regulator
+  SCOPES.wasteBalanceLedgerRead
 ]
 
 /**
