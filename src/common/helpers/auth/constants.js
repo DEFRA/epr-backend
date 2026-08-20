@@ -26,12 +26,6 @@ export const REGULATOR_APP_ROLE = 'Waste.Regulator.Standard'
  */
 export const REGULATOR_ROLE = 'regulator_standard'
 
-/**
- * `organisation.read` is the same scope an operator holds, on a different
- * condition: an operator reads their own linked organisation, a regulator reads
- * every organisation. So no read route names a regulator, and a read route
- * written later admits one without its author knowing regulators exist.
- */
 export const REGULATOR_SCOPES = [
   SCOPES.organisationRead,
   SCOPES.organisationSearch,

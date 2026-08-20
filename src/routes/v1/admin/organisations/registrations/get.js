@@ -17,10 +17,6 @@ export const registrationGetPath =
 
 export const registrationAccreditationsGetPath = `${registrationGetPath}/accreditations`
 
-// These routes name an organisation, so `organisation.read` alone would admit
-// the operator who owns it. No operator earns `organisation.search`, and every
-// admin tier and the regulator hold it, so requiring both refuses the operator.
-// `admin.read` cannot draw that line, because a regulator does not hold it.
 const adminAuth = {
   scope: [`+${SCOPES.organisationRead}`, `+${SCOPES.organisationSearch}`]
 }
