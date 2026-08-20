@@ -24,7 +24,7 @@ export const registrationGet = {
   path: registrationGetPath,
   options: {
     auth: registrationAuth,
-    tags: ['api', 'admin'],
+    tags: ['api'],
     response: {
       schema: registrationResponseSchema
     }
@@ -56,7 +56,7 @@ export const registrationAccreditationsGet = {
   path: registrationAccreditationsGetPath,
   options: {
     auth: registrationAuth,
-    tags: ['api', 'admin'],
+    tags: ['api'],
     response: {
       schema: registrationAccreditationsResponseSchema
     }
