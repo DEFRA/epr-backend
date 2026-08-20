@@ -2,7 +2,7 @@ import { beforeEach, describe } from 'vitest'
 
 /**
  * @typedef {Object} ContractTestFixtures
- * @property {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepository - The adapter under test
+ * @property {import('./port.js').PublicRegisterRepository} publicRegisterRepository - The adapter under test
  */
 
 /**

@@ -22,7 +22,7 @@ import { registerDependency } from '#plugins/register-dependency.js'
 import { router } from '#plugins/router.js'
 import { getConfig } from '#root/config.js'
 
-import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
+import { createInMemoryPublicRegisterRepositoryPlugin } from '#public-register/repository/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
 import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'

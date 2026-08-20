@@ -1,4 +1,4 @@
-import { createPublicRegisterRepository } from './public-register.js'
+import { createPublicRegisterRepository } from './s3.js'
 import { publicRegisterConfig } from './config.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
