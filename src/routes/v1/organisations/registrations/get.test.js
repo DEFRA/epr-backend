@@ -207,6 +207,16 @@ describe(`GET ${registrationGetPath}`, () => {
     expect(body.reprocessingType).toBeNull()
   })
 
+  it('carries a null glass process for a material the question does not apply to', async () => {
+    const registration = buildRegistration({ wasteProcessingType: 'exporter' })
+
+    const response = await read(anOrganisation(registration), registration.id)
+
+    const { application } = JSON.parse(response.payload)
+    expect(application.material).not.toBe('glass')
+    expect(application).toHaveProperty('glassRecyclingProcess', null)
+  })
+
   it('keeps the name the applicant typed inside the application, not beside the id', async () => {
     const registration = aRegistration()
     const organisation = anOrganisation(registration)

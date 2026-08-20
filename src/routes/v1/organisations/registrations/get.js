@@ -120,9 +120,7 @@ function toRegistrationResource(registration, organisation) {
       orgName: registration.orgName,
       submittedToRegulator: registration.submittedToRegulator,
       material: registration.material,
-      ...(registration.glassRecyclingProcess && {
-        glassRecyclingProcess: registration.glassRecyclingProcess
-      }),
+      glassRecyclingProcess: registration.glassRecyclingProcess ?? null,
       wasteProcessingType: registration.wasteProcessingType,
       site: toSiteResource(registration.site)
     }

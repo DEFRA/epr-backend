@@ -77,7 +77,7 @@ const registrationApplicationSchema = Joi.object({
   orgName: Joi.string().required(),
   submittedToRegulator: regulatorSchema.required(),
   material: materialSchema.required(),
-  glassRecyclingProcess: Joi.array().items(Joi.string()).optional(),
+  glassRecyclingProcess: Joi.array().items(Joi.string()).allow(null).required(),
   wasteProcessingType: wasteProcessingTypeSchema.required(),
   site: siteSchema.allow(null).required()
 })
