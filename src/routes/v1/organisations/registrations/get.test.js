@@ -8,7 +8,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
+import {
+  asOperator,
+  asServiceMaintainer,
+  asUnscopedAdminUser
+} from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -262,6 +266,17 @@ describe(`GET ${registrationGetPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
+    it('refuses a caller who holds no organisation read', async () => {
+      const request = await serveOrganisation()
+
+      const response = await server.inject({
+        ...request,
+        ...asUnscopedAdminUser()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
     testRegulatorCanRead({
       server: () => server,
       makeRequest: serveOrganisation
@@ -476,6 +491,17 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
       const response = await server.inject({ ...request, ...asOperator() })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('refuses a caller who holds no organisation read', async () => {
+      const request = await serveOrganisation()
+
+      const response = await server.inject({
+        ...request,
+        ...asUnscopedAdminUser()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
     })
 
     testRegulatorCanRead({
