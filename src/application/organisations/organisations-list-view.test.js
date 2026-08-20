@@ -1,12 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrgWithCriteria } from '#repositories/organisations/contract/test-data.js'
-import { SCOPES } from '#common/helpers/auth/constants.js'
 import { USER_ROLES } from '#domain/organisations/model.js'
 import { createOrganisationsListView } from './organisations-list-view.js'
-
-const REGULATOR_SCOPES = [SCOPES.organisationSearch, SCOPES.organisationRead]
-const ADMIN_SCOPES = [SCOPES.adminRead, SCOPES.organisationSearch]
 
 /**
  * An organisation carrying every field the list route used to hand out: the
@@ -45,120 +41,18 @@ describe('organisations list view', () => {
   /** @type {Omit<import('#domain/organisations/model.js').Organisation, 'status'>} */
   let organisation
 
+  /** @type {import('./organisations-list-view.js').OrganisationsListView} */
+  let view
+
   beforeEach(async () => {
     organisationsRepository = createInMemoryOrganisationsRepository([])()
     organisation = buildOrganisationWithPersonalData()
     await organisationsRepository.insert(organisation)
+    view = createOrganisationsListView({ organisationsRepository })
   })
 
-  /** @param {string[]} scopes */
-  const viewFor = (scopes) =>
-    createOrganisationsListView({ organisationsRepository, scopes })
-
-  describe('a regulator credential', () => {
-    it('reads the name, the ids and the status, and nothing else', async () => {
-      const { items } = await viewFor(REGULATOR_SCOPES).find({
-        page: 1,
-        pageSize: 50
-      })
-
-      expect(items).toEqual([
-        {
-          id: organisation.id,
-          orgId: 500118,
-          companyDetails: { name: 'Kirkby Plastics Ltd' },
-          status: 'created',
-          submittedToRegulator: 'ea'
-        }
-      ])
-    })
-
-    it('reads the same shape from the no-criteria branch', async () => {
-      const organisations = await viewFor(REGULATOR_SCOPES).findAll()
-
-      expect(organisations).toEqual([
-        {
-          id: organisation.id,
-          orgId: 500118,
-          companyDetails: { name: 'Kirkby Plastics Ltd' },
-          status: 'created',
-          submittedToRegulator: 'ea'
-        }
-      ])
-    })
-
-    it('keeps the pagination envelope', async () => {
-      const page = await viewFor(REGULATOR_SCOPES).find({
-        page: 1,
-        pageSize: 10
-      })
-
-      expect(page).toMatchObject({
-        page: 1,
-        pageSize: 10,
-        totalItems: 1,
-        totalPages: 1
-      })
-    })
-  })
-
-  describe('an admin credential', () => {
-    it('reads every field the back office organisations table renders', async () => {
-      const { items } = await viewFor(ADMIN_SCOPES).find({
-        page: 1,
-        pageSize: 50
-      })
-
-      expect(items).toEqual([
-        {
-          id: organisation.id,
-          orgId: 500118,
-          companyDetails: { name: 'Kirkby Plastics Ltd' },
-          status: 'created',
-          submittedToRegulator: 'ea',
-          registrations: [
-            {
-              registrationNumber: 'R26ER5001180041PL',
-              accreditationId: expect.any(String)
-            },
-            { registrationNumber: null }
-          ],
-          accreditations: [
-            {
-              id: expect.any(String),
-              accreditationNumber: 'A26ER5001180114PL'
-            },
-            { id: expect.any(String), accreditationNumber: null },
-            { id: expect.any(String), accreditationNumber: null }
-          ]
-        }
-      ])
-    })
-
-    it('reads the same shape from the no-criteria branch', async () => {
-      const [fromFindAll] = await viewFor(ADMIN_SCOPES).findAll()
-      const { items } = await viewFor(ADMIN_SCOPES).find({
-        page: 1,
-        pageSize: 50
-      })
-
-      expect(fromFindAll).toEqual(items[0])
-    })
-
-    it('reads no operator or maintainer contact', async () => {
-      const { items } = await viewFor(ADMIN_SCOPES).find({
-        page: 1,
-        pageSize: 50
-      })
-
-      expect(items[0]).not.toHaveProperty('users')
-      expect(items[0]).not.toHaveProperty('linkedDefraOrganisation')
-      expect(items[0]).not.toHaveProperty('submitterContactDetails')
-    })
-  })
-
-  it('reads the narrow shape when the caller holds no scopes at all', async () => {
-    const { items } = await viewFor([]).find({ page: 1, pageSize: 50 })
+  it('reads the organisation identity and the published numbers', async () => {
+    const { items } = await view.find({ page: 1, pageSize: 50 })
 
     expect(items).toEqual([
       {
@@ -166,8 +60,57 @@ describe('organisations list view', () => {
         orgId: 500118,
         companyDetails: { name: 'Kirkby Plastics Ltd' },
         status: 'created',
-        submittedToRegulator: 'ea'
+        submittedToRegulator: 'ea',
+        registrations: [
+          {
+            registrationNumber: 'R26ER5001180041PL',
+            accreditationId: expect.any(String)
+          },
+          { registrationNumber: null }
+        ],
+        accreditations: [
+          {
+            id: expect.any(String),
+            accreditationNumber: 'A26ER5001180114PL'
+          },
+          { id: expect.any(String), accreditationNumber: null },
+          { id: expect.any(String), accreditationNumber: null }
+        ]
       }
     ])
+  })
+
+  it('pairs each registration with its accreditation', async () => {
+    const { items } = await view.find({ page: 1, pageSize: 50 })
+
+    expect(items[0].registrations[0].accreditationId).toEqual(
+      items[0].accreditations[0].id
+    )
+  })
+
+  it('reads the same item from the no-criteria branch', async () => {
+    const [fromFindAll] = await view.findAll()
+    const { items } = await view.find({ page: 1, pageSize: 50 })
+
+    expect(fromFindAll).toEqual(items[0])
+  })
+
+  it('reads no operator or maintainer contact', async () => {
+    const { items } = await view.find({ page: 1, pageSize: 50 })
+
+    expect(items[0]).not.toHaveProperty('users')
+    expect(items[0]).not.toHaveProperty('linkedDefraOrganisation')
+    expect(items[0]).not.toHaveProperty('submitterContactDetails')
+  })
+
+  it('keeps the pagination envelope', async () => {
+    const page = await view.find({ page: 1, pageSize: 10 })
+
+    expect(page).toMatchObject({
+      page: 1,
+      pageSize: 10,
+      totalItems: 1,
+      totalPages: 1
+    })
   })
 })

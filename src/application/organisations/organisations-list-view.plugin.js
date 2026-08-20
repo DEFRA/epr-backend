@@ -3,13 +3,12 @@ import { createOrganisationsListView } from './organisations-list-view.js'
 
 /**
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { RequestAuth } from '#common/hapi-types.js'
  */
 
 /**
  * Exposes `request.organisationsListView` so the organisations list route has
- * a reader that already knows what its caller may see. The route never names
- * the repository, so no unshaped organisation document is in reach of the
+ * a reader that hands out list items rather than organisation documents. The
+ * route never names the repository, so no unshaped document is in reach of the
  * handler that serves the list.
  *
  * The cast below mirrors `prnEventsPlugin`: `registerDependency`'s
@@ -26,16 +25,12 @@ export const organisationsListViewPlugin = {
   /** @param {import('@hapi/hapi').Server} server */
   register: (server) => {
     registerDependency(server, 'organisationsListView', (request) => {
-      const { organisationsRepository, auth } =
-        /** @type {{ organisationsRepository: OrganisationsRepository, auth?: RequestAuth }} */ (
+      const { organisationsRepository } =
+        /** @type {{ organisationsRepository: OrganisationsRepository }} */ (
           /** @type {unknown} */ (request)
         )
 
-      const credentials = auth?.credentials
-      const scopes =
-        credentials && 'scope' in credentials ? credentials.scope : []
-
-      return createOrganisationsListView({ organisationsRepository, scopes })
+      return createOrganisationsListView({ organisationsRepository })
     })
   }
 }

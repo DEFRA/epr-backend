@@ -1,31 +1,25 @@
-import { SCOPES } from '#common/helpers/auth/constants.js'
-
 /**
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { FindParams, OrganisationsRepository } from '#repositories/organisations/port.js'
  */
 
 /**
- * What every reader of the organisations list sees: the columns the regulator
- * organisations page renders, plus the document id its link needs.
+ * One organisation on the list route.
+ *
+ * The identity fields name the organisation and address its record. The
+ * registration and accreditation lines carry the numbers the public register
+ * already publishes, and the id that pairs a registration with its
+ * accreditation.
  *
  * @typedef {{
  *   id: string,
  *   orgId: number,
  *   companyDetails: { name: string },
  *   status: string,
- *   submittedToRegulator: string
- * }} OrganisationListItem
- */
-
-/**
- * What the back office adds on top: the numbers behind the Reg/Acc column, one
- * line per registration and one per accreditation no registration references.
- *
- * @typedef {OrganisationListItem & {
+ *   submittedToRegulator: string,
  *   registrations: Array<{ registrationNumber?: string | null, accreditationId?: string }>,
  *   accreditations: Array<{ id: string, accreditationNumber?: string | null }>
- * }} AdminOrganisationListItem
+ * }} OrganisationListItem
  */
 
 /**
@@ -49,26 +43,12 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
  * @param {Organisation} organisation
  * @returns {OrganisationListItem}
  */
-const toListItem = ({
-  id,
-  orgId,
-  companyDetails,
-  status,
-  submittedToRegulator
-}) => ({
-  id,
-  orgId,
-  companyDetails: { name: companyDetails.name },
-  status,
-  submittedToRegulator
-})
-
-/**
- * @param {Organisation} organisation
- * @returns {AdminOrganisationListItem}
- */
-const toAdminListItem = (organisation) => ({
-  ...toListItem(organisation),
+const toListItem = (organisation) => ({
+  id: organisation.id,
+  orgId: organisation.orgId,
+  companyDetails: { name: organisation.companyDetails.name },
+  status: organisation.status,
+  submittedToRegulator: organisation.submittedToRegulator,
   registrations: organisation.registrations.map(
     ({ registrationNumber, accreditationId }) => ({
       registrationNumber,
@@ -81,38 +61,31 @@ const toAdminListItem = (organisation) => ({
 })
 
 /**
- * Reads the organisations list at the width the caller's scopes earn.
+ * Reads the organisations list.
  *
  * An organisation document carries personal data about two sets of people —
  * the operator's staff in `users` and `submitterContactDetails`, and our own
  * staff in `linkedDefraOrganisation.linkedBy` and `statusHistory[].updatedBy`.
- * A list of every operator is the wrong place to hand either set out, so this
- * view builds each item field by field instead of narrowing a whole document.
- * A field arrives in a response because someone named it here.
+ * ADR 45 assigns that data to `service-data.read`, which the regulator bundle
+ * does not hold, and a list of every operator is the wrong place to hand it
+ * out in any case.
  *
- * The two shapes differ by what each page renders, not by what each caller is
- * entitled to: the extra fields are registration and accreditation numbers,
- * which the public register already publishes. `admin.read` selects the wider
- * shape because it marks the back-office table, the one page with a column for
- * them. A caller holding no scopes reads the narrow shape, so a new caller
- * starts narrow.
+ * So this view builds each item field by field instead of narrowing a whole
+ * document. A field arrives in a response because someone named it above, and
+ * a field added to the organisation model reaches nobody until someone does.
  *
- * @param {{ organisationsRepository: OrganisationsRepository, scopes: string[] }} params
+ * Every caller reads the same item. The fields here are the organisation's
+ * identity and the numbers the public register publishes, so no caller has
+ * grounds to see less and none needs to see more.
+ *
+ * @param {{ organisationsRepository: OrganisationsRepository }} params
  * @returns {OrganisationsListView}
  */
-export const createOrganisationsListView = ({
-  organisationsRepository,
-  scopes
-}) => {
-  const toItem = scopes.includes(SCOPES.adminRead)
-    ? toAdminListItem
-    : toListItem
-
-  return {
-    findAll: async () => (await organisationsRepository.findAll()).map(toItem),
-    find: async (params) => {
-      const { items, ...envelope } = await organisationsRepository.find(params)
-      return { ...envelope, items: items.map(toItem) }
-    }
+export const createOrganisationsListView = ({ organisationsRepository }) => ({
+  findAll: async () =>
+    (await organisationsRepository.findAll()).map(toListItem),
+  find: async (params) => {
+    const { items, ...envelope } = await organisationsRepository.find(params)
+    return { ...envelope, items: items.map(toListItem) }
   }
-}
+})

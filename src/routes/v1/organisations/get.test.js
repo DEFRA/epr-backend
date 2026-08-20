@@ -441,13 +441,28 @@ describe('GET /v1/organisations', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
   })
-  describe('the width of the response, by credential', () => {
+  describe('the width of the response', () => {
     const SERVICE_DATA_FIELDS = [
       'users',
       'linkedDefraOrganisation',
       'formSubmission',
       'statusHistory',
       'submitterContactDetails'
+    ]
+
+    const LIST_ITEM_KEYS = [
+      'accreditations',
+      'companyDetails',
+      'id',
+      'orgId',
+      'registrations',
+      'status',
+      'submittedToRegulator'
+    ]
+
+    const CREDENTIALS = [
+      ['a regulator', entraIdMockAuthTokens.regulatorToken],
+      ['an admin', entraIdMockAuthTokens.validToken]
     ]
 
     /**
@@ -489,47 +504,26 @@ describe('GET /v1/organisations', () => {
       )
     })
 
-    it('gives a regulator the name, the ids and the status, and nothing else', async () => {
-      const { items } = await listWith(entraIdMockAuthTokens.regulatorToken)
+    it.each(CREDENTIALS)(
+      'gives %s the organisation identity and the published numbers',
+      async (_label, token) => {
+        const { items } = await listWith(token)
 
-      expect(items.map((item) => Object.keys(item).sort())).toEqual([
-        ['companyDetails', 'id', 'orgId', 'status', 'submittedToRegulator']
-      ])
-    })
-
-    it.each(SERVICE_DATA_FIELDS)(
-      'keeps %s away from a regulator',
-      async (field) => {
-        const { items } = await listWith(entraIdMockAuthTokens.regulatorToken)
-
-        expect(items[0]).not.toHaveProperty(field)
+        expect(items.map((item) => Object.keys(item).sort())).toEqual([
+          LIST_ITEM_KEYS
+        ])
       }
     )
 
-    it('gives an admin every field the back office organisations table reads', async () => {
-      const { items } = await listWith(entraIdMockAuthTokens.validToken)
+    it.each(
+      CREDENTIALS.flatMap(([label, token]) =>
+        SERVICE_DATA_FIELDS.map((field) => [field, label, token])
+      )
+    )('keeps %s away from %s', async (field, _label, token) => {
+      const { items } = await listWith(token)
 
-      expect(items.map((item) => Object.keys(item).sort())).toEqual([
-        [
-          'accreditations',
-          'companyDetails',
-          'id',
-          'orgId',
-          'registrations',
-          'status',
-          'submittedToRegulator'
-        ]
-      ])
+      expect(items[0]).not.toHaveProperty(field)
     })
-
-    it.each(SERVICE_DATA_FIELDS)(
-      'keeps %s away from an admin as well',
-      async (field) => {
-        const { items } = await listWith(entraIdMockAuthTokens.validToken)
-
-        expect(items[0]).not.toHaveProperty(field)
-      }
-    )
 
     it('shapes the no-criteria branch the same way', async () => {
       const response = await server.inject({
@@ -543,7 +537,7 @@ describe('GET /v1/organisations', () => {
       /** @type {import('#application/organisations/organisations-list-view.js').OrganisationListItem[]} */
       const organisations = JSON.parse(response.payload)
       expect(organisations.map((item) => Object.keys(item).sort())).toEqual([
-        ['companyDetails', 'id', 'orgId', 'status', 'submittedToRegulator']
+        LIST_ITEM_KEYS
       ])
     })
   })
