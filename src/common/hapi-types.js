@@ -132,6 +132,11 @@
  * is closed, so reading a property no plugin registers fails the type check.
  * Adding a `registerDependency` call means adding its name here too.
  *
+ * Membership here does not mean the startup variant works. `registerDependency`
+ * builds that one from `{ logger }` alone, so a dependency that needs another
+ * dependency reads `undefined` and fails on first use rather than at startup.
+ * `organisationsListView` and `prnEvents` are request-only for that reason.
+ *
  * @typedef {{
  *   formSubmissionsRepository: FormSubmissionsRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,

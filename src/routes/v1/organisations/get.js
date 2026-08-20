@@ -55,9 +55,10 @@ export const organisationsGetAll = {
     }
   },
   /**
-   * The handler is declared against the scope-aware view and the query alone.
-   * Naming the organisations repository here fails the blocking type check, so
-   * an unshaped organisation document cannot reach the response.
+   * The handler is declared against the view and the query alone. Naming the
+   * organisations repository here fails the blocking type check, so this
+   * handler has no whole document to return. What the view itself hands out is
+   * pinned by the tests on the view, not by a type.
    *
    * @param {{
    *   organisationsListView: import('#application/organisations/organisations-list-view.js').OrganisationsListView,

@@ -95,14 +95,6 @@ describe('organisations list view', () => {
     expect(fromFindAll).toEqual(items[0])
   })
 
-  it('reads no operator or maintainer contact', async () => {
-    const { items } = await view.find({ page: 1, pageSize: 50 })
-
-    expect(items[0]).not.toHaveProperty('users')
-    expect(items[0]).not.toHaveProperty('linkedDefraOrganisation')
-    expect(items[0]).not.toHaveProperty('submitterContactDetails')
-  })
-
   it('keeps the pagination envelope', async () => {
     const page = await view.find({ page: 1, pageSize: 10 })
 

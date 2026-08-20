@@ -66,9 +66,11 @@ const toListItem = (organisation) => ({
  * An organisation document carries personal data about two sets of people —
  * the operator's staff in `users` and `submitterContactDetails`, and our own
  * staff in `linkedDefraOrganisation.linkedBy` and `statusHistory[].updatedBy`.
- * ADR 45 assigns that data to `service-data.read`, which the regulator bundle
- * does not hold, and a list of every operator is the wrong place to hand it
- * out in any case.
+ * The operator and regulator authorisation decision puts linked organisations
+ * and form submissions in the `service-data.read` class, which the regulator
+ * bundle does not hold. It grants a regulator the operator's contact details,
+ * so those come out on data minimisation instead: this list enumerates the
+ * whole population of operators to render a handful of columns.
  *
  * So this view builds each item field by field instead of narrowing a whole
  * document. A field arrives in a response because someone named it above, and

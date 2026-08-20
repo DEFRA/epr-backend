@@ -442,14 +442,6 @@ describe('GET /v1/organisations', () => {
     })
   })
   describe('the width of the response', () => {
-    const SERVICE_DATA_FIELDS = [
-      'users',
-      'linkedDefraOrganisation',
-      'formSubmission',
-      'statusHistory',
-      'submitterContactDetails'
-    ]
-
     const LIST_ITEM_KEYS = [
       'accreditations',
       'companyDetails',
@@ -514,16 +506,6 @@ describe('GET /v1/organisations', () => {
         ])
       }
     )
-
-    it.each(
-      CREDENTIALS.flatMap(([label, token]) =>
-        SERVICE_DATA_FIELDS.map((field) => [field, label, token])
-      )
-    )('keeps %s away from %s', async (field, _label, token) => {
-      const { items } = await listWith(token)
-
-      expect(items[0]).not.toHaveProperty(field)
-    })
 
     it('shapes the no-criteria branch the same way', async () => {
       const response = await server.inject({
