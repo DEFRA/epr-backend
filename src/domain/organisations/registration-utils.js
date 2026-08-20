@@ -94,25 +94,24 @@ export function activeAccreditationValidFrom(accreditation) {
 }
 
 /**
- * Returns the registration's material at its finest granularity. Glass is the
- * only material that sub-divides: each glass registration carries a single
- * recycling process (submissions are split per process upstream), so the
- * process value (glass_re_melt / glass_other) is returned in place of 'glass'.
+ * Returns the record's material at its finest granularity. Glass is the only
+ * material that sub-divides: each glass record carries a single recycling
+ * process (submissions are split per process upstream), so the process value
+ * (glass_re_melt / glass_other) is returned in place of 'glass'.
  * All other materials are returned unchanged.
  *
- * @param {Pick<Registration, 'material' | 'glassRecyclingProcess'>} registration
+ * A registration and an accreditation both answer this, so the parameter names
+ * the two fields rather than either type.
+ *
+ * @param {{ material: Material, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
  * @returns {Material | GlassRecyclingProcess}
  */
-export function resolveDetailedMaterial(registration) {
-  const glassProcess = registration.glassRecyclingProcess
-  if (
-    registration.material === 'glass' &&
-    glassProcess &&
-    glassProcess.length > 0
-  ) {
+export function resolveDetailedMaterial(record) {
+  const glassProcess = record.glassRecyclingProcess
+  if (record.material === 'glass' && glassProcess && glassProcess.length > 0) {
     return glassProcess[0]
   }
-  return registration.material
+  return record.material
 }
 
 /**

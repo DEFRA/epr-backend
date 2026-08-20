@@ -1,7 +1,10 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
+import {
+  accreditationsForRegistration,
+  resolveDetailedMaterial
+} from '#domain/organisations/registration-utils.js'
 import {
   registrationAccreditationsResponseSchema,
   registrationResponseSchema
@@ -119,8 +122,7 @@ function toRegistrationResource(registration, organisation) {
     application: {
       orgName: registration.orgName,
       submittedToRegulator: registration.submittedToRegulator,
-      material: registration.material,
-      glassRecyclingProcess: registration.glassRecyclingProcess ?? null,
+      material: resolveDetailedMaterial(registration),
       wasteProcessingType: registration.wasteProcessingType,
       site: toSiteResource(registration.site)
     }
@@ -169,7 +171,7 @@ function toAccreditationResource(accreditation) {
     application: {
       orgName: accreditation.orgName,
       submittedToRegulator: accreditation.submittedToRegulator,
-      material: accreditation.material,
+      material: resolveDetailedMaterial(accreditation),
       wasteProcessingType: accreditation.wasteProcessingType
     }
   }

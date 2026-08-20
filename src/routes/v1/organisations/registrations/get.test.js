@@ -155,8 +155,7 @@ describe(`GET ${registrationGetPath}`, () => {
       application: {
         orgName: registration.orgName,
         submittedToRegulator: registration.submittedToRegulator,
-        material: registration.material,
-        glassRecyclingProcess: registration.glassRecyclingProcess,
+        material: 'glass_re_melt',
         wasteProcessingType: 'reprocessor',
         site: {
           address: registration.site.address,
@@ -207,14 +206,24 @@ describe(`GET ${registrationGetPath}`, () => {
     expect(body.reprocessingType).toBeNull()
   })
 
-  it('carries a null glass process for a material the question does not apply to', async () => {
-    const registration = buildRegistration({ wasteProcessingType: 'exporter' })
+  it('reports the glass process as the material, glass being the only one that sub-divides', async () => {
+    const registration = aRegistration()
 
     const response = await read(anOrganisation(registration), registration.id)
 
     const { application } = JSON.parse(response.payload)
-    expect(application.material).not.toBe('glass')
-    expect(application).toHaveProperty('glassRecyclingProcess', null)
+    expect(registration.material).toBe('glass')
+    expect(registration.glassRecyclingProcess).toEqual(['glass_re_melt'])
+    expect(application.material).toBe('glass_re_melt')
+    expect(application).not.toHaveProperty('glassRecyclingProcess')
+  })
+
+  it('reports a material that does not sub-divide unchanged', async () => {
+    const registration = buildRegistration({ material: 'plastic' })
+
+    const response = await read(anOrganisation(registration), registration.id)
+
+    expect(JSON.parse(response.payload).application.material).toBe('plastic')
   })
 
   it('keeps the name the applicant typed inside the application, not beside the id', async () => {
@@ -316,7 +325,7 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
         application: {
           orgName: accreditation.orgName,
           submittedToRegulator: accreditation.submittedToRegulator,
-          material: accreditation.material,
+          material: 'glass_re_melt',
           wasteProcessingType: accreditation.wasteProcessingType
         }
       }

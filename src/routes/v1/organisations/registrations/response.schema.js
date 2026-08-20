@@ -1,10 +1,10 @@
 import Joi from 'joi'
 import {
   ACCREDITATION_STATUS,
-  MATERIAL,
   REGISTRATION_STATUS,
   REGULATOR,
   REPROCESSING_TYPE,
+  TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
@@ -53,7 +53,14 @@ const dateRangeSchema = Joi.object({
   validTo: Joi.string().allow(null).required()
 })
 
-const materialSchema = Joi.string().valid(...Object.values(MATERIAL))
+/**
+ * Glass is the only material that sub-divides, and a record carries one
+ * process, so `material` reads `glass_re_melt` or `glass_other` where the store
+ * holds `glass` beside a process. `resolveDetailedMaterial` performs the same
+ * lift for the waste-records export, the credited-tonnage report and the
+ * reports read model.
+ */
+const materialSchema = Joi.string().valid(...TONNAGE_MONITORING_MATERIALS)
 const regulatorSchema = Joi.string().valid(...Object.values(REGULATOR))
 const wasteProcessingTypeSchema = Joi.string().valid(
   ...Object.values(WASTE_PROCESSING_TYPE)
@@ -77,7 +84,6 @@ const registrationApplicationSchema = Joi.object({
   orgName: Joi.string().required(),
   submittedToRegulator: regulatorSchema.required(),
   material: materialSchema.required(),
-  glassRecyclingProcess: Joi.array().items(Joi.string()).allow(null).required(),
   wasteProcessingType: wasteProcessingTypeSchema.required(),
   site: siteSchema.allow(null).required()
 })
