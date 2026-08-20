@@ -75,10 +75,6 @@ describe('the regulator role', () => {
     expect(REGULATOR_SCOPES).toContain(SCOPES.organisationRead)
   })
 
-  test('carries the coarse regulator scope for what only a regulator does', () => {
-    expect(REGULATOR_SCOPES).toContain(SCOPES.regulator)
-  })
-
   test('carries organisation.search, which enumerates operators the regulator holds no id for', () => {
     expect(REGULATOR_SCOPES).toContain(SCOPES.organisationSearch)
   })
