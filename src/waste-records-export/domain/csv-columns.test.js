@@ -169,6 +169,7 @@ describe('csv-columns', () => {
       statusHistory: [],
       formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
       material: 'plastic',
+      orgName: 'Acme Ltd',
       prnIssuance: {
         incomeBusinessPlan: [],
         signatories: [],
