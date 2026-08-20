@@ -17,10 +17,10 @@ export const registrationGetPath =
 
 export const registrationAccreditationsGetPath = `${registrationGetPath}/accreditations`
 
-// An operator earns `organisation.read` for their own organisation, and these
-// routes name one, so that scope alone would admit them to an admin page. See
-// REGULATOR_SCOPES for why `organisation.search` is the scope that refuses them
-// and still admits every admin tier and the regulator.
+// These routes name an organisation, so `organisation.read` alone would admit
+// the operator who owns it. No operator earns `organisation.search`, and every
+// admin tier and the regulator hold it, so requiring both refuses the operator.
+// `admin.read` cannot draw that line, because a regulator does not hold it.
 const adminAuth = {
   scope: [`+${SCOPES.organisationRead}`, `+${SCOPES.organisationSearch}`]
 }

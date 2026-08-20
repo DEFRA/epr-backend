@@ -27,35 +27,10 @@ export const REGULATOR_APP_ROLE = 'Waste.Regulator.Standard'
 export const REGULATOR_ROLE = 'regulator_standard'
 
 /**
- * Scope bundle for a regulator standard user.
- *
  * `organisation.read` is the same scope an operator holds, on a different
- * condition: an operator holds it for their own linked organisation, a
- * regulator holds it for every organisation. So no read route names a
- * regulator, and a read route written later admits one without its author
- * knowing regulators exist.
- *
- * `organisation.search` is separate from `organisation.read` because a search
- * enumerates the population of operators: the caller holds no organisation id
- * yet, so the condition an operator's `organisation.read` carries — their own
- * linked organisation — cannot apply.
- *
- * No operator ever earns `organisation.search`, and every admin tier and the
- * regulator hold it. So a route that requires it alongside `organisation.read`
- * admits a caller who reads any organisation, and refuses one who reads only
- * their own. `admin.read` cannot draw that line, because a regulator does not
- * hold it.
- *
- * `waste-balance.ledger.read` covers the ledger behind a waste balance: the
- * service's own record of how the balance moved, event by event. An operator
- * reads the balance, and does not read the ledger.
- *
- * `organisation.read` cannot draw that line on its own. An operator earns it
- * for the organisation named in the request, and the ledger routes name one.
- * So a ledger route requires both scopes: `organisation.read` for the
- * organisation, and `waste-balance.ledger.read` for the ledger behind it.
- *
- * A regulator reads and changes nothing, so no write scope appears here.
+ * condition: an operator reads their own linked organisation, a regulator reads
+ * every organisation. So no read route names a regulator, and a read route
+ * written later admits one without its author knowing regulators exist.
  */
 export const REGULATOR_SCOPES = [
   SCOPES.organisationRead,
