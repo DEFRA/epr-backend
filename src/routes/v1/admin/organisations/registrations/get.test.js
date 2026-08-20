@@ -144,29 +144,53 @@ describe(`GET ${registrationGetPath}`, () => {
     expect(JSON.parse(response.payload)).toEqual({
       id: registration.id,
       organisationId: organisation.id,
-      orgName: registration.orgName,
       registrationNumber: 'R26ER5001180041PL',
       status: 'created',
-      material: registration.material,
-      glassRecyclingProcess: registration.glassRecyclingProcess,
-      wasteProcessingType: 'reprocessor',
       reprocessingType: 'input',
-      submittedToRegulator: registration.submittedToRegulator,
       validFrom: null,
       validTo: null,
-      site: registration.site
+      application: {
+        orgName: registration.orgName,
+        submittedToRegulator: registration.submittedToRegulator,
+        material: registration.material,
+        glassRecyclingProcess: registration.glassRecyclingProcess,
+        wasteProcessingType: 'reprocessor',
+        site: {
+          address: registration.site.address,
+          gridReference: registration.site.gridReference,
+          capacity: registration.site.siteCapacity.map((entry) => ({
+            material: entry.material,
+            tonnes: entry.siteCapacityInTonnes,
+            timescale: entry.siteCapacityTimescale
+          }))
+        }
+      }
     })
   })
 
   it('carries the whole site address, not the parts one page shows', async () => {
     const registration = aRegistration()
-    const { site } = JSON.parse(
+    const { application } = JSON.parse(
       (await read(anOrganisation(registration), registration.id)).payload
     )
 
-    expect(site.address).toEqual(registration.site.address)
-    expect(site.gridReference).toBe(registration.site.gridReference)
-    expect(site.siteCapacity).toEqual(registration.site.siteCapacity)
+    expect(application.site.address).toEqual(registration.site.address)
+    expect(application.site.gridReference).toBe(registration.site.gridReference)
+  })
+
+  it('names a capacity by what it is, not by the object that holds it', async () => {
+    const registration = aRegistration()
+    const [stored] = registration.site.siteCapacity
+
+    const { application } = JSON.parse(
+      (await read(anOrganisation(registration), registration.id)).payload
+    )
+
+    expect(application.site.capacity[0]).toEqual({
+      material: stored.material,
+      tonnes: stored.siteCapacityInTonnes,
+      timescale: stored.siteCapacityTimescale
+    })
   })
 
   it('carries a null site when the store holds none, as for an exporter', async () => {
@@ -175,18 +199,20 @@ describe(`GET ${registrationGetPath}`, () => {
     const response = await read(anOrganisation(registration), registration.id)
 
     const body = JSON.parse(response.payload)
-    expect(body.site).toBeNull()
-    expect(body.wasteProcessingType).toBe('exporter')
+    expect(body.application.site).toBeNull()
+    expect(body.application.wasteProcessingType).toBe('exporter')
     expect(body.reprocessingType).toBeNull()
   })
 
-  it('names the organisation only by the id in its own path', async () => {
+  it('keeps the name the applicant typed inside the application, not beside the id', async () => {
     const registration = aRegistration()
     const organisation = anOrganisation(registration)
 
     const body = JSON.parse((await read(organisation, registration.id)).payload)
 
     expect(body.organisationId).toBe(organisation.id)
+    expect(body.application.orgName).toBe(registration.orgName)
+    expect(body).not.toHaveProperty('orgName')
     expect(body).not.toHaveProperty('companyName')
   })
 
@@ -259,16 +285,17 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
     ).toEqual([
       {
         id: accreditation.id,
-        orgName: accreditation.orgName,
         accreditationNumber: 'A26ER5001180114PL',
         status: 'approved',
-        material: accreditation.material,
-        wasteProcessingType: accreditation.wasteProcessingType,
         reprocessingType: 'input',
-        submittedToRegulator: accreditation.submittedToRegulator,
         validFrom: '2026-07-01',
         validTo: '2026-12-31',
-        site: accreditation.site ?? null
+        application: {
+          orgName: accreditation.orgName,
+          submittedToRegulator: accreditation.submittedToRegulator,
+          material: accreditation.material,
+          wasteProcessingType: accreditation.wasteProcessingType
+        }
       }
     ])
   })
@@ -360,7 +387,7 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
     expect(accreditation.validTo).toBeNull()
   })
 
-  it('carries no site or reprocessing type for an exporter accreditation', async () => {
+  it('carries no reprocessing type for an exporter accreditation', async () => {
     const registration = buildRegistration({ wasteProcessingType: 'exporter' })
     const exporterAccreditation = buildAccreditation({
       wasteProcessingType: 'exporter',
@@ -374,9 +401,20 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
       registration.id
     )
 
-    expect(accreditation.site).toBeNull()
     expect(accreditation.reprocessingType).toBeNull()
-    expect(accreditation.wasteProcessingType).toBe('exporter')
+    expect(accreditation.application.wasteProcessingType).toBe('exporter')
+  })
+
+  it('leaves the site to the registration the accreditation matches', async () => {
+    const registration = aRegistration()
+
+    const [returned] = await readAccreditations(
+      anOrganisation(registration, [anAccreditation()]),
+      registration.id
+    )
+
+    expect(returned).not.toHaveProperty('site')
+    expect(returned.application).not.toHaveProperty('site')
   })
 
   it('returns 404 when the organisation holds no such registration', async () => {

@@ -9,7 +9,7 @@ import {
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { Registration, RegistrationSite } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 export const registrationGetPath =
@@ -118,19 +118,40 @@ function toRegistrationResource(registration, organisation) {
   return {
     id: registration.id,
     organisationId: organisation.id,
-    orgName: registration.orgName,
     registrationNumber: registration.registrationNumber ?? null,
     status: registration.status,
-    material: registration.material,
-    ...(registration.glassRecyclingProcess && {
-      glassRecyclingProcess: registration.glassRecyclingProcess
-    }),
-    wasteProcessingType: registration.wasteProcessingType,
     reprocessingType: registration.reprocessingType ?? null,
-    submittedToRegulator: registration.submittedToRegulator,
     validFrom: registration.validFrom ?? null,
     validTo: registration.validTo ?? null,
-    site: registration.site ?? null
+    application: {
+      orgName: registration.orgName,
+      submittedToRegulator: registration.submittedToRegulator,
+      material: registration.material,
+      ...(registration.glassRecyclingProcess && {
+        glassRecyclingProcess: registration.glassRecyclingProcess
+      }),
+      wasteProcessingType: registration.wasteProcessingType,
+      site: toSiteResource(registration.site)
+    }
+  }
+}
+
+/**
+ * @param {RegistrationSite | null | undefined} site
+ */
+function toSiteResource(site) {
+  if (!site) {
+    return null
+  }
+
+  return {
+    address: site.address,
+    gridReference: site.gridReference,
+    capacity: site.siteCapacity.map((entry) => ({
+      material: entry.material,
+      tonnes: entry.siteCapacityInTonnes,
+      timescale: entry.siteCapacityTimescale
+    }))
   }
 }
 
@@ -140,15 +161,16 @@ function toRegistrationResource(registration, organisation) {
 function toAccreditationResource(accreditation) {
   return {
     id: accreditation.id,
-    orgName: accreditation.orgName,
     accreditationNumber: accreditation.accreditationNumber ?? null,
     status: accreditation.status,
-    material: accreditation.material,
-    wasteProcessingType: accreditation.wasteProcessingType,
     reprocessingType: accreditation.reprocessingType ?? null,
-    submittedToRegulator: accreditation.submittedToRegulator,
     validFrom: accreditation.validFrom ?? null,
     validTo: accreditation.validTo ?? null,
-    site: accreditation.site ?? null
+    application: {
+      orgName: accreditation.orgName,
+      submittedToRegulator: accreditation.submittedToRegulator,
+      material: accreditation.material,
+      wasteProcessingType: accreditation.wasteProcessingType
+    }
   }
 }

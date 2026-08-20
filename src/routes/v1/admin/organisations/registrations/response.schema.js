@@ -19,16 +19,21 @@ const addressSchema = Joi.object({
   fullAddress: Joi.string().optional()
 })
 
-const siteCapacitySchema = Joi.object({
-  siteCapacityInTonnes: Joi.number().required(),
+/**
+ * The store spells these `siteCapacityInTonnes` and `siteCapacityTimescale`,
+ * repeating the object that holds them. A key says what the value is, and the
+ * object it sits in says what it belongs to.
+ */
+const capacitySchema = Joi.object({
   material: Joi.string().required(),
-  siteCapacityTimescale: Joi.string().required()
+  tonnes: Joi.number().required(),
+  timescale: Joi.string().required()
 })
 
 const siteSchema = Joi.object({
   address: addressSchema.required(),
   gridReference: Joi.string().required(),
-  siteCapacity: Joi.array().items(siteCapacitySchema).required()
+  capacity: Joi.array().items(capacitySchema).required()
 })
 
 const materialSchema = Joi.string().valid(...Object.values(MATERIAL))
@@ -41,52 +46,67 @@ const reprocessingTypeSchema = Joi.string()
   .allow(null)
 
 /**
+ * Content as the applicant supplied it on the registration form, before a
+ * regulator decided anything about it.
+ *
+ * `orgName` is one of those answers, so it is the name the applicant typed on
+ * this form. It is not the organisation's name, which the organisation holds
+ * once in its company details, and it is not the name Defra ID holds.
+ *
  * A site is optional in the store, so `site` is null for a registration that
  * holds none. An exporter is the ordinary case of that.
  */
-export const registrationResponseSchema = Joi.object({
-  id: Joi.string().required(),
-  organisationId: Joi.string().required(),
+const registrationApplicationSchema = Joi.object({
   orgName: Joi.string().required(),
-  registrationNumber: Joi.string().allow(null).required(),
-  status: Joi.string()
-    .valid(...Object.values(REGISTRATION_STATUS))
-    .required(),
+  submittedToRegulator: regulatorSchema.required(),
   material: materialSchema.required(),
   glassRecyclingProcess: Joi.array().items(Joi.string()).optional(),
   wasteProcessingType: wasteProcessingTypeSchema.required(),
-  reprocessingType: reprocessingTypeSchema.required(),
-  submittedToRegulator: regulatorSchema.required(),
-  validFrom: Joi.string().allow(null).required(),
-  validTo: Joi.string().allow(null).required(),
   site: siteSchema.allow(null).required()
 })
 
 /**
- * An accreditation's site records only the line and postcode that identify it,
- * which is a narrower address than a registration site carries.
+ * `organisationId` names the organisation that holds the registration. The rest
+ * of the keys outside `application` are the ones a regulator decides: the
+ * number, the dates and the reprocessing type are all recorded when the
+ * registration is approved, and the status is derived from the status history.
  */
-const accreditationSiteSchema = Joi.object({
-  address: Joi.object({
-    line1: Joi.string().required(),
-    postcode: Joi.string().required()
-  }).optional()
+export const registrationResponseSchema = Joi.object({
+  id: Joi.string().required(),
+  organisationId: Joi.string().required(),
+  registrationNumber: Joi.string().allow(null).required(),
+  status: Joi.string()
+    .valid(...Object.values(REGISTRATION_STATUS))
+    .required(),
+  reprocessingType: reprocessingTypeSchema.required(),
+  validFrom: Joi.string().allow(null).required(),
+  validTo: Joi.string().allow(null).required(),
+  application: registrationApplicationSchema.required()
+})
+
+/**
+ * Content as the applicant supplied it on the accreditation form. The site this
+ * form asks for is the address that matches an accreditation to a registered
+ * site, so the collection leaves it out: every accreditation in it matches the
+ * registration named in the path, and that registration carries the site.
+ */
+const accreditationApplicationSchema = Joi.object({
+  orgName: Joi.string().required(),
+  submittedToRegulator: regulatorSchema.required(),
+  material: materialSchema.required(),
+  wasteProcessingType: wasteProcessingTypeSchema.required()
 })
 
 const accreditationSchema = Joi.object({
   id: Joi.string().required(),
-  orgName: Joi.string().required(),
   accreditationNumber: Joi.string().allow(null).required(),
   status: Joi.string()
     .valid(...Object.values(ACCREDITATION_STATUS))
     .required(),
-  material: materialSchema.required(),
-  wasteProcessingType: wasteProcessingTypeSchema.required(),
   reprocessingType: reprocessingTypeSchema.required(),
-  submittedToRegulator: regulatorSchema.required(),
   validFrom: Joi.string().allow(null).required(),
   validTo: Joi.string().allow(null).required(),
-  site: accreditationSiteSchema.allow(null).required()
+  application: accreditationApplicationSchema.required()
 })
 
 export const registrationAccreditationsResponseSchema = Joi.object({
