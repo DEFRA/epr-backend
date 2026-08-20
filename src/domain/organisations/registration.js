@@ -16,7 +16,7 @@
 
 /**
  * @typedef {{
- *  capacity: number;
+ *  siteCapacityInTonnes: number;
  *  material: string;
  *  siteCapacityTimescale: string;
  * }} SiteCapacity

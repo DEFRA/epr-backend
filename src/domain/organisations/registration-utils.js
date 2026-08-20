@@ -139,20 +139,14 @@ export function resolveAccreditation(registration, org) {
 }
 
 /**
- * An accreditation that carries a number. An accreditation that never got one
- * never became an accreditation the operator could report against.
- * @typedef {Accreditation & { accreditationNumber: string }} NumberedAccreditation
- */
-
-/**
- * Returns every numbered accreditation the registration holds, newest first.
+ * Returns every accreditation that belongs to the registration, newest first.
  *
  * An accreditation carries no registration id, and
  * `registration.accreditationId` points forward to at most one, so a
  * registration finds the rest of its accreditations by the natural key
  * `isAccreditationForRegistration` matches on. That key is unique across
- * approved records only, so a registration can hold more than one cancelled
- * accreditation with the same key.
+ * approved records only, so a registration can hold more than one accreditation
+ * with the same key.
  *
  * The same slack lets two registrations share a key, because
  * validateApprovals rejects a duplicate key among approved registrations
@@ -163,16 +157,15 @@ export function resolveAccreditation(registration, org) {
  *
  * @param {Registration} registration
  * @param {{ registrations: Registration[], accreditations: Accreditation[] }} org
- * @returns {NumberedAccreditation[]}
+ * @returns {Accreditation[]}
  */
-export function resolveNumberedAccreditations(registration, org) {
+export function accreditationsForRegistration(registration, org) {
   const claimedElsewhere = accreditationsClaimedByOtherRegistrations(
     registration,
     org
   )
 
   return org.accreditations
-    .filter(isNumberedAccreditation)
     .filter((accreditation) => !claimedElsewhere.has(accreditation.id))
     .filter((accreditation) =>
       isAccreditationForRegistration(accreditation, registration)
@@ -194,35 +187,18 @@ function accreditationsClaimedByOtherRegistrations(registration, org) {
 }
 
 /**
- * An accreditation carries a number once a regulator issues one. A number
- * that is present but blank was lost rather than issued, so it does not count.
+ * An accreditation with no start date has no entitlement to order by, so it
+ * sorts below every dated one. The number and then the id break a tie, which
+ * keeps the order stable for accreditations a regulator never numbered.
  *
- * @param {Accreditation} accreditation
- * @returns {accreditation is NumberedAccreditation}
- */
-export function isNumberedAccreditation(accreditation) {
-  return (
-    typeof accreditation.accreditationNumber === 'string' &&
-    accreditation.accreditationNumber.trim() !== ''
-  )
-}
-
-/**
- * @param {NumberedAccreditation} accreditation
- * @returns {string}
- */
-function startOfEntitlement(accreditation) {
-  return accreditation.validFrom ?? ''
-}
-
-/**
- * @param {NumberedAccreditation} a
- * @param {NumberedAccreditation} b
+ * @param {Accreditation} a
+ * @param {Accreditation} b
  * @returns {number}
  */
 function byNewestFirst(a, b) {
   return (
-    startOfEntitlement(b).localeCompare(startOfEntitlement(a)) ||
-    b.accreditationNumber.localeCompare(a.accreditationNumber)
+    (b.validFrom ?? '').localeCompare(a.validFrom ?? '') ||
+    (b.accreditationNumber ?? '').localeCompare(a.accreditationNumber ?? '') ||
+    b.id.localeCompare(a.id)
   )
 }

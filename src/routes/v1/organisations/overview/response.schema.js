@@ -1,5 +1,4 @@
 import Joi from 'joi'
-import { registrationSummarySchema } from '#application/organisations/registration-summary.js'
 
 const accreditationSchema = Joi.object({
   id: Joi.string().required(),
@@ -7,7 +6,13 @@ const accreditationSchema = Joi.object({
   status: Joi.string().required()
 })
 
-const registrationSchema = registrationSummarySchema.keys({
+const registrationSchema = Joi.object({
+  id: Joi.string().required(),
+  registrationNumber: Joi.string().allow(null).required(),
+  status: Joi.string().required(),
+  material: Joi.string().required(),
+  processingType: Joi.string().required(),
+  site: Joi.string().allow(null).required(),
   accreditation: accreditationSchema.optional()
 })
 

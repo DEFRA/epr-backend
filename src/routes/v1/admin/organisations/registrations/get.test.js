@@ -17,7 +17,10 @@ import {
   ACCREDITATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { registrationDetailsGetPath } from './get.js'
+import {
+  registrationAccreditationsGetPath,
+  registrationGetPath
+} from './get.js'
 
 /** @import { AccreditationStatus, Organisation } from '#domain/organisations/model.js' */
 /** @import { Accreditation, StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
@@ -29,11 +32,12 @@ import { registrationDetailsGetPath } from './get.js'
  */
 
 /**
+ * @param {string} path
  * @param {string} organisationId
  * @param {string} registrationId
  */
-const makePath = (organisationId, registrationId) =>
-  registrationDetailsGetPath
+const makePath = (path, organisationId, registrationId) =>
+  path
     .replace('{organisationId}', organisationId)
     .replace('{registrationId}', registrationId)
 
@@ -88,8 +92,13 @@ const anOrganisation = (registration, accreditations = []) =>
 /**
  * @param {StoredOrganisation} organisation
  * @param {string} registrationId
+ * @param {string} [path]
  */
-const readRegistration = async (organisation, registrationId) => {
+const read = async (
+  organisation,
+  registrationId,
+  path = registrationGetPath
+) => {
   const server = await createTestServer({
     repositories: {
       organisationsRepository: createInMemoryOrganisationsRepository([
@@ -100,7 +109,7 @@ const readRegistration = async (organisation, registrationId) => {
 
   return server.inject({
     method: 'GET',
-    url: makePath(organisation.id, registrationId),
+    url: makePath(path, organisation.id, registrationId),
     ...asServiceMaintainer()
   })
 }
@@ -110,38 +119,133 @@ const readRegistration = async (organisation, registrationId) => {
  * @param {string} registrationId
  */
 const readAccreditations = async (organisation, registrationId) => {
-  const response = await readRegistration(organisation, registrationId)
+  const response = await read(
+    organisation,
+    registrationId,
+    registrationAccreditationsGetPath
+  )
 
   expect(response.statusCode).toBe(StatusCodes.OK)
   return JSON.parse(response.payload).accreditations
 }
 
-describe(`GET ${registrationDetailsGetPath}`, () => {
+describe(`GET ${registrationGetPath}`, () => {
   setupAuthContext()
 
-  it('returns the registration and the organisation that holds it', async () => {
+  it('returns the registration as the organisation holds it', async () => {
     const registration = aRegistration({
       registrationNumber: 'R26ER5001180041PL'
     })
     const organisation = anOrganisation(registration)
 
-    const response = await readRegistration(organisation, registration.id)
+    const response = await read(organisation, registration.id)
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    const result = JSON.parse(response.payload)
-    expect(result.organisationId).toBe(organisation.id)
-    expect(result.companyName).toBe(organisation.companyDetails.name)
-    expect(result.registration).toEqual({
+    expect(JSON.parse(response.payload)).toEqual({
       id: registration.id,
+      organisationId: organisation.id,
+      orgName: registration.orgName,
       registrationNumber: 'R26ER5001180041PL',
       status: 'created',
       material: registration.material,
-      processingType: 'reprocessor - input',
-      site: registration.site.address.line1,
-      town: registration.site.address.town,
-      postcode: registration.site.address.postcode
+      glassRecyclingProcess: registration.glassRecyclingProcess,
+      wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
+      submittedToRegulator: registration.submittedToRegulator,
+      validFrom: null,
+      validTo: null,
+      site: registration.site
     })
   })
+
+  it('carries the whole site address, not the parts one page shows', async () => {
+    const registration = aRegistration()
+    const { site } = JSON.parse(
+      (await read(anOrganisation(registration), registration.id)).payload
+    )
+
+    expect(site.address).toEqual(registration.site.address)
+    expect(site.gridReference).toBe(registration.site.gridReference)
+    expect(site.siteCapacity).toEqual(registration.site.siteCapacity)
+  })
+
+  it('carries a null site when the store holds none, as for an exporter', async () => {
+    const registration = buildRegistration({ wasteProcessingType: 'exporter' })
+
+    const response = await read(anOrganisation(registration), registration.id)
+
+    const body = JSON.parse(response.payload)
+    expect(body.site).toBeNull()
+    expect(body.wasteProcessingType).toBe('exporter')
+    expect(body.reprocessingType).toBeNull()
+  })
+
+  it('names the organisation only by the id in its own path', async () => {
+    const registration = aRegistration()
+    const organisation = anOrganisation(registration)
+
+    const body = JSON.parse((await read(organisation, registration.id)).payload)
+
+    expect(body.organisationId).toBe(organisation.id)
+    expect(body).not.toHaveProperty('companyName')
+  })
+
+  it('returns a null registration number for a registration that carries none', async () => {
+    const registration = aRegistration()
+
+    const response = await read(anOrganisation(registration), registration.id)
+
+    expect(JSON.parse(response.payload).registrationNumber).toBeNull()
+  })
+
+  it('returns 404 when the organisation holds no such registration', async () => {
+    const response = await read(
+      anOrganisation(aRegistration()),
+      '68f6a147c117aec8a1ab74ff'
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+  })
+
+  describe('access control', () => {
+    const registration = aRegistration()
+    const organisation = anOrganisation(registration)
+
+    /** @type {import('#test/create-test-server.js').TestServer} */
+    let server
+
+    const serveOrganisation = async () => {
+      server = await createTestServer({
+        repositories: {
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            partialMock(organisation)
+          ])
+        }
+      })
+
+      return {
+        method: 'GET',
+        url: makePath(registrationGetPath, organisation.id, registration.id)
+      }
+    }
+
+    it('refuses an operator holding only their own organisation read', async () => {
+      const request = await serveOrganisation()
+
+      const response = await server.inject({ ...request, ...asOperator() })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
+    testRegulatorCanRead({
+      server: () => server,
+      makeRequest: serveOrganisation
+    })
+  })
+})
+
+describe(`GET ${registrationAccreditationsGetPath}`, () => {
+  setupAuthContext()
 
   it('returns an accreditation the registration does not link to', async () => {
     const registration = aRegistration()
@@ -155,12 +259,31 @@ describe(`GET ${registrationDetailsGetPath}`, () => {
     ).toEqual([
       {
         id: accreditation.id,
+        orgName: accreditation.orgName,
         accreditationNumber: 'A26ER5001180114PL',
         status: 'approved',
+        material: accreditation.material,
+        wasteProcessingType: accreditation.wasteProcessingType,
+        reprocessingType: 'input',
+        submittedToRegulator: accreditation.submittedToRegulator,
         validFrom: '2026-07-01',
-        validTo: '2026-12-31'
+        validTo: '2026-12-31',
+        site: accreditation.site ?? null
       }
     ])
+  })
+
+  it('returns an accreditation no registration links to, which the validation rules report as orphaned', async () => {
+    const registration = aRegistration()
+    const orphan = anAccreditation()
+
+    const accreditations = await readAccreditations(
+      anOrganisation(registration, [orphan]),
+      registration.id
+    )
+
+    expect(registration.accreditationId).toBeUndefined()
+    expect(accreditations.map((a) => a.id)).toEqual([orphan.id])
   })
 
   it('returns an empty list when the registration holds no accreditation', async () => {
@@ -171,15 +294,19 @@ describe(`GET ${registrationDetailsGetPath}`, () => {
     ).toEqual([])
   })
 
-  it('leaves out an accreditation that never got a number', async () => {
+  it('returns an accreditation that never got a number, with a null number', async () => {
     const registration = aRegistration()
+    const unnumbered = anUnnumberedAccreditation()
 
-    expect(
-      await readAccreditations(
-        anOrganisation(registration, [anUnnumberedAccreditation()]),
-        registration.id
-      )
-    ).toEqual([])
+    const accreditations = await readAccreditations(
+      anOrganisation(registration, [unnumbered]),
+      registration.id
+    )
+
+    expect(accreditations).toHaveLength(1)
+    expect(accreditations[0].id).toBe(unnumbered.id)
+    expect(accreditations[0].accreditationNumber).toBeNull()
+    expect(accreditations[0].status).toBe('created')
   })
 
   it('leaves out an accreditation for another site', async () => {
@@ -217,7 +344,7 @@ describe(`GET ${registrationDetailsGetPath}`, () => {
     ).toEqual(['A26ER5001180114PL', 'A26ER5001180097PL'])
   })
 
-  it('returns null dates for a numbered accreditation that carries none', async () => {
+  it('returns null dates for an accreditation that carries none', async () => {
     const registration = aRegistration()
     const undated = anAccreditation(ACCREDITATION_STATUS.CANCELLED, {
       validFrom: undefined,
@@ -233,38 +360,30 @@ describe(`GET ${registrationDetailsGetPath}`, () => {
     expect(accreditation.validTo).toBeNull()
   })
 
-  it('returns a null registration number for a registration that carries none', async () => {
-    const registration = aRegistration()
-
-    const response = await readRegistration(
-      anOrganisation(registration),
-      registration.id
-    )
-
-    expect(
-      JSON.parse(response.payload).registration.registrationNumber
-    ).toBeNull()
-  })
-
-  it('returns a null site for an exporter registration', async () => {
+  it('carries no site or reprocessing type for an exporter accreditation', async () => {
     const registration = buildRegistration({ wasteProcessingType: 'exporter' })
+    const exporterAccreditation = buildAccreditation({
+      wasteProcessingType: 'exporter',
+      material: registration.material,
+      accreditationNumber: 'A26ER5001180114PL',
+      statusHistory: statusHistoryEndingIn(ACCREDITATION_STATUS.APPROVED)
+    })
 
-    const response = await readRegistration(
-      anOrganisation(registration),
+    const [accreditation] = await readAccreditations(
+      anOrganisation(registration, [exporterAccreditation]),
       registration.id
     )
 
-    const { registration: summary } = JSON.parse(response.payload)
-    expect(summary.site).toBeNull()
-    expect(summary.town).toBeNull()
-    expect(summary.postcode).toBeNull()
-    expect(summary.processingType).toBe('exporter')
+    expect(accreditation.site).toBeNull()
+    expect(accreditation.reprocessingType).toBeNull()
+    expect(accreditation.wasteProcessingType).toBe('exporter')
   })
 
   it('returns 404 when the organisation holds no such registration', async () => {
-    const response = await readRegistration(
+    const response = await read(
       anOrganisation(aRegistration()),
-      '68f6a147c117aec8a1ab74ff'
+      '68f6a147c117aec8a1ab74ff',
+      registrationAccreditationsGetPath
     )
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -288,7 +407,11 @@ describe(`GET ${registrationDetailsGetPath}`, () => {
 
       return {
         method: 'GET',
-        url: makePath(organisation.id, registration.id)
+        url: makePath(
+          registrationAccreditationsGetPath,
+          organisation.id,
+          registration.id
+        )
       }
     }
 
@@ -305,7 +428,7 @@ describe(`GET ${registrationDetailsGetPath}`, () => {
       makeRequest: serveOrganisation
     })
 
-    it('shows a regulator standard user the accredited periods', async () => {
+    it('shows a regulator standard user the accreditations', async () => {
       const request = await serveOrganisation()
 
       const response = await server.inject({
@@ -316,15 +439,9 @@ describe(`GET ${registrationDetailsGetPath}`, () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(JSON.parse(response.payload).accreditations).toEqual([
-        {
-          id: organisation.accreditations[0].id,
-          accreditationNumber: 'A26ER5001180114PL',
-          status: 'approved',
-          validFrom: '2026-07-01',
-          validTo: '2026-12-31'
-        }
-      ])
+      expect(
+        JSON.parse(response.payload).accreditations.map((a) => a.id)
+      ).toEqual([organisation.accreditations[0].id])
     })
   })
 })

@@ -5,7 +5,7 @@ import {
   isRegistrationAccredited,
   resolveAccreditationNumber,
   resolveAccreditation,
-  resolveNumberedAccreditations,
+  accreditationsForRegistration,
   resolveDetailedMaterial
 } from './registration-utils.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
@@ -355,10 +355,10 @@ describe('resolveDetailedMaterial', () => {
 })
 
 // ---------------------------------------------------------------------------
-// resolveNumberedAccreditations
+// accreditationsForRegistration
 // ---------------------------------------------------------------------------
 
-describe('resolveNumberedAccreditations', () => {
+describe('accreditationsForRegistration', () => {
   const accreditationFixture = {
     id: 'acc-1',
     accreditationNumber: 'ACC-001',
@@ -384,7 +384,7 @@ describe('resolveNumberedAccreditations', () => {
       accreditations: [accreditationFixture]
     })
 
-    expect(resolveNumberedAccreditations(reg, org)).toEqual([
+    expect(accreditationsForRegistration(reg, org)).toEqual([
       accreditationFixture
     ])
   })
@@ -400,7 +400,7 @@ describe('resolveNumberedAccreditations', () => {
       accreditations: [accreditationFixture]
     })
 
-    expect(resolveNumberedAccreditations(reg, org)).toHaveLength(1)
+    expect(accreditationsForRegistration(reg, org)).toHaveLength(1)
   })
 
   it('leaves out an accreditation another registration links to', () => {
@@ -419,8 +419,8 @@ describe('resolveNumberedAccreditations', () => {
       accreditations: [accreditationFixture]
     })
 
-    expect(resolveNumberedAccreditations(cancelled, org)).toEqual([])
-    expect(resolveNumberedAccreditations(approved, org)).toEqual([
+    expect(accreditationsForRegistration(cancelled, org)).toEqual([])
+    expect(accreditationsForRegistration(approved, org)).toEqual([
       accreditationFixture
     ])
   })
@@ -436,22 +436,14 @@ describe('resolveNumberedAccreditations', () => {
       accreditations: [accreditationFixture]
     })
 
-    expect(resolveNumberedAccreditations(reg, org)).toHaveLength(1)
-  })
-
-  it('excludes an accreditation whose number is blank', () => {
-    const blank = { ...accreditationFixture, accreditationNumber: '   ' }
-    const reg = buildReg(reprocessorRegistration)
-    const org = buildOrg({ registrations: [reg], accreditations: [blank] })
-
-    expect(resolveNumberedAccreditations(reg, org)).toEqual([])
+    expect(accreditationsForRegistration(reg, org)).toHaveLength(1)
   })
 
   it('returns an empty list when the registration holds no accreditation', () => {
     const reg = buildReg(reprocessorRegistration)
     const org = buildOrg({ registrations: [reg], accreditations: [] })
 
-    expect(resolveNumberedAccreditations(reg, org)).toEqual([])
+    expect(accreditationsForRegistration(reg, org)).toEqual([])
   })
 
   it('excludes an accreditation that matches on a different site', () => {
@@ -462,7 +454,7 @@ describe('resolveNumberedAccreditations', () => {
     const reg = buildReg(reprocessorRegistration)
     const org = buildOrg({ registrations: [reg], accreditations: [elsewhere] })
 
-    expect(resolveNumberedAccreditations(reg, org)).toEqual([])
+    expect(accreditationsForRegistration(reg, org)).toEqual([])
   })
 
   it('excludes an accreditation that matches on a different material', () => {
@@ -473,22 +465,23 @@ describe('resolveNumberedAccreditations', () => {
       accreditations: [otherMaterial]
     })
 
-    expect(resolveNumberedAccreditations(reg, org)).toEqual([])
+    expect(accreditationsForRegistration(reg, org)).toEqual([])
   })
 
-  it.each([{ accreditationNumber: null }, { accreditationNumber: undefined }])(
-    'excludes an accreditation that never got a number (%o)',
-    (numbering) => {
-      const unnumbered = { ...accreditationFixture, ...numbering }
-      const reg = buildReg(reprocessorRegistration)
-      const org = buildOrg({
-        registrations: [reg],
-        accreditations: [unnumbered]
-      })
+  it.each([
+    { accreditationNumber: null },
+    { accreditationNumber: undefined },
+    { accreditationNumber: '   ' }
+  ])('keeps an accreditation that carries no number (%o)', (numbering) => {
+    const unnumbered = { ...accreditationFixture, ...numbering }
+    const reg = buildReg(reprocessorRegistration)
+    const org = buildOrg({
+      registrations: [reg],
+      accreditations: [unnumbered]
+    })
 
-      expect(resolveNumberedAccreditations(reg, org)).toEqual([])
-    }
-  )
+    expect(accreditationsForRegistration(reg, org)).toEqual([unnumbered])
+  })
 
   it('keeps two cancelled accreditations that share a key and a year', () => {
     const first = {
@@ -510,7 +503,7 @@ describe('resolveNumberedAccreditations', () => {
     })
 
     expect(
-      resolveNumberedAccreditations(reg, org).map((acc) => acc.id)
+      accreditationsForRegistration(reg, org).map((acc) => acc.id)
     ).toEqual(['acc-2', 'acc-1'])
   })
 
@@ -537,7 +530,7 @@ describe('resolveNumberedAccreditations', () => {
     })
 
     expect(
-      resolveNumberedAccreditations(reg, org).map((acc) => acc.id)
+      accreditationsForRegistration(reg, org).map((acc) => acc.id)
     ).toEqual(['acc-2', 'acc-1'])
   })
 
@@ -557,8 +550,36 @@ describe('resolveNumberedAccreditations', () => {
     })
 
     expect(
-      resolveNumberedAccreditations(reg, org).map((acc) => acc.id)
+      accreditationsForRegistration(reg, org).map((acc) => acc.id)
     ).toEqual(['acc-1', 'acc-2'])
+  })
+
+  it('orders two undated accreditations by id when neither carries a number', () => {
+    const first = {
+      ...accreditationFixture,
+      id: 'acc-1',
+      accreditationNumber: null,
+      status: 'rejected',
+      validFrom: undefined,
+      validTo: undefined
+    }
+    const second = {
+      ...accreditationFixture,
+      id: 'acc-2',
+      accreditationNumber: null,
+      status: 'rejected',
+      validFrom: undefined,
+      validTo: undefined
+    }
+    const reg = buildReg(reprocessorRegistration)
+    const org = buildOrg({
+      registrations: [reg],
+      accreditations: [first, second]
+    })
+
+    expect(
+      accreditationsForRegistration(reg, org).map((acc) => acc.id)
+    ).toEqual(['acc-2', 'acc-1'])
   })
 
   it('matches an exporter accreditation on type and material alone', () => {
@@ -576,6 +597,6 @@ describe('resolveNumberedAccreditations', () => {
       accreditations: [exporterAccreditation]
     })
 
-    expect(resolveNumberedAccreditations(reg, org)).toHaveLength(1)
+    expect(accreditationsForRegistration(reg, org)).toHaveLength(1)
   })
 })

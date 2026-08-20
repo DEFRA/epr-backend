@@ -61,6 +61,7 @@
  *  formSubmission: { id: string; time: Date };
  *  glassRecyclingProcess?: GlassRecyclingProcess[] | null;
  *  material: string;
+ *  orgName: string;
  *  orsFileUploads?: object[];
  *  prnIssuance: PrnIssuance;
  *  reprocessingType?: ReprocessingType;
