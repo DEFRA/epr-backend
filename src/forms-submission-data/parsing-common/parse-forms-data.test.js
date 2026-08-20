@@ -18,6 +18,7 @@ import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.js
 import exporterRegistration from '#data/fixtures/ea/registration/exporter.json' with { type: 'json' }
 import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json' with { type: 'json' }
 import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-no-partnership.json' with { type: 'json' }
+import reprocessorSteelBlankPageTitles from '#data/fixtures/ea/accreditation/reprocessor-steel-blank-page-titles.json' with { type: 'json' }
 
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -444,6 +445,85 @@ describe('extractAnswers', () => {
       'Duplicate page title detected: "Organisation details"'
     )
   })
+
+  it('should derive a page key from the first non-Markdown component when page title is blank', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          pages: [
+            {
+              title: '',
+              components: [
+                { type: 'Markdown', title: '', content: 'Some guidance' },
+                {
+                  type: 'YesNoField',
+                  title: 'Do you have an Organisation ID number?',
+                  shortDescription: 'Have an Org ID?',
+                  name: 'field1'
+                }
+              ]
+            }
+          ]
+        }
+      },
+      data: {
+        main: {
+          field1: 'true'
+        }
+      }
+    }
+
+    const result = extractAnswers(mockData)
+
+    expect(result).toEqual({
+      'Do you have an Organisation ID number?': { 'Have an Org ID?': 'true' }
+    })
+  })
+
+  it('should skip a page with no title and no derivable component title', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          pages: [
+            {
+              title: '',
+              controller: 'SummaryPageController',
+              components: [
+                { type: 'Markdown', title: '', content: 'Submit your answers' }
+              ]
+            },
+            {
+              title: 'Organisation details',
+              components: [{ shortDescription: 'Org name', name: 'field1' }]
+            }
+          ]
+        }
+      },
+      data: {
+        main: {
+          field1: 'Company A'
+        }
+      }
+    }
+
+    const result = extractAnswers(mockData)
+
+    expect(result).toEqual({
+      'Organisation details': { 'Org name': 'Company A' }
+    })
+  })
+
+  it('should extract answers from the real fixture with blank page titles (PAE-1830)', () => {
+    const result = extractAnswers(
+      reprocessorSteelBlankPageTitles.rawSubmissionData
+    )
+    const flattened = flattenAnswersByShortDesc(result)
+
+    expect(flattened[ACCREDITATION.CATEGORY_TO_ACCREDIT.fields.MATERIAL]).toBe(
+      'Steel (R4)'
+    )
+    expect(flattened['Have an Org ID?']).toBe('true')
+  })
 })
 
 describe('flattenAnswersByShortDesc', () => {
@@ -502,6 +582,7 @@ describe('flattenAnswersByShortDesc', () => {
 describe('extractAnswers - validate all EA fixtures for duplicates', () => {
   const eaFixturesPath = 'src/data/fixtures/ea'
 
+  /** @returns {string[]} */
   function getAllJsonFiles(dir) {
     const files = []
     const entries = readdirSync(dir, { withFileTypes: true })
@@ -531,6 +612,50 @@ describe('extractAnswers - validate all EA fixtures for duplicates', () => {
       expect(answers).toBeDefined()
 
       // Should flatten answers without unexpected duplicate shortDescriptions
+      const flattened = flattenAnswersByShortDesc(answers)
+      expect(flattened).toBeDefined()
+    }
+  )
+})
+
+describe('extractAnswers - validate all production form definitions for duplicates', () => {
+  const prodDefinitionsPath = 'src/data/prod-form-definitions'
+
+  /** @returns {string[]} */
+  function getAllJsonFiles(dir) {
+    const files = []
+    const entries = readdirSync(dir, { withFileTypes: true })
+
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        files.push(...getAllJsonFiles(fullPath))
+      } else if (entry.isFile() && entry.name.endsWith('.json')) {
+        files.push(fullPath)
+      }
+    }
+
+    return files
+  }
+
+  const allJsonFiles = getAllJsonFiles(prodDefinitionsPath)
+
+  test.each(allJsonFiles)(
+    'should not have duplicate page keys in %s',
+    (filePath) => {
+      const content = readFileSync(filePath, 'utf8')
+      const definition = JSON.parse(content)
+
+      // Production definitions hold pages at the top level, unlike fixtures
+      // which nest them under rawSubmissionData.meta.definition
+      const rawSubmissionData = {
+        meta: { definition },
+        data: { main: {} }
+      }
+
+      const answers = extractAnswers(rawSubmissionData)
+      expect(answers).toBeDefined()
+
       const flattened = flattenAnswersByShortDesc(answers)
       expect(flattened).toBeDefined()
     }

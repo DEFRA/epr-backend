@@ -204,7 +204,7 @@ const NONE_OF_ABOVE = 'None of the above'
 function getPermitsForExporter(answersByPages) {
   const exporterPermits = REGISTRATION.EXPORTER_PERMITS
   const permits =
-    answersByPages[exporterPermits.title][exporterPermits.fields.PERMITS]
+    answersByPages[exporterPermits.title]?.[exporterPermits.fields.PERMITS]
 
   if (!permits) {
     return []
