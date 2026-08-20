@@ -2,6 +2,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { organisationsListResponseSchema } from './get.response.schema.js'
 
 export const organisationsGetAllPath = '/v1/organisations'
 
@@ -52,6 +53,9 @@ export const organisationsGetAll = {
     tags: ['api', 'admin'],
     validate: {
       query: querySchema
+    },
+    response: {
+      schema: organisationsListResponseSchema
     }
   },
   /**
