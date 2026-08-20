@@ -55,7 +55,12 @@ export const organisationsGetAll = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
+   * The handler is declared against the scope-aware view and the query alone.
+   * Naming the organisations repository here fails the blocking type check, so
+   * an unshaped organisation document cannot reach the response.
+   *
+   * @param {{
+   *   organisationsListView: import('#application/organisations/organisations-list-view.js').OrganisationsListView,
    *   query: {
    *     search?: string,
    *     orgId?: string,
@@ -69,13 +74,13 @@ export const organisationsGetAll = {
    * }} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
-  handler: async ({ organisationsRepository, query }, h) => {
+  handler: async ({ organisationsListView, query }, h) => {
     if (!isPaginatedRequest(query)) {
-      const organisations = await organisationsRepository.findAll()
+      const organisations = await organisationsListView.findAll()
       return h.response(organisations).code(StatusCodes.OK)
     }
 
-    const result = await organisationsRepository.find({
+    const result = await organisationsListView.find({
       search: query.search,
       orgId: query.orgId,
       registrationId: query.registrationId,

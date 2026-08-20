@@ -21,6 +21,7 @@ import {
   orsImportsRepositoryPlugin,
   overseasSitesRepositoryPlugin
 } from '#overseas-sites/index.js'
+import { organisationsListViewPlugin } from '#application/organisations/organisations-list-view.plugin.js'
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
@@ -136,7 +137,8 @@ function getProductionPlugins(config) {
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
     orsImportsRepositoryPlugin,
-    mongoSummaryLogRowStatesRepositoryPlugin
+    mongoSummaryLogRowStatesRepositoryPlugin,
+    organisationsListViewPlugin
   ]
 
   plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)

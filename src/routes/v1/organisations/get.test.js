@@ -441,4 +441,110 @@ describe('GET /v1/organisations', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
   })
+  describe('the width of the response, by credential', () => {
+    const SERVICE_DATA_FIELDS = [
+      'users',
+      'linkedDefraOrganisation',
+      'formSubmission',
+      'statusHistory',
+      'submitterContactDetails'
+    ]
+
+    /**
+     * @param {string} token
+     * @returns {Promise<import('#application/organisations/organisations-list-view.js').OrganisationListPage>}
+     */
+    const listWith = async (token) => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/organisations?page=1&pageSize=10',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      return JSON.parse(response.payload)
+    }
+
+    beforeEach(async () => {
+      await organisationsRepository.insert(
+        buildOrganisation({
+          users: [
+            {
+              contactId: 'contact-1',
+              email: 'jo.sample@example.com',
+              fullName: 'Jo Sample',
+              roles: ['standard_user']
+            }
+          ],
+          linkedDefraOrganisation: {
+            orgId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+            orgName: 'Linked Ltd',
+            linkedAt: '2026-01-02T00:00:00.000Z',
+            linkedBy: {
+              id: '3f2504e0-4f89-11d3-9a0c-0305e82c3302',
+              email: 'maintainer@example.com'
+            }
+          }
+        })
+      )
+    })
+
+    it('gives a regulator the name, the ids and the status, and nothing else', async () => {
+      const { items } = await listWith(entraIdMockAuthTokens.regulatorToken)
+
+      expect(items.map((item) => Object.keys(item).sort())).toEqual([
+        ['companyDetails', 'id', 'orgId', 'status', 'submittedToRegulator']
+      ])
+    })
+
+    it.each(SERVICE_DATA_FIELDS)(
+      'keeps %s away from a regulator',
+      async (field) => {
+        const { items } = await listWith(entraIdMockAuthTokens.regulatorToken)
+
+        expect(items[0]).not.toHaveProperty(field)
+      }
+    )
+
+    it('gives an admin every field the back office organisations table reads', async () => {
+      const { items } = await listWith(entraIdMockAuthTokens.validToken)
+
+      expect(items.map((item) => Object.keys(item).sort())).toEqual([
+        [
+          'accreditations',
+          'companyDetails',
+          'id',
+          'orgId',
+          'registrations',
+          'status',
+          'submittedToRegulator'
+        ]
+      ])
+    })
+
+    it.each(SERVICE_DATA_FIELDS)(
+      'keeps %s away from an admin as well',
+      async (field) => {
+        const { items } = await listWith(entraIdMockAuthTokens.validToken)
+
+        expect(items[0]).not.toHaveProperty(field)
+      }
+    )
+
+    it('shapes the no-criteria branch the same way', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/organisations',
+        headers: {
+          Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
+        }
+      })
+
+      /** @type {import('#application/organisations/organisations-list-view.js').OrganisationListItem[]} */
+      const organisations = JSON.parse(response.payload)
+      expect(organisations.map((item) => Object.keys(item).sort())).toEqual([
+        ['companyDetails', 'id', 'orgId', 'status', 'submittedToRegulator']
+      ])
+    })
+  })
 })
