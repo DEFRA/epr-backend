@@ -147,8 +147,7 @@ describe(`GET ${registrationGetPath}`, () => {
       registrationNumber: 'R26ER5001180041PL',
       status: 'created',
       reprocessingType: 'input',
-      validFrom: null,
-      validTo: null,
+      dateRange: { validFrom: null, validTo: null },
       application: {
         orgName: registration.orgName,
         submittedToRegulator: registration.submittedToRegulator,
@@ -288,8 +287,7 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
         accreditationNumber: 'A26ER5001180114PL',
         status: 'approved',
         reprocessingType: 'input',
-        validFrom: '2026-07-01',
-        validTo: '2026-12-31',
+        dateRange: { validFrom: '2026-07-01', validTo: '2026-12-31' },
         application: {
           orgName: accreditation.orgName,
           submittedToRegulator: accreditation.submittedToRegulator,
@@ -383,8 +381,27 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
       registration.id
     )
 
-    expect(accreditation.validFrom).toBeNull()
-    expect(accreditation.validTo).toBeNull()
+    expect(accreditation.dateRange).toEqual({
+      validFrom: null,
+      validTo: null
+    })
+  })
+
+  it('keeps a range that carries only a start, rather than dropping the date', async () => {
+    const registration = aRegistration()
+    const openEnded = anAccreditation(ACCREDITATION_STATUS.CANCELLED, {
+      validTo: undefined
+    })
+
+    const [accreditation] = await readAccreditations(
+      anOrganisation(registration, [openEnded]),
+      registration.id
+    )
+
+    expect(accreditation.dateRange).toEqual({
+      validFrom: '2026-07-01',
+      validTo: null
+    })
   })
 
   it('carries no reprocessing type for an exporter accreditation', async () => {

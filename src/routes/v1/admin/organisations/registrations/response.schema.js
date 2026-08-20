@@ -36,6 +36,23 @@ const siteSchema = Joi.object({
   capacity: Joi.array().items(capacitySchema).required()
 })
 
+/**
+ * `validFrom` and `validTo` are one range, and the domain already passes them
+ * as one object - `isWithinAccreditationDateRange(date, { validFrom, validTo })`
+ * in `common/helpers/dates/accreditation.js`. The bounds keep their names
+ * because `valid` does not repeat `dateRange`, which makes this the same object
+ * that helper takes.
+ *
+ * Each bound is nullable on its own. The store requires both only while a
+ * record is approved, or approved or suspended for an accreditation, and
+ * outside that each is independently optional, so the range is always present
+ * and says nothing about whether it is filled in.
+ */
+const dateRangeSchema = Joi.object({
+  validFrom: Joi.string().allow(null).required(),
+  validTo: Joi.string().allow(null).required()
+})
+
 const materialSchema = Joi.string().valid(...Object.values(MATERIAL))
 const regulatorSchema = Joi.string().valid(...Object.values(REGULATOR))
 const wasteProcessingTypeSchema = Joi.string().valid(
@@ -79,8 +96,7 @@ export const registrationResponseSchema = Joi.object({
     .valid(...Object.values(REGISTRATION_STATUS))
     .required(),
   reprocessingType: reprocessingTypeSchema.required(),
-  validFrom: Joi.string().allow(null).required(),
-  validTo: Joi.string().allow(null).required(),
+  dateRange: dateRangeSchema.required(),
   application: registrationApplicationSchema.required()
 })
 
@@ -104,8 +120,7 @@ const accreditationSchema = Joi.object({
     .valid(...Object.values(ACCREDITATION_STATUS))
     .required(),
   reprocessingType: reprocessingTypeSchema.required(),
-  validFrom: Joi.string().allow(null).required(),
-  validTo: Joi.string().allow(null).required(),
+  dateRange: dateRangeSchema.required(),
   application: accreditationApplicationSchema.required()
 })
 

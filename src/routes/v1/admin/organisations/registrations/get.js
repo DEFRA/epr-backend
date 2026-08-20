@@ -121,8 +121,7 @@ function toRegistrationResource(registration, organisation) {
     registrationNumber: registration.registrationNumber ?? null,
     status: registration.status,
     reprocessingType: registration.reprocessingType ?? null,
-    validFrom: registration.validFrom ?? null,
-    validTo: registration.validTo ?? null,
+    dateRange: toDateRangeResource(registration),
     application: {
       orgName: registration.orgName,
       submittedToRegulator: registration.submittedToRegulator,
@@ -133,6 +132,16 @@ function toRegistrationResource(registration, organisation) {
       wasteProcessingType: registration.wasteProcessingType,
       site: toSiteResource(registration.site)
     }
+  }
+}
+
+/**
+ * @param {{ validFrom?: string | null, validTo?: string | null }} record
+ */
+function toDateRangeResource({ validFrom, validTo }) {
+  return {
+    validFrom: validFrom ?? null,
+    validTo: validTo ?? null
   }
 }
 
@@ -164,8 +173,7 @@ function toAccreditationResource(accreditation) {
     accreditationNumber: accreditation.accreditationNumber ?? null,
     status: accreditation.status,
     reprocessingType: accreditation.reprocessingType ?? null,
-    validFrom: accreditation.validFrom ?? null,
-    validTo: accreditation.validTo ?? null,
+    dateRange: toDateRangeResource(accreditation),
     application: {
       orgName: accreditation.orgName,
       submittedToRegulator: accreditation.submittedToRegulator,
