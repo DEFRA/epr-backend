@@ -40,6 +40,12 @@ export const REGULATOR_ROLE = 'regulator_standard'
  * yet, so the condition an operator's `organisation.read` carries — their own
  * linked organisation — cannot apply.
  *
+ * That grant has a second property a by-id route can rely on. No operator ever
+ * earns `organisation.search`, and every admin tier and the regulator hold it,
+ * so a route that requires it alongside `organisation.read` admits a caller
+ * who reads any organisation and refuses one who reads only their own.
+ * `admin.read` cannot draw that line, because a regulator does not hold it.
+ *
  * `waste-balance.ledger.read` covers the ledger behind a waste balance: the
  * service's own record of how the balance moved, event by event. An operator
  * reads the balance, and does not read the ledger.

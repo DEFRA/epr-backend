@@ -5,7 +5,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { toRegistrationSummary } from '#application/organisations/registration-summary.js'
 import { organisationsOverviewResponseSchema } from './response.schema.js'
 
 export const organisationsOverviewGetPath =
@@ -51,16 +51,8 @@ export const organisationsOverviewGet = {
           ? accreditationsById.get(reg.accreditationId)
           : undefined
 
-        const isExporter =
-          reg.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-
         return {
-          id: reg.id,
-          registrationNumber: reg.registrationNumber,
-          status: reg.status,
-          material: reg.material,
-          processingType: getProcessingType(reg),
-          site: isExporter ? null : reg.site.address.line1,
+          ...toRegistrationSummary(reg),
           ...(linkedAccreditation && {
             accreditation: {
               id: linkedAccreditation.id,
@@ -111,17 +103,4 @@ export const organisationsOverviewGet = {
       throw Boom.badImplementation(`Failure on ${organisationsOverviewGetPath}`)
     }
   }
-}
-
-/**
- * @param {{ wasteProcessingType: string, reprocessingType?: string | null }} registration
- * @returns {string}
- */
-function getProcessingType(registration) {
-  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
-    return WASTE_PROCESSING_TYPE.EXPORTER
-  }
-  return registration.reprocessingType
-    ? `${WASTE_PROCESSING_TYPE.REPROCESSOR} - ${registration.reprocessingType}`
-    : WASTE_PROCESSING_TYPE.REPROCESSOR
 }

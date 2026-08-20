@@ -1,4 +1,5 @@
 import { ACTIVE_ACCREDITATION_STATUSES } from '#domain/organisations/model.js'
+import { isNumberedAccreditation } from '#domain/organisations/registration-utils.js'
 import {
   SEVERITY,
   accreditationTarget,
@@ -32,14 +33,6 @@ const hasBeenAccredited = (accreditation) =>
   )
 
 /**
- * @param {Accreditation} accreditation
- * @returns {boolean}
- */
-const isNumbered = (accreditation) =>
-  typeof accreditation.accreditationNumber === 'string' &&
-  accreditation.accreditationNumber.trim() !== ''
-
-/**
  * The number is a property of the accreditation, and the reports that fail on
  * a missing one reach the accreditation through the identifiers recorded on a
  * PRN rather than through the registration that links to it. An accreditation
@@ -53,7 +46,8 @@ const evaluate = (org) =>
   org.accreditations
     .filter(
       (accreditation) =>
-        hasBeenAccredited(accreditation) && !isNumbered(accreditation)
+        hasBeenAccredited(accreditation) &&
+        !isNumberedAccreditation(accreditation)
     )
     .map((accreditation) =>
       createIssue({

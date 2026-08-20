@@ -3,6 +3,7 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
 
 /** @import { AccreditationStatus, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { Registration, ReportableRegistration } from '#domain/organisations/registration.js' */
@@ -134,5 +135,94 @@ export function resolveAccreditation(registration, org) {
         a.id === registration.accreditationId &&
         ACTIVE_ACCREDITATION_STATUSES.has(a.status)
     ) ?? null
+  )
+}
+
+/**
+ * An accreditation that carries a number. An accreditation that never got one
+ * never became an accreditation the operator could report against.
+ * @typedef {Accreditation & { accreditationNumber: string }} NumberedAccreditation
+ */
+
+/**
+ * Returns every numbered accreditation the registration holds, newest first.
+ *
+ * An accreditation carries no registration id, and
+ * `registration.accreditationId` points forward to at most one, so a
+ * registration finds the rest of its accreditations by the natural key
+ * `isAccreditationForRegistration` matches on. That key is unique across
+ * approved records only, so a registration can hold more than one cancelled
+ * accreditation with the same key.
+ *
+ * The same slack lets two registrations share a key, because
+ * validateApprovals rejects a duplicate key among approved registrations
+ * alone. So the key on its own would give a cancelled registration the live
+ * registration's accreditations. An accreditation another registration links
+ * to belongs to that registration - validateAccreditationLinkUniqueness holds
+ * each accreditation to at most one - so this drops those and keeps the rest.
+ *
+ * @param {Registration} registration
+ * @param {{ registrations: Registration[], accreditations: Accreditation[] }} org
+ * @returns {NumberedAccreditation[]}
+ */
+export function resolveNumberedAccreditations(registration, org) {
+  const claimedElsewhere = accreditationsClaimedByOtherRegistrations(
+    registration,
+    org
+  )
+
+  return org.accreditations
+    .filter(isNumberedAccreditation)
+    .filter((accreditation) => !claimedElsewhere.has(accreditation.id))
+    .filter((accreditation) =>
+      isAccreditationForRegistration(accreditation, registration)
+    )
+    .sort(byNewestFirst)
+}
+
+/**
+ * @param {Registration} registration
+ * @param {{ registrations: Registration[] }} org
+ * @returns {Set<string>}
+ */
+function accreditationsClaimedByOtherRegistrations(registration, org) {
+  return new Set(
+    org.registrations
+      .filter((candidate) => candidate.id !== registration.id)
+      .flatMap((candidate) => candidate.accreditationId ?? [])
+  )
+}
+
+/**
+ * An accreditation carries a number once a regulator issues one. A number
+ * that is present but blank was lost rather than issued, so it does not count.
+ *
+ * @param {Accreditation} accreditation
+ * @returns {accreditation is NumberedAccreditation}
+ */
+export function isNumberedAccreditation(accreditation) {
+  return (
+    typeof accreditation.accreditationNumber === 'string' &&
+    accreditation.accreditationNumber.trim() !== ''
+  )
+}
+
+/**
+ * @param {NumberedAccreditation} accreditation
+ * @returns {string}
+ */
+function startOfEntitlement(accreditation) {
+  return accreditation.validFrom ?? ''
+}
+
+/**
+ * @param {NumberedAccreditation} a
+ * @param {NumberedAccreditation} b
+ * @returns {number}
+ */
+function byNewestFirst(a, b) {
+  return (
+    startOfEntitlement(b).localeCompare(startOfEntitlement(a)) ||
+    b.accreditationNumber.localeCompare(a.accreditationNumber)
   )
 }
