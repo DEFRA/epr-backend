@@ -43,6 +43,114 @@ const buildAdminUser = ({ id, email, name }) => ({
 })
 
 /**
+ * Fetches the PRN and confirms it is in a cancellable state, logging and
+ * throwing the appropriate Boom error otherwise (404 if missing, 409 if not
+ * `accepted`).
+ *
+ * @param {PackagingRecyclingNotesRepository} repository
+ * @param {string} id
+ * @param {TypedLogger} logger
+ * @returns {Promise<*>} the `accepted` PRN
+ */
+const findAcceptedPrnOrThrow = async (repository, id, logger) => {
+  const previousPrn = await repository.findById(id)
+
+  if (!previousPrn) {
+    logger.info({
+      message: `Admin cancel refused: PRN not found: ${id}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
+        reference: id
+      }
+    })
+    throw Boom.notFound(`PRN not found: ${id}`)
+  }
+
+  if (previousPrn.status.currentStatus !== PRN_STATUS.ACCEPTED) {
+    logger.info({
+      message: `Admin cancel refused: PRN ${id} is ${previousPrn.status.currentStatus}, not accepted`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
+        reference: id
+      }
+    })
+    throw Boom.conflict(
+      `Cannot cancel a PRN with status '${previousPrn.status.currentStatus}'; only an accepted PRN can be cancelled`
+    )
+  }
+
+  return previousPrn
+}
+
+/**
+ * Transitions the given PRN to cancelled, audits the change, logs success and
+ * builds the 200 response body.
+ *
+ * @param {HapiRequest & {
+ *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+ *   prnEvents: { onCancelled: OnPrnCancelled }
+ * }} request
+ * @param {*} previousPrn
+ * @param {string} id
+ * @param {Object} h - Hapi response toolkit
+ */
+const performCancellation = async (request, previousPrn, id, h) => {
+  const {
+    packagingRecyclingNotesRepository,
+    ledgerRepository,
+    organisationsRepository,
+    prnEvents,
+    logger,
+    auth
+  } = request
+
+  const user = buildAdminUser(
+    /** @type {{ id: string, email: string, name?: string }} */ (
+      auth.credentials
+    )
+  )
+
+  const updatedPrn = await updatePrnStatus({
+    prnRepository: packagingRecyclingNotesRepository,
+    ledgerRepository,
+    organisationsRepository,
+    prnEvents,
+    logger,
+    id,
+    organisationId: previousPrn.organisation.id,
+    registrationId: previousPrn.registrationId,
+    accreditationId: previousPrn.accreditation.id,
+    newStatus: PRN_STATUS.CANCELLED,
+    actor: PRN_ACTOR.SERVICE_MAINTAINER,
+    user,
+    providedPrn: previousPrn
+  })
+
+  await auditPrnStatusTransition(request, id, previousPrn, updatedPrn)
+
+  logger.info({
+    message: `Admin cancel succeeded: PRN ${id} is now cancelled`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+      reference: id
+    }
+  })
+
+  return h
+    .response({
+      id: updatedPrn.id,
+      prnNumber: updatedPrn.prnNumber,
+      status: updatedPrn.status.currentStatus,
+      tonnage: updatedPrn.tonnage,
+      updatedAt: updatedPrn.updatedAt
+    })
+    .code(StatusCodes.OK)
+}
+
+/**
  * Maps a cancellation failure to the HTTP error it should surface as.
  *
  * `updatePrnStatus` is called with `providedPrn` set to the same document this
@@ -107,15 +215,7 @@ export const adminPackagingRecyclingNotesCancel = {
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const {
-      packagingRecyclingNotesRepository,
-      ledgerRepository,
-      organisationsRepository,
-      prnEvents,
-      params,
-      logger,
-      auth
-    } = request
+    const { packagingRecyclingNotesRepository, params, logger } = request
     const { id } = params
 
     logger.debug({
@@ -128,76 +228,13 @@ export const adminPackagingRecyclingNotesCancel = {
     })
 
     try {
-      const previousPrn = await packagingRecyclingNotesRepository.findById(id)
-
-      if (!previousPrn) {
-        logger.info({
-          message: `Admin cancel refused: PRN not found: ${id}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
-            reference: id
-          }
-        })
-        throw Boom.notFound(`PRN not found: ${id}`)
-      }
-
-      if (previousPrn.status.currentStatus !== PRN_STATUS.ACCEPTED) {
-        logger.info({
-          message: `Admin cancel refused: PRN ${id} is ${previousPrn.status.currentStatus}, not accepted`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
-            reference: id
-          }
-        })
-        throw Boom.conflict(
-          `Cannot cancel a PRN with status '${previousPrn.status.currentStatus}'; only an accepted PRN can be cancelled`
-        )
-      }
-
-      const user = buildAdminUser(
-        /** @type {{ id: string, email: string, name?: string }} */ (
-          auth.credentials
-        )
+      const previousPrn = await findAcceptedPrnOrThrow(
+        packagingRecyclingNotesRepository,
+        id,
+        logger
       )
 
-      const updatedPrn = await updatePrnStatus({
-        prnRepository: packagingRecyclingNotesRepository,
-        ledgerRepository,
-        organisationsRepository,
-        prnEvents,
-        logger,
-        id,
-        organisationId: previousPrn.organisation.id,
-        registrationId: previousPrn.registrationId,
-        accreditationId: previousPrn.accreditation.id,
-        newStatus: PRN_STATUS.CANCELLED,
-        actor: PRN_ACTOR.SERVICE_MAINTAINER,
-        user,
-        providedPrn: previousPrn
-      })
-
-      await auditPrnStatusTransition(request, id, previousPrn, updatedPrn)
-
-      logger.info({
-        message: `Admin cancel succeeded: PRN ${id} is now cancelled`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
-          reference: id
-        }
-      })
-
-      return h
-        .response({
-          id: updatedPrn.id,
-          prnNumber: updatedPrn.prnNumber,
-          status: updatedPrn.status.currentStatus,
-          tonnage: updatedPrn.tonnage,
-          updatedAt: updatedPrn.updatedAt
-        })
-        .code(StatusCodes.OK)
+      return await performCancellation(request, previousPrn, id, h)
     } catch (error) {
       throw mapAdminCancelError(
         error,
