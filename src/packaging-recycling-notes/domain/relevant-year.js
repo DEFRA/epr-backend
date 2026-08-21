@@ -29,6 +29,14 @@ export class RelevantYearWindowExpiredError extends Error {
   }
 }
 
+// Month index 0 = January.
+const JANUARY = 0
+const LAST_DAY_OF_JANUARY = 31
+const END_OF_DAY_HOURS = 23
+const END_OF_DAY_MINUTES = 59
+const END_OF_DAY_SECONDS = 59
+const END_OF_DAY_MILLISECONDS = 999
+
 /**
  * The last instant (UTC) of 31 January in the year immediately following
  * `relevantYear` — inclusive.
@@ -42,8 +50,17 @@ function endOfRelevantYear(relevantYear) {
       `Cannot compute the end of a relevant year: relevantYear must be a finite number, got ${relevantYear}`
     )
   }
-  // Month index 0 = January.
-  return new Date(Date.UTC(relevantYear + 1, 0, 31, 23, 59, 59, 999))
+  return new Date(
+    Date.UTC(
+      relevantYear + 1,
+      JANUARY,
+      LAST_DAY_OF_JANUARY,
+      END_OF_DAY_HOURS,
+      END_OF_DAY_MINUTES,
+      END_OF_DAY_SECONDS,
+      END_OF_DAY_MILLISECONDS
+    )
+  )
 }
 
 /**
