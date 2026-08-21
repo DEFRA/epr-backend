@@ -2,6 +2,8 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { createOrganisationsListView } from '#application/organisations/organisations-list-view.js'
+import { organisationsListResponseSchema } from './get.response.schema.js'
 
 export const organisationsGetAllPath = '/v1/organisations'
 
@@ -52,10 +54,14 @@ export const organisationsGetAll = {
     tags: ['api', 'admin'],
     validate: {
       query: querySchema
+    },
+    response: {
+      schema: organisationsListResponseSchema
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
+   * @param {{
+   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *   query: {
    *     search?: string,
    *     orgId?: string,
@@ -70,12 +76,16 @@ export const organisationsGetAll = {
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
   handler: async ({ organisationsRepository, query }, h) => {
+    const organisationsListView = createOrganisationsListView({
+      organisationsRepository
+    })
+
     if (!isPaginatedRequest(query)) {
-      const organisations = await organisationsRepository.findAll()
+      const organisations = await organisationsListView.findAll()
       return h.response(organisations).code(StatusCodes.OK)
     }
 
-    const result = await organisationsRepository.find({
+    const result = await organisationsListView.find({
       search: query.search,
       orgId: query.orgId,
       registrationId: query.registrationId,

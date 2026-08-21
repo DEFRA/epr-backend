@@ -441,4 +441,86 @@ describe('GET /v1/organisations', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
   })
+  describe('the width of the response', () => {
+    const LIST_ITEM_KEYS = [
+      'accreditations',
+      'companyDetails',
+      'id',
+      'orgId',
+      'registrations',
+      'status',
+      'submittedToRegulator'
+    ]
+
+    const CREDENTIALS = [
+      ['a regulator', entraIdMockAuthTokens.regulatorToken],
+      ['an admin', entraIdMockAuthTokens.validToken]
+    ]
+
+    /**
+     * @param {string} token
+     * @returns {Promise<import('#application/organisations/organisations-list-view.js').OrganisationListPage>}
+     */
+    const listWith = async (token) => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/organisations?page=1&pageSize=10',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      return JSON.parse(response.payload)
+    }
+
+    beforeEach(async () => {
+      await organisationsRepository.insert(
+        buildOrganisation({
+          users: [
+            {
+              contactId: 'contact-1',
+              email: 'jo.sample@example.com',
+              fullName: 'Jo Sample',
+              roles: ['standard_user']
+            }
+          ],
+          linkedDefraOrganisation: {
+            orgId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+            orgName: 'Linked Ltd',
+            linkedAt: '2026-01-02T00:00:00.000Z',
+            linkedBy: {
+              id: '3f2504e0-4f89-11d3-9a0c-0305e82c3302',
+              email: 'maintainer@example.com'
+            }
+          }
+        })
+      )
+    })
+
+    it.each(CREDENTIALS)(
+      'gives %s the organisation identity and the published numbers',
+      async (_label, token) => {
+        const { items } = await listWith(token)
+
+        expect(items.map((item) => Object.keys(item).sort())).toEqual([
+          LIST_ITEM_KEYS
+        ])
+      }
+    )
+
+    it('shapes the no-criteria branch the same way', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/organisations',
+        headers: {
+          Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
+        }
+      })
+
+      /** @type {import('#application/organisations/organisations-list-view.js').OrganisationListItem[]} */
+      const organisations = JSON.parse(response.payload)
+      expect(organisations.map((item) => Object.keys(item).sort())).toEqual([
+        LIST_ITEM_KEYS
+      ])
+    })
+  })
 })

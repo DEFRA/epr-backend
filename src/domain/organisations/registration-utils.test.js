@@ -5,6 +5,7 @@ import {
   isRegistrationAccredited,
   resolveAccreditationNumber,
   resolveAccreditation,
+  accreditationsForRegistration,
   resolveDetailedMaterial
 } from './registration-utils.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
@@ -350,5 +351,54 @@ describe('resolveDetailedMaterial', () => {
     const reg = buildReg({ material: 'plastic' })
 
     expect(resolveDetailedMaterial(reg)).toBe('plastic')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// accreditationsForRegistration
+// ---------------------------------------------------------------------------
+
+describe('accreditationsForRegistration', () => {
+  const accreditationFixture = {
+    id: 'acc-1',
+    accreditationNumber: 'ACC-001',
+    status: 'approved',
+    statusHistory: [],
+    validFrom: '2026-01-01',
+    validTo: '2026-12-31',
+    material: 'plastic',
+    wasteProcessingType: 'reprocessor'
+  }
+
+  it('returns the accreditation the registration names', () => {
+    const reg = buildReg({ accreditationId: 'acc-1' })
+    const org = buildOrg({
+      registrations: [reg],
+      accreditations: [accreditationFixture]
+    })
+
+    expect(accreditationsForRegistration(reg, org)).toEqual([
+      accreditationFixture
+    ])
+  })
+
+  it('returns an empty list when the registration names no accreditation', () => {
+    const reg = buildReg({ accreditationId: null })
+    const org = buildOrg({
+      registrations: [reg],
+      accreditations: [accreditationFixture]
+    })
+
+    expect(accreditationsForRegistration(reg, org)).toEqual([])
+  })
+
+  it('returns an empty list when the organisation holds no accreditation of that id', () => {
+    const reg = buildReg({ accreditationId: 'acc-9' })
+    const org = buildOrg({
+      registrations: [reg],
+      accreditations: [accreditationFixture]
+    })
+
+    expect(accreditationsForRegistration(reg, org)).toEqual([])
   })
 })
