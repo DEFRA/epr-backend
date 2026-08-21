@@ -13,7 +13,6 @@
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
  * @import {ReportsRepository} from '#reports/repository/port.js'
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
- * @import {OrganisationsListView} from '#application/organisations/organisations-list-view.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
  * @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -71,7 +70,6 @@
  *  db: Db,
  *  locker: LockManager,
  *  logger: TypedLogger,
- *  organisationsListView: OrganisationsListView,
  *  organisationsRepository: OrganisationsRepository,
  *  systemLogsRepository: SystemLogsRepository,
  *  ledgerRepository: WasteBalanceLedgerRepository,
@@ -132,16 +130,10 @@
  * is closed, so reading a property no plugin registers fails the type check.
  * Adding a `registerDependency` call means adding its name here too.
  *
- * Membership here does not mean the startup variant works. `registerDependency`
- * builds that one from `{ logger }` alone, so a dependency that needs another
- * dependency reads `undefined` and fails on first use rather than at startup.
- * `organisationsListView` and `prnEvents` are request-only for that reason.
- *
  * @typedef {{
  *   formSubmissionsRepository: FormSubmissionsRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   nonProdDataReset: NonProdDataReset,
- *   organisationsListView: OrganisationsListView,
  *   organisationsRepository: OrganisationsRepository,
  *   orsImportsRepository: OrsImportsRepository,
  *   overseasSitesRepository: OverseasSitesRepository,

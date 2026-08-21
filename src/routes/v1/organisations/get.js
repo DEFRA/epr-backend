@@ -2,6 +2,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { createOrganisationsListView } from '#application/organisations/organisations-list-view.js'
 import { organisationsListResponseSchema } from './get.response.schema.js'
 
 export const organisationsGetAllPath = '/v1/organisations'
@@ -59,13 +60,8 @@ export const organisationsGetAll = {
     }
   },
   /**
-   * The handler is declared against the view and the query alone. Naming the
-   * organisations repository here fails the blocking type check, so this
-   * handler has no whole document to return. What the view itself hands out is
-   * pinned by the tests on the view, not by a type.
-   *
    * @param {{
-   *   organisationsListView: import('#application/organisations/organisations-list-view.js').OrganisationsListView,
+   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *   query: {
    *     search?: string,
    *     orgId?: string,
@@ -79,7 +75,11 @@ export const organisationsGetAll = {
    * }} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
-  handler: async ({ organisationsListView, query }, h) => {
+  handler: async ({ organisationsRepository, query }, h) => {
+    const organisationsListView = createOrganisationsListView({
+      organisationsRepository
+    })
+
     if (!isPaginatedRequest(query)) {
       const organisations = await organisationsListView.findAll()
       return h.response(organisations).code(StatusCodes.OK)
