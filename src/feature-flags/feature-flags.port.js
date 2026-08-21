@@ -6,6 +6,7 @@
  * @property {() => boolean} isStaleIssuedTonnageReportEnabled
  * @property {() => boolean} isReportDataValidationEnabled
  * @property {() => boolean} isReportDataCompleteDiagnosticEnabled
+ * @property {() => boolean} isPrnAdminCancellationEnabled
  */
 
 /**
@@ -16,6 +17,7 @@
  * @property {boolean} [staleIssuedTonnageReport]
  * @property {boolean} [reportDataValidation]
  * @property {boolean} [reportDataCompleteDiagnostic]
+ * @property {boolean} [prnAdminCancellation]
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
