@@ -12,7 +12,10 @@ import {
 } from './create-report-validation.js'
 import { canRequestResubmission } from './resubmission-service.js'
 import { findReportIdBySubmissionNumber } from './submission-lookup.js'
-import { assertReportDataComplete } from './report-mandatory/assert-report-data-complete.js'
+import {
+  assertReportDataComplete,
+  summariseIncompleteData
+} from './report-mandatory/assert-report-data-complete.js'
 
 /**
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
@@ -133,6 +136,29 @@ function buildReportData(aggregated, registration) {
 }
 
 /**
+ * Wraps a stored report with its `canRequestResubmission` flag for the
+ * fetch-or-generate result. The completeness signal is a preview-only concern,
+ * so the stored branch never carries it.
+ *
+ * @param {import('#reports/repository/port.js').Report} storedReport
+ * @param {PeriodicReport[]} periodicReports
+ * @returns {import('#reports/repository/port.js').Report & { canRequestResubmission: boolean }}
+ */
+function buildStoredReportResult(storedReport, periodicReports) {
+  return {
+    ...storedReport,
+    canRequestResubmission: canRequestResubmission(periodicReports, {
+      status: storedReport.status.currentStatus,
+      resubmissionRequired: storedReport.resubmissionRequired,
+      year: storedReport.year,
+      cadence: /** @type {Cadence} */ (storedReport.cadence),
+      period: storedReport.period,
+      submissionNumber: storedReport.submissionNumber
+    })
+  }
+}
+
+/**
  * Finds the report for a given period with PRN tonnage. Returns the stored
  * report if one exists, otherwise computes one from waste records.
  *
@@ -149,7 +175,8 @@ function buildReportData(aggregated, registration) {
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
- * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean }>}
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
+ * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean, incompleteSummaryLogRows?: { total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } }>}
  */
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
@@ -163,7 +190,8 @@ export async function fetchOrGenerateReportForPeriod({
   year,
   cadence,
   period,
-  submissionNumber
+  submissionNumber,
+  featureFlags
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationId,
@@ -183,17 +211,7 @@ export async function fetchOrGenerateReportForPeriod({
     : null
 
   if (storedReport) {
-    return {
-      ...storedReport,
-      canRequestResubmission: canRequestResubmission(periodicReports, {
-        status: storedReport.status.currentStatus,
-        resubmissionRequired: storedReport.resubmissionRequired,
-        year: storedReport.year,
-        cadence: /** @type {Cadence} */ (storedReport.cadence),
-        period: storedReport.period,
-        submissionNumber: storedReport.submissionNumber
-      })
-    }
+    return buildStoredReportResult(storedReport, periodicReports)
   }
 
   const operatorCategory = getOperatorCategory(registration)
@@ -222,7 +240,21 @@ export async function fetchOrGenerateReportForPeriod({
     latestSubmission
   })
 
-  return { ...aggregatedReportDetail, canRequestResubmission: false }
+  // Attached on every generate-branch preview (any period without a stored
+  // report), not only Due/Over Due ones: a not-yet-ended period resolves to a
+  // null period status yet still generates. The frontend gates the
+  // validation-error screen on Due/Over Due, so this signal is broader than the
+  // screen by design (PAE-1420).
+  const incompleteSummaryLogRows = summariseIncompleteDataIfEnabled(
+    featureFlags,
+    wasteRecordStates
+  )
+
+  return {
+    ...aggregatedReportDetail,
+    canRequestResubmission: false,
+    ...(incompleteSummaryLogRows && { incompleteSummaryLogRows })
+  }
 }
 
 /**
@@ -404,6 +436,24 @@ function assertReportDataCompleteIfEnabled(
   if (featureFlags?.isReportDataValidationEnabled()) {
     assertReportDataComplete(wasteRecordStates, reference)
   }
+}
+
+/**
+ * Summarises incomplete summary-log rows for the GET report-detail preview when
+ * the feature flag is on, mirroring the POST gate's issue payload without
+ * throwing. Returns `null` when the flag is off — or on but nothing is missing —
+ * so the generate branch attaches the field only when there is something to
+ * report.
+ *
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags | undefined} featureFlags
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @returns {{ total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } | null}
+ */
+function summariseIncompleteDataIfEnabled(featureFlags, wasteRecordStates) {
+  if (!featureFlags?.isReportDataValidationEnabled()) {
+    return null
+  }
+  return summariseIncompleteData(wasteRecordStates)
 }
 
 /**

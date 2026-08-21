@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
-import { reportsCalendarResponseSchema } from './response.schema.js'
+import {
+  reportDetailResponseSchema,
+  reportsCalendarResponseSchema
+} from './response.schema.js'
 
 const validReport = {
   id: 'report-1',
@@ -81,6 +84,59 @@ describe('reportsCalendarResponseSchema', () => {
     }
 
     const { error } = reportsCalendarResponseSchema.validate(response)
+
+    expect(error).toBeDefined()
+  })
+})
+
+describe('reportDetailResponseSchema incompleteSummaryLogRows (PAE-1420)', () => {
+  const validDetail = {
+    details: { material: 'plastic', site: null },
+    recyclingActivity: { suppliers: [], totalTonnageReceived: 0 },
+    source: { lastUploadedAt: null, summaryLogId: null },
+    wasteSent: {
+      finalDestinations: [],
+      tonnageSentToAnotherSite: 0,
+      tonnageSentToExporter: 0,
+      tonnageSentToReprocessor: 0
+    }
+  }
+
+  it('accepts a well-formed incompleteSummaryLogRows', () => {
+    const { error } = reportDetailResponseSchema.validate({
+      ...validDetail,
+      incompleteSummaryLogRows: {
+        total: 2,
+        issues: [
+          { sheet: 'Received', rowId: 'row-1', field: 'SUPPLIER_NAME' },
+          { sheet: 'Received', rowId: 'row-1', field: 'SUPPLIER_ADDRESS' }
+        ]
+      }
+    })
+
+    expect(error).toBeUndefined()
+  })
+
+  it('rejects an incompleteSummaryLogRows whose total is not a number', () => {
+    const { error } = reportDetailResponseSchema.validate({
+      ...validDetail,
+      incompleteSummaryLogRows: {
+        total: 'two',
+        issues: [{ sheet: 'Received', rowId: 'row-1', field: 'SUPPLIER_NAME' }]
+      }
+    })
+
+    expect(error).toBeDefined()
+  })
+
+  it('rejects an issue missing the field locator', () => {
+    const { error } = reportDetailResponseSchema.validate({
+      ...validDetail,
+      incompleteSummaryLogRows: {
+        total: 1,
+        issues: [{ sheet: 'Received', rowId: 'row-1' }]
+      }
+    })
 
     expect(error).toBeDefined()
   })

@@ -94,6 +94,29 @@ export const findIssues = (rows) =>
 export const MAX_ISSUES_REPORTED = 100
 
 /**
+ * Summarises missing mandatory fields across the whole summary log without
+ * throwing, for the GET report-detail preview. Returns `null` when nothing is
+ * missing, so callers attach the field only when there is something to report.
+ *
+ * Mirrors the payload {@link assertReportDataComplete} throws on the POST:
+ * `total` is the true number of missing fields; `issues` is capped at
+ * `MAX_ISSUES_REPORTED`, so `total` can exceed `issues.length`. The frontend
+ * consumes the same `{ total, issues }` shape whether it arrives in this 200
+ * body field or the 400 error payload.
+ *
+ * @param {CompletenessRow[]} rows
+ * @returns {{ total: number, issues: Issue[] } | null}
+ */
+export const summariseIncompleteData = (rows) => {
+  const issues = findIssues(rows)
+  const total = issues.length
+  if (!total) {
+    return null
+  }
+  return { total, issues: issues.slice(0, MAX_ISSUES_REPORTED) }
+}
+
+/**
  * Throws a 400 Boom enriched with `code=report_data_incomplete` and a flat
  * `issues` payload if any mandatory field is missing anywhere in the summary
  * log. On success it returns silently and the report is created.

@@ -15,6 +15,7 @@ import {
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod,
@@ -22,6 +23,7 @@ import {
   createReportsService
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { MAX_ISSUES_REPORTED } from './report-mandatory/assert-report-data-complete.js'
 
 /**
  * @import { Registration } from '#domain/organisations/registration.js'
@@ -382,6 +384,150 @@ describe('report-service', () => {
       expect(report.recyclingActivity?.suppliers[0]?.supplierName).toBe(
         'Supplier A'
       )
+    })
+
+    describe('incompleteSummaryLogRows (PAE-1420)', () => {
+      const gateEnabled = createInMemoryFeatureFlags({
+        reportDataValidation: true
+      })
+
+      // A received row whose positive tonnage triggers the supplier rule but
+      // carries none of the six mandatory supplier fields: six missing fields.
+      const incompleteReceivedEntry = () =>
+        buildSummaryLogRowStateEntry({
+          rowId: 'row-1',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          data: { TONNAGE_RECEIVED_FOR_RECYCLING: 5 }
+        })
+
+      const completeReceivedEntry = () =>
+        buildSummaryLogRowStateEntry({
+          rowId: 'row-1',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          data: {
+            TONNAGE_RECEIVED_FOR_RECYCLING: 5,
+            SUPPLIER_NAME: 'Acme Waste Ltd',
+            SUPPLIER_ADDRESS: '1 Depot Road',
+            SUPPLIER_POSTCODE: 'AB1 2CD',
+            SUPPLIER_EMAIL: 'ops@acme.example',
+            SUPPLIER_PHONE_NUMBER: '01234 567890',
+            ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baling'
+          }
+        })
+
+      const generate = async (entries, featureFlags) => {
+        const params = defaultParams()
+        const { ledgerRepository, summaryLogRowStatesRepository } =
+          await seedState(params, entries)
+        return fetchOrGenerateReportForPeriod({
+          reportsRepository: createInMemoryReportsRepository()(),
+          ledgerRepository,
+          summaryLogRowStatesRepository,
+          packagingRecyclingNotesRepository: createPrnRepo(),
+          ...params,
+          featureFlags
+        })
+      }
+
+      it('attaches incompleteSummaryLogRows on the generate branch when the flag is on and data is incomplete', async () => {
+        const report = await generate([incompleteReceivedEntry()], gateEnabled)
+
+        const { incompleteSummaryLogRows } = report
+        expect(incompleteSummaryLogRows?.total).toBe(6)
+        expect(incompleteSummaryLogRows?.issues).toHaveLength(6)
+        expect(incompleteSummaryLogRows?.issues).toContainEqual(
+          expect.objectContaining({ rowId: 'row-1', field: 'SUPPLIER_NAME' })
+        )
+      })
+
+      it('caps issues at MAX_ISSUES_REPORTED while total stays truthful', async () => {
+        // Each incomplete received row contributes six missing supplier fields,
+        // so enough rows breach the display cap. total stays truthful; issues
+        // is capped.
+        const FIELDS_PER_ROW = 6
+        const rowCount = Math.ceil((MAX_ISSUES_REPORTED + 1) / FIELDS_PER_ROW)
+        const entries = Array.from({ length: rowCount }, (_, index) =>
+          buildSummaryLogRowStateEntry({
+            rowId: `row-${index + 1}`,
+            wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+            data: { TONNAGE_RECEIVED_FOR_RECYCLING: 5 }
+          })
+        )
+
+        const report = await generate(entries, gateEnabled)
+
+        const { incompleteSummaryLogRows } = report
+        expect(incompleteSummaryLogRows?.total).toBe(rowCount * FIELDS_PER_ROW)
+        expect(incompleteSummaryLogRows?.total).toBeGreaterThan(
+          MAX_ISSUES_REPORTED
+        )
+        expect(incompleteSummaryLogRows?.issues).toHaveLength(
+          MAX_ISSUES_REPORTED
+        )
+      })
+
+      it('omits incompleteSummaryLogRows when the flag is off despite incomplete data', async () => {
+        const report = await generate(
+          [incompleteReceivedEntry()],
+          createInMemoryFeatureFlags()
+        )
+
+        expect(report).not.toHaveProperty('incompleteSummaryLogRows')
+      })
+
+      it('omits incompleteSummaryLogRows when the flag is on but data is complete', async () => {
+        const report = await generate([completeReceivedEntry()], gateEnabled)
+
+        expect(report).not.toHaveProperty('incompleteSummaryLogRows')
+      })
+
+      it('never attaches incompleteSummaryLogRows on the stored-report branch', async () => {
+        const params = defaultParams()
+        const { ledgerRepository, summaryLogRowStatesRepository } =
+          await seedState(params, [incompleteReceivedEntry()])
+        const reportsRepository = createInMemoryReportsRepository()()
+        const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
+
+        await reportsRepository.createReport({
+          organisationId: params.organisationId,
+          registrationId: params.registrationId,
+          year: 2024,
+          cadence: 'monthly',
+          period: 1,
+          submissionNumber: 1,
+          startDate: '2024-01-01',
+          endDate: '2024-01-31',
+          dueDate: '2024-02-15',
+          changedBy,
+          material: 'plastic',
+          wasteProcessingType: 'reprocessor',
+          source: { summaryLogId: 'sl-1', lastUploadedAt: null },
+          prn: null,
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: []
+          }
+        })
+
+        const report = await fetchOrGenerateReportForPeriod({
+          reportsRepository,
+          ledgerRepository,
+          summaryLogRowStatesRepository,
+          packagingRecyclingNotesRepository: createPrnRepo(),
+          ...params,
+          featureFlags: gateEnabled
+        })
+
+        expect(report).not.toHaveProperty('incompleteSummaryLogRows')
+      })
     })
   })
 
