@@ -218,7 +218,7 @@ export const adminPackagingRecyclingNotesCancel = {
     const { packagingRecyclingNotesRepository, params, logger } = request
     const { id } = params
 
-    logger.debug({
+    logger.info({
       message: `Admin cancel requested: id=${id}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
