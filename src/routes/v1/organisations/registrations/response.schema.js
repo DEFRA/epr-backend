@@ -19,11 +19,6 @@ const addressSchema = Joi.object({
   fullAddress: Joi.string().optional()
 })
 
-/**
- * The store spells these `siteCapacityInTonnes` and `siteCapacityTimescale`,
- * repeating the object that holds them. A key says what the value is, and the
- * object it sits in says what it belongs to.
- */
 const capacitySchema = Joi.object({
   material: Joi.string().required(),
   tonnes: Joi.number().required(),
@@ -37,12 +32,6 @@ const siteSchema = Joi.object({
 })
 
 /**
- * `validFrom` and `validTo` are one range, and the domain already passes them
- * as one object - `isWithinAccreditationDateRange(date, { validFrom, validTo })`
- * in `common/helpers/dates/accreditation.js`. The bounds keep their names
- * because `valid` does not repeat `dateRange`, which makes this the same object
- * that helper takes.
- *
  * Each bound is nullable on its own. The store requires both only while a
  * record is approved, or approved or suspended for an accreditation, and
  * outside that each is independently optional, so the range is always present
@@ -56,9 +45,7 @@ const dateRangeSchema = Joi.object({
 /**
  * Glass is the only material that sub-divides, and a record carries one
  * process, so `material` reads `glass_re_melt` or `glass_other` where the store
- * holds `glass` beside a process. `resolveDetailedMaterial` performs the same
- * lift for the waste-records export, the credited-tonnage report and the
- * reports read model.
+ * holds `glass` beside a process.
  */
 const materialSchema = Joi.string().valid(...TONNAGE_MONITORING_MATERIALS)
 const regulatorSchema = Joi.string().valid(...Object.values(REGULATOR))
@@ -89,10 +76,10 @@ const registrationApplicationSchema = Joi.object({
 })
 
 /**
- * `organisationId` names the organisation that holds the registration. The rest
- * of the keys outside `application` are the ones a regulator decides: the
- * number, the dates and the reprocessing type are all recorded when the
- * registration is approved, and the status is derived from the status history.
+ * Apart from `organisationId`, the keys outside `application` are the ones a
+ * regulator decides: the number, the dates and the reprocessing type are
+ * recorded when the registration is approved, and the status is derived from
+ * the status history.
  */
 export const registrationResponseSchema = Joi.object({
   id: Joi.string().required(),
@@ -107,10 +94,9 @@ export const registrationResponseSchema = Joi.object({
 })
 
 /**
- * Content as the applicant supplied it on the accreditation form. The site this
- * form asks for is the address that matches an accreditation to a registered
- * site, so the collection leaves it out: every accreditation in it matches the
- * registration named in the path, and that registration carries the site.
+ * Content as the applicant supplied it on the accreditation form. The site the
+ * form asks for is the address that matches the accreditation to a registered
+ * site, and the registration named in the path carries it.
  */
 const accreditationApplicationSchema = Joi.object({
   orgName: Joi.string().required(),

@@ -100,9 +100,6 @@ export function activeAccreditationValidFrom(accreditation) {
  * (glass_re_melt / glass_other) is returned in place of 'glass'.
  * All other materials are returned unchanged.
  *
- * A registration and an accreditation both answer this, so the parameter names
- * the two fields rather than either type.
- *
  * @param {{ material: Material, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
  * @returns {Material | GlassRecyclingProcess}
  */
@@ -145,14 +142,12 @@ export function resolveAccreditation(registration, org) {
  * registration finds the rest of its accreditations by the natural key
  * `isAccreditationForRegistration` matches on. That key is unique across
  * approved records only, so a registration can hold more than one accreditation
- * with the same key.
+ * with the same key, and an accreditation no registration links to - the state
+ * ORPHAN_ACCREDITATION reports - is returned when its key matches.
  *
- * The same slack lets two registrations share a key, because
- * validateApprovals rejects a duplicate key among approved registrations
- * alone. So the key on its own would give a cancelled registration the live
- * registration's accreditations. An accreditation another registration links
- * to belongs to that registration - validateAccreditationLinkUniqueness holds
- * each accreditation to at most one - so this drops those and keeps the rest.
+ * Two registrations can share a key for the same reason, so an accreditation
+ * another registration links to is excluded:
+ * validateAccreditationLinkUniqueness holds each accreditation to at most one.
  *
  * @param {Registration} registration
  * @param {{ registrations: Registration[], accreditations: Accreditation[] }} org
@@ -187,8 +182,8 @@ function accreditationsClaimedByOtherRegistrations(registration, org) {
 
 /**
  * An accreditation with no start date has no entitlement to order by, so it
- * sorts below every dated one. The number and then the id break a tie, which
- * keeps the order stable for accreditations a regulator never numbered.
+ * sorts below every dated one. The id breaks a remaining tie, so accreditations
+ * a regulator never numbered keep a stable order.
  *
  * @param {Accreditation} a
  * @param {Accreditation} b

@@ -47,13 +47,6 @@ export const registrationGet = {
   }
 }
 
-/**
- * Returns every accreditation whose natural key matches this registration and
- * that no other registration claims. That is a superset of the single
- * accreditation `registration.accreditationId` names, so an accreditation no
- * registration links to - the state ORPHAN_ACCREDITATION reports - appears here
- * when its key matches.
- */
 export const registrationAccreditationsGet = {
   method: 'GET',
   path: registrationAccreditationsGetPath,
