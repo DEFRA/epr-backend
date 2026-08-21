@@ -5,7 +5,7 @@ import {
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
 /** @import { AccreditationStatus, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
-/** @import { Registration, ReportableRegistration } from '#domain/organisations/registration.js' */
+/** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
@@ -93,25 +93,21 @@ export function activeAccreditationValidFrom(accreditation) {
 }
 
 /**
- * Returns the registration's material at its finest granularity. Glass is the
- * only material that sub-divides: each glass registration carries a single
- * recycling process (submissions are split per process upstream), so the
- * process value (glass_re_melt / glass_other) is returned in place of 'glass'.
+ * Returns the record's material at its finest granularity. Glass is the only
+ * material that sub-divides: each glass record carries a single recycling
+ * process (submissions are split per process upstream), so the process value
+ * (glass_re_melt / glass_other) is returned in place of 'glass'.
  * All other materials are returned unchanged.
  *
- * @param {Pick<Registration, 'material' | 'glassRecyclingProcess'>} registration
+ * @param {{ material: Material, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
  * @returns {Material | GlassRecyclingProcess}
  */
-export function resolveDetailedMaterial(registration) {
-  const glassProcess = registration.glassRecyclingProcess
-  if (
-    registration.material === 'glass' &&
-    glassProcess &&
-    glassProcess.length > 0
-  ) {
+export function resolveDetailedMaterial(record) {
+  const glassProcess = record.glassRecyclingProcess
+  if (record.material === 'glass' && glassProcess && glassProcess.length > 0) {
     return glassProcess[0]
   }
-  return registration.material
+  return record.material
 }
 
 /**
@@ -134,5 +130,27 @@ export function resolveAccreditation(registration, org) {
         a.id === registration.accreditationId &&
         ACTIVE_ACCREDITATION_STATUSES.has(a.status)
     ) ?? null
+  )
+}
+
+/**
+ * Returns the accreditations the registration holds.
+ *
+ * `registration.accreditationId` names at most one, so the result holds no
+ * more than one entry. The result is a collection because a registration will
+ * hold several once the model carries them.
+ *
+ * @param {{ accreditationId?: string | null }} registration
+ * @param {{ accreditations: Accreditation[] }} org
+ * @returns {Accreditation[]}
+ */
+export function accreditationsForRegistration(registration, org) {
+  const { accreditationId } = registration
+  if (!accreditationId) {
+    return []
+  }
+
+  return org.accreditations.filter(
+    (accreditation) => accreditation.id === accreditationId
   )
 }
