@@ -3,10 +3,9 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
-import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
 
 /** @import { AccreditationStatus, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
-/** @import { Registration, ReportableRegistration } from '#domain/organisations/registration.js' */
+/** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
@@ -135,64 +134,23 @@ export function resolveAccreditation(registration, org) {
 }
 
 /**
- * Returns every accreditation that belongs to the registration, newest first.
+ * Returns the accreditations the registration holds.
  *
- * An accreditation carries no registration id, and
- * `registration.accreditationId` points forward to at most one, so a
- * registration finds the rest of its accreditations by the natural key
- * `isAccreditationForRegistration` matches on. That key is unique across
- * approved records only, so a registration can hold more than one accreditation
- * with the same key, and an accreditation no registration links to - the state
- * ORPHAN_ACCREDITATION reports - is returned when its key matches.
+ * `registration.accreditationId` names at most one, so the result holds no
+ * more than one entry. The result is a collection because a registration will
+ * hold several once the model carries them.
  *
- * Two registrations can share a key for the same reason, so an accreditation
- * another registration links to is excluded:
- * validateAccreditationLinkUniqueness holds each accreditation to at most one.
- *
- * @param {Registration} registration
- * @param {{ registrations: Registration[], accreditations: Accreditation[] }} org
+ * @param {{ accreditationId?: string | null }} registration
+ * @param {{ accreditations: Accreditation[] }} org
  * @returns {Accreditation[]}
  */
 export function accreditationsForRegistration(registration, org) {
-  const claimedElsewhere = accreditationsClaimedByOtherRegistrations(
-    registration,
-    org
-  )
+  const { accreditationId } = registration
+  if (!accreditationId) {
+    return []
+  }
 
-  return org.accreditations
-    .filter((accreditation) => !claimedElsewhere.has(accreditation.id))
-    .filter((accreditation) =>
-      isAccreditationForRegistration(accreditation, registration)
-    )
-    .sort(byNewestFirst)
-}
-
-/**
- * @param {Registration} registration
- * @param {{ registrations: Registration[] }} org
- * @returns {Set<string>}
- */
-function accreditationsClaimedByOtherRegistrations(registration, org) {
-  return new Set(
-    org.registrations
-      .filter((candidate) => candidate.id !== registration.id)
-      .flatMap((candidate) => candidate.accreditationId ?? [])
-  )
-}
-
-/**
- * An accreditation with no start date has no entitlement to order by, so it
- * sorts below every dated one. The id breaks a remaining tie, so accreditations
- * a regulator never numbered keep a stable order.
- *
- * @param {Accreditation} a
- * @param {Accreditation} b
- * @returns {number}
- */
-function byNewestFirst(a, b) {
-  return (
-    (b.validFrom ?? '').localeCompare(a.validFrom ?? '') ||
-    (b.accreditationNumber ?? '').localeCompare(a.accreditationNumber ?? '') ||
-    b.id.localeCompare(a.id)
+  return org.accreditations.filter(
+    (accreditation) => accreditation.id === accreditationId
   )
 }

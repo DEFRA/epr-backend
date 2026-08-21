@@ -367,18 +367,11 @@ describe('accreditationsForRegistration', () => {
     validFrom: '2026-01-01',
     validTo: '2026-12-31',
     material: 'plastic',
-    wasteProcessingType: 'reprocessor',
-    site: { address: { postcode: 'LS10 1AB' } }
+    wasteProcessingType: 'reprocessor'
   }
 
-  const reprocessorRegistration = {
-    material: 'plastic',
-    wasteProcessingType: 'reprocessor',
-    site: { address: { postcode: 'LS10 1AB' } }
-  }
-
-  it('returns an accreditation that matches the registration by natural key', () => {
-    const reg = buildReg(reprocessorRegistration)
+  it('returns the accreditation the registration names', () => {
+    const reg = buildReg({ accreditationId: 'acc-1' })
     const org = buildOrg({
       registrations: [reg],
       accreditations: [accreditationFixture]
@@ -389,214 +382,23 @@ describe('accreditationsForRegistration', () => {
     ])
   })
 
-  it('matches an accreditation the registration does not link to', () => {
-    const reg = buildReg({
-      ...reprocessorRegistration,
-      id: 'reg-1',
-      accreditationId: null
-    })
+  it('returns an empty list when the registration names no accreditation', () => {
+    const reg = buildReg({ accreditationId: null })
     const org = buildOrg({
       registrations: [reg],
       accreditations: [accreditationFixture]
     })
 
-    expect(accreditationsForRegistration(reg, org)).toHaveLength(1)
+    expect(accreditationsForRegistration(reg, org)).toEqual([])
   })
 
-  it('leaves out an accreditation another registration links to', () => {
-    const cancelled = buildReg({
-      ...reprocessorRegistration,
-      id: 'reg-1',
-      status: 'cancelled'
-    })
-    const approved = buildReg({
-      ...reprocessorRegistration,
-      id: 'reg-2',
-      accreditationId: 'acc-1'
-    })
-    const org = buildOrg({
-      registrations: [cancelled, approved],
-      accreditations: [accreditationFixture]
-    })
-
-    expect(accreditationsForRegistration(cancelled, org)).toEqual([])
-    expect(accreditationsForRegistration(approved, org)).toEqual([
-      accreditationFixture
-    ])
-  })
-
-  it('keeps an accreditation the registration itself links to', () => {
-    const reg = buildReg({
-      ...reprocessorRegistration,
-      id: 'reg-1',
-      accreditationId: 'acc-1'
-    })
+  it('returns an empty list when the organisation holds no accreditation of that id', () => {
+    const reg = buildReg({ accreditationId: 'acc-9' })
     const org = buildOrg({
       registrations: [reg],
       accreditations: [accreditationFixture]
     })
 
-    expect(accreditationsForRegistration(reg, org)).toHaveLength(1)
-  })
-
-  it('returns an empty list when the registration holds no accreditation', () => {
-    const reg = buildReg(reprocessorRegistration)
-    const org = buildOrg({ registrations: [reg], accreditations: [] })
-
     expect(accreditationsForRegistration(reg, org)).toEqual([])
-  })
-
-  it('excludes an accreditation that matches on a different site', () => {
-    const elsewhere = {
-      ...accreditationFixture,
-      site: { address: { postcode: 'BS1 4XE' } }
-    }
-    const reg = buildReg(reprocessorRegistration)
-    const org = buildOrg({ registrations: [reg], accreditations: [elsewhere] })
-
-    expect(accreditationsForRegistration(reg, org)).toEqual([])
-  })
-
-  it('excludes an accreditation that matches on a different material', () => {
-    const otherMaterial = { ...accreditationFixture, material: 'steel' }
-    const reg = buildReg(reprocessorRegistration)
-    const org = buildOrg({
-      registrations: [reg],
-      accreditations: [otherMaterial]
-    })
-
-    expect(accreditationsForRegistration(reg, org)).toEqual([])
-  })
-
-  it.each([
-    { accreditationNumber: null },
-    { accreditationNumber: undefined },
-    { accreditationNumber: '   ' }
-  ])('keeps an accreditation that carries no number (%o)', (numbering) => {
-    const unnumbered = { ...accreditationFixture, ...numbering }
-    const reg = buildReg(reprocessorRegistration)
-    const org = buildOrg({
-      registrations: [reg],
-      accreditations: [unnumbered]
-    })
-
-    expect(accreditationsForRegistration(reg, org)).toEqual([unnumbered])
-  })
-
-  it('keeps two cancelled accreditations that share a key and a year', () => {
-    const first = {
-      ...accreditationFixture,
-      id: 'acc-1',
-      accreditationNumber: 'ACC-001',
-      status: 'cancelled'
-    }
-    const second = {
-      ...accreditationFixture,
-      id: 'acc-2',
-      accreditationNumber: 'ACC-002',
-      status: 'cancelled'
-    }
-    const reg = buildReg(reprocessorRegistration)
-    const org = buildOrg({
-      registrations: [reg],
-      accreditations: [first, second]
-    })
-
-    expect(
-      accreditationsForRegistration(reg, org).map((acc) => acc.id)
-    ).toEqual(['acc-2', 'acc-1'])
-  })
-
-  it('orders the newest accreditation first', () => {
-    const earlier = {
-      ...accreditationFixture,
-      id: 'acc-1',
-      accreditationNumber: 'ACC-001',
-      validFrom: '2026-02-15',
-      validTo: '2026-03-31',
-      status: 'cancelled'
-    }
-    const later = {
-      ...accreditationFixture,
-      id: 'acc-2',
-      accreditationNumber: 'ACC-002',
-      validFrom: '2026-07-01',
-      validTo: '2026-12-31'
-    }
-    const reg = buildReg(reprocessorRegistration)
-    const org = buildOrg({
-      registrations: [reg],
-      accreditations: [earlier, later]
-    })
-
-    expect(
-      accreditationsForRegistration(reg, org).map((acc) => acc.id)
-    ).toEqual(['acc-2', 'acc-1'])
-  })
-
-  it('orders an accreditation with no start date last', () => {
-    const undated = {
-      ...accreditationFixture,
-      id: 'acc-2',
-      accreditationNumber: 'ACC-002',
-      status: 'cancelled',
-      validFrom: undefined,
-      validTo: undefined
-    }
-    const reg = buildReg(reprocessorRegistration)
-    const org = buildOrg({
-      registrations: [reg],
-      accreditations: [undated, accreditationFixture]
-    })
-
-    expect(
-      accreditationsForRegistration(reg, org).map((acc) => acc.id)
-    ).toEqual(['acc-1', 'acc-2'])
-  })
-
-  it('orders two undated accreditations by id when neither carries a number', () => {
-    const first = {
-      ...accreditationFixture,
-      id: 'acc-1',
-      accreditationNumber: null,
-      status: 'rejected',
-      validFrom: undefined,
-      validTo: undefined
-    }
-    const second = {
-      ...accreditationFixture,
-      id: 'acc-2',
-      accreditationNumber: null,
-      status: 'rejected',
-      validFrom: undefined,
-      validTo: undefined
-    }
-    const reg = buildReg(reprocessorRegistration)
-    const org = buildOrg({
-      registrations: [reg],
-      accreditations: [first, second]
-    })
-
-    expect(
-      accreditationsForRegistration(reg, org).map((acc) => acc.id)
-    ).toEqual(['acc-2', 'acc-1'])
-  })
-
-  it('matches an exporter accreditation on type and material alone', () => {
-    const exporterAccreditation = {
-      ...accreditationFixture,
-      wasteProcessingType: 'exporter',
-      site: undefined
-    }
-    const reg = buildReg({
-      material: 'plastic',
-      wasteProcessingType: 'exporter'
-    })
-    const org = buildOrg({
-      registrations: [reg],
-      accreditations: [exporterAccreditation]
-    })
-
-    expect(accreditationsForRegistration(reg, org)).toHaveLength(1)
   })
 })

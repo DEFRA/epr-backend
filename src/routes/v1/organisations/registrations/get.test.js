@@ -306,9 +306,9 @@ describe(`GET ${registrationGetPath}`, () => {
 describe(`GET ${registrationAccreditationsGetPath}`, () => {
   setupAuthContext()
 
-  it('returns an accreditation the registration does not link to', async () => {
-    const registration = aRegistration()
+  it('returns the accreditation the registration links to', async () => {
     const accreditation = anAccreditation()
+    const registration = aRegistration({ accreditationId: accreditation.id })
 
     expect(
       await readAccreditations(
@@ -332,30 +332,33 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
     ])
   })
 
-  it('returns an accreditation no registration links to, which the validation rules report as orphaned', async () => {
-    const registration = aRegistration()
-    const orphan = anAccreditation()
-
-    const accreditations = await readAccreditations(
-      anOrganisation(registration, [orphan]),
-      registration.id
-    )
-
-    expect(registration.accreditationId).toBeUndefined()
-    expect(accreditations.map((a) => a.id)).toEqual([orphan.id])
-  })
-
-  it('returns an empty list when the registration holds no accreditation', async () => {
+  it('returns an empty list when the registration links to no accreditation', async () => {
     const registration = aRegistration()
 
     expect(
-      await readAccreditations(anOrganisation(registration), registration.id)
+      await readAccreditations(
+        anOrganisation(registration, [anAccreditation()]),
+        registration.id
+      )
+    ).toEqual([])
+  })
+
+  it('returns an empty list when the link names an accreditation the organisation does not hold', async () => {
+    const registration = aRegistration({
+      accreditationId: '68f6a147c117aec8a1ab74ff'
+    })
+
+    expect(
+      await readAccreditations(
+        anOrganisation(registration, [anAccreditation()]),
+        registration.id
+      )
     ).toEqual([])
   })
 
   it('returns an accreditation that never got a number, with a null number', async () => {
-    const registration = aRegistration()
     const unnumbered = anUnnumberedAccreditation()
+    const registration = aRegistration({ accreditationId: unnumbered.id })
 
     const accreditations = await readAccreditations(
       anOrganisation(registration, [unnumbered]),
@@ -368,47 +371,12 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
     expect(accreditations[0].status).toBe('created')
   })
 
-  it('leaves out an accreditation for another site', async () => {
-    const registration = aRegistration()
-    const elsewhere = anAccreditation(ACCREDITATION_STATUS.APPROVED, {
-      site: { address: { line1: 'Another site', postcode: 'BS1 4XE' } }
-    })
-
-    expect(
-      await readAccreditations(
-        anOrganisation(registration, [elsewhere]),
-        registration.id
-      )
-    ).toEqual([])
-  })
-
-  it('returns two cancelled accreditations that share a key, newest first', async () => {
-    const registration = aRegistration()
-    const earlier = anAccreditation(ACCREDITATION_STATUS.CANCELLED, {
-      accreditationNumber: 'A26ER5001180097PL',
-      validFrom: '2026-02-15',
-      validTo: '2026-03-31'
-    })
-    const later = anAccreditation(ACCREDITATION_STATUS.CANCELLED, {
-      accreditationNumber: 'A26ER5001180114PL'
-    })
-
-    const accreditations = await readAccreditations(
-      anOrganisation(registration, [earlier, later]),
-      registration.id
-    )
-
-    expect(
-      accreditations.map((accreditation) => accreditation.accreditationNumber)
-    ).toEqual(['A26ER5001180114PL', 'A26ER5001180097PL'])
-  })
-
   it('returns null dates for an accreditation that carries none', async () => {
-    const registration = aRegistration()
     const undated = anAccreditation(ACCREDITATION_STATUS.CANCELLED, {
       validFrom: undefined,
       validTo: undefined
     })
+    const registration = aRegistration({ accreditationId: undated.id })
 
     const [accreditation] = await readAccreditations(
       anOrganisation(registration, [undated]),
@@ -422,10 +390,10 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
   })
 
   it('keeps a range that carries only a start, rather than dropping the date', async () => {
-    const registration = aRegistration()
     const openEnded = anAccreditation(ACCREDITATION_STATUS.CANCELLED, {
       validTo: undefined
     })
+    const registration = aRegistration({ accreditationId: openEnded.id })
 
     const [accreditation] = await readAccreditations(
       anOrganisation(registration, [openEnded]),
@@ -439,12 +407,14 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
   })
 
   it('carries no reprocessing type for an exporter accreditation', async () => {
-    const registration = buildRegistration({ wasteProcessingType: 'exporter' })
     const exporterAccreditation = buildAccreditation({
       wasteProcessingType: 'exporter',
-      material: registration.material,
       accreditationNumber: 'A26ER5001180114PL',
       statusHistory: statusHistoryEndingIn(ACCREDITATION_STATUS.APPROVED)
+    })
+    const registration = buildRegistration({
+      wasteProcessingType: 'exporter',
+      accreditationId: exporterAccreditation.id
     })
 
     const [accreditation] = await readAccreditations(
@@ -456,11 +426,12 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
     expect(accreditation.application.wasteProcessingType).toBe('exporter')
   })
 
-  it('leaves the site to the registration the accreditation matches', async () => {
-    const registration = aRegistration()
+  it('leaves the site to the registration, which already carries it', async () => {
+    const accreditation = anAccreditation()
+    const registration = aRegistration({ accreditationId: accreditation.id })
 
     const [returned] = await readAccreditations(
-      anOrganisation(registration, [anAccreditation()]),
+      anOrganisation(registration, [accreditation]),
       registration.id
     )
 
@@ -479,8 +450,9 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
   })
 
   describe('access control', () => {
-    const registration = aRegistration()
-    const organisation = anOrganisation(registration, [anAccreditation()])
+    const accreditation = anAccreditation()
+    const registration = aRegistration({ accreditationId: accreditation.id })
+    const organisation = anOrganisation(registration, [accreditation])
 
     /** @type {import('#test/create-test-server.js').TestServer} */
     let server

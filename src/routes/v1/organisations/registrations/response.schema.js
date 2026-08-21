@@ -95,8 +95,8 @@ export const registrationResponseSchema = Joi.object({
 
 /**
  * Content as the applicant supplied it on the accreditation form. The site the
- * form asks for is the address that matches the accreditation to a registered
- * site, and the registration named in the path carries it.
+ * form asks for is the registered site's address, which the registration named
+ * in the path carries.
  */
 const accreditationApplicationSchema = Joi.object({
   orgName: Joi.string().required(),
