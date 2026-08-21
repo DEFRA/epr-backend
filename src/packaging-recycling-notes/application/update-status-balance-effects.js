@@ -75,6 +75,10 @@ const TRANSITION_TO_COMMAND = Object.freeze({
   [`${PRN_STATUS.AWAITING_CANCELLATION}|${PRN_STATUS.CANCELLED}`]: {
     method: 'cancelIssuedPrn',
     logOperation: 'credit_full'
+  },
+  [`${PRN_STATUS.ACCEPTED}|${PRN_STATUS.CANCELLED}`]: {
+    method: 'cancelIssuedPrn',
+    logOperation: 'credit_full'
   }
 })
 
