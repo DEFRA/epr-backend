@@ -153,7 +153,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     vi.clearAllMocks()
   })
 
-  it('cancels an accepted PRN within the window, crediting the full tonnage back to both balances (Scenarios 1 and 3)', async () => {
+  it('cancels an accepted PRN within the window, crediting the full tonnage back to both balances', async () => {
     await startServer(buildAcceptedPrn({ tonnage: 500 }))
 
     const response = await server.inject({
@@ -259,7 +259,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     })
   })
 
-  it('allows cancellation exactly at the 31 January deadline instant (Scenario 5)', async () => {
+  it('allows cancellation exactly at the 31 January deadline instant', async () => {
     // Faking only Date leaves setTimeout/setInterval real, so Hapi's own
     // async request lifecycle (server.inject) is unaffected.
     vi.useFakeTimers({ toFake: ['Date'] })
@@ -277,7 +277,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     vi.useRealTimers()
   })
 
-  it('rejects cancellation one millisecond after the deadline (Scenario 2)', async () => {
+  it('rejects cancellation one millisecond after the deadline', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
 
@@ -335,7 +335,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     PRN_STATUS.CANCELLED,
     PRN_STATUS.DELETED,
     PRN_STATUS.DISCARDED
-  ])('rejects cancelling a %s PRN (Scenario 4)', async (currentStatus) => {
+  ])('rejects cancelling a %s PRN', async (currentStatus) => {
     await startServer(buildAcceptedPrn({ currentStatus }))
 
     const response = await server.inject({
