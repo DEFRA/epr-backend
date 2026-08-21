@@ -68,7 +68,8 @@ const buildAwaitingAcceptancePrn = (overrides = {}) => ({
   createdBy: creator,
   updatedAt: issuedDate,
   updatedBy: issuer,
-  ...overrides
+  ...overrides,
+  obligationYear: overrides.obligationYear ?? 2026
 })
 
 describe('mapToExternalPrn', () => {

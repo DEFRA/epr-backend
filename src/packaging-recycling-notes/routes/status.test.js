@@ -79,6 +79,7 @@ const createMockPrn = (overrides = {}) => ({
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },
+  obligationYear: 2026,
   issuedToOrganisation: {
     id: 'producer-org-789',
     name: 'Producer Org'

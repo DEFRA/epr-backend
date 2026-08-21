@@ -65,7 +65,8 @@ const buildPrn = (overrides = {}) => ({
     currentStatusAt: baseAt,
     history: []
   },
-  ...overrides
+  ...overrides,
+  obligationYear: overrides.obligationYear ?? 2026
 })
 
 /**

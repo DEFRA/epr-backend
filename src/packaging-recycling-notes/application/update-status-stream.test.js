@@ -56,6 +56,7 @@ const buildPrn = (overrides = {}) => ({
     material: 'plastic',
     submittedToRegulator: REGULATOR.EA
   },
+  obligationYear: 2026,
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: TONNAGE,
   isExport: false,

@@ -99,6 +99,7 @@ export const prnInsertSchema = Joi.object({
       .keys({ siteAddress: siteAddressSchema.required() })
       .required()
   }),
+  obligationYear: Joi.number().integer().required(),
   issuedToOrganisation: organisationNameAndIdSchema.required(),
   tonnage: Joi.number().positive().required(),
   isExport: Joi.boolean().required(),
@@ -113,5 +114,8 @@ export const prnInsertSchema = Joi.object({
 
 export const prnReadSchema = prnInsertSchema.keys({
   id: Joi.string().required(),
+  obligationYear: Joi.number()
+    .integer()
+    .default(Joi.ref('accreditation.accreditationYear')),
   notes: Joi.string().empty(null).optional()
 })

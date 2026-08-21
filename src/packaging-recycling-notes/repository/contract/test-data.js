@@ -93,6 +93,7 @@ export const buildPrn = (overrides = {}) => {
     },
     registrationId: `reg-${randomUUID()}`,
     accreditation: buildAccreditation(),
+    obligationYear: 2026,
     issuedToOrganisation: {
       id: `recipient-${randomUUID()}`,
       name: 'Recipient Org',
