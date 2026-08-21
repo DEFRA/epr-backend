@@ -20,5 +20,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isReportDataCompleteDiagnosticEnabled() {
     return flags.reportDataCompleteDiagnostic ?? false
+  },
+  isPrnAdminCancellationEnabled() {
+    return flags.prnAdminCancellation ?? false
   }
 })

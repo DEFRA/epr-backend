@@ -666,6 +666,41 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(response.payload).toContain('No transition exists from')
       })
 
+      it('returns 400 when an operator attempts to cancel an accepted PRN (PAE-1823, service-maintainer-only edge)', async () => {
+        // accepted -> cancelled is a real transition (INTERNAL_ACTOR_BY_STATUS
+        // has no entry for 'accepted', so the operator route can never resolve
+        // an actor for it) - only the admin route can drive it, as
+        // PRN_ACTOR.SERVICE_MAINTAINER, which this route can never supply.
+        const createdPrnId = '507f1f77bcf86cd799439044'
+        const createdPrn = createMockPrn({
+          id: createdPrnId,
+          status: {
+            currentStatus: PRN_STATUS.ACCEPTED,
+            history: [
+              {
+                status: PRN_STATUS.ACCEPTED,
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
+              }
+            ]
+          }
+        })
+
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createdPrn
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${createdPrnId}/status`,
+          ...asOperator(),
+          payload: { status: PRN_STATUS.CANCELLED }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(response.payload).toContain('is not permitted')
+      })
+
       it('returns 400 when PRN has unknown current status', async () => {
         const unknownStatusPrnId = '507f1f77bcf86cd799439033'
         const unknownStatusPrn = createMockPrn({

@@ -11,6 +11,7 @@ import {
   validateTransition,
   assertAccreditationCanIssue
 } from '#packaging-recycling-notes/domain/model.js'
+import { assertCancellationAllowed } from '#packaging-recycling-notes/domain/cancellation.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -271,6 +272,12 @@ export async function updatePrnStatus({
 
   const currentStatus = prn.status.currentStatus
   validateTransition(currentStatus, newStatus, actor)
+  assertCancellationAllowed(
+    currentStatus,
+    newStatus,
+    prn.accreditation.accreditationYear,
+    updatedAt ?? new Date()
+  )
 
   const ctx = buildWriteContext({
     prnRepository,

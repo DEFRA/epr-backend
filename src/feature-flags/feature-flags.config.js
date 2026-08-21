@@ -19,5 +19,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isReportDataCompleteDiagnosticEnabled() {
     return config.get('featureFlags.reportDataCompleteDiagnostic')
+  },
+  isPrnAdminCancellationEnabled() {
+    return config.get('featureFlags.prnAdminCancellation')
   }
 })
