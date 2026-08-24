@@ -390,7 +390,6 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`
 
       const tailEvent = (kind, number, createdAt) => ({
-        id: `event-${number}`,
         registrationId,
         accreditationId,
         organisationId,

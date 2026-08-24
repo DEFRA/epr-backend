@@ -75,7 +75,6 @@ const buildPrn = (overrides = {}) => ({
 })
 
 const buildLedgerEvent = (kind, number = APPENDED_WATERMARK) => ({
-  id: `event-${number}`,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,
@@ -96,7 +95,6 @@ const buildLedgerEvent = (kind, number = APPENDED_WATERMARK) => ({
 const buildSeededLedgerRepository = () =>
   createInMemoryLedgerRepository([
     {
-      id: 'seed-1',
       registrationId: REG_ID,
       accreditationId: ACC_ID,
       organisationId: ORG_ID,

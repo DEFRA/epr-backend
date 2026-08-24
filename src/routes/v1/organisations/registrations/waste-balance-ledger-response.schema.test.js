@@ -4,7 +4,6 @@ import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { wasteBalanceLedgerResponseSchema } from './waste-balance-ledger-response.schema.js'
 
 const commonKeys = () => ({
-  id: 'evt-1',
   number: 1,
   createdAt: new Date('2026-01-15T10:00:00.000Z'),
   createdBy: { id: 'user-1', name: 'Jo Sample', email: 'jo@example.com' },
@@ -128,10 +127,15 @@ describe('the waste balance ledger response schema', () => {
     }
   )
 
-  it('refuses an event that states no id', () => {
-    const { number, createdAt, createdBy, balance } = commonKeys()
+  it('refuses an event that names itself by anything but its number', () => {
+    const event = summaryLogEvent({ id: 'stored-event-1' })
+
+    expect(refusalOf(event)).toContain('"events[0].id" is not allowed')
+  })
+
+  it('refuses an event that states no number', () => {
+    const { createdAt, createdBy, balance } = commonKeys()
     const event = {
-      number,
       createdAt,
       createdBy,
       balance,
@@ -139,7 +143,7 @@ describe('the waste balance ledger response schema', () => {
       summaryLog: { id: 'log-1', creditTotal: 100 }
     }
 
-    expect(refusalOf(event)).toContain('"events[0].id" is required')
+    expect(refusalOf(event)).toContain('"events[0].number" is required')
   })
 
   it('refuses an event that hands out the stored payload', () => {

@@ -44,7 +44,6 @@ describe('waste-balances ledger repository - in-memory implementation', () => {
       }
       const repository = createInMemoryLedgerRepository([
         {
-          id: 'event-2',
           ...buildLedgerEvent({
             ...partition,
             number: 2,
@@ -52,7 +51,6 @@ describe('waste-balances ledger repository - in-memory implementation', () => {
           })
         },
         {
-          id: 'event-1',
           ...buildLedgerEvent({
             ...partition,
             number: 1,

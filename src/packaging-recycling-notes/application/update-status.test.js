@@ -84,7 +84,6 @@ const buildPrn = (overrides = {}) => ({
  * @returns {import('#waste-balances/repository/ledger-schema.js').LedgerEvent}
  */
 const buildOpeningBalanceEvent = ({ amount, availableAmount }) => ({
-  id: 'opening-balance',
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,
@@ -597,7 +596,6 @@ describe('updatePrnStatus', () => {
       ])(createMockLogger())
       const ledgerRepository = createInMemoryLedgerRepository([
         {
-          id: 'opening-balance',
           registrationId: DEFAULT_REG_ID,
           accreditationId: ACC_ID,
           organisationId: DEFAULT_ORG_ID,

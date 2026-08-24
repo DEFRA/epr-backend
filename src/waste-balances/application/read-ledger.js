@@ -29,9 +29,9 @@
  * What every event states, whichever thing it concerns.
  *
  * @typedef {Object} LedgerEventCommon
- * @property {string} id
  * @property {number} number The event's position in its ledger, counting from
- *   one.
+ *   one. With the ledger it names the event, so the ledger's own storage id is
+ *   never handed out.
  * @property {LedgerEventKind} kind
  * @property {Date} createdAt
  * @property {LedgerActor} createdBy
@@ -132,7 +132,6 @@ const creditsASummaryLog = (payload) => 'summaryLogId' in payload
  */
 const toEventResource = (event) => {
   const common = {
-    id: event.id,
     number: event.number,
     kind: event.kind,
     createdAt: event.createdAt,

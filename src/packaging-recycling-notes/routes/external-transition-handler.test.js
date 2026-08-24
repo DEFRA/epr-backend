@@ -85,7 +85,6 @@ const buildPrn = (currentStatus) => ({
  * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number) => ({
-  id: `event-${number}`,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,

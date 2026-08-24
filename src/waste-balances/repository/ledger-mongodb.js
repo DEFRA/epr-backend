@@ -70,13 +70,12 @@ export async function ensureLedgerCollection(db) {
   return collection
 }
 
-const toLedgerEvent = (doc) => {
-  const { _id, ...rest } = doc
-  return validateLedgerEventRead({
-    id: _id.toString(),
-    ...rest
-  })
-}
+/**
+ * A reader addresses an event by its ledger and its `number`, so `_id` is the
+ * collection's own bookkeeping and goes no further. The read schema strips
+ * every key it does not name, `_id` among them.
+ */
+const toLedgerEvent = (doc) => validateLedgerEventRead(doc)
 
 /**
  * Classify a MongoDB E11000 duplicate key error raised by an append.

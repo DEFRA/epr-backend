@@ -76,7 +76,7 @@ describe(`GET ${registrationWasteBalanceLedgerGetPath}`, () => {
   })
 
   it('gives a submission event its balances, its actor and the log it credits', async () => {
-    const [stored] = await ledgerRepository.appendEvents([
+    await ledgerRepository.appendEvents([
       buildLedgerEvent({
         organisationId: 'org-shape',
         registrationId: 'reg-shape',
@@ -97,7 +97,6 @@ describe(`GET ${registrationWasteBalanceLedgerGetPath}`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload).events[0]).toEqual({
-      id: stored.id,
       number: 1,
       kind: 'summary-log-submitted',
       createdAt: '2026-01-15T10:00:00.000Z',

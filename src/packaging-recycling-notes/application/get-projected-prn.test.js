@@ -76,7 +76,6 @@ const buildPrn = (overrides = {}) => ({
  * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number, createdAt) => ({
-  id: `event-${number}`,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,

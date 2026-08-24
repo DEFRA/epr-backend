@@ -53,19 +53,15 @@ const prnSchema = Joi.object({
 /**
  * What every event states, whichever thing it concerns.
  *
- * `number` is the event's position in its ledger, and with the ledger id it is
- * the event's identity: two events of one ledger differ by it, and it is what
- * orders them. A caller that shows no ordinal still needs it to say which event
- * it means. A writer also commits to the slot it names, but a field is not a
- * storage fact merely because the store also uses it.
+ * `number` addresses the event. The stream is the three-part ledger id, which
+ * the envelope states once, and `number` is the event's position in that
+ * stream, so the pair names the event and orders it. A caller that shows no
+ * ordinal still needs it to say which event it means.
  *
- * `id` is the id the ledger gives the event. The read model promises one, so
- * the representation states one. It is stated whether or not a caller has
- * anything to do with it: what the resource is does not depend on what any
- * caller does with it.
+ * The store also gives each event a document id. Nothing addresses an event by
+ * it, so it stays in the store.
  */
 const commonEventKeys = {
-  id: Joi.string().required(),
   number: Joi.number().integer().min(1).required(),
   createdAt: Joi.date().required(),
   createdBy: actorSchema.required(),
