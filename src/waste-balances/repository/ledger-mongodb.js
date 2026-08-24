@@ -70,11 +70,6 @@ export async function ensureLedgerCollection(db) {
   return collection
 }
 
-/**
- * A reader addresses an event by its ledger and its `number`, so `_id` is the
- * collection's own bookkeeping and goes no further. The read schema strips
- * every key it does not name, `_id` among them.
- */
 const toLedgerEvent = (doc) => validateLedgerEventRead(doc)
 
 /**

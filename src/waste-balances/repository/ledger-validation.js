@@ -20,13 +20,6 @@ export const validateLedgerEventInsert = (data) => {
 }
 
 /**
- * A read validates the shape a write states, because the store adds nothing to
- * it. The two differ in whose fault a refusal is: bad insert data comes from a
- * caller, and a stored document that fails is our own defect.
- *
- * The event is named by its ledger and number rather than by any document id,
- * which is how a reader addresses it.
- *
  * @returns {import('./ledger-schema.js').LedgerEvent}
  */
 export const validateLedgerEventRead = (data) => {

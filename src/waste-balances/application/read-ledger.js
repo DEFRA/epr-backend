@@ -4,9 +4,6 @@
  */
 
 /**
- * A balance sits inside an event that already says which balance it is, so each
- * figure names what it counts rather than repeating the word amount.
- *
  * @typedef {Object} LedgerBalance
  * @property {number} total Credits minus debits.
  * @property {number} available The total, minus the tonnage a created note
@@ -14,10 +11,9 @@
  */
 
 /**
- * Who wrote an event. The ledger holds the best view of an actor it has, so
- * neither the name nor the email is promised: a machine writer carries no
- * email, and an event rebuilt from a record written before a name was captured
- * carries no name.
+ * Who wrote an event. Neither the name nor the email is promised: a machine
+ * writer carries no email, and an event rebuilt from an older record carries
+ * no name.
  *
  * @typedef {Object} LedgerActor
  * @property {string} id
@@ -30,8 +26,7 @@
  *
  * @typedef {Object} LedgerEventCommon
  * @property {number} number The event's position in its ledger, counting from
- *   one. With the ledger it names the event, so the ledger's own storage id is
- *   never handed out.
+ *   one.
  * @property {LedgerEventKind} kind
  * @property {Date} createdAt
  * @property {LedgerActor} createdBy
@@ -61,15 +56,12 @@
  */
 
 /**
- * An event names the one thing it concerns, so a reader takes the tonnage of a
- * note from `prn` and the credit of a submission from `summaryLog`. An event
- * that names both is a type error.
+ * An event names the one thing it concerns, and naming both is a type error.
  *
- * An event that names one and states a `kind` belonging to the other is not.
- * Tying `kind` to the subject here needs a stored event that is itself
- * discriminated on `kind`, and `LedgerEventInsert` pairs the two through the
- * insert schema instead. The response schema tests the pairing at the wire, so
- * a mismatch is refused rather than served.
+ * Naming one and stating a `kind` belonging to the other is not. Tying `kind`
+ * to the subject here needs a stored event discriminated on `kind`, and
+ * `LedgerEventInsert` pairs the two through the insert schema instead. The
+ * response schema refuses a mismatch at the wire.
  *
  * @typedef {SummaryLogEventResource | PrnEventResource} LedgerEventResource
  */
@@ -112,14 +104,11 @@ const toBalance = ({ amount, availableAmount }) => ({
 const toActor = ({ id, name, email }) => ({ id, name, email })
 
 /**
- * A stored event pairs a `kind` with a `payload`, and the insert schema rather
- * than the type holds the two together. The payload's own key tells the two
- * apart: a summary log submission names the log it credits, and every PRN event
- * names the note it concerns.
+ * The payload's own key tells the two apart: a summary log submission names the
+ * log it credits, and every PRN event names the note it concerns.
  *
  * A stored event whose kind and payload disagree does not exist: both adapters
- * validate an insert against `ledgerEventInsertSchema`, which couples the two,
- * and the MongoDB adapter re-checks it on every read.
+ * validate an insert against `ledgerEventInsertSchema`, which couples the two.
  *
  * @param {SummaryLogSubmittedPayload | PrnPayload} payload
  * @returns {payload is SummaryLogSubmittedPayload}
@@ -159,14 +148,9 @@ const toEventResource = (event) => {
 /**
  * Reads one waste balance ledger.
  *
- * A stored event repeats the organisation, registration and accreditation on
- * every row. Those three are the ledger's identity, not the event's, so they
- * come out once under `ledger`. The registered-only ledger of a registration
- * says so there, as an accreditation of null.
- *
- * Each event is built field by field rather than by narrowing a stored one. A
- * field arrives in a response because someone named it here, and a field added
- * to the ledger reaches nobody until someone does.
+ * The organisation, registration and accreditation identify the ledger rather
+ * than the event, so they come out once under `ledger`. A registration's
+ * registered-only ledger says so there, as an accreditation of null.
  *
  * The whole ledger comes back. A ledger holds one event per submission and per
  * PRN decision, so the count follows the operator's own activity rather than

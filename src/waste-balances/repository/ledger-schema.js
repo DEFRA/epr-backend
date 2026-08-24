@@ -122,8 +122,7 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * Shape returned by `WasteBalanceLedgerRepository` reads: exactly what was
- * written. An event is addressed by its ledger and its `number`, so a store
- * that gives a document its own id keeps that id to itself.
+ * written.
  *
  * @typedef {LedgerEventInsert} LedgerEvent
  */
