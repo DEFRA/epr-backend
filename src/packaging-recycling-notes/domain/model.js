@@ -265,6 +265,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   accreditationYear: number | null;
  *   createdAt: Date;
  *   isDecemberWaste: boolean;
+ *   obligationYear: number;
  *   issuedToOrganisation: OrganisationNameAndId;
  *   material: string;
  *   notes: string | null;

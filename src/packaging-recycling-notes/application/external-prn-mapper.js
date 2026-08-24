@@ -90,6 +90,7 @@ export function mapToExternalPrn(prn) {
     accreditation: mapAccreditation(prn.accreditation),
     isDecemberWaste: prn.isDecemberWaste,
     isExport: prn.isExport,
+    obligationYear: prn.obligationYear,
     tonnageValue: prn.tonnage
   }
 

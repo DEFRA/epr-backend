@@ -43,6 +43,7 @@ const mockPrns = [
     tonnage: 50,
     isExport: false,
     isDecemberWaste: false,
+    obligationYear: 2026,
     status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
     createdAt: new Date('2026-01-15T10:00:00Z'),
     createdBy: { id: 'user-1', name: 'Test User' },
@@ -70,6 +71,7 @@ const mockPrns = [
     tonnage: 120,
     isExport: false,
     isDecemberWaste: false,
+    obligationYear: 2027,
     status: {
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       issued: {
@@ -167,6 +169,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
           },
           tonnage: 50,
           material: 'glass',
+          obligationYear: 2026,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           createdAt: '2026-01-15T10:00:00.000Z',
           issuedAt: null,
@@ -181,6 +184,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
           },
           tonnage: 120,
           material: 'glass',
+          obligationYear: 2027,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           createdAt: '2026-01-18T14:30:00.000Z',
           issuedAt: '2026-01-20T09:00:00.000Z',

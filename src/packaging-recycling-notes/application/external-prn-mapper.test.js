@@ -105,6 +105,7 @@ describe('mapToExternalPrn', () => {
       },
       isDecemberWaste: true,
       isExport: false,
+      obligationYear: 2026,
       tonnageValue: 126,
       issuerNotes: 'T2E Reference 9201234'
     })

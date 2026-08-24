@@ -166,6 +166,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     const body = JSON.parse(response.payload)
     expect(body.status).toBe(PRN_STATUS.CANCELLED)
+    expect(body.obligationYear).toBe(2026)
 
     const stored = await packagingRecyclingNotesRepository.findById(prnId)
     expect(stored?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)

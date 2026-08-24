@@ -125,6 +125,7 @@ describe('GET /v1/admin/organisations/{organisationId}/registrations/{registrati
     expect(payload.items[0].issuedAt).toBe(
       mockPrn.status.issued.at.toISOString()
     )
+    expect(payload.items[0].obligationYear).toBe(mockPrn.obligationYear)
   })
 
   it('returns 401 when no auth token is provided', async () => {

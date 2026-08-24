@@ -111,6 +111,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(body.notes).toBeNull()
         expect(body.isDecemberWaste).toBe(false)
         expect(body.accreditationYear).toBe(2026)
+        expect(body.obligationYear).toBe(2026)
         expect(body.wasteProcessingType).toBe(WASTE_PROCESSING_TYPE.REPROCESSOR)
       })
 
