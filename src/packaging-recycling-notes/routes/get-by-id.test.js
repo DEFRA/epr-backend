@@ -55,6 +55,7 @@ const mockPrn = {
   tonnage: 50,
   isExport: false,
   isDecemberWaste: true,
+  obligationYear: 2027,
   status: {
     currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
     issued: {
@@ -144,6 +145,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           id: prnId,
           prnNumber: null,
           accreditationYear: 2026,
+          obligationYear: 2027,
           issuedToOrganisation: {
             id: 'acme-001',
             name: 'Acme Packaging Ltd',

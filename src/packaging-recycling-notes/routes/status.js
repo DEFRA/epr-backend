@@ -62,6 +62,7 @@ const buildResponse = (prn) => ({
   tonnage: prn.tonnage,
   material: prn.accreditation?.material,
   issuedToOrganisation: prn.issuedToOrganisation,
+  obligationYear: prn.obligationYear,
   status: prn.status.currentStatus,
   updatedAt: prn.updatedAt
 })

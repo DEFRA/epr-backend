@@ -92,6 +92,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
         expect(payload.items).toHaveLength(1)
         expect(payload.items[0].id).toBe(mockPrn.id)
         expect(payload.items[0].tonnageValue).toBe(mockPrn.tonnage)
+        expect(payload.items[0].obligationYear).toBe(mockPrn.obligationYear)
         expect(payload.items[0].status.currentStatus).toBe(
           PRN_STATUS.AWAITING_ACCEPTANCE
         )
@@ -246,6 +247,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
         expect(item.accreditation.id).toBe(mockPrn.accreditation.id)
         expect(item.isDecemberWaste).toBe(mockPrn.isDecemberWaste)
         expect(item.isExport).toBe(mockPrn.isExport)
+        expect(item.obligationYear).toBe(mockPrn.obligationYear)
         expect(item.prnNumber).toBe(mockPrn.prnNumber)
         expect(item.issuerNotes).toBe(mockPrn.notes)
       })

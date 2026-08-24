@@ -13,6 +13,7 @@ describe('mapToAdminPrn', () => {
     expect(mapped.prnNumber).toBe(prn.prnNumber)
     expect(mapped.status).toBe(prn.status.currentStatus)
     expect(mapped.accreditationYear).toBe(prn.accreditation.accreditationYear)
+    expect(mapped.obligationYear).toBe(prn.obligationYear)
     expect(mapped.tonnage).toBe(prn.tonnage)
     expect(mapped.organisationName).toBe(prn.organisation.name)
   })

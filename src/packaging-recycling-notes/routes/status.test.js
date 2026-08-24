@@ -177,6 +177,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const body = JSON.parse(response.payload)
         expect(body.id).toBe(prnId)
         expect(body.status).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
+        expect(body.obligationYear).toBe(2026)
 
         expect(
           packagingRecyclingNotesRepository.persistProjection

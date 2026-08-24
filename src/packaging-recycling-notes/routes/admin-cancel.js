@@ -145,6 +145,7 @@ const performCancellation = async (request, previousPrn, id, h) => {
       prnNumber: updatedPrn.prnNumber,
       status: updatedPrn.status.currentStatus,
       tonnage: updatedPrn.tonnage,
+      obligationYear: updatedPrn.obligationYear,
       updatedAt: updatedPrn.updatedAt
     })
     .code(StatusCodes.OK)
