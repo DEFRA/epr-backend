@@ -29,6 +29,7 @@
  * What every event states, whichever thing it concerns.
  *
  * @typedef {Object} LedgerEventCommon
+ * @property {string} id
  * @property {number} number The event's position in its ledger, counting from
  *   one.
  * @property {LedgerEventKind} kind
@@ -74,8 +75,9 @@
  */
 
 /**
- * What a ledger read answers with. Mirrors `ledgerEventsResponseSchema` in
- * `src/routes/v1/admin/organisations/registrations/ledger-events-response.schema.js`
+ * What a ledger read answers with. Mirrors `wasteBalanceLedgerResponseSchema`
+ * in
+ * `src/routes/v1/organisations/registrations/waste-balance-ledger-response.schema.js`
  * — keep the two in sync; the schema is the runtime gate, these typedefs are
  * the check-time gate.
  *
@@ -130,6 +132,7 @@ const creditsASummaryLog = (payload) => 'summaryLogId' in payload
  */
 const toEventResource = (event) => {
   const common = {
+    id: event.id,
     number: event.number,
     kind: event.kind,
     createdAt: event.createdAt,

@@ -1,16 +1,16 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
-import { ledgerEventsResponseSchema } from '../../ledger-events-response.schema.js'
+import { wasteBalanceLedgerResponseSchema } from '../../waste-balance-ledger-response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
-export const accreditationLedgerEventsGetPath =
-  '/v1/admin/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/waste-balance-events'
+export const accreditationWasteBalanceLedgerGetPath =
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/waste-balance-ledger'
 
-export const accreditationLedgerEventsGet = {
+export const accreditationWasteBalanceLedgerGet = {
   method: 'GET',
-  path: accreditationLedgerEventsGetPath,
+  path: accreditationWasteBalanceLedgerGetPath,
   options: {
     auth: {
       scope: [
@@ -18,9 +18,9 @@ export const accreditationLedgerEventsGet = {
         `+${SCOPES.wasteBalanceLedgerRead}`
       ]
     },
-    tags: ['api', 'admin'],
+    tags: ['api'],
     response: {
-      schema: ledgerEventsResponseSchema
+      schema: wasteBalanceLedgerResponseSchema
     }
   },
   /**

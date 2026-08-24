@@ -116,14 +116,23 @@ describe('reading a waste balance ledger', () => {
     ])
   })
 
-  it('repeats none of the ledger ids on an event, and hands out no storage id', async () => {
-    await ledgerRepository.appendEvents([buildLedgerEvent()])
+  it('states the event id and repeats none of the ledger ids on an event', async () => {
+    const [stored] = await ledgerRepository.appendEvents([buildLedgerEvent()])
 
     const result = await readLedger(ledgerRepository, buildLedgerId())
 
     expect(result.events.map((event) => Object.keys(event).sort())).toEqual([
-      ['balance', 'createdAt', 'createdBy', 'kind', 'number', 'summaryLog']
+      [
+        'balance',
+        'createdAt',
+        'createdBy',
+        'id',
+        'kind',
+        'number',
+        'summaryLog'
+      ]
     ])
+    expect(result.events[0].id).toBe(stored.id)
   })
 
   it('reads the events of the ledger it names in order', async () => {

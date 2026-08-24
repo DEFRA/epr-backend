@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { ledgerEventsResponseSchema } from './ledger-events-response.schema.js'
+import { wasteBalanceLedgerResponseSchema } from './waste-balance-ledger-response.schema.js'
 
 const commonKeys = () => ({
+  id: 'evt-1',
   number: 1,
   createdAt: new Date('2026-01-15T10:00:00.000Z'),
   createdBy: { id: 'user-1', name: 'Jo Sample', email: 'jo@example.com' },
@@ -42,7 +43,7 @@ const ledgerOf = (events, accreditationId = 'acc-1') => ({
 
 /** @param {unknown} value */
 const errorFrom = (value) =>
-  ledgerEventsResponseSchema.validate(value).error?.message
+  wasteBalanceLedgerResponseSchema.validate(value).error?.message
 
 /**
  * An event is one of two whole shapes, so a refusal names the shape that came
@@ -52,7 +53,7 @@ const errorFrom = (value) =>
  * @param {unknown} event
  */
 const refusalOf = (event) => {
-  const { error } = ledgerEventsResponseSchema.validate(ledgerOf([event]))
+  const { error } = wasteBalanceLedgerResponseSchema.validate(ledgerOf([event]))
   /** @type {Array<{ message: string }>} */
   const arms = error?.details[0]?.context?.details ?? []
 
@@ -127,10 +128,18 @@ describe('the waste balance ledger response schema', () => {
     }
   )
 
-  it('refuses an event that hands out its storage id', () => {
-    const event = summaryLogEvent({ id: 'stored-event-1' })
+  it('refuses an event that states no id', () => {
+    const { number, createdAt, createdBy, balance } = commonKeys()
+    const event = {
+      number,
+      createdAt,
+      createdBy,
+      balance,
+      kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+      summaryLog: { id: 'log-1', creditTotal: 100 }
+    }
 
-    expect(refusalOf(event)).toContain('"events[0].id" is not allowed')
+    expect(refusalOf(event)).toContain('"events[0].id" is required')
   })
 
   it('refuses an event that hands out the stored payload', () => {

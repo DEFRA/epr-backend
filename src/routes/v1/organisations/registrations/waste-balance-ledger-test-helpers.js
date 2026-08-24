@@ -39,7 +39,7 @@ const ANOTHER_ORGANISATION_ID = 'another-organisation-id'
  *
  * @param {{ makeUrl: (organisationId: string) => string }} options
  */
-export const testLedgerEventsAccess = ({ makeUrl }) => {
+export const testWasteBalanceLedgerAccess = ({ makeUrl }) => {
   describe('access control', () => {
     setupAuthContext()
 
@@ -179,7 +179,10 @@ const ledgerHoldingAnUnnameableEvent = (ledgerId) => ({
  *   ledgerId: import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId
  * }} options
  */
-export const testLedgerEventsResponseIsChecked = ({ makeUrl, ledgerId }) => {
+export const testWasteBalanceLedgerResponseIsChecked = ({
+  makeUrl,
+  ledgerId
+}) => {
   describe('response validation', () => {
     setupAuthContext()
 

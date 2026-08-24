@@ -53,12 +53,19 @@ const prnSchema = Joi.object({
 /**
  * What every event states, whichever thing it concerns.
  *
- * `number` is the event's position in its ledger. It is also the slot a writer
- * commits to, so stating it hands out a storage fact; the back-office lists it
- * as the event's ordinal, so it is stated here by decision rather than by
- * default.
+ * `number` is the event's position in its ledger, and with the ledger id it is
+ * the event's identity: two events of one ledger differ by it, and it is what
+ * orders them. A caller that shows no ordinal still needs it to say which event
+ * it means. A writer also commits to the slot it names, but a field is not a
+ * storage fact merely because the store also uses it.
+ *
+ * `id` is the id the ledger gives the event. The read model promises one, so
+ * the representation states one. It is stated whether or not a caller has
+ * anything to do with it: what the resource is does not depend on what any
+ * caller does with it.
  */
 const commonEventKeys = {
+  id: Joi.string().required(),
   number: Joi.number().integer().min(1).required(),
   createdAt: Joi.date().required(),
   createdBy: actorSchema.required(),
@@ -115,7 +122,7 @@ const prnEventSchema = Joi.object({
  * failed response instead of a served one, which is the guarantee the two
  * routes offer their callers.
  */
-export const ledgerEventsResponseSchema = Joi.object({
+export const wasteBalanceLedgerResponseSchema = Joi.object({
   ledger: ledgerSchema.required(),
   events: Joi.array()
     .items(Joi.alternatives().try(summaryLogEventSchema, prnEventSchema))
