@@ -108,6 +108,12 @@ describe('prnCommandFor', () => {
       PRN_STATUS.CANCELLED,
       'cancelIssuedPrn',
       'credit_full'
+    ],
+    [
+      PRN_STATUS.ACCEPTED,
+      PRN_STATUS.CANCELLED,
+      'cancelIssuedPrn',
+      'credit_full'
     ]
   ])(
     'maps %s -> %s to the %s command',

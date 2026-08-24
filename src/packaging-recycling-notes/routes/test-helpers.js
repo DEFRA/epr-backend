@@ -4,7 +4,7 @@
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'node:crypto'
 
-import { MATERIAL } from '#domain/organisations/model.js'
+import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 /** @type {{ publicKey: JsonWebKey, privateKey: string }} */
@@ -84,6 +84,7 @@ export const generateExternalApiTokenWithoutClientId = () => {
 export const createMockIssuedPrn = (overrides = {}) => ({
   id: prnId,
   schemaVersion: 2,
+  version: 1,
   prnNumber,
   organisation: {
     id: 'org-123',
@@ -95,7 +96,7 @@ export const createMockIssuedPrn = (overrides = {}) => ({
     accreditationNumber: 'ACC-2026-001',
     accreditationYear: 2026,
     material: MATERIAL.PLASTIC,
-    submittedToRegulator: 'ea'
+    submittedToRegulator: REGULATOR.EA
   },
   issuedToOrganisation: {
     id: 'producer-org-789',
@@ -107,6 +108,7 @@ export const createMockIssuedPrn = (overrides = {}) => ({
   notes: 'Test notes',
   status: {
     currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+    currentStatusAt: new Date(issuedDate),
     created: {
       at: new Date(authorisedDate),
       by: creator

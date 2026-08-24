@@ -381,6 +381,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_REPORT_DATA_COMPLETE_DIAGNOSTIC'
+    },
+    prnAdminCancellation: {
+      doc: 'Feature Flag: Allow an admin to cancel an accepted PRN/PERN (PAE-1823)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_PRN_ADMIN_CANCELLATION'
     }
   },
   formSubmissionOverrides: {

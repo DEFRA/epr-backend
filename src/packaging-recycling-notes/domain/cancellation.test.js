@@ -1,0 +1,72 @@
+import { describe, it, expect } from 'vitest'
+
+import { assertCancellationAllowed } from './cancellation.js'
+import { RelevantYearWindowExpiredError } from './relevant-year.js'
+import { PRN_STATUS } from './model.js'
+
+describe('assertCancellationAllowed', () => {
+  it('does not throw for accepted -> cancelled within the window', () => {
+    expect(() =>
+      assertCancellationAllowed(
+        PRN_STATUS.ACCEPTED,
+        PRN_STATUS.CANCELLED,
+        2026,
+        new Date('2027-01-31T23:59:59.999Z')
+      )
+    ).not.toThrow()
+  })
+
+  it('throws RelevantYearWindowExpiredError for accepted -> cancelled once the deadline has passed', () => {
+    expect(() =>
+      assertCancellationAllowed(
+        PRN_STATUS.ACCEPTED,
+        PRN_STATUS.CANCELLED,
+        2026,
+        new Date('2027-02-01T00:00:00.000Z')
+      )
+    ).toThrow(RelevantYearWindowExpiredError)
+  })
+
+  it('carries the relevant year on the error', () => {
+    let thrownError
+    try {
+      assertCancellationAllowed(
+        PRN_STATUS.ACCEPTED,
+        PRN_STATUS.CANCELLED,
+        2026,
+        new Date('2027-03-01T00:00:00.000Z')
+      )
+    } catch (e) {
+      thrownError = e
+    }
+
+    expect(thrownError).toBeInstanceOf(RelevantYearWindowExpiredError)
+    expect(thrownError?.relevantYear).toBe(2026)
+  })
+
+  it.each([
+    [
+      'awaiting_cancellation -> cancelled (signatory path, no deadline)',
+      PRN_STATUS.AWAITING_CANCELLATION,
+      PRN_STATUS.CANCELLED
+    ],
+    [
+      'awaiting_authorisation -> deleted',
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.DELETED
+    ],
+    ['draft -> discarded', PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED]
+  ])(
+    'is a no-op for %s, even long past what would be the deadline',
+    (_label, previousStatus, newStatus) => {
+      expect(() =>
+        assertCancellationAllowed(
+          previousStatus,
+          newStatus,
+          2000,
+          new Date('2099-01-01T00:00:00.000Z')
+        )
+      ).not.toThrow()
+    }
+  )
+})
