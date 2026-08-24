@@ -21,10 +21,7 @@ describe('waste balance ledger view', () => {
   })
 
   it('names the ledger the events belong to', async () => {
-    const ledgerId = buildLedgerId()
-    await ledgerRepository.appendEvents([buildLedgerEvent()])
-
-    const result = await view.read(ledgerId)
+    const result = await view.read(buildLedgerId())
 
     expect(result.ledger).toEqual({
       organisationId: 'org-1',

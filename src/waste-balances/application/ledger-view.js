@@ -4,7 +4,7 @@
  */
 
 /**
- * A balance sits inside an entry that already says which balance it is, so each
+ * A balance sits inside an event that already says which balance it is, so each
  * figure names what it counts rather than repeating the word amount.
  *
  * @typedef {Object} LedgerBalance
@@ -14,43 +14,43 @@
  */
 
 /**
- * What every entry records, whichever event it is.
+ * What every event states, whichever thing it concerns.
  *
- * @typedef {Object} LedgerEntryBase
- * @property {number} number The entry's position in its ledger, counting from
+ * @typedef {Object} LedgerEventCommon
+ * @property {number} number The event's position in its ledger, counting from
  *   one.
  * @property {LedgerEventKind} kind
  * @property {Date} createdAt
  * @property {LedgerUserSummary} createdBy
  * @property {{ opening: LedgerBalance, closing: LedgerBalance }} balance The
- *   balance before and after the entry.
+ *   balance before and after the event.
  */
 
 /**
- * @typedef {LedgerEntryBase & {
+ * @typedef {LedgerEventCommon & {
  *   summaryLog: { id: string, creditTotal: number },
  *   prn?: never
- * }} SummaryLogLedgerEntry
+ * }} SummaryLogEventResource
  */
 
 /**
- * @typedef {LedgerEntryBase & {
+ * @typedef {LedgerEventCommon & {
  *   prn: { id: string, tonnage: number },
  *   summaryLog?: never
- * }} PrnLedgerEntry
+ * }} PrnEventResource
  */
 
 /**
- * An entry names the one thing it concerns, so a reader takes the tonnage of a
+ * An event names the one thing it concerns, so a reader takes the tonnage of a
  * note from `prn` and the credit of a submission from `summaryLog`.
  *
- * @typedef {SummaryLogLedgerEntry | PrnLedgerEntry} LedgerEntry
+ * @typedef {SummaryLogEventResource | PrnEventResource} LedgerEventResource
  */
 
 /**
  * @typedef {Object} LedgerResource
  * @property {WasteBalanceLedgerId} ledger
- * @property {LedgerEntry[]} events
+ * @property {LedgerEventResource[]} events
  */
 
 /**
@@ -79,7 +79,7 @@ const toBalance = ({ amount, availableAmount }) => ({
 
 /**
  * A ledger holds the best view of an actor it has. A machine writer carries no
- * email, and an entry rebuilt from a record written before a name was captured
+ * email, and an event rebuilt from a record written before a name was captured
  * carries no name, so neither is promised.
  *
  * @param {LedgerUserSummary} actor
@@ -93,6 +93,10 @@ const toActor = ({ id, name, email }) => ({ id, name, email })
  * apart: a summary log submission names the log it credits, and every PRN event
  * names the note it concerns.
  *
+ * The response schema decides the same question from `kind`, so a stored event
+ * whose kind and payload disagree is refused at the wire rather than served
+ * under the wrong name.
+ *
  * @param {SummaryLogSubmittedPayload | PrnPayload} payload
  * @returns {payload is SummaryLogSubmittedPayload}
  */
@@ -100,10 +104,10 @@ const creditsASummaryLog = (payload) => 'summaryLogId' in payload
 
 /**
  * @param {LedgerEvent} event
- * @returns {LedgerEntry}
+ * @returns {LedgerEventResource}
  */
-const toEntry = (event) => {
-  const entry = {
+const toEventResource = (event) => {
+  const common = {
     number: event.number,
     kind: event.kind,
     createdAt: event.createdAt,
@@ -116,14 +120,14 @@ const toEntry = (event) => {
 
   return creditsASummaryLog(event.payload)
     ? {
-        ...entry,
+        ...common,
         summaryLog: {
           id: event.payload.summaryLogId,
           creditTotal: event.payload.creditTotal
         }
       }
     : {
-        ...entry,
+        ...common,
         prn: { id: event.payload.prnId, tonnage: event.payload.amount }
       }
 }
@@ -132,13 +136,13 @@ const toEntry = (event) => {
  * Reads one waste balance ledger.
  *
  * A stored event repeats the organisation, registration and accreditation on
- * every row. Those three are the ledger's identity, not the entry's, so they
+ * every row. Those three are the ledger's identity, not the event's, so they
  * come out once under `ledger`. The registered-only ledger of a registration
  * says so there, as an accreditation of null.
  *
- * The view builds each entry field by field rather than narrowing a stored
- * event. A field arrives in a response because someone named it here, and a
- * field added to the ledger reaches nobody until someone does.
+ * The view builds each event field by field rather than narrowing a stored one.
+ * A field arrives in a response because someone named it here, and a field
+ * added to the ledger reaches nobody until someone does.
  *
  * @param {{ ledgerRepository: WasteBalanceLedgerRepository }} params
  * @returns {LedgerView}
@@ -146,6 +150,8 @@ const toEntry = (event) => {
 export const createLedgerView = ({ ledgerRepository }) => ({
   read: async (ledgerId) => ({
     ledger: toLedger(ledgerId),
-    events: (await ledgerRepository.findAllInLedger(ledgerId)).map(toEntry)
+    events: (await ledgerRepository.findAllInLedger(ledgerId)).map(
+      toEventResource
+    )
   })
 })
