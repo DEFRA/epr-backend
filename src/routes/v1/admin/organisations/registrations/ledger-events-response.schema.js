@@ -97,6 +97,10 @@ const prnEventSchema = Joi.object({
 /**
  * The width of a waste balance ledger read, enforced at the wire.
  *
+ * Mirrors `LedgerResource` in
+ * `src/waste-balances/application/read-ledger.js` — keep the two in sync; this
+ * schema is the runtime gate, those typedefs are the check-time gate.
+ *
  * An event is one of two whole shapes, and `kind` decides which. A reader that
  * knows the kind therefore knows which key holds the tonnage, and no event
  * offers both subjects or neither.

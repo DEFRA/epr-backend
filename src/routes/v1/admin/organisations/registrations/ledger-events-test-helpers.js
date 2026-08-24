@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { asServiceMaintainer } from '#test/inject-auth.js'
 import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
 import {
   defraIdMockAuthTokens,
@@ -132,6 +135,68 @@ export const testLedgerEventsAccess = ({ makeUrl }) => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    })
+  })
+}
+
+/**
+ * A ledger repository that hands out one event whose kind and payload disagree.
+ *
+ * No adapter holds such an event: both refuse it on insert. It is built here so
+ * a route test can show what a route does when a read cannot be named. The read
+ * takes an event's subject from its payload and the response schema takes it
+ * from the kind, so this event reaches the schema as a note-kind event carrying
+ * a summary log.
+ *
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
+ */
+const ledgerHoldingAnUnnameableEvent = (ledgerId) => ({
+  ...createInMemoryLedgerRepository()(),
+  findAllInLedger: async () => [
+    {
+      id: 'stored-event-1',
+      ...ledgerId,
+      number: 1,
+      kind: LEDGER_EVENT_KIND.PRN_ISSUED,
+      payload: { summaryLogId: 'log-1', creditTotal: 100 },
+      openingBalance: { amount: 0, availableAmount: 0 },
+      closingBalance: { amount: 100, availableAmount: 100 },
+      createdAt: new Date('2026-01-15T10:00:00.000Z'),
+      createdBy: { id: 'user-1' }
+    }
+  ]
+})
+
+/**
+ * Shows the route holds itself to its response schema.
+ *
+ * Every other test here reads a ledger the schema accepts, so none of them
+ * fails if the route stops declaring a response. This one hands the route an
+ * event the schema refuses and requires the route to refuse it too.
+ *
+ * @param {{
+ *   makeUrl: (ledgerId: import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId) => string,
+ *   ledgerId: import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId
+ * }} options
+ */
+export const testLedgerEventsResponseIsChecked = ({ makeUrl, ledgerId }) => {
+  describe('response validation', () => {
+    setupAuthContext()
+
+    it('refuses to serve an event its response schema does not allow', async () => {
+      const server = await createTestServer({
+        repositories: {
+          ledgerRepository: ledgerHoldingAnUnnameableEvent(ledgerId)
+        }
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makeUrl(ledgerId),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
     })
   })
 }

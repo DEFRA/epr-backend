@@ -8,7 +8,10 @@ import {
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testLedgerEventsAccess } from '../../ledger-events-test-helpers.js'
+import {
+  testLedgerEventsAccess,
+  testLedgerEventsResponseIsChecked
+} from '../../ledger-events-test-helpers.js'
 import { accreditationLedgerEventsGetPath } from './get.js'
 
 /**
@@ -159,4 +162,14 @@ describe(`GET ${accreditationLedgerEventsGetPath}`, () => {
 
 testLedgerEventsAccess({
   makeUrl: (organisationId) => makePath(organisationId, 'reg-1', 'acc-1')
+})
+
+testLedgerEventsResponseIsChecked({
+  ledgerId: {
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    accreditationId: 'acc-1'
+  },
+  makeUrl: ({ organisationId, registrationId, accreditationId }) =>
+    makePath(organisationId, registrationId, String(accreditationId))
 })

@@ -5,7 +5,10 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testLedgerEventsAccess } from '../ledger-events-test-helpers.js'
+import {
+  testLedgerEventsAccess,
+  testLedgerEventsResponseIsChecked
+} from '../ledger-events-test-helpers.js'
 import { registrationLedgerEventsGetPath } from './get.js'
 
 /**
@@ -175,4 +178,14 @@ describe(`GET ${registrationLedgerEventsGetPath}`, () => {
 
 testLedgerEventsAccess({
   makeUrl: (organisationId) => makePath(organisationId, 'reg-1')
+})
+
+testLedgerEventsResponseIsChecked({
+  ledgerId: {
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    accreditationId: null
+  },
+  makeUrl: ({ organisationId, registrationId }) =>
+    makePath(organisationId, registrationId)
 })

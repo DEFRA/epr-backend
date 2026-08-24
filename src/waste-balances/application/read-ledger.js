@@ -74,6 +74,11 @@
  */
 
 /**
+ * What a ledger read answers with. Mirrors `ledgerEventsResponseSchema` in
+ * `src/routes/v1/admin/organisations/registrations/ledger-events-response.schema.js`
+ * — keep the two in sync; the schema is the runtime gate, these typedefs are
+ * the check-time gate.
+ *
  * @typedef {Object} LedgerResource
  * @property {WasteBalanceLedgerId} ledger
  * @property {LedgerEventResource[]} events
@@ -110,9 +115,9 @@ const toActor = ({ id, name, email }) => ({ id, name, email })
  * apart: a summary log submission names the log it credits, and every PRN event
  * names the note it concerns.
  *
- * A stored event whose kind and payload disagree never reaches here — the
- * repository validates every read against `ledgerEventReadSchema`, which
- * couples the two, and raises rather than returning it.
+ * A stored event whose kind and payload disagree does not exist: both adapters
+ * validate an insert against `ledgerEventInsertSchema`, which couples the two,
+ * and the MongoDB adapter re-checks it on every read.
  *
  * @param {SummaryLogSubmittedPayload | PrnPayload} payload
  * @returns {payload is SummaryLogSubmittedPayload}
