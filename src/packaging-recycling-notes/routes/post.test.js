@@ -127,6 +127,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             organisation: expect.objectContaining({ id: organisationId }),
             registrationId,
             accreditation: expect.objectContaining({ id: accreditationId }),
+            obligationYear: 2026,
             issuedToOrganisation: validPayload.issuedToOrganisation
           })
         )

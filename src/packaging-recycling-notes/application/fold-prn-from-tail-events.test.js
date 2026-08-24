@@ -177,6 +177,22 @@ describe('foldPrnFromTailEvents', () => {
       })
     })
 
+    it('prn-accepted projects its selected obligation year', () => {
+      const prn = basePrn()
+      const event = {
+        ...buildEvent(
+          LEDGER_EVENT_KIND.PRN_ACCEPTED,
+          3,
+          '2026-02-03T12:00:00.000Z'
+        ),
+        payload: { prnId: 'prn-1', amount: 50, obligationYear: 2027 }
+      }
+
+      const result = foldPrnFromTailEvents(prn, [event])
+
+      expect(result.obligationYear).toBe(2027)
+    })
+
     it('prn-rejected sets currentStatus awaiting_cancellation and rejected slot', () => {
       const prn = basePrn()
       const event = buildEvent(

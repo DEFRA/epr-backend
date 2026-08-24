@@ -139,20 +139,30 @@ const COMMANDS_REQUIRING_OPEN_LEDGER = Object.freeze(
  * @param {string} command.prnId
  * @param {number} command.tonnage
  * @param {import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary} command.createdBy
+ * @param {number} [command.obligationYear]
  * @returns {Promise<Array<import('#waste-balances/repository/ledger-port.js').LedgerEvent>>}
  */
 export async function applyPrnBalanceCommand(
   service,
   logger,
-  { currentStatus, newStatus, ledgerId, prnId, tonnage, createdBy }
+  {
+    currentStatus,
+    newStatus,
+    ledgerId,
+    prnId,
+    tonnage,
+    createdBy,
+    obligationYear
+  }
 ) {
   const command = prnCommandFor(currentStatus, newStatus)
+  const payload = {
+    prnId,
+    amount: tonnage,
+    ...(obligationYear === undefined ? {} : { obligationYear })
+  }
 
-  const result = await service[command.method](
-    ledgerId,
-    { prnId, amount: tonnage },
-    createdBy
-  )
+  const result = await service[command.method](ledgerId, payload, createdBy)
 
   if (result.status === PRN_COMMAND_STATUS.REJECTED) {
     if (
