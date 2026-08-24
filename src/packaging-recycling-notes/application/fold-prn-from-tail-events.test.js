@@ -34,7 +34,6 @@ const basePrn = () =>
 const eventCreator = { id: 'user-1', name: 'Test User' }
 
 const buildEvent = (kind, number, createdAt, createdBy = eventCreator) => ({
-  id: `event-${number}`,
   registrationId: 'reg-1',
   accreditationId: 'acc-1',
   organisationId: 'org-1',

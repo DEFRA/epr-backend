@@ -1,14 +1,16 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { readLedger } from '#waste-balances/application/read-ledger.js'
+import { wasteBalanceLedgerResponseSchema } from '../waste-balance-ledger-response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
-export const registrationLedgerEventsGetPath =
-  '/v1/admin/organisations/{organisationId}/registrations/{registrationId}/waste-balance-events'
+export const registrationWasteBalanceLedgerGetPath =
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/waste-balance-ledger'
 
-export const registrationLedgerEventsGet = {
+export const registrationWasteBalanceLedgerGet = {
   method: 'GET',
-  path: registrationLedgerEventsGetPath,
+  path: registrationWasteBalanceLedgerGetPath,
   options: {
     auth: {
       scope: [
@@ -16,7 +18,10 @@ export const registrationLedgerEventsGet = {
         `+${SCOPES.wasteBalanceLedgerRead}`
       ]
     },
-    tags: ['api', 'admin']
+    tags: ['api'],
+    response: {
+      schema: wasteBalanceLedgerResponseSchema
+    }
   },
   /**
    * @param {HapiRequest & {
@@ -28,12 +33,12 @@ export const registrationLedgerEventsGet = {
     const { ledgerRepository } = request
     const { organisationId, registrationId } = request.params
 
-    const events = await ledgerRepository.findAllInLedger({
+    const ledger = await readLedger(ledgerRepository, {
       organisationId,
       registrationId,
       accreditationId: null
     })
 
-    return h.response(events).code(StatusCodes.OK)
+    return h.response(ledger).code(StatusCodes.OK)
   }
 }

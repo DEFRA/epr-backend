@@ -70,13 +70,7 @@ export async function ensureLedgerCollection(db) {
   return collection
 }
 
-const toLedgerEvent = (doc) => {
-  const { _id, ...rest } = doc
-  return validateLedgerEventRead({
-    id: _id.toString(),
-    ...rest
-  })
-}
+const toLedgerEvent = (doc) => validateLedgerEventRead(doc)
 
 /**
  * Classify a MongoDB E11000 duplicate key error raised by an append.

@@ -121,10 +121,10 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * Shape returned by `WasteBalanceLedgerRepository` reads — `LedgerEventInsert` plus
- * the storage-assigned `id`.
+ * Shape returned by `WasteBalanceLedgerRepository` reads: exactly what was
+ * written.
  *
- * @typedef {LedgerEventInsert & { id: string }} LedgerEvent
+ * @typedef {LedgerEventInsert} LedgerEvent
  */
 
 const userSummarySchema = Joi.object({
@@ -190,8 +190,4 @@ export const ledgerEventInsertSchema = Joi.object({
     })
   }
   return value
-})
-
-export const ledgerEventReadSchema = ledgerEventInsertSchema.keys({
-  id: Joi.string().required()
 })
