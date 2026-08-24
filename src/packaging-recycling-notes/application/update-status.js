@@ -13,6 +13,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { assertCancellationAllowed } from '#packaging-recycling-notes/domain/cancellation.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
+import { selectObligationYearForAcceptance } from '#packaging-recycling-notes/domain/obligation-year.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
@@ -74,7 +75,8 @@ async function notifyPrnCancelled(prnEvents, newStatus, updatedPrn) {
  *   user: { id: string, name: string, email?: string },
  *   currentStatus: PrnStatus,
  *   now: Date,
- *   id: string
+ *   id: string,
+ *   obligationYear?: number
  * }} PrnWriteContext
  */
 
@@ -141,7 +143,8 @@ async function performStreamWrite({
   registrationId,
   accreditationId,
   id,
-  user
+  user,
+  obligationYear
 }) {
   // The issuable check is hoisted ahead of the stream append so a suspended or
   // cancelled accreditation is never debited. The fetched accreditation is
@@ -155,13 +158,19 @@ async function performStreamWrite({
     assertAccreditationCanIssue(accreditation)
   }
 
+  const selectedObligationYear = selectObligationYearForAcceptance(
+    prn,
+    obligationYear
+  )
+
   const ledgerEvents = await applyPrnBalanceCommand(service, logger, {
     currentStatus,
     newStatus,
     ledgerId: { organisationId, registrationId, accreditationId },
     prnId: id,
     tonnage: prn.tonnage,
-    createdBy: user
+    createdBy: user,
+    obligationYear: selectedObligationYear
   })
 
   const projection = foldPrnFromTailEvents(prn, ledgerEvents)
@@ -244,6 +253,7 @@ const performDiscardWrite = async ({ prnRepository, updateParams }) => {
  * @param {{ id: string; name: string; email?: string }} params.user
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} [params.providedPrn] - Optional pre-fetched PRN to avoid duplicate fetch
  * @param {Date} [params.updatedAt] - Optional timestamp override (defaults to now)
+ * @param {number} [params.obligationYear] - Optional obligation year selected during external acceptance
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
  */
 export async function updatePrnStatus({
@@ -260,7 +270,8 @@ export async function updatePrnStatus({
   actor,
   user,
   providedPrn,
-  updatedAt
+  updatedAt,
+  obligationYear
 }) {
   const prn = await resolvePrnForUpdate({
     prnRepository,
@@ -292,7 +303,8 @@ export async function updatePrnStatus({
     accreditationId,
     user,
     id,
-    updatedAt
+    updatedAt,
+    obligationYear
   })
 
   const updatedPrn =
@@ -370,6 +382,7 @@ async function resolvePrnForUpdate({
  * @param {{ id: string; name: string; email?: string }} params.user
  * @param {string} params.id
  * @param {Date} [params.updatedAt]
+ * @param {number} [params.obligationYear]
  * @returns {PrnWriteContext}
  */
 function buildWriteContext({
@@ -385,7 +398,8 @@ function buildWriteContext({
   accreditationId,
   user,
   id,
-  updatedAt
+  updatedAt,
+  obligationYear
 }) {
   const now = updatedAt ?? new Date()
   const updateParams = {
@@ -411,6 +425,7 @@ function buildWriteContext({
     user,
     currentStatus,
     now,
-    id
+    id,
+    obligationYear
   }
 }

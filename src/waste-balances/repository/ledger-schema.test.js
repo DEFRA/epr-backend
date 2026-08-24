@@ -73,6 +73,16 @@ describe('ledger event insert schema', () => {
     expect(error).toBeUndefined()
   })
 
+  it('accepts a prn-accepted event with an obligation year', () => {
+    const { error } = validate(
+      buildLedgerEvent({
+        kind: LEDGER_EVENT_KIND.PRN_ACCEPTED,
+        payload: { prnId: 'prn-1', amount: 50, obligationYear: 2027 }
+      })
+    )
+    expect(error).toBeUndefined()
+  })
+
   it('accepts a valid prn-rejected event', () => {
     const { error } = validate(
       buildLedgerEvent({

@@ -46,9 +46,16 @@ const applyEvent = (prn, event) => {
   // email (best-view enrichment on the stream), which the PRN document omits.
   const by = { id: event.createdBy.id, name: event.createdBy.name }
   const slotValue = { at: event.createdAt, by }
+  const obligationYear =
+    event.kind === LEDGER_EVENT_KIND.PRN_ACCEPTED &&
+    'obligationYear' in event.payload &&
+    event.payload.obligationYear !== undefined
+      ? { obligationYear: event.payload.obligationYear }
+      : {}
 
   return {
     ...prn,
+    ...obligationYear,
     updatedAt: event.createdAt,
     updatedBy: by,
     lastAppliedEventNumber: event.number,

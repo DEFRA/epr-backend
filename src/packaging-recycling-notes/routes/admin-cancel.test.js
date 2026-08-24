@@ -81,6 +81,7 @@ const buildAcceptedPrn = ({
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },
+  obligationYear: accreditationYear,
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage,
   isExport: false,
