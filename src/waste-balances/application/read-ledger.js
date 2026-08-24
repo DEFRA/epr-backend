@@ -61,7 +61,14 @@
 
 /**
  * An event names the one thing it concerns, so a reader takes the tonnage of a
- * note from `prn` and the credit of a submission from `summaryLog`.
+ * note from `prn` and the credit of a submission from `summaryLog`. An event
+ * that names both is a type error.
+ *
+ * An event that names one and states a `kind` belonging to the other is not.
+ * Tying `kind` to the subject here needs a stored event that is itself
+ * discriminated on `kind`, and `LedgerEventInsert` pairs the two through the
+ * insert schema instead. The response schema tests the pairing at the wire, so
+ * a mismatch is refused rather than served.
  *
  * @typedef {SummaryLogEventResource | PrnEventResource} LedgerEventResource
  */

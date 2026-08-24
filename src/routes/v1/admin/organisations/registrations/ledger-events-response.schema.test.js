@@ -53,9 +53,8 @@ const errorFrom = (value) =>
  */
 const refusalOf = (event) => {
   const { error } = ledgerEventsResponseSchema.validate(ledgerOf([event]))
-  const arms = /** @type {Array<{ message: string }>} */ (
-    error?.details[0]?.context?.details ?? []
-  )
+  /** @type {Array<{ message: string }>} */
+  const arms = error?.details[0]?.context?.details ?? []
 
   return arms.map((arm) => arm.message).join(' ')
 }
