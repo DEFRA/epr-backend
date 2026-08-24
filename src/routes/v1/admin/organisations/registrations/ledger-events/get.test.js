@@ -48,9 +48,47 @@ describe(`GET ${registrationLedgerEventsGetPath}`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
-    expect(result).toHaveLength(1)
-    expect(result[0].number).toBe(1)
-    expect(result[0].accreditationId).toBeNull()
+    expect(result.ledger).toEqual({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: null
+    })
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0].number).toBe(1)
+  })
+
+  it('gives a submission entry its balances, its actor and the log it credits', async () => {
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        organisationId: 'org-shape',
+        registrationId: 'reg-shape',
+        accreditationId: null,
+        number: 1,
+        payload: { summaryLogId: 'log-1', creditTotal: 100 },
+        openingBalance: { amount: 0, availableAmount: 0 },
+        closingBalance: { amount: 100, availableAmount: 100 },
+        createdBy: { id: 'user-1', name: 'Test User' }
+      })
+    ])
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath('org-shape', 'reg-shape'),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload).events[0]).toEqual({
+      number: 1,
+      kind: 'summary-log-submitted',
+      createdAt: '2026-01-15T10:00:00.000Z',
+      createdBy: { id: 'user-1', name: 'Test User' },
+      balance: {
+        opening: { total: 0, available: 0 },
+        closing: { total: 100, available: 100 }
+      },
+      summaryLog: { id: 'log-1', creditTotal: 100 }
+    })
   })
 
   it('returns events ordered by number ascending', async () => {
@@ -79,12 +117,10 @@ describe(`GET ${registrationLedgerEventsGetPath}`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
-    expect(result).toHaveLength(2)
-    expect(result[0].number).toBe(1)
-    expect(result[1].number).toBe(2)
+    expect(result.events.map((event) => event.number)).toEqual([1, 2])
   })
 
-  it('returns an empty array when the registration holds no such events', async () => {
+  it('returns no events when the registration holds none', async () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath('org-none', 'reg-none'),
@@ -92,7 +128,7 @@ describe(`GET ${registrationLedgerEventsGetPath}`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toEqual([])
+    expect(JSON.parse(response.payload).events).toEqual([])
   })
 
   it('does not return the events of an accreditation of the same registration', async () => {
@@ -112,7 +148,7 @@ describe(`GET ${registrationLedgerEventsGetPath}`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toEqual([])
+    expect(JSON.parse(response.payload).events).toEqual([])
   })
 
   it('returns no events for a registration named under a different organisation', async () => {
@@ -132,7 +168,7 @@ describe(`GET ${registrationLedgerEventsGetPath}`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toEqual([])
+    expect(JSON.parse(response.payload).events).toEqual([])
   })
 })
 
