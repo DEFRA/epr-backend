@@ -8,7 +8,7 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
 }))
 
-const { auditPublicRegisterGenerate } = await import('./public-register.js')
+const { auditPublicRegisterGenerate } = await import('./auditing.js')
 
 describe('auditPublicRegisterGenerate', () => {
   const url = 'https://example.com/public-register.csv'
