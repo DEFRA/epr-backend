@@ -30,11 +30,21 @@ const actorSchema = Joi.object({
   email: Joi.string()
 })
 
+/**
+ * `creditTotal` is the total the summary log itself states, not the amount the
+ * balance moved. A submission moves the balance by the difference between its
+ * total and the previous submission's, so on a ledger holding no notes the two
+ * figures read alike and mean different things.
+ */
 const summaryLogSchema = Joi.object({
   id: Joi.string().required(),
   creditTotal: Joi.number().required()
 })
 
+/**
+ * `tonnage` is the tonnage of the note itself, not the amount the balance
+ * moved. Accepting or rejecting a note moves neither total.
+ */
 const prnSchema = Joi.object({
   id: Joi.string().required(),
   tonnage: Joi.number().required()
@@ -89,9 +99,12 @@ const prnEventSchema = Joi.object({
  *
  * An event is one of two whole shapes, and `kind` decides which. A reader that
  * knows the kind therefore knows which key holds the tonnage, and no event
- * offers both subjects or neither. Two whole shapes also publish as two named
- * definitions, where one shape with a key that comes and goes publishes as
- * neither.
+ * offers both subjects or neither.
+ *
+ * Swagger 2.0 has no union, so `/swagger` cannot state that. It describes an
+ * event as the first shape and carries the second under the `x-alternatives`
+ * extension, which a standard reader ignores. The generated document therefore
+ * understates the contract, and this file states it.
  *
  * The ledger view builds each event from named fields, so an unexpected key can
  * only arrive if someone adds one to the view. This schema makes that arrival a

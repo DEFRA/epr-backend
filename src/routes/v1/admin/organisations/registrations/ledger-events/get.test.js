@@ -57,7 +57,7 @@ describe(`GET ${registrationLedgerEventsGetPath}`, () => {
     expect(result.events[0].number).toBe(1)
   })
 
-  it('gives a submission entry its balances, its actor and the log it credits', async () => {
+  it('gives a submission event its balances, its actor and the log it credits', async () => {
     await ledgerRepository.appendEvents([
       buildLedgerEvent({
         organisationId: 'org-shape',
@@ -116,6 +116,7 @@ describe(`GET ${registrationLedgerEventsGetPath}`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+    /** @type {{ events: Array<{ number: number }> }} */
     const result = JSON.parse(response.payload)
     expect(result.events.map((event) => event.number)).toEqual([1, 2])
   })

@@ -27,12 +27,15 @@ const prnEvent = (overrides = {}) => ({
   ...overrides
 })
 
-/** @param {unknown[]} events */
-const ledgerOf = (events) => ({
+/**
+ * @param {unknown[]} events
+ * @param {string | null} [accreditationId]
+ */
+const ledgerOf = (events, accreditationId = 'acc-1') => ({
   ledger: {
     organisationId: 'org-1',
     registrationId: 'reg-1',
-    accreditationId: 'acc-1'
+    accreditationId
   },
   events
 })
@@ -48,13 +51,14 @@ const errorFrom = (value) =>
  *
  * @param {unknown} event
  */
-const refusalOf = (event) =>
-  (
-    ledgerEventsResponseSchema.validate(ledgerOf([event])).error?.details[0]
-      .context?.details ?? []
+const refusalOf = (event) => {
+  const { error } = ledgerEventsResponseSchema.validate(ledgerOf([event]))
+  const arms = /** @type {Array<{ message: string }>} */ (
+    error?.details[0]?.context?.details ?? []
   )
-    .map((detail) => detail.message)
-    .join(' ')
+
+  return arms.map((arm) => arm.message).join(' ')
+}
 
 describe('the waste balance ledger response schema', () => {
   it('accepts an event that credits a summary log', () => {
@@ -76,16 +80,16 @@ describe('the waste balance ledger response schema', () => {
   })
 
   it('names the registered-only ledger by a null accreditation', () => {
-    const response = { ...ledgerOf([]) }
-    response.ledger = { ...response.ledger, accreditationId: null }
-
-    expect(errorFrom(response)).toBeUndefined()
+    expect(errorFrom(ledgerOf([], null))).toBeUndefined()
   })
 
   it('refuses an event that names both a summary log and a note', () => {
     const event = summaryLogEvent({ prn: { id: 'prn-1', tonnage: 50 } })
 
     expect(refusalOf(event)).toContain('"events[0].prn" is not allowed')
+    expect(
+      refusalOf({ ...event, kind: LEDGER_EVENT_KIND.PRN_CREATED })
+    ).toContain('"events[0].summaryLog" is not allowed')
   })
 
   it('refuses a summary log event that names no log', () => {

@@ -14,6 +14,18 @@
  */
 
 /**
+ * Who wrote an event. The ledger holds the best view of an actor it has, so
+ * neither the name nor the email is promised: a machine writer carries no
+ * email, and an event rebuilt from a record written before a name was captured
+ * carries no name.
+ *
+ * @typedef {Object} LedgerActor
+ * @property {string} id
+ * @property {string} [name]
+ * @property {string} [email]
+ */
+
+/**
  * What every event states, whichever thing it concerns.
  *
  * @typedef {Object} LedgerEventCommon
@@ -21,12 +33,16 @@
  *   one.
  * @property {LedgerEventKind} kind
  * @property {Date} createdAt
- * @property {LedgerUserSummary} createdBy
+ * @property {LedgerActor} createdBy
  * @property {{ opening: LedgerBalance, closing: LedgerBalance }} balance The
  *   balance before and after the event.
  */
 
 /**
+ * `creditTotal` is the total the summary log itself states, not the amount the
+ * balance moved. A submission moves the balance by the difference between its
+ * total and the previous submission's.
+ *
  * @typedef {LedgerEventCommon & {
  *   summaryLog: { id: string, creditTotal: number },
  *   prn?: never
@@ -34,6 +50,9 @@
  */
 
 /**
+ * `tonnage` is the tonnage of the note itself, not the amount the balance
+ * moved. Accepting or rejecting a note moves neither total.
+ *
  * @typedef {LedgerEventCommon & {
  *   prn: { id: string, tonnage: number },
  *   summaryLog?: never
@@ -51,11 +70,6 @@
  * @typedef {Object} LedgerResource
  * @property {WasteBalanceLedgerId} ledger
  * @property {LedgerEventResource[]} events
- */
-
-/**
- * @typedef {Object} LedgerView
- * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerResource>} read
  */
 
 /**
@@ -78,12 +92,8 @@ const toBalance = ({ amount, availableAmount }) => ({
 })
 
 /**
- * A ledger holds the best view of an actor it has. A machine writer carries no
- * email, and an event rebuilt from a record written before a name was captured
- * carries no name, so neither is promised.
- *
  * @param {LedgerUserSummary} actor
- * @returns {LedgerUserSummary}
+ * @returns {LedgerActor}
  */
 const toActor = ({ id, name, email }) => ({ id, name, email })
 
@@ -93,9 +103,9 @@ const toActor = ({ id, name, email }) => ({ id, name, email })
  * apart: a summary log submission names the log it credits, and every PRN event
  * names the note it concerns.
  *
- * The response schema decides the same question from `kind`, so a stored event
- * whose kind and payload disagree is refused at the wire rather than served
- * under the wrong name.
+ * A stored event whose kind and payload disagree never reaches here — the
+ * repository validates every read against `ledgerEventReadSchema`, which
+ * couples the two, and raises rather than returning it.
  *
  * @param {SummaryLogSubmittedPayload | PrnPayload} payload
  * @returns {payload is SummaryLogSubmittedPayload}
@@ -140,18 +150,23 @@ const toEventResource = (event) => {
  * come out once under `ledger`. The registered-only ledger of a registration
  * says so there, as an accreditation of null.
  *
- * The view builds each event field by field rather than narrowing a stored one.
- * A field arrives in a response because someone named it here, and a field
- * added to the ledger reaches nobody until someone does.
+ * Each event is built field by field rather than by narrowing a stored one. A
+ * field arrives in a response because someone named it here, and a field added
+ * to the ledger reaches nobody until someone does.
  *
- * @param {{ ledgerRepository: WasteBalanceLedgerRepository }} params
- * @returns {LedgerView}
+ * The whole ledger comes back. A ledger holds one event per submission and per
+ * PRN decision, so the count follows the operator's own activity rather than
+ * the size of the service. The `events` key leaves room to page it later
+ * without changing the shape.
+ *
+ * @param {WasteBalanceLedgerRepository} ledgerRepository
+ * @param {WasteBalanceLedgerId} ledgerId - The registration or accreditation
+ *   whose ledger is read.
+ * @returns {Promise<LedgerResource>}
  */
-export const createLedgerView = ({ ledgerRepository }) => ({
-  read: async (ledgerId) => ({
-    ledger: toLedger(ledgerId),
-    events: (await ledgerRepository.findAllInLedger(ledgerId)).map(
-      toEventResource
-    )
-  })
+export const readLedger = async (ledgerRepository, ledgerId) => ({
+  ledger: toLedger(ledgerId),
+  events: (await ledgerRepository.findAllInLedger(ledgerId)).map(
+    toEventResource
+  )
 })

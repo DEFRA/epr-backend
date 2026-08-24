@@ -62,7 +62,7 @@ describe(`GET ${accreditationLedgerEventsGetPath}`, () => {
     expect(result.events[0].number).toBe(1)
   })
 
-  it('gives a PRN entry the note it concerns and that note\u2019s tonnage', async () => {
+  it('gives a PRN event the note it concerns and the note’s tonnage', async () => {
     await ledgerRepository.appendEvents([
       buildPrnCreatedEvent({
         registrationId: 'reg-prn',
@@ -120,6 +120,7 @@ describe(`GET ${accreditationLedgerEventsGetPath}`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+    /** @type {{ events: Array<{ number: number }> }} */
     const result = JSON.parse(response.payload)
     expect(result.events.map((event) => event.number)).toEqual([1, 2])
   })

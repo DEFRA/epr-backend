@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { createLedgerView } from '#waste-balances/application/ledger-view.js'
+import { readLedger } from '#waste-balances/application/read-ledger.js'
 import { ledgerEventsResponseSchema } from '../../ledger-events-response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
@@ -33,9 +33,7 @@ export const accreditationLedgerEventsGet = {
     const { ledgerRepository } = request
     const { organisationId, registrationId, accreditationId } = request.params
 
-    const ledgerView = createLedgerView({ ledgerRepository })
-
-    const ledger = await ledgerView.read({
+    const ledger = await readLedger(ledgerRepository, {
       organisationId,
       registrationId,
       accreditationId

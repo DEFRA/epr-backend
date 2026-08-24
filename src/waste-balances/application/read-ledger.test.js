@@ -6,22 +6,18 @@ import {
   buildLedgerId,
   buildPrnAcceptedEvent
 } from '../repository/ledger-test-data.js'
-import { createLedgerView } from './ledger-view.js'
+import { readLedger } from './read-ledger.js'
 
-describe('waste balance ledger view', () => {
+describe('reading a waste balance ledger', () => {
   /** @type {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} */
   let ledgerRepository
 
-  /** @type {import('./ledger-view.js').LedgerView} */
-  let view
-
   beforeEach(() => {
     ledgerRepository = createInMemoryLedgerRepository()()
-    view = createLedgerView({ ledgerRepository })
   })
 
   it('names the ledger the events belong to', async () => {
-    const result = await view.read(buildLedgerId())
+    const result = await readLedger(ledgerRepository, buildLedgerId())
 
     expect(result.ledger).toEqual({
       organisationId: 'org-1',
@@ -33,13 +29,13 @@ describe('waste balance ledger view', () => {
   it('names a registered-only ledger by its null accreditation', async () => {
     const ledgerId = buildLedgerId({ accreditationId: null })
 
-    const result = await view.read(ledgerId)
+    const result = await readLedger(ledgerRepository, ledgerId)
 
     expect(result.ledger.accreditationId).toBeNull()
   })
 
   it('returns no events for a ledger that holds none', async () => {
-    const result = await view.read(buildLedgerId())
+    const result = await readLedger(ledgerRepository, buildLedgerId())
 
     expect(result.events).toEqual([])
   })
@@ -52,12 +48,16 @@ describe('waste balance ledger view', () => {
       })
     ])
 
-    const [event] = (await view.read(buildLedgerId())).events
+    const result = await readLedger(ledgerRepository, buildLedgerId())
 
-    expect(event.balance).toEqual({
-      opening: { total: 10, available: 8 },
-      closing: { total: 30, available: 28 }
-    })
+    expect(result.events).toEqual([
+      expect.objectContaining({
+        balance: {
+          opening: { total: 10, available: 8 },
+          closing: { total: 30, available: 28 }
+        }
+      })
+    ])
   })
 
   it('names the summary log a submission event credits', async () => {
@@ -65,10 +65,11 @@ describe('waste balance ledger view', () => {
       buildLedgerEvent({ payload: { summaryLogId: 'log-7', creditTotal: 250 } })
     ])
 
-    const [event] = (await view.read(buildLedgerId())).events
+    const result = await readLedger(ledgerRepository, buildLedgerId())
 
-    expect(event.summaryLog).toEqual({ id: 'log-7', creditTotal: 250 })
-    expect(event.prn).toBeUndefined()
+    expect(result.events).toEqual([
+      expect.objectContaining({ summaryLog: { id: 'log-7', creditTotal: 250 } })
+    ])
   })
 
   it('names the note a PRN event concerns, and its tonnage', async () => {
@@ -76,10 +77,11 @@ describe('waste balance ledger view', () => {
       buildPrnAcceptedEvent({ payload: { prnId: 'prn-9', amount: 40 } })
     ])
 
-    const [event] = (await view.read(buildLedgerId())).events
+    const result = await readLedger(ledgerRepository, buildLedgerId())
 
-    expect(event.prn).toEqual({ id: 'prn-9', tonnage: 40 })
-    expect(event.summaryLog).toBeUndefined()
+    expect(result.events).toEqual([
+      expect.objectContaining({ prn: { id: 'prn-9', tonnage: 40 } })
+    ])
   })
 
   it('carries an actor the source knows only the id of', async () => {
@@ -87,9 +89,11 @@ describe('waste balance ledger view', () => {
       buildLedgerEvent({ createdBy: { id: 'user-9' } })
     ])
 
-    const [event] = (await view.read(buildLedgerId())).events
+    const result = await readLedger(ledgerRepository, buildLedgerId())
 
-    expect(event.createdBy).toEqual({ id: 'user-9' })
+    expect(result.events).toEqual([
+      expect.objectContaining({ createdBy: { id: 'user-9' } })
+    ])
   })
 
   it('carries an actor name and email where the source holds them', async () => {
@@ -99,27 +103,26 @@ describe('waste balance ledger view', () => {
       })
     ])
 
-    const [event] = (await view.read(buildLedgerId())).events
+    const result = await readLedger(ledgerRepository, buildLedgerId())
 
-    expect(event.createdBy).toEqual({
-      id: 'user-9',
-      name: 'Jo Sample',
-      email: 'jo@example.com'
-    })
+    expect(result.events).toEqual([
+      expect.objectContaining({
+        createdBy: {
+          id: 'user-9',
+          name: 'Jo Sample',
+          email: 'jo@example.com'
+        }
+      })
+    ])
   })
 
   it('repeats none of the ledger ids on an event, and hands out no storage id', async () => {
     await ledgerRepository.appendEvents([buildLedgerEvent()])
 
-    const [event] = (await view.read(buildLedgerId())).events
+    const result = await readLedger(ledgerRepository, buildLedgerId())
 
-    expect(Object.keys(event).sort()).toEqual([
-      'balance',
-      'createdAt',
-      'createdBy',
-      'kind',
-      'number',
-      'summaryLog'
+    expect(result.events.map((event) => Object.keys(event).sort())).toEqual([
+      ['balance', 'createdAt', 'createdBy', 'kind', 'number', 'summaryLog']
     ])
   })
 
@@ -130,7 +133,7 @@ describe('waste balance ledger view', () => {
       buildLedgerEvent({ accreditationId: null, number: 1 })
     ])
 
-    const result = await view.read(buildLedgerId())
+    const result = await readLedger(ledgerRepository, buildLedgerId())
 
     expect(result.events.map((event) => event.number)).toEqual([1, 2])
   })
