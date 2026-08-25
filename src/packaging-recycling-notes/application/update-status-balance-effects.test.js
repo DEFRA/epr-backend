@@ -21,6 +21,11 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  buildPrn,
+  buildAccreditation as buildPrnAccreditation
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 /**
  * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
@@ -80,23 +85,42 @@ const serviceWithBalance = (closingBalance) => {
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} currentStatus
  */
 const prnAt = (currentStatus) =>
-  /** @type {*} */ ({
-    id: PRN_ID,
-    registrationId: REGISTRATION_ID,
-    organisation: { id: ORGANISATION_ID },
-    accreditation: { id: ACCREDITATION_ID, accreditationYear: 2026 },
-    tonnage: TONNAGE,
+  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ ({
+    ...buildPrn({
+      id: PRN_ID,
+      registrationId: REGISTRATION_ID,
+      organisation: {
+        id: ORGANISATION_ID,
+        name: 'Test Reprocessor',
+        tradingName: 'Trading Name'
+      },
+      accreditation: buildPrnAccreditation({
+        id: ACCREDITATION_ID,
+        accreditationYear: 2026
+      }),
+      tonnage: TONNAGE
+    }),
     lastAppliedEventNumber: SEED_NUMBER,
-    status: { currentStatus }
+    status:
+      /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['status']} */ ({
+        currentStatus
+      })
   })
 
+/**
+ * @param {ReturnType<typeof createWasteBalanceService>} service
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} currentStatus
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} newStatus
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} actor
+ */
 const applyTransition = (service, logger, currentStatus, newStatus, actor) =>
   applyPrnTransition(service, logger, {
     prn: prnAt(currentStatus),
     ledgerId,
     newStatus,
     actor,
-    accreditation: /** @type {*} */ ({
+    accreditation: buildAccreditation({
       status: ACCREDITATION_STATUS.APPROVED,
       submittedToRegulator: REGULATOR.EA
     }),
