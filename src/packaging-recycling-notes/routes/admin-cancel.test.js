@@ -220,7 +220,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     )
   })
 
-  it('marks the active report for the PRN issuance period stale (ADR-0042, unchanged)', async () => {
+  it('marks the active report for the PRN issuance period stale on accepted -> cancelled', async () => {
     const reportId = randomUUID()
     const reports = new Map([
       [
@@ -550,6 +550,50 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
       expect(
         mockCdpAuditing.mock.calls[0][0].context.next.status.currentStatus
       ).toBe(PRN_STATUS.CANCELLED)
+    })
+
+    it('marks the active report for the PRN issuance period stale on awaiting_acceptance -> cancelled', async () => {
+      const reportId = randomUUID()
+      const reports = new Map([
+        [
+          reportId,
+          {
+            ...buildCreateReportParams({ organisationId, registrationId }),
+            id: reportId,
+            version: 1,
+            schemaVersion: 1,
+            status: {
+              currentStatus: 'in_progress',
+              currentStatusAt: new Date().toISOString(),
+              created: { at: new Date().toISOString(), by: { id: 'user-1' } },
+              history: []
+            }
+          }
+        ]
+      ])
+
+      await startServer(
+        buildAwaitingAcceptancePrn({
+          issuedAt: new Date('2024-01-15T10:00:00Z')
+        }),
+        { reports }
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: cancelUrl,
+        ...asServiceMaintainerWrite()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const updatedReport = await reportsRepository.findReportById(reportId)
+      expect(updatedReport.stale).toEqual({
+        prnCancelled: {
+          occurredAt: expect.any(String),
+          prnId
+        }
+      })
     })
 
     it('allows cancellation exactly at the 31 January deadline instant', async () => {
