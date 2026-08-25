@@ -14,7 +14,7 @@ import {
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { formatDate } from '#common/helpers/date-formatter.js'
+import { calendarDate, formatDate } from '#common/helpers/date-formatter.js'
 import { invalidArg, partialMock } from '#test/type-helpers.js'
 
 describe('transform', () => {
@@ -602,9 +602,9 @@ describe('transform', () => {
       year: 2026,
       period: 1,
       label: 'Jan Report',
-      startDate: '2026-01-01',
-      endDate: '2026-01-31',
-      dueDate: '2026-02-28'
+      startDate: calendarDate('2026-01-01'),
+      endDate: calendarDate('2026-01-31'),
+      dueDate: calendarDate('2026-02-28')
     }
     const periods = [period]
 

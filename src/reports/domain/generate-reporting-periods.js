@@ -8,6 +8,24 @@ import { filterPeriodsFromDate } from './filter-periods-from-date.js'
  * @import { Cadence } from './cadence.js'
  */
 
+/**
+ * A reporting period as generated for the calendar, before any stored report is
+ * merged onto it. First stage of the calendar pipeline: generated ->
+ * `MergedPeriod` -> `CalendarPeriod`.
+ *
+ * Distinct from `ReportingPeriod`, which is the branded start/end pair alone;
+ * this adds the derived due date and the empty report slot.
+ *
+ * @typedef {{
+ *   dueDate: CalendarDate;
+ *   endDate: CalendarDate;
+ *   period: number;
+ *   report: null;
+ *   startDate: CalendarDate;
+ *   year: number;
+ * }} GeneratedPeriod
+ */
+
 const DUE_DAY = 20
 const MONTHS_IN_YEAR = 12
 
@@ -27,7 +45,7 @@ function computeDueDate(year, endMonth) {
  *
  * @param {Cadence} cadence
  * @param {number} year
- * @returns {Array<{year: number, period: number, startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate, report: null}>}
+ * @returns {GeneratedPeriod[]}
  */
 export function generateAllPeriodsForYear(cadence, year) {
   const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
@@ -53,7 +71,7 @@ export function generateAllPeriodsForYear(cadence, year) {
  * @param {number} year
  * @param {Date} [now] - Current date (defaults to new Date(), injectable for testing)
  * @param {string | null} [fromDate] - ISO `YYYY-MM-DD` lower bound; periods ending before it are dropped
- * @returns {Array<{year: number, period: number, startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate, report: null}>}
+ * @returns {GeneratedPeriod[]}
  */
 export function generateReportingPeriods(
   cadence,
