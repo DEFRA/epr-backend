@@ -6,9 +6,13 @@ import { assertBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain
  * the relevant-year deadline below. `accepted` since PAE-1823; `awaiting_acceptance`
  * added for PAE-1859 (cancelling a note stuck awaiting the recipient's response).
  *
+ * The single source of truth for admin-cancellable statuses — also imported by
+ * `routes/admin-cancel.js` for its 409 guard, so the deadline check here and
+ * the route's cancellability check can never drift apart.
+ *
  * @type {Set<import('#packaging-recycling-notes/domain/model.js').PrnStatus>}
  */
-const ADMIN_CANCELLABLE_PREVIOUS_STATUSES = new Set([
+export const ADMIN_CANCELLABLE_PREVIOUS_STATUSES = new Set([
   PRN_STATUS.ACCEPTED,
   PRN_STATUS.AWAITING_ACCEPTANCE
 ])

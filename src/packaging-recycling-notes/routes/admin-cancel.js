@@ -14,6 +14,7 @@ import {
   StatusConflictError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
+import { ADMIN_CANCELLABLE_PREVIOUS_STATUSES } from '#packaging-recycling-notes/domain/cancellation.js'
 import { RelevantYearWindowExpiredError } from '#packaging-recycling-notes/domain/relevant-year.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
@@ -46,18 +47,6 @@ const buildAdminUser = ({ id, email, name }) => ({
 })
 
 /**
- * Statuses an admin can cancel a PRN/PERN from. `accepted` since PAE-1823;
- * `awaiting_acceptance` added for PAE-1859 so a note stranded awaiting the
- * recipient's response isn't stuck if they can't act on it.
- *
- * @type {Set<import('#packaging-recycling-notes/domain/model.js').PrnStatus>}
- */
-const CANCELLABLE_STATUSES = new Set([
-  PRN_STATUS.ACCEPTED,
-  PRN_STATUS.AWAITING_ACCEPTANCE
-])
-
-/**
  * Fetches the PRN and confirms it is in a cancellable state, logging and
  * throwing the appropriate Boom error otherwise (404 if missing, 409 if not
  * `accepted` or `awaiting_acceptance`).
@@ -82,7 +71,9 @@ const findCancellablePrnOrThrow = async (repository, id, logger) => {
     throw Boom.notFound(`PRN not found: ${id}`)
   }
 
-  if (!CANCELLABLE_STATUSES.has(previousPrn.status.currentStatus)) {
+  if (
+    !ADMIN_CANCELLABLE_PREVIOUS_STATUSES.has(previousPrn.status.currentStatus)
+  ) {
     logger.info({
       message: `Admin cancel refused: PRN ${id} is ${previousPrn.status.currentStatus}, not cancellable`,
       event: {
