@@ -261,34 +261,6 @@
  */
 
 /**
- * A raw report document as the periodic-report projections select it. The
- * activity payloads are optional because the two projections differ: the
- * calendar one (`findPeriodicReports`) omits them entirely, the estate-wide one
- * (`findAllPeriodicReports`) selects the summary fields above. A full `Report`
- * satisfies this too.
- *
- * @typedef {Pick<
- *   Report,
- *   | 'cadence'
- *   | 'dueDate'
- *   | 'endDate'
- *   | 'id'
- *   | 'period'
- *   | 'startDate'
- *   | 'submissionNumber'
- *   | 'year'
- * > & {
- *   exportActivity?: ExportActivitySummary,
- *   prn?: PrnData,
- *   recyclingActivity?: RecyclingActivitySummary,
- *   resubmissionRequired?: ReportResubmissionRequired | null,
- *   status: Pick<ReportStatusObject, 'created' | 'currentStatus' | 'submitted'>,
- *   supportingInformation?: string,
- *   wasteSent?: WasteSentSummary
- * }} PeriodicReportDoc
- */
-
-/**
  * @typedef {{
  *   id: string,
  *   exportActivity?: ExportActivitySummary,

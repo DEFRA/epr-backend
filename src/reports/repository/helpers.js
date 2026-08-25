@@ -1,4 +1,3 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -13,13 +12,49 @@ import {
 import { randomUUID } from 'node:crypto'
 
 /**
- * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import {
+ *   ExportActivitySummary,
  *   PeriodicReport,
- *   PeriodicReportDoc,
+ *   PrnData,
+ *   RecyclingActivitySummary,
+ *   Report,
  *   ReportPerPeriod,
- *   ReportSummary
+ *   ReportResubmissionRequired,
+ *   ReportStatusObject,
+ *   ReportSummary,
+ *   WasteSentSummary
  * } from './port.js'
+ */
+
+/**
+ * The fields the periodic-report grouping needs from a report. The activity
+ * payloads are optional because callers supply different subsets: the calendar
+ * view omits them entirely, the estate-wide view carries the summary totals. A
+ * full `Report` satisfies this too.
+ *
+ * Dates are `CalendarDate` because each adapter is expected to have converted
+ * before calling in - this is shared machinery, not a place to reconcile any
+ * one datastore's history.
+ *
+ * @typedef {Pick<
+ *   Report,
+ *   | 'cadence'
+ *   | 'dueDate'
+ *   | 'endDate'
+ *   | 'id'
+ *   | 'period'
+ *   | 'startDate'
+ *   | 'submissionNumber'
+ *   | 'year'
+ * > & {
+ *   exportActivity?: ExportActivitySummary,
+ *   prn?: PrnData,
+ *   recyclingActivity?: RecyclingActivitySummary,
+ *   resubmissionRequired?: ReportResubmissionRequired | null,
+ *   status: Pick<ReportStatusObject, 'created' | 'currentStatus' | 'submitted'>,
+ *   supportingInformation?: string,
+ *   wasteSent?: WasteSentSummary
+ * }} PeriodicReportFields
  */
 
 /**
@@ -50,16 +85,6 @@ export const mapReport = (report) => {
   }
   return { ...report, stale: normaliseStale(report.stale) }
 }
-
-/**
- * Only reports persisted before the bare-date schema fix carry a full ISO
- * datetime here (historical Joi coercion); new reports are already bare, so
- * the truncation is a no-op for them. Safe to reduce to a plain read once no
- * pre-fix reports remain.
- * @param {string} dateString
- * @returns {CalendarDate}
- */
-const backCompatCalendarDate = (dateString) => calendarDate(dateString)
 
 /**
  * Picks the latest submission (highest submissionNumber) per reporting period
@@ -106,7 +131,7 @@ const groupTransform = (arr, keyFn, valueFn) =>
   )
 
 /**
- * @param {PeriodicReportDoc} doc
+ * @param {PeriodicReportFields} doc
  * @returns {ReportSummary}
  */
 const toSubmission = (doc) => ({
@@ -154,7 +179,7 @@ const toSubmission = (doc) => ({
 })
 
 /**
- * @param {PeriodicReportDoc[]} periodDocs
+ * @param {PeriodicReportFields[]} periodDocs
  * @returns {ReportPerPeriod}
  */
 const buildPeriodSummary = (periodDocs) => {
@@ -163,9 +188,9 @@ const buildPeriodSummary = (periodDocs) => {
   )
   const { startDate, endDate, dueDate } = first
   return {
-    startDate: backCompatCalendarDate(startDate),
-    endDate: backCompatCalendarDate(endDate),
-    dueDate: backCompatCalendarDate(dueDate),
+    startDate,
+    endDate,
+    dueDate,
     current: toSubmission(first),
     previousSubmissions: rest.map(toSubmission)
   }
@@ -180,7 +205,7 @@ const buildPeriodSummary = (periodDocs) => {
  *
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {PeriodicReportDoc[]} docs
+ * @param {PeriodicReportFields[]} docs
  * @returns {PeriodicReport[]}
  */
 export const groupAsPeriodicReports = (
@@ -194,7 +219,7 @@ export const groupAsPeriodicReports = (
     registrationId,
     year: Number(year),
     reports: groupTransform(
-      /** @type {PeriodicReportDoc[]} */ (yearDocs),
+      /** @type {PeriodicReportFields[]} */ (yearDocs),
       (doc) => doc.cadence,
       (cadenceDocs) =>
         groupTransform(
@@ -207,9 +232,9 @@ export const groupAsPeriodicReports = (
 }
 
 /**
- * Groups raw reports and transforms them into periodic reports.
- * @param {import('./port.js').Report[]} reports
- * @returns {import('./port.js').PeriodicReport[]}
+ * Groups reports and transforms them into periodic reports.
+ * @param {(PeriodicReportFields & { organisationId: string, registrationId: string })[]} reports
+ * @returns {PeriodicReport[]}
  */
 export const transformToPeriodicReports = (reports) => {
   const grouped = reports.reduce((acc, report) => {

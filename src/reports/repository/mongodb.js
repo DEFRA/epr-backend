@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {
@@ -35,10 +36,32 @@ import {
  *   UpdateReportParams,
  *   UpdateReportStatusParams
  * } from './port.js'
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Db } from 'mongodb'
  */
 
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+
+/**
+ * Converts the calendar-date fields of a stored document to the bare dates the
+ * port promises. Reports persisted before the bare-date schema fix carry a full
+ * ISO datetime here (historical Joi coercion); newer ones are already bare, so
+ * this is a no-op for them.
+ *
+ * This lives in the adapter rather than in shared code because it exists only
+ * to reconcile what this collection happens to hold. The in-memory adapter
+ * stores domain values and has no such history, so it must not run it.
+ *
+ * @template {{ startDate: string, endDate: string, dueDate: string }} T
+ * @param {T} doc
+ * @returns {T & { startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate }}
+ */
+const withBareDates = (doc) => ({
+  ...doc,
+  startDate: calendarDate(doc.startDate),
+  endDate: calendarDate(doc.endDate),
+  dueDate: calendarDate(doc.dueDate)
+})
 
 /**
  * Resolves a failed findOneAndUpdate into a 404 (report missing) or 409 (version mismatch).
@@ -172,7 +195,7 @@ const performUpdateReport = async (db, params) => {
   }
 
   const { _id, ...report } = doc
-  return mapReport(report)
+  return mapReport(withBareDates(report))
 }
 
 /**
@@ -212,7 +235,7 @@ const performUpdateReportStatus = async (db, params) => {
   }
 
   const { _id, ...report } = doc
-  return mapReport(report)
+  return mapReport(withBareDates(report))
 }
 
 /**
@@ -227,7 +250,7 @@ const performFindReportById = async (db, reportId) => {
     throw Boom.notFound(`Report not found: ${reportId}`)
   }
   const { _id, ...report } = doc
-  return mapReport(report)
+  return mapReport(withBareDates(report))
 }
 
 /**
@@ -295,7 +318,11 @@ const performFindPeriodicReports = async (db, params) => {
     )
     .toArray()
 
-  return groupAsPeriodicReports(organisationId, registrationId, docs)
+  return groupAsPeriodicReports(
+    organisationId,
+    registrationId,
+    docs.map(withBareDates)
+  )
 }
 
 /**
@@ -347,7 +374,7 @@ const performFindAllPeriodicReports = async (db) => {
     )
     .toArray()
 
-  return transformToPeriodicReports(docs)
+  return transformToPeriodicReports(docs.map(withBareDates))
 }
 
 /**
