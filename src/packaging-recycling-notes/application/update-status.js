@@ -163,7 +163,7 @@ async function performStreamWrite({
         )
       : undefined
 
-  /* c8 ignore next 6 - defensive: findAccreditationById resolves an accreditation or throws, so a nullish one means the repository broke its contract */
+  /* c8 ignore next 5 - defensive: findAccreditationById resolves an accreditation or throws, so a nullish one means the repository broke its contract */
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE && !accreditation) {
     throw Boom.badImplementation(
       `Accreditation ${accreditationId} could not be read for the issuance of PRN ${prn.id}`
@@ -193,6 +193,9 @@ async function performStreamWrite({
 
   const updated = foldPrnFromTailEvents(projection, events)
 
+  // Keyed off the accreditation rather than the status it was fetched for: the
+  // two are already tied together above, and this is the form that narrows it
+  // for the PRN number below.
   if (accreditation) {
     return {
       updatedPrn: await persistProjectionWithIssuanceRetry({
@@ -247,10 +250,10 @@ const performDiscardWrite = async ({
 
   validateTransition(fromStatus, newStatus, actor)
 
-  /* c8 ignore next 6 - defensive: the caller routes only balance-effect-free transitions here, and the state machine has exactly one */
+  /* c8 ignore next 5 - defensive: the caller routes only balance-effect-free transitions here, and the state machine has exactly one */
   if (prnCommandFor(fromStatus, newStatus)) {
     throw Boom.badImplementation(
-      `${fromStatus} -> ${newStatus} has a balance effect but took the write path that appends no event`
+      `${fromStatus} -> ${newStatus} on PRN ${prn.id} has a balance effect but took the write path that appends no event`
     )
   }
 

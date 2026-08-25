@@ -327,7 +327,7 @@ describe('createWasteBalanceService', () => {
       expect(all).toHaveLength(1)
     })
 
-    it('guards every PRN command against a non-positive amount before deciding', async () => {
+    it('rejects a non-positive amount before the decision runs', async () => {
       await seedLedger()
       let decided = false
 

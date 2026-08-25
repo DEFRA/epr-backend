@@ -9,6 +9,7 @@ import { ACCREDITATION_STATUS, REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import {
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
@@ -18,6 +19,7 @@ import {
   buildLedgerEvent,
   buildPrnCreatedEvent,
   buildPrnRejectedEvent,
+  buildPrnAcceptedEvent,
   buildPrnCancelledAfterIssueEvent
 } from '#waste-balances/repository/ledger-test-data.js'
 
@@ -129,6 +131,31 @@ const seedClosingBalance = (ledgerRepository, balanceSeed) =>
       }
     })
   ])
+
+/**
+ * A ledger whose head moves mid-command: the first `findLatestInLedger` — the
+ * read a command's fold opens with — lands a competing event before it
+ * resolves. A ruling made after the fold sees that event; one made before it
+ * does not.
+ *
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').LedgerEvent} competingEvent
+ * @returns {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository}
+ */
+const withCompetingWriteDuringFold = (ledgerRepository, competingEvent) => {
+  let landed = false
+
+  return {
+    ...ledgerRepository,
+    findLatestInLedger: async (ledgerId) => {
+      if (!landed) {
+        landed = true
+        await ledgerRepository.appendEvents([competingEvent])
+      }
+      return ledgerRepository.findLatestInLedger(ledgerId)
+    }
+  }
+}
 
 const buildOrganisationsRepository = () =>
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
@@ -422,6 +449,68 @@ describe('updatePrnStatus concurrency', () => {
       amount: ISSUED_AMOUNT + TONNAGE,
       availableAmount: RINGFENCED_AVAILABLE + TONNAGE
     })
+  })
+
+  it('rules on the transition against the head the command folded, not an earlier one', async () => {
+    const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
+      buildAwaitingAcceptanceSeed()
+    ])
+    const prnRepository = prnFactory(noopLogger())
+
+    const ledgerRepository = createInMemoryLedgerRepository()()
+    await seedClosingBalance(ledgerRepository, {
+      amount: ISSUED_AMOUNT,
+      availableAmount: RINGFENCED_AVAILABLE
+    })
+
+    // The producer's acceptance lands while this command is folding: it is not
+    // on the ledger when the request arrives, and is by the time the fold
+    // resolves. Only a ruling taken after the fold can see it, so this is the
+    // ordering the write depends on rather than one the caller can arrange.
+    const racingLedger = withCompetingWriteDuringFold(
+      ledgerRepository,
+      buildPrnAcceptedEvent({
+        organisationId: ORG_ID,
+        registrationId: REG_ID,
+        accreditationId: ACC_ID,
+        number: 2,
+        payload: { prnId: PRN_ID, amount: TONNAGE },
+        openingBalance: {
+          amount: ISSUED_AMOUNT,
+          availableAmount: RINGFENCED_AVAILABLE
+        },
+        closingBalance: {
+          amount: ISSUED_AMOUNT,
+          availableAmount: RINGFENCED_AVAILABLE
+        }
+      })
+    )
+
+    await expect(
+      updatePrnStatus({
+        prnRepository,
+        ledgerRepository: racingLedger,
+        organisationsRepository: buildOrganisationsRepository(),
+        prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
+        logger: noopLogger(),
+        id: PRN_ID,
+        organisationId: ORG_ID,
+        accreditationId: ACC_ID,
+        registrationId: REG_ID,
+        newStatus: PRN_STATUS.ACCEPTED,
+        actor: PRN_ACTOR.PRODUCER,
+        user: { id: 'user-789', name: 'Test User' }
+      })
+    ).rejects.toBeInstanceOf(StatusConflictError)
+
+    // A second acceptance would have taken slot 3 with every guard satisfied.
+    const all = await ledgerRepository.findAllInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
+    expect(all).toHaveLength(2)
+    expect(all[1].kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
   })
 
   it('refuses a discard whose creation event is already on the ledger but not yet projected', async () => {

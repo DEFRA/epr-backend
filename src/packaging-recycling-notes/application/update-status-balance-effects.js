@@ -200,7 +200,7 @@ export async function applyPrnTransition(
       }
 
       const command = prnCommandFor(fromStatus, newStatus)
-      /* c8 ignore next 6 - defensive: the caller routes balance-affecting transitions here, so every transition reaching this point has a command */
+      /* c8 ignore next 5 - defensive: the caller routes balance-affecting transitions here, so every transition reaching this point has a command */
       if (!command) {
         throw Boom.badImplementation(
           `${fromStatus} -> ${newStatus} took the waste balance write path but has no balance effect`
