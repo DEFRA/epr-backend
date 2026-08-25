@@ -69,4 +69,28 @@ describe('assertCancellationAllowed', () => {
       ).not.toThrow()
     }
   )
+
+  describe('awaiting_acceptance -> cancelled (admin path, PAE-1859)', () => {
+    it('does not throw within the window', () => {
+      expect(() =>
+        assertCancellationAllowed(
+          PRN_STATUS.AWAITING_ACCEPTANCE,
+          PRN_STATUS.CANCELLED,
+          2026,
+          new Date('2027-01-31T23:59:59.999Z')
+        )
+      ).not.toThrow()
+    })
+
+    it('throws RelevantYearWindowExpiredError once the deadline has passed', () => {
+      expect(() =>
+        assertCancellationAllowed(
+          PRN_STATUS.AWAITING_ACCEPTANCE,
+          PRN_STATUS.CANCELLED,
+          2026,
+          new Date('2027-02-01T00:00:00.000Z')
+        )
+      ).toThrow(RelevantYearWindowExpiredError)
+    })
+  })
 })

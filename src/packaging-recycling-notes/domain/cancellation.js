@@ -2,10 +2,22 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { assertBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/relevant-year.js'
 
 /**
+ * Prior statuses a PRN/PERN can be admin-cancelled from, and so must respect
+ * the relevant-year deadline below. `accepted` since PAE-1823; `awaiting_acceptance`
+ * added for PAE-1859 (cancelling a note stuck awaiting the recipient's response).
+ *
+ * @type {Set<import('#packaging-recycling-notes/domain/model.js').PrnStatus>}
+ */
+const CANCELLABLE_PREVIOUS_STATUSES = new Set([
+  PRN_STATUS.ACCEPTED,
+  PRN_STATUS.AWAITING_ACCEPTANCE
+])
+
+/**
  * A PRN/PERN issued under an accreditation for relevant year Y must not be
- * cancelled after 31 January of the following year (PAE-1823). Keyed on the
- * transition itself, not the actor, so callers can run this unconditionally
- * on any status change.
+ * cancelled after 31 January of the following year (PAE-1823, widened to
+ * `awaiting_acceptance` by PAE-1859). Keyed on the transition itself, not the
+ * actor, so callers can run this unconditionally on any status change.
  *
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} previousStatus
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} newStatus
@@ -19,10 +31,11 @@ export function assertCancellationAllowed(
   accreditationYear,
   now
 ) {
-  const isAcceptedToCancelled =
-    previousStatus === PRN_STATUS.ACCEPTED && newStatus === PRN_STATUS.CANCELLED
+  const isAdminCancellation =
+    CANCELLABLE_PREVIOUS_STATUSES.has(previousStatus) &&
+    newStatus === PRN_STATUS.CANCELLED
 
-  if (isAcceptedToCancelled) {
+  if (isAdminCancellation) {
     assertBeforeEndOfRelevantYear(accreditationYear, now)
   }
 }

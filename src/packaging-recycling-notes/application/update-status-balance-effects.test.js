@@ -195,6 +195,12 @@ describe('prnCommandFor', () => {
       PRN_STATUS.CANCELLED,
       decideCancelIssuedPrn,
       'credit_full'
+    ],
+    [
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.CANCELLED,
+      decideCancelIssuedPrn,
+      'credit_full'
     ]
   ])(
     'maps %s -> %s to its balance decision',

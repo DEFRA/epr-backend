@@ -336,7 +336,6 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
   it.each([
     PRN_STATUS.DRAFT,
     PRN_STATUS.AWAITING_AUTHORISATION,
-    PRN_STATUS.AWAITING_ACCEPTANCE,
     PRN_STATUS.AWAITING_CANCELLATION,
     PRN_STATUS.CANCELLED,
     PRN_STATUS.DELETED,
@@ -492,6 +491,105 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+  })
+
+  describe('cancelling from awaiting_acceptance (PAE-1859)', () => {
+    /** @param {Object} [options] */
+    const buildAwaitingAcceptancePrn = ({
+      accreditationYear = 2026,
+      tonnage = 500,
+      issuedAt = ISSUED_AT
+    } = {}) => {
+      const prn = buildAcceptedPrn({
+        currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        accreditationYear,
+        tonnage,
+        issuedAt
+      })
+      // Never accepted — the accepted slot must stay unset so the external API
+      // does not report an acceptedAt for a PRN that was never accepted.
+      const { accepted: _accepted, ...statusWithoutAccepted } = prn.status
+      return { ...prn, status: statusWithoutAccepted }
+    }
+
+    it('cancels an awaiting_acceptance PRN within the window, crediting the full tonnage back', async () => {
+      await startServer(buildAwaitingAcceptancePrn({ tonnage: 500 }))
+
+      const response = await server.inject({
+        method: 'POST',
+        url: cancelUrl,
+        ...asServiceMaintainerWrite()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      expect(body.status).toBe(PRN_STATUS.CANCELLED)
+
+      const stored = await packagingRecyclingNotesRepository.findById(prnId)
+      expect(stored?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
+      // Never accepted or rejected, so neither slot should be stamped by the
+      // cancellation — the external API must not report acceptedAt/rejectedAt.
+      expect(stored?.status.accepted).toBeUndefined()
+      expect(stored?.status.rejected).toBeUndefined()
+
+      const latestEvent = await ledgerRepository.findLatestInLedger({
+        organisationId,
+        registrationId,
+        accreditationId
+      })
+      expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
+      expect(latestEvent.closingBalance).toEqual({
+        amount: SEED_BALANCE.amount + 500,
+        availableAmount: SEED_BALANCE.availableAmount + 500
+      })
+
+      expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+      expect(
+        mockCdpAuditing.mock.calls[0][0].context.previous.status.currentStatus
+      ).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      expect(
+        mockCdpAuditing.mock.calls[0][0].context.next.status.currentStatus
+      ).toBe(PRN_STATUS.CANCELLED)
+    })
+
+    it('allows cancellation exactly at the 31 January deadline instant', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2027-01-31T23:59:59.999Z'))
+
+      await startServer(buildAwaitingAcceptancePrn({ accreditationYear: 2026 }))
+
+      const response = await server.inject({
+        method: 'POST',
+        url: cancelUrl,
+        ...asServiceMaintainerWrite()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      vi.useRealTimers()
+    })
+
+    it('rejects cancellation one millisecond after the deadline', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
+
+      await startServer(buildAwaitingAcceptancePrn({ accreditationYear: 2026 }))
+
+      const response = await server.inject({
+        method: 'POST',
+        url: cancelUrl,
+        ...asServiceMaintainerWrite()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      const payload = JSON.parse(response.payload)
+      expect(payload.message).toMatch(/2026/)
+      expect(payload.message).toMatch(/31 January 2027/)
+
+      const stored = await packagingRecyclingNotesRepository.findById(prnId)
+      expect(stored?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      vi.useRealTimers()
+    })
   })
 
   it('rejects a second cancellation of the same PRN, crediting the balance only once', async () => {

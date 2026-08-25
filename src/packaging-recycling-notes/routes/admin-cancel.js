@@ -46,16 +46,28 @@ const buildAdminUser = ({ id, email, name }) => ({
 })
 
 /**
+ * Statuses an admin can cancel a PRN/PERN from. `accepted` since PAE-1823;
+ * `awaiting_acceptance` added for PAE-1859 so a note stranded awaiting the
+ * recipient's response isn't stuck if they can't act on it.
+ *
+ * @type {Set<import('#packaging-recycling-notes/domain/model.js').PrnStatus>}
+ */
+const CANCELLABLE_STATUSES = new Set([
+  PRN_STATUS.ACCEPTED,
+  PRN_STATUS.AWAITING_ACCEPTANCE
+])
+
+/**
  * Fetches the PRN and confirms it is in a cancellable state, logging and
  * throwing the appropriate Boom error otherwise (404 if missing, 409 if not
- * `accepted`).
+ * `accepted` or `awaiting_acceptance`).
  *
  * @param {PackagingRecyclingNotesRepository} repository
  * @param {string} id
  * @param {TypedLogger} logger
- * @returns {Promise<*>} the `accepted` PRN
+ * @returns {Promise<*>} the cancellable PRN
  */
-const findAcceptedPrnOrThrow = async (repository, id, logger) => {
+const findCancellablePrnOrThrow = async (repository, id, logger) => {
   const previousPrn = await repository.findById(id)
 
   if (!previousPrn) {
@@ -70,9 +82,9 @@ const findAcceptedPrnOrThrow = async (repository, id, logger) => {
     throw Boom.notFound(`PRN not found: ${id}`)
   }
 
-  if (previousPrn.status.currentStatus !== PRN_STATUS.ACCEPTED) {
+  if (!CANCELLABLE_STATUSES.has(previousPrn.status.currentStatus)) {
     logger.info({
-      message: `Admin cancel refused: PRN ${id} is ${previousPrn.status.currentStatus}, not accepted`,
+      message: `Admin cancel refused: PRN ${id} is ${previousPrn.status.currentStatus}, not cancellable`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
@@ -80,7 +92,7 @@ const findAcceptedPrnOrThrow = async (repository, id, logger) => {
       }
     })
     throw Boom.conflict(
-      `Cannot cancel a PRN with status '${previousPrn.status.currentStatus}'; only an accepted PRN can be cancelled`
+      `Cannot cancel a PRN with status '${previousPrn.status.currentStatus}'; only an accepted or awaiting acceptance PRN can be cancelled`
     )
   }
 
@@ -157,11 +169,11 @@ const performCancellation = async (request, previousPrn, id, h) => {
 /**
  * Maps a cancellation failure to the HTTP error it should surface as.
  *
- * This handler checks the fetched document is `accepted`, but the transition is
- * ruled on again at the ledger head against the PRN projected from the stream.
- * The two disagree whenever another writer has cancelled the PRN since, so a
- * status conflict is the ordinary refusal for a losing request rather than a
- * broken invariant.
+ * This handler checks the fetched document is `accepted` or
+ * `awaiting_acceptance`, but the transition is ruled on again at the ledger
+ * head against the PRN projected from the stream. The two disagree whenever
+ * another writer has changed the PRN's status since, so a status conflict is
+ * the ordinary refusal for a losing request rather than a broken invariant.
  *
  * @param {*} error
  * @param {string} path
@@ -244,7 +256,7 @@ export const adminPackagingRecyclingNotesCancel = {
     })
 
     try {
-      const previousPrn = await findAcceptedPrnOrThrow(
+      const previousPrn = await findCancellablePrnOrThrow(
         packagingRecyclingNotesRepository,
         id,
         logger
