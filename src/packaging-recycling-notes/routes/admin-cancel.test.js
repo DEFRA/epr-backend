@@ -10,7 +10,11 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  buildLedgerEvent,
+  buildPrnCancelledAfterIssueEvent
+} from '#waste-balances/repository/ledger-test-data.js'
+import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -386,6 +390,60 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+  })
+
+  it('refuses with 409 when the PRN is already cancelled on the stream', async () => {
+    await startServer(buildAcceptedPrn())
+
+    // The ticket's second route: the cancel event reached the ledger and the
+    // document write did not, so the document still reads accepted.
+    await ledgerRepository.appendEvents([
+      partialMock(
+        buildPrnCancelledAfterIssueEvent({
+          organisationId,
+          registrationId,
+          accreditationId,
+          number: 2,
+          payload: { prnId, amount: 500 }
+        })
+      )
+    ])
+
+    const response = await server.inject({
+      method: 'POST',
+      url: cancelUrl,
+      ...asServiceMaintainerWrite()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    const all = await ledgerRepository.findAllInLedger({
+      organisationId,
+      registrationId,
+      accreditationId
+    })
+    expect(all).toHaveLength(2)
+  })
+
+  it('refuses with 409 when another writer takes the ledger slot first', async () => {
+    await startServer(buildAcceptedPrn())
+
+    ledgerRepository.appendEvents = vi.fn().mockRejectedValue(
+      new LedgerSlotConflictError({
+        organisationId,
+        registrationId,
+        accreditationId,
+        number: 2
+      })
+    )
+
+    const response = await server.inject({
+      method: 'POST',
+      url: cancelUrl,
+      ...asServiceMaintainerWrite()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    expect(JSON.parse(response.payload).message).not.toContain(accreditationId)
   })
 
   it('returns 422 for a malformed PRN id (Joi param validation)', async () => {

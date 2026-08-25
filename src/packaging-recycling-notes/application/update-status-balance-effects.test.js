@@ -6,7 +6,8 @@ import {
 } from './update-status-balance-effects.js'
 import {
   PRN_STATUS,
-  PRN_ACTOR
+  PRN_ACTOR,
+  PRN_STATUS_TRANSITIONS
 } from '#packaging-recycling-notes/domain/model.js'
 import {
   createPrn as decideCreatePrn,
@@ -128,6 +129,24 @@ const applyTransition = (service, logger, currentStatus, newStatus, actor) =>
     createdBy,
     now: new Date('2026-06-01T00:00:00.000Z')
   })
+
+describe('every permitted transition is routed to a write path', () => {
+  // `updatePrnStatus` sends DISCARDED to the write that appends no event and
+  // everything else to the ledger, so a transition with no command must be
+  // exactly the one the discard path handles. Adding a transition to the state
+  // machine without a balance decision fails here rather than in production.
+  const permitted = Object.entries(PRN_STATUS_TRANSITIONS).flatMap(
+    ([fromStatus, transitions]) =>
+      transitions.map((transition) => [fromStatus, transition.status])
+  )
+
+  it.each(permitted)('%s -> %s', (fromStatus, newStatus) => {
+    const isDiscard =
+      fromStatus === PRN_STATUS.DRAFT && newStatus === PRN_STATUS.DISCARDED
+
+    expect(Boolean(prnCommandFor(fromStatus, newStatus))).toBe(!isDiscard)
+  })
+})
 
 describe('prnCommandFor', () => {
   it.each([

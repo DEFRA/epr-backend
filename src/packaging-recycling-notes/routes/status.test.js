@@ -24,6 +24,7 @@ import {
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
@@ -621,6 +622,27 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
         expect(response.payload).toContain('Version conflict')
+      })
+
+      it('returns 409 when another writer takes the ledger slot first', async () => {
+        ledgerRepository.appendEvents = vi.fn().mockRejectedValue(
+          new LedgerSlotConflictError({
+            organisationId,
+            registrationId,
+            accreditationId,
+            number: 2
+          })
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asOperator(),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(response.payload).not.toContain(accreditationId)
       })
 
       it('returns 404 when PRN belongs to different organisation', async () => {

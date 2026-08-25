@@ -153,22 +153,19 @@ async function performStreamWrite({
   user,
   obligationYear
 }) {
-  // Fetched here because the issuance path stamps the PRN number from it;
-  // whether it permits issuing is ruled on with the transition.
-  const accreditation =
+  // Present only on the issuance path, which stamps the PRN number from the
+  // accreditation; whether it permits issuing is ruled on with the transition.
+  // Carrying it in an object rather than beside an `undefined` keeps the branch
+  // below a statement about the transition rather than about what was fetched.
+  const issuance =
     newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
-      ? await organisationsRepository.findAccreditationById(
-          organisationId,
-          accreditationId
-        )
+      ? {
+          accreditation: await organisationsRepository.findAccreditationById(
+            organisationId,
+            accreditationId
+          )
+        }
       : undefined
-
-  /* c8 ignore next 5 - defensive: findAccreditationById resolves an accreditation or throws, so a nullish one means the repository broke its contract */
-  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE && !accreditation) {
-    throw Boom.badImplementation(
-      `Accreditation ${accreditationId} could not be read for the issuance of PRN ${prn.id}`
-    )
-  }
 
   const selectedObligationYear = selectObligationYearForAcceptance(
     prn,
@@ -183,7 +180,7 @@ async function performStreamWrite({
       ledgerId: { organisationId, registrationId, accreditationId },
       newStatus,
       actor,
-      accreditation,
+      accreditation: issuance?.accreditation,
       tonnage: prn.tonnage,
       createdBy: user,
       now,
@@ -193,17 +190,14 @@ async function performStreamWrite({
 
   const updated = foldPrnFromTailEvents(projection, events)
 
-  // Keyed off the accreditation rather than the status it was fetched for: the
-  // two are already tied together above, and this is the form that narrows it
-  // for the PRN number below.
-  if (accreditation) {
+  if (issuance) {
     return {
       updatedPrn: await persistProjectionWithIssuanceRetry({
         prnRepository,
         projection: updated,
         expectedVersion: prn.version,
         prnNumberParams: {
-          regulator: accreditation.submittedToRegulator,
+          regulator: issuance.accreditation.submittedToRegulator,
           isExport: prn.isExport,
           accreditationYear: prn.accreditation.accreditationYear
         }
