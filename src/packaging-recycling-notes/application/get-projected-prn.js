@@ -6,13 +6,37 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
+ * @typedef {ReturnType<typeof createWasteBalanceService>} WasteBalanceService
  */
 
 /**
- * Brings a fetched PRN current by folding any stream tail events past its
- * watermark, so callers receive the fully-formed PRN without touching the event
- * stream themselves. A missing or soft-deleted document short-circuits with no
- * stream query: a deleted PRN is terminal and has no further events to project.
+ * Brings a PRN current by folding the stream events past its watermark onto it.
+ * The document is a projection that can lag the stream, so this — not the
+ * document's own fields — is how a PRN's state is read (ADR-0036, "Reading PRN
+ * state"): by the read routes below, and by the write path when it needs a
+ * status to rule on.
+ *
+ * @param {PackagingRecyclingNote} prn
+ * @param {WasteBalanceService} service
+ * @returns {Promise<PackagingRecyclingNote>}
+ */
+export const projectPrnFromStreamTail = async (prn, service) => {
+  const tailEvents = await service.prnCatchupEvents({
+    organisationId: prn.organisation.id,
+    registrationId: prn.registrationId,
+    accreditationId: prn.accreditation.id,
+    prnId: prn.id,
+    afterEventNumber: prn.lastAppliedEventNumber ?? 0
+  })
+
+  return foldPrnFromTailEvents(prn, tailEvents)
+}
+
+/**
+ * Projects a fetched PRN so read callers receive the fully-formed document
+ * without touching the event stream themselves. A missing or soft-deleted
+ * document short-circuits with no stream query: a deleted PRN is terminal and
+ * has no further events to project.
  *
  * @param {PackagingRecyclingNote | null} prn
  * @param {WasteBalanceLedgerRepository} ledgerRepository
@@ -23,17 +47,10 @@ const projectFromStreamTail = async (prn, ledgerRepository) => {
     return prn
   }
 
-  const tailEvents = await createWasteBalanceService(
-    ledgerRepository
-  ).prnCatchupEvents({
-    organisationId: prn.organisation.id,
-    registrationId: prn.registrationId,
-    accreditationId: prn.accreditation.id,
-    prnId: prn.id,
-    afterEventNumber: prn.lastAppliedEventNumber ?? 0
-  })
-
-  return foldPrnFromTailEvents(prn, tailEvents)
+  return projectPrnFromStreamTail(
+    prn,
+    createWasteBalanceService(ledgerRepository)
+  )
 }
 
 /**

@@ -2,14 +2,7 @@ import Boom from '@hapi/boom'
 
 import {
   submitSummaryLog as decideSummaryLog,
-  createPrn as decideCreatePrn,
-  issuePrn as decideIssuePrn,
-  cancelPrnCreation as decideCancelPrnCreation,
-  cancelIssuedPrn as decideCancelIssuedPrn,
-  acceptPrn as decideAcceptPrn,
-  rejectPrn as decideRejectPrn,
-  PRN_COMMAND_STATUS,
-  PRN_COMMAND_REJECTION
+  PRN_COMMAND_STATUS
 } from '../domain/commands.js'
 import { currentWasteBalance } from './current-waste-balance.js'
 import { performUpdateViaLedger } from './update-via-ledger.js'
@@ -103,11 +96,25 @@ const createLedgerCommands = (ledgerRepository) => {
   }
 
   /**
-   * Run a PRN command: assert the positive-amount invariant the pure decider
-   * trusts, fold the ledger, reject when it does not exist yet (PRN commands
-   * always act on an open ledger), run the pure decider, and append the decided
-   * events when it commits. The amount guard and the no-ledger rejection both
-   * live here, in one place, rather than in each decider.
+   * Run a PRN command: assert the positive-amount invariant the deciders trust,
+   * fold the ledger, let the caller decide against the folded balance, and
+   * append what it returns.
+   *
+   * The fold yields `null` for a ledger with no events, and that is handed to
+   * the decision like any other state rather than short-circuited here. Whether
+   * a missing ledger is a client error or corruption depends on the transition
+   * being made, which is the caller's business, not the ledger's — and the
+   * caller must get to rule on that transition before anything else answers for
+   * it.
+   *
+   * `decide` is the caller's business rule, not a condition bolted onto one: it
+   * either yields the events to append or the reason there are none. It runs
+   * after the fold, so anything it reads for itself — the PRN's own status, say
+   * — is no older than the head those events land on. That ordering is what
+   * makes the pair of guards complete. The slot index alone only settles
+   * writers contending for the same slot: a writer that folds after a
+   * competitor's append sees the moved head and takes the next free slot, so
+   * every guard is satisfied and the command commits twice over.
    *
    * A non-positive amount is a broken invariant, not a client error: the PRN's
    * tonnage is validated positive at the HTTP route and the PRN repository
@@ -115,10 +122,13 @@ const createLedgerCommands = (ledgerRepository) => {
    * surfaces as a 500 the platform logs and alerts on, rather than slipping past
    * the deciders' `<` sufficiency check to inflate the balance.
    *
-   * @param {(balance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot, payload: import('../repository/ledger-schema.js').PrnPayload) => import('../domain/commands.js').PrnDecision} decide
-   * @returns {(ledgerId: import('../repository/ledger-schema.js').WasteBalanceLedgerId, payload: import('../repository/ledger-schema.js').PrnPayload, createdBy: import('../repository/ledger-schema.js').LedgerUserSummary) => Promise<PrnCommandResult>}
+   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
+   * @param {import('../repository/ledger-schema.js').PrnPayload} payload
+   * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
+   * @param {(balance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null) => Promise<import('../domain/commands.js').PrnDecision>} decide
+   * @returns {Promise<PrnCommandResult>}
    */
-  const runPrnCommand = (decide) => async (ledgerId, payload, createdBy) => {
+  const runPrnCommand = async (ledgerId, payload, createdBy, decide) => {
     if (!(payload.amount > 0)) {
       throw Boom.badImplementation(
         `PRN amount must be positive at the waste-balance write boundary; received ${payload.amount}`
@@ -126,14 +136,8 @@ const createLedgerCommands = (ledgerRepository) => {
     }
 
     const { state, head } = await fold(ledgerId)
-    if (!state) {
-      return {
-        status: PRN_COMMAND_STATUS.REJECTED,
-        reason: PRN_COMMAND_REJECTION.NO_LEDGER
-      }
-    }
 
-    const decision = decide(state.balance, payload)
+    const decision = await decide(state ? state.balance : null)
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       return decision
     }
@@ -155,6 +159,11 @@ const createLedgerCommands = (ledgerRepository) => {
  * leaves the next slot occupied, so the append rejects with a
  * `LedgerSlotConflictError` and the conflict surfaces to the caller — no
  * in-process retry (ADR-0036).
+ *
+ * The slot index settles only writers contending for the same slot, so every
+ * decision a command makes must come from a read taken at or after its fold.
+ * Anything the fold does not carry is read by the caller's decider, inside
+ * `runPrnCommand`.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [systemLogsRepository]
@@ -237,12 +246,7 @@ export const createWasteBalanceService = (
       })
     },
 
-    createPrn: runPrnCommand(decideCreatePrn),
-    issuePrn: runPrnCommand(decideIssuePrn),
-    cancelPrnCreation: runPrnCommand(decideCancelPrnCreation),
-    cancelIssuedPrn: runPrnCommand(decideCancelIssuedPrn),
-    acceptPrn: runPrnCommand(decideAcceptPrn),
-    rejectPrn: runPrnCommand(decideRejectPrn),
+    runPrnCommand,
 
     /**
      * The PRN's ledger events after a watermark: the catch-up tail a read
