@@ -6,6 +6,18 @@ import { coerceStoredTonnages } from './stored-tonnage-coercion.js'
  */
 
 /**
+ * Collapse negative zero to positive zero. `-0` and `+0` are distinct under
+ * `Object.is` (and therefore `util.isDeepStrictEqual`), yet MongoDB does not
+ * preserve `-0`: a persisted `-0` reads back as `+0`. A projected `-0` would
+ * thus never deep-equal its stored copy, producing an endless phantom
+ * "adjustment" when an identical row is resubmitted.
+ *
+ * @param {number} value
+ * @returns {number}
+ */
+const normaliseNegativeZero = (value) => (value === 0 ? 0 : value)
+
+/**
  * Project a waste record into its committed row state: classify it for the
  * waste balance and coerce the stored tonnages to two decimal places. These are
  * properties of the row-state value itself, so they
@@ -39,6 +51,12 @@ export const projectSummaryLogRowState = (
   return {
     ...classified,
     processingType,
+    classification: {
+      ...classified.classification,
+      transactionAmount: normaliseNegativeZero(
+        classified.classification.transactionAmount
+      )
+    },
     data: coerceStoredTonnages(data)
   }
 }
