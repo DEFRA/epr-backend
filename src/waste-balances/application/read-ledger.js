@@ -46,21 +46,6 @@
  */
 
 /**
- * `prnNumber` is the note's own number, the reference it is known by outside
- * the service. It is null wherever the note holds no number the read can see,
- * which is not only the pre-issuance case:
- *
- * - The note is not yet issued. A number is stamped as a note is issued, and a
- *   ledger records the events before that, so a note carries a number on some
- *   of its events and none on the earlier ones.
- * - The note has been deleted. The note read excludes a deleted note, and a
- *   note reaches `deleted` only from `awaiting_authorisation`, so one that is
- *   deleted never held a number.
- * - The issuance has not finished. The write appends the event before it
- *   persists the number, and the read-side catch-up projects status without
- *   restoring a number, so an issued event can be read before its note carries
- *   one.
- *
  * `tonnage` is the tonnage of the note itself, not the amount the balance
  * moved. Accepting or rejecting a note moves neither total.
  *
@@ -94,13 +79,6 @@
  */
 
 /**
- * Reads the notes of one accreditation, so a ledger read can state each note's
- * own number beside the id its events carry.
- *
- * Stated here as what a ledger read needs of a note, rather than taken from the
- * note module, so `waste-balances` depends on nothing above it. A
- * `PackagingRecyclingNotesRepository` satisfies it, and the routes pass one.
- *
  * @typedef {Object} LedgerNoteReader
  * @property {(accreditation: WasteBalanceLedgerId & { accreditationId: string }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByAccreditation
  */
@@ -143,17 +121,6 @@ const toActor = ({ id, name, email }) => ({ id, name, email })
 const creditsASummaryLog = (payload) => 'summaryLogId' in payload
 
 /**
- * The number of every note the ledger's events can name, by note id.
- *
- * A ledger is keyed by the accreditation its notes belong to — the write path
- * refuses an event whose note names another accreditation, and refuses a note
- * event on a registered-only ledger at all — so one read of that accreditation
- * covers every note the events name.
- *
- * Empty where the ledger names no note: a registered-only ledger holds none,
- * and an accreditation ledger that has seen no note decision has nothing to
- * look up.
- *
  * @param {LedgerNoteReader} noteReader
  * @param {WasteBalanceLedgerId} ledgerId
  * @param {LedgerEvent[]} events
@@ -222,9 +189,6 @@ const toEventResource = (event, noteNumbers) => {
  * PRN decision, so the count follows the operator's own activity rather than
  * the size of the service. The `events` key leaves room to page it later
  * without changing the shape.
- *
- * A note event names its note by id. The number that note is known by is held
- * on the note itself, so the read states it from there.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {LedgerNoteReader} noteReader

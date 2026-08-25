@@ -39,10 +39,8 @@ const summaryLogSchema = Joi.object({
 })
 
 /**
- * `prnNumber` is the note's own number, the reference it is known by outside
- * the service. It is null wherever the note holds no number the read can see.
- * A reader cannot take null to mean the note is unissued: `LedgerEventResource`
- * in `src/waste-balances/application/read-ledger.js` states the cases.
+ * `prnNumber` is null wherever the read sees no number on the note. Null does
+ * not mean the note is unissued.
  *
  * `tonnage` is the tonnage of the note itself, not the amount the balance
  * moved. Accepting or rejecting a note moves neither total.
