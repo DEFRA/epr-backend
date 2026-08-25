@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { buildCalendarPeriods } from './build-calendar-periods.js'
 
 const submittedReport = (overrides = {}) => ({
@@ -14,9 +15,9 @@ const submittedReport = (overrides = {}) => ({
 const period = (report, overrides = {}) => ({
   year: 2026,
   period: 1,
-  startDate: '2026-01-01',
-  endDate: '2026-01-31',
-  dueDate: '2026-02-20',
+  startDate: calendarDate('2026-01-01'),
+  endDate: calendarDate('2026-01-31'),
+  dueDate: calendarDate('2026-02-20'),
   submissionNumber: report?.submissionNumber ?? 1,
   report,
   ...overrides
@@ -65,17 +66,17 @@ describe('buildCalendarPeriods', () => {
 
     const submitted = period(submittedReport({ id: 'report-feb' }), {
       period: 2,
-      startDate: '2026-02-01',
-      endDate: '2026-02-28',
-      dueDate: '2026-03-20'
+      startDate: calendarDate('2026-02-01'),
+      endDate: calendarDate('2026-02-28'),
+      dueDate: calendarDate('2026-03-20')
     })
 
     const noReport = period(null, {
       year: 2999,
       period: 3,
-      startDate: '2999-03-01',
-      endDate: '2999-03-31',
-      dueDate: '2999-04-20'
+      startDate: calendarDate('2999-03-01'),
+      endDate: calendarDate('2999-03-31'),
+      dueDate: calendarDate('2999-04-20')
     })
 
     const result = buildCalendarPeriods([flagged, submitted, noReport])

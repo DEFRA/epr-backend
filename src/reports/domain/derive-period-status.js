@@ -2,6 +2,7 @@ import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { PERIOD_STATUS } from './period-status.js'
 
 /**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { ReportStatus } from './report-status.js'
  * @import { PeriodStatus } from './period-status.js'
  */
@@ -13,7 +14,7 @@ import { PERIOD_STATUS } from './period-status.js'
  * compared as ISO date strings (YYYY-MM-DD, which sort chronologically): a
  * period is overdue once the current UTC date is past its due date, i.e. from
  * the 21st when the due date is the 20th.
- * @param {{ endDate: string, dueDate: string, report: { status: ReportStatus } | null }} period
+ * @param {{ endDate: CalendarDate, dueDate: CalendarDate, report: { status: ReportStatus } | null }} period
  * @returns {PeriodStatus | null}
  */
 export const derivePeriodStatus = ({ endDate, dueDate, report }) => {
