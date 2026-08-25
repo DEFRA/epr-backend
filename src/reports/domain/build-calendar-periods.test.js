@@ -47,7 +47,7 @@ describe('buildCalendarPeriods', () => {
       submissionNumber: 2,
       periodStatus: 'requires_resubmission',
       report: null,
-      dueDate: '2026-02-20'
+      dueDate: flagged.dueDate
     })
   })
 
