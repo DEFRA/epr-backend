@@ -3,6 +3,12 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
+import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
+import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
+import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 import {
   createMongoSummaryLogRowStatesRepository,
@@ -263,5 +269,82 @@ describe('write round-trip count', () => {
     const forFiftyRows = await roundTripsFor(50, 'log-50')
 
     expect(forFiftyRows).toBe(forOneRow)
+  })
+})
+
+describe('negative-zero classification survives the Mongo round-trip', () => {
+  /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} */
+  const overseasSites = {}
+
+  const accreditation = buildAccreditation({
+    validFrom: '2024-01-01',
+    validTo: '2024-12-31',
+    statusHistory: [
+      { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+      { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+    ]
+  })
+
+  // A zero-tonnage sent-on debit projects transactionAmount `-0`. MongoDB does
+  // not preserve `-0` (it reads back `+0`), so without normalisation the fresh
+  // projection never deep-equals its stored copy and the identical resubmission
+  // is reported as an endless phantom adjustment.
+  /** @type {import('#domain/waste-records/model.js').WasteRecord} */
+  const zeroTonnageSentOn = {
+    organisationId: DEFAULT_LEDGER_ID.organisationId,
+    registrationId: DEFAULT_LEDGER_ID.registrationId,
+    accreditationId: DEFAULT_LEDGER_ID.accreditationId,
+    rowId: '5000',
+    type: WASTE_RECORD_TYPE.SENT_ON,
+    data: {
+      processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+      DATE_LOAD_LEFT_SITE: new Date('2024-06-15'),
+      TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 0
+    }
+  }
+
+  /** @type {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} */
+  const currentUpload = {
+    record: zeroTonnageSentOn,
+    outcome: ROW_OUTCOME.INCLUDED,
+    tableName: 'SENT_ON_LOADS',
+    wasteRecordType: WASTE_RECORD_TYPE.SENT_ON
+  }
+
+  it('classifies an identical zero-tonnage sent-on resubmission as unchanged', async (/** @type {*} */ {
+    summaryLogRowStatesRepository
+  }) => {
+    const repository = summaryLogRowStatesRepository()
+
+    // First submission: project and persist the zero-debit sent-on row.
+    const entry = projectSummaryLogRowState(
+      zeroTonnageSentOn,
+      accreditation,
+      overseasSites
+    )
+    await repository.upsertSummaryLogRowStates(
+      DEFAULT_LEDGER_ID,
+      [entry],
+      'log-1'
+    )
+
+    // Read the submitted state back through Mongo, then compare the identical
+    // row's fresh projection against it — exactly what a resubmission does.
+    const submitted = await repository.findRowStatesForSummaryLog(
+      DEFAULT_LEDGER_ID,
+      'log-1'
+    )
+    const submittedRowStatesByKey = new Map(
+      submitted.map((doc) => [`${doc.wasteRecordType}:${doc.rowId}`, doc])
+    )
+
+    const changes = classifyRecordChanges({
+      wasteRecords: [currentUpload],
+      submittedRowStatesByKey,
+      accreditation,
+      overseasSites
+    })
+
+    expect(changes.get('sentOn:5000')).toBe(RECORD_CHANGE.UNCHANGED)
   })
 })
