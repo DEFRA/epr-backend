@@ -174,18 +174,6 @@ describe('reading a waste balance ledger', () => {
     expect(noteReader.findByAccreditation).not.toHaveBeenCalled()
   })
 
-  it('reads the notes of the accreditation whose ledger it is reading', async () => {
-    await ledgerRepository.appendEvents([buildPrnAcceptedEvent()])
-
-    await readLedger(ledgerRepository, noteReader, buildLedgerId())
-
-    expect(noteReader.findByAccreditation).toHaveBeenCalledWith({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1'
-    })
-  })
-
   it('carries an actor the source knows only the id of', async () => {
     await ledgerRepository.appendEvents([
       buildLedgerEvent({ createdBy: { id: 'user-9' } })

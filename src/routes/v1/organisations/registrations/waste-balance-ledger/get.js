@@ -4,7 +4,7 @@ import { readLedger } from '#waste-balances/application/read-ledger.js'
 import { wasteBalanceLedgerResponseSchema } from '../waste-balance-ledger-response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { LedgerNoteReader } from '#waste-balances/application/read-ledger.js' */
+/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 
 export const registrationWasteBalanceLedgerGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/waste-balance-ledger'
@@ -26,7 +26,7 @@ export const registrationWasteBalanceLedgerGet = {
   },
   /**
    * @param {HapiRequest & {
-   *   packagingRecyclingNotesRepository: LedgerNoteReader,
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   params: { organisationId: string, registrationId: string }
    * }} request
    * @param {HapiResponseToolkit} h

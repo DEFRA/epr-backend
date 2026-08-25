@@ -47,9 +47,19 @@
 
 /**
  * `prnNumber` is the note's own number, the reference it is known by outside
- * the service. A note holds none until it is issued, and a ledger records the
- * events that precede issuance, so the number is null on some events of a note
- * that carries one on others.
+ * the service. It is null wherever the note holds no number the read can see,
+ * which is not only the pre-issuance case:
+ *
+ * - The note is not yet issued. A number is stamped as a note is issued, and a
+ *   ledger records the events before that, so a note carries a number on some
+ *   of its events and none on the earlier ones.
+ * - The note has been deleted. The note read excludes a deleted note, and a
+ *   note reaches `deleted` only from `awaiting_authorisation`, so one that is
+ *   deleted never held a number.
+ * - The issuance has not finished. The write appends the event before it
+ *   persists the number, and the read-side catch-up projects status without
+ *   restoring a number, so an issued event can be read before its note carries
+ *   one.
  *
  * `tonnage` is the tonnage of the note itself, not the amount the balance
  * moved. Accepting or rejecting a note moves neither total.

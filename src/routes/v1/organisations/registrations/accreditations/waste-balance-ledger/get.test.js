@@ -156,6 +156,50 @@ describe(`GET ${accreditationWasteBalanceLedgerGetPath}`, () => {
     })
   })
 
+  it('gives no number for a note the accreditation does not hold', async () => {
+    const noteOfAnotherAccreditation = createMockIssuedPrn({
+      id: 'prn-elsewhere',
+      prnNumber: 'EA26000456',
+      organisation: { id: 'org-note', name: 'A reprocessor' },
+      registrationId: 'reg-note',
+      accreditation: {
+        ...createMockIssuedPrn().accreditation,
+        id: 'acc-elsewhere'
+      }
+    })
+    const serverHoldingTheNote = await createTestServer({
+      repositories: {
+        packagingRecyclingNotesRepository:
+          createInMemoryPackagingRecyclingNotesRepository(
+            [noteOfAnotherAccreditation],
+            []
+          )
+      }
+    })
+    await serverHoldingTheNote.app.ledgerRepository.appendEvents([
+      buildPrnCreatedEvent({
+        organisationId: 'org-note',
+        registrationId: 'reg-note',
+        accreditationId: 'acc-note',
+        number: 1,
+        payload: { prnId: 'prn-elsewhere', amount: 50 }
+      })
+    ])
+
+    const response = await serverHoldingTheNote.inject({
+      method: 'GET',
+      url: makePath('org-note', 'reg-note', 'acc-note'),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload).events[0].prn).toEqual({
+      id: 'prn-elsewhere',
+      prnNumber: null,
+      tonnage: 50
+    })
+  })
+
   it('returns events ordered by number ascending', async () => {
     await ledgerRepository.appendEvents([
       buildLedgerEvent({
