@@ -150,7 +150,10 @@ describe('Waste balance arithmetic integration tests', () => {
       },
       { prnId, amount },
       { id: 'test-user' },
-      async (balance) => decideIssuePrn(balance, { prnId, amount })
+      async (balance) => ({
+        decision: decideIssuePrn(balance, { prnId, amount }),
+        context: null
+      })
     )
 
   const createPrn = async (env, tonnage) => {

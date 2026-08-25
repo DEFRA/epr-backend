@@ -11,10 +11,9 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
 
 /**
  * Brings a PRN current by folding the stream events past its watermark onto it.
- * The document is a projection that can lag the stream, so this — not the
- * document's own fields — is how a PRN's state is read (ADR-0036, "Reading PRN
- * state"): by the read routes below, and by the write path when it needs a
- * status to rule on.
+ * The document is a projection that can lag the stream, so this is how a PRN's
+ * state is read (ADR-0036, "Reading PRN state"): by the read routes below, and
+ * by the write path when it needs a status to rule on.
  *
  * @param {PackagingRecyclingNote} prn
  * @param {WasteBalanceService} service

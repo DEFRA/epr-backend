@@ -128,8 +128,7 @@ const REJECTION_TO_ERROR = Object.freeze({
  * from `awaiting_acceptance`, so both follow transitions that opened the
  * ledger: a missing ledger is not a client error but a broken invariant, and is
  * surfaced as a 500 rather than the contextual 400 the reachable commands
- * return. The target status alone identifies them, so this needs no second
- * table keyed the way `TRANSITION_TO_COMMAND` already is.
+ * return.
  *
  * @type {ReadonlySet<PrnStatus>}
  */
@@ -141,18 +140,10 @@ const TARGETS_REQUIRING_OPEN_LEDGER = Object.freeze(
  * Apply a PRN status transition through the waste balance ledger: the ledger
  * folds, this decides, and the ledger appends what comes back.
  *
- * The decision runs inside the ledger command rather than ahead of it, and that
- * placement is the whole point. The PRN document is a projection that can lag
- * the stream, so the status the state machine rules on is read by projecting
- * the PRN — and projecting it *after* the fold means the ruling is made against
- * the head the events land on. Decide from a document read earlier and a
- * competing writer can slip in between: its append moves the head, this fold
- * sees the moved head, and the events land at the next free slot with every
- * guard satisfied and the transition made twice (PAE-1844). The slot index only
- * settles writers contending for the same slot; this settles the rest.
- *
- * The transition rule runs here once. There is no second check against the
- * document, because the document is not what the rule is about.
+ * The status the state machine rules on comes from projecting the PRN, because
+ * the document can lag the stream. The projection happens inside the decision,
+ * so it is read after the fold and the ruling holds at the head the events land
+ * on — see `runPrnCommand` for why that ordering is what makes the write safe.
  *
  * @param {WasteBalanceService} service
  * @param {import('#common/hapi-types.js').TypedLogger} logger
@@ -161,7 +152,7 @@ const TARGETS_REQUIRING_OPEN_LEDGER = Object.freeze(
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & { accreditationId: string }} transition.ledgerId
  * @param {PrnStatus} transition.newStatus
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} transition.actor
- * @param {import('#domain/organisations/accreditation.js').Accreditation} [transition.accreditation] - fetched by the caller on the issuance path, ruled on here
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} [transition.accreditation] - fetched by the caller on the issuance path, so a missing accreditation is reported before the transition is ruled on
  * @param {number} transition.tonnage
  * @param {import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary} transition.createdBy
  * @param {Date} transition.now
@@ -189,16 +180,7 @@ export async function applyPrnTransition(
     ...(obligationYear === undefined ? {} : { obligationYear })
   }
 
-  /**
-   * What the ruling settled, kept for the caller and the audit line. The
-   * decision below assigns it before it can return at all, so it is present on
-   * every path the command comes back from.
-   *
-   * @type {{ projection: PackagingRecyclingNote, fromStatus: PrnStatus, logOperation: string } | undefined}
-   */
-  let ruled
-
-  const result = await service.runPrnCommand(
+  const { result, context: ruled } = await service.runPrnCommand(
     ledgerId,
     payload,
     createdBy,
@@ -218,27 +200,36 @@ export async function applyPrnTransition(
       }
 
       const command = prnCommandFor(fromStatus, newStatus)
-      ruled = { projection, fromStatus, logOperation: command.logOperation }
+      /* c8 ignore next 6 - defensive: the caller routes balance-affecting transitions here, so every transition reaching this point has a command */
+      if (!command) {
+        throw Boom.badImplementation(
+          `${fromStatus} -> ${newStatus} took the waste balance write path but has no balance effect`
+        )
+      }
+
+      // What the ruling settled, returned alongside the decision so the caller
+      // and the audit line get it without reading the PRN again.
+      const context = {
+        projection,
+        fromStatus,
+        logOperation: command.logOperation
+      }
 
       // A ledger with no events cannot carry a PRN command. Whether that is the
       // client's fault is settled below, where the transition is known.
       if (!balance) {
         return {
-          status: PRN_COMMAND_STATUS.REJECTED,
-          reason: PRN_COMMAND_REJECTION.NO_LEDGER
+          decision: {
+            status: PRN_COMMAND_STATUS.REJECTED,
+            reason: PRN_COMMAND_REJECTION.NO_LEDGER
+          },
+          context
         }
       }
 
-      return command.decide(balance, payload)
+      return { decision: command.decide(balance, payload), context }
     }
   )
-
-  /* c8 ignore next 5 - defensive: the command only returns once the decision has run, and that records the ruling */
-  if (!ruled) {
-    throw Boom.badImplementation(
-      `Waste balance command for PRN ${prn.id} returned without a recorded transition ruling`
-    )
-  }
 
   if (result.status === PRN_COMMAND_STATUS.REJECTED) {
     if (

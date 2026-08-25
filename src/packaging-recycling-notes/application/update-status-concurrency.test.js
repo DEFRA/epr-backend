@@ -80,6 +80,10 @@ const buildIssuableSeed = () =>
   /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
     buildAwaitingAuthorisationPrn(PRN_BASE)
   )
+const buildAwaitingAcceptanceSeed = () =>
+  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+    buildAwaitingAcceptancePrn(PRN_BASE)
+  )
 const buildAwaitingCancellationSeed = () =>
   /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
     buildAwaitingAcceptancePrn({
@@ -357,7 +361,7 @@ describe('updatePrnStatus concurrency', () => {
 
   it('commits a cancellation the stream permits but the unprojected document does not', async () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
-      buildAwaitingAcceptancePrn(PRN_BASE)
+      buildAwaitingAcceptanceSeed()
     ])
     const prnRepository = prnFactory(noopLogger())
 

@@ -100,21 +100,24 @@ const createLedgerCommands = (ledgerRepository) => {
    * fold the ledger, let the caller decide against the folded balance, and
    * append what it returns.
    *
-   * The fold yields `null` for a ledger with no events, and that is handed to
-   * the decision like any other state rather than short-circuited here. Whether
-   * a missing ledger is a client error or corruption depends on the transition
-   * being made, which is the caller's business, not the ledger's — and the
-   * caller must get to rule on that transition before anything else answers for
-   * it.
+   * `decide` runs after the fold, so anything it reads for itself — the PRN's
+   * own status, say — is no older than the head those events land on. That
+   * ordering is what completes the concurrency guard, because the slot index
+   * alone only settles writers contending for the same slot: a writer that
+   * folds after a competitor's append sees the moved head, takes the next free
+   * slot, and commits a second time with every guard satisfied (PAE-1844). Both
+   * halves of the guard assume the decision's own reads go to the same node as
+   * the fold, which the driver's default primary read preference gives us.
    *
-   * `decide` is the caller's business rule, not a condition bolted onto one: it
-   * either yields the events to append or the reason there are none. It runs
-   * after the fold, so anything it reads for itself — the PRN's own status, say
-   * — is no older than the head those events land on. That ordering is what
-   * makes the pair of guards complete. The slot index alone only settles
-   * writers contending for the same slot: a writer that folds after a
-   * competitor's append sees the moved head and takes the next free slot, so
-   * every guard is satisfied and the command commits twice over.
+   * The decision returns what it worked out alongside the decision itself, so
+   * the caller gets its own findings back without reading them again. The
+   * ledger passes that context through untouched.
+   *
+   * The fold yields `null` for a ledger with no events, handed to the decision
+   * like any other state. Whether a missing ledger is a client error or
+   * corruption depends on the transition being made, which the ledger does not
+   * know — and the caller must get to rule on that transition before anything
+   * else answers for it.
    *
    * A non-positive amount is a broken invariant, not a client error: the PRN's
    * tonnage is validated positive at the HTTP route and the PRN repository
@@ -122,11 +125,12 @@ const createLedgerCommands = (ledgerRepository) => {
    * surfaces as a 500 the platform logs and alerts on, rather than slipping past
    * the deciders' `<` sufficiency check to inflate the balance.
    *
+   * @template TContext
    * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
    * @param {import('../repository/ledger-schema.js').PrnPayload} payload
    * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
-   * @param {(balance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null) => Promise<import('../domain/commands.js').PrnDecision>} decide
-   * @returns {Promise<PrnCommandResult>}
+   * @param {(balance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null) => Promise<{ decision: import('../domain/commands.js').PrnDecision, context: TContext }>} decide - receives `null` for a ledger with no events
+   * @returns {Promise<{ result: PrnCommandResult, context: TContext }>}
    */
   const runPrnCommand = async (ledgerId, payload, createdBy, decide) => {
     if (!(payload.amount > 0)) {
@@ -137,14 +141,17 @@ const createLedgerCommands = (ledgerRepository) => {
 
     const { state, head } = await fold(ledgerId)
 
-    const decision = await decide(state ? state.balance : null)
+    const { decision, context } = await decide(state ? state.balance : null)
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
-      return decision
+      return { result: decision, context }
     }
 
     return {
-      status: PRN_COMMAND_STATUS.COMMITTED,
-      events: await append(ledgerId, head, decision.events, createdBy)
+      result: {
+        status: PRN_COMMAND_STATUS.COMMITTED,
+        events: await append(ledgerId, head, decision.events, createdBy)
+      },
+      context
     }
   }
 
@@ -159,11 +166,8 @@ const createLedgerCommands = (ledgerRepository) => {
  * leaves the next slot occupied, so the append rejects with a
  * `LedgerSlotConflictError` and the conflict surfaces to the caller — no
  * in-process retry (ADR-0036).
- *
- * The slot index settles only writers contending for the same slot, so every
- * decision a command makes must come from a read taken at or after its fold.
- * Anything the fold does not carry is read by the caller's decider, inside
- * `runPrnCommand`.
+ * That settles writers contending for the same slot; the rest is settled by
+ * where each command makes its decision, described on `runPrnCommand`.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [systemLogsRepository]

@@ -132,10 +132,18 @@ describe('createWasteBalanceService', () => {
      * @param {(balance: *, payload: *) => *} decide
      * @param {*} payload
      */
-    const runCommand = (decide, payload) =>
-      service.runPrnCommand(ledgerId, payload, createdBy, async (balance) =>
-        decide(balance, payload)
+    const runCommand = async (decide, payload) => {
+      const { result } = await service.runPrnCommand(
+        ledgerId,
+        payload,
+        createdBy,
+        async (balance) => ({
+          decision: decide(balance, payload),
+          context: null
+        })
       )
+      return result
+    }
 
     it('createPrn commits a prn-created event ringfencing the available balance', async () => {
       await seedLedger()
@@ -179,15 +187,18 @@ describe('createWasteBalanceService', () => {
     it('hands the decision a null balance when the ledger has no events', async () => {
       // What a missing ledger means depends on the transition being made, so
       // the ledger reports it rather than ruling on it.
-      const result = await service.runPrnCommand(
+      const { result } = await service.runPrnCommand(
         ledgerId,
         { prnId: 'prn-1', amount: 100 },
         createdBy,
         async (balance) => {
           expect(balance).toBeNull()
           return {
-            status: PRN_COMMAND_STATUS.REJECTED,
-            reason: PRN_COMMAND_REJECTION.NO_LEDGER
+            decision: {
+              status: PRN_COMMAND_STATUS.REJECTED,
+              reason: PRN_COMMAND_REJECTION.NO_LEDGER
+            },
+            context: null
           }
         }
       )
@@ -316,47 +327,54 @@ describe('createWasteBalanceService', () => {
       expect(all).toHaveLength(1)
     })
 
-    const guardedPrnCommands = [
-      ['createPrn', decideCreatePrn],
-      ['issuePrn', decideIssuePrn],
-      ['cancelPrnCreation', decideCancelPrnCreation],
-      ['cancelIssuedPrn', decideCancelIssuedPrn],
-      ['acceptPrn', decideAcceptPrn],
-      ['rejectPrn', decideRejectPrn]
-    ]
+    it('guards every PRN command against a non-positive amount before deciding', async () => {
+      await seedLedger()
+      let decided = false
 
-    it.each(guardedPrnCommands)(
-      'guards %s against a non-positive amount at the shared write boundary',
-      async (_name, decide) => {
-        await seedLedger()
+      await expect(
+        service.runPrnCommand(
+          ledgerId,
+          { prnId: 'prn-1', amount: -1 },
+          createdBy,
+          async () => {
+            decided = true
+            return {
+              decision: { status: PRN_COMMAND_STATUS.COMMITTED, events: [] },
+              context: null
+            }
+          }
+        )
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
 
-        await expect(
-          runCommand(/** @type {*} */ (decide), { prnId: 'prn-1', amount: -1 })
-        ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
-      }
-    )
+      expect(decided).toBe(false)
+    })
 
     it('decides against the head it appends at, not the one the caller read', async () => {
       await seedLedger()
 
+      // What the caller saw before it asked for the command.
+      const readByCaller = await service.currentBalance(ledgerId)
+      expect(readByCaller?.availableAmount).toBe(1000)
+
+      // A competing writer lands after that read and before the command runs.
+      await runCommand(decideCreatePrn, { prnId: 'prn-2', amount: 10 })
+
       /** @type {number[]} */
       const balancesSeen = []
-
-      // A competing writer lands between the caller's own read and the
-      // command's fold. The decision must see that writer's balance, not the
-      // one the caller started from.
       await service.runPrnCommand(
         ledgerId,
         { prnId: 'prn-1', amount: 10 },
         createdBy,
         async (balance) => {
           balancesSeen.push(balance.availableAmount)
-          return decideCreatePrn(balance, { prnId: 'prn-1', amount: 10 })
+          return {
+            decision: decideCreatePrn(balance, { prnId: 'prn-1', amount: 10 }),
+            context: null
+          }
         }
       )
-      await runCommand(decideCreatePrn, { prnId: 'prn-2', amount: 10 })
 
-      expect(balancesSeen).toEqual([1000])
+      expect(balancesSeen).toEqual([990])
       expect(await service.currentBalance(ledgerId)).toMatchObject({
         availableAmount: 980
       })
@@ -464,8 +482,10 @@ describe('createWasteBalanceService', () => {
         ledgerId,
         { prnId: 'prn-1', amount: 40 },
         createdBy,
-        async (balance) =>
-          decideCreatePrn(balance, { prnId: 'prn-1', amount: 40 })
+        async (balance) => ({
+          decision: decideCreatePrn(balance, { prnId: 'prn-1', amount: 40 }),
+          context: null
+        })
       )
 
       const balance = await service.currentBalance(ledgerId)

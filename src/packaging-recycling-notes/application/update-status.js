@@ -1,7 +1,10 @@
 import Boom from '@hapi/boom'
 
 import { prnMetrics } from './metrics.js'
-import { applyPrnTransition } from './update-status-balance-effects.js'
+import {
+  applyPrnTransition,
+  prnCommandFor
+} from './update-status-balance-effects.js'
 import {
   CANCELLED_PRN_STATUSES,
   PRN_STATUS,
@@ -58,7 +61,7 @@ async function notifyPrnCancelled(prnEvents, newStatus, updatedPrn) {
  *
  * The identity is an accreditation's, not a registration's: this path runs only
  * for accredited streams, so `accreditationId` is narrowed to non-null — the
- * same intersection `applyPrnBalanceCommand` takes as its `ledgerId`.
+ * same intersection `applyPrnTransition` takes as its `ledgerId`.
  *
  * @typedef {WasteBalanceLedgerId & { accreditationId: string } & {
  *   prnRepository: PackagingRecyclingNotesRepository,
@@ -150,10 +153,8 @@ async function performStreamWrite({
   user,
   obligationYear
 }) {
-  // Fetched here because the issuance path also stamps the PRN number from it;
-  // whether it permits issuing is ruled on with the transition, so a request
-  // that was never a legal transition is refused as one rather than as an
-  // accreditation problem.
+  // Fetched here because the issuance path stamps the PRN number from it;
+  // whether it permits issuing is ruled on with the transition.
   const accreditation =
     newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
       ? await organisationsRepository.findAccreditationById(
@@ -161,6 +162,13 @@ async function performStreamWrite({
           accreditationId
         )
       : undefined
+
+  /* c8 ignore next 6 - defensive: findAccreditationById resolves an accreditation or throws, so a nullish one means the repository broke its contract */
+  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE && !accreditation) {
+    throw Boom.badImplementation(
+      `Accreditation ${accreditationId} could not be read for the issuance of PRN ${prn.id}`
+    )
+  }
 
   const selectedObligationYear = selectObligationYearForAcceptance(
     prn,
@@ -185,14 +193,7 @@ async function performStreamWrite({
 
   const updated = foldPrnFromTailEvents(projection, events)
 
-  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    /* c8 ignore next 5 - unreachable: findAccreditationById resolves an accreditation or throws, and this branch only runs when one was asked for */
-    if (!accreditation) {
-      throw Boom.badImplementation(
-        `Accreditation ${accreditationId} could not be read for the issuance of PRN ${prn.id}`
-      )
-    }
-
+  if (accreditation) {
     return {
       updatedPrn: await persistProjectionWithIssuanceRetry({
         prnRepository,
@@ -223,10 +224,12 @@ async function performStreamWrite({
  * status is stamped directly with no stream event. Used for DRAFT→DISCARDED,
  * where a never-issued draft is discarded.
  *
- * The rule still runs against the projected PRN, not the fetched document. A
- * draft whose creation event reached the stream but not the document is really
- * awaiting authorisation, and discarding it would strand the tonnage its
- * creation ringfenced.
+ * The rule runs against the projected PRN. A draft whose creation event reached
+ * the stream but not the document is really awaiting authorisation, and
+ * discarding it would strand the tonnage its creation ringfenced.
+ *
+ * Appending no event means this write contends for no ledger slot, so it is
+ * serialised against a concurrent write only by the document's own version.
  *
  * @param {PrnWriteContext} ctx
  * @returns {Promise<{ updatedPrn: PackagingRecyclingNote, fromStatus: PrnStatus }>}
@@ -243,6 +246,13 @@ const performDiscardWrite = async ({
   const fromStatus = projection.status.currentStatus
 
   validateTransition(fromStatus, newStatus, actor)
+
+  /* c8 ignore next 6 - defensive: the caller routes only balance-effect-free transitions here, and the state machine has exactly one */
+  if (prnCommandFor(fromStatus, newStatus)) {
+    throw Boom.badImplementation(
+      `${fromStatus} -> ${newStatus} has a balance effect but took the write path that appends no event`
+    )
+  }
 
   const updatedPrn = await prnRepository.updateStatus(updateParams)
   if (!updatedPrn) {
@@ -317,8 +327,7 @@ export async function updatePrnStatus({
   // DRAFT→DISCARDED is the state machine's only transition with no balance
   // effect, and DISCARDED is reachable from nowhere else, so the requested
   // status alone picks the write path. Which transition this actually is gets
-  // ruled on inside the path, against the projected PRN — the fetched document
-  // is not trusted to answer that.
+  // ruled on inside the path.
   const { updatedPrn, fromStatus } =
     newStatus === PRN_STATUS.DISCARDED
       ? await performDiscardWrite(ctx)
