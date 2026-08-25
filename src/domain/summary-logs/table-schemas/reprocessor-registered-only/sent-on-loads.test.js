@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TABLE_SCHEMAS } from './index.js'
+import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 const { SENT_ON_LOADS } = TABLE_SCHEMAS
@@ -52,8 +53,13 @@ describe('SENT_ON_LOADS (REPROCESSOR_REGISTERED_ONLY)', () => {
       })
     })
 
-    it('has unfilledValues object', () => {
-      expect(typeof schema.unfilledValues).toBe('object')
+    it('treats the final-destination facility type placeholder as unfilled', () => {
+      // The facility type is a 'Choose option' dropdown, so a cell left on the
+      // placeholder must count as unfilled — matching the accredited schemas so
+      // the report-completeness gate flags an unselected one (defra-h9hv twin).
+      expect(schema.unfilledValues).toEqual({
+        FINAL_DESTINATION_FACILITY_TYPE: DROPDOWN_PLACEHOLDER
+      })
     })
 
     it('has validationSchema with validate function', () => {

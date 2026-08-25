@@ -73,6 +73,16 @@ describe('ledger event insert schema', () => {
     expect(error).toBeUndefined()
   })
 
+  it('accepts a prn-accepted event with an obligation year', () => {
+    const { error } = validate(
+      buildLedgerEvent({
+        kind: LEDGER_EVENT_KIND.PRN_ACCEPTED,
+        payload: { prnId: 'prn-1', amount: 50, obligationYear: 2027 }
+      })
+    )
+    expect(error).toBeUndefined()
+  })
+
   it('accepts a valid prn-rejected event', () => {
     const { error } = validate(
       buildLedgerEvent({
@@ -243,15 +253,24 @@ describe('ledger event validation', () => {
   })
 
   describe('validateLedgerEventRead', () => {
-    it('returns the validated event for valid input with id', () => {
-      const event = { id: 'evt-1', ...buildLedgerEvent() }
-      const result = validateLedgerEventRead(event)
-      expect(result.id).toBe('evt-1')
+    it('returns the stored event as written', () => {
+      const event = buildLedgerEvent()
+      expect(validateLedgerEventRead(event)).toEqual(event)
     })
 
-    it('throws Boom.badImplementation for invalid input', () => {
-      expect(() => validateLedgerEventRead({ id: 'bad' })).toThrow(
-        /Invalid ledger event/
+    it('keeps the document id the store gave the event', () => {
+      const event = buildLedgerEvent()
+      const result = validateLedgerEventRead({ _id: 'mongo-1', ...event })
+      expect(result).not.toHaveProperty('_id')
+      expect(result).toEqual(event)
+    })
+
+    it('names the event by its ledger and number when it refuses one', () => {
+      const event = buildLedgerEvent({ number: 7 })
+      expect(() =>
+        validateLedgerEventRead({ ...event, closingBalance: undefined })
+      ).toThrow(
+        /Invalid ledger event for organisation .* registration .* accreditation .* number 7/
       )
     })
   })

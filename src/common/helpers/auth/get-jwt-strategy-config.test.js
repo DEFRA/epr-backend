@@ -252,7 +252,7 @@ describe('#getJwtStrategyConfig', () => {
     test('credential carries the scope the Entra resolver returned for a regulator', async () => {
       mockGetEntraUserRoles.mockResolvedValue({
         role: 'regulator_standard',
-        scopes: [SCOPES.organisationRead, SCOPES.regulator]
+        scopes: [SCOPES.organisationRead, SCOPES.organisationSearch]
       })
       const config = createStrategyConfig(mockOidcConfigs)
 
@@ -273,7 +273,7 @@ describe('#getJwtStrategyConfig', () => {
       expect(result.credentials.role).toBe('regulator_standard')
       expect(result.credentials.scope).toEqual([
         SCOPES.organisationRead,
-        SCOPES.regulator
+        SCOPES.organisationSearch
       ])
     })
 
@@ -351,7 +351,7 @@ describe('#getJwtStrategyConfig', () => {
       ])
     })
 
-    test('support tier credential carries only admin.read', async () => {
+    test('support tier credential carries the read scopes of that tier', async () => {
       mockGetEntraUserRoles.mockResolvedValue({
         role: 'support',
         scopes: [...ADMIN_ROLES.support]
@@ -372,7 +372,7 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.scope).toEqual([SCOPES.adminRead])
+      expect(result.credentials.scope).toEqual([...ADMIN_ROLES.support])
     })
 
     test('handles Entra ID token where user matches no admin tier (empty scope)', async () => {

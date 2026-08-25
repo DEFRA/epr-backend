@@ -17,6 +17,7 @@ export const mapToAdminPrn = (prn) => ({
   material: prn.accreditation.material,
   processToBeUsed: getProcessCode(prn.accreditation.material),
   isDecemberWaste: prn.isDecemberWaste,
+  obligationYear: prn.obligationYear,
   notes: prn.notes ?? null,
   issuedAt: prn.status.issued?.at ?? null,
   issuedBy: prn.status.issued?.by ?? null,

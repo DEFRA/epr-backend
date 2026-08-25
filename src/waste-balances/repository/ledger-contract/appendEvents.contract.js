@@ -17,7 +17,7 @@ export const testAppendEventsBehaviour = (it) => {
       }
     )
 
-    it('persists an event and returns the stored event with an id', async () => {
+    it('persists an event and returns it as written', async () => {
       const event = buildLedgerEvent({
         registrationId: 'reg-append',
         accreditationId: 'acc-append',
@@ -26,8 +26,7 @@ export const testAppendEventsBehaviour = (it) => {
 
       const [stored] = await repository.appendEvents([event])
 
-      expect(stored.id).toEqual(expect.any(String))
-      expect(stored.id).not.toBe('')
+      expect(stored).not.toHaveProperty('id')
       expect(stored.registrationId).toBe('reg-append')
       expect(stored.accreditationId).toBe('acc-append')
       expect(stored.number).toBe(1)
@@ -37,7 +36,7 @@ export const testAppendEventsBehaviour = (it) => {
       expect(stored.closingBalance).toEqual(event.closingBalance)
     })
 
-    it('inserts multiple events and returns stored events with ids', async () => {
+    it('inserts multiple events and returns them in order', async () => {
       const events = [
         buildLedgerEvent({
           registrationId: 'reg-bulk',
@@ -55,9 +54,7 @@ export const testAppendEventsBehaviour = (it) => {
       const stored = await repository.appendEvents(events)
 
       expect(stored).toHaveLength(2)
-      expect(stored[0].id).toEqual(expect.any(String))
       expect(stored[0].number).toBe(1)
-      expect(stored[1].id).toEqual(expect.any(String))
       expect(stored[1].number).toBe(2)
     })
 

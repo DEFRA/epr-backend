@@ -13,5 +13,14 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isStaleIssuedTonnageReportEnabled() {
     return config.get('featureFlags.staleIssuedTonnageReport')
+  },
+  isReportDataValidationEnabled() {
+    return config.get('featureFlags.reportDataValidation')
+  },
+  isReportDataCompleteDiagnosticEnabled() {
+    return config.get('featureFlags.reportDataCompleteDiagnostic')
+  },
+  isPrnAdminCancellationEnabled() {
+    return config.get('featureFlags.prnAdminCancellation')
   }
 })

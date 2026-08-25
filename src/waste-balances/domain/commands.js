@@ -23,7 +23,7 @@ import {
  *
  * @typedef {Object} BalanceEvent
  * @property {import('../repository/ledger-schema.js').LedgerEventKind} kind
- * @property {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload | import('../repository/ledger-schema.js').PrnPayload} payload
+ * @property {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload | import('../repository/ledger-schema.js').PrnPayload | import('../repository/ledger-schema.js').PrnAcceptedPayload} payload
  * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} openingBalance
  * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} closingBalance
  */
@@ -92,7 +92,7 @@ export const submitSummaryLog = (state, { summaryLogId, creditTotal }) => {
 /**
  * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
- * @param {import('../repository/ledger-schema.js').PrnPayload} payload
+ * @param {import('../repository/ledger-schema.js').PrnPayload | import('../repository/ledger-schema.js').PrnAcceptedPayload} payload
  * @returns {PrnDecision}
  */
 const committed = (kind, opening, payload) => ({
@@ -166,7 +166,7 @@ export const cancelIssuedPrn = (balance, payload) =>
  * Record a PRN acceptance. No balance movement.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
- * @param {import('../repository/ledger-schema.js').PrnPayload} payload
+ * @param {import('../repository/ledger-schema.js').PrnAcceptedPayload} payload
  * @returns {PrnDecision}
  */
 export const acceptPrn = (balance, payload) =>

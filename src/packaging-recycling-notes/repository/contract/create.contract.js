@@ -66,6 +66,7 @@ export const testCreateBehaviour = (it) => {
             material: 'paper',
             submittedToRegulator: 'nrw'
           },
+          obligationYear: 2027,
           issuedToOrganisation: {
             id: 'recipient-preserve-test',
             name: 'Recipient Org',
@@ -95,6 +96,7 @@ export const testCreateBehaviour = (it) => {
           material: 'paper',
           submittedToRegulator: 'nrw'
         })
+        expect(found.obligationYear).toBe(2027)
         expect(found.issuedToOrganisation).toStrictEqual({
           id: 'recipient-preserve-test',
           name: 'Recipient Org',

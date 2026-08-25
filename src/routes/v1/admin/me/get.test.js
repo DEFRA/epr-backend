@@ -59,7 +59,7 @@ describe('GET /v1/admin/me', () => {
   })
 
   describe('payload by tier', () => {
-    it('returns the write tier scope bundle (admin.read + admin.write + admin.dlq.purge)', async () => {
+    it('returns the write tier scope bundle', async () => {
       const response = await server.inject({
         method: 'GET',
         url: ADMIN_ME_PATH,
@@ -68,11 +68,18 @@ describe('GET /v1/admin/me', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        scopes: [SCOPES.adminRead, SCOPES.adminWrite, SCOPES.adminDlqPurge]
+        scopes: [
+          SCOPES.adminRead,
+          SCOPES.adminWrite,
+          SCOPES.adminDlqPurge,
+          SCOPES.organisationSearch,
+          SCOPES.organisationRead,
+          SCOPES.wasteBalanceLedgerRead
+        ]
       })
     })
 
-    it('returns the maintainer tier scope bundle (admin.read + admin.dlq.purge)', async () => {
+    it('returns the maintainer tier scope bundle', async () => {
       const response = await server.inject({
         method: 'GET',
         url: ADMIN_ME_PATH,
@@ -81,11 +88,17 @@ describe('GET /v1/admin/me', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        scopes: [SCOPES.adminRead, SCOPES.adminDlqPurge]
+        scopes: [
+          SCOPES.adminRead,
+          SCOPES.adminDlqPurge,
+          SCOPES.organisationSearch,
+          SCOPES.organisationRead,
+          SCOPES.wasteBalanceLedgerRead
+        ]
       })
     })
 
-    it('returns the support tier scope bundle (admin.read only)', async () => {
+    it('returns the support tier scope bundle', async () => {
       const response = await server.inject({
         method: 'GET',
         url: ADMIN_ME_PATH,
@@ -94,7 +107,12 @@ describe('GET /v1/admin/me', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        scopes: [SCOPES.adminRead]
+        scopes: [
+          SCOPES.adminRead,
+          SCOPES.organisationSearch,
+          SCOPES.organisationRead,
+          SCOPES.wasteBalanceLedgerRead
+        ]
       })
     })
   })

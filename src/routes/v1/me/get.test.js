@@ -63,7 +63,14 @@ describe('GET /v1/me', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
         role: 'service_maintainer_write',
-        scopes: [SCOPES.adminRead, SCOPES.adminWrite, SCOPES.adminDlqPurge]
+        scopes: [
+          SCOPES.adminRead,
+          SCOPES.adminWrite,
+          SCOPES.adminDlqPurge,
+          SCOPES.organisationSearch,
+          SCOPES.organisationRead,
+          SCOPES.wasteBalanceLedgerRead
+        ]
       })
     })
   })

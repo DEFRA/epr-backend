@@ -96,7 +96,10 @@ const startServer = async (prn) => {
  * @param {PrnStatus} [currentStatus]
  * @returns {PackagingRecyclingNote}
  */
-const buildPrn = (currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE) => ({
+const buildPrn = (
+  currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE,
+  { isDecemberWaste = false, obligationYear = 2026 } = {}
+) => ({
   id: prnId,
   schemaVersion: 2,
   version: 1,
@@ -113,7 +116,8 @@ const buildPrn = (currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE) => ({
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage: 100,
   isExport: false,
-  isDecemberWaste: false,
+  isDecemberWaste,
+  obligationYear,
   createdAt: new Date('2026-01-10T10:00:00Z'),
   createdBy: { id: 'user-123', name: 'Test User' },
   updatedAt: new Date('2026-01-15T10:00:00Z'),
@@ -167,7 +171,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
     )
   })
 
-  it('honours a caller-provided acceptedAt timestamp in the payload', async () => {
+  it('does not change the obligation year when none is supplied', async () => {
     await startServer(buildPrn())
 
     const response = await server.inject({
@@ -180,6 +184,61 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
     expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
     const stored = await packagingRecyclingNotesRepository.findById(prnId)
     expect(stored?.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
+    expect(stored?.obligationYear).toBe(2026)
+  })
+
+  it('does not change a non-December PRN obligation year when one is supplied', async () => {
+    await startServer(buildPrn())
+
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      headers: authHeaders,
+      payload: { obligationYear: 2027 }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+    const stored = await packagingRecyclingNotesRepository.findById(prnId)
+    expect(stored?.obligationYear).toBe(2026)
+  })
+
+  it.each([2026, 2027])(
+    'sets a December PRN obligation year to %i',
+    async (obligationYear) => {
+      await startServer(
+        buildPrn(PRN_STATUS.AWAITING_ACCEPTANCE, {
+          isDecemberWaste: true
+        })
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: acceptUrl,
+        headers: authHeaders,
+        payload: { obligationYear }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+      const stored = await packagingRecyclingNotesRepository.findById(prnId)
+      expect(stored?.obligationYear).toBe(obligationYear)
+    }
+  )
+
+  it('rejects an invalid obligation year for a December PRN', async () => {
+    await startServer(
+      buildPrn(PRN_STATUS.AWAITING_ACCEPTANCE, { isDecemberWaste: true })
+    )
+
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      headers: authHeaders,
+      payload: { obligationYear: 2028 }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+    const stored = await packagingRecyclingNotesRepository.findById(prnId)
+    expect(stored?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
   })
 
   it.each([

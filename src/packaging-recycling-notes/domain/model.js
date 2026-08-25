@@ -35,7 +35,8 @@ export const CANCELLED_PRN_STATUSES = new Set([
 export const PRN_ACTOR = Object.freeze({
   REPROCESSOR_EXPORTER: 'reprocessor_exporter',
   SIGNATORY: 'signatory',
-  PRODUCER: 'producer'
+  PRODUCER: 'producer',
+  SERVICE_MAINTAINER: 'service_maintainer'
 })
 
 /**
@@ -63,7 +64,12 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
     { status: PRN_STATUS.ACCEPTED, actors: [PRN_ACTOR.PRODUCER] },
     { status: PRN_STATUS.AWAITING_CANCELLATION, actors: [PRN_ACTOR.PRODUCER] }
   ],
-  [PRN_STATUS.ACCEPTED]: [],
+  [PRN_STATUS.ACCEPTED]: [
+    {
+      status: PRN_STATUS.CANCELLED,
+      actors: [PRN_ACTOR.SERVICE_MAINTAINER]
+    }
+  ],
   [PRN_STATUS.AWAITING_CANCELLATION]: [
     { status: PRN_STATUS.CANCELLED, actors: [PRN_ACTOR.SIGNATORY] }
   ],
@@ -229,6 +235,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   organisation: OrganisationNameAndId;
  *   registrationId: string;
  *   accreditation: AccreditationSnapshot;
+ *   obligationYear: number;
  *   issuedToOrganisation: OrganisationNameAndId;
  *   tonnage: number;
  *   isExport: boolean;
@@ -258,6 +265,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   accreditationYear: number | null;
  *   createdAt: Date;
  *   isDecemberWaste: boolean;
+ *   obligationYear: number;
  *   issuedToOrganisation: OrganisationNameAndId;
  *   material: string;
  *   notes: string | null;

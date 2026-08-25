@@ -66,6 +66,14 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
+ * The acceptance event may also carry the year selected by the accepter. It
+ * belongs in the event so a PRN projection can be recovered after an
+ * event-first write succeeds but its projection persistence fails.
+ *
+ * @typedef {PrnPayload & { obligationYear?: number }} PrnAcceptedPayload
+ */
+
+/**
  * The identity of an accreditation, or of a registration in its registered-only
  * phase (`accreditationId` null). An accreditation belongs to a registration,
  * which belongs to an organisation: all three ids are constitutive, and naming
@@ -104,7 +112,7 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  *
  * @typedef {LedgerPosition & {
  *   kind: LedgerEventKind,
- *   payload: SummaryLogSubmittedPayload | PrnPayload,
+ *   payload: SummaryLogSubmittedPayload | PrnPayload | PrnAcceptedPayload,
  *   openingBalance: LedgerBalanceSnapshot,
  *   closingBalance: LedgerBalanceSnapshot,
  *   createdAt: Date,
@@ -113,10 +121,10 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * Shape returned by `WasteBalanceLedgerRepository` reads — `LedgerEventInsert` plus
- * the storage-assigned `id`.
+ * Shape returned by `WasteBalanceLedgerRepository` reads: exactly what was
+ * written.
  *
- * @typedef {LedgerEventInsert & { id: string }} LedgerEvent
+ * @typedef {LedgerEventInsert} LedgerEvent
  */
 
 const userSummarySchema = Joi.object({
@@ -140,6 +148,10 @@ const prnPayloadSchema = Joi.object({
   amount: Joi.number().required()
 })
 
+const prnAcceptedPayloadSchema = prnPayloadSchema.keys({
+  obligationYear: Joi.number().integer()
+})
+
 export const ledgerEventInsertSchema = Joi.object({
   registrationId: Joi.string().required(),
   accreditationId: Joi.string().allow(null).required(),
@@ -151,17 +163,21 @@ export const ledgerEventInsertSchema = Joi.object({
   payload: Joi.when('kind', {
     is: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
     then: summaryLogPayloadSchema.required()
-  }).when('kind', {
-    is: Joi.string().valid(
-      LEDGER_EVENT_KIND.PRN_CREATED,
-      LEDGER_EVENT_KIND.PRN_ISSUED,
-      LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
-      LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
-      LEDGER_EVENT_KIND.PRN_ACCEPTED,
-      LEDGER_EVENT_KIND.PRN_REJECTED
-    ),
-    then: prnPayloadSchema.required()
-  }),
+  })
+    .when('kind', {
+      is: LEDGER_EVENT_KIND.PRN_ACCEPTED,
+      then: prnAcceptedPayloadSchema.required()
+    })
+    .when('kind', {
+      is: Joi.string().valid(
+        LEDGER_EVENT_KIND.PRN_CREATED,
+        LEDGER_EVENT_KIND.PRN_ISSUED,
+        LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
+        LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+        LEDGER_EVENT_KIND.PRN_REJECTED
+      ),
+      then: prnPayloadSchema.required()
+    }),
   openingBalance: balanceSnapshotSchema.required(),
   closingBalance: balanceSnapshotSchema.required(),
   createdAt: Joi.date().required(),
@@ -174,8 +190,4 @@ export const ledgerEventInsertSchema = Joi.object({
     })
   }
   return value
-})
-
-export const ledgerEventReadSchema = ledgerEventInsertSchema.keys({
-  id: Joi.string().required()
 })

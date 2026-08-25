@@ -75,26 +75,31 @@ const buildPrnData = ({
   user,
   isExport,
   now
-}) => ({
-  schemaVersion: 2,
-  organisation,
-  registrationId,
-  accreditation: snapshotAccreditation(accreditation),
-  issuedToOrganisation: payload.issuedToOrganisation,
-  tonnage: payload.tonnage,
-  isExport,
-  ...(payload.notes && { notes: payload.notes }),
-  isDecemberWaste: false,
-  status: {
-    currentStatus: PRN_STATUS.DRAFT,
-    currentStatusAt: now,
-    history: [{ status: PRN_STATUS.DRAFT, at: now, by: user }]
-  },
-  createdAt: now,
-  createdBy: user,
-  updatedAt: now,
-  updatedBy: user
-})
+}) => {
+  const accreditationSnapshot = snapshotAccreditation(accreditation)
+
+  return {
+    schemaVersion: 2,
+    organisation,
+    registrationId,
+    accreditation: accreditationSnapshot,
+    obligationYear: accreditationSnapshot.accreditationYear,
+    issuedToOrganisation: payload.issuedToOrganisation,
+    tonnage: payload.tonnage,
+    isExport,
+    ...(payload.notes && { notes: payload.notes }),
+    isDecemberWaste: false,
+    status: {
+      currentStatus: PRN_STATUS.DRAFT,
+      currentStatusAt: now,
+      history: [{ status: PRN_STATUS.DRAFT, at: now, by: user }]
+    },
+    createdAt: now,
+    createdBy: user,
+    updatedAt: now,
+    updatedBy: user
+  }
+}
 
 /**
  * @param {{ id: string; validFrom?: string }} accreditation
@@ -120,6 +125,7 @@ const buildResponse = (prn, { wasteProcessingType }) => ({
   accreditationYear: prn.accreditation.accreditationYear,
   createdAt: prn.createdAt,
   isDecemberWaste: prn.isDecemberWaste,
+  obligationYear: prn.obligationYear,
   issuedToOrganisation: prn.issuedToOrganisation,
   material: prn.accreditation.material,
   notes: prn.notes ?? null,

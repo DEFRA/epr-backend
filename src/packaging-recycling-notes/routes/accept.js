@@ -13,7 +13,8 @@ export const packagingRecyclingNotesAcceptPath =
 const packagingRecyclingNotesAcceptPayloadSchema = Joi.object({
   acceptedAt: Joi.string().isoDate().optional().messages({
     'string.isoDate': 'acceptedAt must be a valid ISO 8601 date-time'
-  })
+  }),
+  obligationYear: Joi.number().integer().optional()
 }).allow(null)
 
 export const packagingRecyclingNotesAccept = {

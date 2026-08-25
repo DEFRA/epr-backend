@@ -28,6 +28,7 @@ const buildResponse = (prn, { wasteProcessingType }) => ({
   accreditationYear: prn.accreditation.accreditationYear,
   createdAt: prn.createdAt,
   isDecemberWaste: prn.isDecemberWaste,
+  obligationYear: prn.obligationYear,
   issuedAt: prn.status.issued?.at ?? null,
   issuedBy: prn.status.issued?.by ?? null,
   issuedToOrganisation: prn.issuedToOrganisation,

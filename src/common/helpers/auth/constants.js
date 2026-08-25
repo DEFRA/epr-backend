@@ -9,7 +9,8 @@ export const SCOPES = {
   organisationWrite: 'organisation.write',
   organisationLinkedRead: 'organisation.linked.read',
   organisationLinkedWrite: 'organisation.linked.write',
-  regulator: 'regulator'
+  organisationSearch: 'organisation.search',
+  wasteBalanceLedgerRead: 'waste-balance.ledger.read'
 }
 
 /**
@@ -25,34 +26,41 @@ export const REGULATOR_APP_ROLE = 'Waste.Regulator.Standard'
  */
 export const REGULATOR_ROLE = 'regulator_standard'
 
-/**
- * Scope bundle for a regulator standard user.
- *
- * `organisation.read` is the same scope an operator holds, on a different
- * condition: an operator holds it for their own linked organisation, a
- * regulator holds it for every organisation. So no read route names a
- * regulator, and a read route written later admits one without its author
- * knowing regulators exist.
- *
- * `regulator` is coarse on purpose. It stands for the whole set of functions
- * only a regulator performs, and subdivides when caseworking functions
- * arrive.
- *
- * A regulator reads and changes nothing, so no write scope appears here.
- */
-export const REGULATOR_SCOPES = [SCOPES.organisationRead, SCOPES.regulator]
+export const REGULATOR_SCOPES = [
+  SCOPES.organisationRead,
+  SCOPES.organisationSearch,
+  SCOPES.wasteBalanceLedgerRead
+]
 
 /**
  * Admin role → scope-bundle map. Used internally by getEntraUserRoles to
  * resolve an email-list match to its scope set; role names do not flow onto
  * credentials or out over the wire.
+ *
+ * Every tier reads, so every tier holds `organisation.read` and
+ * `waste-balance.ledger.read`. A tier reaches a route by holding the scopes
+ * that route requires, never by the route naming the tier.
  */
 export const ADMIN_ROLES = {
   service_maintainer_write: [
     SCOPES.adminRead,
     SCOPES.adminWrite,
-    SCOPES.adminDlqPurge
+    SCOPES.adminDlqPurge,
+    SCOPES.organisationSearch,
+    SCOPES.organisationRead,
+    SCOPES.wasteBalanceLedgerRead
   ],
-  service_maintainer: [SCOPES.adminRead, SCOPES.adminDlqPurge],
-  support: [SCOPES.adminRead]
+  service_maintainer: [
+    SCOPES.adminRead,
+    SCOPES.adminDlqPurge,
+    SCOPES.organisationSearch,
+    SCOPES.organisationRead,
+    SCOPES.wasteBalanceLedgerRead
+  ],
+  support: [
+    SCOPES.adminRead,
+    SCOPES.organisationSearch,
+    SCOPES.organisationRead,
+    SCOPES.wasteBalanceLedgerRead
+  ]
 }

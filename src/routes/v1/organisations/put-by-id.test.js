@@ -152,7 +152,10 @@ describe('PUT /v1/organisations/{id}', () => {
         expect(payload.scope).toEqual([
           'admin.read',
           'admin.write',
-          'admin.dlq.purge'
+          'admin.dlq.purge',
+          'organisation.search',
+          'organisation.read',
+          'waste-balance.ledger.read'
         ])
       }
 

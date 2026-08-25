@@ -34,7 +34,6 @@ const basePrn = () =>
 const eventCreator = { id: 'user-1', name: 'Test User' }
 
 const buildEvent = (kind, number, createdAt, createdBy = eventCreator) => ({
-  id: `event-${number}`,
   registrationId: 'reg-1',
   accreditationId: 'acc-1',
   organisationId: 'org-1',
@@ -175,6 +174,22 @@ describe('foldPrnFromTailEvents', () => {
         at: event.createdAt,
         by: event.createdBy
       })
+    })
+
+    it('prn-accepted projects its selected obligation year', () => {
+      const prn = basePrn()
+      const event = {
+        ...buildEvent(
+          LEDGER_EVENT_KIND.PRN_ACCEPTED,
+          3,
+          '2026-02-03T12:00:00.000Z'
+        ),
+        payload: { prnId: 'prn-1', amount: 50, obligationYear: 2027 }
+      }
+
+      const result = foldPrnFromTailEvents(prn, [event])
+
+      expect(result.obligationYear).toBe(2027)
     })
 
     it('prn-rejected sets currentStatus awaiting_cancellation and rejected slot', () => {

@@ -17,7 +17,8 @@ vi.mock('./metrics.js', () => ({
 }))
 
 const { updatePrnStatus } = await import('./update-status.js')
-const { getProjectedPrnByNumber } = await import('./get-projected-prn.js')
+const { getProjectedPrnByNumber, getProjectedPrnById } =
+  await import('./get-projected-prn.js')
 
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
@@ -56,6 +57,7 @@ const buildPrn = (overrides = {}) => ({
     material: 'plastic',
     submittedToRegulator: REGULATOR.EA
   },
+  obligationYear: 2026,
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: TONNAGE,
   isExport: false,
@@ -73,7 +75,6 @@ const buildPrn = (overrides = {}) => ({
 })
 
 const buildLedgerEvent = (kind, number = APPENDED_WATERMARK) => ({
-  id: `event-${number}`,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,
@@ -94,7 +95,6 @@ const buildLedgerEvent = (kind, number = APPENDED_WATERMARK) => ({
 const buildSeededLedgerRepository = () =>
   createInMemoryLedgerRepository([
     {
-      id: 'seed-1',
       registrationId: REG_ID,
       accreditationId: ACC_ID,
       organisationId: ORG_ID,
@@ -201,6 +201,46 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
         })
       })
     )
+  })
+
+  it('records an accepted December-waste PRN obligation year in the ledger event', async () => {
+    const storedPrn = buildPrn({
+      version: 1,
+      isDecemberWaste: true,
+      status: {
+        currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        history: []
+      }
+    })
+    const packagingRecyclingNotesRepository =
+      createInMemoryPackagingRecyclingNotesRepository([storedPrn])(
+        buildLogger()
+      )
+    const ledgerRepository = buildSeededLedgerRepository()
+
+    await callUpdate({
+      prnRepository: packagingRecyclingNotesRepository,
+      ledgerRepository,
+      organisationsRepository: buildOrganisationsRepository(),
+      providedPrn: storedPrn,
+      newStatus: PRN_STATUS.ACCEPTED,
+      actor: PRN_ACTOR.PRODUCER,
+      obligationYear: 2027
+    })
+
+    const latest = await ledgerRepository.findLatestInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
+    const reread = await packagingRecyclingNotesRepository.findById(PRN_ID)
+
+    expect(latest?.payload).toEqual({
+      prnId: PRN_ID,
+      amount: TONNAGE,
+      obligationYear: 2027
+    })
+    expect(reread?.obligationYear).toBe(2027)
   })
 
   it.each(['suspended', 'cancelled'])(
@@ -426,6 +466,55 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     })
     expect(all).toHaveLength(2)
     expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
+  })
+
+  it('recovers an accepted December-waste obligation year from the stream when projection persistence fails', async () => {
+    const storedPrn = buildPrn({
+      version: 1,
+      isDecemberWaste: true,
+      lastAppliedEventNumber: SEED_NUMBER,
+      status: {
+        currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        history: []
+      }
+    })
+    const packagingRecyclingNotesRepository =
+      createInMemoryPackagingRecyclingNotesRepository([storedPrn])(
+        buildLogger()
+      )
+    const prnRepository = {
+      findById: packagingRecyclingNotesRepository.findById,
+      persistProjection: vi
+        .fn()
+        .mockRejectedValue(new Error('doc write failed'))
+    }
+    const ledgerRepository = buildSeededLedgerRepository()
+
+    await expect(
+      callUpdate({
+        prnRepository,
+        ledgerRepository,
+        organisationsRepository: buildOrganisationsRepository(),
+        providedPrn: storedPrn,
+        newStatus: PRN_STATUS.ACCEPTED,
+        actor: PRN_ACTOR.PRODUCER,
+        obligationYear: 2027
+      })
+    ).rejects.toThrow('doc write failed')
+
+    const recovered = await getProjectedPrnById({
+      packagingRecyclingNotesRepository,
+      ledgerRepository,
+      prnId: PRN_ID
+    })
+
+    expect(recovered).toEqual(
+      expect.objectContaining({
+        obligationYear: 2027,
+        lastAppliedEventNumber: APPENDED_WATERMARK,
+        status: expect.objectContaining({ currentStatus: PRN_STATUS.ACCEPTED })
+      })
+    )
   })
 })
 

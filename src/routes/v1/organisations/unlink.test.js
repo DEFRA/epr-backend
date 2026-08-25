@@ -1,4 +1,4 @@
-import { SCOPES } from '#common/helpers/auth/constants.js'
+import { ADMIN_ROLES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
@@ -48,7 +48,7 @@ vi.mock(
 const ADMIN_USER = {
   id: 'test-maintainer-id',
   email: 'maintainer@example.com',
-  scope: [SCOPES.adminRead, SCOPES.adminWrite, SCOPES.adminDlqPurge]
+  scope: [...ADMIN_ROLES.service_maintainer_write]
 }
 
 describe('DELETE /v1/organisations/{organisationId}/link', () => {

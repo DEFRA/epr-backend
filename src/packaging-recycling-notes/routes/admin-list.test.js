@@ -85,6 +85,7 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
       expect(payload.items[0].organisationName).toBe(mockPrn.organisation.name)
       expect(payload.items[0].prnNumber).toBe(mockPrn.prnNumber)
       expect(payload.items[0].isDecemberWaste).toBe(mockPrn.isDecemberWaste)
+      expect(payload.items[0].obligationYear).toBe(mockPrn.obligationYear)
       expect(payload.items[0].notes).toBe(mockPrn.notes)
       expect(payload.items[0].accreditationNumber).toBe(
         mockPrn.accreditation.accreditationNumber

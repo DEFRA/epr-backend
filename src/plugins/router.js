@@ -15,6 +15,7 @@ import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availa
 import * as overseasSitesRoutes from '#overseas-sites/routes/index.js'
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
 import { adminAccreditationPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-accreditation-list.js'
+import { adminPackagingRecyclingNotesCancel } from '#packaging-recycling-notes/routes/admin-cancel.js'
 import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
 import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
 import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
@@ -24,7 +25,12 @@ import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registra
 import * as reportsRoutes from '#reports/routes/index.js'
 import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
 import { adminMeGet } from '#routes/v1/admin/me/get.js'
-import { ledgerEventsGet } from '#routes/v1/admin/organisations/registrations/accreditations/ledger-events/get.js'
+import { accreditationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/accreditations/waste-balance-ledger/get.js'
+import {
+  registrationAccreditationsGet,
+  registrationGet
+} from '#routes/v1/organisations/registrations/get.js'
+import { registrationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/waste-balance-ledger/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
@@ -38,6 +44,11 @@ const router = {
         const devRoutesBehindFeatureFlag = featureFlags.isDevEndpointsEnabled()
           ? Object.values(devRoutes)
           : []
+
+        const prnAdminCancellationRoutesBehindFeatureFlag =
+          featureFlags.isPrnAdminCancellationEnabled()
+            ? [adminPackagingRecyclingNotesCancel]
+            : []
 
         const { reportsUnsubmit: _unsubmit, ...coreReportsRoutes } =
           reportsRoutes
@@ -65,11 +76,15 @@ const router = {
           ...summaryLogUploadsReportRoutes,
           adminAccreditationPackagingRecyclingNotesList,
           adminPackagingRecyclingNotesList,
+          ...prnAdminCancellationRoutesBehindFeatureFlag,
           ...Object.values(overseasSitesRoutes),
           ...Object.values(coreReportsRoutes),
           reportsUnsubmit,
           adminMeGet,
-          ledgerEventsGet,
+          accreditationWasteBalanceLedgerGet,
+          registrationGet,
+          registrationAccreditationsGet,
+          registrationWasteBalanceLedgerGet,
           dlqMessagesGet,
           dlqPurgePost
         ])

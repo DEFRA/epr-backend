@@ -17,10 +17,15 @@ import {
 
 describe('PRN_STATUS_TRANSITIONS', () => {
   it('has empty array for terminal states', () => {
-    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.ACCEPTED]).toEqual([])
     expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.CANCELLED]).toEqual([])
     expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.DELETED]).toEqual([])
     expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.DISCARDED]).toEqual([])
+  })
+
+  it('allows only accepted -> cancelled for a service maintainer (PAE-1823)', () => {
+    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.ACCEPTED]).toEqual([
+      { status: PRN_STATUS.CANCELLED, actors: [PRN_ACTOR.SERVICE_MAINTAINER] }
+    ])
   })
 
   it.each([
@@ -50,7 +55,8 @@ describe('PRN_STATUS_TRANSITIONS', () => {
       PRN_STATUS.AWAITING_CANCELLATION,
       PRN_STATUS.CANCELLED,
       PRN_ACTOR.SIGNATORY
-    ]
+    ],
+    [PRN_STATUS.ACCEPTED, PRN_STATUS.CANCELLED, PRN_ACTOR.SERVICE_MAINTAINER]
   ])('allows %s -> %s for %s', (from, to, actor) => {
     expect(isValidTransition(from, to, actor)).toBe(true)
   })
@@ -76,6 +82,10 @@ describe('PRN_STATUS_TRANSITIONS', () => {
     ],
     [PRN_STATUS.DRAFT, PRN_STATUS.ACCEPTED, PRN_ACTOR.PRODUCER],
     [PRN_STATUS.ACCEPTED, PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER],
+    [PRN_STATUS.ACCEPTED, PRN_STATUS.DELETED, PRN_ACTOR.SERVICE_MAINTAINER],
+    [PRN_STATUS.ACCEPTED, PRN_STATUS.CANCELLED, PRN_ACTOR.SIGNATORY],
+    [PRN_STATUS.ACCEPTED, PRN_STATUS.CANCELLED, PRN_ACTOR.PRODUCER],
+    [PRN_STATUS.ACCEPTED, PRN_STATUS.CANCELLED, PRN_ACTOR.REPROCESSOR_EXPORTER],
     [/** @type {PrnStatus} */ ('unknown'), PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER]
   ])('rejects %s -> %s for %s', (from, to, actor) => {
     expect(isValidTransition(from, to, actor)).toBe(false)

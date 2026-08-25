@@ -68,7 +68,8 @@ const buildAwaitingAcceptancePrn = (overrides = {}) => ({
   createdBy: creator,
   updatedAt: issuedDate,
   updatedBy: issuer,
-  ...overrides
+  ...overrides,
+  obligationYear: overrides.obligationYear ?? 2026
 })
 
 describe('mapToExternalPrn', () => {
@@ -104,6 +105,7 @@ describe('mapToExternalPrn', () => {
       },
       isDecemberWaste: true,
       isExport: false,
+      obligationYear: 2026,
       tonnageValue: 126,
       issuerNotes: 'T2E Reference 9201234'
     })

@@ -65,7 +65,8 @@ const buildPrn = (overrides = {}) => ({
     currentStatusAt: baseAt,
     history: []
   },
-  ...overrides
+  ...overrides,
+  obligationYear: overrides.obligationYear ?? 2026
 })
 
 /**
@@ -75,7 +76,6 @@ const buildPrn = (overrides = {}) => ({
  * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number, createdAt) => ({
-  id: `event-${number}`,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,

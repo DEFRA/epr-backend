@@ -14,5 +14,14 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isStaleIssuedTonnageReportEnabled() {
     return flags.staleIssuedTonnageReport ?? false
+  },
+  isReportDataValidationEnabled() {
+    return flags.reportDataValidation ?? false
+  },
+  isReportDataCompleteDiagnosticEnabled() {
+    return flags.reportDataCompleteDiagnostic ?? false
+  },
+  isPrnAdminCancellationEnabled() {
+    return flags.prnAdminCancellation ?? false
   }
 })
