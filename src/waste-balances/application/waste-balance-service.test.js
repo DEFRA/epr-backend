@@ -31,6 +31,11 @@ const createdBy = {
   email: 'user@example.test'
 }
 
+/**
+ * @import { LedgerBalanceSnapshot, PrnPayload, PrnAcceptedPayload } from '#waste-balances/repository/ledger-schema.js'
+ * @import { PrnDecision } from '#waste-balances/domain/commands.js'
+ */
+
 describe('createWasteBalanceService', () => {
   let ledgerRepository
   let service
@@ -129,8 +134,12 @@ describe('createWasteBalanceService', () => {
      * rules on more than the balance before delegating here; these cases are
      * about what the ledger does with the decision it gets back.
      *
-     * @param {(balance: *, payload: *) => *} decide
-     * @param {*} payload
+     * Every case below seeds the ledger first, so the fold resolves a balance
+     * and the deciders — which take a snapshot, not a nullable one — can be
+     * handed it directly.
+     *
+     * @param {(balance: LedgerBalanceSnapshot, payload: PrnPayload & PrnAcceptedPayload) => PrnDecision} decide
+     * @param {PrnPayload & PrnAcceptedPayload} payload
      */
     const runCommand = async (decide, payload) => {
       const { result } = await service.runPrnCommand(
@@ -138,7 +147,10 @@ describe('createWasteBalanceService', () => {
         payload,
         createdBy,
         async (balance) => ({
-          decision: decide(balance, payload),
+          decision: decide(
+            /** @type {LedgerBalanceSnapshot} */ (balance),
+            payload
+          ),
           context: null
         })
       )
