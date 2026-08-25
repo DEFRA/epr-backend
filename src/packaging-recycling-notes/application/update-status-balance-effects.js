@@ -137,13 +137,78 @@ const TARGETS_REQUIRING_OPEN_LEDGER = Object.freeze(
 )
 
 /**
- * Apply a PRN status transition through the waste balance ledger: the ledger
- * folds, this decides, and the ledger appends what comes back.
+ * The decision a ledger command runs for a PRN status transition: rule on the
+ * transition, then choose the balance command it carries.
  *
- * The status the state machine rules on comes from projecting the PRN, because
- * the document can lag the stream. The projection happens inside the decision,
- * so it is read after the fold and the ruling holds at the head the events land
- * on — see `runPrnCommand` for why that ordering is what makes the write safe.
+ * The status ruled on comes from projecting the PRN, because the document can
+ * lag the stream. This runs inside the ledger command, so the projection is
+ * read after the fold and the ruling holds at the head the events land on — see
+ * `runPrnCommand` for why that ordering is what makes the write safe.
+ *
+ * @param {Object} transition
+ * @param {WasteBalanceService} transition.service
+ * @param {PackagingRecyclingNote} transition.prn
+ * @param {PrnStatus} transition.newStatus
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} transition.actor
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} [transition.accreditation]
+ * @param {Date} transition.now
+ * @param {import('#waste-balances/repository/ledger-schema.js').PrnPayload} transition.payload
+ */
+const ruleTransitionAndDecide =
+  ({ service, prn, newStatus, actor, accreditation, now, payload }) =>
+  async (
+    /** @type {import('#waste-balances/repository/ledger-schema.js').LedgerBalanceSnapshot | null} */ balance
+  ) => {
+    const projection = await projectPrnFromStreamTail(prn, service)
+    const fromStatus = projection.status.currentStatus
+
+    validateTransition(fromStatus, newStatus, actor)
+    assertCancellationAllowed(
+      fromStatus,
+      newStatus,
+      prn.accreditation.accreditationYear,
+      now
+    )
+    if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+      assertAccreditationCanIssue(accreditation)
+    }
+
+    const command = prnCommandFor(fromStatus, newStatus)
+    /* c8 ignore next 5 - defensive: the caller routes balance-affecting transitions here, so every transition reaching this point has a command */
+    if (!command) {
+      throw Boom.badImplementation(
+        `${fromStatus} -> ${newStatus} took the waste balance write path but has no balance effect`
+      )
+    }
+
+    // What the ruling settled, returned alongside the decision so the caller
+    // and the audit line get it without reading the PRN again.
+    const context = {
+      projection,
+      fromStatus,
+      logOperation: command.logOperation
+    }
+
+    // A ledger with no events cannot carry a PRN command. Whether that is the
+    // client's fault is settled by the caller, where the transition is known.
+    if (!balance) {
+      return {
+        decision: {
+          status: PRN_COMMAND_STATUS.REJECTED,
+          reason: PRN_COMMAND_REJECTION.NO_LEDGER
+        },
+        context
+      }
+    }
+
+    return { decision: command.decide(balance, payload), context }
+  }
+
+/**
+ * Apply a PRN status transition through the waste balance ledger: the ledger
+ * folds, `ruleTransitionAndDecide` rules and decides, and the ledger appends
+ * what comes back. What the ruling settled returns with it, for the refusal
+ * this raises and for the audit line.
  *
  * @param {WasteBalanceService} service
  * @param {import('#common/hapi-types.js').TypedLogger} logger
@@ -184,51 +249,15 @@ export async function applyPrnTransition(
     ledgerId,
     payload,
     createdBy,
-    async (balance) => {
-      const projection = await projectPrnFromStreamTail(prn, service)
-      const fromStatus = projection.status.currentStatus
-
-      validateTransition(fromStatus, newStatus, actor)
-      assertCancellationAllowed(
-        fromStatus,
-        newStatus,
-        prn.accreditation.accreditationYear,
-        now
-      )
-      if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-        assertAccreditationCanIssue(accreditation)
-      }
-
-      const command = prnCommandFor(fromStatus, newStatus)
-      /* c8 ignore next 5 - defensive: the caller routes balance-affecting transitions here, so every transition reaching this point has a command */
-      if (!command) {
-        throw Boom.badImplementation(
-          `${fromStatus} -> ${newStatus} took the waste balance write path but has no balance effect`
-        )
-      }
-
-      // What the ruling settled, returned alongside the decision so the caller
-      // and the audit line get it without reading the PRN again.
-      const context = {
-        projection,
-        fromStatus,
-        logOperation: command.logOperation
-      }
-
-      // A ledger with no events cannot carry a PRN command. Whether that is the
-      // client's fault is settled below, where the transition is known.
-      if (!balance) {
-        return {
-          decision: {
-            status: PRN_COMMAND_STATUS.REJECTED,
-            reason: PRN_COMMAND_REJECTION.NO_LEDGER
-          },
-          context
-        }
-      }
-
-      return { decision: command.decide(balance, payload), context }
-    }
+    ruleTransitionAndDecide({
+      service,
+      prn,
+      newStatus,
+      actor,
+      accreditation,
+      now,
+      payload
+    })
   )
 
   if (result.status === PRN_COMMAND_STATUS.REJECTED) {
