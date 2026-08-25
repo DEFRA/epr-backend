@@ -8,7 +8,7 @@ import { assertBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain
  *
  * @type {Set<import('#packaging-recycling-notes/domain/model.js').PrnStatus>}
  */
-const CANCELLABLE_PREVIOUS_STATUSES = new Set([
+const ADMIN_CANCELLABLE_PREVIOUS_STATUSES = new Set([
   PRN_STATUS.ACCEPTED,
   PRN_STATUS.AWAITING_ACCEPTANCE
 ])
@@ -32,7 +32,7 @@ export function assertCancellationAllowed(
   now
 ) {
   const isAdminCancellation =
-    CANCELLABLE_PREVIOUS_STATUSES.has(previousStatus) &&
+    ADMIN_CANCELLABLE_PREVIOUS_STATUSES.has(previousStatus) &&
     newStatus === PRN_STATUS.CANCELLED
 
   if (isAdminCancellation) {
