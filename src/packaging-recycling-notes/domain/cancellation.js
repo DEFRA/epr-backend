@@ -1,5 +1,8 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { assertBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/relevant-year.js'
+import {
+  assertBeforeEndOfRelevantYear,
+  isBeforeEndOfRelevantYear
+} from '#packaging-recycling-notes/domain/relevant-year.js'
 
 /**
  * Prior statuses a PRN/PERN can be admin-cancelled from, and so must respect
@@ -42,4 +45,24 @@ export function assertCancellationAllowed(
   if (isAdminCancellation) {
     assertBeforeEndOfRelevantYear(accreditationYear, now)
   }
+}
+
+/**
+ * Whether an admin/regulator could cancel this PRN/PERN right now: its current
+ * status is one admin cancellation can start from, and its accreditation
+ * year's cancellation window has not closed. The single rule both the admin
+ * PRN list (`admin-prn-mapper.js`) and, transitively, the activity page's
+ * Cancel link are driven from — kept here so it can never drift from
+ * `ADMIN_CANCELLABLE_PREVIOUS_STATUSES` or the deadline check above.
+ *
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} status
+ * @param {number} accreditationYear
+ * @param {Date} now
+ * @returns {boolean}
+ */
+export function isRegulatorCancellable(status, accreditationYear, now) {
+  return (
+    ADMIN_CANCELLABLE_PREVIOUS_STATUSES.has(status) &&
+    isBeforeEndOfRelevantYear(accreditationYear, now)
+  )
 }
