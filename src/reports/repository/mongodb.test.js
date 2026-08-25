@@ -13,6 +13,7 @@ import { createMongoError } from '#test/mongo-error.js'
  */
 
 const DATABASE_NAME = 'epr-backend'
+const LEGACY_REPORT_ID = '9f1d3c2a-5b47-4e18-9c60-2d7a8e4f1b03'
 
 const it = /** @type {import('vitest').TestAPI<ReportsFixtures>} */ (
   mongoIt.extend({
@@ -87,6 +88,48 @@ describe('MongoDB reports repository', () => {
       expect(slot.startDate).toBe('2024-01-01')
       expect(slot.endDate).toBe('2024-01-31')
       expect(slot.dueDate).toBe('2024-02-21')
+    })
+
+    it('returns bare dates from findReportById for a report persisted before the bare-date schema fix', /** @param {ReportsFixtures} fixture */ async ({
+      mongoClient,
+      reportsRepository
+    }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      await database.collection('reports').insertOne(
+        /** @type {any} */ ({
+          _id: 'legacy-report-2',
+          id: LEGACY_REPORT_ID,
+          version: 1,
+          schemaVersion: 1,
+          organisationId: '507f1f77bcf86cd799439021',
+          registrationId: '507f1f77bcf86cd799439022',
+          year: 2024,
+          cadence: 'monthly',
+          period: 1,
+          submissionNumber: 1,
+          startDate: '2024-01-01T00:00:00.000Z',
+          endDate: '2024-01-31T00:00:00.000Z',
+          dueDate: '2024-02-21T00:00:00.000Z',
+          status: {
+            currentStatus: 'submitted',
+            currentStatusAt: '2024-02-01T00:00:00.000Z',
+            submitted: { at: '2024-02-01T00:00:00.000Z', by: { id: 'u' } },
+            history: []
+          }
+        })
+      )
+
+      const report = await reportsRepository().findReportById(LEGACY_REPORT_ID)
+
+      expect({
+        startDate: report.startDate,
+        endDate: report.endDate,
+        dueDate: report.dueDate
+      }).toStrictEqual({
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        dueDate: '2024-02-21'
+      })
     })
   })
 

@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -135,9 +136,9 @@ describe('resubmission-service', () => {
         reports: {
           monthly: {
             1: {
-              startDate: '2024-01-01',
-              endDate: '2024-01-31',
-              dueDate: '2024-02-15',
+              startDate: calendarDate('2024-01-01'),
+              endDate: calendarDate('2024-01-31'),
+              dueDate: calendarDate('2024-02-15'),
               current,
               previousSubmissions
             }
@@ -244,9 +245,9 @@ describe('resubmission-service', () => {
         cadence: 'monthly',
         period: 1,
         submissionNumber: 1,
-        startDate: '2024-01-01',
-        endDate: '2024-01-31',
-        dueDate: '2024-02-15',
+        startDate: calendarDate('2024-01-01'),
+        endDate: calendarDate('2024-01-31'),
+        dueDate: calendarDate('2024-02-15'),
         changedBy,
         material: 'plastic',
         wasteProcessingType: 'reprocessor',

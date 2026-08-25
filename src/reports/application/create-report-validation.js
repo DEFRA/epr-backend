@@ -6,12 +6,13 @@ import { errorCodes } from '#reports/enums/error-codes.js'
 import { findSubmissionByNumber } from './submission-lookup.js'
 
 /**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 
 /**
- * @typedef {{ period: number, startDate: string, endDate: string, dueDate: string }} PeriodInfo
+ * @typedef {{ period: number, startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate }} PeriodInfo
  */
 
 /**
@@ -176,7 +177,7 @@ export const assertResubmissionAllowed = (
  * @param {Cadence} cadence
  * @param {number} year
  * @param {number} period
- * @returns {{ startDate: string, endDate: string, dueDate: string }}
+ * @returns {{ startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate }}
  */
 export function getValidatedPeriodInfo(cadence, year, period) {
   const allPeriods = generateAllPeriodsForYear(cadence, year)

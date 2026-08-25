@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from './cadence.js'
 import { REPORT_STATUS } from './report-status.js'
 import {
@@ -31,9 +32,9 @@ const reportSummary = (status, id) =>
  * @returns {import('#reports/repository/port.js').ReportPerPeriod}
  */
 const slot = (overrides = {}) => ({
-  startDate: '2026-01-01',
-  endDate: '2026-03-31',
-  dueDate: '2026-04-20',
+  startDate: calendarDate('2026-01-01'),
+  endDate: calendarDate('2026-03-31'),
+  dueDate: calendarDate('2026-04-20'),
   current: null,
   previousSubmissions: [],
   ...overrides
