@@ -46,11 +46,16 @@
  */
 
 /**
+ * `prnNumber` is the note's own number, the reference it is known by outside
+ * the service. A note holds none until it is issued, and a ledger records the
+ * events that precede issuance, so the number is null on some events of a note
+ * that carries one on others.
+ *
  * `tonnage` is the tonnage of the note itself, not the amount the balance
  * moved. Accepting or rejecting a note moves neither total.
  *
  * @typedef {LedgerEventCommon & {
- *   prn: { id: string, tonnage: number },
+ *   prn: { id: string, prnNumber: string | null, tonnage: number },
  *   summaryLog?: never
  * }} PrnEventResource
  */
@@ -76,6 +81,18 @@
  * @typedef {Object} LedgerResource
  * @property {WasteBalanceLedgerId} ledger
  * @property {LedgerEventResource[]} events
+ */
+
+/**
+ * Reads the notes of one accreditation, so a ledger read can state each note's
+ * own number beside the id its events carry.
+ *
+ * Stated here as what a ledger read needs of a note, rather than taken from the
+ * note module, so `waste-balances` depends on nothing above it. A
+ * `PackagingRecyclingNotesRepository` satisfies it, and the routes pass one.
+ *
+ * @typedef {Object} LedgerNoteReader
+ * @property {(accreditation: WasteBalanceLedgerId & { accreditationId: string }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByAccreditation
  */
 
 /**
@@ -116,10 +133,45 @@ const toActor = ({ id, name, email }) => ({ id, name, email })
 const creditsASummaryLog = (payload) => 'summaryLogId' in payload
 
 /**
+ * The number of every note the ledger's events can name, by note id.
+ *
+ * A ledger is keyed by the accreditation its notes belong to — the write path
+ * refuses an event whose note names another accreditation, and refuses a note
+ * event on a registered-only ledger at all — so one read of that accreditation
+ * covers every note the events name.
+ *
+ * Empty where the ledger names no note: a registered-only ledger holds none,
+ * and an accreditation ledger that has seen no note decision has nothing to
+ * look up.
+ *
+ * @param {LedgerNoteReader} noteReader
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {LedgerEvent[]} events
+ * @returns {Promise<Map<string, string | null>>}
+ */
+const noteNumbersById = async (noteReader, ledgerId, events) => {
+  const { accreditationId } = ledgerId
+
+  const namesNoNote = events.every((event) => creditsASummaryLog(event.payload))
+
+  if (accreditationId === null || namesNoNote) {
+    return new Map()
+  }
+
+  const notes = await noteReader.findByAccreditation({
+    ...ledgerId,
+    accreditationId
+  })
+
+  return new Map(notes.map((note) => [note.id, note.prnNumber ?? null]))
+}
+
+/**
  * @param {LedgerEvent} event
+ * @param {Map<string, string | null>} noteNumbers
  * @returns {LedgerEventResource}
  */
-const toEventResource = (event) => {
+const toEventResource = (event, noteNumbers) => {
   const common = {
     number: event.number,
     kind: event.kind,
@@ -141,7 +193,11 @@ const toEventResource = (event) => {
       }
     : {
         ...common,
-        prn: { id: event.payload.prnId, tonnage: event.payload.amount }
+        prn: {
+          id: event.payload.prnId,
+          prnNumber: noteNumbers.get(event.payload.prnId) ?? null,
+          tonnage: event.payload.amount
+        }
       }
 }
 
@@ -157,14 +213,21 @@ const toEventResource = (event) => {
  * the size of the service. The `events` key leaves room to page it later
  * without changing the shape.
  *
+ * A note event names its note by id. The number that note is known by is held
+ * on the note itself, so the read states it from there.
+ *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
+ * @param {LedgerNoteReader} noteReader
  * @param {WasteBalanceLedgerId} ledgerId - The registration or accreditation
  *   whose ledger is read.
  * @returns {Promise<LedgerResource>}
  */
-export const readLedger = async (ledgerRepository, ledgerId) => ({
-  ledger: toLedger(ledgerId),
-  events: (await ledgerRepository.findAllInLedger(ledgerId)).map(
-    toEventResource
-  )
-})
+export const readLedger = async (ledgerRepository, noteReader, ledgerId) => {
+  const events = await ledgerRepository.findAllInLedger(ledgerId)
+  const noteNumbers = await noteNumbersById(noteReader, ledgerId, events)
+
+  return {
+    ledger: toLedger(ledgerId),
+    events: events.map((event) => toEventResource(event, noteNumbers))
+  }
+}

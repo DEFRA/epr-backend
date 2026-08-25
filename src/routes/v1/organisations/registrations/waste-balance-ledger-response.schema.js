@@ -39,11 +39,16 @@ const summaryLogSchema = Joi.object({
 })
 
 /**
+ * `prnNumber` is the note's own number, the reference it is known by outside
+ * the service. It is null on the events of a note that holds none: a note is
+ * numbered as it is issued, and a ledger records the events before that.
+ *
  * `tonnage` is the tonnage of the note itself, not the amount the balance
  * moved. Accepting or rejecting a note moves neither total.
  */
 const prnSchema = Joi.object({
   id: Joi.string().required(),
+  prnNumber: Joi.string().allow(null).required(),
   tonnage: Joi.number().required()
 })
 

@@ -23,7 +23,7 @@ const summaryLogEvent = (overrides = {}) => ({
 const prnEvent = (overrides = {}) => ({
   ...commonKeys(),
   kind: LEDGER_EVENT_KIND.PRN_CREATED,
-  prn: { id: 'prn-1', tonnage: 50 },
+  prn: { id: 'prn-1', prnNumber: 'EX123456789', tonnage: 50 },
   ...overrides
 })
 
@@ -68,6 +68,22 @@ describe('the waste balance ledger response schema', () => {
     expect(errorFrom(ledgerOf([prnEvent()]))).toBeUndefined()
   })
 
+  it('accepts an event whose note holds no number yet', () => {
+    expect(
+      errorFrom(
+        ledgerOf([
+          prnEvent({ prn: { id: 'prn-1', prnNumber: null, tonnage: 50 } })
+        ])
+      )
+    ).toBeUndefined()
+  })
+
+  it('refuses a note that states no number either way', () => {
+    const event = prnEvent({ prn: { id: 'prn-1', tonnage: 50 } })
+
+    expect(refusalOf(event)).toContain('"events[0].prn.prnNumber" is required')
+  })
+
   it('accepts a ledger holding no events', () => {
     expect(errorFrom(ledgerOf([]))).toBeUndefined()
   })
@@ -83,7 +99,9 @@ describe('the waste balance ledger response schema', () => {
   })
 
   it('refuses an event that names both a summary log and a note', () => {
-    const event = summaryLogEvent({ prn: { id: 'prn-1', tonnage: 50 } })
+    const event = summaryLogEvent({
+      prn: { id: 'prn-1', prnNumber: 'EX123456789', tonnage: 50 }
+    })
 
     expect(refusalOf(event)).toContain('"events[0].prn" is not allowed')
     expect(
