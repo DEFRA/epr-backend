@@ -621,7 +621,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(response.payload).toContain('Version conflict')
+        // The versions the repository names are for the logs; a caller that
+        // lost the race is told what happened and what to do about it.
+        expect(response.payload).not.toContain('Version conflict')
+        expect(JSON.parse(response.payload).message).toBe(
+          'This PRN was updated by another request. Please try again.'
+        )
       })
 
       it('returns 409 when another writer takes the ledger slot first', async () => {
