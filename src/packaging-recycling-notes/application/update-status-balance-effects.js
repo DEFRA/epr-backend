@@ -1,11 +1,23 @@
 import Boom from '@hapi/boom'
 
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_STATUS,
+  validateTransition,
+  assertAccreditationCanIssue
+} from '#packaging-recycling-notes/domain/model.js'
+import { assertCancellationAllowed } from '#packaging-recycling-notes/domain/cancellation.js'
+import { projectPrnFromCatchupEvents } from './get-projected-prn.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import {
+  createPrn as decideCreatePrn,
+  issuePrn as decideIssuePrn,
+  cancelPrnCreation as decideCancelPrnCreation,
+  cancelIssuedPrn as decideCancelIssuedPrn,
+  acceptPrn as decideAcceptPrn,
+  rejectPrn as decideRejectPrn,
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
 } from '#waste-balances/domain/commands.js'
@@ -13,6 +25,7 @@ import {
 /**
  * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  */
 
 /**
@@ -44,40 +57,40 @@ export function logWasteBalanceUpdate(
 }
 
 /**
- * Maps a permitted status transition to the waste-balance service command it
- * runs and the operation label its system log carries. Transitions without an
- * entry have no balance effect. Keys must be transitions the state machine
+ * Maps a permitted status transition to the waste-balance decision it runs and
+ * the operation label its system log carries. Transitions without an entry have
+ * no balance effect. Keys must be transitions the state machine
  * (`PRN_STATUS_TRANSITIONS`) actually permits.
  *
- * @type {Record<string, { method: 'createPrn' | 'issuePrn' | 'cancelPrnCreation' | 'cancelIssuedPrn' | 'acceptPrn' | 'rejectPrn', logOperation: string }>}
+ * @type {Record<string, { decide: (balance: import('#waste-balances/repository/ledger-schema.js').LedgerBalanceSnapshot, payload: import('#waste-balances/repository/ledger-schema.js').PrnPayload) => import('#waste-balances/domain/commands.js').PrnDecision, logOperation: string }>}
  */
 const TRANSITION_TO_COMMAND = Object.freeze({
   [`${PRN_STATUS.DRAFT}|${PRN_STATUS.AWAITING_AUTHORISATION}`]: {
-    method: 'createPrn',
+    decide: decideCreatePrn,
     logOperation: 'deduct_available'
   },
   [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.AWAITING_ACCEPTANCE}`]: {
-    method: 'issuePrn',
+    decide: decideIssuePrn,
     logOperation: 'deduct_total'
   },
   [`${PRN_STATUS.AWAITING_ACCEPTANCE}|${PRN_STATUS.ACCEPTED}`]: {
-    method: 'acceptPrn',
+    decide: decideAcceptPrn,
     logOperation: 'append_accepted'
   },
   [`${PRN_STATUS.AWAITING_ACCEPTANCE}|${PRN_STATUS.AWAITING_CANCELLATION}`]: {
-    method: 'rejectPrn',
+    decide: decideRejectPrn,
     logOperation: 'append_rejected'
   },
   [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.DELETED}`]: {
-    method: 'cancelPrnCreation',
+    decide: decideCancelPrnCreation,
     logOperation: 'credit_available'
   },
   [`${PRN_STATUS.AWAITING_CANCELLATION}|${PRN_STATUS.CANCELLED}`]: {
-    method: 'cancelIssuedPrn',
+    decide: decideCancelIssuedPrn,
     logOperation: 'credit_full'
   },
   [`${PRN_STATUS.ACCEPTED}|${PRN_STATUS.CANCELLED}`]: {
-    method: 'cancelIssuedPrn',
+    decide: decideCancelIssuedPrn,
     logOperation: 'credit_full'
   }
 })
@@ -111,66 +124,149 @@ const REJECTION_TO_ERROR = Object.freeze({
 })
 
 /**
- * Commands that act on a PRN already created and issued. Both transitions only
- * follow ones that opened the ledger, so a missing ledger here is not a client
- * error but a broken invariant — surfaced as a 500 rather than the contextual
- * 400 the reachable commands return.
+ * Transitions onto a PRN already created and issued. Both are reachable only
+ * from `awaiting_acceptance`, so both follow transitions that opened the
+ * ledger: a missing ledger is not a client error but a broken invariant, and is
+ * surfaced as a 500 rather than the contextual 400 the reachable commands
+ * return.
  *
- * @type {ReadonlySet<string>}
+ * @type {ReadonlySet<PrnStatus>}
  */
-const COMMANDS_REQUIRING_OPEN_LEDGER = Object.freeze(
-  new Set(['acceptPrn', 'rejectPrn'])
+const TARGETS_REQUIRING_OPEN_LEDGER = Object.freeze(
+  new Set([PRN_STATUS.ACCEPTED, PRN_STATUS.AWAITING_CANCELLATION])
 )
 
 /**
- * Run the waste-balance command for a status transition through the service,
- * folding once and appending the decided events. A rejection becomes the
- * caller-facing error; a commit is logged and its appended stream events
- * returned for the projection fold. The slot index is the optimistic-concurrency
- * guard: a head that moved after the fold surfaces as a slot conflict and
- * propagates to the caller (ADR-0036).
+ * The decision a ledger command runs for a PRN status transition: rule on the
+ * transition, then choose the balance command it carries.
+ *
+ * The status ruled on comes from projecting the PRN, because the document can
+ * lag the stream. This runs inside the ledger command, so the projection is
+ * read after the fold and the ruling holds at the head the events land on — see
+ * `runPrnCommand` for why that ordering is what makes the write safe.
+ *
+ * @param {Object} transition
+ * @param {WasteBalanceService} transition.service
+ * @param {PackagingRecyclingNote} transition.prn
+ * @param {PrnStatus} transition.newStatus
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} transition.actor
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} [transition.accreditation]
+ * @param {Date} transition.now
+ * @param {import('#waste-balances/repository/ledger-schema.js').PrnPayload} transition.payload
+ */
+const ruleTransitionAndDecide =
+  ({ service, prn, newStatus, actor, accreditation, now, payload }) =>
+  async (
+    /** @type {import('#waste-balances/repository/ledger-schema.js').LedgerBalanceSnapshot | null} */ balance
+  ) => {
+    const projection = await projectPrnFromCatchupEvents(prn, service)
+    const fromStatus = projection.status.currentStatus
+
+    validateTransition(fromStatus, newStatus, actor)
+    assertCancellationAllowed(
+      fromStatus,
+      newStatus,
+      prn.accreditation.accreditationYear,
+      now
+    )
+    if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+      assertAccreditationCanIssue(accreditation)
+    }
+
+    const command = prnCommandFor(fromStatus, newStatus)
+    /* c8 ignore next 5 - defensive: the caller routes balance-affecting transitions here, so every transition reaching this point has a command */
+    if (!command) {
+      throw Boom.badImplementation(
+        `${fromStatus} -> ${newStatus} took the waste balance write path but has no balance effect`
+      )
+    }
+
+    // What the ruling settled, returned alongside the decision so the caller
+    // and the audit line get it without reading the PRN again.
+    const context = {
+      projection,
+      fromStatus,
+      logOperation: command.logOperation
+    }
+
+    // A ledger with no events cannot carry a PRN command. Whether that is the
+    // client's fault is settled by the caller, where the transition is known.
+    if (!balance) {
+      return {
+        decision: {
+          status: PRN_COMMAND_STATUS.REJECTED,
+          reason: PRN_COMMAND_REJECTION.NO_LEDGER
+        },
+        context
+      }
+    }
+
+    return { decision: command.decide(balance, payload), context }
+  }
+
+/**
+ * Apply a PRN status transition through the waste balance ledger: the ledger
+ * folds, `ruleTransitionAndDecide` rules and decides, and the ledger appends
+ * what comes back. What the ruling settled returns with it, for the refusal
+ * this raises and for the audit line.
  *
  * @param {WasteBalanceService} service
  * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {Object} command
- * @param {PrnStatus} command.currentStatus
- * @param {PrnStatus} command.newStatus
- * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & { accreditationId: string }} command.ledgerId
- * @param {string} command.prnId
- * @param {number} command.tonnage
- * @param {import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary} command.createdBy
- * @param {number} [command.obligationYear]
- * @returns {Promise<Array<import('#waste-balances/repository/ledger-port.js').LedgerEvent>>}
+ * @param {Object} transition
+ * @param {PackagingRecyclingNote} transition.prn - the fetched document, projected before the rule is applied
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & { accreditationId: string }} transition.ledgerId
+ * @param {PrnStatus} transition.newStatus
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} transition.actor
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} [transition.accreditation] - fetched by the caller on the issuance path, so a missing accreditation is reported before the transition is ruled on
+ * @param {number} transition.tonnage
+ * @param {import('#waste-balances/repository/ledger-schema.js').LedgerUserSummary} transition.createdBy
+ * @param {Date} transition.now
+ * @param {number} [transition.obligationYear]
+ * @returns {Promise<{ events: Array<import('#waste-balances/repository/ledger-port.js').LedgerEvent>, projection: PackagingRecyclingNote, fromStatus: PrnStatus }>}
  */
-export async function applyPrnBalanceCommand(
+export async function applyPrnTransition(
   service,
   logger,
   {
-    currentStatus,
-    newStatus,
+    prn,
     ledgerId,
-    prnId,
+    newStatus,
+    actor,
+    accreditation,
     tonnage,
     createdBy,
+    now,
     obligationYear
   }
 ) {
-  const command = prnCommandFor(currentStatus, newStatus)
   const payload = {
-    prnId,
+    prnId: prn.id,
     amount: tonnage,
     ...(obligationYear === undefined ? {} : { obligationYear })
   }
 
-  const result = await service[command.method](ledgerId, payload, createdBy)
+  const { result, context: ruled } = await service.runPrnCommand(
+    ledgerId,
+    payload,
+    createdBy,
+    ruleTransitionAndDecide({
+      service,
+      prn,
+      newStatus,
+      actor,
+      accreditation,
+      now,
+      payload
+    })
+  )
 
   if (result.status === PRN_COMMAND_STATUS.REJECTED) {
     if (
       result.reason === PRN_COMMAND_REJECTION.NO_LEDGER &&
-      COMMANDS_REQUIRING_OPEN_LEDGER.has(command.method)
+      TARGETS_REQUIRING_OPEN_LEDGER.has(newStatus)
     ) {
       throw Boom.badImplementation(
-        `${command.method} reached a missing waste balance ledger for accreditation ${ledgerId.accreditationId}; a created and issued PRN must have an open ledger`
+        `${ruled.fromStatus} -> ${newStatus} reached a missing waste balance ledger for accreditation ${ledgerId.accreditationId}; a created and issued PRN must have an open ledger`
       )
     }
     throw REJECTION_TO_ERROR[result.reason](ledgerId.accreditationId)
@@ -178,12 +274,16 @@ export async function applyPrnBalanceCommand(
 
   logWasteBalanceUpdate(
     logger,
-    command.logOperation,
-    prnId,
+    ruled.logOperation,
+    prn.id,
     tonnage,
-    currentStatus,
+    ruled.fromStatus,
     newStatus
   )
 
-  return result.events
+  return {
+    events: result.events,
+    projection: ruled.projection,
+    fromStatus: ruled.fromStatus
+  }
 }

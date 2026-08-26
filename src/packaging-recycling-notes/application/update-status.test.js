@@ -541,7 +541,7 @@ describe('updatePrnStatus', () => {
             findById: vi.fn().mockResolvedValue(prn),
             updateStatus: vi.fn().mockResolvedValue(null)
           },
-          wasteBalanceService: {},
+          ledgerRepository: createInMemoryLedgerRepository()(),
           organisationsRepository: {},
           newStatus: PRN_STATUS.DISCARDED,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER

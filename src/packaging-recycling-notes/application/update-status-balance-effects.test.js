@@ -1,14 +1,32 @@
 import { describe, it, expect, vi } from 'vitest'
 
 import {
-  applyPrnBalanceCommand,
+  applyPrnTransition,
   prnCommandFor
 } from './update-status-balance-effects.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_STATUS,
+  PRN_ACTOR,
+  PRN_STATUS_TRANSITIONS
+} from '#packaging-recycling-notes/domain/model.js'
+import {
+  createPrn as decideCreatePrn,
+  issuePrn as decideIssuePrn,
+  cancelPrnCreation as decideCancelPrnCreation,
+  cancelIssuedPrn as decideCancelIssuedPrn,
+  acceptPrn as decideAcceptPrn,
+  rejectPrn as decideRejectPrn
+} from '#waste-balances/domain/commands.js'
+import { ACCREDITATION_STATUS, REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  buildPrn,
+  buildAccreditation as buildPrnAccreditation
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 /**
  * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
@@ -61,65 +79,128 @@ const serviceWithBalance = (closingBalance) => {
   )
 }
 
-const applyTransition = (service, logger, currentStatus, newStatus) =>
-  applyPrnBalanceCommand(service, logger, {
-    currentStatus,
-    newStatus,
-    ledgerId,
-    prnId: PRN_ID,
-    tonnage: TONNAGE,
-    createdBy
+/**
+ * A PRN document sitting at `currentStatus` with nothing unprojected behind it,
+ * so the transition is ruled on exactly that status.
+ *
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} currentStatus
+ */
+const prnAt = (currentStatus) =>
+  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ ({
+    ...buildPrn({
+      id: PRN_ID,
+      registrationId: REGISTRATION_ID,
+      organisation: {
+        id: ORGANISATION_ID,
+        name: 'Test Reprocessor',
+        tradingName: 'Trading Name'
+      },
+      accreditation: buildPrnAccreditation({
+        id: ACCREDITATION_ID,
+        accreditationYear: 2026
+      }),
+      tonnage: TONNAGE
+    }),
+    lastAppliedEventNumber: SEED_NUMBER,
+    status:
+      /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['status']} */ ({
+        currentStatus
+      })
   })
+
+/**
+ * @param {ReturnType<typeof createWasteBalanceService>} service
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} currentStatus
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} newStatus
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} actor
+ */
+const applyTransition = (service, logger, currentStatus, newStatus, actor) =>
+  applyPrnTransition(service, logger, {
+    prn: prnAt(currentStatus),
+    ledgerId,
+    newStatus,
+    actor,
+    accreditation: buildAccreditation({
+      status: ACCREDITATION_STATUS.APPROVED,
+      submittedToRegulator: REGULATOR.EA
+    }),
+    tonnage: TONNAGE,
+    createdBy,
+    now: new Date('2026-06-01T00:00:00.000Z')
+  })
+
+describe('every permitted transition is routed to a write path', () => {
+  // `updatePrnStatus` sends DISCARDED to the write that appends no event and
+  // everything else to the ledger, so a transition with no command must be
+  // exactly the one the discard path handles. Adding a transition to the state
+  // machine without a balance decision fails here rather than in production.
+  // Walked from the statuses rather than `Object.entries`, which widens the
+  // keys to `string` and loses the check that these are real PRN statuses.
+  const permitted = Object.values(PRN_STATUS).flatMap((fromStatus) =>
+    PRN_STATUS_TRANSITIONS[fromStatus].map((transition) => [
+      fromStatus,
+      transition.status
+    ])
+  )
+
+  it.each(permitted)('%s -> %s', (fromStatus, newStatus) => {
+    const isDiscard =
+      fromStatus === PRN_STATUS.DRAFT && newStatus === PRN_STATUS.DISCARDED
+
+    expect(Boolean(prnCommandFor(fromStatus, newStatus))).toBe(!isDiscard)
+  })
+})
 
 describe('prnCommandFor', () => {
   it.each([
     [
       PRN_STATUS.DRAFT,
       PRN_STATUS.AWAITING_AUTHORISATION,
-      'createPrn',
+      decideCreatePrn,
       'deduct_available'
     ],
     [
       PRN_STATUS.AWAITING_AUTHORISATION,
       PRN_STATUS.AWAITING_ACCEPTANCE,
-      'issuePrn',
+      decideIssuePrn,
       'deduct_total'
     ],
     [
       PRN_STATUS.AWAITING_ACCEPTANCE,
       PRN_STATUS.ACCEPTED,
-      'acceptPrn',
+      decideAcceptPrn,
       'append_accepted'
     ],
     [
       PRN_STATUS.AWAITING_ACCEPTANCE,
       PRN_STATUS.AWAITING_CANCELLATION,
-      'rejectPrn',
+      decideRejectPrn,
       'append_rejected'
     ],
     [
       PRN_STATUS.AWAITING_AUTHORISATION,
       PRN_STATUS.DELETED,
-      'cancelPrnCreation',
+      decideCancelPrnCreation,
       'credit_available'
     ],
     [
       PRN_STATUS.AWAITING_CANCELLATION,
       PRN_STATUS.CANCELLED,
-      'cancelIssuedPrn',
+      decideCancelIssuedPrn,
       'credit_full'
     ],
     [
       PRN_STATUS.ACCEPTED,
       PRN_STATUS.CANCELLED,
-      'cancelIssuedPrn',
+      decideCancelIssuedPrn,
       'credit_full'
     ]
   ])(
-    'maps %s -> %s to the %s command',
-    (currentStatus, newStatus, method, logOperation) => {
+    'maps %s -> %s to its balance decision',
+    (currentStatus, newStatus, decide, logOperation) => {
       expect(prnCommandFor(currentStatus, newStatus)).toEqual({
-        method,
+        decide,
         logOperation
       })
     }
@@ -132,15 +213,16 @@ describe('prnCommandFor', () => {
   })
 })
 
-describe('applyPrnBalanceCommand on commit', () => {
+describe('applyPrnTransition on commit', () => {
   it('appends the decided event and returns it', async () => {
     const service = serviceWithBalance({ amount: 1000, availableAmount: 1000 })
 
-    const events = await applyTransition(
+    const { events } = await applyTransition(
       service,
       buildLogger(),
       PRN_STATUS.DRAFT,
-      PRN_STATUS.AWAITING_AUTHORISATION
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_ACTOR.REPROCESSOR_EXPORTER
     )
 
     expect(events).toHaveLength(1)
@@ -156,7 +238,8 @@ describe('applyPrnBalanceCommand on commit', () => {
       service,
       logger,
       PRN_STATUS.DRAFT,
-      PRN_STATUS.AWAITING_AUTHORISATION
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_ACTOR.REPROCESSOR_EXPORTER
     )
 
     expect(logger.info).toHaveBeenCalledWith(
@@ -175,7 +258,7 @@ describe('applyPrnBalanceCommand on commit', () => {
   })
 })
 
-describe('applyPrnBalanceCommand on rejection', () => {
+describe('applyPrnTransition on rejection', () => {
   it('throws a 400 naming the accreditation when no ledger exists', async () => {
     const service = serviceWithBalance(null)
 
@@ -184,7 +267,8 @@ describe('applyPrnBalanceCommand on rejection', () => {
         service,
         buildLogger(),
         PRN_STATUS.DRAFT,
-        PRN_STATUS.AWAITING_AUTHORISATION
+        PRN_STATUS.AWAITING_AUTHORISATION,
+        PRN_ACTOR.REPROCESSOR_EXPORTER
       )
     ).rejects.toMatchObject({
       isBoom: true,
@@ -201,7 +285,8 @@ describe('applyPrnBalanceCommand on rejection', () => {
         service,
         buildLogger(),
         PRN_STATUS.DRAFT,
-        PRN_STATUS.AWAITING_AUTHORISATION
+        PRN_STATUS.AWAITING_AUTHORISATION,
+        PRN_ACTOR.REPROCESSOR_EXPORTER
       )
     ).rejects.toMatchObject({
       isBoom: true,
@@ -218,7 +303,8 @@ describe('applyPrnBalanceCommand on rejection', () => {
         service,
         buildLogger(),
         PRN_STATUS.AWAITING_AUTHORISATION,
-        PRN_STATUS.AWAITING_ACCEPTANCE
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_ACTOR.SIGNATORY
       )
     ).rejects.toMatchObject({
       isBoom: true,
@@ -240,7 +326,13 @@ describe('applyPrnBalanceCommand on rejection', () => {
       const service = serviceWithBalance(null)
 
       await expect(
-        applyTransition(service, buildLogger(), currentStatus, newStatus)
+        applyTransition(
+          service,
+          buildLogger(),
+          currentStatus,
+          newStatus,
+          PRN_ACTOR.PRODUCER
+        )
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 500 }

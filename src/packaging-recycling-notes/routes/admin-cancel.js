@@ -10,11 +10,14 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   PRN_STATUS,
-  PRN_ACTOR
+  PRN_ACTOR,
+  StatusConflictError,
+  UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { RelevantYearWindowExpiredError } from '#packaging-recycling-notes/domain/relevant-year.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
+import { writeConflictRefusal } from './write-conflict-refusal.js'
 
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
@@ -154,18 +157,30 @@ const performCancellation = async (request, previousPrn, id, h) => {
 /**
  * Maps a cancellation failure to the HTTP error it should surface as.
  *
- * `updatePrnStatus` is called with `providedPrn` set to the same document this
- * handler already checked is `accepted`, so its internal `validateTransition`
- * re-checks that identical status and can never disagree — `StatusConflictError`
- * and `UnauthorisedTransitionError` are consequently unreachable here and are
- * deliberately not special-cased; they would fall through to the generic 500
- * below if the invariant above were ever broken.
+ * This handler checks the fetched document is `accepted`, but the transition is
+ * ruled on again at the ledger head against the PRN projected from the stream.
+ * The two disagree whenever another writer has cancelled the PRN since, so a
+ * status conflict is the ordinary refusal for a losing request rather than a
+ * broken invariant.
+ *
  * @param {*} error
  * @param {string} path
  * @param {string} id
  * @param {TypedLogger} logger
  */
 const mapAdminCancelError = (error, path, id, logger) => {
+  const conflict = writeConflictRefusal(error)
+  if (conflict) {
+    return conflict
+  }
+
+  if (
+    error instanceof StatusConflictError ||
+    error instanceof UnauthorisedTransitionError
+  ) {
+    return Boom.conflict(error.message)
+  }
+
   if (error instanceof RelevantYearWindowExpiredError) {
     logger.info({
       message: `Admin cancel refused: ${error.message}`,

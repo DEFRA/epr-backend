@@ -6,7 +6,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
-import { PrnNumberConflictError } from './port.js'
+import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
 import { validatePrnInsert } from './validation.js'
 import {
   isWatermarkRegression,
@@ -207,7 +207,9 @@ const performUpdateStatus =
           reference: id
         }
       })
-      throw Boom.conflict(conflictError.message)
+      throw Boom.conflict(conflictError.message, {
+        kind: PRN_VERSION_CONFLICT
+      })
     }
 
     enforceMonotonicWatermark(
@@ -285,7 +287,9 @@ const performPersistProjection =
           reference: id
         }
       })
-      throw Boom.conflict(conflictError.message)
+      throw Boom.conflict(conflictError.message, {
+        kind: PRN_VERSION_CONFLICT
+      })
     }
 
     enforceMonotonicWatermark(
@@ -343,7 +347,9 @@ const performRollback =
           reference: id
         }
       })
-      throw Boom.conflict(conflictError.message)
+      throw Boom.conflict(conflictError.message, {
+        kind: PRN_VERSION_CONFLICT
+      })
     }
 
     enforceMonotonicWatermark(

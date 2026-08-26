@@ -2,14 +2,7 @@ import Boom from '@hapi/boom'
 
 import {
   submitSummaryLog as decideSummaryLog,
-  createPrn as decideCreatePrn,
-  issuePrn as decideIssuePrn,
-  cancelPrnCreation as decideCancelPrnCreation,
-  cancelIssuedPrn as decideCancelIssuedPrn,
-  acceptPrn as decideAcceptPrn,
-  rejectPrn as decideRejectPrn,
-  PRN_COMMAND_STATUS,
-  PRN_COMMAND_REJECTION
+  PRN_COMMAND_STATUS
 } from '../domain/commands.js'
 import { currentWasteBalance } from './current-waste-balance.js'
 import { performUpdateViaLedger } from './update-via-ledger.js'
@@ -103,11 +96,28 @@ const createLedgerCommands = (ledgerRepository) => {
   }
 
   /**
-   * Run a PRN command: assert the positive-amount invariant the pure decider
-   * trusts, fold the ledger, reject when it does not exist yet (PRN commands
-   * always act on an open ledger), run the pure decider, and append the decided
-   * events when it commits. The amount guard and the no-ledger rejection both
-   * live here, in one place, rather than in each decider.
+   * Run a PRN command: assert the positive-amount invariant the deciders trust,
+   * fold the ledger, let the caller decide against the folded balance, and
+   * append what it returns.
+   *
+   * `decide` runs after the fold, so anything it reads for itself — the PRN's
+   * own status, say — is no older than the head those events land on. That
+   * ordering is what completes the concurrency guard, because the slot index
+   * alone only settles writers contending for the same slot: a writer that
+   * folds after a competitor's append sees the moved head, takes the next free
+   * slot, and commits a second time with every guard satisfied (PAE-1844). Both
+   * halves of the guard assume the decision's own reads go to the same node as
+   * the fold, which the driver's default primary read preference gives us.
+   *
+   * The decision returns what it worked out alongside the decision itself, so
+   * the caller gets its own findings back without reading them again. The
+   * ledger passes that context through untouched.
+   *
+   * The fold yields `null` for a ledger with no events, handed to the decision
+   * like any other state. Whether a missing ledger is a client error or
+   * corruption depends on the transition being made, which the ledger does not
+   * know — and the caller must get to rule on that transition before anything
+   * else answers for it.
    *
    * A non-positive amount is a broken invariant, not a client error: the PRN's
    * tonnage is validated positive at the HTTP route and the PRN repository
@@ -115,10 +125,14 @@ const createLedgerCommands = (ledgerRepository) => {
    * surfaces as a 500 the platform logs and alerts on, rather than slipping past
    * the deciders' `<` sufficiency check to inflate the balance.
    *
-   * @param {(balance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot, payload: import('../repository/ledger-schema.js').PrnPayload) => import('../domain/commands.js').PrnDecision} decide
-   * @returns {(ledgerId: import('../repository/ledger-schema.js').WasteBalanceLedgerId, payload: import('../repository/ledger-schema.js').PrnPayload, createdBy: import('../repository/ledger-schema.js').LedgerUserSummary) => Promise<PrnCommandResult>}
+   * @template TContext
+   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
+   * @param {import('../repository/ledger-schema.js').PrnPayload} payload
+   * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
+   * @param {(balance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null) => Promise<{ decision: import('../domain/commands.js').PrnDecision, context: TContext }>} decide - receives `null` for a ledger with no events
+   * @returns {Promise<{ result: PrnCommandResult, context: TContext }>}
    */
-  const runPrnCommand = (decide) => async (ledgerId, payload, createdBy) => {
+  const runPrnCommand = async (ledgerId, payload, createdBy, decide) => {
     if (!(payload.amount > 0)) {
       throw Boom.badImplementation(
         `PRN amount must be positive at the waste-balance write boundary; received ${payload.amount}`
@@ -126,21 +140,18 @@ const createLedgerCommands = (ledgerRepository) => {
     }
 
     const { state, head } = await fold(ledgerId)
-    if (!state) {
-      return {
-        status: PRN_COMMAND_STATUS.REJECTED,
-        reason: PRN_COMMAND_REJECTION.NO_LEDGER
-      }
-    }
 
-    const decision = decide(state.balance, payload)
+    const { decision, context } = await decide(state ? state.balance : null)
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
-      return decision
+      return { result: decision, context }
     }
 
     return {
-      status: PRN_COMMAND_STATUS.COMMITTED,
-      events: await append(ledgerId, head, decision.events, createdBy)
+      result: {
+        status: PRN_COMMAND_STATUS.COMMITTED,
+        events: await append(ledgerId, head, decision.events, createdBy)
+      },
+      context
     }
   }
 
@@ -155,6 +166,8 @@ const createLedgerCommands = (ledgerRepository) => {
  * leaves the next slot occupied, so the append rejects with a
  * `LedgerSlotConflictError` and the conflict surfaces to the caller — no
  * in-process retry (ADR-0036).
+ * That settles writers contending for the same slot; the rest is settled by
+ * where each command makes its decision, described on `runPrnCommand`.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [systemLogsRepository]
@@ -237,12 +250,7 @@ export const createWasteBalanceService = (
       })
     },
 
-    createPrn: runPrnCommand(decideCreatePrn),
-    issuePrn: runPrnCommand(decideIssuePrn),
-    cancelPrnCreation: runPrnCommand(decideCancelPrnCreation),
-    cancelIssuedPrn: runPrnCommand(decideCancelIssuedPrn),
-    acceptPrn: runPrnCommand(decideAcceptPrn),
-    rejectPrn: runPrnCommand(decideRejectPrn),
+    runPrnCommand,
 
     /**
      * The PRN's ledger events after a watermark: the catch-up tail a read

@@ -6,7 +6,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { PrnNumberConflictError } from './port.js'
+import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
 import { validatePrnInsert, validatePrnRead } from './validation.js'
 import { throwWatermarkRegression } from './watermark-guard.js'
 
@@ -322,7 +322,9 @@ const resolveMissedUpdate = async (
         reference: id
       }
     })
-    throw Boom.conflict(versionConflictError.message)
+    throw Boom.conflict(versionConflictError.message, {
+      kind: PRN_VERSION_CONFLICT
+    })
   }
 
   return throwWatermarkRegression(

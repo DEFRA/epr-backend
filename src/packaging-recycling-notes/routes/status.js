@@ -17,6 +17,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
+import { writeConflictRefusal } from './write-conflict-refusal.js'
 
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
@@ -88,6 +89,11 @@ const buildUser = (auth) => {
  * @param {TypedLogger} logger
  */
 const mapUpdateStatusError = (error, path, logger) => {
+  const conflict = writeConflictRefusal(error)
+  if (conflict) {
+    return conflict
+  }
+
   if (error instanceof AccreditationStatusError) {
     return Boom.forbidden(error.message)
   }

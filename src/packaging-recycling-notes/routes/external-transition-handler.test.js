@@ -13,6 +13,7 @@ import { config } from '#root/config.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -198,6 +199,21 @@ describe('mapTransitionError', () => {
   // Both wired external routes (accept, reject) drive PRODUCER-only transitions,
   // so a wrong-actor error never arises through them. The mapping is exercised
   // here directly to keep the generic handler's 400 path verified.
+  it('maps a ledger slot conflict to a 409 without naming the ledger', () => {
+    const error = new LedgerSlotConflictError({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1',
+      number: 2
+    })
+
+    const result = mapTransitionError(error, '/test', { error: () => {} })
+
+    expect(result.isBoom).toBe(true)
+    expect(result.output.statusCode).toBe(StatusCodes.CONFLICT)
+    expect(result.output.payload.message).not.toContain('acc-1')
+  })
+
   it('maps an unauthorised transition to a 400', () => {
     const error = new UnauthorisedTransitionError(
       PRN_STATUS.AWAITING_CANCELLATION,
