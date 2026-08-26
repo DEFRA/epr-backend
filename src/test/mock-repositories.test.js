@@ -75,10 +75,7 @@ describe('mock-repositories', () => {
         'findByAccreditation',
         'findByStatus',
         'updateStatus',
-        'persistProjection',
-        'rollbackIssuance',
-        'rollbackPendingCancellation',
-        'rollbackIssuedCancellation'
+        'persistProjection'
       ]
     },
     createMockOverseasSitesRepository: {

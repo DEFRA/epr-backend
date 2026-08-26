@@ -57,19 +57,6 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  */
 
 /**
- * Reverses a forward status transition that has already been committed by
- * updateStatus, when a follow-on side-effect failed and the document needs
- * to be returned to its prior state.
- *
- * @typedef {Object} RollbackParams
- * @property {string} id - PRN ID
- * @property {number} expectedVersion - Document version after the forward write (CAS gate)
- * @property {{ id: string; name: string }} updatedBy - Actor recorded against the rollback history entry
- * @property {Date} updatedAt - Timestamp of the rollback
- * @property {number} [lastAppliedEventNumber] - Stream watermark to carry forward; subject to the same monotonic guard as updateStatus. A migrated PRN (one that already carries a watermark) must carry one on its rollback too; a PRN that has never carried one may omit it.
- */
-
-/**
  * Save a fully projected PRN document with optimistic concurrency. The
  * projection is constructed at the application layer (typically by folding
  * stream events onto the prior PRN); the repository performs no projection
@@ -89,9 +76,6 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
  * @property {(params: PersistProjectionParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} persistProjection
- * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackIssuance
- * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackPendingCancellation
- * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackIssuedCancellation
  */
 
 /**
