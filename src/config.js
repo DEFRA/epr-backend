@@ -376,12 +376,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_REPORT_DATA_VALIDATION'
     },
-    reportDataCompleteDiagnostic: {
-      doc: 'Feature Flag: Run the estate-wide report-data completeness diagnostic on startup, logging which live summary logs would fail the report-completeness rules (defra-4ry0)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_REPORT_DATA_COMPLETE_DIAGNOSTIC'
-    },
     prnAdminCancellation: {
       doc: 'Feature Flag: Allow an admin to cancel an accepted PRN/PERN (PAE-1823)',
       format: Boolean,
