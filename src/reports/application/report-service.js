@@ -241,10 +241,13 @@ export async function fetchOrGenerateReportForPeriod({
   })
 
   // Attached on every generate-branch preview (any period without a stored
-  // report), not only Due/Over Due ones: a not-yet-ended period resolves to a
-  // null period status yet still generates. The frontend gates the
-  // validation-error screen on Due/Over Due, so this signal is broader than the
-  // screen by design (PAE-1420).
+  // report) regardless of period status: a not-yet-ended period resolves to a
+  // null period status yet still generates. The frontend controller redirects
+  // to the validation-error screen unconditionally on this signal, with no
+  // period-status check. What keeps a not-yet-ended period off that screen is
+  // the reports list upstream, which only offers a link into the generate
+  // branch for Due/Over Due (or requires-resubmission) periods, never a future
+  // one (PAE-1420).
   const incompleteSummaryLogRows = summariseIncompleteDataIfEnabled(
     featureFlags,
     wasteRecordStates
