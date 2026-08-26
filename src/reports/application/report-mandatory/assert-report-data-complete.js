@@ -71,7 +71,7 @@ const issuesForRow = (row, schema, rules) => {
  * @param {CompletenessRow[]} rows
  * @returns {Issue[]}
  */
-export const findIssues = (rows) =>
+const findIssues = (rows) =>
   rows.flatMap((row) => {
     const rules = reportMandatoryPolicyFor(row.processingType)?.[
       row.wasteRecordType

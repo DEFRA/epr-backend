@@ -5,7 +5,6 @@
  * @property {() => boolean} isPreCpaResubmissionReportEnabled
  * @property {() => boolean} isStaleIssuedTonnageReportEnabled
  * @property {() => boolean} isReportDataValidationEnabled
- * @property {() => boolean} isReportDataCompleteDiagnosticEnabled
  * @property {() => boolean} isPrnAdminCancellationEnabled
  */
 
@@ -16,7 +15,6 @@
  * @property {boolean} [preCpaResubmissionReport]
  * @property {boolean} [staleIssuedTonnageReport]
  * @property {boolean} [reportDataValidation]
- * @property {boolean} [reportDataCompleteDiagnostic]
  * @property {boolean} [prnAdminCancellation]
  */
 
