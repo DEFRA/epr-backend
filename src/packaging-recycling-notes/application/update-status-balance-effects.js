@@ -6,7 +6,7 @@ import {
   assertAccreditationCanIssue
 } from '#packaging-recycling-notes/domain/model.js'
 import { assertCancellationAllowed } from '#packaging-recycling-notes/domain/cancellation.js'
-import { projectPrnFromStreamTail } from './get-projected-prn.js'
+import { projectPrnFromCatchupEvents } from './get-projected-prn.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -159,7 +159,7 @@ const ruleTransitionAndDecide =
   async (
     /** @type {import('#waste-balances/repository/ledger-schema.js').LedgerBalanceSnapshot | null} */ balance
   ) => {
-    const projection = await projectPrnFromStreamTail(prn, service)
+    const projection = await projectPrnFromCatchupEvents(prn, service)
     const fromStatus = projection.status.currentStatus
 
     validateTransition(fromStatus, newStatus, actor)

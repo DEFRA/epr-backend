@@ -15,7 +15,7 @@ import { selectObligationYearForAcceptance } from '#packaging-recycling-notes/do
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
-import { projectPrnFromStreamTail } from './get-projected-prn.js'
+import { projectPrnFromCatchupEvents } from './get-projected-prn.js'
 
 /** Suffixes A-Z for PRN-number collision avoidance on issuance */
 const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
@@ -239,7 +239,7 @@ const performDiscardWrite = async ({
   actor,
   updateParams
 }) => {
-  const projection = await projectPrnFromStreamTail(prn, service)
+  const projection = await projectPrnFromCatchupEvents(prn, service)
   const fromStatus = projection.status.currentStatus
 
   validateTransition(fromStatus, newStatus, actor)

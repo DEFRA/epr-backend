@@ -10,17 +10,18 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
  */
 
 /**
- * Brings a PRN current by folding the stream events past its watermark onto it.
- * The document is a projection that can lag the stream, so this is how a PRN's
- * state is read (ADR-0036, "Reading PRN state"): by the read routes below, and
- * by the write path when it needs a status to rule on.
+ * Brings a PRN current by folding on its catch-up events: the stream events
+ * past the watermark the document carries. The document is a projection that
+ * can lag the stream, so this is how a PRN's state is read (ADR-0036, "Reading
+ * PRN state"): by the read routes below, and by the write path when it needs a
+ * status to rule on.
  *
  * @param {PackagingRecyclingNote} prn
  * @param {WasteBalanceService} service
  * @returns {Promise<PackagingRecyclingNote>}
  */
-export const projectPrnFromStreamTail = async (prn, service) => {
-  const tailEvents = await service.prnCatchupEvents({
+export const projectPrnFromCatchupEvents = async (prn, service) => {
+  const catchupEvents = await service.prnCatchupEvents({
     organisationId: prn.organisation.id,
     registrationId: prn.registrationId,
     accreditationId: prn.accreditation.id,
@@ -28,7 +29,7 @@ export const projectPrnFromStreamTail = async (prn, service) => {
     afterEventNumber: prn.lastAppliedEventNumber ?? 0
   })
 
-  return foldPrnFromTailEvents(prn, tailEvents)
+  return foldPrnFromTailEvents(prn, catchupEvents)
 }
 
 /**
@@ -46,7 +47,7 @@ const projectFromStreamTail = async (prn, ledgerRepository) => {
     return prn
   }
 
-  return projectPrnFromStreamTail(
+  return projectPrnFromCatchupEvents(
     prn,
     createWasteBalanceService(ledgerRepository)
   )
