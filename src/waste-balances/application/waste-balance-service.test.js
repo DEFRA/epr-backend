@@ -406,7 +406,7 @@ describe('createWasteBalanceService', () => {
       expect(all).toHaveLength(1)
     })
 
-    it('refuses a second commit, because the head it folded at is spent', async () => {
+    it('refuses a second commit, because the stream tip it folded at has moved on', async () => {
       await seedLedger()
 
       const payload = { prnId: 'prn-1', amount: 10 }
