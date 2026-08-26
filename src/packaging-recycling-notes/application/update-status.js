@@ -152,7 +152,8 @@ async function gatherTransitionState(
  * persisted are recovered by the read-side catch-up on the next read.
  *
  * The fold is onto the projection the ruling was made against, not the fetched
- * document: they differ exactly when the document had fallen behind the stream.
+ * document: they differ exactly when the document had fallen behind the stream,
+ * and folding onto the document would drop the events it had yet to see.
  *
  * The projection is the only PRN value this phase needs: the fold carries every
  * field it reads through untouched, `version` included, which the repository's
