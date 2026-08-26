@@ -29,6 +29,35 @@ const ACC_ID = 'acc-concurrency'
 const TONNAGE = 5
 const OPENING = 386.62
 
+const ACCEPTOR = { id: 'user-acceptor', name: 'Acceptor User' }
+
+/**
+ * The PRN the ledger seed reflects: issued, then accepted. Acceptance is
+ * layered onto the issued builder so the document is a real accepted PRN, with
+ * the history and business operations that go with it, rather than an issued
+ * one with its current status rewritten.
+ *
+ * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ * @returns {Omit<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>}
+ */
+const buildAcceptedPrn = (overrides) => {
+  const issued = buildAwaitingAcceptancePrn(overrides)
+  const acceptedAt = new Date()
+  return {
+    ...issued,
+    status: {
+      ...issued.status,
+      currentStatus: PRN_STATUS.ACCEPTED,
+      currentStatusAt: acceptedAt,
+      accepted: { at: acceptedAt, by: ACCEPTOR },
+      history: [
+        ...issued.status.history,
+        { status: PRN_STATUS.ACCEPTED, at: acceptedAt, by: ACCEPTOR }
+      ]
+    }
+  }
+}
+
 const it = mongoIt.extend({
   mongoClient: async (/** @type {*} */ { db }, use) => {
     const client = await MongoClient.connect(db)
@@ -47,6 +76,19 @@ const deferred = () => {
 }
 
 /**
+ * Forwards every property but the one named, so a proxy only has to describe
+ * what it changes.
+ *
+ * @template T
+ * @param {T} target
+ * @param {string | symbol} property
+ */
+const passThrough = (target, property) => {
+  const value = Reflect.get(/** @type {object} */ (target), property)
+  return typeof value === 'function' ? value.bind(target) : value
+}
+
+/**
  * A view of a real database whose PRN projection write waits for `release`
  * before reaching mongod, and which announces when a writer has got that far.
  *
@@ -54,33 +96,46 @@ const deferred = () => {
  * document that projects it is not, so a second request folding in between sees
  * a head that has moved and a document that has not.
  *
- * @param {*} database
+ * @param {import('mongodb').Db} database
  * @param {Promise<unknown>} release
  */
 const databaseHoldingProjectionWrite = (database, release) => {
   const reached = deferred()
 
-  const view = {
-    collection: (/** @type {string} */ name) =>
-      new Proxy(database.collection(name), {
-        get: (target, property) => {
-          if (property === 'findOneAndReplace' && name === PRNS_COLLECTION) {
-            return async (/** @type {*[]} */ ...args) => {
+  /**
+   * @param {import('mongodb').Collection} collection
+   */
+  const collectionHoldingReplace = (collection) => {
+    const findOneAndReplace = collection.findOneAndReplace.bind(collection)
+    return new Proxy(collection, {
+      get: (target, property) =>
+        property === 'findOneAndReplace'
+          ? async (
+              /** @type {Parameters<typeof findOneAndReplace>} */ ...args
+            ) => {
               reached.settle()
               await release
-              return target.findOneAndReplace(...args)
+              return findOneAndReplace(...args)
             }
-          }
-          const value = Reflect.get(target, property)
-          return typeof value === 'function' ? value.bind(target) : value
-        }
-      })
+          : passThrough(target, property)
+    })
   }
+
+  const view = new Proxy(database, {
+    get: (target, property) =>
+      property === 'collection'
+        ? (/** @type {string} */ name) =>
+            name === PRNS_COLLECTION
+              ? collectionHoldingReplace(target.collection(name))
+              : target.collection(name)
+        : passThrough(target, property)
+  })
 
   return { view, reachedProjectionWrite: reached.promise }
 }
 
 describe('PRN status concurrency against real MongoDB', () => {
+  /** @type {import('mongodb').Db} */
   let database
   let prnRepositoryFactory
   let ledgerRepository
@@ -115,7 +170,7 @@ describe('PRN status concurrency against real MongoDB', () => {
     ])
 
     const { id } = await prnRepositoryFactory(createMockLogger()).create(
-      buildAwaitingAcceptancePrn({
+      buildAcceptedPrn({
         organisation: { id: ORG_ID, name: 'Test Reprocessor' },
         registrationId: REG_ID,
         accreditation: {
@@ -126,8 +181,7 @@ describe('PRN status concurrency against real MongoDB', () => {
           submittedToRegulator: 'ea',
           siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
         },
-        tonnage: TONNAGE,
-        status: { currentStatus: PRN_STATUS.ACCEPTED }
+        tonnage: TONNAGE
       })
     )
     prnId = id

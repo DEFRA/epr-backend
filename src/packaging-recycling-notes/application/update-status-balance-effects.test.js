@@ -135,9 +135,13 @@ describe('every permitted transition is routed to a write path', () => {
   // everything else to the ledger, so a transition with no command must be
   // exactly the one the discard path handles. Adding a transition to the state
   // machine without a balance decision fails here rather than in production.
-  const permitted = Object.entries(PRN_STATUS_TRANSITIONS).flatMap(
-    ([fromStatus, transitions]) =>
-      transitions.map((transition) => [fromStatus, transition.status])
+  // Walked from the statuses rather than `Object.entries`, which widens the
+  // keys to `string` and loses the check that these are real PRN statuses.
+  const permitted = Object.values(PRN_STATUS).flatMap((fromStatus) =>
+    PRN_STATUS_TRANSITIONS[fromStatus].map((transition) => [
+      fromStatus,
+      transition.status
+    ])
   )
 
   it.each(permitted)('%s -> %s', (fromStatus, newStatus) => {
