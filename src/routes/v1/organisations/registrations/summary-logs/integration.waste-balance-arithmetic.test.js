@@ -10,7 +10,10 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { issuePrn as decideIssuePrn } from '#waste-balances/domain/commands.js'
+import {
+  issuePrn as decideIssuePrn,
+  PRN_COMMAND_STATUS
+} from '#waste-balances/domain/commands.js'
 
 import {
   asOperator,
@@ -141,20 +144,22 @@ describe('Waste balance arithmetic integration tests', () => {
    * rules on the PRN's own status first; there is no such PRN here, so the
    * balance decision is supplied on its own.
    */
-  const debitTotalBalanceOutOfBand = (env, prnId, amount) =>
-    env.wasteBalanceService.runPrnCommand(
+  const debitTotalBalanceOutOfBand = async (env, prnId, amount) => {
+    const { balance, append } = await env.wasteBalanceService.beginPrnCommand(
       {
         organisationId: env.organisationId,
         registrationId: env.registrationId,
         accreditationId: env.accreditationId
       },
       { prnId, amount },
-      { id: 'test-user' },
-      async (balance) => ({
-        decision: decideIssuePrn(balance, { prnId, amount }),
-        context: null
-      })
+      { id: 'test-user' }
     )
+    const decision = decideIssuePrn(balance, { prnId, amount })
+    if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
+      throw new Error(`expected a committed decision, got ${decision.reason}`)
+    }
+    return append(decision.events)
+  }
 
   const createPrn = async (env, tonnage) => {
     const { server, organisationId, registrationId, accreditationId } = env

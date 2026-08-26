@@ -1,6 +1,6 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
+import { foldPrnFromTailEvents } from '#packaging-recycling-notes/domain/fold-prn-from-tail-events.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository

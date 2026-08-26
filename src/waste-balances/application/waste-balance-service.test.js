@@ -36,6 +36,19 @@ const createdBy = {
  * @import { PrnDecision } from '#waste-balances/domain/commands.js'
  */
 
+/**
+ * The events a decider committed. Every caller below has already put enough
+ * balance on the ledger, so a rejection here is the test's own mistake.
+ *
+ * @param {PrnDecision} decision
+ */
+const committedEvents = (decision) => {
+  if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
+    throw new Error(`expected a committed decision, got ${decision.reason}`)
+  }
+  return decision.events
+}
+
 describe('createWasteBalanceService', () => {
   let ledgerRepository
   let service
@@ -130,9 +143,10 @@ describe('createWasteBalanceService', () => {
       )
 
     /**
-     * Run one of the pure deciders as the command's decision. A real caller
-     * rules on more than the balance before delegating here; these cases are
-     * about what the ledger does with the decision it gets back.
+     * Fold the ledger and run one of the pure deciders against the balance,
+     * without committing. A real caller rules on more than the balance before
+     * deciding; these cases are about what the ledger hands it and what it does
+     * with the decision that comes back.
      *
      * Every case below seeds the ledger first, so the fold resolves a balance
      * and the deciders — which take a snapshot, not a nullable one — can be
@@ -141,20 +155,36 @@ describe('createWasteBalanceService', () => {
      * @param {(balance: LedgerBalanceSnapshot, payload: PrnPayload & PrnAcceptedPayload) => PrnDecision} decide
      * @param {PrnPayload & PrnAcceptedPayload} payload
      */
-    const runCommand = async (decide, payload) => {
-      const { result } = await service.runPrnCommand(
+    const decideCommand = async (decide, payload) => {
+      const { balance } = await service.beginPrnCommand(
         ledgerId,
         payload,
-        createdBy,
-        async (balance) => ({
-          decision: decide(
-            /** @type {LedgerBalanceSnapshot} */ (balance),
-            payload
-          ),
-          context: null
-        })
+        createdBy
       )
-      return result
+      return decide(/** @type {LedgerBalanceSnapshot} */ (balance), payload)
+    }
+
+    /**
+     * A caller in miniature: begin the command, decide against the balance it
+     * folded, and commit what comes back.
+     *
+     * @param {(balance: LedgerBalanceSnapshot, payload: PrnPayload & PrnAcceptedPayload) => PrnDecision} decide
+     * @param {PrnPayload & PrnAcceptedPayload} payload
+     */
+    const runCommand = async (decide, payload) => {
+      const { balance, append } = await service.beginPrnCommand(
+        ledgerId,
+        payload,
+        createdBy
+      )
+      const decision = decide(
+        /** @type {LedgerBalanceSnapshot} */ (balance),
+        payload
+      )
+      return {
+        status: decision.status,
+        events: await append(committedEvents(decision))
+      }
     }
 
     it('createPrn commits a prn-created event ringfencing the available balance', async () => {
@@ -179,12 +209,12 @@ describe('createWasteBalanceService', () => {
     it('createPrn rejects insufficient available balance without appending', async () => {
       await seedLedger(50)
 
-      const result = await runCommand(decideCreatePrn, {
+      const decision = await decideCommand(decideCreatePrn, {
         prnId: 'prn-1',
         amount: 100
       })
 
-      expect(result).toEqual({
+      expect(decision).toEqual({
         status: PRN_COMMAND_STATUS.REJECTED,
         reason: PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE
       })
@@ -196,29 +226,16 @@ describe('createWasteBalanceService', () => {
       expect(all).toHaveLength(1)
     })
 
-    it('hands the decision a null balance when the ledger has no events', async () => {
+    it('hands back a null balance when the ledger has no events', async () => {
       // What a missing ledger means depends on the transition being made, so
       // the ledger reports it rather than ruling on it.
-      const { result } = await service.runPrnCommand(
+      const { balance } = await service.beginPrnCommand(
         ledgerId,
         { prnId: 'prn-1', amount: 100 },
-        createdBy,
-        async (balance) => {
-          expect(balance).toBeNull()
-          return {
-            decision: {
-              status: PRN_COMMAND_STATUS.REJECTED,
-              reason: PRN_COMMAND_REJECTION.NO_LEDGER
-            },
-            context: null
-          }
-        }
+        createdBy
       )
 
-      expect(result).toEqual({
-        status: PRN_COMMAND_STATUS.REJECTED,
-        reason: PRN_COMMAND_REJECTION.NO_LEDGER
-      })
+      expect(balance).toBeNull()
       expect(await ledgerRepository.findAllInLedger(ledgerId)).toHaveLength(0)
     })
 
@@ -240,14 +257,15 @@ describe('createWasteBalanceService', () => {
     it('issuePrn rejects insufficient total balance', async () => {
       await seedLedger(50)
 
-      const result = await runCommand(decideIssuePrn, {
+      const decision = await decideCommand(decideIssuePrn, {
         prnId: 'prn-1',
         amount: 100
       })
 
-      expect(result.reason).toBe(
-        PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE
-      )
+      expect(decision).toEqual({
+        status: PRN_COMMAND_STATUS.REJECTED,
+        reason: PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE
+      })
     })
 
     it('cancelPrnCreation commits a credit of the available balance', async () => {
@@ -339,26 +357,16 @@ describe('createWasteBalanceService', () => {
       expect(all).toHaveLength(1)
     })
 
-    it('rejects a non-positive amount before the decision runs', async () => {
+    it('refuses a non-positive amount before handing back anything to decide against', async () => {
       await seedLedger()
-      let decided = false
 
       await expect(
-        service.runPrnCommand(
+        service.beginPrnCommand(
           ledgerId,
           { prnId: 'prn-1', amount: -1 },
-          createdBy,
-          async () => {
-            decided = true
-            return {
-              decision: { status: PRN_COMMAND_STATUS.COMMITTED, events: [] },
-              context: null
-            }
-          }
+          createdBy
         )
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
-
-      expect(decided).toBe(false)
     })
 
     it('decides against the head it appends at, not the one the caller read', async () => {
@@ -371,43 +379,67 @@ describe('createWasteBalanceService', () => {
       // A competing writer lands after that read and before the command runs.
       await runCommand(decideCreatePrn, { prnId: 'prn-2', amount: 10 })
 
-      /** @type {number[]} */
-      const balancesSeen = []
-      await service.runPrnCommand(
+      const payload = { prnId: 'prn-1', amount: 10 }
+      const { balance, append } = await service.beginPrnCommand(
         ledgerId,
-        { prnId: 'prn-1', amount: 10 },
-        createdBy,
-        async (balance) => {
-          balancesSeen.push(balance.availableAmount)
-          return {
-            decision: decideCreatePrn(balance, { prnId: 'prn-1', amount: 10 }),
-            context: null
-          }
-        }
+        payload,
+        createdBy
       )
+      await append(committedEvents(decideCreatePrn(balance, payload)))
 
-      expect(balancesSeen).toEqual([990])
+      expect(balance.availableAmount).toBe(990)
       expect(await service.currentBalance(ledgerId)).toMatchObject({
         availableAmount: 980
       })
     })
 
-    it('appends nothing when the decision throws', async () => {
+    it('appends nothing when the caller never commits', async () => {
       await seedLedger()
 
-      await expect(
-        service.runPrnCommand(
-          ledgerId,
-          { prnId: 'prn-1', amount: 10 },
-          createdBy,
-          async () => {
-            throw new Error('the PRN has already moved on')
-          }
-        )
-      ).rejects.toThrow('the PRN has already moved on')
+      await service.beginPrnCommand(
+        ledgerId,
+        { prnId: 'prn-1', amount: 10 },
+        createdBy
+      )
 
       const all = await ledgerRepository.findAllInLedger(ledgerId)
       expect(all).toHaveLength(1)
+    })
+
+    it('refuses a second commit, because the head it folded at is spent', async () => {
+      await seedLedger()
+
+      const payload = { prnId: 'prn-1', amount: 10 }
+      const { balance, append } = await service.beginPrnCommand(
+        ledgerId,
+        payload,
+        createdBy
+      )
+      const events = committedEvents(decideCreatePrn(balance, payload))
+      await append(events)
+
+      expect(() => append(events)).toThrow(
+        expect.objectContaining({ isBoom: true })
+      )
+      expect(await ledgerRepository.findAllInLedger(ledgerId)).toHaveLength(2)
+    })
+
+    it('commits at the head it folded at, so a competitor that lands first wins the slot', async () => {
+      await seedLedger()
+
+      const payload = { prnId: 'prn-1', amount: 10 }
+      const { balance, append } = await service.beginPrnCommand(
+        ledgerId,
+        payload,
+        createdBy
+      )
+
+      // A competing writer takes the slot between the fold and the commit.
+      await runCommand(decideCreatePrn, { prnId: 'prn-2', amount: 10 })
+
+      await expect(
+        append(committedEvents(decideCreatePrn(balance, payload)))
+      ).rejects.toBeInstanceOf(LedgerSlotConflictError)
     })
   })
 
@@ -490,15 +522,13 @@ describe('createWasteBalanceService', () => {
         { summaryLogId: 'log-A', creditTotal: 150 },
         createdBy
       )
-      await service.runPrnCommand(
+      const payload = { prnId: 'prn-1', amount: 40 }
+      const { balance: folded, append } = await service.beginPrnCommand(
         ledgerId,
-        { prnId: 'prn-1', amount: 40 },
-        createdBy,
-        async (balance) => ({
-          decision: decideCreatePrn(balance, { prnId: 'prn-1', amount: 40 }),
-          context: null
-        })
+        payload,
+        createdBy
       )
+      await append(committedEvents(decideCreatePrn(folded, payload)))
 
       const balance = await service.currentBalance(ledgerId)
 
