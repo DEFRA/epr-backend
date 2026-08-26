@@ -246,8 +246,9 @@ describe('updatePrnStatus', () => {
     // Tonnage is validated positive at the route and in the PRN schema, so a
     // PRN that reaches the write without one is corruption. The deciders test
     // sufficiency with `<`, which a non-positive amount passes, so the guard
-    // has to refuse before the balance is decided against.
-    it.each([0, -100])(
+    // has to refuse before the balance is decided against. `NaN` passes that
+    // check too, and is the only value that reaches it from the wrong side.
+    it.each([0, -100, NaN])(
       'refuses a tonnage of %s as a broken invariant, appending nothing',
       async (tonnage) => {
         const repositories = seedRepositories({

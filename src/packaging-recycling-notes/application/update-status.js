@@ -274,14 +274,15 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
  * the PRN, because that is the document it is an invariant of: tonnage is
  * validated positive at the route and in the PRN schema. A non-positive one is
  * corruption rather than client error, so it surfaces as a 500 rather than
- * slipping past the deciders' `<` sufficiency check.
+ * slipping past the deciders' `<` sufficiency check. `NaN` is the only value
+ * that passes that check, so it is refused by name.
  *
  * @param {PackagingRecyclingNote} prn
  * @param {number} [obligationYear]
  * @returns {import('#waste-balances/repository/ledger-schema.js').PrnAcceptedPayload}
  */
 function buildCommandPayload(prn, obligationYear) {
-  if (!(prn.tonnage > 0)) {
+  if (Number.isNaN(prn.tonnage) || prn.tonnage <= 0) {
     throw Boom.badImplementation(
       `PRN tonnage must be positive at the waste-balance write boundary; received ${prn.tonnage}`
     )
