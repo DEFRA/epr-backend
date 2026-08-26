@@ -28,6 +28,17 @@ describe('PRN_STATUS_TRANSITIONS', () => {
     ])
   })
 
+  it('allows a service maintainer to cancel from awaiting_acceptance, alongside the existing producer transitions (PAE-1859)', () => {
+    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.AWAITING_ACCEPTANCE]).toEqual([
+      { status: PRN_STATUS.ACCEPTED, actors: [PRN_ACTOR.PRODUCER] },
+      {
+        status: PRN_STATUS.AWAITING_CANCELLATION,
+        actors: [PRN_ACTOR.PRODUCER]
+      },
+      { status: PRN_STATUS.CANCELLED, actors: [PRN_ACTOR.SERVICE_MAINTAINER] }
+    ])
+  })
+
   it.each([
     [
       PRN_STATUS.DRAFT,
@@ -56,7 +67,12 @@ describe('PRN_STATUS_TRANSITIONS', () => {
       PRN_STATUS.CANCELLED,
       PRN_ACTOR.SIGNATORY
     ],
-    [PRN_STATUS.ACCEPTED, PRN_STATUS.CANCELLED, PRN_ACTOR.SERVICE_MAINTAINER]
+    [PRN_STATUS.ACCEPTED, PRN_STATUS.CANCELLED, PRN_ACTOR.SERVICE_MAINTAINER],
+    [
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.CANCELLED,
+      PRN_ACTOR.SERVICE_MAINTAINER
+    ]
   ])('allows %s -> %s for %s', (from, to, actor) => {
     expect(isValidTransition(from, to, actor)).toBe(true)
   })
@@ -86,6 +102,13 @@ describe('PRN_STATUS_TRANSITIONS', () => {
     [PRN_STATUS.ACCEPTED, PRN_STATUS.CANCELLED, PRN_ACTOR.SIGNATORY],
     [PRN_STATUS.ACCEPTED, PRN_STATUS.CANCELLED, PRN_ACTOR.PRODUCER],
     [PRN_STATUS.ACCEPTED, PRN_STATUS.CANCELLED, PRN_ACTOR.REPROCESSOR_EXPORTER],
+    [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.CANCELLED, PRN_ACTOR.PRODUCER],
+    [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.CANCELLED, PRN_ACTOR.SIGNATORY],
+    [
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.CANCELLED,
+      PRN_ACTOR.REPROCESSOR_EXPORTER
+    ],
     [/** @type {PrnStatus} */ ('unknown'), PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER]
   ])('rejects %s -> %s for %s', (from, to, actor) => {
     expect(isValidTransition(from, to, actor)).toBe(false)
