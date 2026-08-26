@@ -13,8 +13,7 @@ import { foldPrnFromTailEvents } from '#packaging-recycling-notes/domain/fold-pr
  * Brings a PRN current by folding on its catch-up events: the stream events
  * past the watermark the document carries. The document is a projection that
  * can lag the stream, so this is how a PRN's state is read (ADR-0036, "Reading
- * PRN state"): by the read routes below, and by the write path when it needs a
- * status to rule on.
+ * PRN state").
  *
  * @param {PackagingRecyclingNote} prn
  * @param {WasteBalanceService} service
@@ -70,8 +69,8 @@ export const getProjectedPrnById = async ({
 
 /**
  * Reads a PRN by its public number and projects it from its stream tail. The
- * external accept/reject path decides the next transition from the returned
- * status, so folding here keeps that decision off a stale document.
+ * caller decides the next transition from the returned status, so folding here
+ * keeps that decision off a stale document.
  *
  * @param {Object} params
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
