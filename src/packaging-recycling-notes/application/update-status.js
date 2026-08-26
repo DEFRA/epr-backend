@@ -366,9 +366,8 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
   const stored = providedPrn ?? (await prnRepository.findById(id))
 
   if (
-    !stored ||
-    stored.organisation.id !== ledgerId.organisationId ||
-    stored.accreditation.id !== ledgerId.accreditationId
+    stored?.organisation.id !== ledgerId.organisationId ||
+    stored?.accreditation.id !== ledgerId.accreditationId
   ) {
     throw Boom.notFound(`PRN not found: ${id}`)
   }
