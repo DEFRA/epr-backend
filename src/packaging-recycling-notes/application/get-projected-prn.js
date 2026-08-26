@@ -20,7 +20,7 @@ import { foldPrnFromTailEvents } from '#packaging-recycling-notes/domain/fold-pr
  * @param {WasteBalanceService} service
  * @returns {Promise<PackagingRecyclingNote>}
  */
-export const projectPrnFromCatchupEvents = async (prn, service) => {
+export const bringPrnCurrent = async (prn, service) => {
   const catchupEvents = await service.prnCatchupEvents({
     organisationId: prn.organisation.id,
     registrationId: prn.registrationId,
@@ -47,10 +47,7 @@ const projectFromStreamTail = async (prn, ledgerRepository) => {
     return prn
   }
 
-  return projectPrnFromCatchupEvents(
-    prn,
-    createWasteBalanceService(ledgerRepository)
-  )
+  return bringPrnCurrent(prn, createWasteBalanceService(ledgerRepository))
 }
 
 /**

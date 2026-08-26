@@ -18,31 +18,30 @@ import {
 } from '#common/enums/event.js'
 
 /**
- * Operational system log capturing that a waste balance write committed.
+ * Operational system log capturing that a waste balance write committed: one
+ * line per event appended, labelled by what the event was.
  *
  * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {string} operation
- * @param {string} prnId
- * @param {number} tonnage
- * @param {string} fromStatus
- * @param {string} toStatus
+ * @param {Object} committed
+ * @param {Array<{ kind: string }>} committed.events
+ * @param {{ id: string, tonnage: number }} committed.prn
+ * @param {string} committed.fromStatus
+ * @param {string} committed.newStatus
  */
 export function logWasteBalanceUpdate(
   logger,
-  operation,
-  prnId,
-  tonnage,
-  fromStatus,
-  toStatus
+  { events, prn, fromStatus, newStatus }
 ) {
-  logger.info({
-    message: `Waste balance ${operation} for PRN ${prnId} (${fromStatus} -> ${toStatus}), tonnage ${tonnage}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.DB,
-      action: LOGGING_EVENT_ACTIONS.WASTE_BALANCE_UPDATED,
-      reference: prnId
-    }
-  })
+  for (const { kind } of events) {
+    logger.info({
+      message: `Waste balance ${LOG_OPERATION_BY_EVENT_KIND[kind]} for PRN ${prn.id} (${fromStatus} -> ${newStatus}), tonnage ${prn.tonnage}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.WASTE_BALANCE_UPDATED,
+        reference: prn.id
+      }
+    })
+  }
 }
 
 /**

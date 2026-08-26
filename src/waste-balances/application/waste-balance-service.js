@@ -105,31 +105,20 @@ const createLedgerCommands = (ledgerRepository) => {
    * together with the append that commits the decision.
    *
    * Everything the decision reads must be read after this call, so nothing it
-   * rules on is older than the head those events land on. That ordering is what
-   * completes the concurrency guard, because the slot index alone only settles
-   * writers contending for the same slot: a writer that folds after a
-   * competitor's append sees the moved head, takes the next free slot, and
-   * commits a second time with every guard satisfied (PAE-1844). Both halves of
-   * the guard assume the decision's own reads go to the same node as the fold,
-   * which the driver's default primary read preference gives us.
+   * rules on is older than the head those events land on. The slot index alone
+   * only settles writers contending for the same slot; a writer that folds
+   * after a competitor's append sees the moved head, takes the next free slot,
+   * and commits a second time with every guard satisfied (PAE-1844). Both
+   * halves assume the decision's reads go to the same node as the fold, which
+   * the driver's default primary read preference gives us.
    *
-   * The head stays captured in the returned `append`, so a caller cannot commit
-   * at a head it did not fold at, and cannot append without having folded. The
-   * attempt consumes it whether or not it succeeded, so it cannot be committed
-   * at twice either: a second append would write from a now-stale view of the
-   * stream tip, which ADR-0036 requires be detected rather than absorbed.
+   * `balance` is `null` for a ledger with no events, handed back like any other
+   * state: whether that is a client error or corruption depends on the
+   * transition, which the ledger does not know.
    *
-   * The fold yields `null` for a ledger with no events, handed back like any
-   * other state. Whether a missing ledger is a client error or corruption
-   * depends on the transition being made, which the ledger does not know — and
-   * the caller must get to rule on that transition before anything else answers
-   * for it.
-   *
-   * A non-positive amount is a broken invariant, not a client error: the PRN's
-   * tonnage is validated positive at the HTTP route and the PRN repository
-   * schema, so anything reaching this boundary is internal corruption and
-   * surfaces as a 500 the platform logs and alerts on, rather than slipping past
-   * the deciders' `<` sufficiency check to inflate the balance.
+   * A non-positive amount is a broken invariant rather than a client error —
+   * tonnage is validated positive at the route and in the PRN schema — so it
+   * surfaces as a 500 rather than slipping past the deciders' `<` check.
    *
    * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
    * @param {import('../repository/ledger-schema.js').PrnPayload} payload
@@ -170,9 +159,8 @@ const createLedgerCommands = (ledgerRepository) => {
  * index is the optimistic-concurrency guard: a head that moved after the fold
  * leaves the next slot occupied, so the append rejects with a
  * `LedgerSlotConflictError` and the conflict surfaces to the caller — no
- * in-process retry (ADR-0036).
- * That settles writers contending for the same slot; the rest is settled by
- * where each command makes its decision, described on `beginPrnCommand`.
+ * in-process retry (ADR-0036). Where each command makes its decision settles
+ * the rest, as `beginPrnCommand` describes.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [systemLogsRepository]

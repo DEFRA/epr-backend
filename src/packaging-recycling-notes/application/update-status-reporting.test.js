@@ -15,6 +15,7 @@ import {
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
 import { PRN_COMMAND_REJECTION } from '#waste-balances/domain/commands.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 const ACCREDITATION_ID = 'acc-1'
 const PRN_ID = 'prn-1'
@@ -45,18 +46,16 @@ describe('logWasteBalanceUpdate', () => {
       /** @type {unknown} */ ({ info: vi.fn() })
     )
 
-    logWasteBalanceUpdate(
-      logger,
-      'deduct_available',
-      PRN_ID,
-      10,
-      PRN_STATUS.DRAFT,
-      PRN_STATUS.AWAITING_AUTHORISATION
-    )
+    logWasteBalanceUpdate(logger, {
+      events: [{ kind: LEDGER_EVENT_KIND.PRN_ISSUED }],
+      prn: { id: PRN_ID, tonnage: 10 },
+      fromStatus: PRN_STATUS.DRAFT,
+      newStatus: PRN_STATUS.AWAITING_AUTHORISATION
+    })
 
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: `Waste balance deduct_available for PRN ${PRN_ID} (${PRN_STATUS.DRAFT} -> ${PRN_STATUS.AWAITING_AUTHORISATION}), tonnage 10`,
+        message: `Waste balance ${LOG_OPERATION_BY_EVENT_KIND[LEDGER_EVENT_KIND.PRN_ISSUED]} for PRN ${PRN_ID} (${PRN_STATUS.DRAFT} -> ${PRN_STATUS.AWAITING_AUTHORISATION}), tonnage 10`,
         event: expect.objectContaining({
           action: 'waste_balance_updated',
           category: 'database',
@@ -64,6 +63,24 @@ describe('logWasteBalanceUpdate', () => {
         })
       })
     )
+  })
+
+  it('logs one line per appended event', () => {
+    const logger = /** @type {import('#common/hapi-types.js').TypedLogger} */ (
+      /** @type {unknown} */ ({ info: vi.fn() })
+    )
+
+    logWasteBalanceUpdate(logger, {
+      events: [
+        { kind: LEDGER_EVENT_KIND.PRN_ISSUED },
+        { kind: LEDGER_EVENT_KIND.PRN_ACCEPTED }
+      ],
+      prn: { id: PRN_ID, tonnage: 10 },
+      fromStatus: PRN_STATUS.DRAFT,
+      newStatus: PRN_STATUS.AWAITING_AUTHORISATION
+    })
+
+    expect(logger.info).toHaveBeenCalledTimes(2)
   })
 })
 

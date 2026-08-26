@@ -29,11 +29,10 @@ import { assertCancellationAllowed } from './cancellation.js'
  * this table have no balance effect — the state machine has exactly one,
  * `draft` → `discarded`.
  *
- * This is the single statement of the relation. The event-kind → status table
- * the read-side fold uses is derived from it below, so the round trip
- * (transition → event kind → resulting status) cannot drift. That each row's
- * decision really does emit the kind beside it is asserted by this module's
- * table test rather than by a runtime guard.
+ * The single statement of the relation: the event-kind → status table the
+ * read-side fold uses is derived from it below, so the round trip cannot drift.
+ * That each row's decision emits the kind beside it is asserted by this
+ * module's table test rather than by a runtime guard.
  *
  * @type {ReadonlyArray<{
  *   from: PrnStatus,
@@ -94,11 +93,10 @@ export const PRN_TRANSITION_EFFECTS = Object.freeze([
 ])
 
 /**
- * Ledger-event-kind → PRN currentStatus the event projects to, derived from the
- * transition table: the status an event projects to is the target of the
- * transition that appends it. Kinds appended by more than one transition
- * (`prn-cancelled-after-issue`) share a target, which the domain's table test
- * asserts rather than a runtime guard.
+ * Ledger-event-kind → PRN currentStatus, derived from the transition table: an
+ * event projects to the target of the transition that appends it. Kinds
+ * appended by more than one transition (`prn-cancelled-after-issue`) share a
+ * target, which the table test asserts.
  *
  * @type {Record<string, PrnStatus>}
  */
@@ -109,8 +107,7 @@ export const LEDGER_EVENT_KIND_TO_PRN_STATUS = Object.freeze(
 /**
  * Whether a PRN at this status has been issued, read off the transition table:
  * the status the issuance transition leads to. Reaching it appends
- * `prn-issued`, so a PRN sitting there whose ledger holds no events is
- * corruption rather than a client error — see `LEDGER_MISSING_AFTER_ISSUE`.
+ * `prn-issued`, so an empty ledger under it is corruption, not client error.
  *
  * @param {PrnStatus} status
  */
@@ -165,10 +162,10 @@ export class PrnLedgerRejectionError extends Error {
 /**
  * What a transition does to the PRN, or why it cannot be made.
  *
- * `balanceEvents` are appended to the ledger and folded onto the PRN, so the
- * document is derived from them. `statusChange` is stated directly, for the one
- * transition that appends nothing. Both are named by the domain so the
- * application never infers which it has been handed.
+ * `balanceEvents` are appended and folded onto the PRN, so the document is
+ * derived from them. `statusChange` is stated directly, for the one transition
+ * that appends nothing. Both are named by the domain, so the application never
+ * infers which it was handed.
  *
  * @typedef {{ balanceEvents: BalanceEvent[] }
  *   | { statusChange: { to: PrnStatus, at: Date, by: StatusChangeActor } }
@@ -180,10 +177,10 @@ export class PrnLedgerRejectionError extends Error {
  * that refused it, or `undefined` when all three pass.
  *
  * Each rule throws on its own; the catch is unconditional so a caller gets one
- * answer as data. A refusal is one of the classes the routes already map, and
- * the application throws exactly what it was handed. Anything else a rule can
- * throw is a programming error, which leaves on this arm and reaches the same
- * unmapped 500 it would have reached by propagating.
+ * answer as data. A refusal is one of the classes the routes already map, so
+ * the application throws exactly what it was handed. Anything else is a
+ * programming error, and leaves on this arm to the same unmapped 500 it would
+ * have reached by propagating.
  *
  * @param {Object} params
  * @param {PrnStatus} params.fromStatus
@@ -215,17 +212,18 @@ const ruleTransition = ({
 }
 
 /**
- * Rule on a PRN status transition and say what it does.
+ * Phase 2 of a PRN status write — decide. Rule on the transition and say what
+ * it does.
  *
- * Pure: every input is a parameter, including `now` and the folded ledger
- * balance, and nothing is read or written. This is the only place the three
- * transition rules are composed, and the only place a transition's balance
- * effect is looked up — an application layer that routed on the target status
- * ahead of the ruling would be answering a domain question for itself.
+ * Pure: every input is a parameter, `now` and the folded ledger balance
+ * included, and nothing is read or written. It is the only place the three
+ * transition rules compose and the only place a transition's balance effect is
+ * looked up, so an application that routed on the target status ahead of the
+ * ruling would be answering a domain question for itself.
  *
- * A `null` balance means the ledger holds no events. Whether that is the
- * client's problem depends on where the PRN has got to, which is why the
- * ruling is made here and not at the ledger.
+ * A `null` balance means the ledger holds no events; whether that is the
+ * client's problem depends on where the PRN has got to, which is why the ruling
+ * is made here rather than at the ledger.
  *
  * @param {Object} params
  * @param {PrnStatus} params.fromStatus - the status ruled on, taken from the projection
