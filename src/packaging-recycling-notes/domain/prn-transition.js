@@ -179,9 +179,11 @@ export class PrnLedgerRejectionError extends Error {
  * The three rules a PRN transition must satisfy, composed. Returns the error
  * that refused it, or `undefined` when all three pass.
  *
- * Each rule throws on its own; they are caught here so a caller gets one
- * answer as data. The errors are the classes the routes already map, so what
- * the application throws is exactly what it was handed.
+ * Each rule throws on its own; the catch is unconditional so a caller gets one
+ * answer as data. A refusal is one of the classes the routes already map, and
+ * the application throws exactly what it was handed. Anything else a rule can
+ * throw is a programming error, which leaves on this arm and reaches the same
+ * unmapped 500 it would have reached by propagating.
  *
  * @param {Object} params
  * @param {PrnStatus} params.fromStatus

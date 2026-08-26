@@ -5,7 +5,7 @@ import {
   logWasteBalanceUpdate,
   LOG_OPERATION_BY_EVENT_KIND,
   toTransitionError
-} from './update-status-balance-effects.js'
+} from './update-status-reporting.js'
 import {
   CANCELLED_PRN_STATUSES,
   PRN_STATUS
@@ -130,9 +130,15 @@ async function persistProjectionWithIssuanceRetry({
  *
  * The accreditation is read only on the issuance path, which is the only phase
  * that stamps the PRN number from it; whether it permits issuing is ruled on
- * with the transition. Carrying it in an object rather than beside an
- * `undefined` keeps the later branch a statement about the transition rather
- * than about what was fetched.
+ * with the transition. Reading it here rather than ahead of the fold is what
+ * puts the accreditation check on state no older than the events it authorises.
+ * Carrying it in an object rather than beside an `undefined` keeps the later
+ * branch a statement about the transition rather than about what was fetched.
+ *
+ * Every transition gathers the same way, including the one that appends
+ * nothing: it opens a ledger command and leaves the `append` it was handed
+ * unused. That write still contends for no ledger slot and is serialised only
+ * by the document version, as `persistStatusChange` says.
  *
  * @param {PrnWriteContext} ctx
  * @param {import('#waste-balances/repository/ledger-schema.js').PrnAcceptedPayload} payload
@@ -281,8 +287,10 @@ async function persistStatusChange({ prnRepository, prn, id, statusChange }) {
 /**
  * A PRN status write, as the three phases it is and nothing else: gather the
  * state and context, rule on the transition, then persist what the ruling
- * named. Which of the two persist mechanisms runs is the domain's answer, not
- * a branch taken on the requested status ahead of the ruling.
+ * named. Which of the two write paths runs is the domain's answer, not a branch
+ * taken on the requested status ahead of the ruling. Within the ledger arm,
+ * issuance still takes the PRN-numbering persist off the requested status,
+ * which is a numbering concern rather than a balance one.
  *
  * @param {PrnWriteContext} ctx
  * @returns {Promise<{ updatedPrn: PackagingRecyclingNote, fromStatus: PrnStatus }>}

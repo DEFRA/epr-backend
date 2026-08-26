@@ -22,10 +22,11 @@ import { validateAccreditationId } from '../repository/validation.js'
  * `null` for a ledger with no events — and the commit that appends that
  * decision at the head the balance was folded from.
  *
- * `append` commits once, because the command is bound to the stream tip its
- * fold observed. A second call would append from a now-stale view of that tip,
- * and ADR-0036 asks for a fresh computation against current state rather than a
- * silent retry, so it is refused rather than absorbed.
+ * `append` commits once: the command is bound to the stream tip its fold
+ * observed, and the attempt consumes it whether or not it succeeded. A second
+ * call would append from a now-stale view of that tip, and ADR-0036 asks for a
+ * fresh computation against current state rather than a silent retry, so it is
+ * refused rather than absorbed.
  *
  * @typedef {Object} PrnCommand
  * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null} balance
@@ -114,9 +115,9 @@ const createLedgerCommands = (ledgerRepository) => {
    *
    * The head stays captured in the returned `append`, so a caller cannot commit
    * at a head it did not fold at, and cannot append without having folded. The
-   * first call consumes it, so it cannot be committed at twice either: a second
-   * append would write from a now-stale view of the stream tip, which ADR-0036
-   * requires be detected rather than absorbed.
+   * attempt consumes it whether or not it succeeded, so it cannot be committed
+   * at twice either: a second append would write from a now-stale view of the
+   * stream tip, which ADR-0036 requires be detected rather than absorbed.
    *
    * The fold yields `null` for a ledger with no events, handed back like any
    * other state. Whether a missing ledger is a client error or corruption
@@ -143,17 +144,17 @@ const createLedgerCommands = (ledgerRepository) => {
     }
 
     const { state, head } = await fold(ledgerId)
-    let committed = false
+    let appendAttempted = false
 
     return {
       balance: state ? state.balance : null,
-      append: (events) => {
-        if (committed) {
+      append: async (events) => {
+        if (appendAttempted) {
           throw Boom.badImplementation(
             'A PRN command commits once; a second append would write from a now-stale view of the stream tip'
           )
         }
-        committed = true
+        appendAttempted = true
         return append(ledgerId, head, events, createdBy)
       }
     }

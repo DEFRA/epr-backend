@@ -418,7 +418,7 @@ describe('createWasteBalanceService', () => {
       const events = committedEvents(decideCreatePrn(balance, payload))
       await append(events)
 
-      expect(() => append(events)).toThrow(
+      await expect(append(events)).rejects.toEqual(
         expect.objectContaining({ isBoom: true })
       )
       expect(await ledgerRepository.findAllInLedger(ledgerId)).toHaveLength(2)

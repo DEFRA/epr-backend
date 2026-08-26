@@ -1,3 +1,9 @@
+/**
+ * How a PRN status write reports itself once the domain has ruled: the system
+ * log line naming what was appended, and the HTTP-shaped error carrying what
+ * was refused. No balance effect is decided here — that is the domain's.
+ */
+
 import Boom from '@hapi/boom'
 
 import {

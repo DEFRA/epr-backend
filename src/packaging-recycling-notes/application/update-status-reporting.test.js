@@ -4,7 +4,7 @@ import {
   logWasteBalanceUpdate,
   LOG_OPERATION_BY_EVENT_KIND,
   toTransitionError
-} from './update-status-balance-effects.js'
+} from './update-status-reporting.js'
 import {
   LEDGER_MISSING_AFTER_ISSUE,
   PrnLedgerRejectionError,
