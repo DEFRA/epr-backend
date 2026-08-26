@@ -79,7 +79,8 @@ async function notifyPrnCancelled(prnEvents, newStatus, updatedPrn) {
  * Everything a PRN status transition needs: the repositories and service it
  * reaches through, and the transition it is making. The identity is an
  * accreditation's: this path runs only for accredited streams, so
- * `accreditationId` is narrowed to non-null.
+ * `accreditationId` is narrowed to non-null. The PRN itself is not here — it is
+ * loaded inside phase 1, after the balance is read for update.
  *
  * @typedef {{
  *   ledgerId: WasteBalanceLedgerId & { accreditationId: string },
@@ -87,7 +88,7 @@ async function notifyPrnCancelled(prnEvents, newStatus, updatedPrn) {
  *   organisationsRepository: OrganisationsRepository,
  *   service: WasteBalanceService,
  *   logger: import('#common/hapi-types.js').TypedLogger,
- *   prn: PackagingRecyclingNote,
+ *   providedPrn?: PackagingRecyclingNote,
  *   newStatus: PrnStatus,
  *   user: { id: string, name: string, email?: string },
  *   actor: import('#packaging-recycling-notes/domain/model.js').PrnActor,
@@ -98,34 +99,25 @@ async function notifyPrnCancelled(prnEvents, newStatus, updatedPrn) {
  */
 
 /**
- * Phase 1 — gather. The ledger is folded first and every other read follows it,
- * so nothing the ruling is made against is older than the head the events would
- * land on (PAE-1844). The accreditation is read here for that reason, and only
- * on the issuance path, which is the only transition that stamps the PRN number
+ * Phase 1 — gather. The balance is read for update first and every other read
+ * follows it, so nothing the ruling is made against is older than the head the
+ * events would land on (PAE-1844). That ordering is why the PRN is loaded here
+ * rather than handed in, and why the accreditation is read here too — on the
+ * issuance path only, which is the one transition that stamps the PRN number
  * from it.
  *
  * @param {PrnTransitionContext} ctx
- * @param {import('#waste-balances/repository/ledger-schema.js').PrnAcceptedPayload} payload
- * @returns {Promise<import('#waste-balances/application/waste-balance-service.js').PrnCommand & {
- *   projection: PackagingRecyclingNote,
- *   fromStatus: PrnStatus,
+ * @returns {Promise<import('#waste-balances/application/waste-balance-service.js').BalanceForUpdate & {
+ *   prn: PackagingRecyclingNote,
  *   issuance: { accreditation: import('#domain/organisations/accreditation.js').Accreditation } | undefined
  * }>}
  */
-async function gatherTransitionState(
-  { service, organisationsRepository, prn, newStatus, ledgerId, user },
-  payload
-) {
-  const { balance, append } = await service.beginPrnCommand(
-    ledgerId,
-    payload,
-    user
-  )
+async function gatherTransitionState(ctx) {
+  const { service, organisationsRepository, newStatus, ledgerId, user } = ctx
 
-  // Loading the PRN is split in two because the ledger fold must sit between
-  // the halves: the stored document is fetched before the transition starts,
-  // and brought current here, after `beginPrnCommand`.
-  const projection = await bringPrnCurrent(prn, service)
+  const { balance, append } = await service.readBalanceForUpdate(ledgerId, user)
+
+  const prn = await loadPrn(ctx)
 
   const issuance =
     newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
@@ -137,13 +129,7 @@ async function gatherTransitionState(
         }
       : undefined
 
-  return {
-    balance,
-    append,
-    projection,
-    fromStatus: projection.status.currentStatus,
-    issuance
-  }
+  return { balance, append, prn, issuance }
 }
 
 /**
@@ -151,17 +137,13 @@ async function gatherTransitionState(
  * result. There is no compensation: events appended without the document
  * persisted are recovered by the read-side catch-up on the next read.
  *
- * The fold is onto the projection the ruling was made against, not the fetched
- * document: they differ exactly when the document had fallen behind the stream,
- * and folding onto the document would drop the events it had yet to see.
- *
- * The projection is the only PRN value this phase needs: the fold carries every
- * field it reads through untouched, `version` included, which the repository's
- * optimistic-concurrency guard owns rather than the fold.
+ * `version` is read off the PRN as loaded rather than off the fold, because the
+ * repository's optimistic-concurrency guard owns it and the fold leaves it
+ * alone.
  *
  * @param {PrnTransitionContext} ctx
  * @param {Object} committed
- * @param {PackagingRecyclingNote} committed.projection
+ * @param {PackagingRecyclingNote} committed.prn
  * @param {PrnStatus} committed.fromStatus
  * @param {{ accreditation: import('#domain/organisations/accreditation.js').Accreditation } | undefined} committed.issuance
  * @param {import('#waste-balances/repository/ledger-port.js').LedgerEvent[]} committed.events
@@ -169,17 +151,12 @@ async function gatherTransitionState(
  */
 async function persistAppendedEvents(
   { prnRepository, logger, newStatus },
-  { projection, fromStatus, issuance, events }
+  { prn, fromStatus, issuance, events }
 ) {
-  logWasteBalanceUpdate(logger, {
-    events,
-    prn: projection,
-    fromStatus,
-    newStatus
-  })
+  logWasteBalanceUpdate(logger, { events, prn, fromStatus, newStatus })
 
-  const updated = foldPrnFromTailEvents(projection, events)
-  const expectedVersion = projection.version
+  const updated = foldPrnFromTailEvents(prn, events)
+  const expectedVersion = prn.version
 
   if (issuance) {
     return persistIssuedPrn(prnRepository, {
@@ -205,13 +182,20 @@ async function persistAppendedEvents(
  * means this write contends for no ledger slot, so it is serialised against a
  * concurrent write only by the document's own version.
  *
+ * It writes the watermark back rather than the status fields the fold produced,
+ * which is safe only because `draft` is the one status no transition leads into:
+ * a PRN still in it has appended nothing, so there is no fold to lose.
+ *
  * @param {PrnTransitionContext} ctx
- * @param {{ to: PrnStatus, at: Date, by: import('#packaging-recycling-notes/domain/prn-transition.js').StatusChangeActor }} statusChange
+ * @param {Object} stated
+ * @param {PackagingRecyclingNote} stated.prn
+ * @param {{ to: PrnStatus, at: Date, by: import('#packaging-recycling-notes/domain/prn-transition.js').StatusChangeActor }} stated.statusChange
  * @returns {Promise<PackagingRecyclingNote>}
  */
-async function persistStatusChange({ prnRepository, prn, id }, statusChange) {
-  // The stored document, not the projection: this arm persists no fold, so the
-  // watermark it writes back is the one the document already carried.
+async function persistStatusChange(
+  { prnRepository, id },
+  { prn, statusChange }
+) {
   const updatedPrn = await prnRepository.updateStatus({
     id,
     version: prn.version,
@@ -227,14 +211,26 @@ async function persistStatusChange({ prnRepository, prn, id }, statusChange) {
 }
 
 /**
- * The waste-balance command the ledger is folded for and the ruling is made
- * against: which PRN, how much, and — on acceptance only — the obligation year
- * the caller chose.
+ * The waste-balance command the ruling is made against: which PRN, how much,
+ * and — on acceptance only — the obligation year the caller chose.
  *
- * @param {PrnTransitionContext} ctx
+ * The positive-amount invariant is asserted here, where the amount is read off
+ * the PRN, because that is the document it is an invariant of: tonnage is
+ * validated positive at the route and in the PRN schema. A non-positive one is
+ * corruption rather than client error, so it surfaces as a 500 rather than
+ * slipping past the deciders' `<` sufficiency check.
+ *
+ * @param {PackagingRecyclingNote} prn
+ * @param {number} [obligationYear]
  * @returns {import('#waste-balances/repository/ledger-schema.js').PrnAcceptedPayload}
  */
-function buildCommandPayload({ prn, obligationYear }) {
+function buildCommandPayload(prn, obligationYear) {
+  if (!(prn.tonnage > 0)) {
+    throw Boom.badImplementation(
+      `PRN tonnage must be positive at the waste-balance write boundary; received ${prn.tonnage}`
+    )
+  }
+
   const selectedObligationYear = selectObligationYearForAcceptance(
     prn,
     obligationYear
@@ -265,12 +261,13 @@ function buildCommandPayload({ prn, obligationYear }) {
  * @returns {Promise<{ updatedPrn: PackagingRecyclingNote, fromStatus: PrnStatus }>}
  */
 async function applyPrnTransition(ctx) {
-  const { prn, newStatus, actor, user, now, ledgerId } = ctx
-  const payload = buildCommandPayload(ctx)
+  const { newStatus, actor, user, now, ledgerId, obligationYear } = ctx
 
   // Phase 1 — gather.
-  const { balance, append, projection, fromStatus, issuance } =
-    await gatherTransitionState(ctx, payload)
+  const { balance, append, prn, issuance } = await gatherTransitionState(ctx)
+
+  const fromStatus = prn.status.currentStatus
+  const payload = buildCommandPayload(prn, obligationYear)
 
   // Phase 2 — decide. The only place the transition rules compose, and pure:
   // everything it rules against was gathered above and is passed in.
@@ -293,7 +290,10 @@ async function applyPrnTransition(ctx) {
   // Phase 3 — persist, on whichever arm the ruling named.
   if ('statusChange' in outcome) {
     return {
-      updatedPrn: await persistStatusChange(ctx, outcome.statusChange),
+      updatedPrn: await persistStatusChange(ctx, {
+        prn,
+        statusChange: outcome.statusChange
+      }),
       fromStatus
     }
   }
@@ -304,7 +304,7 @@ async function applyPrnTransition(ctx) {
 
   return {
     updatedPrn: await persistAppendedEvents(ctx, {
-      projection,
+      prn,
       fromStatus,
       issuance,
       events
@@ -314,9 +314,10 @@ async function applyPrnTransition(ctx) {
 }
 
 /**
- * Move a PRN to a new status: resolve the PRN, run the transition, then report
- * it. Metrics and the cancellation notification sit outside the transition
- * because neither may change whether it committed.
+ * Move a PRN to a new status: run the transition, then report it. Metrics and
+ * the cancellation notification sit outside the transition because neither may
+ * change whether it committed. Both metric labels are read off the result, as
+ * neither the fold nor either persist arm can change them.
  *
  * @param {UpdatePrnStatusRequest} request
  * @returns {Promise<PackagingRecyclingNote>}
@@ -324,16 +325,15 @@ async function applyPrnTransition(ctx) {
 export async function updatePrnStatus(request) {
   const { prnEvents, logger, newStatus } = request
 
-  const prn = await fetchStoredPrn(request)
-  const ctx = buildTransitionContext(request, prn)
-
-  const { updatedPrn, fromStatus } = await applyPrnTransition(ctx)
+  const { updatedPrn, fromStatus } = await applyPrnTransition(
+    buildTransitionContext(request)
+  )
 
   await prnMetrics.recordStatusTransition({
     fromStatus,
     toStatus: newStatus,
-    material: prn.accreditation.material,
-    isExport: prn.isExport
+    material: updatedPrn.accreditation.material,
+    isExport: updatedPrn.isExport
   })
 
   try {
@@ -350,31 +350,30 @@ export async function updatePrnStatus(request) {
 }
 
 /**
- * The first half of loading the PRN: the stored document as the repository
- * holds it, asserted to belong to the caller's organisation and accreditation.
- * `bringPrnCurrent` is the second half, and runs after the ledger fold.
+ * The PRN the transition rules against: the stored document, asserted to belong
+ * to the caller's organisation and accreditation, brought current by folding on
+ * the stream events it has not yet seen.
  *
- * @param {UpdatePrnStatusRequest} request
+ * It runs inside phase 1 rather than ahead of the transition so that no read it
+ * makes predates the head the transition's events will land on. That costs a
+ * wasted fold when the PRN turns out not to exist or not to belong to the
+ * caller, which is the price of the hazard being unstateable.
+ *
+ * @param {PrnTransitionContext} ctx
  * @returns {Promise<PackagingRecyclingNote>}
  */
-async function fetchStoredPrn({
-  prnRepository,
-  id,
-  organisationId,
-  accreditationId,
-  providedPrn
-}) {
-  const prn = providedPrn ?? (await prnRepository.findById(id))
+async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
+  const stored = providedPrn ?? (await prnRepository.findById(id))
 
   if (
-    !prn ||
-    prn.organisation.id !== organisationId ||
-    prn.accreditation.id !== accreditationId
+    !stored ||
+    stored.organisation.id !== ledgerId.organisationId ||
+    stored.accreditation.id !== ledgerId.accreditationId
   ) {
     throw Boom.notFound(`PRN not found: ${id}`)
   }
 
-  return prn
+  return bringPrnCurrent(stored, service)
 }
 
 /**
@@ -383,33 +382,30 @@ async function fetchStoredPrn({
  * takes it whole.
  *
  * @param {UpdatePrnStatusRequest} request
- * @param {PackagingRecyclingNote} prn
  * @returns {PrnTransitionContext}
  */
-function buildTransitionContext(
-  {
-    prnRepository,
-    ledgerRepository,
-    organisationsRepository,
-    logger,
-    newStatus,
-    actor,
-    organisationId,
-    registrationId,
-    accreditationId,
-    user,
-    id,
-    updatedAt,
-    obligationYear
-  },
-  prn
-) {
+function buildTransitionContext({
+  prnRepository,
+  ledgerRepository,
+  organisationsRepository,
+  logger,
+  newStatus,
+  actor,
+  organisationId,
+  registrationId,
+  accreditationId,
+  user,
+  id,
+  updatedAt,
+  obligationYear,
+  providedPrn
+}) {
   return {
     prnRepository,
     organisationsRepository,
     service: createWasteBalanceService(ledgerRepository),
     logger,
-    prn,
+    providedPrn,
     newStatus,
     actor,
     ledgerId: { organisationId, registrationId, accreditationId },

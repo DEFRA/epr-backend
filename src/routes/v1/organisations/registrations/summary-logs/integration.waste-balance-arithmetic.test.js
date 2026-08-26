@@ -145,15 +145,15 @@ describe('Waste balance arithmetic integration tests', () => {
    * balance decision is supplied on its own.
    */
   const debitTotalBalanceOutOfBand = async (env, prnId, amount) => {
-    const { balance, append } = await env.wasteBalanceService.beginPrnCommand(
-      {
-        organisationId: env.organisationId,
-        registrationId: env.registrationId,
-        accreditationId: env.accreditationId
-      },
-      { prnId, amount },
-      { id: 'test-user' }
-    )
+    const { balance, append } =
+      await env.wasteBalanceService.readBalanceForUpdate(
+        {
+          organisationId: env.organisationId,
+          registrationId: env.registrationId,
+          accreditationId: env.accreditationId
+        },
+        { id: 'test-user' }
+      )
     const decision = decideIssuePrn(balance, { prnId, amount })
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)

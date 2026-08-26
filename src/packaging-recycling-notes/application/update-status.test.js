@@ -242,6 +242,34 @@ describe('updatePrnStatus', () => {
     })
   })
 
+  describe('the waste-balance write boundary', () => {
+    // Tonnage is validated positive at the route and in the PRN schema, so a
+    // PRN that reaches the write without one is corruption. The deciders test
+    // sufficiency with `<`, which a non-positive amount passes, so the guard
+    // has to refuse before the balance is decided against.
+    it.each([0, -100])(
+      'refuses a tonnage of %s as a broken invariant, appending nothing',
+      async (tonnage) => {
+        const repositories = seedRepositories({
+          prn: buildPrn({ tonnage }),
+          balance: { amount: 1000, availableAmount: 1000 }
+        })
+
+        await expect(
+          callUpdate({
+            ...repositories,
+            newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+          })
+        ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
+
+        expect(
+          await readBalance(repositories.wasteBalanceService)
+        ).toMatchObject({ amount: 1000, availableAmount: 1000 })
+      }
+    )
+  })
+
   describe('transition rules', () => {
     it('throws StatusConflictError when the transition is not permitted', async () => {
       const repositories = seedRepositories({

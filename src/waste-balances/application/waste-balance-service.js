@@ -18,25 +18,26 @@ import { validateAccreditationId } from '../repository/validation.js'
  */
 
 /**
- * A PRN command in flight: the ledger balance its decision is made against —
- * `null` for a ledger with no events — and the commit that appends that
- * decision at the head the balance was folded from.
+ * A balance read for update: the ledger state to decide against — `null` for a
+ * ledger with no events — and the commit that appends the decision at the head
+ * that state was folded from.
  *
- * `append` commits once: the command is bound to the stream tip its fold
- * observed, and the attempt consumes it whether or not it succeeded. A second
- * call would append from a now-stale view of that tip, and ADR-0036 asks for a
- * fresh computation against current state rather than a silent retry, so it is
+ * `append` commits once: it is bound to the stream tip its fold observed, and
+ * the attempt consumes it whether or not it succeeded. A second call would
+ * append from a now-stale view of that tip, and ADR-0036 asks for a fresh
+ * computation against current state rather than a silent retry, so it is
  * refused rather than absorbed.
  *
- * @typedef {Object} PrnCommand
+ * @typedef {Object} BalanceForUpdate
  * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null} balance
  * @property {(events: import('../domain/commands.js').BalanceEvent[]) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} append
  */
 
 /**
  * The ledger command machinery, sharing one captured ledger repository: fold
- * the ledger into decidable state, append decided events, and run a PRN command
- * end to end. The service surface is assembled from these.
+ * the ledger into decidable state, append decided events, and hold a fold open
+ * for a caller that decides in between. The service surface is assembled from
+ * these.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  */
@@ -100,38 +101,29 @@ const createLedgerCommands = (ledgerRepository) => {
   }
 
   /**
-   * Begin a PRN command: assert the positive-amount invariant the deciders
-   * trust, fold the ledger, and hand back the balance to decide against
-   * together with the append that commits the decision.
+   * Read the balance for update: fold the ledger, and hand back both the state
+   * to decide against and the only writer permitted to commit at the point that
+   * read happened. `SELECT ... FOR UPDATE`, over an append-only stream.
    *
-   * Everything the decision reads must be read after this call, so nothing it
-   * rules on is older than the head those events land on. The slot index alone
-   * only settles writers contending for the same slot; a writer that folds
-   * after a competitor's append sees the moved head, takes the next free slot,
-   * and commits a second time with every guard satisfied (PAE-1844). Both
-   * halves assume the decision's reads go to the same node as the fold, which
-   * the driver's default primary read preference gives us.
+   * The caller deciding in between is what separates this from
+   * `commitSummaryLogSubmittedEvent`, which folds and appends in one go and so
+   * has no gap to pin. Everything the decision reads must be read after this
+   * call, so nothing it rules on is older than the head those events land on.
+   * The slot index alone only settles writers contending for the same slot; a
+   * writer that folds after a competitor's append sees the moved head, takes
+   * the next free slot, and commits a second time with every guard satisfied
+   * (PAE-1844). Both halves assume the decision's reads go to the same node as
+   * the fold, which the driver's default primary read preference gives us.
    *
    * `balance` is `null` for a ledger with no events, handed back like any other
    * state: whether that is a client error or corruption depends on the
    * transition, which the ledger does not know.
    *
-   * A non-positive amount is a broken invariant rather than a client error —
-   * tonnage is validated positive at the route and in the PRN schema — so it
-   * surfaces as a 500 rather than slipping past the deciders' `<` check.
-   *
    * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
-   * @param {import('../repository/ledger-schema.js').PrnPayload} payload
    * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
-   * @returns {Promise<PrnCommand>}
+   * @returns {Promise<BalanceForUpdate>}
    */
-  const beginPrnCommand = async (ledgerId, payload, createdBy) => {
-    if (!(payload.amount > 0)) {
-      throw Boom.badImplementation(
-        `PRN amount must be positive at the waste-balance write boundary; received ${payload.amount}`
-      )
-    }
-
+  const readBalanceForUpdate = async (ledgerId, createdBy) => {
     const { state, head } = await fold(ledgerId)
     let appendAttempted = false
 
@@ -140,7 +132,7 @@ const createLedgerCommands = (ledgerRepository) => {
       append: async (events) => {
         if (appendAttempted) {
           throw Boom.badImplementation(
-            'A PRN command commits once; a second append would write from a now-stale view of the stream tip'
+            'A balance read for update commits once; a second append would write from a now-stale view of the stream tip'
           )
         }
         appendAttempted = true
@@ -149,7 +141,7 @@ const createLedgerCommands = (ledgerRepository) => {
     }
   }
 
-  return { fold, append, beginPrnCommand }
+  return { fold, append, readBalanceForUpdate }
 }
 
 /**
@@ -160,7 +152,7 @@ const createLedgerCommands = (ledgerRepository) => {
  * leaves the next slot occupied, so the append rejects with a
  * `LedgerSlotConflictError` and the conflict surfaces to the caller — no
  * in-process retry (ADR-0036). Where each command makes its decision settles
- * the rest, as `beginPrnCommand` describes.
+ * the rest, as `readBalanceForUpdate` describes.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [systemLogsRepository]
@@ -171,7 +163,7 @@ export const createWasteBalanceService = (
   ledgerRepository,
   systemLogsRepository
 ) => {
-  const { fold, append, beginPrnCommand } =
+  const { fold, append, readBalanceForUpdate } =
     createLedgerCommands(ledgerRepository)
 
   /**
@@ -244,7 +236,7 @@ export const createWasteBalanceService = (
       })
     },
 
-    beginPrnCommand,
+    readBalanceForUpdate,
 
     /**
      * The PRN's ledger events after a watermark: the catch-up tail a read
