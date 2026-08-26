@@ -59,7 +59,7 @@ const applyEvent = (prn, event) => {
 }
 
 /**
- * Left-fold over persisted stream tail events: applies each event in turn,
+ * Left-fold over a PRN's catch-up events: applies each event in turn,
  * stamping its slot, appending a history entry, advancing currentStatus,
  * updatedAt/By and the lastAppliedEventNumber watermark. The persisted-document
  * version is owned by the repository's optimistic-concurrency guard, so the
@@ -72,12 +72,12 @@ const applyEvent = (prn, event) => {
  * `WasteBalanceLedgerRepository.findEventsByPrnIdAfter` guarantees.
  *
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
- * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} tailEvents
+ * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} catchupEvents
  * @returns {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote}
  */
-export const foldPrnFromTailEvents = (prn, tailEvents) => {
-  if (tailEvents.length === 0) {
+export const applyCatchupEventsToPrn = (prn, catchupEvents) => {
+  if (catchupEvents.length === 0) {
     return prn
   }
-  return tailEvents.reduce((acc, event) => applyEvent(acc, event), prn)
+  return catchupEvents.reduce((acc, event) => applyEvent(acc, event), prn)
 }

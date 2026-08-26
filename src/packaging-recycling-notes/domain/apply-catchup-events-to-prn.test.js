@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
+import { applyCatchupEventsToPrn } from './apply-catchup-events-to-prn.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
@@ -46,12 +46,12 @@ const buildEvent = (kind, number, createdAt, createdBy = eventCreator) => ({
   createdBy
 })
 
-describe('foldPrnFromTailEvents', () => {
-  describe('with no tail events', () => {
+describe('applyCatchupEventsToPrn', () => {
+  describe('with no catch-up events', () => {
     it('returns the PRN unchanged', () => {
       const prn = basePrn()
 
-      const result = foldPrnFromTailEvents(prn, [])
+      const result = applyCatchupEventsToPrn(prn, [])
 
       expect(result).toBe(prn)
     })
@@ -66,7 +66,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-01T12:00:00.000Z'
       )
 
-      const result = foldPrnFromTailEvents(prn, [event])
+      const result = applyCatchupEventsToPrn(prn, [event])
 
       expect(result.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_AUTHORISATION
@@ -103,7 +103,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-02T12:00:00.000Z'
       )
 
-      const result = foldPrnFromTailEvents(prn, [created, issued])
+      const result = applyCatchupEventsToPrn(prn, [created, issued])
 
       expect(result.version).toBe(prn.version)
     })
@@ -117,7 +117,7 @@ describe('foldPrnFromTailEvents', () => {
         { id: 'user-1', name: 'Test User', email: 'test@example.com' }
       )
 
-      const result = foldPrnFromTailEvents(prn, [event])
+      const result = applyCatchupEventsToPrn(prn, [event])
 
       const expectedActor = { id: 'user-1', name: 'Test User' }
       expect(result.updatedBy).toEqual(expectedActor)
@@ -140,7 +140,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-02T12:00:00.000Z'
       )
 
-      const result = foldPrnFromTailEvents(prn, [event])
+      const result = applyCatchupEventsToPrn(prn, [event])
 
       expect(result.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
       expect(result.status.issued).toEqual({
@@ -162,7 +162,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-03T12:00:00.000Z'
       )
 
-      const result = foldPrnFromTailEvents(prn, [event])
+      const result = applyCatchupEventsToPrn(prn, [event])
 
       expect(result.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
       expect(result.status.accepted).toEqual({
@@ -187,7 +187,7 @@ describe('foldPrnFromTailEvents', () => {
         payload: { prnId: 'prn-1', amount: 50, obligationYear: 2027 }
       }
 
-      const result = foldPrnFromTailEvents(prn, [event])
+      const result = applyCatchupEventsToPrn(prn, [event])
 
       expect(result.obligationYear).toBe(2027)
     })
@@ -200,7 +200,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-04T12:00:00.000Z'
       )
 
-      const result = foldPrnFromTailEvents(prn, [event])
+      const result = applyCatchupEventsToPrn(prn, [event])
 
       expect(result.status.currentStatus).toBe(PRN_STATUS.AWAITING_CANCELLATION)
       expect(result.status.rejected).toEqual({
@@ -222,7 +222,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-05T12:00:00.000Z'
       )
 
-      const result = foldPrnFromTailEvents(prn, [event])
+      const result = applyCatchupEventsToPrn(prn, [event])
 
       expect(result.status.currentStatus).toBe(PRN_STATUS.DELETED)
       expect(result.status.deleted).toEqual({
@@ -244,7 +244,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-06T12:00:00.000Z'
       )
 
-      const result = foldPrnFromTailEvents(prn, [event])
+      const result = applyCatchupEventsToPrn(prn, [event])
 
       expect(result.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
       expect(result.status.cancelled).toEqual({
@@ -274,7 +274,7 @@ describe('foldPrnFromTailEvents', () => {
         { id: 'signatory', name: 'Sig Natory' }
       )
 
-      const result = foldPrnFromTailEvents(prn, [created, issued])
+      const result = applyCatchupEventsToPrn(prn, [created, issued])
 
       expect(result.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
       expect(result.status.currentStatusAt).toEqual(issued.createdAt)
@@ -314,7 +314,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-01T12:00:00.000Z'
       )
 
-      expect(() => foldPrnFromTailEvents(prn, [event])).toThrow(
+      expect(() => applyCatchupEventsToPrn(prn, [event])).toThrow(
         /unmappable ledger event kind/i
       )
     })
@@ -330,7 +330,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-02T12:00:00.000Z'
       )
 
-      foldPrnFromTailEvents(prn, [event])
+      applyCatchupEventsToPrn(prn, [event])
 
       expect(prn).toEqual(snapshot)
     })
@@ -348,7 +348,7 @@ describe('foldPrnFromTailEvents', () => {
         '2026-02-05T12:00:00.000Z'
       )
 
-      const result = foldPrnFromTailEvents(prn, [event])
+      const result = applyCatchupEventsToPrn(prn, [event])
 
       expect(result.tonnage).toBe(50)
       expect(result.prnNumber).toBe('ER1234567890A')

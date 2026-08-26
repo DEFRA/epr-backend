@@ -12,9 +12,9 @@ import {
 import { decidePrnTransition } from '#packaging-recycling-notes/domain/prn-transition.js'
 import { selectObligationYearForAcceptance } from '#packaging-recycling-notes/domain/obligation-year.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { foldPrnFromTailEvents } from '#packaging-recycling-notes/domain/fold-prn-from-tail-events.js'
+import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
 import { persistIssuedPrn } from './persist-issued-prn.js'
-import { bringPrnCurrent } from './get-projected-prn.js'
+import { catchUpPrnProjection } from './get-projected-prn.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
@@ -263,7 +263,7 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
     throw Boom.notFound(`PRN not found: ${id}`)
   }
 
-  return bringPrnCurrent(stored, service)
+  return catchUpPrnProjection(stored, service)
 }
 
 /**
@@ -324,7 +324,7 @@ async function persistProjectedPrn(
 ) {
   logWasteBalanceUpdate(logger, { events, prn, fromStatus, newStatus })
 
-  const updated = foldPrnFromTailEvents(prn, events)
+  const updated = applyCatchupEventsToPrn(prn, events)
   const expectedVersion = prn.version
 
   if (issuance) {

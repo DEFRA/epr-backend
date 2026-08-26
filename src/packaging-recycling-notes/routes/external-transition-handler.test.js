@@ -104,8 +104,8 @@ let ledgerRepository
 /**
  * Starts a test server wired with real in-memory adapters: the PRN store, the
  * event stream, and the waste-balance store sharing that stream. The read-side
- * fold always runs, bringing the persisted doc current from the stream tail
- * before the transition decision.
+ * fold always runs, catching the persisted doc up to the stream before the
+ * transition decision.
  *
  * @param {object} params
  * @param {PrnStatus} params.currentStatus

@@ -240,8 +240,8 @@ export const createWasteBalanceService = (
     readBalanceForUpdate,
 
     /**
-     * The PRN's ledger events after a watermark: the catch-up tail a read
-     * projection folds onto a fetched PRN to bring it current. This is a ledger
+     * The PRN's ledger events after a watermark: the catch-up events a read
+     * folds onto a fetched PRN to bring it current. This is a ledger
      * read that happens to be about a PRN, so it names its ledger in full and
      * the `prnId` selects within it.
      *

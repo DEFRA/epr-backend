@@ -412,7 +412,7 @@ describe('createWasteBalanceService', () => {
       prnId: 'prn-1'
     }
 
-    it('returns the PRN tail events after the watermark in order', async () => {
+    it('returns the PRN catch-up events after the watermark in order', async () => {
       await ledgerRepository.appendEvents([
         buildPrnCreatedEvent({
           registrationId: 'reg-1',
