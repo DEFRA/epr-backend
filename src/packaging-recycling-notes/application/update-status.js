@@ -149,7 +149,7 @@ async function gatherTransitionState(ctx) {
  * @param {import('#waste-balances/repository/ledger-port.js').LedgerEvent[]} committed.events
  * @returns {Promise<PackagingRecyclingNote>}
  */
-async function persistAppendedEvents(
+async function persistProjectedPrn(
   { prnRepository, logger, newStatus },
   { prn, fromStatus, issuance, events }
 ) {
@@ -298,12 +298,10 @@ async function applyPrnTransition(ctx) {
     }
   }
 
-  // The append is the commit (ADR-0036); the persist below only projects what
-  // it took. A statement of its own so that order stays visible.
   const events = await append(outcome.balanceEvents)
 
   return {
-    updatedPrn: await persistAppendedEvents(ctx, {
+    updatedPrn: await persistProjectedPrn(ctx, {
       prn,
       fromStatus,
       issuance,
@@ -314,10 +312,7 @@ async function applyPrnTransition(ctx) {
 }
 
 /**
- * Move a PRN to a new status: run the transition, then report it. Metrics and
- * the cancellation notification sit outside the transition because neither may
- * change whether it committed. Both metric labels are read off the result, as
- * neither the fold nor either persist arm can change them.
+ * Move a PRN to a new status, then report it.
  *
  * @param {UpdatePrnStatusRequest} request
  * @returns {Promise<PackagingRecyclingNote>}

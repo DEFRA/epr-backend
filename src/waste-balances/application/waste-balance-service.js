@@ -23,10 +23,11 @@ import { validateAccreditationId } from '../repository/validation.js'
  * that state was folded from.
  *
  * `append` commits once: it is bound to the stream tip its fold observed, and
- * the attempt consumes it whether or not it succeeded. A second call would
- * append from a now-stale view of that tip, and ADR-0036 asks for a fresh
- * computation against current state rather than a silent retry, so it is
- * refused rather than absorbed.
+ * the attempt consumes it whether or not it succeeded. The captured head means
+ * a second call would be refused by the slot index anyway, but as the conflict
+ * a genuine competing writer produces — a 409 telling the client to retry, when
+ * the fault is ours and retrying cannot fix it. Naming it as our bug is what
+ * the guard is for. ADR-0036's detection over absorption, one layer up.
  *
  * @typedef {Object} BalanceForUpdate
  * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null} balance
@@ -132,7 +133,7 @@ const createLedgerCommands = (ledgerRepository) => {
       append: async (events) => {
         if (appendAttempted) {
           throw Boom.badImplementation(
-            'A balance read for update commits once; a second append would write from a now-stale view of the stream tip'
+            'A balance read for update commits once; committing twice off one read is a caller error, not the slot conflict a competing writer produces'
           )
         }
         appendAttempted = true

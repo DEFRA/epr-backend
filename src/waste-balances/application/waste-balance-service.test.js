@@ -363,7 +363,12 @@ describe('createWasteBalanceService', () => {
       expect(all).toHaveLength(1)
     })
 
-    it('refuses a second commit, because the stream tip it folded at has moved on', async () => {
+    // Committing twice off one read is a caller error, and the guard's value is
+    // saying so: the captured head means the slot index would refuse it anyway,
+    // but as the same conflict a genuine competing writer produces, which the
+    // routes map to a 409 telling a client to retry something retrying cannot
+    // fix.
+    it('refuses a second commit off one read as a caller error, not a slot conflict', async () => {
       await seedLedger()
 
       const payload = { prnId: 'prn-1', amount: 10 }
@@ -374,9 +379,10 @@ describe('createWasteBalanceService', () => {
       const events = committedEvents(decideCreatePrn(balance, payload))
       await append(events)
 
-      await expect(append(events)).rejects.toEqual(
-        expect.objectContaining({ isBoom: true })
-      )
+      await expect(append(events)).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 }
+      })
       expect(await ledgerRepository.findAllInLedger(ledgerId)).toHaveLength(2)
     })
 
