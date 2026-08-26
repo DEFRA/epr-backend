@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   PRN_STATUS,
   PRN_ACTOR,
+  AccreditationStatusError,
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
 import { ACCREDITATION_STATUS, REGULATOR } from '#domain/organisations/model.js'
@@ -154,6 +155,40 @@ const withCompetingWriteDuringFold = (ledgerRepository, competingEvent) => {
       }
       return ledgerRepository.findLatestInLedger(ledgerId)
     }
+  }
+}
+
+/**
+ * An accreditation suspended mid-command: approved when the request arrives,
+ * suspended by the time the fold resolves. Only a check made against a read
+ * taken after the fold sees the suspension, so this is the ordering the write
+ * depends on rather than one the caller can arrange.
+ *
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
+ */
+const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
+  /** @type {import('#domain/organisations/model.js').AccreditationStatus} */
+  let status = ACCREDITATION_STATUS.APPROVED
+
+  return {
+    ledgerRepository: {
+      ...ledgerRepository,
+      findLatestInLedger: async (
+        /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */ ledgerId
+      ) => {
+        status = ACCREDITATION_STATUS.SUSPENDED
+        return ledgerRepository.findLatestInLedger(ledgerId)
+      }
+    },
+    organisationsRepository:
+      /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
+        /** @type {unknown} */ ({
+          findAccreditationById: async () => ({
+            status,
+            submittedToRegulator: REGULATOR.EA
+          })
+        })
+      )
   }
 }
 
@@ -384,6 +419,46 @@ describe('updatePrnStatus concurrency', () => {
       amount: ISSUED_AMOUNT + TONNAGE,
       availableAmount: RINGFENCED_AVAILABLE + TONNAGE
     })
+  })
+
+  it('rules on the accreditation against a read taken after the fold, not before it', async () => {
+    const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
+      buildIssuableSeed()
+    ])
+    const prnRepository = prnFactory(noopLogger())
+
+    const seeded = createInMemoryLedgerRepository()()
+    await seedClosingBalance(seeded, buildBalanceSeed())
+
+    const { ledgerRepository, organisationsRepository } =
+      withAccreditationSuspendedDuringFold(seeded)
+
+    await expect(
+      updatePrnStatus({
+        prnRepository,
+        ledgerRepository,
+        organisationsRepository,
+        prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
+        logger: noopLogger(),
+        id: PRN_ID,
+        organisationId: ORG_ID,
+        accreditationId: ACC_ID,
+        registrationId: REG_ID,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
+        user: { id: 'user-789', name: 'Test User' }
+      })
+    ).rejects.toBeInstanceOf(AccreditationStatusError)
+
+    const stored = await prnRepository.findById(PRN_ID)
+    expect(stored?.status.currentStatus).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
+    expect(
+      await ledgerRepository.findLatestInLedger({
+        organisationId: ORG_ID,
+        registrationId: REG_ID,
+        accreditationId: ACC_ID
+      })
+    ).toMatchObject({ number: 1 })
   })
 
   it('commits a cancellation the stream permits but the unprojected document does not', async () => {

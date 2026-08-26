@@ -2,23 +2,19 @@ import Boom from '@hapi/boom'
 
 import { prnMetrics } from './metrics.js'
 import {
-  applyPrnTransition,
-  prnCommandFor
-} from './update-status-balance-effects.js'
+  logWasteBalanceUpdate,
+  toTransitionError
+} from './update-status-reporting.js'
 import {
   CANCELLED_PRN_STATUSES,
-  PRN_STATUS,
-  validateTransition
+  PRN_STATUS
 } from '#packaging-recycling-notes/domain/model.js'
-import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
+import { decidePrnTransition } from '#packaging-recycling-notes/domain/prn-transition.js'
 import { selectObligationYearForAcceptance } from '#packaging-recycling-notes/domain/obligation-year.js'
-import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
-import { projectPrnFromCatchupEvents } from './get-projected-prn.js'
-
-/** Suffixes A-Z for PRN-number collision avoidance on issuance */
-const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
+import { persistIssuedPrn } from './persist-issued-prn.js'
+import { catchUpPrnProjection } from './get-projected-prn.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
@@ -29,6 +25,360 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  * @typedef {import('#reports/application/prn-cancellation-events.js').OnPrnCancelled} OnPrnCancelled
  */
+
+/**
+ * What a caller asks for: the collaborators to reach through, the PRN and the
+ * status to move it to. The three ids arrive loose here because that is the
+ * route contract; `buildTransitionContext` is where they become one ledger id.
+ *
+ * @typedef {{
+ *   prnRepository: PackagingRecyclingNotesRepository,
+ *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   prnEvents: { onCancelled: OnPrnCancelled },
+ *   logger: import('#common/hapi-types.js').TypedLogger,
+ *   id: string,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   accreditationId: string,
+ *   newStatus: PrnStatus,
+ *   actor: import('#packaging-recycling-notes/domain/model.js').PrnActor,
+ *   user: { id: string, name: string, email?: string },
+ *   providedPrn?: PackagingRecyclingNote,
+ *   updatedAt?: Date,
+ *   obligationYear?: number
+ * }} UpdatePrnStatusRequest
+ */
+
+/**
+ * Everything a PRN status transition needs: the repositories and service it
+ * reaches through, and the transition it is making. The identity is an
+ * accreditation's: this path runs only for accredited streams, so
+ * `accreditationId` is narrowed to non-null. The PRN itself is not here — it is
+ * loaded inside phase 1, after the balance is read for update.
+ *
+ * @typedef {{
+ *   ledgerId: WasteBalanceLedgerId & { accreditationId: string },
+ *   prnRepository: PackagingRecyclingNotesRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   service: WasteBalanceService,
+ *   logger: import('#common/hapi-types.js').TypedLogger,
+ *   providedPrn?: PackagingRecyclingNote,
+ *   newStatus: PrnStatus,
+ *   user: { id: string, name: string, email?: string },
+ *   actor: import('#packaging-recycling-notes/domain/model.js').PrnActor,
+ *   now: Date,
+ *   id: string,
+ *   obligationYear?: number
+ * }} PrnTransitionContext
+ */
+
+/**
+ * Move a PRN to a new status, then report it.
+ *
+ * @param {UpdatePrnStatusRequest} request
+ * @returns {Promise<PackagingRecyclingNote>}
+ */
+export async function updatePrnStatus(request) {
+  const { prnEvents, logger, newStatus } = request
+
+  const { updatedPrn, fromStatus } = await applyPrnTransition(
+    buildTransitionContext(request)
+  )
+
+  await prnMetrics.recordStatusTransition({
+    fromStatus,
+    toStatus: newStatus,
+    material: updatedPrn.accreditation.material,
+    isExport: updatedPrn.isExport
+  })
+
+  try {
+    await notifyPrnCancelled(prnEvents, newStatus, updatedPrn)
+  } catch (error) {
+    // Best-effort: the PRN transition is already committed, so don't fail the caller for a stale-notification error.
+    logger.error({
+      err: error,
+      message: `PRN-cancellation notification failed for ${updatedPrn.id}; PRN status is already committed`
+    })
+  }
+
+  return updatedPrn
+}
+
+/**
+ * Assembles the `PrnTransitionContext` the three phases run on. This is the one
+ * place the caller's three loose ids become a `ledgerId`; everything downstream
+ * takes it whole.
+ *
+ * @param {UpdatePrnStatusRequest} request
+ * @returns {PrnTransitionContext}
+ */
+function buildTransitionContext({
+  prnRepository,
+  ledgerRepository,
+  organisationsRepository,
+  logger,
+  newStatus,
+  actor,
+  organisationId,
+  registrationId,
+  accreditationId,
+  user,
+  id,
+  updatedAt,
+  obligationYear,
+  providedPrn
+}) {
+  return {
+    prnRepository,
+    organisationsRepository,
+    service: createWasteBalanceService(ledgerRepository),
+    logger,
+    providedPrn,
+    newStatus,
+    actor,
+    ledgerId: { organisationId, registrationId, accreditationId },
+    user,
+    now: updatedAt ?? new Date(),
+    id,
+    obligationYear
+  }
+}
+
+/**
+ * A PRN status transition, as the three phases it is and nothing else: gather
+ * the state and context, rule on the transition, then persist what the ruling
+ * named.
+ *
+ * The ruling comes back on exactly one of three arms, so phases 1 and 2 are the
+ * same lines whichever it is and the two persist paths diverge only at the end.
+ *
+ * @param {PrnTransitionContext} ctx
+ * @returns {Promise<{ updatedPrn: PackagingRecyclingNote, fromStatus: PrnStatus }>}
+ */
+async function applyPrnTransition(ctx) {
+  const { newStatus, actor, user, now, ledgerId, obligationYear } = ctx
+
+  // Phase 1 — gather.
+  const { balance, append, prn, issuance } = await gatherTransitionState(ctx)
+  const fromStatus = prn.status.currentStatus
+
+  // Phase 2 — decide. The only place the transition rules compose, and pure:
+  // everything it rules against was gathered above and is passed in.
+  const outcome = decidePrnTransition({
+    fromStatus,
+    newStatus,
+    actor,
+    accreditation: issuance?.accreditation,
+    accreditationYear: prn.accreditation.accreditationYear,
+    now,
+    balance,
+    payload: buildCommandPayload(prn, obligationYear),
+    updatedBy: { id: user.id, name: user.name }
+  })
+
+  if ('error' in outcome) {
+    throw toTransitionError(outcome.error, ledgerId.accreditationId)
+  }
+
+  // Phase 3 — persist, on whichever arm the ruling named.
+  if ('statusChange' in outcome) {
+    return {
+      updatedPrn: await persistStatusChange(ctx, {
+        prn,
+        statusChange: outcome.statusChange
+      }),
+      fromStatus
+    }
+  }
+
+  const events = await append(outcome.balanceEvents)
+
+  return {
+    updatedPrn: await persistProjectedPrn(ctx, {
+      prn,
+      fromStatus,
+      issuance,
+      events
+    }),
+    fromStatus
+  }
+}
+
+/**
+ * Phase 1 — gather. The balance is read for update first and every other read
+ * follows it, so nothing the ruling is made against is older than the head the
+ * events would land on (PAE-1844). That ordering is why the PRN is loaded here
+ * rather than handed in, and why the accreditation is read here too — on the
+ * issuance path only, which is the one transition that stamps the PRN number
+ * from it.
+ *
+ * @param {PrnTransitionContext} ctx
+ * @returns {Promise<import('#waste-balances/application/waste-balance-service.js').BalanceForUpdate & {
+ *   prn: PackagingRecyclingNote,
+ *   issuance: { accreditation: import('#domain/organisations/accreditation.js').Accreditation } | undefined
+ * }>}
+ */
+async function gatherTransitionState(ctx) {
+  const { service, organisationsRepository, newStatus, ledgerId, user } = ctx
+
+  const { balance, append } = await service.readBalanceForUpdate(ledgerId, user)
+
+  const prn = await loadPrn(ctx)
+
+  const issuance =
+    newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
+      ? {
+          accreditation: await organisationsRepository.findAccreditationById(
+            ledgerId.organisationId,
+            ledgerId.accreditationId
+          )
+        }
+      : undefined
+
+  return { balance, append, prn, issuance }
+}
+
+/**
+ * The PRN the transition rules against: the stored document, asserted to belong
+ * to the caller's organisation and accreditation, brought current by folding on
+ * the stream events it has not yet seen.
+ *
+ * It runs inside phase 1 rather than ahead of the transition so that no read it
+ * makes predates the head the transition's events will land on. That costs a
+ * wasted fold when the PRN turns out not to exist or not to belong to the
+ * caller, which is the price of the hazard being unstateable.
+ *
+ * @param {PrnTransitionContext} ctx
+ * @returns {Promise<PackagingRecyclingNote>}
+ */
+async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
+  const stored = providedPrn ?? (await prnRepository.findById(id))
+
+  if (
+    stored?.organisation.id !== ledgerId.organisationId ||
+    stored?.accreditation.id !== ledgerId.accreditationId
+  ) {
+    throw Boom.notFound(`PRN not found: ${id}`)
+  }
+
+  return catchUpPrnProjection(stored, service)
+}
+
+/**
+ * The waste-balance command the ruling is made against: which PRN, how much,
+ * and — on acceptance only — the obligation year the caller chose.
+ *
+ * The positive-amount invariant is asserted here, where the amount is read off
+ * the PRN, because that is the document it is an invariant of: tonnage is
+ * validated positive at the route and in the PRN schema. A non-positive one is
+ * corruption rather than client error, so it surfaces as a 500 rather than
+ * slipping past the deciders' `<` sufficiency check. `NaN` is the only value
+ * that passes that check, so it is refused by name.
+ *
+ * @param {PackagingRecyclingNote} prn
+ * @param {number} [obligationYear]
+ * @returns {import('#waste-balances/repository/ledger-schema.js').PrnAcceptedPayload}
+ */
+function buildCommandPayload(prn, obligationYear) {
+  if (Number.isNaN(prn.tonnage) || prn.tonnage <= 0) {
+    throw Boom.badImplementation(
+      `PRN tonnage must be positive at the waste-balance write boundary; received ${prn.tonnage}`
+    )
+  }
+
+  const selectedObligationYear = selectObligationYearForAcceptance(
+    prn,
+    obligationYear
+  )
+
+  return {
+    prnId: prn.id,
+    amount: prn.tonnage,
+    ...(selectedObligationYear === undefined
+      ? {}
+      : { obligationYear: selectedObligationYear })
+  }
+}
+
+/**
+ * Phase 3, ledger arm — fold the committed events onto the PRN and persist the
+ * result. There is no compensation: events appended without the document
+ * persisted are recovered by the read-side catch-up on the next read.
+ *
+ * `version` is read off the PRN as loaded rather than off the fold, because the
+ * repository's optimistic-concurrency guard owns it and the fold leaves it
+ * alone.
+ *
+ * @param {PrnTransitionContext} ctx
+ * @param {Object} committed
+ * @param {PackagingRecyclingNote} committed.prn
+ * @param {PrnStatus} committed.fromStatus
+ * @param {{ accreditation: import('#domain/organisations/accreditation.js').Accreditation } | undefined} committed.issuance
+ * @param {import('#waste-balances/repository/ledger-port.js').LedgerEvent[]} committed.events
+ * @returns {Promise<PackagingRecyclingNote>}
+ */
+async function persistProjectedPrn(
+  { prnRepository, logger, newStatus },
+  { prn, fromStatus, issuance, events }
+) {
+  logWasteBalanceUpdate(logger, { events, prn, fromStatus, newStatus })
+
+  const updated = applyCatchupEventsToPrn(prn, events)
+  const expectedVersion = prn.version
+
+  if (issuance) {
+    return persistIssuedPrn(prnRepository, {
+      projection: updated,
+      expectedVersion,
+      accreditation: issuance.accreditation
+    })
+  }
+
+  const persisted = await prnRepository.persistProjection({
+    projection: updated,
+    expectedVersion
+  })
+  if (!persisted) {
+    throw Boom.badImplementation('Failed to persist PRN projection')
+  }
+  return persisted
+}
+
+/**
+ * Phase 3, stated arm — stamp the status onto the PRN document directly, for
+ * the one transition that appends nothing (DRAFT→DISCARDED). Appending no event
+ * means this write contends for no ledger slot, so it is serialised against a
+ * concurrent write only by the document's own version.
+ *
+ * It writes the watermark back rather than the status fields the fold produced,
+ * which is safe only because `draft` is the one status no transition leads into:
+ * a PRN still in it has appended nothing, so there is no fold to lose.
+ *
+ * @param {PrnTransitionContext} ctx
+ * @param {Object} stated
+ * @param {PackagingRecyclingNote} stated.prn
+ * @param {{ to: PrnStatus, at: Date, by: import('#packaging-recycling-notes/domain/prn-transition.js').StatusChangeActor }} stated.statusChange
+ * @returns {Promise<PackagingRecyclingNote>}
+ */
+async function persistStatusChange(
+  { prnRepository, id },
+  { prn, statusChange }
+) {
+  const updatedPrn = await prnRepository.updateStatus({
+    id,
+    version: prn.version,
+    status: statusChange.to,
+    updatedBy: statusChange.by,
+    updatedAt: statusChange.at,
+    lastAppliedEventNumber: prn.lastAppliedEventNumber
+  })
+  if (!updatedPrn) {
+    throw Boom.badImplementation('Failed to update PRN status')
+  }
+  return updatedPrn
+}
 
 /**
  * Raises the `onCancelled` PRN event for any transition into a cancelled status, so interested domains (e.g. reports) can react; a no-op otherwise.
@@ -53,397 +403,4 @@ async function notifyPrnCancelled(prnEvents, newStatus, updatedPrn) {
     prnId: updatedPrn.id,
     issuedAt: new Date(issued.at).toISOString()
   })
-}
-
-/**
- * The shared context handed to each write path. The ledger path and the
- * no-balance-effect discard write consume different subsets.
- *
- * The identity is an accreditation's, not a registration's: this path runs only
- * for accredited streams, so `accreditationId` is narrowed to non-null — the
- * same intersection `applyPrnTransition` takes as its `ledgerId`.
- *
- * @typedef {WasteBalanceLedgerId & { accreditationId: string } & {
- *   prnRepository: PackagingRecyclingNotesRepository,
- *   organisationsRepository: OrganisationsRepository,
- *   service: WasteBalanceService,
- *   logger: import('#common/hapi-types.js').TypedLogger,
- *   prn: PackagingRecyclingNote,
- *   updateParams: import('#packaging-recycling-notes/repository/port.js').UpdateStatusParams,
- *   newStatus: PrnStatus,
- *   user: { id: string, name: string, email?: string },
- *   actor: import('#packaging-recycling-notes/domain/model.js').PrnActor,
- *   now: Date,
- *   id: string,
- *   obligationYear?: number
- * }} PrnWriteContext
- */
-
-/**
- * Persist a projected PRN, retrying issuance with new PRN number suffixes when
- * the existing one collides. The projection's `prnNumber` is the only field that
- * changes between attempts.
- *
- * @param {Object} params
- * @param {PackagingRecyclingNotesRepository} params.prnRepository
- * @param {PackagingRecyclingNote} params.projection
- * @param {number} params.expectedVersion
- * @param {{ regulator: string, isExport: boolean, accreditationYear: number }} params.prnNumberParams
- * @returns {Promise<PackagingRecyclingNote>}
- */
-async function persistProjectionWithIssuanceRetry({
-  prnRepository,
-  projection,
-  expectedVersion,
-  prnNumberParams
-}) {
-  const suffixAttempts = [undefined, ...COLLISION_SUFFIXES]
-
-  for (const suffix of suffixAttempts) {
-    const prnNumber = generatePrnNumber({ ...prnNumberParams, suffix })
-
-    try {
-      const result = await prnRepository.persistProjection({
-        projection: { ...projection, prnNumber },
-        expectedVersion
-      })
-      if (!result) {
-        throw Boom.badImplementation('Failed to persist PRN projection')
-      }
-      return result
-    } catch (error) {
-      if (error instanceof PrnNumberConflictError) {
-        continue
-      }
-      throw error
-    }
-  }
-
-  throw new Error('Unable to generate unique PRN number after all retries')
-}
-
-/**
- * Event-first write for a status transition. The transition is ruled on and the
- * balance-affecting events appended in one ledger command, the events are then
- * folded onto the PRN, and the resulting projection is persisted. There is no
- * compensation: a partial failure (events appended, doc not persisted) is
- * recovered by the read-side catch-up, which folds events after the watermark
- * on the next read.
- *
- * The fold is onto the projection the ruling was made against, not onto the
- * fetched document — they differ exactly when the document had fallen behind
- * the stream, and folding onto the document would drop the events it had yet to
- * see.
- *
- * @param {PrnWriteContext} ctx
- * @returns {Promise<{ updatedPrn: PackagingRecyclingNote, fromStatus: PrnStatus }>}
- */
-async function performStreamWrite({
-  prnRepository,
-  organisationsRepository,
-  service,
-  logger,
-  prn,
-  newStatus,
-  actor,
-  organisationId,
-  registrationId,
-  accreditationId,
-  now,
-  user,
-  obligationYear
-}) {
-  // Present only on the issuance path, which stamps the PRN number from the
-  // accreditation; whether it permits issuing is ruled on with the transition.
-  // Carrying it in an object rather than beside an `undefined` keeps the branch
-  // below a statement about the transition rather than about what was fetched.
-  const issuance =
-    newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
-      ? {
-          accreditation: await organisationsRepository.findAccreditationById(
-            organisationId,
-            accreditationId
-          )
-        }
-      : undefined
-
-  const selectedObligationYear = selectObligationYearForAcceptance(
-    prn,
-    obligationYear
-  )
-
-  const { events, projection, fromStatus } = await applyPrnTransition(
-    service,
-    logger,
-    {
-      prn,
-      ledgerId: { organisationId, registrationId, accreditationId },
-      newStatus,
-      actor,
-      accreditation: issuance?.accreditation,
-      tonnage: prn.tonnage,
-      createdBy: user,
-      now,
-      obligationYear: selectedObligationYear
-    }
-  )
-
-  const updated = foldPrnFromTailEvents(projection, events)
-
-  if (issuance) {
-    return {
-      updatedPrn: await persistProjectionWithIssuanceRetry({
-        prnRepository,
-        projection: updated,
-        expectedVersion: prn.version,
-        prnNumberParams: {
-          regulator: issuance.accreditation.submittedToRegulator,
-          isExport: prn.isExport,
-          accreditationYear: prn.accreditation.accreditationYear
-        }
-      }),
-      fromStatus
-    }
-  }
-
-  const persisted = await prnRepository.persistProjection({
-    projection: updated,
-    expectedVersion: prn.version
-  })
-  if (!persisted) {
-    throw Boom.badImplementation('Failed to persist PRN projection')
-  }
-  return { updatedPrn: persisted, fromStatus }
-}
-
-/**
- * Write a status transition that has no balance effect: the PRN document's
- * status is stamped directly with no stream event. Used for DRAFT→DISCARDED,
- * where a never-issued draft is discarded.
- *
- * The rule runs against the projected PRN. A draft whose creation event reached
- * the stream but not the document is really awaiting authorisation, and
- * discarding it would strand the tonnage its creation ringfenced.
- *
- * Appending no event means this write contends for no ledger slot, so it is
- * serialised against a concurrent write only by the document's own version.
- *
- * @param {PrnWriteContext} ctx
- * @returns {Promise<{ updatedPrn: PackagingRecyclingNote, fromStatus: PrnStatus }>}
- */
-const performDiscardWrite = async ({
-  prnRepository,
-  service,
-  prn,
-  newStatus,
-  actor,
-  updateParams
-}) => {
-  const projection = await projectPrnFromCatchupEvents(prn, service)
-  const fromStatus = projection.status.currentStatus
-
-  validateTransition(fromStatus, newStatus, actor)
-
-  /* c8 ignore next 5 - defensive: the caller routes only balance-effect-free transitions here, and the state machine has exactly one */
-  if (prnCommandFor(fromStatus, newStatus)) {
-    throw Boom.badImplementation(
-      `${fromStatus} -> ${newStatus} on PRN ${prn.id} has a balance effect but took the write path that appends no event`
-    )
-  }
-
-  const updatedPrn = await prnRepository.updateStatus(updateParams)
-  if (!updatedPrn) {
-    throw Boom.badImplementation('Failed to update PRN status')
-  }
-  return { updatedPrn, fromStatus }
-}
-
-/**
- * Updates PRN status with all business logic
- *
- * @param {Object} params
- * @param {PackagingRecyclingNotesRepository} params.prnRepository
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {{ onCancelled: OnPrnCancelled }} params.prnEvents
- * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {string} params.id
- * @param {string} params.organisationId
- * @param {string} params.registrationId
- * @param {string} params.accreditationId
- * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
- * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
- * @param {{ id: string; name: string; email?: string }} params.user
- * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} [params.providedPrn] - Optional pre-fetched PRN to avoid duplicate fetch
- * @param {Date} [params.updatedAt] - Optional timestamp override (defaults to now)
- * @param {number} [params.obligationYear] - Optional obligation year selected during external acceptance
- * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
- */
-export async function updatePrnStatus({
-  prnRepository,
-  ledgerRepository,
-  organisationsRepository,
-  prnEvents,
-  logger,
-  id,
-  organisationId,
-  registrationId,
-  accreditationId,
-  newStatus,
-  actor,
-  user,
-  providedPrn,
-  updatedAt,
-  obligationYear
-}) {
-  const prn = await resolvePrnForUpdate({
-    prnRepository,
-    id,
-    organisationId,
-    accreditationId,
-    providedPrn
-  })
-
-  const ctx = buildWriteContext({
-    prnRepository,
-    ledgerRepository,
-    organisationsRepository,
-    logger,
-    prn,
-    newStatus,
-    actor,
-    organisationId,
-    registrationId,
-    accreditationId,
-    user,
-    id,
-    updatedAt,
-    obligationYear
-  })
-
-  // DRAFT→DISCARDED is the state machine's only transition with no balance
-  // effect, and DISCARDED is reachable from nowhere else, so the requested
-  // status alone picks the write path. Which transition this actually is gets
-  // ruled on inside the path.
-  const { updatedPrn, fromStatus } =
-    newStatus === PRN_STATUS.DISCARDED
-      ? await performDiscardWrite(ctx)
-      : await performStreamWrite(ctx)
-
-  await prnMetrics.recordStatusTransition({
-    fromStatus,
-    toStatus: newStatus,
-    material: prn.accreditation.material,
-    isExport: prn.isExport
-  })
-
-  try {
-    await notifyPrnCancelled(prnEvents, newStatus, updatedPrn)
-  } catch (error) {
-    // Best-effort: the PRN transition is already committed, so don't fail the caller for a stale-notification error.
-    logger.error({
-      err: error,
-      message: `PRN-cancellation notification failed for ${updatedPrn.id}; PRN status is already committed`
-    })
-  }
-
-  return updatedPrn
-}
-
-/**
- * Fetches (or reuses) the PRN under update and asserts it belongs to the
- * caller's organisation/accreditation.
- *
- * @param {Object} params
- * @param {PackagingRecyclingNotesRepository} params.prnRepository
- * @param {string} params.id
- * @param {string} params.organisationId
- * @param {string} params.accreditationId
- * @param {PackagingRecyclingNote} [params.providedPrn]
- * @returns {Promise<PackagingRecyclingNote>}
- */
-async function resolvePrnForUpdate({
-  prnRepository,
-  id,
-  organisationId,
-  accreditationId,
-  providedPrn
-}) {
-  const prn = providedPrn ?? (await prnRepository.findById(id))
-
-  if (
-    !prn ||
-    prn.organisation.id !== organisationId ||
-    prn.accreditation.id !== accreditationId
-  ) {
-    throw Boom.notFound(`PRN not found: ${id}`)
-  }
-
-  return prn
-}
-
-/**
- * Builds the shared write context (`PrnWriteContext`) handed to
- * `performDiscardWrite`/`performStreamWrite`.
- *
- * @param {Object} params
- * @param {PackagingRecyclingNotesRepository} params.prnRepository
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {PackagingRecyclingNote} params.prn
- * @param {PrnStatus} params.newStatus
- * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
- * @param {string} params.organisationId
- * @param {string} params.registrationId
- * @param {string} params.accreditationId
- * @param {{ id: string; name: string; email?: string }} params.user
- * @param {string} params.id
- * @param {Date} [params.updatedAt]
- * @param {number} [params.obligationYear]
- * @returns {PrnWriteContext}
- */
-function buildWriteContext({
-  prnRepository,
-  ledgerRepository,
-  organisationsRepository,
-  logger,
-  prn,
-  newStatus,
-  actor,
-  organisationId,
-  registrationId,
-  accreditationId,
-  user,
-  id,
-  updatedAt,
-  obligationYear
-}) {
-  const now = updatedAt ?? new Date()
-  const updateParams = {
-    id,
-    version: prn.version,
-    status: newStatus,
-    updatedBy: { id: user.id, name: user.name },
-    updatedAt: now,
-    lastAppliedEventNumber: prn.lastAppliedEventNumber
-  }
-
-  return {
-    prnRepository,
-    organisationsRepository,
-    service: createWasteBalanceService(ledgerRepository),
-    logger,
-    prn,
-    updateParams,
-    newStatus,
-    actor,
-    organisationId,
-    registrationId,
-    accreditationId,
-    user,
-    now,
-    id,
-    obligationYear
-  }
 }

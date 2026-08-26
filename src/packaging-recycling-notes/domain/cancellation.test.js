@@ -1,50 +1,42 @@
 import { describe, it, expect } from 'vitest'
 
-import {
-  assertCancellationAllowed,
-  isRegulatorCancellable
-} from './cancellation.js'
+import { cancellationRefusal, isRegulatorCancellable } from './cancellation.js'
 import { RelevantYearWindowExpiredError } from './relevant-year.js'
 import { PRN_STATUS } from './model.js'
 
-describe('assertCancellationAllowed', () => {
-  it('does not throw for accepted -> cancelled within the window', () => {
-    expect(() =>
-      assertCancellationAllowed(
+describe('cancellationRefusal', () => {
+  it('is undefined for accepted -> cancelled within the window', () => {
+    expect(
+      cancellationRefusal(
         PRN_STATUS.ACCEPTED,
         PRN_STATUS.CANCELLED,
         2026,
         new Date('2027-01-31T23:59:59.999Z')
       )
-    ).not.toThrow()
+    ).toBeUndefined()
   })
 
-  it('throws RelevantYearWindowExpiredError for accepted -> cancelled once the deadline has passed', () => {
-    expect(() =>
-      assertCancellationAllowed(
+  it('refuses accepted -> cancelled once the deadline has passed', () => {
+    expect(
+      cancellationRefusal(
         PRN_STATUS.ACCEPTED,
         PRN_STATUS.CANCELLED,
         2026,
         new Date('2027-02-01T00:00:00.000Z')
       )
-    ).toThrow(RelevantYearWindowExpiredError)
+    ).toBeInstanceOf(RelevantYearWindowExpiredError)
   })
 
-  it('carries the relevant year on the error', () => {
-    let thrownError
-    try {
-      assertCancellationAllowed(
-        PRN_STATUS.ACCEPTED,
-        PRN_STATUS.CANCELLED,
-        2026,
-        new Date('2027-03-01T00:00:00.000Z')
-      )
-    } catch (e) {
-      thrownError = e
-    }
+  it('carries the relevant year on the refusal', () => {
+    const refusal = cancellationRefusal(
+      PRN_STATUS.ACCEPTED,
+      PRN_STATUS.CANCELLED,
+      2026,
+      new Date('2027-03-01T00:00:00.000Z')
+    )
 
-    expect(thrownError).toBeInstanceOf(RelevantYearWindowExpiredError)
-    expect(thrownError?.relevantYear).toBe(2026)
+    expect(refusal).toBeInstanceOf(RelevantYearWindowExpiredError)
+    expect(refusal?.relevantYear).toBe(2026)
   })
 
   it.each([
@@ -60,40 +52,40 @@ describe('assertCancellationAllowed', () => {
     ],
     ['draft -> discarded', PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED]
   ])(
-    'is a no-op for %s, even long past what would be the deadline',
+    'has no view on %s, even long past what would be the deadline',
     (_label, previousStatus, newStatus) => {
-      expect(() =>
-        assertCancellationAllowed(
+      expect(
+        cancellationRefusal(
           previousStatus,
           newStatus,
           2000,
           new Date('2099-01-01T00:00:00.000Z')
         )
-      ).not.toThrow()
+      ).toBeUndefined()
     }
   )
 
   describe('awaiting_acceptance -> cancelled (admin path, PAE-1859)', () => {
-    it('does not throw within the window', () => {
-      expect(() =>
-        assertCancellationAllowed(
+    it('is undefined within the window', () => {
+      expect(
+        cancellationRefusal(
           PRN_STATUS.AWAITING_ACCEPTANCE,
           PRN_STATUS.CANCELLED,
           2026,
           new Date('2027-01-31T23:59:59.999Z')
         )
-      ).not.toThrow()
+      ).toBeUndefined()
     })
 
-    it('throws RelevantYearWindowExpiredError once the deadline has passed', () => {
-      expect(() =>
-        assertCancellationAllowed(
+    it('refuses once the deadline has passed', () => {
+      expect(
+        cancellationRefusal(
           PRN_STATUS.AWAITING_ACCEPTANCE,
           PRN_STATUS.CANCELLED,
           2026,
           new Date('2027-02-01T00:00:00.000Z')
         )
-      ).toThrow(RelevantYearWindowExpiredError)
+      ).toBeInstanceOf(RelevantYearWindowExpiredError)
     })
   })
 })

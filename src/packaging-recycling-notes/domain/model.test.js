@@ -5,8 +5,8 @@ import {
   PRN_STATUS_TRANSITIONS,
   PRN_ACTOR,
   isValidTransition,
-  validateTransition,
-  assertAccreditationCanIssue,
+  transitionRefusal,
+  issuanceRefusal,
   AccreditationStatusError,
   StatusConflictError,
   UnauthorisedTransitionError
@@ -115,82 +115,78 @@ describe('PRN_STATUS_TRANSITIONS', () => {
   })
 })
 
-describe('validateTransition', () => {
-  it('does not throw for valid transitions', () => {
-    expect(() =>
-      validateTransition(
+describe('transitionRefusal', () => {
+  it('is undefined for valid transitions', () => {
+    expect(
+      transitionRefusal(
         PRN_STATUS.AWAITING_ACCEPTANCE,
         PRN_STATUS.ACCEPTED,
         PRN_ACTOR.PRODUCER
       )
-    ).not.toThrow()
+    ).toBeUndefined()
   })
 
-  it('throws StatusConflictError when no transition exists from current to new status', () => {
-    expect(() =>
-      validateTransition(
+  it('is a StatusConflictError when no transition exists from current to new status', () => {
+    expect(
+      transitionRefusal(
         PRN_STATUS.ACCEPTED,
         PRN_STATUS.DRAFT,
         PRN_ACTOR.PRODUCER
       )
-    ).toThrow(StatusConflictError)
+    ).toBeInstanceOf(StatusConflictError)
   })
 
-  it('throws StatusConflictError for terminal states', () => {
-    expect(() =>
-      validateTransition(
+  it('is a StatusConflictError for terminal states', () => {
+    expect(
+      transitionRefusal(
         PRN_STATUS.CANCELLED,
         PRN_STATUS.ACCEPTED,
         PRN_ACTOR.PRODUCER
       )
-    ).toThrow(StatusConflictError)
+    ).toBeInstanceOf(StatusConflictError)
   })
 
-  it('throws UnauthorisedTransitionError when transition exists but actor is not permitted', () => {
-    expect(() =>
-      validateTransition(
+  it('is an UnauthorisedTransitionError when transition exists but actor is not permitted', () => {
+    expect(
+      transitionRefusal(
         PRN_STATUS.AWAITING_ACCEPTANCE,
         PRN_STATUS.ACCEPTED,
         PRN_ACTOR.SIGNATORY
       )
-    ).toThrow(UnauthorisedTransitionError)
+    ).toBeInstanceOf(UnauthorisedTransitionError)
   })
 
   it('includes status details in StatusConflictError', () => {
-    let thrownError
-    try {
-      validateTransition(
-        PRN_STATUS.ACCEPTED,
-        PRN_STATUS.DRAFT,
-        PRN_ACTOR.PRODUCER
-      )
-    } catch (e) {
-      thrownError = e
-    }
+    const refusal = transitionRefusal(
+      PRN_STATUS.ACCEPTED,
+      PRN_STATUS.DRAFT,
+      PRN_ACTOR.PRODUCER
+    )
 
-    expect(thrownError?.currentStatus).toBe(PRN_STATUS.ACCEPTED)
-    expect(thrownError?.newStatus).toBe(PRN_STATUS.DRAFT)
+    expect(refusal).toBeInstanceOf(StatusConflictError)
+    expect(refusal).toMatchObject({
+      currentStatus: PRN_STATUS.ACCEPTED,
+      newStatus: PRN_STATUS.DRAFT
+    })
   })
 
   it('includes actor details in UnauthorisedTransitionError', () => {
-    let thrownError
-    try {
-      validateTransition(
-        PRN_STATUS.AWAITING_ACCEPTANCE,
-        PRN_STATUS.ACCEPTED,
-        PRN_ACTOR.SIGNATORY
-      )
-    } catch (e) {
-      thrownError = e
-    }
+    const refusal = transitionRefusal(
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.ACCEPTED,
+      PRN_ACTOR.SIGNATORY
+    )
 
-    expect(thrownError?.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
-    expect(thrownError?.newStatus).toBe(PRN_STATUS.ACCEPTED)
-    expect(thrownError?.actor).toBe(PRN_ACTOR.SIGNATORY)
+    expect(refusal).toBeInstanceOf(UnauthorisedTransitionError)
+    expect(refusal).toMatchObject({
+      currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      newStatus: PRN_STATUS.ACCEPTED,
+      actor: PRN_ACTOR.SIGNATORY
+    })
   })
 })
 
-describe('assertAccreditationCanIssue', () => {
+describe('issuanceRefusal', () => {
   /** @type {AccreditationStatus[]} */
   const issuableStatuses = ['approved', 'created', 'rejected']
 
@@ -198,28 +194,40 @@ describe('assertAccreditationCanIssue', () => {
   const blockedStatuses = ['suspended', 'cancelled']
 
   it.each(issuableStatuses)(
-    'does not throw when accreditation is %s',
+    'is undefined when accreditation is %s',
     (status) => {
-      expect(() => assertAccreditationCanIssue({ status })).not.toThrow()
+      expect(
+        issuanceRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, { status })
+      ).toBeUndefined()
     }
   )
 
   it.each(blockedStatuses)(
-    'throws AccreditationStatusError when accreditation is %s',
+    'is an AccreditationStatusError when accreditation is %s',
     (status) => {
-      expect(() => assertAccreditationCanIssue({ status })).toThrow(
-        AccreditationStatusError
-      )
+      expect(
+        issuanceRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, { status })
+      ).toBeInstanceOf(AccreditationStatusError)
     }
   )
 
-  it('does not throw when accreditation is missing', () => {
-    expect(() => assertAccreditationCanIssue(null)).not.toThrow()
+  it('is undefined when accreditation is missing', () => {
+    expect(
+      issuanceRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, null)
+    ).toBeUndefined()
   })
 
-  it('describes the action and status in the error message', () => {
-    expect(() => assertAccreditationCanIssue({ status: 'suspended' })).toThrow(
-      'Cannot issue a PRN on a suspended accreditation'
-    )
+  it.each(blockedStatuses)(
+    'has no view on a transition that is not issuance, even when accreditation is %s',
+    (status) => {
+      expect(issuanceRefusal(PRN_STATUS.ACCEPTED, { status })).toBeUndefined()
+    }
+  )
+
+  it('describes the action and status in the refusal message', () => {
+    expect(
+      issuanceRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, { status: 'suspended' })
+        ?.message
+    ).toBe('Cannot issue a PRN on a suspended accreditation')
   })
 })

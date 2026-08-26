@@ -32,7 +32,7 @@ const prnId = 'prn-001'
 /**
  * Intentionally lacks `version` so the fold's `prn.version ?? 0` defensive
  * branch (legacy-doc compatibility) is exercised when this fixture flows
- * through `foldPrnFromTailEvents`. Cast at the consumer boundary.
+ * through `applyCatchupEventsToPrn`. Cast at the consumer boundary.
  */
 const mockPrn = {
   id: prnId,
@@ -389,7 +389,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
     describe('read-side catch-up from event stream', () => {
       const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`
 
-      const tailEvent = (kind, number, createdAt) => ({
+      const catchupEvent = (kind, number, createdAt) => ({
         registrationId,
         accreditationId,
         organisationId,
@@ -415,14 +415,18 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           stalePrn
         )
         await ledgerRepository.appendEvents([
-          tailEvent(
+          catchupEvent(
             LEDGER_EVENT_KIND.PRN_CREATED,
             1,
             '2026-02-01T12:00:00.000Z'
           )
         ])
         await ledgerRepository.appendEvents([
-          tailEvent(LEDGER_EVENT_KIND.PRN_ISSUED, 2, '2026-02-02T12:00:00.000Z')
+          catchupEvent(
+            LEDGER_EVENT_KIND.PRN_ISSUED,
+            2,
+            '2026-02-02T12:00:00.000Z'
+          )
         ])
 
         const response = await server.inject({
@@ -449,14 +453,14 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           awaitingAuthPrn
         )
         await ledgerRepository.appendEvents([
-          tailEvent(
+          catchupEvent(
             LEDGER_EVENT_KIND.PRN_CREATED,
             1,
             '2026-02-01T12:00:00.000Z'
           )
         ])
         await ledgerRepository.appendEvents([
-          tailEvent(
+          catchupEvent(
             LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
             2,
             '2026-02-02T12:00:00.000Z'

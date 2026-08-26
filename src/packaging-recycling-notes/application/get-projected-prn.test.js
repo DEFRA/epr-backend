@@ -107,7 +107,7 @@ const buildRepositories = ({ prn = null, events = [] }) => {
 }
 
 describe('getProjectedPrnById', () => {
-  it('folds tail events past the watermark onto the PRN', async () => {
+  it('folds catch-up events past the watermark onto the PRN', async () => {
     const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({
         prn: buildPrn({
@@ -226,7 +226,7 @@ describe('getProjectedPrnById', () => {
 })
 
 describe('getProjectedPrnByNumber', () => {
-  it('folds the stream tail onto the PRN found by number', async () => {
+  it('folds the catch-up events onto the PRN found by number', async () => {
     const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({
         prn: buildPrn(),

@@ -1,19 +1,5 @@
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-
-/**
- * Ledger-event-kind → PRN currentStatus the event projects to.
- *
- * @type {Record<string, import('#packaging-recycling-notes/domain/model.js').PrnStatus>}
- */
-const LEDGER_EVENT_KIND_TO_PRN_STATUS = Object.freeze({
-  [LEDGER_EVENT_KIND.PRN_CREATED]: PRN_STATUS.AWAITING_AUTHORISATION,
-  [LEDGER_EVENT_KIND.PRN_ISSUED]: PRN_STATUS.AWAITING_ACCEPTANCE,
-  [LEDGER_EVENT_KIND.PRN_ACCEPTED]: PRN_STATUS.ACCEPTED,
-  [LEDGER_EVENT_KIND.PRN_REJECTED]: PRN_STATUS.AWAITING_CANCELLATION,
-  [LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED]: PRN_STATUS.DELETED,
-  [LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE]: PRN_STATUS.CANCELLED
-})
+import { LEDGER_EVENT_KIND_TO_PRN_STATUS } from './prn-transition.js'
 
 /**
  * Ledger-event-kind → PRN status slot the event timestamps. Slot names follow
@@ -73,7 +59,7 @@ const applyEvent = (prn, event) => {
 }
 
 /**
- * Left-fold over persisted stream tail events: applies each event in turn,
+ * Left-fold over a PRN's catch-up events: applies each event in turn,
  * stamping its slot, appending a history entry, advancing currentStatus,
  * updatedAt/By and the lastAppliedEventNumber watermark. The persisted-document
  * version is owned by the repository's optimistic-concurrency guard, so the
@@ -86,12 +72,12 @@ const applyEvent = (prn, event) => {
  * `WasteBalanceLedgerRepository.findEventsByPrnIdAfter` guarantees.
  *
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
- * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} tailEvents
+ * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} catchupEvents
  * @returns {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote}
  */
-export const foldPrnFromTailEvents = (prn, tailEvents) => {
-  if (tailEvents.length === 0) {
+export const applyCatchupEventsToPrn = (prn, catchupEvents) => {
+  if (catchupEvents.length === 0) {
     return prn
   }
-  return tailEvents.reduce((acc, event) => applyEvent(acc, event), prn)
+  return catchupEvents.reduce((acc, event) => applyEvent(acc, event), prn)
 }
