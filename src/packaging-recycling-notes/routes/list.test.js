@@ -10,7 +10,6 @@ import {
   vi
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
@@ -59,8 +58,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
             packagingRecyclingNotesRepository,
           wasteBalanceService: () => ({}),
           organisationsRepository: () => ({})
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
     })
 

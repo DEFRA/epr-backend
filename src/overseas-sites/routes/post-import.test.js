@@ -10,7 +10,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
@@ -45,8 +44,7 @@ describe(`${orsImportCreatePath} route`, () => {
         repositories: {
           orsImportsRepository: () => orsImportsRepository,
           uploadsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags({})
+        }
       })
     })
 

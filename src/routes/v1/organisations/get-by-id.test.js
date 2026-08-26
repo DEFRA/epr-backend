@@ -1,4 +1,3 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
@@ -23,11 +22,9 @@ describe('GET /v1/organisations/{id}', () => {
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
   })
 
@@ -166,8 +163,7 @@ describe('GET /v1/organisations/{id}', () => {
               password: 'changeme'
             }
           },
-          repositories: { organisationsRepository: factory },
-          featureFlags: createInMemoryFeatureFlags()
+          repositories: { organisationsRepository: factory }
         })
       })
 

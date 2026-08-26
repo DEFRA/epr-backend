@@ -7,7 +7,6 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -135,16 +134,13 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       validate: vi.fn()
     }
 
-    const featureFlags = createInMemoryFeatureFlags()
-
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory
       },
       workers: {
         summaryLogsWorker
-      },
-      featureFlags
+      }
     })
   })
 
@@ -495,8 +491,6 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     const insertError = new Error('Database connection failed')
 
     beforeAll(async () => {
-      const featureFlags = createInMemoryFeatureFlags()
-
       failingServer = await createTestServer({
         repositories: {
           summaryLogsRepository: () => ({
@@ -509,8 +503,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         },
         workers: {
           summaryLogsWorker: { validate: vi.fn() }
-        },
-        featureFlags
+        }
       })
     })
 
