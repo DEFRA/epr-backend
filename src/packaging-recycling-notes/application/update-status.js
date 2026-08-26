@@ -149,14 +149,10 @@ function buildTransitionContext({
 /**
  * A PRN status transition, as the three phases it is and nothing else: gather
  * the state and context, rule on the transition, then persist what the ruling
- * named. Each phase helper takes the context first and its own inputs second.
+ * named.
  *
- * The two persist arms are mutually exclusive and exactly one runs. Which one
- * is the *shape* of the domain's answer, not a branch on the requested status
- * taken ahead of the ruling, so phases 1 and 2 are the same lines either way
- * and the paths diverge only at persist. Issuance still takes the PRN-numbering
- * persist off the requested status, which is a numbering concern rather than a
- * balance one.
+ * The ruling comes back on exactly one of three arms, so phases 1 and 2 are the
+ * same lines whichever it is and the two persist paths diverge only at the end.
  *
  * @param {PrnTransitionContext} ctx
  * @returns {Promise<{ updatedPrn: PackagingRecyclingNote, fromStatus: PrnStatus }>}
@@ -166,9 +162,7 @@ async function applyPrnTransition(ctx) {
 
   // Phase 1 — gather.
   const { balance, append, prn, issuance } = await gatherTransitionState(ctx)
-
   const fromStatus = prn.status.currentStatus
-  const payload = buildCommandPayload(prn, obligationYear)
 
   // Phase 2 — decide. The only place the transition rules compose, and pure:
   // everything it rules against was gathered above and is passed in.
@@ -180,7 +174,7 @@ async function applyPrnTransition(ctx) {
     accreditationYear: prn.accreditation.accreditationYear,
     now,
     balance,
-    payload,
+    payload: buildCommandPayload(prn, obligationYear),
     updatedBy: { id: user.id, name: user.name }
   })
 
