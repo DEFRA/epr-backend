@@ -229,5 +229,79 @@ export const testFindBehaviour = (it) => {
         expect(result[0].tonnage).toBe(100)
       })
     })
+
+    describe('findByIds', () => {
+      it('reads the notes the ids name', async () => {
+        const accreditation = buildAccreditationId()
+        const wanted = await repository.create(
+          buildDraftPrn(underAccreditation(accreditation, { tonnage: 100 }))
+        )
+        await repository.create(
+          buildDraftPrn(underAccreditation(accreditation, { tonnage: 200 }))
+        )
+
+        const result = await repository.findByIds({
+          ...accreditation,
+          ids: [wanted.id]
+        })
+
+        expect(result).toHaveLength(1)
+        expect(result[0].id).toBe(wanted.id)
+        expect(result[0].tonnage).toBe(100)
+      })
+
+      it('reads nothing when no ids are named', async () => {
+        const accreditation = buildAccreditationId()
+        await repository.create(
+          buildDraftPrn(underAccreditation(accreditation))
+        )
+
+        const result = await repository.findByIds({ ...accreditation, ids: [] })
+
+        expect(result).toEqual([])
+      })
+
+      it('reads nothing for a note another accreditation holds', async () => {
+        const accreditation = buildAccreditationId()
+        const elsewhere = await repository.create(
+          buildDraftPrn(underAccreditation(buildAccreditationId()))
+        )
+
+        const result = await repository.findByIds({
+          ...accreditation,
+          ids: [elsewhere.id]
+        })
+
+        expect(result).toEqual([])
+      })
+
+      it('reads nothing for an id no note is stored under', async () => {
+        const accreditation = buildAccreditationId()
+        await repository.create(
+          buildDraftPrn(underAccreditation(accreditation))
+        )
+
+        const result = await repository.findByIds({
+          ...accreditation,
+          ids: ['a note that was never stored']
+        })
+
+        expect(result).toEqual([])
+      })
+
+      it('does not return deleted PRNs (soft delete)', async () => {
+        const accreditation = buildAccreditationId()
+        const deleted = await repository.create(
+          buildDeletedPrn(underAccreditation(accreditation))
+        )
+
+        const result = await repository.findByIds({
+          ...accreditation,
+          ids: [deleted.id]
+        })
+
+        expect(result).toEqual([])
+      })
+    })
   })
 }

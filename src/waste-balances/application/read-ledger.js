@@ -79,13 +79,13 @@
  */
 
 /**
- * Reads the notes an accreditation holds. Deleted notes are not among them, and
- * their absence costs a ledger read nothing: a note can only be deleted before
- * it is issued, and only issue gives it a number. A note this reader omits has
- * no number to state.
+ * Reads the notes an accreditation holds, among the ids asked for. Deleted
+ * notes are not among them, and their absence costs a ledger read nothing: a
+ * note can only be deleted before it is issued, and only issue gives it a
+ * number. A note this reader omits has no number to state.
  *
  * @typedef {Object} LedgerNoteReader
- * @property {(accreditation: WasteBalanceLedgerId & { accreditationId: string }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByAccreditation
+ * @property {(params: WasteBalanceLedgerId & { accreditationId: string, ids: string[] }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds
  */
 
 /**
@@ -138,15 +138,18 @@ const noteNumbersById = async (noteReader, ledgerId, events) => {
     return new Map()
   }
 
-  const namesNoNote = events.every((event) => creditsASummaryLog(event.payload))
+  const noteIds = events.flatMap((event) =>
+    creditsASummaryLog(event.payload) ? [] : [event.payload.prnId]
+  )
 
-  if (namesNoNote) {
+  if (noteIds.length === 0) {
     return new Map()
   }
 
-  const notes = await noteReader.findByAccreditation({
+  const notes = await noteReader.findByIds({
     ...ledgerId,
-    accreditationId
+    accreditationId,
+    ids: noteIds
   })
 
   return new Map(notes.map((note) => [note.id, note.prnNumber ?? null]))

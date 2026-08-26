@@ -50,6 +50,18 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  */
 
 /**
+ * Names the notes a ledger read wants, scoped to the accreditation whose ledger
+ * it is reading. The scope is what keeps a note belonging to another
+ * accreditation from being read here, so it is required rather than optional.
+ *
+ * @typedef {Object} FindByIdsParams
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {string} accreditationId
+ * @property {string[]} ids
+ */
+
+/**
  * @typedef {Object} PaginatedResult
  * @property {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} items
  * @property {string | null} nextCursor
@@ -73,6 +85,7 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  * @property {(prnNumber: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findByPrnNumber
  * @property {(prn: Omit<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} create
  * @property {(accreditationId: AccreditationId) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
+ * @property {(params: FindByIdsParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByIds
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
  * @property {(params: PersistProjectionParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} persistProjection

@@ -12,7 +12,7 @@ import { readLedger } from './read-ledger.js'
  * @param {Array<{ id: string, prnNumber?: string | null }>} notes
  */
 const noteReaderHolding = (notes) => ({
-  findByAccreditation: vi.fn(async () => notes)
+  findByIds: vi.fn(async () => notes)
 })
 
 describe('reading a waste balance ledger', () => {
@@ -160,7 +160,7 @@ describe('reading a waste balance ledger', () => {
 
     await readLedger(ledgerRepository, noteReader, buildLedgerId())
 
-    expect(noteReader.findByAccreditation).not.toHaveBeenCalled()
+    expect(noteReader.findByIds).not.toHaveBeenCalled()
   })
 
   it('reads no note for a registered-only ledger', async () => {
@@ -171,7 +171,7 @@ describe('reading a waste balance ledger', () => {
 
     await readLedger(ledgerRepository, noteReader, ledgerId)
 
-    expect(noteReader.findByAccreditation).not.toHaveBeenCalled()
+    expect(noteReader.findByIds).not.toHaveBeenCalled()
   })
 
   it('carries an actor the source knows only the id of', async () => {
