@@ -16,7 +16,13 @@ export const LEDGER_EVENT_KIND = Object.freeze({
 
 const kindValues = Object.values(LEDGER_EVENT_KIND)
 
-const PRN_KINDS = new Set([
+/**
+ * Every kind of ledger event raised by a PRN. Frozen, and an array rather than
+ * a `Set`, because it is exported: `Object.freeze` does not stop `.add()` on a
+ * `Set`, and this list gates write-path validation below, so a consumer that
+ * mutated it would silently change what the ledger accepts.
+ */
+export const PRN_KINDS = Object.freeze([
   LEDGER_EVENT_KIND.PRN_CREATED,
   LEDGER_EVENT_KIND.PRN_ISSUED,
   LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
@@ -183,7 +189,7 @@ export const ledgerEventInsertSchema = Joi.object({
   createdAt: Joi.date().required(),
   createdBy: userSummarySchema.required()
 }).custom((value, helpers) => {
-  if (value.accreditationId === null && PRN_KINDS.has(value.kind)) {
+  if (value.accreditationId === null && PRN_KINDS.includes(value.kind)) {
     return helpers.error('any.custom', {
       message:
         'PRN events are invalid in registered-only ledgers (accreditationId is null)'
