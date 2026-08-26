@@ -79,6 +79,11 @@
  */
 
 /**
+ * Reads the notes an accreditation holds. Deleted notes are not among them, and
+ * their absence costs a ledger read nothing: a note can only be deleted before
+ * it is issued, and only issue gives it a number. A note this reader omits has
+ * no number to state.
+ *
  * @typedef {Object} LedgerNoteReader
  * @property {(accreditation: WasteBalanceLedgerId & { accreditationId: string }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByAccreditation
  */
@@ -129,9 +134,13 @@ const creditsASummaryLog = (payload) => 'summaryLogId' in payload
 const noteNumbersById = async (noteReader, ledgerId, events) => {
   const { accreditationId } = ledgerId
 
+  if (accreditationId === null) {
+    return new Map()
+  }
+
   const namesNoNote = events.every((event) => creditsASummaryLog(event.payload))
 
-  if (accreditationId === null || namesNoNote) {
+  if (namesNoNote) {
     return new Map()
   }
 
