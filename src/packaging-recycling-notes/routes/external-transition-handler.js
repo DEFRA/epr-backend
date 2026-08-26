@@ -14,7 +14,7 @@ import { InvalidObligationYearError } from '#packaging-recycling-notes/domain/ob
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 import { getProjectedPrnByNumber } from '#packaging-recycling-notes/application/get-projected-prn.js'
-import { lostRaceRefusal } from './lost-race-refusal.js'
+import { writeConflictRefusal } from './write-conflict-refusal.js'
 
 /**
  * @import { Request, Lifecycle } from '@hapi/hapi'
@@ -164,9 +164,9 @@ export function createExternalTransitionHandler({
 }
 
 export function mapTransitionError(error, path, logger) {
-  const lostRace = lostRaceRefusal(error)
-  if (lostRace) {
-    return lostRace
+  const conflict = writeConflictRefusal(error)
+  if (conflict) {
+    return conflict
   }
 
   if (error instanceof InvalidObligationYearError) {

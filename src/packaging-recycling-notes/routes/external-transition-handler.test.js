@@ -199,7 +199,7 @@ describe('mapTransitionError', () => {
   // Both wired external routes (accept, reject) drive PRODUCER-only transitions,
   // so a wrong-actor error never arises through them. The mapping is exercised
   // here directly to keep the generic handler's 400 path verified.
-  it('maps a lost ledger slot race to a 409 without naming the ledger', () => {
+  it('maps a ledger slot conflict to a 409 without naming the ledger', () => {
     const error = new LedgerSlotConflictError({
       organisationId: 'org-1',
       registrationId: 'reg-1',

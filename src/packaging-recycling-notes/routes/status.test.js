@@ -622,7 +622,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
         // The versions the repository names are for the logs; a caller that
-        // lost the race is told what happened and what to do about it.
+        // hits a conflict is told what happened and what to do about it.
         expect(response.payload).not.toContain('Version conflict')
         expect(JSON.parse(response.payload).message).toBe(
           'This PRN was updated by another request. Please try again.'

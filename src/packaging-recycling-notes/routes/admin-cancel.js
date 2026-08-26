@@ -17,7 +17,7 @@ import {
 import { RelevantYearWindowExpiredError } from '#packaging-recycling-notes/domain/relevant-year.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
-import { lostRaceRefusal } from './lost-race-refusal.js'
+import { writeConflictRefusal } from './write-conflict-refusal.js'
 
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
@@ -169,9 +169,9 @@ const performCancellation = async (request, previousPrn, id, h) => {
  * @param {TypedLogger} logger
  */
 const mapAdminCancelError = (error, path, id, logger) => {
-  const lostRace = lostRaceRefusal(error)
-  if (lostRace) {
-    return lostRace
+  const conflict = writeConflictRefusal(error)
+  if (conflict) {
+    return conflict
   }
 
   if (

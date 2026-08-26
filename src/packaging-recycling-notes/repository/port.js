@@ -11,10 +11,10 @@ export class PrnNumberConflictError extends Error {
 }
 
 /**
- * Tags the `Boom.conflict` an implementation raises when a write loses the
- * document's compare-and-set race. The message on that error names the two
- * versions and is written for the logs; a write route recognises the tag and
- * answers the client in its own words.
+ * Tags the `Boom.conflict` an implementation raises when a write asserts a
+ * document version another writer has already moved. The message on that error
+ * names the two versions and is written for the logs; a write route recognises
+ * the tag and answers the client in its own words.
  */
 export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
 

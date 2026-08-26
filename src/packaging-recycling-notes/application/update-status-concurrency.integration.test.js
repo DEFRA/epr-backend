@@ -255,9 +255,9 @@ describe('PRN status concurrency against real MongoDB', () => {
       cancel(prnRepositoryFactory)
     ])
 
-    // Which conflict the loser gets depends on where its fold landed relative
-    // to the winner's append, and real network latency makes that genuinely
-    // variable. Both outcomes are refusals, and both leave one credit.
+    // Which conflict the refused cancellation gets depends on where its fold
+    // landed relative to the other's append, and real network latency makes that
+    // genuinely variable. Both outcomes are refusals, and both leave one credit.
     const rejected = results.filter((r) => r.status === 'rejected')
     expect(rejected).toHaveLength(1)
     expect(
