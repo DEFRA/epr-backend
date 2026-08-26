@@ -9,12 +9,8 @@ import {
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
 } from '#waste-balances/domain/commands.js'
-import {
-  PRN_STATUS,
-  validateTransition,
-  assertAccreditationCanIssue
-} from './model.js'
-import { assertCancellationAllowed } from './cancellation.js'
+import { PRN_STATUS, transitionRefusal, issuanceRefusal } from './model.js'
+import { cancellationRefusal } from './cancellation.js'
 
 /**
  * @import {PrnStatus, PrnActor} from './model.js'
@@ -173,14 +169,10 @@ export class PrnLedgerRejectionError extends Error {
  */
 
 /**
- * The three rules a PRN transition must satisfy, composed. Returns the error
- * that refused it, or `undefined` when all three pass.
- *
- * Each rule throws on its own; the catch is unconditional so a caller gets one
- * answer as data. A refusal is one of the classes the routes already map, so
- * the application throws exactly what it was handed. Anything else is a
- * programming error, and leaves on this arm to the same unmapped 500 it would
- * have reached by propagating.
+ * The three rules a PRN transition must satisfy, composed. Each returns the
+ * refusal it found or `undefined`, so the first refusal short-circuits the rest
+ * and the caller gets one answer as data. Every refusal is one of the classes
+ * the routes already map, so the application throws exactly what it was handed.
  *
  * @param {Object} params
  * @param {PrnStatus} params.fromStatus
@@ -198,18 +190,10 @@ const ruleTransition = ({
   accreditation,
   accreditationYear,
   now
-}) => {
-  try {
-    validateTransition(fromStatus, newStatus, actor)
-    assertCancellationAllowed(fromStatus, newStatus, accreditationYear, now)
-    if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-      assertAccreditationCanIssue(accreditation)
-    }
-    return undefined
-  } catch (error) {
-    return /** @type {Error} */ (error)
-  }
-}
+}) =>
+  transitionRefusal(fromStatus, newStatus, actor) ??
+  cancellationRefusal(fromStatus, newStatus, accreditationYear, now) ??
+  issuanceRefusal(newStatus, accreditation)
 
 /**
  * Phase 2 of a PRN status write — decide. Rule on the transition and say what

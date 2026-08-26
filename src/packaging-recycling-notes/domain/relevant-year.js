@@ -76,14 +76,16 @@ export function isBeforeEndOfRelevantYear(relevantYear, now) {
 }
 
 /**
- * Asserts `now` falls on or before the end of `relevantYear`.
+ * The refusal when `now` falls after the end of `relevantYear`, or `undefined`
+ * when it is still open. Reads the window through the predicate above so the
+ * deadline is stated once.
  *
  * @param {number} relevantYear
  * @param {Date} now
- * @throws {RelevantYearWindowExpiredError} when the deadline has passed
+ * @returns {RelevantYearWindowExpiredError | undefined}
  */
-export function assertBeforeEndOfRelevantYear(relevantYear, now) {
-  if (!isBeforeEndOfRelevantYear(relevantYear, now)) {
-    throw new RelevantYearWindowExpiredError(relevantYear)
-  }
+export function relevantYearWindowRefusal(relevantYear, now) {
+  return isBeforeEndOfRelevantYear(relevantYear, now)
+    ? undefined
+    : new RelevantYearWindowExpiredError(relevantYear)
 }
