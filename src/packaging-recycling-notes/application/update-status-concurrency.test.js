@@ -699,6 +699,7 @@ describe('updatePrnStatus concurrency', () => {
     const stored = await prnRepository.findById(PRN_ID)
     expect(stored?.status.currentStatus).toBe(PRN_STATUS.DRAFT)
   })
+
   it('states the note number on the issuing event to a read landing as it commits', async () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
       buildIssuableSeed()
@@ -783,9 +784,14 @@ describe('updatePrnStatus concurrency', () => {
       issue(SECOND_PRN_ID)
     ])
 
+    const fulfilled = results.filter((r) => r.status === 'fulfilled')
     const rejected = results.filter((r) => r.status === 'rejected')
     expect(rejected).toHaveLength(1)
     expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
+    expect(fulfilled).toHaveLength(1)
+    expect(fulfilled[0].value.status.currentStatus).toBe(
+      PRN_STATUS.AWAITING_ACCEPTANCE
+    )
 
     const events = await ledgerRepository.findAllInLedger({
       organisationId: ORG_ID,
@@ -806,5 +812,6 @@ describe('updatePrnStatus concurrency', () => {
       expect.any(String),
       expect.any(String)
     ])
+    expect(notes[0]?.prnNumber).not.toBe(notes[1]?.prnNumber)
   })
 })
