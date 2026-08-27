@@ -193,8 +193,8 @@ async function applyPrnTransition(ctx) {
     }
   }
 
-  // The note takes its number before the event that announces it, so that a
-  // read landing between the two never sees an issuance with no number on it.
+  // The note takes its number before the event announcing it, so a read landing
+  // between the two never sees an issuance with no number.
   const numbered = issuance
     ? await reservePrnNumber(ctx.prnRepository, {
         prn,
@@ -317,8 +317,7 @@ function buildCommandPayload(prn, obligationYear) {
  *
  * `version` is read off the PRN as handed in rather than off the fold, because
  * the repository's optimistic-concurrency guard owns it and the fold leaves it
- * alone. On the issuance path that PRN is the one the number reservation wrote,
- * so the version is the one that write advanced to.
+ * alone.
  *
  * @param {PrnTransitionContext} ctx
  * @param {Object} committed

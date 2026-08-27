@@ -80,9 +80,7 @@
 
 /**
  * Reads the notes an accreditation holds, among the ids asked for. Deleted
- * notes are not among them, so a ledger states null for every event of one. A
- * deleted note can still hold a number, reserved for an issuance that was then
- * refused; no note was issued under it, so the ledger does not state it.
+ * notes are not among them, so a ledger states null for every event of one.
  *
  * @typedef {Object} LedgerNoteReader
  * @property {(params: WasteBalanceLedgerId & { accreditationId: string, ids: string[] }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds

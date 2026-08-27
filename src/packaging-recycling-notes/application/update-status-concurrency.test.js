@@ -802,8 +802,7 @@ describe('updatePrnStatus concurrency', () => {
       events.filter((event) => event.kind === LEDGER_EVENT_KIND.PRN_ISSUED)
     ).toHaveLength(1)
 
-    // Both notes took a number before reaching the ledger, so the one refused
-    // the slot is left holding the number it did not get to use.
+    // Both notes took a number before reaching the ledger.
     const notes = await Promise.all([
       prnRepository.findById(PRN_ID),
       prnRepository.findById(SECOND_PRN_ID)
@@ -814,16 +813,15 @@ describe('updatePrnStatus concurrency', () => {
     ])
     expect(notes[0]?.prnNumber).not.toBe(notes[1]?.prnNumber)
 
-    // Holding an unused number does not strand the note: its own next attempt
-    // takes a number again and reaches the ledger.
-    const refusedId =
+    // The refused note keeps its number for its next attempt.
+    const refusedIndex =
       notes[0]?.status.currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
-        ? PRN_ID
-        : SECOND_PRN_ID
-    const reissued = await issue(refusedId)
+        ? 0
+        : 1
+    const reissued = await issue(refusedIndex === 0 ? PRN_ID : SECOND_PRN_ID)
 
     expect(reissued.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
-    expect(reissued.prnNumber).toEqual(expect.any(String))
+    expect(reissued.prnNumber).toBe(notes[refusedIndex]?.prnNumber)
 
     const afterRetry = await ledgerRepository.findAllInLedger({
       organisationId: ORG_ID,
