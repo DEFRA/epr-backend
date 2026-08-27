@@ -14,7 +14,9 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 /**
  * Write the note's number onto its document, retrying with a new suffix while
  * the generated one is already taken. The unique index on the number is what
- * settles the collision, so the write is the only way to find out.
+ * settles the collision, so the write is the only way to find out. The document
+ * written is the caught-up projection handed in, so this also flushes the fold
+ * the transition was decided against.
  *
  * Running before the append moves where a same-note race is refused: a second
  * issuance fails on this document write rather than at the ledger slot. An

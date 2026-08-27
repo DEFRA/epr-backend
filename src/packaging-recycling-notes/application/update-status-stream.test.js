@@ -397,6 +397,15 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
         actor: PRN_ACTOR.SIGNATORY
       })
     ).rejects.toThrow(/Unable to generate unique PRN number/)
+
+    // Numbering runs first, so exhausting every suffix announces no issuance.
+    const all = await ledgerRepository.findAllInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
+    expect(all).toHaveLength(1)
+    expect(all.at(-1)?.number).toBe(SEED_NUMBER)
   })
 
   it('throws Boom.badImplementation when the number write returns null on issuance', async () => {

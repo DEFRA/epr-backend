@@ -813,5 +813,25 @@ describe('updatePrnStatus concurrency', () => {
       expect.any(String)
     ])
     expect(notes[0]?.prnNumber).not.toBe(notes[1]?.prnNumber)
+
+    // Holding an unused number does not strand the note: its own next attempt
+    // takes a number again and reaches the ledger.
+    const refusedId =
+      notes[0]?.status.currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
+        ? PRN_ID
+        : SECOND_PRN_ID
+    const reissued = await issue(refusedId)
+
+    expect(reissued.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+    expect(reissued.prnNumber).toEqual(expect.any(String))
+
+    const afterRetry = await ledgerRepository.findAllInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
+    expect(
+      afterRetry.filter((event) => event.kind === LEDGER_EVENT_KIND.PRN_ISSUED)
+    ).toHaveLength(2)
   })
 })
