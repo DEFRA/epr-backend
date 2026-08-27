@@ -45,7 +45,8 @@ const summaryLogSchema = Joi.object({
  * It is null while the note has no number, and null for a deleted note whatever
  * number it holds, because a ledger read does not reach one. A note takes its
  * number before the event announcing its issue reaches the stream, so an issue
- * never reads back without one.
+ * reads back without one only where it was appended before that ordering held
+ * and its number never reached the document.
  *
  * `tonnage` is the tonnage of the note itself, not the amount the balance
  * moved. Accepting or rejecting a note moves neither total.

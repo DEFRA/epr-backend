@@ -22,10 +22,11 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
  * the event announcing the issue without also seeing the number it was issued
  * with. The cost falls on the issuance that is then refused, because a
  * competing writer took the ledger slot: the note is left holding the number it
- * did not get to use — replaced by the next issuance attempt, and announced by
- * no event of that note's in the meantime — and the competing writer, having
- * read the note before this write, finds its own version stale. Both are
- * tracked separately.
+ * did not get to use until the next issuance attempt replaces it, and a ledger
+ * read states that number on the note's earlier events in the meantime, because
+ * it maps one number per note onto every event of that note. The competing
+ * writer, having read the note before this write, finds its own version stale.
+ * Both are tracked separately.
  *
  * @param {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @param {Object} issuing
@@ -49,7 +50,7 @@ export async function reservePrnNumber(prnRepository, { prn, accreditation }) {
         expectedVersion: prn.version
       })
       if (!result) {
-        throw Boom.badImplementation('Failed to persist PRN projection')
+        throw Boom.badImplementation("Failed to write the PRN's number")
       }
       return result
     } catch (error) {
@@ -60,5 +61,7 @@ export async function reservePrnNumber(prnRepository, { prn, accreditation }) {
     }
   }
 
-  throw new Error('Unable to generate unique PRN number after all retries')
+  throw Boom.badImplementation(
+    'Unable to generate unique PRN number after all retries'
+  )
 }
