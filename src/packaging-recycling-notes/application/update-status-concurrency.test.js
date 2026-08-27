@@ -12,6 +12,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { readLedger } from '#waste-balances/application/read-ledger.js'
 import {
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
@@ -49,6 +50,7 @@ const noopLogger = () => ({
 })
 
 const PRN_ID = '507f1f77bcf86cd799439011'
+const SECOND_PRN_ID = '507f1f77bcf86cd799439012'
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
 const REG_ID = 'reg-789'
@@ -79,6 +81,10 @@ const PRN_BASE = {
 const buildDraftSeed = () =>
   /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
     buildDraftPrn(PRN_BASE)
+  )
+const buildSecondIssuableSeed = () =>
+  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+    buildAwaitingAuthorisationPrn({ ...PRN_BASE, id: SECOND_PRN_ID })
   )
 const buildIssuableSeed = () =>
   /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
@@ -692,5 +698,113 @@ describe('updatePrnStatus concurrency', () => {
 
     const stored = await prnRepository.findById(PRN_ID)
     expect(stored?.status.currentStatus).toBe(PRN_STATUS.DRAFT)
+  })
+  it('states the note number on the issuing event to a read landing as it commits', async () => {
+    const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
+      buildIssuableSeed()
+    ])
+    const prnRepository = prnFactory(noopLogger())
+
+    const committedLedger = createInMemoryLedgerRepository()()
+    await seedClosingBalance(committedLedger, buildBalanceSeed())
+
+    /** @type {import('#waste-balances/application/read-ledger.js').LedgerResource[]} */
+    const reads = []
+    const ledgerRepository = {
+      ...committedLedger,
+      appendEvents: async (
+        /** @type {Parameters<typeof committedLedger.appendEvents>[0]} */ events
+      ) => {
+        const appended = await committedLedger.appendEvents(events)
+        reads.push(
+          await readLedger(committedLedger, prnRepository, {
+            organisationId: ORG_ID,
+            registrationId: REG_ID,
+            accreditationId: ACC_ID
+          })
+        )
+        return appended
+      }
+    }
+
+    const issued = await updatePrnStatus({
+      prnRepository,
+      ledgerRepository,
+      organisationsRepository: buildOrganisationsRepository(),
+      prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
+      logger: noopLogger(),
+      id: PRN_ID,
+      organisationId: ORG_ID,
+      accreditationId: ACC_ID,
+      registrationId: REG_ID,
+      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      actor: PRN_ACTOR.SIGNATORY,
+      user: { id: 'user-789', name: 'Test User' }
+    })
+
+    const issuingEvent = reads
+      .flatMap((read) => read.events)
+      .find((event) => event.kind === LEDGER_EVENT_KIND.PRN_ISSUED)
+
+    expect(issuingEvent).toBeDefined()
+    expect(issued.prnNumber).toEqual(expect.any(String))
+    expect(issuingEvent?.prn?.prnNumber).toBe(issued.prnNumber)
+  })
+
+  it('lets only one of two notes issuing at once onto the ledger', async () => {
+    const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
+      buildIssuableSeed(),
+      buildSecondIssuableSeed()
+    ])
+    const prnRepository = prnFactory(noopLogger())
+
+    const ledgerRepository = createInMemoryLedgerRepository()()
+    await seedClosingBalance(ledgerRepository, buildBalanceSeed())
+    const organisationsRepository = buildOrganisationsRepository()
+
+    const issue = (/** @type {string} */ id) =>
+      updatePrnStatus({
+        prnRepository,
+        ledgerRepository,
+        organisationsRepository,
+        prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
+        logger: noopLogger(),
+        id,
+        organisationId: ORG_ID,
+        accreditationId: ACC_ID,
+        registrationId: REG_ID,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
+        user: { id: 'user-789', name: 'Test User' }
+      })
+
+    const results = await Promise.allSettled([
+      issue(PRN_ID),
+      issue(SECOND_PRN_ID)
+    ])
+
+    const rejected = results.filter((r) => r.status === 'rejected')
+    expect(rejected).toHaveLength(1)
+    expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
+
+    const events = await ledgerRepository.findAllInLedger({
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    })
+    expect(
+      events.filter((event) => event.kind === LEDGER_EVENT_KIND.PRN_ISSUED)
+    ).toHaveLength(1)
+
+    // Both notes took a number before reaching the ledger, so the one refused
+    // the slot is left holding the number it did not get to use.
+    const notes = await Promise.all([
+      prnRepository.findById(PRN_ID),
+      prnRepository.findById(SECOND_PRN_ID)
+    ])
+    expect(notes.map((note) => note?.prnNumber)).toEqual([
+      expect.any(String),
+      expect.any(String)
+    ])
   })
 })
