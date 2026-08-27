@@ -20,13 +20,14 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
  *
  * This runs before the issuance event is appended, so that no reader can see
  * the event announcing the issue without also seeing the number it was issued
- * with. The cost falls on the issuance that is then refused, because a
- * competing writer took the ledger slot: the note is left holding the number it
- * did not get to use until the next issuance attempt replaces it, and a ledger
- * read states that number on the note's earlier events in the meantime, because
- * it maps one number per note onto every event of that note. The competing
- * writer, having read the note before this write, finds its own version stale.
- * Both are tracked separately.
+ * with. The cost falls on the issuance that is then refused because another
+ * note took the ledger slot: it is left holding the number it did not get to
+ * use until its own next issuance attempt replaces it, and a ledger read states
+ * that number on the note's earlier events in the meantime, because it maps one
+ * number per note onto every event of that note. A second issuance of the same
+ * note is refused earlier and differently — it read the note before this write,
+ * so this write leaves its version stale and it never reaches the ledger. Both
+ * are tracked separately.
  *
  * @param {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @param {Object} issuing
