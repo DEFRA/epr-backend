@@ -13,7 +13,7 @@ import { throwWatermarkRegression } from './watermark-guard.js'
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
-/** @import { FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, PersistProjectionParams, UpdateStatusParams } from './port.js' */
+/** @import { FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, PersistProjectionParams, UpdateStatusParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 
 const COLLECTION_NAME = 'packaging-recycling-notes'
@@ -177,6 +177,50 @@ const performFindByAccreditation = async (
   const docs = await db
     .collection(COLLECTION_NAME)
     .find({
+      'organisation.id': organisationId,
+      registrationId,
+      'accreditation.id': accreditationId,
+      'status.currentStatus': { $ne: PRN_STATUS.DELETED }
+    })
+    .toArray()
+
+  return docs.map((doc) =>
+    validatePrnRead({ ...doc, id: doc._id.toHexString() })
+  )
+}
+
+/**
+ * A note id reaches this repository from a stored waste-balance ledger event,
+ * whose schema constrains the id to a string and no further. Anything that is
+ * not a document id cannot name a stored note, so it is dropped rather than
+ * handed to the driver, which would throw on it.
+ *
+ * @param {string} id
+ * @returns {boolean}
+ */
+const isDocumentId = (id) => /^[0-9a-f]{24}$/i.test(id)
+
+/**
+ * @param {Db} db
+ * @param {FindByIdsParams} params
+ * @returns {Promise<PackagingRecyclingNote[]>}
+ */
+const performFindByIds = async (
+  db,
+  { organisationId, registrationId, accreditationId, ids }
+) => {
+  const documentIds = ids
+    .filter(isDocumentId)
+    .map((id) => ObjectId.createFromHexString(id))
+
+  if (documentIds.length === 0) {
+    return []
+  }
+
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({
+      _id: { $in: documentIds },
       'organisation.id': organisationId,
       registrationId,
       'accreditation.id': accreditationId,
@@ -488,6 +532,7 @@ export const createPackagingRecyclingNotesRepository = async (
     create: (prn) => performCreate(db, prn),
     findByAccreditation: (accreditationId) =>
       performFindByAccreditation(db, accreditationId),
+    findByIds: (params) => performFindByIds(db, params),
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
     findByStatus: performFindByStatus(db, excludeOrganisationIds),

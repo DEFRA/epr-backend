@@ -97,6 +97,25 @@ const performFindByAccreditation =
     return results
   }
 
+const performFindByIds =
+  (storage) =>
+  async ({ organisationId, registrationId, accreditationId, ids }) => {
+    const wanted = new Set(ids)
+    const results = []
+    for (const prn of storage.values()) {
+      if (
+        wanted.has(prn.id) &&
+        prn.organisation?.id === organisationId &&
+        prn.registrationId === registrationId &&
+        prn.accreditation?.id === accreditationId &&
+        prn.status?.currentStatus !== PRN_STATUS.DELETED
+      ) {
+        results.push(structuredClone(prn))
+      }
+    }
+    return results
+  }
+
 /**
  * @param {PackagingRecyclingNote['status']['currentStatusAt'] | undefined} statusAt
  * @param {FindByStatusParams['dateFrom']} dateFrom
@@ -331,6 +350,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
   return (/** @type {TypedLogger} */ logger) => ({
     create: performCreate(storage),
     findByAccreditation: performFindByAccreditation(storage),
+    findByIds: performFindByIds(storage),
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),
     findByStatus: performFindByStatus(storage, excludeOrganisationIds),

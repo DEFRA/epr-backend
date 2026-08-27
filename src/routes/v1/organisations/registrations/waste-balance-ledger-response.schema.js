@@ -39,11 +39,15 @@ const summaryLogSchema = Joi.object({
 })
 
 /**
+ * `prnNumber` is null wherever the read sees no number on the note. Null does
+ * not mean the note is unissued.
+ *
  * `tonnage` is the tonnage of the note itself, not the amount the balance
  * moved. Accepting or rejecting a note moves neither total.
  */
 const prnSchema = Joi.object({
   id: Joi.string().required(),
+  prnNumber: Joi.string().allow(null).required(),
   tonnage: Joi.number().required()
 })
 

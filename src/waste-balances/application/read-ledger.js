@@ -50,7 +50,7 @@
  * moved. Accepting or rejecting a note moves neither total.
  *
  * @typedef {LedgerEventCommon & {
- *   prn: { id: string, tonnage: number },
+ *   prn: { id: string, prnNumber: string | null, tonnage: number },
  *   summaryLog?: never
  * }} PrnEventResource
  */
@@ -76,6 +76,16 @@
  * @typedef {Object} LedgerResource
  * @property {WasteBalanceLedgerId} ledger
  * @property {LedgerEventResource[]} events
+ */
+
+/**
+ * Reads the notes an accreditation holds, among the ids asked for. Deleted
+ * notes are not among them, and their absence costs a ledger read nothing: a
+ * note can only be deleted before it is issued, and only issue gives it a
+ * number. A note this reader omits has no number to state.
+ *
+ * @typedef {Object} LedgerNoteReader
+ * @property {(params: WasteBalanceLedgerId & { accreditationId: string, ids: string[] }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds
  */
 
 /**
@@ -116,10 +126,41 @@ const toActor = ({ id, name, email }) => ({ id, name, email })
 const creditsASummaryLog = (payload) => 'summaryLogId' in payload
 
 /**
+ * @param {LedgerNoteReader} noteReader
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {LedgerEvent[]} events
+ * @returns {Promise<Map<string, string | null>>}
+ */
+const noteNumbersById = async (noteReader, ledgerId, events) => {
+  const { accreditationId } = ledgerId
+
+  if (accreditationId === null) {
+    return new Map()
+  }
+
+  const noteIds = events.flatMap((event) =>
+    creditsASummaryLog(event.payload) ? [] : [event.payload.prnId]
+  )
+
+  if (noteIds.length === 0) {
+    return new Map()
+  }
+
+  const notes = await noteReader.findByIds({
+    ...ledgerId,
+    accreditationId,
+    ids: noteIds
+  })
+
+  return new Map(notes.map((note) => [note.id, note.prnNumber ?? null]))
+}
+
+/**
  * @param {LedgerEvent} event
+ * @param {Map<string, string | null>} noteNumbers
  * @returns {LedgerEventResource}
  */
-const toEventResource = (event) => {
+const toEventResource = (event, noteNumbers) => {
   const common = {
     number: event.number,
     kind: event.kind,
@@ -141,7 +182,11 @@ const toEventResource = (event) => {
       }
     : {
         ...common,
-        prn: { id: event.payload.prnId, tonnage: event.payload.amount }
+        prn: {
+          id: event.payload.prnId,
+          prnNumber: noteNumbers.get(event.payload.prnId) ?? null,
+          tonnage: event.payload.amount
+        }
       }
 }
 
@@ -158,13 +203,17 @@ const toEventResource = (event) => {
  * without changing the shape.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
+ * @param {LedgerNoteReader} noteReader
  * @param {WasteBalanceLedgerId} ledgerId - The registration or accreditation
  *   whose ledger is read.
  * @returns {Promise<LedgerResource>}
  */
-export const readLedger = async (ledgerRepository, ledgerId) => ({
-  ledger: toLedger(ledgerId),
-  events: (await ledgerRepository.findAllInLedger(ledgerId)).map(
-    toEventResource
-  )
-})
+export const readLedger = async (ledgerRepository, noteReader, ledgerId) => {
+  const events = await ledgerRepository.findAllInLedger(ledgerId)
+  const noteNumbers = await noteNumbersById(noteReader, ledgerId, events)
+
+  return {
+    ledger: toLedger(ledgerId),
+    events: events.map((event) => toEventResource(event, noteNumbers))
+  }
+}
