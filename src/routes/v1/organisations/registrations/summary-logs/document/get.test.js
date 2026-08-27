@@ -5,9 +5,10 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { asServiceMaintainer } from '#test/inject-auth.js'
+import { asServiceMaintainer, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/document', () => {
@@ -24,7 +25,54 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     ACCREDITATION_NUMBER: 'EPR123456',
     REGISTRATION_NUMBER: 'R-2026-0099'
   }
-  const loadsByReportingPeriod = emptyLoadsByReportingPeriod()
+  // A populated breakdown: a balance-affecting added load carrying real tonnage
+  // in an open period, and a load excluded because its period is already closed.
+  // This is the data the endpoint exists to surface, so the test asserts it
+  // round-trips intact rather than proving only that an empty shape passes.
+  const loadsByReportingPeriod = {
+    ...emptyLoadsByReportingPeriod(),
+    openPeriodLoads: {
+      added: {
+        balanceAffecting: {
+          count: 1,
+          tonnageDelta: 18.5,
+          rows: [
+            {
+              rowId: 'r0002',
+              wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+              exclusionReasons: [],
+              tonnageDelta: 18.5
+            }
+          ]
+        },
+        nonBalanceAffecting: { count: 0, rows: [] }
+      },
+      adjusted: {
+        balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+        nonBalanceAffecting: { count: 0, rows: [] }
+      }
+    },
+    closedPeriodLoads: {
+      added: {
+        balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+        nonBalanceAffecting: {
+          count: 1,
+          rows: [
+            {
+              rowId: 'r0130',
+              wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+              exclusionReasons: ['periodAlreadySubmitted'],
+              tonnageDelta: 0
+            }
+          ]
+        }
+      },
+      adjusted: {
+        balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
+        nonBalanceAffecting: { count: 0, rows: [] }
+      }
+    }
+  }
 
   const createServer = async (options = {}) => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -77,6 +125,23 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         meta,
         loadsByReportingPeriod
       })
+      // the populated per-period rows survive the round trip intact, including
+      // the balance-affecting tonnage delta and the exclusion reason
+      expect(
+        response.result.loadsByReportingPeriod.openPeriodLoads.added
+          .balanceAffecting.rows
+      ).toEqual([
+        {
+          rowId: 'r0002',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          exclusionReasons: [],
+          tonnageDelta: 18.5
+        }
+      ])
+      expect(
+        response.result.loadsByReportingPeriod.closedPeriodLoads.added
+          .nonBalanceAffecting.rows[0].exclusionReasons
+      ).toEqual(['periodAlreadySubmitted'])
       // file (with its storage uri) is part of the raw document
       expect(response.result.file).toBeDefined()
       expect(response.result.file.uri).toBeDefined()
@@ -112,7 +177,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/document`,
-        ...asServiceMaintainer({ scope: ['standardUser'] })
+        ...asUnscopedAdminUser()
       })
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
