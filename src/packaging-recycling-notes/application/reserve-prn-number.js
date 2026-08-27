@@ -9,25 +9,18 @@ import Boom from '@hapi/boom'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 
-/** Suffixes A-Z for PRN-number collision avoidance on issuance */
 const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 /**
  * Write the note's number onto its document, retrying with a new suffix while
  * the generated one is already taken. The unique index on the number is what
- * settles the collision, so the write is the only way to find out; `prnNumber`
- * is the only field that changes between attempts.
+ * settles the collision, so the write is the only way to find out.
  *
- * This runs before the issuance event is appended, so that no reader can see
- * the event announcing the issue without also seeing the number it was issued
- * with. The cost falls on the issuance that is then refused because another
- * note took the ledger slot: it is left holding the number it did not get to
- * use until its own next issuance attempt replaces it, and a ledger read states
- * that number on the note's earlier events in the meantime, because it maps one
- * number per note onto every event of that note. A second issuance of the same
- * note is refused earlier and differently — it read the note before this write,
- * so this write leaves its version stale and it never reaches the ledger. Both
- * are tracked separately.
+ * Running before the append moves where a same-note race is refused: a second
+ * issuance fails on this document write rather than at the ledger slot. An
+ * issuance refused the slot by another note is left holding a number it did not
+ * get to use until its own next attempt replaces it. Both costs are tracked
+ * separately.
  *
  * @param {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @param {Object} issuing
