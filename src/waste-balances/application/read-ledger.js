@@ -81,8 +81,8 @@
 /**
  * Reads the notes an accreditation holds, among the ids asked for. Deleted
  * notes are not among them, and their absence costs a ledger read nothing: a
- * note can only be deleted before it is issued, and only issue gives it a
- * number. A note this reader omits has no number to state.
+ * note can only be deleted before it is issued, so nothing it left on the
+ * stream announces an issue and no event of its has a number to state.
  *
  * @typedef {Object} LedgerNoteReader
  * @property {(params: WasteBalanceLedgerId & { accreditationId: string, ids: string[] }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds

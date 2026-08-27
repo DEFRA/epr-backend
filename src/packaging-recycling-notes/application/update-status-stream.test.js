@@ -169,7 +169,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     expect(reread?.version).toBe(2)
   })
 
-  it('appends the balance event before persisting the projection when issuing', async () => {
+  it('takes the note number before the issuing event and projects after it', async () => {
     const persistProjection = vi
       .fn()
       .mockImplementation(async ({ projection }) => projection)
@@ -191,10 +191,15 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       actor: PRN_ACTOR.SIGNATORY
     })
 
-    expect(appendEvents.mock.invocationCallOrder[0]).toBeLessThan(
-      persistProjection.mock.invocationCallOrder[0]
+    const [numbering, projecting] = persistProjection.mock.invocationCallOrder
+    const [appending] = appendEvents.mock.invocationCallOrder
+    expect(numbering).toBeLessThan(appending)
+    expect(appending).toBeLessThan(projecting)
+
+    expect(persistProjection.mock.calls[0][0].projection.prnNumber).toEqual(
+      expect.any(String)
     )
-    expect(persistProjection).toHaveBeenCalledWith(
+    expect(persistProjection).toHaveBeenLastCalledWith(
       expect.objectContaining({
         projection: expect.objectContaining({
           lastAppliedEventNumber: APPENDED_WATERMARK
@@ -363,7 +368,9 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       actor: PRN_ACTOR.SIGNATORY
     })
 
-    expect(persistProjection).toHaveBeenCalledTimes(2)
+    // Two number reservations, then the projection persist that follows the
+    // appended event.
+    expect(persistProjection).toHaveBeenCalledTimes(3)
   })
 
   it('throws after exhausting every PRN number suffix retry on issuance', async () => {
@@ -436,7 +443,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     ).rejects.toThrow(/Failed to persist PRN projection/)
   })
 
-  it('leaves the appended event in place when persistProjection fails on issuance', async () => {
+  it('announces no issuance when the note cannot take its number', async () => {
     const persistProjection = vi
       .fn()
       .mockRejectedValue(new Error('doc write failed'))
@@ -464,8 +471,8 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       registrationId: REG_ID,
       accreditationId: ACC_ID
     })
-    expect(all).toHaveLength(2)
-    expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
+    expect(all).toHaveLength(1)
+    expect(all.at(-1)?.number).toBe(SEED_NUMBER)
   })
 
   it('recovers an accepted December-waste obligation year from the stream when projection persistence fails', async () => {

@@ -10,6 +10,7 @@ import { ACCREDITATION_STATUS, REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
+import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import {
   buildDraftPrn,
@@ -205,12 +206,39 @@ const buildOrganisationsRepository = () =>
 const COMMITTED_EVENT_NUMBER = 2
 
 /**
+ * Whichever guard refuses the loser, exactly one writer commits: the stream
+ * holds a single event past the seed, and the PRN document — persisted only by
+ * the winner — reflects that one transition.
+ *
+ * @param {PromiseSettledResult<unknown>[]} results
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
+ * @param {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} expectedStatus
+ */
+const expectOneCommittedTransition = async (
+  results,
+  ledgerRepository,
+  prnRepository,
+  expectedStatus
+) => {
+  expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1)
+
+  const latest = await ledgerRepository.findLatestInLedger({
+    organisationId: ORG_ID,
+    registrationId: REG_ID,
+    accreditationId: ACC_ID
+  })
+  expect(latest?.number).toBe(COMMITTED_EVENT_NUMBER)
+
+  const prn = await prnRepository.findById(PRN_ID)
+  expect(prn?.status.currentStatus).toBe(expectedStatus)
+}
+
+/**
  * On the ledger path concurrent writers serialise at the append-only stream
  * slot: the first writer claims the next slot, the second collides with a
- * LedgerSlotConflictError. Exactly one writer commits, so the stream holds a
- * single event past the seed and the PRN document — persisted only by the
- * winner, since the loser fails at the stream append before persisting —
- * reflects that one transition.
+ * LedgerSlotConflictError. The loser fails at the stream append, before
+ * persisting anything.
  *
  * @param {PromiseSettledResult<unknown>[]} results
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
@@ -223,22 +251,46 @@ const expectOneWinsOneStreamConflict = async (
   prnRepository,
   expectedStatus
 ) => {
-  const fulfilled = results.filter((r) => r.status === 'fulfilled')
   const rejected = results.filter((r) => r.status === 'rejected')
 
-  expect(fulfilled).toHaveLength(1)
   expect(rejected).toHaveLength(1)
   expect(rejected[0].reason).toBeInstanceOf(LedgerSlotConflictError)
 
-  const latest = await ledgerRepository.findLatestInLedger({
-    organisationId: ORG_ID,
-    registrationId: REG_ID,
-    accreditationId: ACC_ID
-  })
-  expect(latest?.number).toBe(COMMITTED_EVENT_NUMBER)
+  await expectOneCommittedTransition(
+    results,
+    ledgerRepository,
+    prnRepository,
+    expectedStatus
+  )
+}
 
-  const prn = await prnRepository.findById(PRN_ID)
-  expect(prn?.status.currentStatus).toBe(expectedStatus)
+/**
+ * Two issuances of the same note serialise a step earlier than the stream slot:
+ * taking the note's number is a document write, so the second writer's stale
+ * version is refused before it reaches the ledger at all.
+ *
+ * @param {PromiseSettledResult<unknown>[]} results
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
+ * @param {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} expectedStatus
+ */
+const expectOneWinsOneDocumentConflict = async (
+  results,
+  ledgerRepository,
+  prnRepository,
+  expectedStatus
+) => {
+  const rejected = results.filter((r) => r.status === 'rejected')
+
+  expect(rejected).toHaveLength(1)
+  expect(rejected[0].reason?.data?.kind).toBe(PRN_VERSION_CONFLICT)
+
+  await expectOneCommittedTransition(
+    results,
+    ledgerRepository,
+    prnRepository,
+    expectedStatus
+  )
 }
 
 describe('updatePrnStatus concurrency', () => {
@@ -271,7 +323,7 @@ describe('updatePrnStatus concurrency', () => {
 
     const results = await Promise.allSettled([issue(), issue()])
 
-    await expectOneWinsOneStreamConflict(
+    await expectOneWinsOneDocumentConflict(
       results,
       ledgerRepository,
       prnRepository,

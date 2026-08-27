@@ -13,7 +13,7 @@ import { decidePrnTransition } from '#packaging-recycling-notes/domain/prn-trans
 import { selectObligationYearForAcceptance } from '#packaging-recycling-notes/domain/obligation-year.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
-import { persistIssuedPrn } from './persist-issued-prn.js'
+import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
 
 /**
@@ -193,13 +193,21 @@ async function applyPrnTransition(ctx) {
     }
   }
 
+  // The note takes its number before the event that announces it, so that a
+  // read landing between the two never sees an issuance with no number on it.
+  const numbered = issuance
+    ? await reservePrnNumber(ctx.prnRepository, {
+        prn,
+        accreditation: issuance.accreditation
+      })
+    : prn
+
   const events = await append(outcome.balanceEvents)
 
   return {
     updatedPrn: await persistProjectedPrn(ctx, {
-      prn,
+      prn: numbered,
       fromStatus,
-      issuance,
       events
     }),
     fromStatus
@@ -307,38 +315,27 @@ function buildCommandPayload(prn, obligationYear) {
  * result. There is no compensation: events appended without the document
  * persisted are recovered by the read-side catch-up on the next read.
  *
- * `version` is read off the PRN as loaded rather than off the fold, because the
- * repository's optimistic-concurrency guard owns it and the fold leaves it
- * alone.
+ * `version` is read off the PRN as handed in rather than off the fold, because
+ * the repository's optimistic-concurrency guard owns it and the fold leaves it
+ * alone. On the issuance path that PRN is the one the number reservation wrote,
+ * so the version is the one that write advanced to.
  *
  * @param {PrnTransitionContext} ctx
  * @param {Object} committed
  * @param {PackagingRecyclingNote} committed.prn
  * @param {PrnStatus} committed.fromStatus
- * @param {{ accreditation: import('#domain/organisations/accreditation.js').Accreditation } | undefined} committed.issuance
  * @param {import('#waste-balances/repository/ledger-port.js').LedgerEvent[]} committed.events
  * @returns {Promise<PackagingRecyclingNote>}
  */
 async function persistProjectedPrn(
   { prnRepository, logger, newStatus },
-  { prn, fromStatus, issuance, events }
+  { prn, fromStatus, events }
 ) {
   logWasteBalanceUpdate(logger, { events, prn, fromStatus, newStatus })
 
-  const updated = applyCatchupEventsToPrn(prn, events)
-  const expectedVersion = prn.version
-
-  if (issuance) {
-    return persistIssuedPrn(prnRepository, {
-      projection: updated,
-      expectedVersion,
-      accreditation: issuance.accreditation
-    })
-  }
-
   const persisted = await prnRepository.persistProjection({
-    projection: updated,
-    expectedVersion
+    projection: applyCatchupEventsToPrn(prn, events),
+    expectedVersion: prn.version
   })
   if (!persisted) {
     throw Boom.badImplementation('Failed to persist PRN projection')
