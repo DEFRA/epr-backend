@@ -39,8 +39,10 @@ const summaryLogSchema = Joi.object({
 })
 
 /**
- * `prnNumber` is null wherever the read sees no number on the note. Null does
- * not mean the note is unissued.
+ * `prnNumber` is the number the note carries when the read is taken, not the
+ * one it carried when the event happened, so it reads the same on every event
+ * of that note. It is null while the note has no number, and null for a deleted
+ * note whatever number it holds.
  *
  * `tonnage` is the tonnage of the note itself, not the amount the balance
  * moved. Accepting or rejecting a note moves neither total.
