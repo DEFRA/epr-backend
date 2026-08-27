@@ -352,24 +352,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    preCpaResubmissionBackfill: {
-      doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768).',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
-    },
-    preCpaResubmissionReport: {
-      doc: 'Feature Flag: Run the estate-wide pre-CPA resubmission sizing diagnostic on startup (PAE-1747)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_REPORT'
-    },
-    staleIssuedTonnageReport: {
-      doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
-    },
     reportDataValidation: {
       doc: 'Feature Flag: Block report creation when mandatory summary-log row data is incomplete (PAE-1420)',
       format: Boolean,
