@@ -6,3 +6,59 @@ exclude:
   code:
     - 'src/adapters/repositories/uploads/test-helpers/**'
 
+# The exceljs advisories below have no upstream fix: the version Snyk names as
+# fixed (5.0.0) is not a published exceljs release — it is the version number of
+# an unofficial third-party fork (exceljs-hardened). Each ignore records why the
+# vulnerable code path is unreachable in this service, which only PARSES
+# user-uploaded spreadsheets (reading cell .value) and never WRITES or serialises
+# a workbook with exceljs. Reachability was confirmed by code inspection and by
+# instrumenting exceljs at runtime. Data-amplification on parse is deliberately
+# NOT ignored here — it is reachable and tracked separately.
+ignore:
+  # Prototype Pollution via deepMerge (CVE-2026-78207). The sink is in
+  # Note.get model() — the serialise/WRITE direction. Loading a workbook uses
+  # Note.set model / fromModel, which never calls deepMerge. Instrumenting the
+  # installed exceljs deepMerge showed 0 calls when loading a comment-bearing
+  # workbook and reading cell values (both the DOM workbook.xlsx.load path in
+  # overseas-sites and the streaming WorksheetReader path in summary-logs), vs
+  # 24 calls on the write path. This service has no exceljs write path.
+  SNYK-JS-EXCELJS-19234023:
+    - '*':
+        reason: >-
+          Write/serialise-only sink (Note.get model deepMerge); confirmed
+          unreachable — service only parses and reads cell values, never writes
+          spreadsheets. No upstream fix (exceljs 5.0.0 is an unofficial fork).
+        expires: 2027-02-27T00:00:00.000Z
+  # CSV Injection (formula injection into generated CSV/spreadsheet output). A
+  # write/export concern. This service does not export via exceljs — CSV export
+  # uses @fast-csv/format — so the sink is not reachable.
+  SNYK-JS-EXCELJS-19234021:
+    - '*':
+        reason: >-
+          Export/write-only sink; unreachable — service never writes CSV or
+          spreadsheets via exceljs (CSV export uses @fast-csv/format). No
+          upstream fix (exceljs 5.0.0 is an unofficial fork).
+        expires: 2027-02-27T00:00:00.000Z
+  # External Control of File Name or Path (CVE-2026-78208). The sink is
+  # Workbook.addImage({filename}) -> addMedia() in lib/xlsx/xlsx.js, reached only
+  # when BUILDING and serialising a workbook. This service never adds images or
+  # writes workbooks, so the path-traversal sink is not reachable.
+  SNYK-JS-EXCELJS-19234019:
+    - '*':
+        reason: >-
+          Write-path sink (Workbook.addImage/addMedia); unreachable — service
+          never builds or serialises workbooks. No upstream fix (exceljs 5.0.0
+          is an unofficial fork).
+        expires: 2027-02-27T00:00:00.000Z
+  # Zip Slip via unzipper. Triggers only when EXTRACTING archive entries to disk
+  # (unzipper Extract / Open.directory write-to-path APIs). The summary-log
+  # parser reads the xlsx zip in memory via unzipper.Open.buffer() and never
+  # writes extracted entries to the filesystem, so the traversal sink is not
+  # reachable. No upstream patch is available for unzipper.
+  SNYK-JS-UNZIPPER-18365659:
+    - '*':
+        reason: >-
+          Disk-extraction-only sink; unreachable — parser uses
+          unzipper.Open.buffer (in-memory), never extracts to disk. No upstream
+          patch available.
+        expires: 2027-02-27T00:00:00.000Z
