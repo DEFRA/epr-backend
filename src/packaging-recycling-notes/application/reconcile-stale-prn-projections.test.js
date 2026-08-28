@@ -1,0 +1,290 @@
+import { describe, beforeEach, expect, vi } from 'vitest'
+import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { MongoClient, ObjectId } from 'mongodb'
+import Boom from '@hapi/boom'
+
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
+import {
+  buildAccreditationId,
+  buildAwaitingAcceptancePrn,
+  buildAwaitingAuthorisationPrn,
+  underAccreditation
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import {
+  createMongoLedgerRepository,
+  ensureLedgerCollection,
+  WASTE_BALANCE_EVENTS_COLLECTION_NAME
+} from '#waste-balances/repository/ledger-mongodb.js'
+import {
+  buildPrnIssuedEvent,
+  buildPrnRejectedEvent
+} from '#waste-balances/repository/ledger-test-data.js'
+
+import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
+
+const DATABASE_NAME = 'epr-backend'
+const PRN_COLLECTION_NAME = 'packaging-recycling-notes'
+
+/**
+ * @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger
+ */
+
+/** A complete TypedLogger stub — the reconciler paths under test log nothing. */
+const stubLogger = () =>
+  /** @type {TypedLogger} */ ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn()
+  })
+
+const it = mongoIt.extend({
+  mongoClient: async (/** @type {*} */ { db }, use) => {
+    const client = await MongoClient.connect(db)
+    await use(client)
+    await client.close()
+  },
+
+  database: async (/** @type {*} */ { mongoClient }, use) => {
+    await use(mongoClient.db(DATABASE_NAME))
+  },
+
+  prnCollection: async (/** @type {*} */ { database }, use) => {
+    // Constructing the repository ensures the collection and its indexes.
+    await createPackagingRecyclingNotesRepository(database, [])
+    await use(database.collection(PRN_COLLECTION_NAME))
+  },
+
+  prnRepository: async (/** @type {*} */ { database }, use) => {
+    const factory = await createPackagingRecyclingNotesRepository(database, [])
+    await use(factory(stubLogger()))
+  },
+
+  ledgerCollection: async (/** @type {*} */ { database }, use) => {
+    await ensureLedgerCollection(database)
+    await use(database.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME))
+  },
+
+  service: async (/** @type {*} */ { database }, use) => {
+    const ledgerFactory = await createMongoLedgerRepository(database)
+    await use(createWasteBalanceService(ledgerFactory()))
+  }
+})
+
+/**
+ * Seeds a PRN stored at `awaiting_acceptance` with watermark 2, then appends a
+ * rejection at slot 3 the projection has never applied — so the stored status
+ * lags the ledger. Returns the created (read-shaped) PRN.
+ */
+const seedDriftingPrn = async (prnRepository, ledgerCollection) => {
+  const ids = buildAccreditationId()
+  const created = await prnRepository.create(
+    buildAwaitingAcceptancePrn({
+      ...underAccreditation(ids),
+      lastAppliedEventNumber: 2
+    })
+  )
+  await ledgerCollection.insertOne(
+    buildPrnRejectedEvent({
+      ...ids,
+      number: 3,
+      payload: { prnId: created.id, amount: 50 }
+    })
+  )
+  return created
+}
+
+const findStored = (prnCollection, id) =>
+  prnCollection.findOne({ _id: ObjectId.createFromHexString(id) })
+
+describe('reconcileStalePrnProjections', () => {
+  beforeEach(async (/** @type {*} */ { prnCollection, ledgerCollection }) => {
+    await prnCollection.deleteMany({})
+    await ledgerCollection.deleteMany({})
+  })
+
+  it('reports a PRN whose watermark sits behind the ledger, and writes nothing in dry-run', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service
+  }) => {
+    const created = await seedDriftingPrn(prnRepository, ledgerCollection)
+
+    const result = await reconcileStalePrnProjections(
+      { prnCollection, prnRepository, service },
+      { isDryRun: true }
+    )
+
+    expect(result.scanned).toBe(1)
+    expect(result.drifting).toBe(1)
+    expect(result.repaired).toBe(0)
+    expect(result.stillDrifting).toBe(0)
+    expect(result.reports).toEqual([
+      {
+        prnId: created.id,
+        prnNumber: created.prnNumber,
+        currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        lastAppliedEventNumber: 2,
+        unappliedCount: 1,
+        minUnappliedNumber: 3,
+        wouldBecomeStatus: PRN_STATUS.AWAITING_CANCELLATION
+      }
+    ])
+
+    const stored = await findStored(prnCollection, created.id)
+    expect(stored.version).toBe(1)
+    expect(stored.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+    expect(stored.lastAppliedEventNumber).toBe(2)
+  })
+
+  it('scans but does not flag a projection whose watermark is level with the ledger', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service
+  }) => {
+    const ids = buildAccreditationId()
+    const created = await prnRepository.create(
+      buildAwaitingAcceptancePrn({
+        ...underAccreditation(ids),
+        lastAppliedEventNumber: 3
+      })
+    )
+    // The event sits at the watermark, not past it — nothing to apply.
+    await ledgerCollection.insertOne(
+      buildPrnRejectedEvent({
+        ...ids,
+        number: 3,
+        payload: { prnId: created.id, amount: 50 }
+      })
+    )
+
+    const result = await reconcileStalePrnProjections(
+      { prnCollection, prnRepository, service },
+      { isDryRun: true }
+    )
+
+    expect(result).toMatchObject({ scanned: 1, drifting: 0 })
+    expect(result.reports).toEqual([])
+  })
+
+  it('folds and persists a drifting projection when not a dry run', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service
+  }) => {
+    const created = await seedDriftingPrn(prnRepository, ledgerCollection)
+
+    const result = await reconcileStalePrnProjections(
+      { prnCollection, prnRepository, service },
+      { isDryRun: false }
+    )
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      drifting: 1,
+      repaired: 1,
+      stillDrifting: 0
+    })
+
+    const stored = await findStored(prnCollection, created.id)
+    expect(stored.version).toBe(2)
+    expect(stored.status.currentStatus).toBe(PRN_STATUS.AWAITING_CANCELLATION)
+    expect(stored.lastAppliedEventNumber).toBe(3)
+    expect(stored.status.rejected).toBeDefined()
+  })
+
+  it('repairs the rest and counts the losers when a persist loses its race', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service
+  }) => {
+    const throwing = await seedDriftingPrn(prnRepository, ledgerCollection)
+    const nulling = await seedDriftingPrn(prnRepository, ledgerCollection)
+    const winning = await seedDriftingPrn(prnRepository, ledgerCollection)
+
+    // A CAS miss surfaces two ways: the mongo repo returns null when the stored
+    // version has moved; a watermark regression throws. Both leave drift.
+    const guardedRepository = {
+      ...prnRepository,
+      persistProjection: async (/** @type {*} */ params) => {
+        if (params.projection.id === throwing.id) {
+          throw Boom.conflict('Version conflict', {
+            kind: PRN_VERSION_CONFLICT
+          })
+        }
+        if (params.projection.id === nulling.id) {
+          return null
+        }
+        return prnRepository.persistProjection(params)
+      }
+    }
+
+    const result = await reconcileStalePrnProjections(
+      { prnCollection, prnRepository: guardedRepository, service },
+      { isDryRun: false }
+    )
+
+    expect(result).toMatchObject({
+      scanned: 3,
+      drifting: 3,
+      repaired: 1,
+      stillDrifting: 2
+    })
+
+    const storedWinner = await findStored(prnCollection, winning.id)
+    expect(storedWinner.version).toBe(2)
+    for (const loser of [throwing, nulling]) {
+      const stored = await findStored(prnCollection, loser.id)
+      expect(stored.version).toBe(1)
+    }
+  })
+
+  it('folds a projection that has applied no events, reporting a null PRN number', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service
+  }) => {
+    const ids = buildAccreditationId()
+    // Awaiting authorisation: created but never issued, so it carries no PRN
+    // number and no watermark. An issuance it never applied leaves it adrift.
+    const created = await prnRepository.create(
+      buildAwaitingAuthorisationPrn(underAccreditation(ids))
+    )
+    await ledgerCollection.insertOne(
+      buildPrnIssuedEvent({
+        ...ids,
+        number: 1,
+        payload: { prnId: created.id, amount: 50 }
+      })
+    )
+
+    const result = await reconcileStalePrnProjections(
+      { prnCollection, prnRepository, service },
+      { isDryRun: true }
+    )
+
+    expect(result).toMatchObject({ scanned: 1, drifting: 1 })
+    expect(result.reports).toEqual([
+      {
+        prnId: created.id,
+        prnNumber: null,
+        currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        lastAppliedEventNumber: undefined,
+        unappliedCount: 1,
+        minUnappliedNumber: 1,
+        wouldBecomeStatus: PRN_STATUS.AWAITING_ACCEPTANCE
+      }
+    ])
+  })
+})

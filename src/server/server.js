@@ -43,6 +43,7 @@ import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
+import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -217,6 +218,7 @@ async function createServer(options = {}) {
     )
     runFormsDataMigration(startedServer)
     runOrganisationValidationSweep(startedServer)
+    runReconcileStalePrnProjections(startedServer)
   })
 
   return server

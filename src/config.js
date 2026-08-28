@@ -363,6 +363,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_PRN_ADMIN_CANCELLATION'
+    },
+    reconcileStalePrnProjections: {
+      doc: 'Feature Flag: Let the startup sweep repair PRN projections whose status lags their ledger, rather than only reporting them (PAE-1908)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
     }
   },
   formSubmissionOverrides: {
