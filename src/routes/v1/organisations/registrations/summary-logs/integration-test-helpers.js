@@ -28,7 +28,7 @@ import assert from 'node:assert/strict'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { StatusHistoryEntry, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { Material, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { AppliedForMaterial, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
@@ -812,7 +812,7 @@ const buildComplexTestOrg = ({
       { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
       { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
     ]),
-    material: /** @type {Material} */ (material),
+    material: /** @type {AppliedForMaterial} */ (material),
     wasteProcessingType: processingType,
     reprocessingType: /** @type {ReprocessingType} */ (reprocessingType),
     formSubmission: { id: registrationId, time: new Date() },

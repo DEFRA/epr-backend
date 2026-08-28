@@ -54,6 +54,7 @@ const regFixture = {
   },
   submittedToRegulator: 'ea',
   submitterContactDetails: userFixture,
+  suppliers: 'Local authority kerbside collections',
   wasteProcessingType: 'reprocessor',
   registrationNumber: 'REG-001',
   status: 'approved',
@@ -335,16 +336,25 @@ describe('resolveDetailedMaterial', () => {
     expect(resolveDetailedMaterial(reg)).toBe('glass_other')
   })
 
-  it('returns glass when a glass registration has no recycling process', () => {
+  it('resolves nothing for a glass registration that carries no recycling process', () => {
     const reg = buildReg({ material: 'glass' })
 
-    expect(resolveDetailedMaterial(reg)).toBe('glass')
+    expect(resolveDetailedMaterial(reg)).toBeNull()
   })
 
-  it('returns glass when the recycling process array is empty', () => {
+  it('resolves nothing when the recycling process array is empty', () => {
     const reg = buildReg({ material: 'glass', glassRecyclingProcess: [] })
 
-    expect(resolveDetailedMaterial(reg)).toBe('glass')
+    expect(resolveDetailedMaterial(reg)).toBeNull()
+  })
+
+  it('resolves nothing for a glass registration carrying both processes, which means it was never split', () => {
+    const reg = buildReg({
+      material: 'glass',
+      glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+    })
+
+    expect(resolveDetailedMaterial(reg)).toBeNull()
   })
 
   it('returns the material unchanged for non-glass registrations', () => {
