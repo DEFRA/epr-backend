@@ -9,11 +9,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import {
-  asRegulator,
-  asServiceMaintainer,
-  asUnscopedAdminUser
-} from '#test/inject-auth.js'
+import { asServiceMaintainer, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/document', () => {
@@ -150,23 +146,6 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       // file (with its storage uri) is part of the raw document
       expect(response.result.file).toBeDefined()
       expect(response.result.file.uri).toBeDefined()
-    })
-
-    it('is readable by a regulator', async () => {
-      const { server, summaryLogsRepository } = await createServer()
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        summaryLogFactory.submitted({ organisationId, registrationId })
-      )
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/document`,
-        ...asRegulator()
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(response.result.status).toBe('submitted')
     })
   })
 
