@@ -133,12 +133,18 @@ export const PARTNERSHIP_TYPE = Object.freeze({
   LTD_LIABILITY: 'ltd_liability'
 })
 
+/**
+ * @typedef {typeof TIME_SCALE[keyof typeof TIME_SCALE]} TimeScale
+ */
 export const TIME_SCALE = Object.freeze({
   WEEKLY: 'weekly',
   MONTHLY: 'monthly',
   YEARLY: 'yearly'
 })
 
+/**
+ * @typedef {typeof WASTE_PERMIT_TYPE[keyof typeof WASTE_PERMIT_TYPE]} WastePermitType
+ */
 export const WASTE_PERMIT_TYPE = Object.freeze({
   ENVIRONMENTAL_PERMIT: 'environmental_permit',
   INSTALLATION_PERMIT: 'installation_permit',

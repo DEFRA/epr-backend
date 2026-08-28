@@ -1,5 +1,5 @@
 /** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
-/** @import {GlassRecyclingProcess, Material, RegistrationStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
+/** @import {GlassRecyclingProcess, Material, RegistrationStatus, ReprocessingType, TimeScale, User, WastePermitType} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -21,7 +21,7 @@
  * @typedef {{
  *  material: Material;
  *  authorisedWeightInTonnes: number;
- *  timeScale: string;
+ *  timeScale: TimeScale;
  * }} AuthorisedMaterial
  */
 
@@ -39,7 +39,7 @@
  * or a set of waste exemptions.
  *
  * @typedef {{
- *  type: string;
+ *  type: WastePermitType;
  *  permitNumber?: string;
  *  exemptions?: WasteExemption[];
  *  authorisedMaterials?: AuthorisedMaterial[];

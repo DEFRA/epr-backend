@@ -252,6 +252,17 @@ describe('csv-columns', () => {
       expect(row[METADATA_COL_INDEX['Material']]).toBe('glass_re_melt')
     })
 
+    it('emits an empty Material column for a glass registration that has not been split', () => {
+      const row = buildDataRow({
+        ...baseInput,
+        registration: buildReg({
+          material: 'glass',
+          glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+        })
+      })
+      expect(row[METADATA_COL_INDEX['Material']]).toBe('')
+    })
+
     it('emits an empty Registration Number when the registration has none', () => {
       const row = buildDataRow({
         ...baseInput,
