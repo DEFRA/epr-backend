@@ -187,7 +187,7 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  *   id: string;
  *   accreditationNumber: string;
  *   accreditationYear: number;
- *   material: import('#domain/organisations/model.js').Material;
+ *   material: import('#domain/organisations/model.js').AppliedForMaterial;
  *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue;
  *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess;
  *   siteAddress?: {

@@ -1,10 +1,11 @@
 import {
   ACTIVE_ACCREDITATION_STATUSES,
+  MATERIAL,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
-/** @import { AccreditationStatus, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
@@ -93,21 +94,24 @@ export function activeAccreditationValidFrom(accreditation) {
 }
 
 /**
- * Returns the record's material at its finest granularity. Glass is the only
- * material that sub-divides: each glass record carries a single recycling
- * process (submissions are split per process upstream), so the process value
- * (glass_re_melt / glass_other) is returned in place of 'glass'.
- * All other materials are returned unchanged.
+ * Returns the material the record is for, or null when it is for none yet.
  *
- * @param {{ material: Material, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
- * @returns {Material | GlassRecyclingProcess}
+ * Glass is the only material that sub-divides. A glass submission is split
+ * upstream into one record per recycling process, so a glass record is for the
+ * precise material named by the single process it carries. One that carries no
+ * process, or more than one, has not been split, and so is not yet for either
+ * of them. All other materials are their own answer.
+ *
+ * @param {{ material: AppliedForMaterial, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
+ * @returns {Material | null}
  */
 export function resolveDetailedMaterial(record) {
-  const glassProcess = record.glassRecyclingProcess
-  if (record.material === 'glass' && glassProcess && glassProcess.length > 0) {
-    return glassProcess[0]
+  if (record.material !== MATERIAL.GLASS) {
+    return record.material
   }
-  return record.material
+
+  const [process, ...furtherProcesses] = record.glassRecyclingProcess ?? []
+  return process !== undefined && furtherProcesses.length === 0 ? process : null
 }
 
 /**

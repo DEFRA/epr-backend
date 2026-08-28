@@ -214,7 +214,7 @@ export const buildDataRow = ({
     uppercaseString(registration.submittedToRegulator),
     org.companyDetails.name,
     registration.registrationNumber ?? '',
-    resolveDetailedMaterial(registration),
+    resolveDetailedMaterial(registration) ?? '',
     data.processingType,
     accredited,
     accreditation?.accreditationNumber ?? '',

@@ -152,7 +152,8 @@ describe('PUT /v1/organisations/{id}', () => {
           'admin.dlq.purge',
           'organisation.search',
           'organisation.read',
-          'waste-balance.ledger.read'
+          'waste-balance.ledger.read',
+          'summary-log.read'
         ])
       }
 

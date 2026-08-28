@@ -8,7 +8,7 @@ import {
 } from './contract/test-data.js'
 
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').AccreditationSnapshot} AccreditationSnapshot */
-/** @typedef {import('#domain/organisations/model.js').Material} Material */
+/** @typedef {import('#domain/organisations/model.js').AppliedForMaterial} AppliedForMaterial */
 
 const buildReadDocument = (overrides = {}) => ({
   id: '507f1f77bcf86cd799439011',
@@ -342,7 +342,7 @@ describe('PRN insert schema', () => {
     })
 
     it('accepts all valid material values', () => {
-      /** @type {Material[]} */
+      /** @type {AppliedForMaterial[]} */
       const materials = [
         'aluminium',
         'fibre',

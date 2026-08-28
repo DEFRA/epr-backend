@@ -119,7 +119,8 @@ describe(`${orsImportCreatePath} route`, () => {
             'admin.dlq.purge',
             'organisation.search',
             'organisation.read',
-            'waste-balance.ledger.read'
+            'waste-balance.ledger.read',
+            'summary-log.read'
           ]
         })
       })

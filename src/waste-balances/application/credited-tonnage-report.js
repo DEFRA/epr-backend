@@ -34,6 +34,10 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 /**
  * A single flat row of the report — one accreditation in one month.
  *
+ * The material is empty for a registration that has resolved to none, so a
+ * record the split never reached shows up uncounted against any material
+ * rather than counted against half of what it is.
+ *
  * @typedef {Object} CreditedTonnageRow
  * @property {string} month - `YYYY-MM`
  * @property {{ id: string, reference: string }} organisation - internal id and external reference
@@ -249,7 +253,7 @@ export const buildCreditedTonnageReport = async ({
       })
     }
 
-    const material = resolveDetailedMaterial(registration)
+    const material = resolveDetailedMaterial(registration) ?? ''
     const reference = String(organisation.orgId)
     const accreditationNumber = accreditation.accreditationNumber ?? ''
 

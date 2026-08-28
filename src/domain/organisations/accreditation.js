@@ -1,4 +1,4 @@
-/** @import {AccreditationStatus, GlassRecyclingProcess, Material, ReprocessingType, User} from '#domain/organisations/model.js' */
+/** @import {AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
  * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
@@ -60,7 +60,7 @@
  * @typedef {{ id: string } & StatusHistory & {
  *  formSubmission: { id: string; time: Date };
  *  glassRecyclingProcess?: GlassRecyclingProcess[] | null;
- *  material: Material;
+ *  material: AppliedForMaterial;
  *  orgName: string;
  *  orsFileUploads?: object[];
  *  prnIssuance: PrnIssuance;

@@ -676,6 +676,30 @@ describe('report-service', () => {
       expect(report.material).toBe('glass_re_melt')
     })
 
+    it('refuses a report for a glass registration that has not been split, a report being about one material', async () => {
+      const reportsRepository = createInMemoryReportsRepository()()
+      const params = defaultParams()
+      params.registration = buildRegistration({
+        material: 'glass',
+        glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+      })
+      const { ledgerRepository, summaryLogRowStatesRepository } =
+        await seedState(params, [buildReceivedEntry()])
+      const packagingRecyclingNotesRepository = createPrnRepo()
+      const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
+
+      await expect(
+        createReportForPeriod({
+          reportsRepository,
+          ledgerRepository,
+          summaryLogRowStatesRepository,
+          packagingRecyclingNotesRepository,
+          ...params,
+          changedBy
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+    })
+
     it('formats site address into single-line string', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()

@@ -1,5 +1,5 @@
 /** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
-/** @import {GlassRecyclingProcess, Material, RegistrationStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
+/** @import {AppliedForMaterial, GlassRecyclingProcess, RegistrationStatus, ReprocessingType, TimeScale, User, WastePermitType} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -12,6 +12,38 @@
  *  region?: string;
  *  fullAddress?: string;
  * }} RegistrationAddress
+ */
+
+/**
+ * A weight the site's permit or exemption authorises it to handle, declared
+ * against the material the applicant applied for rather than a glass process.
+ *
+ * @typedef {{
+ *  material: AppliedForMaterial;
+ *  authorisedWeightInTonnes: number;
+ *  timeScale: TimeScale;
+ * }} AuthorisedMaterial
+ */
+
+/**
+ * @typedef {{
+ *  reference: string;
+ *  exemptionCode: string;
+ *  materials: AppliedForMaterial[];
+ * }} WasteExemption
+ */
+
+/**
+ * What authorises the site to handle the material: an environmental or
+ * installation permit, identified by its number and the weights it authorises,
+ * or a set of waste exemptions.
+ *
+ * @typedef {{
+ *  type: WastePermitType;
+ *  permitNumber?: string;
+ *  exemptions?: WasteExemption[];
+ *  authorisedMaterials?: AuthorisedMaterial[];
+ * }} WasteManagementPermit
  */
 
 /**
@@ -36,13 +68,19 @@
  *  accreditationId?: string;
  *  applicationContactDetails: User;
  *  approvedPersons: User[]
+ *  cbduNumber?: string;
+ *  exportPorts?: string[];
  *  formSubmission: { id: string; time: Date };
- *  material: Material;
+ *  material: AppliedForMaterial;
  *  glassRecyclingProcess?: GlassRecyclingProcess[];
+ *  noticeAddress?: RegistrationAddress;
  *  orgName: string;
+ *  plantEquipmentDetails?: string;
  *  site: RegistrationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;
+ *  suppliers: string;
+ *  wasteManagementPermits?: WasteManagementPermit[];
  *  wasteProcessingType: string;
  *  reprocessingType?: ReprocessingType;
  *  overseasSites?: Record<string, {overseasSiteId: string}>;
@@ -61,7 +99,6 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber?: string;
- *  cbduNumber?: string;
  *  status: Extract<RegistrationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string

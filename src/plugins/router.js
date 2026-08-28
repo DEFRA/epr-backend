@@ -30,6 +30,7 @@ import {
   registrationAccreditationsGet,
   registrationGet
 } from '#routes/v1/organisations/registrations/get.js'
+import { registrationsList } from '#routes/v1/organisations/registrations/list/get.js'
 import { registrationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/waste-balance-ledger/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
@@ -81,6 +82,7 @@ const router = {
         reportsUnsubmit,
         adminMeGet,
         accreditationWasteBalanceLedgerGet,
+        registrationsList,
         registrationGet,
         registrationAccreditationsGet,
         registrationWasteBalanceLedgerGet,
