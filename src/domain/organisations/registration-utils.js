@@ -5,7 +5,7 @@ import {
 } from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
-/** @import { AccreditationStatus, GlassRecyclingProcess, Material, Organisation, RegistrationStatus, ResolvedMaterial } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
@@ -102,8 +102,8 @@ export function activeAccreditationValidFrom(accreditation) {
  * process, or more than one, has not been split, and so is not yet for either
  * of them. All other materials are their own answer.
  *
- * @param {{ material: Material, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
- * @returns {ResolvedMaterial | null}
+ * @param {{ material: AppliedForMaterial, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
+ * @returns {Material | null}
  */
 export function resolveDetailedMaterial(record) {
   if (record.material !== MATERIAL.GLASS) {

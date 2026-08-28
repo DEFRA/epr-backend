@@ -78,7 +78,9 @@ export const REGULATOR_DISPLAY = Object.freeze({
 })
 
 /**
- * @typedef {typeof MATERIAL[keyof typeof MATERIAL]} Material
+ * The material as the applicant declared it on the form, which is one of the
+ * seven the form offers and so includes plain `glass`.
+ * @typedef {typeof MATERIAL[keyof typeof MATERIAL]} AppliedForMaterial
  */
 export const MATERIAL = Object.freeze({
   ALUMINIUM: 'aluminium',
@@ -160,13 +162,14 @@ export const GLASS_RECYCLING_PROCESS = Object.freeze({
 })
 
 /**
- * The material a record is for, once resolved. Glass is the only material that
- * sub-divides, so this is one of the six that do not, or one of the two glass
- * recycling processes. Plain `glass` is never a resolved material.
- * @typedef {Exclude<Material, 'glass'> | GlassRecyclingProcess} ResolvedMaterial
+ * The material a record is for. Glass is the only material that sub-divides,
+ * so this is one of the six that do not, or one of the two glass recycling
+ * processes. Plain `glass` is not one of them: a record still holding it has
+ * not been split, and so is not yet for either.
+ * @typedef {Exclude<AppliedForMaterial, 'glass'> | GlassRecyclingProcess} Material
  */
 
-/** @type {readonly ResolvedMaterial[]} */
+/** @type {readonly Material[]} */
 export const TONNAGE_MONITORING_MATERIALS = Object.freeze([
   ...Object.values(MATERIAL).filter((m) => m !== MATERIAL.GLASS),
   ...Object.values(GLASS_RECYCLING_PROCESS)

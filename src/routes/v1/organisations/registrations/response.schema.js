@@ -53,9 +53,7 @@ const dateRangeSchema = Joi.object({
  * not been split, and the key is left out rather than carrying a value the
  * record has not earned.
  */
-const resolvedMaterialSchema = Joi.string().valid(
-  ...TONNAGE_MONITORING_MATERIALS
-)
+const materialSchema = Joi.string().valid(...TONNAGE_MONITORING_MATERIALS)
 
 /**
  * The material as the applicant declared it on the form, which is one of the
@@ -156,7 +154,7 @@ export const registrationResponseSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REGISTRATION_STATUS))
     .required(),
-  material: resolvedMaterialSchema,
+  material: materialSchema,
   reprocessingType: reprocessingTypeSchema.required(),
   dateRange: dateRangeSchema.required(),
   accreditations: Joi.array().items(accreditationLinkSchema).required(),
@@ -191,7 +189,7 @@ const accreditationSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(ACCREDITATION_STATUS))
     .required(),
-  material: resolvedMaterialSchema,
+  material: materialSchema,
   reprocessingType: reprocessingTypeSchema.required(),
   dateRange: dateRangeSchema.required(),
   application: accreditationApplicationSchema.required()

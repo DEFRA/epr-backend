@@ -2,7 +2,7 @@
  * Pure utility functions for formatting public register data
  */
 
-/** @import {Address, GlassRecyclingProcess, Material, TonnageBand} from '#domain/organisations/model.js' */
+/** @import {Address, AppliedForMaterial, GlassRecyclingProcess, TonnageBand} from '#domain/organisations/model.js' */
 /** @import {RegistrationAddress} from '#domain/organisations/registration.js' */
 
 import {
@@ -71,7 +71,7 @@ export function capitalize(str) {
 
 /**
  * Formats material to human-readable format with special handling for glass
- * @param {Material} material - Material constant (e.g., 'plastic', 'glass')
+ * @param {AppliedForMaterial} material - Material constant (e.g., 'plastic', 'glass')
  * @param {GlassRecyclingProcess[]} glassRecyclingProcess - Array of glass recycling processes (for glass material only)
  * @returns {string} - Formatted material (e.g., 'Plastic', 'Glass-remelt', 'Glass-remelt-other')
  */
@@ -89,7 +89,7 @@ export function formatMaterial(material, glassRecyclingProcess = []) {
 
 /**
  * Gets Annex II Process code for a material
- * @param {Material} material - Material constant
+ * @param {AppliedForMaterial} material - Material constant
  * @returns {string} - Annex II process code (e.g., 'R3', 'R4', 'R5')
  */
 export function getAnnexIIProcess(material) {

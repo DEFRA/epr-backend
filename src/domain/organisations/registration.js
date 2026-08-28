@@ -1,5 +1,5 @@
 /** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
-/** @import {GlassRecyclingProcess, Material, RegistrationStatus, ReprocessingType, TimeScale, User, WastePermitType} from '#domain/organisations/model.js' */
+/** @import {AppliedForMaterial, GlassRecyclingProcess, RegistrationStatus, ReprocessingType, TimeScale, User, WastePermitType} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -19,7 +19,7 @@
  * against the material the applicant applied for rather than a glass process.
  *
  * @typedef {{
- *  material: Material;
+ *  material: AppliedForMaterial;
  *  authorisedWeightInTonnes: number;
  *  timeScale: TimeScale;
  * }} AuthorisedMaterial
@@ -29,7 +29,7 @@
  * @typedef {{
  *  reference: string;
  *  exemptionCode: string;
- *  materials: Material[];
+ *  materials: AppliedForMaterial[];
  * }} WasteExemption
  */
 
@@ -71,7 +71,7 @@
  *  cbduNumber?: string;
  *  exportPorts?: string[];
  *  formSubmission: { id: string; time: Date };
- *  material: Material;
+ *  material: AppliedForMaterial;
  *  glassRecyclingProcess?: GlassRecyclingProcess[];
  *  noticeAddress?: RegistrationAddress;
  *  orgName: string;
