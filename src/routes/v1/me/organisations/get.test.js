@@ -1,4 +1,3 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -33,8 +32,7 @@ describe('GET /v1/me/organisations', () => {
     const server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([])
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const response = await server.inject({
@@ -50,11 +48,9 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     const organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     const linkedAt = new Date().toISOString()
@@ -143,11 +139,9 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     const organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     // Only unlinked organisations (no linkedDefraOrganisation)
@@ -194,11 +188,9 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     const organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     const linkedAt = new Date().toISOString()
@@ -241,11 +233,9 @@ describe('GET /v1/me/organisations', () => {
   it('should return empty arrays when user has no organisations', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     // No organisations inserted
@@ -273,11 +263,9 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     const organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     // Organisation where user is initial user (should be included)
@@ -322,11 +310,9 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     const organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     const linkedAt = new Date().toISOString()
@@ -382,11 +368,9 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     const organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     await buildApprovedOrg(organisationsRepository, {
@@ -429,11 +413,9 @@ describe('GET /v1/me/organisations', () => {
   it('should return 403 when user has no organisation in their token', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     // Generate token without relationships/organisations
@@ -468,11 +450,9 @@ describe('GET /v1/me/organisations', () => {
   it('should return 403 and log org IDs when user has relationships but no currentRelationshipId', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     const orgId1 = randomUUID()
@@ -513,11 +493,9 @@ describe('GET /v1/me/organisations', () => {
   it('should return 403 and log org IDs when currentRelationshipId does not match any relationship', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const featureFlags = createInMemoryFeatureFlags()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
 
     const orgId1 = randomUUID()
@@ -563,13 +541,11 @@ describe('GET /v1/me/organisations', () => {
       const systemLogsRepository = systemLogsRepositoryFactory(logger)
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const featureFlags = createInMemoryFeatureFlags()
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           systemLogsRepository: systemLogsRepositoryFactory
-        },
-        featureFlags
+        }
       })
 
       const response = await server.inject({
@@ -592,13 +568,11 @@ describe('GET /v1/me/organisations', () => {
       const systemLogsRepository = systemLogsRepositoryFactory(logger)
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const featureFlags = createInMemoryFeatureFlags()
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           systemLogsRepository: systemLogsRepositoryFactory
-        },
-        featureFlags
+        }
       })
 
       const orgId1 = randomUUID()
@@ -656,13 +630,11 @@ describe('GET /v1/me/organisations', () => {
       }
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const featureFlags = createInMemoryFeatureFlags()
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           systemLogsRepository: throwingSystemLogsRepository
-        },
-        featureFlags
+        }
       })
 
       const tokenWithNoCurrentOrg = generateValidTokenWith({
@@ -694,13 +666,11 @@ describe('GET /v1/me/organisations', () => {
       }
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const featureFlags = createInMemoryFeatureFlags()
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           systemLogsRepository: throwingSystemLogsRepository
-        },
-        featureFlags
+        }
       })
 
       const response = await server.inject({

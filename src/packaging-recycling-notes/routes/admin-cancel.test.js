@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -143,9 +142,7 @@ const startServer = async (
       organisationsRepository: () => ({}),
       reportsRepository: reportsRepositoryFactory
     },
-    featureFlags: createInMemoryFeatureFlags({
-      prnAdminCancellation: cancellationEnabled
-    })
+    config: { featureFlags: { prnAdminCancellation: cancellationEnabled } }
   })
   return server
 }
@@ -379,7 +376,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
         organisationsRepository: () => ({}),
         reportsRepository: () => createInMemoryReportsRepository()()
       },
-      featureFlags: createInMemoryFeatureFlags({ prnAdminCancellation: true })
+      config: { featureFlags: { prnAdminCancellation: true } }
     })
 
     const response = await server.inject({

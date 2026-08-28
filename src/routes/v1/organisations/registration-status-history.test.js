@@ -1,5 +1,4 @@
 import { ledgerIdFor } from '#application/summary-logs/ledger-id.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
@@ -151,8 +150,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const getResponse = await server.inject({
@@ -351,8 +349,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             fixture
           ]),
           systemLogsRepository: createSystemLogsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({
@@ -594,8 +591,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           systemLogsRepository: createSystemLogsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
       const getResponse = await server.inject({
         method: 'GET',
@@ -718,8 +714,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             fixture
           ]),
           systemLogsRepository: createSystemLogsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({
@@ -885,8 +880,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const grantResponse = await integrationServer.inject({
@@ -946,8 +940,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           systemLogsRepository: createSystemLogsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const grantResponse = await integrationServer.inject({

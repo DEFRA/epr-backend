@@ -9,7 +9,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -31,8 +30,7 @@ describe(`${overseasSitesListPath} route`, () => {
       server = await createTestServer({
         repositories: {
           overseasSitesRepository: () => overseasSitesRepository
-        },
-        featureFlags: createInMemoryFeatureFlags({})
+        }
       })
     })
 

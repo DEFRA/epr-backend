@@ -10,7 +10,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -132,8 +131,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             packagingRecyclingNotesRepository,
           ledgerRepository: () => ledgerRepository,
           organisationsRepository: () => organisationsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       await server.initialize()
@@ -391,10 +389,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
 
-        // Should have been called twice - once without suffix, once with A
+        // Two number reservations - one without suffix, one with A - then the
+        // projection persist that follows the appended event.
         expect(
           packagingRecyclingNotesRepository.persistProjection
-        ).toHaveBeenCalledTimes(2)
+        ).toHaveBeenCalledTimes(3)
 
         // Second call should carry the A suffix
         const secondCall =
@@ -435,9 +434,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
+        // Four number reservations, then the projection persist that follows
+        // the appended event.
         expect(
           packagingRecyclingNotesRepository.persistProjection
-        ).toHaveBeenCalledTimes(4)
+        ).toHaveBeenCalledTimes(5)
 
         // Fourth call should carry the C suffix
         const fourthCall =

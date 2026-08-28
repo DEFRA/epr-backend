@@ -16,7 +16,6 @@ import {
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod,
@@ -388,10 +387,6 @@ describe('report-service', () => {
     })
 
     describe('incompleteSummaryLogRows (PAE-1420)', () => {
-      const gateEnabled = createInMemoryFeatureFlags({
-        reportDataValidation: true
-      })
-
       // A received row whose positive tonnage triggers the supplier rule but
       // carries none of the six mandatory supplier fields: six missing fields.
       const incompleteReceivedEntry = () =>
@@ -416,7 +411,7 @@ describe('report-service', () => {
           }
         })
 
-      const generate = async (entries, featureFlags) => {
+      const generate = async (entries, reportDataValidationEnabled) => {
         const params = defaultParams()
         const { ledgerRepository, summaryLogRowStatesRepository } =
           await seedState(params, entries)
@@ -426,12 +421,12 @@ describe('report-service', () => {
           summaryLogRowStatesRepository,
           packagingRecyclingNotesRepository: createPrnRepo(),
           ...params,
-          featureFlags
+          reportDataValidationEnabled
         })
       }
 
       it('attaches incompleteSummaryLogRows on the generate branch when the flag is on and data is incomplete', async () => {
-        const report = await generate([incompleteReceivedEntry()], gateEnabled)
+        const report = await generate([incompleteReceivedEntry()], true)
 
         const { incompleteSummaryLogRows } = report
         expect(incompleteSummaryLogRows?.total).toBe(6)
@@ -455,7 +450,7 @@ describe('report-service', () => {
           })
         )
 
-        const report = await generate(entries, gateEnabled)
+        const report = await generate(entries, true)
 
         const { incompleteSummaryLogRows } = report
         expect(incompleteSummaryLogRows?.total).toBe(rowCount * FIELDS_PER_ROW)
@@ -468,16 +463,13 @@ describe('report-service', () => {
       })
 
       it('omits incompleteSummaryLogRows when the flag is off despite incomplete data', async () => {
-        const report = await generate(
-          [incompleteReceivedEntry()],
-          createInMemoryFeatureFlags()
-        )
+        const report = await generate([incompleteReceivedEntry()], false)
 
         expect(report).not.toHaveProperty('incompleteSummaryLogRows')
       })
 
       it('omits incompleteSummaryLogRows when the flag is on but data is complete', async () => {
-        const report = await generate([completeReceivedEntry()], gateEnabled)
+        const report = await generate([completeReceivedEntry()], true)
 
         expect(report).not.toHaveProperty('incompleteSummaryLogRows')
       })
@@ -524,7 +516,7 @@ describe('report-service', () => {
           summaryLogRowStatesRepository,
           packagingRecyclingNotesRepository: createPrnRepo(),
           ...params,
-          featureFlags: gateEnabled
+          reportDataValidationEnabled: true
         })
 
         expect(report).not.toHaveProperty('incompleteSummaryLogRows')

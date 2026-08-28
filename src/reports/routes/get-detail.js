@@ -88,7 +88,6 @@ export const reportsGetDetail = {
       packagingRecyclingNotesRepository,
       reportsRepository,
       overseasSitesRepository,
-      featureFlags,
       params
     } = request
     const {
@@ -118,7 +117,9 @@ export const reportsGetDetail = {
       cadence,
       period,
       submissionNumber,
-      featureFlags
+      reportDataValidationEnabled: request.config.get(
+        'featureFlags.reportDataValidation'
+      )
     })
 
     warnIfWasteRecordsExcluded(request, report, organisationId, registrationId)

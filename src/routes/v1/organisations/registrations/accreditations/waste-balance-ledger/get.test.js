@@ -5,6 +5,8 @@ import {
   buildLedgerEvent,
   buildPrnCreatedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -109,7 +111,92 @@ describe(`GET ${accreditationWasteBalanceLedgerGetPath}`, () => {
         opening: { total: 100, available: 100 },
         closing: { total: 100, available: 50 }
       },
-      prn: { id: 'prn-1', tonnage: 50 }
+      prn: { id: 'prn-1', prnNumber: null, tonnage: 50 }
+    })
+  })
+
+  it('gives a PRN event the number its note is known by', async () => {
+    const note = createMockIssuedPrn({
+      id: 'prn-numbered',
+      prnNumber: 'EA26000123',
+      organisation: { id: 'org-note', name: 'A reprocessor' },
+      registrationId: 'reg-note',
+      accreditation: {
+        ...createMockIssuedPrn().accreditation,
+        id: 'acc-note'
+      }
+    })
+    const serverHoldingTheNote = await createTestServer({
+      repositories: {
+        packagingRecyclingNotesRepository:
+          createInMemoryPackagingRecyclingNotesRepository([note], [])
+      }
+    })
+    await serverHoldingTheNote.app.ledgerRepository.appendEvents([
+      buildPrnCreatedEvent({
+        organisationId: 'org-note',
+        registrationId: 'reg-note',
+        accreditationId: 'acc-note',
+        number: 1,
+        payload: { prnId: 'prn-numbered', amount: 50 }
+      })
+    ])
+
+    const response = await serverHoldingTheNote.inject({
+      method: 'GET',
+      url: makePath('org-note', 'reg-note', 'acc-note'),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload).events[0].prn).toEqual({
+      id: 'prn-numbered',
+      prnNumber: 'EA26000123',
+      tonnage: 50
+    })
+  })
+
+  it('gives no number for a note the accreditation does not hold', async () => {
+    const noteOfAnotherAccreditation = createMockIssuedPrn({
+      id: 'prn-elsewhere',
+      prnNumber: 'EA26000456',
+      organisation: { id: 'org-note', name: 'A reprocessor' },
+      registrationId: 'reg-note',
+      accreditation: {
+        ...createMockIssuedPrn().accreditation,
+        id: 'acc-elsewhere'
+      }
+    })
+    const serverHoldingTheNote = await createTestServer({
+      repositories: {
+        packagingRecyclingNotesRepository:
+          createInMemoryPackagingRecyclingNotesRepository(
+            [noteOfAnotherAccreditation],
+            []
+          )
+      }
+    })
+    await serverHoldingTheNote.app.ledgerRepository.appendEvents([
+      buildPrnCreatedEvent({
+        organisationId: 'org-note',
+        registrationId: 'reg-note',
+        accreditationId: 'acc-note',
+        number: 1,
+        payload: { prnId: 'prn-elsewhere', amount: 50 }
+      })
+    ])
+
+    const response = await serverHoldingTheNote.inject({
+      method: 'GET',
+      url: makePath('org-note', 'reg-note', 'acc-note'),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload).events[0].prn).toEqual({
+      id: 'prn-elsewhere',
+      prnNumber: null,
+      tonnage: 50
     })
   })
 

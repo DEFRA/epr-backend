@@ -15,7 +15,6 @@ import {
   PROCESSING_TYPES,
   SUMMARY_LOG_META_FIELDS
 } from '#domain/summary-logs/meta-fields.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -76,16 +75,13 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       submit: vi.fn().mockResolvedValue(undefined)
     }
 
-    const featureFlags = createInMemoryFeatureFlags()
-
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory
       },
       workers: {
         summaryLogsWorker
-      },
-      featureFlags
+      }
     })
   })
 

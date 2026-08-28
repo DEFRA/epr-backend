@@ -73,6 +73,7 @@ describe('mock-repositories', () => {
         'findByPrnNumber',
         'create',
         'findByAccreditation',
+        'findByIds',
         'findByStatus',
         'updateStatus',
         'persistProjection'

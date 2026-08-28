@@ -7,7 +7,6 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -597,8 +596,6 @@ export const createTestInfrastructure = async (
     logger: mockLogger
   })
 
-  const featureFlags = createInMemoryFeatureFlags()
-
   const server = await createTestServer({
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
@@ -606,8 +603,7 @@ export const createTestInfrastructure = async (
     },
     workers: {
       summaryLogsWorker: { validate: validateSummaryLog }
-    },
-    featureFlags
+    }
   })
 
   return { server, summaryLogsRepository }
@@ -619,7 +615,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   material = 'paper',
   organisationId = new ObjectId().toString(),
   registrationId = new ObjectId().toString(),
-  featureFlagOverrides = {},
   reportsRepository = createInMemoryReportsRepository()(),
   accredited = true
 } = {}) => {
@@ -642,8 +637,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const organisationsRepository = createInMemoryOrganisationsRepository([
     { ...testOrg, status: 'active' }
   ])()
-
-  const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
   const ledgerRepository = createInMemoryLedgerRepository()()
   const summaryLogRowStatesRepository =
@@ -743,8 +736,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
         syncWasteRecords,
         validateSummaryLog
       })
-    },
-    featureFlags
+    }
   })
 
   return {

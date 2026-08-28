@@ -30,7 +30,6 @@ import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js
 import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
-import { featureFlags } from '#plugins/feature-flags.js'
 import { router } from '#plugins/router.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
@@ -44,8 +43,6 @@ import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
-import { runStaleIssuedTonnageReport } from '#server/run-stale-issued-tonnage-report.js'
-import { runPreCpaResubmissionBackfill } from '#server/run-pre-cpa-resubmission-backfill.js'
 import { runWasteBalanceDuplicateEventsReport } from '#server/run-waste-balance-duplicate-events-report.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 
@@ -159,6 +156,8 @@ async function createServer(options = {}) {
   const config = getConfig()
   const server = Hapi.server(getServerConfig(config))
 
+  server.decorate('request', 'config', () => config, { apply: true })
+
   // Hapi Plugins:
   // requestLogger  - automatically logs incoming requests
   // requestTracing - trace header logging and propagation
@@ -168,7 +167,6 @@ async function createServer(options = {}) {
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
   // mongo*Plugin   - individual repository plugins
   // s3*Plugin      - S3 repository plugins
-  // featureFlags   - sets up feature flag adapter and attaches to `request` objects
   // sqsCommandExecutor - sets up SQS command executor and attaches to `request` objects
   // dlqAdmin       - sets up DLQ admin service and attaches to `request` objects
   // router         - routes used in the app
@@ -202,14 +200,6 @@ async function createServer(options = {}) {
     plugins.push(...getSwaggerPlugins())
   }
 
-  plugins.push({
-    plugin: featureFlags,
-    options: {
-      config,
-      featureFlags: options.featureFlags
-    }
-  })
-
   // LEGACY: Skip MongoDB, repositories and workers for tests of /v1/apply/* routes.
   // These routes use raw db.collection() access and need refactoring.
   // Once refactored, delete this flag and the server-with-mock-db.js fixture.
@@ -218,7 +208,7 @@ async function createServer(options = {}) {
     plugins.push(...getProductionPlugins(config))
   }
 
-  plugins.push(router)
+  plugins.push({ plugin: router, options: { config } })
 
   await server.register(plugins)
 
@@ -228,8 +218,6 @@ async function createServer(options = {}) {
     )
     runFormsDataMigration(startedServer)
     runOrganisationValidationSweep(startedServer)
-    runStaleIssuedTonnageReport(startedServer)
-    runPreCpaResubmissionBackfill(startedServer)
     runWasteBalanceDuplicateEventsReport(startedServer)
   })
 

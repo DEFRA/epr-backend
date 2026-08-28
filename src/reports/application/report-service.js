@@ -175,7 +175,7 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
+ * @param {boolean} [params.reportDataValidationEnabled]
  * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean, incompleteSummaryLogRows?: { total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } }>}
  */
 export async function fetchOrGenerateReportForPeriod({
@@ -191,7 +191,7 @@ export async function fetchOrGenerateReportForPeriod({
   cadence,
   period,
   submissionNumber,
-  featureFlags
+  reportDataValidationEnabled
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationId,
@@ -249,7 +249,7 @@ export async function fetchOrGenerateReportForPeriod({
   // branch for Due/Over Due (or requires-resubmission) periods, never a future
   // one (PAE-1420).
   const incompleteSummaryLogRows = summariseIncompleteDataIfEnabled(
-    featureFlags,
+    reportDataValidationEnabled,
     wasteRecordStates
   )
 
@@ -426,17 +426,17 @@ async function assertReportCreationAllowed({
  * policy lookup skips any processing type without rules, so the feature flag is
  * the only guard needed here.
  *
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags | undefined} featureFlags
+ * @param {boolean | undefined} reportDataValidationEnabled
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
  * @param {string} reference
  * @returns {void}
  */
 function assertReportDataCompleteIfEnabled(
-  featureFlags,
+  reportDataValidationEnabled,
   wasteRecordStates,
   reference
 ) {
-  if (featureFlags?.isReportDataValidationEnabled()) {
+  if (reportDataValidationEnabled) {
     assertReportDataComplete(wasteRecordStates, reference)
   }
 }
@@ -448,12 +448,15 @@ function assertReportDataCompleteIfEnabled(
  * so the generate branch attaches the field only when there is something to
  * report.
  *
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags | undefined} featureFlags
+ * @param {boolean | undefined} reportDataValidationEnabled
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
  * @returns {{ total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } | null}
  */
-function summariseIncompleteDataIfEnabled(featureFlags, wasteRecordStates) {
-  if (!featureFlags?.isReportDataValidationEnabled()) {
+function summariseIncompleteDataIfEnabled(
+  reportDataValidationEnabled,
+  wasteRecordStates
+) {
+  if (!reportDataValidationEnabled) {
     return null
   }
   return summariseIncompleteData(wasteRecordStates)
@@ -477,7 +480,7 @@ function summariseIncompleteDataIfEnabled(featureFlags, wasteRecordStates) {
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {import('#reports/repository/port.js').UserSummary} params.changedBy
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
+ * @param {boolean} [params.reportDataValidationEnabled]
  * @returns {Promise<import('#reports/repository/port.js').Report>}
  */
 export async function createReportForPeriod({
@@ -494,7 +497,7 @@ export async function createReportForPeriod({
   period,
   submissionNumber,
   changedBy,
-  featureFlags
+  reportDataValidationEnabled
 }) {
   const { startDate, endDate, dueDate } = getValidatedPeriodInfo(
     cadence,
@@ -525,7 +528,7 @@ export async function createReportForPeriod({
   )
 
   assertReportDataCompleteIfEnabled(
-    featureFlags,
+    reportDataValidationEnabled,
     wasteRecordStates,
     registrationId
   )
