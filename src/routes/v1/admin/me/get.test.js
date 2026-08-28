@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 
-import { ADMIN_ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
   asServiceMaintainerRead,
@@ -68,7 +68,15 @@ describe('GET /v1/admin/me', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        scopes: [...ADMIN_ROLES.service_maintainer_write]
+        scopes: [
+          SCOPES.adminRead,
+          SCOPES.adminWrite,
+          SCOPES.adminDlqPurge,
+          SCOPES.organisationSearch,
+          SCOPES.organisationRead,
+          SCOPES.wasteBalanceLedgerRead,
+          SCOPES.summaryLogRead
+        ]
       })
     })
 
@@ -81,7 +89,14 @@ describe('GET /v1/admin/me', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        scopes: [...ADMIN_ROLES.service_maintainer]
+        scopes: [
+          SCOPES.adminRead,
+          SCOPES.adminDlqPurge,
+          SCOPES.organisationSearch,
+          SCOPES.organisationRead,
+          SCOPES.wasteBalanceLedgerRead,
+          SCOPES.summaryLogRead
+        ]
       })
     })
 
@@ -94,7 +109,13 @@ describe('GET /v1/admin/me', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        scopes: [...ADMIN_ROLES.support]
+        scopes: [
+          SCOPES.adminRead,
+          SCOPES.organisationSearch,
+          SCOPES.organisationRead,
+          SCOPES.wasteBalanceLedgerRead,
+          SCOPES.summaryLogRead
+        ]
       })
     })
   })

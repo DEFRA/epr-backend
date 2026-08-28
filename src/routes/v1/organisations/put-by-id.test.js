@@ -1,5 +1,4 @@
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { ADMIN_ROLES } from '#common/helpers/auth/constants.js'
 import {
   buildAccreditation,
   buildOrganisation,
@@ -147,7 +146,15 @@ describe('PUT /v1/organisations/{id}', () => {
       const verifyCreatedBy = (payload) => {
         expect(payload.id).toEqual('test-user-id')
         expect(payload.email).toEqual('me@example.com')
-        expect(payload.scope).toEqual([...ADMIN_ROLES.service_maintainer_write])
+        expect(payload.scope).toEqual([
+          'admin.read',
+          'admin.write',
+          'admin.dlq.purge',
+          'organisation.search',
+          'organisation.read',
+          'waste-balance.ledger.read',
+          'summary-log.read'
+        ])
       }
 
       const verifyEvent = (payload) => {
