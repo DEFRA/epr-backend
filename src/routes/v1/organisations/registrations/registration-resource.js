@@ -70,7 +70,7 @@ export function toRegistrationsResource(organisation) {
         compareUnnumberedLast(
           left.registrationNumber,
           right.registrationNumber
-        ) || compareAscending(left.id, right.id)
+        ) || left.id.localeCompare(right.id)
     )
 }
 
@@ -88,15 +88,7 @@ function compareUnnumberedLast(left, right) {
   if (right === null) {
     return -1
   }
-  return compareAscending(left, right)
-}
-
-/**
- * @param {string} left
- * @param {string} right
- */
-function compareAscending(left, right) {
-  return left < right ? -1 : 1
+  return left.localeCompare(right)
 }
 
 /**
