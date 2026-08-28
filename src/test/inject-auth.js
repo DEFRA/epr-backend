@@ -6,7 +6,12 @@
  * use the full auth stack with setupAuthContext() and real tokens.
  */
 
-import { ADMIN_ROLES, SCOPES } from '#common/helpers/auth/constants.js'
+import {
+  ADMIN_ROLES,
+  REGULATOR_ROLE,
+  REGULATOR_SCOPES,
+  SCOPES
+} from '#common/helpers/auth/constants.js'
 
 const ACCESS_TOKEN_STRATEGY = 'access-token'
 
@@ -100,6 +105,22 @@ export const asSupport = (overrides = {}) =>
     email: 'support@example.com',
     overrides
   })
+
+/**
+ * Authenticated regulator standard user, carrying the regulator scope bundle.
+ */
+export const asRegulator = (overrides = {}) => ({
+  auth: {
+    strategy: ACCESS_TOKEN_STRATEGY,
+    credentials: {
+      scope: [...REGULATOR_SCOPES],
+      role: REGULATOR_ROLE,
+      id: 'test-regulator-id',
+      email: 'regulator@test.gov.uk',
+      ...overrides
+    }
+  }
+})
 
 /**
  * Authenticated identity with no admin tier — every admin-scoped route 403s.

@@ -1,4 +1,5 @@
 import {
+  ADMIN_ROLES,
   REGULATOR_ROLE,
   REGULATOR_SCOPES,
   SCOPES
@@ -62,14 +63,7 @@ describe('GET /v1/me', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
         role: 'service_maintainer_write',
-        scopes: [
-          SCOPES.adminRead,
-          SCOPES.adminWrite,
-          SCOPES.adminDlqPurge,
-          SCOPES.organisationSearch,
-          SCOPES.organisationRead,
-          SCOPES.wasteBalanceLedgerRead
-        ]
+        scopes: [...ADMIN_ROLES.service_maintainer_write]
       })
     })
   })

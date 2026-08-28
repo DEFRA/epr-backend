@@ -6,9 +6,14 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { asServiceMaintainer, asUnscopedAdminUser } from '#test/inject-auth.js'
+import {
+  asRegulator,
+  asServiceMaintainer,
+  asUnscopedAdminUser
+} from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/document', () => {
@@ -146,6 +151,23 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.result.file).toBeDefined()
       expect(response.result.file.uri).toBeDefined()
     })
+
+    it('is readable by a regulator', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.submitted({ organisationId, registrationId })
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/document`,
+        ...asRegulator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(response.result.status).toBe('submitted')
+    })
   })
 
   describe('when the summary log does not exist', () => {
@@ -171,13 +193,25 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
     })
 
-    it('returns 403 when the caller lacks admin.read', async () => {
+    it('returns 403 when the caller lacks summary-log.read', async () => {
       const { server } = await createServer()
 
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/document`,
         ...asUnscopedAdminUser()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
+    it('returns 403 when the caller has summary-log.read but not organisation.read', async () => {
+      const { server } = await createServer()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/document`,
+        ...asUnscopedAdminUser({ scope: [SCOPES.summaryLogRead] })
       })
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

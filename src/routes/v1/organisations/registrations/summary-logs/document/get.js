@@ -19,9 +19,13 @@ export const summaryLogDocument = {
   path: summaryLogDocumentPath,
   options: {
     auth: {
-      scope: [SCOPES.adminRead]
+      // Both required (+ prefix): the caller must hold summary-log.read AND
+      // organisation.read. Admins and regulators have a blanket
+      // organisation.read; an operator only holds it for their own org, so this
+      // scopes the document to callers entitled to read that organisation.
+      scope: [`+${SCOPES.summaryLogRead}`, `+${SCOPES.organisationRead}`]
     },
-    tags: ['api', 'admin'],
+    tags: ['api'],
     response: {
       schema: summaryLogDocumentResponseSchema
     }

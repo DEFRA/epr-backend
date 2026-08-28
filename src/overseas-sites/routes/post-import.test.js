@@ -15,6 +15,7 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
+import { ADMIN_ROLES } from '#common/helpers/auth/constants.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { orsImportCreatePath } from './post-import.js'
 
@@ -113,14 +114,7 @@ describe(`${orsImportCreatePath} route`, () => {
         expect(stored.createdBy).toEqual({
           id: 'test-maintainer-id',
           email: 'maintainer@example.com',
-          scope: [
-            'admin.read',
-            'admin.write',
-            'admin.dlq.purge',
-            'organisation.search',
-            'organisation.read',
-            'waste-balance.ledger.read'
-          ]
+          scope: [...ADMIN_ROLES.service_maintainer_write]
         })
       })
 
