@@ -147,16 +147,24 @@ describe(`GET ${registrationGetPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toEqual({
       id: registration.id,
-      organisationId: organisation.id,
+      organisation: { id: organisation.id },
       registrationNumber: 'R26ER5001180041PL',
       status: 'created',
+      material: 'glass_re_melt',
       reprocessingType: 'input',
       dateRange: { validFrom: null, validTo: null },
+      accreditations: [],
       application: {
         orgName: registration.orgName,
         submittedToRegulator: registration.submittedToRegulator,
-        material: 'glass_re_melt',
+        material: 'glass',
         wasteProcessingType: 'reprocessor',
+        cbduNumber: registration.cbduNumber,
+        suppliers: registration.suppliers,
+        plantEquipmentDetails: registration.plantEquipmentDetails,
+        noticeAddress: registration.noticeAddress,
+        exportPorts: null,
+        wastePermits: registration.wasteManagementPermits,
         site: {
           address: registration.site.address,
           gridReference: registration.site.gridReference,
@@ -206,24 +214,161 @@ describe(`GET ${registrationGetPath}`, () => {
     expect(body.reprocessingType).toBeNull()
   })
 
-  it('reports the glass process as the material, glass being the only one that sub-divides', async () => {
+  it('carries the exporter answers the reprocessor form never asks for', async () => {
+    const registration = buildRegistration({ wasteProcessingType: 'exporter' })
+
+    const { application } = JSON.parse(
+      (await read(anOrganisation(registration), registration.id)).payload
+    )
+
+    expect(application.exportPorts).toEqual(registration.exportPorts)
+    expect(application.plantEquipmentDetails).toBeNull()
+    expect(application.wastePermits).toEqual([])
+  })
+
+  it('carries what authorises the site to handle the material', async () => {
+    const registration = aRegistration()
+
+    const { application } = JSON.parse(
+      (await read(anOrganisation(registration), registration.id)).payload
+    )
+
+    expect(application.wastePermits).toEqual(
+      registration.wasteManagementPermits
+    )
+    expect(application.cbduNumber).toBe(registration.cbduNumber)
+    expect(application.suppliers).toBe(registration.suppliers)
+  })
+
+  it('carries a null waste carrier number for a registration whose regulator does not ask for one', async () => {
+    const registration = aRegistration({ cbduNumber: undefined })
+
+    const { application } = JSON.parse(
+      (await read(anOrganisation(registration), registration.id)).payload
+    )
+
+    expect(application.cbduNumber).toBeNull()
+  })
+
+  it('carries a null notice address for a registration that holds none', async () => {
+    const registration = aRegistration({ noticeAddress: undefined })
+
+    const { application } = JSON.parse(
+      (await read(anOrganisation(registration), registration.id)).payload
+    )
+
+    expect(application.noticeAddress).toBeNull()
+  })
+
+  it('names no individual, the registration being a record a regulator reads', async () => {
+    const registration = aRegistration()
+
+    const body = JSON.parse(
+      (await read(anOrganisation(registration), registration.id)).payload
+    )
+
+    expect(body.application).not.toHaveProperty('approvedPersons')
+    expect(body.application).not.toHaveProperty('submitterContactDetails')
+    expect(body.application).not.toHaveProperty('applicationContactDetails')
+  })
+
+  it('links the accreditation the registration holds, without folding it in', async () => {
+    const accreditation = anAccreditation()
+    const registration = aRegistration({ accreditationId: accreditation.id })
+
+    const body = JSON.parse(
+      (
+        await read(
+          anOrganisation(registration, [accreditation]),
+          registration.id
+        )
+      ).payload
+    )
+
+    expect(body.accreditations).toEqual([
+      {
+        id: accreditation.id,
+        accreditationNumber: 'A26ER5001180114PL',
+        status: 'approved'
+      }
+    ])
+  })
+
+  it('links an accreditation whatever its status, a cancelled one being a fact about the registration', async () => {
+    const cancelled = anAccreditation(ACCREDITATION_STATUS.CANCELLED)
+    const registration = aRegistration({ accreditationId: cancelled.id })
+
+    const body = JSON.parse(
+      (await read(anOrganisation(registration, [cancelled]), registration.id))
+        .payload
+    )
+
+    expect(body.accreditations).toEqual([
+      {
+        id: cancelled.id,
+        accreditationNumber: 'A26ER5001180114PL',
+        status: 'cancelled'
+      }
+    ])
+  })
+
+  it('links an unnumbered accreditation with a null number', async () => {
+    const unnumbered = anUnnumberedAccreditation()
+    const registration = aRegistration({ accreditationId: unnumbered.id })
+
+    const body = JSON.parse(
+      (await read(anOrganisation(registration, [unnumbered]), registration.id))
+        .payload
+    )
+
+    expect(body.accreditations).toEqual([
+      { id: unnumbered.id, accreditationNumber: null, status: 'created' }
+    ])
+  })
+
+  it('resolves the glass process as the material the registration is for, glass being the only one that sub-divides', async () => {
     const registration = aRegistration()
 
     const response = await read(anOrganisation(registration), registration.id)
 
-    const { application } = JSON.parse(response.payload)
+    const body = JSON.parse(response.payload)
     expect(registration.material).toBe('glass')
     expect(registration.glassRecyclingProcess).toEqual(['glass_re_melt'])
-    expect(application.material).toBe('glass_re_melt')
-    expect(application).not.toHaveProperty('glassRecyclingProcess')
+    expect(body.material).toBe('glass_re_melt')
+    expect(body).not.toHaveProperty('glassRecyclingProcess')
+    expect(body.application).not.toHaveProperty('glassRecyclingProcess')
   })
 
-  it('reports a material that does not sub-divide unchanged', async () => {
+  it('keeps the material the applicant applied for in the application, beside the resolved one', async () => {
+    const registration = aRegistration()
+
+    const response = await read(anOrganisation(registration), registration.id)
+
+    expect(JSON.parse(response.payload).application.material).toBe('glass')
+  })
+
+  it('reports a material that does not sub-divide unchanged, in both places', async () => {
     const registration = buildRegistration({ material: 'plastic' })
 
     const response = await read(anOrganisation(registration), registration.id)
 
-    expect(JSON.parse(response.payload).application.material).toBe('plastic')
+    const body = JSON.parse(response.payload)
+    expect(body.material).toBe('plastic')
+    expect(body.application.material).toBe('plastic')
+  })
+
+  it('carries no material at all for a registration that has not resolved one', async () => {
+    const registration = aRegistration({
+      material: 'glass',
+      glassRecyclingProcess: []
+    })
+
+    const response = await read(anOrganisation(registration), registration.id)
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const body = JSON.parse(response.payload)
+    expect(body).not.toHaveProperty('material')
+    expect(body.application.material).toBe('glass')
   })
 
   it('keeps the name the applicant typed inside the application, not beside the id', async () => {
@@ -232,7 +377,7 @@ describe(`GET ${registrationGetPath}`, () => {
 
     const body = JSON.parse((await read(organisation, registration.id)).payload)
 
-    expect(body.organisationId).toBe(organisation.id)
+    expect(body.organisation).toEqual({ id: organisation.id })
     expect(body.application.orgName).toBe(registration.orgName)
     expect(body).not.toHaveProperty('orgName')
     expect(body).not.toHaveProperty('companyName')
@@ -320,12 +465,13 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
         id: accreditation.id,
         accreditationNumber: 'A26ER5001180114PL',
         status: 'approved',
+        material: 'glass_re_melt',
         reprocessingType: 'input',
         dateRange: { validFrom: '2026-07-01', validTo: '2026-12-31' },
         application: {
           orgName: accreditation.orgName,
           submittedToRegulator: accreditation.submittedToRegulator,
-          material: 'glass_re_melt',
+          material: 'glass',
           wasteProcessingType: accreditation.wasteProcessingType
         }
       }
@@ -424,6 +570,21 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
 
     expect(accreditation.reprocessingType).toBeNull()
     expect(accreditation.application.wasteProcessingType).toBe('exporter')
+  })
+
+  it('carries no material at all for an accreditation that has not resolved one', async () => {
+    const unresolved = anAccreditation(ACCREDITATION_STATUS.APPROVED, {
+      glassRecyclingProcess: []
+    })
+    const registration = aRegistration({ accreditationId: unresolved.id })
+
+    const [returned] = await readAccreditations(
+      anOrganisation(registration, [unresolved]),
+      registration.id
+    )
+
+    expect(returned).not.toHaveProperty('material')
+    expect(returned.application.material).toBe('glass')
   })
 
   it('leaves the site to the registration, which already carries it', async () => {

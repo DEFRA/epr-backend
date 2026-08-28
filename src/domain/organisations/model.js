@@ -153,7 +153,14 @@ export const GLASS_RECYCLING_PROCESS = Object.freeze({
   GLASS_OTHER: 'glass_other'
 })
 
-/** @type {readonly (Material | GlassRecyclingProcess)[]} */
+/**
+ * The material a record is for, once resolved. Glass is the only material that
+ * sub-divides, so this is one of the six that do not, or one of the two glass
+ * recycling processes. Plain `glass` is never a resolved material.
+ * @typedef {Exclude<Material, 'glass'> | GlassRecyclingProcess} ResolvedMaterial
+ */
+
+/** @type {readonly ResolvedMaterial[]} */
 export const TONNAGE_MONITORING_MATERIALS = Object.freeze([
   ...Object.values(MATERIAL).filter((m) => m !== MATERIAL.GLASS),
   ...Object.values(GLASS_RECYCLING_PROCESS)

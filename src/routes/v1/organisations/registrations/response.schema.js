@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import {
   ACCREDITATION_STATUS,
+  MATERIAL,
   REGISTRATION_STATUS,
   REGULATOR,
   REPROCESSING_TYPE,
@@ -43,11 +44,22 @@ const dateRangeSchema = Joi.object({
 })
 
 /**
- * Glass is the only material that sub-divides, and a record carries one
- * process, so `material` reads `glass_re_melt` or `glass_other` where the store
- * holds `glass` beside a process.
+ * What the record is for, once resolved. Glass is the only material that
+ * sub-divides, so this reads `glass_re_melt` or `glass_other` where the store
+ * holds `glass` beside a single recycling process. Plain `glass` is never a
+ * resolved material: a record that carries no process, or more than one, has
+ * not been split, and the key is left out rather than carrying a value the
+ * record has not earned.
  */
-const materialSchema = Joi.string().valid(...TONNAGE_MONITORING_MATERIALS)
+const resolvedMaterialSchema = Joi.string().valid(
+  ...TONNAGE_MONITORING_MATERIALS
+)
+
+/**
+ * The material as the applicant declared it on the form, which is one of the
+ * seven the form offers and so includes plain `glass`.
+ */
+const appliedForMaterialSchema = Joi.string().valid(...Object.values(MATERIAL))
 const regulatorSchema = Joi.string().valid(...Object.values(REGULATOR))
 const wasteProcessingTypeSchema = Joi.string().valid(
   ...Object.values(WASTE_PROCESSING_TYPE)
@@ -56,6 +68,30 @@ const reprocessingTypeSchema = Joi.string()
   .valid(...Object.values(REPROCESSING_TYPE))
   .allow(null)
 
+const wasteExemptionSchema = Joi.object({
+  reference: Joi.string().required(),
+  exemptionCode: Joi.string().required(),
+  materials: Joi.array().items(appliedForMaterialSchema).required()
+})
+
+const authorisedMaterialSchema = Joi.object({
+  material: appliedForMaterialSchema.required(),
+  authorisedWeightInTonnes: Joi.number().required(),
+  timeScale: Joi.string().required()
+})
+
+/**
+ * What authorises the site to handle the material. A permit is identified by
+ * its number and the weights it authorises; an exemption by its reference and
+ * code, so each arm carries only the keys its own kind has.
+ */
+const wastePermitSchema = Joi.object({
+  type: Joi.string().required(),
+  permitNumber: Joi.string(),
+  exemptions: Joi.array().items(wasteExemptionSchema),
+  authorisedMaterials: Joi.array().items(authorisedMaterialSchema)
+})
+
 /**
  * Content as the applicant supplied it on the registration form, before a
  * regulator decided anything about it.
@@ -63,34 +99,71 @@ const reprocessingTypeSchema = Joi.string()
  * `orgName` is one of those answers, so it is the name the applicant typed on
  * this form. It is not the organisation's name, which the organisation holds
  * once in its company details, and it is not the name Defra ID holds.
+ * `material` likewise is the material they applied for, which is why it may be
+ * plain `glass` where the key outside may not.
  *
- * A site is optional in the store, so `site` is null for a registration that
- * holds none. An exporter is the ordinary case of that.
+ * Every answer is present whether or not it was given, an unanswered one
+ * reading null or empty, so a client never has to tell a missing key from an
+ * empty one. A site and plant equipment are asked of a reprocessor, ports and
+ * a notice address of an exporter, and each is null for the other.
  */
 const registrationApplicationSchema = Joi.object({
   orgName: Joi.string().required(),
   submittedToRegulator: regulatorSchema.required(),
-  material: materialSchema.required(),
+  material: appliedForMaterialSchema.required(),
   wasteProcessingType: wasteProcessingTypeSchema.required(),
-  site: siteSchema.allow(null).required()
+  cbduNumber: Joi.string().allow(null).required(),
+  suppliers: Joi.string().required(),
+  plantEquipmentDetails: Joi.string().allow(null).required(),
+  site: siteSchema.allow(null).required(),
+  wastePermits: Joi.array().items(wastePermitSchema).required(),
+  noticeAddress: addressSchema.allow(null).required(),
+  exportPorts: Joi.array().items(Joi.string()).allow(null).required()
 })
 
 /**
- * Apart from `organisationId`, the keys outside `application` are the ones a
- * regulator decides: the number, the dates and the reprocessing type are
- * recorded when the registration is approved, and the status is derived from
- * the status history.
+ * Enough of an accreditation to address it and to say what state it is in.
+ * Its own content stays at its own address, and it is a link rather than a
+ * fold, so this grows a key only where addressing the accreditation needs one.
+ */
+const accreditationLinkSchema = Joi.object({
+  id: Joi.string().required(),
+  accreditationNumber: Joi.string().allow(null).required(),
+  status: Joi.string()
+    .valid(...Object.values(ACCREDITATION_STATUS))
+    .required()
+})
+
+/**
+ * Apart from its own identity and the organisation it belongs to, the keys
+ * outside `application` are the ones a regulator decides or a process derives:
+ * the number, the dates and the reprocessing type are recorded when the
+ * registration is approved, the status is derived from the status history, and
+ * `material` is what the registration resolved to. That last one is the only
+ * optional key: a registration that has resolved to no material carries none.
  */
 export const registrationResponseSchema = Joi.object({
   id: Joi.string().required(),
-  organisationId: Joi.string().required(),
+  organisation: Joi.object({ id: Joi.string().required() }).required(),
   registrationNumber: Joi.string().allow(null).required(),
   status: Joi.string()
     .valid(...Object.values(REGISTRATION_STATUS))
     .required(),
+  material: resolvedMaterialSchema,
   reprocessingType: reprocessingTypeSchema.required(),
   dateRange: dateRangeSchema.required(),
+  accreditations: Joi.array().items(accreditationLinkSchema).required(),
   application: registrationApplicationSchema.required()
+})
+
+/**
+ * The registrations an organisation holds, whatever their status: a regulator
+ * opens the page precisely to see the ones an operator's own view leaves out.
+ * The item is the member resource, so a client that reads a row and then opens
+ * it is handed the same resource twice.
+ */
+export const registrationsResponseSchema = Joi.object({
+  registrations: Joi.array().items(registrationResponseSchema).required()
 })
 
 /**
@@ -101,7 +174,7 @@ export const registrationResponseSchema = Joi.object({
 const accreditationApplicationSchema = Joi.object({
   orgName: Joi.string().required(),
   submittedToRegulator: regulatorSchema.required(),
-  material: materialSchema.required(),
+  material: appliedForMaterialSchema.required(),
   wasteProcessingType: wasteProcessingTypeSchema.required()
 })
 
@@ -111,6 +184,7 @@ const accreditationSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(ACCREDITATION_STATUS))
     .required(),
+  material: resolvedMaterialSchema,
   reprocessingType: reprocessingTypeSchema.required(),
   dateRange: dateRangeSchema.required(),
   application: accreditationApplicationSchema.required()

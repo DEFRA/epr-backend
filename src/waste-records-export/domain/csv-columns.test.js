@@ -155,6 +155,7 @@ describe('csv-columns', () => {
       site: { address: {}, gridReference: 'TQ123456', siteCapacity: [] },
       submittedToRegulator: 'ea',
       submitterContactDetails: userFixture,
+      suppliers: 'Local authority kerbside collections',
       wasteProcessingType: 'reprocessor',
       registrationNumber: 'REG-001',
       status: 'approved',

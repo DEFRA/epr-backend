@@ -6,13 +6,17 @@ import {
   resolveDetailedMaterial
 } from '#domain/organisations/registration-utils.js'
 import {
+  toDateRangeResource,
+  toRegistrationResource
+} from './registration-resource.js'
+import {
   registrationAccreditationsResponseSchema,
   registrationResponseSchema
 } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Registration, RegistrationSite } from '#domain/organisations/registration.js' */
+/** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 export const registrationGetPath =
@@ -101,70 +105,26 @@ async function findRegistration(request) {
 }
 
 /**
- * @param {Registration} registration
- * @param {Organisation} organisation
- */
-function toRegistrationResource(registration, organisation) {
-  return {
-    id: registration.id,
-    organisationId: organisation.id,
-    registrationNumber: registration.registrationNumber ?? null,
-    status: registration.status,
-    reprocessingType: registration.reprocessingType ?? null,
-    dateRange: toDateRangeResource(registration),
-    application: {
-      orgName: registration.orgName,
-      submittedToRegulator: registration.submittedToRegulator,
-      material: resolveDetailedMaterial(registration),
-      wasteProcessingType: registration.wasteProcessingType,
-      site: toSiteResource(registration.site)
-    }
-  }
-}
-
-/**
- * @param {{ validFrom?: string | null, validTo?: string | null }} record
- */
-function toDateRangeResource({ validFrom, validTo }) {
-  return {
-    validFrom: validFrom ?? null,
-    validTo: validTo ?? null
-  }
-}
-
-/**
- * @param {RegistrationSite | null | undefined} site
- */
-function toSiteResource(site) {
-  if (!site) {
-    return null
-  }
-
-  return {
-    address: site.address,
-    gridReference: site.gridReference,
-    capacity: site.siteCapacity.map((entry) => ({
-      material: entry.material,
-      tonnes: entry.siteCapacityInTonnes,
-      timescale: entry.siteCapacityTimescale
-    }))
-  }
-}
-
-/**
+ * The accreditation reads its material the way the registration does: the
+ * applicant's answer stays in `application`, and the resolved one sits at the
+ * top level where it exists at all.
+ *
  * @param {Accreditation} accreditation
  */
 function toAccreditationResource(accreditation) {
+  const material = resolveDetailedMaterial(accreditation)
+
   return {
     id: accreditation.id,
     accreditationNumber: accreditation.accreditationNumber ?? null,
     status: accreditation.status,
+    ...(material !== null && { material }),
     reprocessingType: accreditation.reprocessingType ?? null,
     dateRange: toDateRangeResource(accreditation),
     application: {
       orgName: accreditation.orgName,
       submittedToRegulator: accreditation.submittedToRegulator,
-      material: resolveDetailedMaterial(accreditation),
+      material: accreditation.material,
       wasteProcessingType: accreditation.wasteProcessingType
     }
   }

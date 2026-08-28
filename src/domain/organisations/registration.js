@@ -15,6 +15,38 @@
  */
 
 /**
+ * A weight the site's permit or exemption authorises it to handle, declared
+ * against the material the applicant applied for rather than a glass process.
+ *
+ * @typedef {{
+ *  material: Material;
+ *  authorisedWeightInTonnes: number;
+ *  timeScale: string;
+ * }} AuthorisedMaterial
+ */
+
+/**
+ * @typedef {{
+ *  reference: string;
+ *  exemptionCode: string;
+ *  materials: Material[];
+ * }} WasteExemption
+ */
+
+/**
+ * What authorises the site to handle the material: an environmental or
+ * installation permit, identified by its number and the weights it authorises,
+ * or a set of waste exemptions.
+ *
+ * @typedef {{
+ *  type: string;
+ *  permitNumber?: string;
+ *  exemptions?: WasteExemption[];
+ *  authorisedMaterials?: AuthorisedMaterial[];
+ * }} WasteManagementPermit
+ */
+
+/**
  * @typedef {{
  *  siteCapacityInTonnes: number;
  *  material: string;
@@ -36,13 +68,19 @@
  *  accreditationId?: string;
  *  applicationContactDetails: User;
  *  approvedPersons: User[]
+ *  cbduNumber?: string;
+ *  exportPorts?: string[];
  *  formSubmission: { id: string; time: Date };
  *  material: Material;
  *  glassRecyclingProcess?: GlassRecyclingProcess[];
+ *  noticeAddress?: RegistrationAddress;
  *  orgName: string;
+ *  plantEquipmentDetails?: string;
  *  site: RegistrationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;
+ *  suppliers: string;
+ *  wasteManagementPermits?: WasteManagementPermit[];
  *  wasteProcessingType: string;
  *  reprocessingType?: ReprocessingType;
  *  overseasSites?: Record<string, {overseasSiteId: string}>;
@@ -61,7 +99,6 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber?: string;
- *  cbduNumber?: string;
  *  status: Extract<RegistrationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string
