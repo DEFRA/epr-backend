@@ -74,7 +74,8 @@ describe('GET /v1/admin/me', () => {
           SCOPES.adminDlqPurge,
           SCOPES.organisationSearch,
           SCOPES.organisationRead,
-          SCOPES.wasteBalanceLedgerRead
+          SCOPES.wasteBalanceLedgerRead,
+          SCOPES.summaryLogRead
         ]
       })
     })
@@ -93,7 +94,8 @@ describe('GET /v1/admin/me', () => {
           SCOPES.adminDlqPurge,
           SCOPES.organisationSearch,
           SCOPES.organisationRead,
-          SCOPES.wasteBalanceLedgerRead
+          SCOPES.wasteBalanceLedgerRead,
+          SCOPES.summaryLogRead
         ]
       })
     })
@@ -111,7 +113,8 @@ describe('GET /v1/admin/me', () => {
           SCOPES.adminRead,
           SCOPES.organisationSearch,
           SCOPES.organisationRead,
-          SCOPES.wasteBalanceLedgerRead
+          SCOPES.wasteBalanceLedgerRead,
+          SCOPES.summaryLogRead
         ]
       })
     })

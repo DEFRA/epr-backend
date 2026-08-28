@@ -10,7 +10,8 @@ export const SCOPES = {
   organisationLinkedRead: 'organisation.linked.read',
   organisationLinkedWrite: 'organisation.linked.write',
   organisationSearch: 'organisation.search',
-  wasteBalanceLedgerRead: 'waste-balance.ledger.read'
+  wasteBalanceLedgerRead: 'waste-balance.ledger.read',
+  summaryLogRead: 'summary-log.read'
 }
 
 /**
@@ -29,7 +30,8 @@ export const REGULATOR_ROLE = 'regulator_standard'
 export const REGULATOR_SCOPES = [
   SCOPES.organisationRead,
   SCOPES.organisationSearch,
-  SCOPES.wasteBalanceLedgerRead
+  SCOPES.wasteBalanceLedgerRead,
+  SCOPES.summaryLogRead
 ]
 
 /**
@@ -48,19 +50,22 @@ export const ADMIN_ROLES = {
     SCOPES.adminDlqPurge,
     SCOPES.organisationSearch,
     SCOPES.organisationRead,
-    SCOPES.wasteBalanceLedgerRead
+    SCOPES.wasteBalanceLedgerRead,
+    SCOPES.summaryLogRead
   ],
   service_maintainer: [
     SCOPES.adminRead,
     SCOPES.adminDlqPurge,
     SCOPES.organisationSearch,
     SCOPES.organisationRead,
-    SCOPES.wasteBalanceLedgerRead
+    SCOPES.wasteBalanceLedgerRead,
+    SCOPES.summaryLogRead
   ],
   support: [
     SCOPES.adminRead,
     SCOPES.organisationSearch,
     SCOPES.organisationRead,
-    SCOPES.wasteBalanceLedgerRead
+    SCOPES.wasteBalanceLedgerRead,
+    SCOPES.summaryLogRead
   ]
 }
