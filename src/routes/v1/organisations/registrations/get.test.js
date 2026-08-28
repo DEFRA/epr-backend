@@ -22,6 +22,7 @@ import {
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
+  registrationAccreditationGetPath,
   registrationAccreditationsGetPath,
   registrationGetPath
 } from './get.js'
@@ -676,5 +677,138 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
         JSON.parse(response.payload).accreditations.map((a) => a.id)
       ).toEqual([organisation.accreditations[0].id])
     })
+  })
+})
+
+describe(`GET ${registrationAccreditationGetPath}`, () => {
+  setupAuthContext()
+
+  /**
+   * @param {StoredOrganisation} organisation
+   * @param {string} registrationId
+   * @param {string} accreditationId
+   */
+  const readAccreditation = async (
+    organisation,
+    registrationId,
+    accreditationId
+  ) => {
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ])
+      }
+    })
+
+    return server.inject({
+      method: 'GET',
+      url: makePath(
+        registrationAccreditationGetPath,
+        organisation.id,
+        registrationId
+      ).replace('{accreditationId}', accreditationId),
+      ...asServiceMaintainer()
+    })
+  }
+
+  it('returns the accreditation the registration holds', async () => {
+    const accreditation = anAccreditation()
+    const registration = aRegistration({ accreditationId: accreditation.id })
+
+    const response = await readAccreditation(
+      anOrganisation(registration, [accreditation]),
+      registration.id,
+      accreditation.id
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toEqual({
+      id: accreditation.id,
+      accreditationNumber: 'A26ER5001180114PL',
+      status: 'approved',
+      material: 'glass_re_melt',
+      reprocessingType: 'input',
+      dateRange: { validFrom: '2026-07-01', validTo: '2026-12-31' },
+      application: {
+        orgName: accreditation.orgName,
+        submittedToRegulator: accreditation.submittedToRegulator,
+        material: 'glass',
+        wasteProcessingType: accreditation.wasteProcessingType
+      }
+    })
+  })
+
+  it('answers the member address with the item the collection returns', async () => {
+    const accreditation = anAccreditation()
+    const registration = aRegistration({ accreditationId: accreditation.id })
+    const organisation = anOrganisation(registration, [accreditation])
+
+    const [collection] = await readAccreditations(organisation, registration.id)
+    const member = await readAccreditation(
+      organisation,
+      registration.id,
+      accreditation.id
+    )
+
+    expect(JSON.parse(member.payload)).toEqual(collection)
+  })
+
+  it('returns nulls for an accreditation that never got a number or dates', async () => {
+    const unnumbered = anUnnumberedAccreditation()
+    const registration = aRegistration({ accreditationId: unnumbered.id })
+
+    const response = await readAccreditation(
+      anOrganisation(registration, [unnumbered]),
+      registration.id,
+      unnumbered.id
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const returned = JSON.parse(response.payload)
+    expect(returned.accreditationNumber).toBeNull()
+    expect(returned.status).toBe('created')
+    expect(returned.dateRange).toEqual({ validFrom: null, validTo: null })
+  })
+
+  it('returns 404 for an accreditation the organisation does not hold', async () => {
+    const accreditation = anAccreditation()
+    const registration = aRegistration({ accreditationId: accreditation.id })
+
+    const response = await readAccreditation(
+      anOrganisation(registration, [accreditation]),
+      registration.id,
+      '68f6a147c117aec8a1ab74ff'
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+  })
+
+  it('returns 404 for an accreditation this registration does not hold', async () => {
+    const held = anAccreditation()
+    const other = anAccreditation(ACCREDITATION_STATUS.APPROVED, {
+      accreditationNumber: 'A26ER5001180999PL'
+    })
+    const registration = aRegistration({ accreditationId: held.id })
+
+    const response = await readAccreditation(
+      anOrganisation(registration, [held, other]),
+      registration.id,
+      other.id
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+  })
+
+  it('returns 404 when the organisation holds no such registration', async () => {
+    const accreditation = anAccreditation()
+
+    const response = await readAccreditation(
+      anOrganisation(aRegistration(), [accreditation]),
+      '68f6a147c117aec8a1ab74ff',
+      accreditation.id
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 })

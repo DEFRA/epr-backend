@@ -183,7 +183,12 @@ const accreditationApplicationSchema = Joi.object({
   wasteProcessingType: wasteProcessingTypeSchema.required()
 })
 
-const accreditationSchema = Joi.object({
+/**
+ * One accreditation, at its own address and as an item of the collection
+ * below. Exported so the two routes are held to one contract by construction
+ * rather than by review.
+ */
+export const accreditationResponseSchema = Joi.object({
   id: Joi.string().required(),
   accreditationNumber: Joi.string().allow(null).required(),
   status: Joi.string()
@@ -196,5 +201,5 @@ const accreditationSchema = Joi.object({
 })
 
 export const registrationAccreditationsResponseSchema = Joi.object({
-  accreditations: Joi.array().items(accreditationSchema).required()
+  accreditations: Joi.array().items(accreditationResponseSchema).required()
 })

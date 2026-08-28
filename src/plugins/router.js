@@ -27,6 +27,7 @@ import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
 import { adminMeGet } from '#routes/v1/admin/me/get.js'
 import { accreditationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/accreditations/waste-balance-ledger/get.js'
 import {
+  registrationAccreditationGet,
   registrationAccreditationsGet,
   registrationGet
 } from '#routes/v1/organisations/registrations/get.js'
@@ -85,6 +86,7 @@ const router = {
         registrationsList,
         registrationGet,
         registrationAccreditationsGet,
+        registrationAccreditationGet,
         registrationWasteBalanceLedgerGet,
         dlqMessagesGet,
         dlqPurgePost
