@@ -222,7 +222,7 @@ describe(`GET ${registrationsListPath}`, () => {
       return served.request
     }
 
-    it('shows an operator the registrations of their own organisation', async () => {
+    it('serves the registrations to any caller holding organisation read', async () => {
       const request = await serveOrganisation()
 
       const response = await server.inject({ ...request, ...asOperator() })

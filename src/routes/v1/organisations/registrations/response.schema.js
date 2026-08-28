@@ -5,7 +5,9 @@ import {
   REGISTRATION_STATUS,
   REGULATOR,
   REPROCESSING_TYPE,
+  TIME_SCALE,
   TONNAGE_MONITORING_MATERIALS,
+  WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
@@ -77,7 +79,9 @@ const wasteExemptionSchema = Joi.object({
 const authorisedMaterialSchema = Joi.object({
   material: appliedForMaterialSchema.required(),
   authorisedWeightInTonnes: Joi.number().required(),
-  timeScale: Joi.string().required()
+  timeScale: Joi.string()
+    .valid(...Object.values(TIME_SCALE))
+    .required()
 })
 
 /**
@@ -86,7 +90,9 @@ const authorisedMaterialSchema = Joi.object({
  * code, so each arm carries only the keys its own kind has.
  */
 const wastePermitSchema = Joi.object({
-  type: Joi.string().required(),
+  type: Joi.string()
+    .valid(...Object.values(WASTE_PERMIT_TYPE))
+    .required(),
   permitNumber: Joi.string(),
   exemptions: Joi.array().items(wasteExemptionSchema),
   authorisedMaterials: Joi.array().items(authorisedMaterialSchema)
@@ -104,8 +110,9 @@ const wastePermitSchema = Joi.object({
  *
  * Every answer is present whether or not it was given, an unanswered one
  * reading null or empty, so a client never has to tell a missing key from an
- * empty one. A site and plant equipment are asked of a reprocessor, ports and
- * a notice address of an exporter, and each is null for the other.
+ * empty one. Plant equipment is asked only of a reprocessor and ports only of
+ * an exporter, so each is null for the other. A site and a notice address are
+ * asked of one and offered to the other, so either may carry both.
  */
 const registrationApplicationSchema = Joi.object({
   orgName: Joi.string().required(),
