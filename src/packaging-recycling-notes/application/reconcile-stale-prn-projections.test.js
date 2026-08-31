@@ -4,7 +4,10 @@ import { MongoClient, ObjectId } from 'mongodb'
 import Boom from '@hapi/boom'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import {
+  createPackagingRecyclingNotesRepository,
+  PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
+} from '#packaging-recycling-notes/repository/mongodb.js'
 import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
 import {
   buildAccreditationId,
@@ -26,7 +29,6 @@ import {
 import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
 
 const DATABASE_NAME = 'epr-backend'
-const PRN_COLLECTION_NAME = 'packaging-recycling-notes'
 
 /**
  * @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger
@@ -58,7 +60,7 @@ const it = mongoIt.extend({
   prnCollection: async (/** @type {*} */ { database }, use) => {
     // Constructing the repository ensures the collection and its indexes.
     await createPackagingRecyclingNotesRepository(database, [])
-    await use(database.collection(PRN_COLLECTION_NAME))
+    await use(database.collection(PACKAGING_RECYCLING_NOTES_COLLECTION_NAME))
   },
 
   prnRepository: async (/** @type {*} */ { database }, use) => {
@@ -173,6 +175,93 @@ describe('reconcileStalePrnProjections', () => {
 
     expect(result).toMatchObject({ scanned: 1, drifting: 0 })
     expect(result.reports).toEqual([])
+  })
+
+  it('skips a PRN deleted between the id snapshot and its read', async (/** @type {*} */ {
+    prnRepository,
+    service
+  }) => {
+    const missingId = new ObjectId()
+    // A doc present at the snapshot but gone by the point read is benign, not a
+    // failure: it is skipped and counts towards nothing.
+    const prnCollection = /** @type {*} */ ({
+      find: () => ({ map: () => ({ toArray: async () => [missingId] }) }),
+      findOne: async () => null
+    })
+
+    const result = await reconcileStalePrnProjections(
+      { prnCollection, prnRepository, service },
+      { isDryRun: true }
+    )
+
+    expect(result).toMatchObject({
+      scanned: 0,
+      drifting: 0,
+      repaired: 0,
+      stillDrifting: 0,
+      failed: 0
+    })
+    expect(result.reports).toEqual([])
+  })
+
+  it('isolates a malformed document and still reconciles the rest', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service
+  }) => {
+    // A document that fails the read schema is seeded ahead of a good PRN; it
+    // must fail only itself, not abort the sweep over the PRNs behind it.
+    await prnCollection.insertOne(/** @type {*} */ ({ notAValidPrn: true }))
+    const created = await seedDriftingPrn(prnRepository, ledgerCollection)
+
+    const result = await reconcileStalePrnProjections(
+      { prnCollection, prnRepository, service },
+      { isDryRun: true }
+    )
+
+    expect(result).toMatchObject({ scanned: 1, drifting: 1, failed: 1 })
+    expect(
+      result.reports.map((/** @type {*} */ report) => report.prnId)
+    ).toEqual([created.id])
+  })
+
+  it('leaves a current projection untouched in repair mode', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service
+  }) => {
+    const ids = buildAccreditationId()
+    const created = await prnRepository.create(
+      buildAwaitingAcceptancePrn({
+        ...underAccreditation(ids),
+        lastAppliedEventNumber: 3
+      })
+    )
+    // The event sits at the watermark, not past it — nothing to apply.
+    await ledgerCollection.insertOne(
+      buildPrnRejectedEvent({
+        ...ids,
+        number: 3,
+        payload: { prnId: created.id, amount: 50 }
+      })
+    )
+
+    const result = await reconcileStalePrnProjections(
+      { prnCollection, prnRepository, service },
+      { isDryRun: false }
+    )
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      drifting: 0,
+      repaired: 0,
+      stillDrifting: 0
+    })
+    const stored = await findStored(prnCollection, created.id)
+    expect(stored.version).toBe(1)
+    expect(stored.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
   })
 
   it('folds and persists a drifting projection when not a dry run', async (/** @type {*} */ {
