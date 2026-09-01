@@ -34,7 +34,7 @@ vi.mock(
 vi.mock('../config.js', () => ({ config: { get: vi.fn() } }))
 
 const cleanResult = {
-  scanned: 2,
+  total: 2,
   drifting: 0,
   repaired: 0,
   stillDrifting: 0,
@@ -89,14 +89,14 @@ describe('runReconcileStalePrnProjections', () => {
     expect(mockLock.free).toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (dry-run): scanned=2 drifting=0 repaired=0 stillDrifting=0 failed=0'
+        'Reconcile stale PRN projections (dry-run): total=2 drifting=0 repaired=0 stillDrifting=0 failed=0'
     })
   })
 
   it('repairs and logs each drift finding when the feature flag is on', async () => {
     vi.mocked(config.get).mockReturnValue(true)
     vi.mocked(reconcileStalePrnProjections).mockResolvedValue({
-      scanned: 1,
+      total: 1,
       drifting: 1,
       repaired: 1,
       stillDrifting: 0,
@@ -128,7 +128,7 @@ describe('runReconcileStalePrnProjections', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (repair): scanned=1 drifting=1 repaired=1 stillDrifting=0 failed=0'
+        'Reconcile stale PRN projections (repair): total=1 drifting=1 repaired=1 stillDrifting=0 failed=0'
     })
   })
 

@@ -9,17 +9,13 @@ import {
 import {
   buildAccreditationId,
   buildAwaitingAcceptancePrn,
-  buildAwaitingAuthorisationPrn,
   underAccreditation
 } from './contract/test-data.js'
 import {
   ensureLedgerCollection,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from '#waste-balances/repository/ledger-mongodb.js'
-import {
-  buildPrnIssuedEvent,
-  buildPrnRejectedEvent
-} from '#waste-balances/repository/ledger-test-data.js'
+import { buildPrnRejectedEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 import { createDriftQuery } from './drift-query.mongodb.js'
 
@@ -73,96 +69,16 @@ const it = mongoIt.extend({
   }
 })
 
-/**
- * Seeds a PRN stored at `awaiting_acceptance` with the given watermark, then
- * appends a rejection at `eventNumber` the projection has never applied — so the
- * stored status lags the ledger when `eventNumber` sits past the watermark.
- */
-const seedRejectedAfter = async (
-  prnRepository,
-  ledgerCollection,
-  { watermark, eventNumber }
-) => {
-  const ids = buildAccreditationId()
-  const created = await prnRepository.create(
-    buildAwaitingAcceptancePrn({
-      ...underAccreditation(ids),
-      lastAppliedEventNumber: watermark
-    })
-  )
-  await ledgerCollection.insertOne(
-    buildPrnRejectedEvent({
-      ...ids,
-      number: eventNumber,
-      payload: { prnId: created.id, amount: 50 }
-    })
-  )
-  return { ids, created }
-}
-
+// The behind / level / no-watermark detection cases are exercised end to end by
+// reconcile-stale-prn-projections.test.js, which drives this same real query. The
+// one property that cannot be checked through the reconciler is the false-positive
+// trap below: if this query wrongly flagged a level sibling, the reconciler would
+// re-read it, fold to nothing, and skip it as `current`, silently masking the
+// regression. So the trap is asserted directly on the query's output.
 describe('createDriftQuery', () => {
   beforeEach(async (/** @type {*} */ { prnCollection, ledgerCollection }) => {
     await prnCollection.deleteMany({})
     await ledgerCollection.deleteMany({})
-  })
-
-  it('flags the id of a PRN whose watermark sits behind its own ledger', async (/** @type {*} */ {
-    prnRepository,
-    ledgerCollection,
-    findDrifting
-  }) => {
-    const { created } = await seedRejectedAfter(
-      prnRepository,
-      ledgerCollection,
-      {
-        watermark: 2,
-        eventNumber: 3
-      }
-    )
-
-    const { total, driftingIds } = await findDrifting()
-
-    expect(total).toBe(1)
-    expect(driftingIds.map((id) => id.toHexString())).toEqual([created.id])
-  })
-
-  it('does not flag a PRN level with its ledger, but still counts it in total', async (/** @type {*} */ {
-    prnRepository,
-    ledgerCollection,
-    findDrifting
-  }) => {
-    // Event sits at the watermark, not past it — nothing unapplied.
-    await seedRejectedAfter(prnRepository, ledgerCollection, {
-      watermark: 3,
-      eventNumber: 3
-    })
-
-    const { total, driftingIds } = await findDrifting()
-
-    expect(total).toBe(1)
-    expect(driftingIds).toEqual([])
-  })
-
-  it('flags a PRN that carries no watermark once an event exists for it', async (/** @type {*} */ {
-    prnRepository,
-    ledgerCollection,
-    findDrifting
-  }) => {
-    const ids = buildAccreditationId()
-    const created = await prnRepository.create(
-      buildAwaitingAuthorisationPrn(underAccreditation(ids))
-    )
-    await ledgerCollection.insertOne(
-      buildPrnIssuedEvent({
-        ...ids,
-        number: 1,
-        payload: { prnId: created.id, amount: 50 }
-      })
-    )
-
-    const { driftingIds } = await findDrifting()
-
-    expect(driftingIds.map((id) => id.toHexString())).toEqual([created.id])
   })
 
   it('does not falsely flag a sibling PRN when another in its partition advances', async (/** @type {*} */ {

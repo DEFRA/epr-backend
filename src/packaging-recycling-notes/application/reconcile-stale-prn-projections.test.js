@@ -131,7 +131,7 @@ describe('reconcileStalePrnProjections', () => {
       { isDryRun: true }
     )
 
-    expect(result.scanned).toBe(1)
+    expect(result.total).toBe(1)
     expect(result.drifting).toBe(1)
     expect(result.repaired).toBe(0)
     expect(result.stillDrifting).toBe(0)
@@ -181,7 +181,7 @@ describe('reconcileStalePrnProjections', () => {
       { isDryRun: true }
     )
 
-    expect(result).toMatchObject({ scanned: 1, drifting: 0 })
+    expect(result).toMatchObject({ total: 1, drifting: 0 })
     expect(result.reports).toEqual([])
   })
 
@@ -203,7 +203,7 @@ describe('reconcileStalePrnProjections', () => {
     )
 
     expect(result).toMatchObject({
-      scanned: 1,
+      total: 1,
       drifting: 0,
       repaired: 0,
       stillDrifting: 0,
@@ -248,7 +248,7 @@ describe('reconcileStalePrnProjections', () => {
     )
 
     expect(result).toMatchObject({
-      scanned: 1,
+      total: 1,
       drifting: 0,
       repaired: 0,
       stillDrifting: 0,
@@ -289,7 +289,7 @@ describe('reconcileStalePrnProjections', () => {
       { isDryRun: true }
     )
 
-    expect(result).toMatchObject({ scanned: 2, drifting: 1, failed: 1 })
+    expect(result).toMatchObject({ total: 2, drifting: 1, failed: 1 })
     expect(
       result.reports.map((/** @type {*} */ report) => report.prnId)
     ).toEqual([created.id])
@@ -324,7 +324,7 @@ describe('reconcileStalePrnProjections', () => {
     )
 
     expect(result).toMatchObject({
-      scanned: 1,
+      total: 1,
       drifting: 0,
       repaired: 0,
       stillDrifting: 0
@@ -349,7 +349,7 @@ describe('reconcileStalePrnProjections', () => {
     )
 
     expect(result).toMatchObject({
-      scanned: 1,
+      total: 1,
       drifting: 1,
       repaired: 1,
       stillDrifting: 0
@@ -401,7 +401,7 @@ describe('reconcileStalePrnProjections', () => {
     )
 
     expect(result).toMatchObject({
-      scanned: 3,
+      total: 3,
       drifting: 3,
       repaired: 1,
       stillDrifting: 2
@@ -441,7 +441,7 @@ describe('reconcileStalePrnProjections', () => {
       { isDryRun: true }
     )
 
-    expect(result).toMatchObject({ scanned: 1, drifting: 1 })
+    expect(result).toMatchObject({ total: 1, drifting: 1 })
     expect(result.reports).toEqual([
       {
         prnId: created.id,

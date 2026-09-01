@@ -20,6 +20,11 @@ import { COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME } from './
  * reads as `0`) and stops at the first — this is an existence probe, not a
  * fetch, so the caller re-reads the tail through the validated catch-up path.
  * Index-backed by `prn_watermark_catchup`; returns only the drifting `_id`s.
+ *
+ * The join omits `organisationId` (the catch-up read includes it): an
+ * accreditation belongs to one registration belongs to one organisation, so
+ * `(registrationId, accreditationId)` plus the unique `payload.prnId` already
+ * name exactly one event stream. Adding the organisation could not narrow it.
  */
 const DRIFTING_IDS_PIPELINE = [
   {

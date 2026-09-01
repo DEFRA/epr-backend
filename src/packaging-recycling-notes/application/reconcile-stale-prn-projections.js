@@ -70,9 +70,10 @@ const unappliedEventsFor = (prn, service) =>
 
 /**
  * Writes the folded projection back under the repository's version CAS and
- * watermark guard. The guard rejects a projection another writer has already
- * moved past — as a returned `null`, or a thrown conflict. Either way the drift
- * stands and the next run retries it, so both collapse to `stillDrifting`.
+ * watermark guard. A projection another writer has already moved past is
+ * refused with a thrown conflict; a `null` return means the PRN was deleted
+ * after detection. Either way the drift stands and the next run retries it, so
+ * both collapse to `stillDrifting`.
  *
  * @param {PackagingRecyclingNotesRepository} prnRepository
  * @param {PackagingRecyclingNote} prn
@@ -179,5 +180,5 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
     }
   }
 
-  return { scanned: total, ...tally, reports }
+  return { total, ...tally, reports }
 }
