@@ -19,7 +19,6 @@ const buildFixture = () =>
         registrations: [
           buildRegistration({
             reprocessingType: 'input',
-            validTo: '2027-01-01',
             statusHistory: [{ status: 'created', updatedAt: '2026-01-01' }]
           })
         ],

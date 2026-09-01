@@ -818,7 +818,6 @@ const buildComplexTestOrg = ({
     formSubmission: { id: registrationId, time: new Date() },
     submittedToRegulator: 'ea',
     validFrom: VALID_FROM,
-    validTo: VALID_TO,
     // A registered-only operator has no accreditation, which makes the
     // registration report on a quarterly cadence rather than monthly.
     ...(accredited && { accreditationId }),
