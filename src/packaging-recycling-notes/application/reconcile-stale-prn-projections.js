@@ -175,6 +175,9 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
         tally.repaired += 1
       } else if (outcome === 'stillDrifting') {
         tally.stillDrifting += 1
+      } else {
+        // 'current' needs no status tally, and a dry-run 'drifting' is already
+        // counted above via its report — neither maps to a repair outcome.
       }
     } catch {
       tally.failed += 1
