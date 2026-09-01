@@ -293,6 +293,9 @@ describe('reconcileStalePrnProjections', () => {
     expect(
       result.reports.map((/** @type {*} */ report) => report.prnId)
     ).toEqual([created.id])
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0].prnId).toBe(insertedId.toHexString())
+    expect(result.failures[0].error).toBeTypeOf('string')
   })
 
   it('leaves a current projection untouched in repair mode', async (/** @type {*} */ {
@@ -413,6 +416,44 @@ describe('reconcileStalePrnProjections', () => {
       const stored = await findStored(prnCollection, loser.id)
       expect(stored.version).toBe(1)
     }
+  })
+
+  it('surfaces an unexpected repair error as a failure, not still-drifting', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service,
+    findDrifting
+  }) => {
+    const created = await seedDriftingPrn(prnRepository, ledgerCollection)
+    // A non-Boom error is not a guard rejection the repository has logged, so it
+    // must not masquerade as a benign still-drifting outcome: it fails the PRN.
+    const erroringRepository = {
+      ...prnRepository,
+      persistProjection: async () => {
+        throw new Error('connection reset')
+      }
+    }
+
+    const result = await reconcileStalePrnProjections(
+      {
+        findDrifting,
+        prnCollection,
+        prnRepository: erroringRepository,
+        service
+      },
+      { isDryRun: false }
+    )
+
+    expect(result).toMatchObject({
+      drifting: 0,
+      repaired: 0,
+      stillDrifting: 0,
+      failed: 1
+    })
+    expect(result.failures).toEqual([
+      { prnId: created.id, error: 'Error: connection reset' }
+    ])
   })
 
   it('folds a projection that has applied no events, reporting a null PRN number', async (/** @type {*} */ {

@@ -70,10 +70,11 @@ const unappliedEventsFor = (prn, service) =>
 
 /**
  * Writes the folded projection back under the repository's version CAS and
- * watermark guard. A projection another writer has already moved past is
- * refused with a thrown conflict; a `null` return means the PRN was deleted
- * after detection. Either way the drift stands and the next run retries it, so
- * both collapse to `stillDrifting`.
+ * watermark guard. The guard's rejections are Boom errors the repository has
+ * already logged (a version conflict, or a watermark regression); they mean the
+ * drift stands for the next run, as does a `null` return (the PRN was deleted
+ * after detection), so both collapse to `stillDrifting`. Any other error is
+ * unexpected and unlogged, so it propagates to be surfaced as a failure.
  *
  * @param {PackagingRecyclingNotesRepository} prnRepository
  * @param {PackagingRecyclingNote} prn
@@ -87,8 +88,11 @@ const repair = async (prnRepository, prn, projection) => {
       expectedVersion: prn.version
     })
     return persisted ? 'repaired' : 'stillDrifting'
-  } catch {
-    return 'stillDrifting'
+  } catch (err) {
+    if (/** @type {*} */ (err)?.isBoom) {
+      return 'stillDrifting'
+    }
+    throw err
   }
 }
 
@@ -154,6 +158,8 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
   }
   /** @type {DriftReport[]} */
   const reports = []
+  /** @type {Array<{ prnId: string, error: string }>} */
+  const failures = []
 
   const { total, driftingIds } = await deps.findDrifting()
 
@@ -175,10 +181,11 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
         // 'current' needs no status tally, and a dry-run 'drifting' is already
         // counted above via its report — neither maps to a repair outcome.
       }
-    } catch {
+    } catch (err) {
+      failures.push({ prnId: String(id), error: String(err) })
       tally.failed += 1
     }
   }
 
-  return { total, ...tally, reports }
+  return { total, ...tally, reports, failures }
 }

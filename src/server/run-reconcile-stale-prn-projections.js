@@ -59,11 +59,24 @@ const runReconcile = async (server) => {
   const isDryRun = !config.get('featureFlags.reconcileStalePrnProjections')
   const deps = await buildDependencies(server)
 
-  const { total, drifting, repaired, stillDrifting, failed, reports } =
-    await reconcileStalePrnProjections(deps, { isDryRun })
+  const {
+    total,
+    drifting,
+    repaired,
+    stillDrifting,
+    failed,
+    reports,
+    failures
+  } = await reconcileStalePrnProjections(deps, { isDryRun })
 
   for (const report of reports) {
     logger.info({ message: formatReport(report) })
+  }
+
+  for (const failure of failures) {
+    logger.error({
+      message: `Reconcile failed for PRN ${failure.prnId}: ${failure.error}`
+    })
   }
 
   const mode = isDryRun ? 'dry-run' : 'repair'

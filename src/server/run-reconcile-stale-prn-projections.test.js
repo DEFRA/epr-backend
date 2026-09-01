@@ -39,7 +39,8 @@ const cleanResult = {
   repaired: 0,
   stillDrifting: 0,
   failed: 0,
-  reports: []
+  reports: [],
+  failures: []
 }
 
 describe('runReconcileStalePrnProjections', () => {
@@ -93,14 +94,14 @@ describe('runReconcileStalePrnProjections', () => {
     })
   })
 
-  it('repairs and logs each drift finding when the feature flag is on', async () => {
+  it('repairs and logs each drift finding and failure when the feature flag is on', async () => {
     vi.mocked(config.get).mockReturnValue(true)
     vi.mocked(reconcileStalePrnProjections).mockResolvedValue({
-      total: 1,
+      total: 2,
       drifting: 1,
       repaired: 1,
       stillDrifting: 0,
-      failed: 0,
+      failed: 1,
       reports: [
         {
           prnId: 'prn-1',
@@ -111,7 +112,8 @@ describe('runReconcileStalePrnProjections', () => {
           minUnappliedNumber: 3,
           wouldBecomeStatus: 'awaiting_cancellation'
         }
-      ]
+      ],
+      failures: [{ prnId: 'prn-2', error: 'Error: connection reset' }]
     })
 
     await runReconcileStalePrnProjections(mockServer)
@@ -126,9 +128,12 @@ describe('runReconcileStalePrnProjections', () => {
       message:
         'Stale PRN projection: prnId=prn-1 prnNumber=TT2600001 currentStatus=awaiting_acceptance lastAppliedEventNumber=2 unapplied=1 minUnappliedNumber=3 wouldBecomeStatus=awaiting_cancellation'
     })
+    expect(logger.error).toHaveBeenCalledWith({
+      message: 'Reconcile failed for PRN prn-2: Error: connection reset'
+    })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (repair): total=1 drifting=1 repaired=1 stillDrifting=0 failed=0'
+        'Reconcile stale PRN projections (repair): total=2 drifting=1 repaired=1 stillDrifting=0 failed=1'
     })
   })
 
