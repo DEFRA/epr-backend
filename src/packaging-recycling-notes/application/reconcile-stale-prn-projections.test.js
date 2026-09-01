@@ -26,6 +26,8 @@ import {
   buildPrnRejectedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
 
+import { createDriftQuery } from '#packaging-recycling-notes/repository/drift-query.mongodb.js'
+
 import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
 
 const DATABASE_NAME = 'epr-backend'
@@ -76,6 +78,10 @@ const it = mongoIt.extend({
   service: async (/** @type {*} */ { database }, use) => {
     const ledgerFactory = await createMongoLedgerRepository(database)
     await use(createWasteBalanceService(ledgerFactory()))
+  },
+
+  findDrifting: async (/** @type {*} */ { database }, use) => {
+    await use(createDriftQuery(database))
   }
 })
 
@@ -115,12 +121,13 @@ describe('reconcileStalePrnProjections', () => {
     prnCollection,
     ledgerCollection,
     prnRepository,
-    service
+    service,
+    findDrifting
   }) => {
     const created = await seedDriftingPrn(prnRepository, ledgerCollection)
 
     const result = await reconcileStalePrnProjections(
-      { prnCollection, prnRepository, service },
+      { findDrifting, prnCollection, prnRepository, service },
       { isDryRun: true }
     )
 
@@ -150,7 +157,8 @@ describe('reconcileStalePrnProjections', () => {
     prnCollection,
     ledgerCollection,
     prnRepository,
-    service
+    service,
+    findDrifting
   }) => {
     const ids = buildAccreditationId()
     const created = await prnRepository.create(
@@ -169,7 +177,7 @@ describe('reconcileStalePrnProjections', () => {
     )
 
     const result = await reconcileStalePrnProjections(
-      { prnCollection, prnRepository, service },
+      { findDrifting, prnCollection, prnRepository, service },
       { isDryRun: true }
     )
 
@@ -177,25 +185,25 @@ describe('reconcileStalePrnProjections', () => {
     expect(result.reports).toEqual([])
   })
 
-  it('skips a PRN deleted between the id snapshot and its read', async (/** @type {*} */ {
+  it('skips a PRN flagged as drifting but deleted before its read', async (/** @type {*} */ {
     prnRepository,
     service
   }) => {
     const missingId = new ObjectId()
-    // A doc present at the snapshot but gone by the point read is benign, not a
-    // failure: it is skipped and counts towards nothing.
-    const prnCollection = /** @type {*} */ ({
-      find: () => ({ map: () => ({ toArray: async () => [missingId] }) }),
-      findOne: async () => null
-    })
+    // Detection flags an id; by the point read the document is gone. Benign, not
+    // a failure: it is skipped and counts towards nothing. `findDrifting` is
+    // stubbed here because a delete landing in that window cannot be produced
+    // reliably against real Mongo.
+    const findDrifting = async () => ({ total: 1, driftingIds: [missingId] })
+    const prnCollection = /** @type {*} */ ({ findOne: async () => null })
 
     const result = await reconcileStalePrnProjections(
-      { prnCollection, prnRepository, service },
+      { findDrifting, prnCollection, prnRepository, service },
       { isDryRun: true }
     )
 
     expect(result).toMatchObject({
-      scanned: 0,
+      scanned: 1,
       drifting: 0,
       repaired: 0,
       stillDrifting: 0,
@@ -208,19 +216,35 @@ describe('reconcileStalePrnProjections', () => {
     prnCollection,
     ledgerCollection,
     prnRepository,
-    service
+    service,
+    findDrifting
   }) => {
-    // A document that fails the read schema is seeded ahead of a good PRN; it
-    // must fail only itself, not abort the sweep over the PRNs behind it.
-    await prnCollection.insertOne(/** @type {*} */ ({ notAValidPrn: true }))
+    // A document with the join keys and an unapplied event is flagged as
+    // drifting, but fails the read schema. It must fail only itself, not abort
+    // the sweep over the good PRN alongside it.
+    const badIds = buildAccreditationId()
+    const { insertedId } = await prnCollection.insertOne(
+      /** @type {*} */ ({
+        registrationId: badIds.registrationId,
+        accreditation: { id: badIds.accreditationId },
+        notAValidPrn: true
+      })
+    )
+    await ledgerCollection.insertOne(
+      buildPrnRejectedEvent({
+        ...badIds,
+        number: 3,
+        payload: { prnId: insertedId.toHexString(), amount: 50 }
+      })
+    )
     const created = await seedDriftingPrn(prnRepository, ledgerCollection)
 
     const result = await reconcileStalePrnProjections(
-      { prnCollection, prnRepository, service },
+      { findDrifting, prnCollection, prnRepository, service },
       { isDryRun: true }
     )
 
-    expect(result).toMatchObject({ scanned: 1, drifting: 1, failed: 1 })
+    expect(result).toMatchObject({ scanned: 2, drifting: 1, failed: 1 })
     expect(
       result.reports.map((/** @type {*} */ report) => report.prnId)
     ).toEqual([created.id])
@@ -230,7 +254,8 @@ describe('reconcileStalePrnProjections', () => {
     prnCollection,
     ledgerCollection,
     prnRepository,
-    service
+    service,
+    findDrifting
   }) => {
     const ids = buildAccreditationId()
     const created = await prnRepository.create(
@@ -249,7 +274,7 @@ describe('reconcileStalePrnProjections', () => {
     )
 
     const result = await reconcileStalePrnProjections(
-      { prnCollection, prnRepository, service },
+      { findDrifting, prnCollection, prnRepository, service },
       { isDryRun: false }
     )
 
@@ -268,12 +293,13 @@ describe('reconcileStalePrnProjections', () => {
     prnCollection,
     ledgerCollection,
     prnRepository,
-    service
+    service,
+    findDrifting
   }) => {
     const created = await seedDriftingPrn(prnRepository, ledgerCollection)
 
     const result = await reconcileStalePrnProjections(
-      { prnCollection, prnRepository, service },
+      { findDrifting, prnCollection, prnRepository, service },
       { isDryRun: false }
     )
 
@@ -295,7 +321,8 @@ describe('reconcileStalePrnProjections', () => {
     prnCollection,
     ledgerCollection,
     prnRepository,
-    service
+    service,
+    findDrifting
   }) => {
     const throwing = await seedDriftingPrn(prnRepository, ledgerCollection)
     const nulling = await seedDriftingPrn(prnRepository, ledgerCollection)
@@ -319,7 +346,12 @@ describe('reconcileStalePrnProjections', () => {
     }
 
     const result = await reconcileStalePrnProjections(
-      { prnCollection, prnRepository: guardedRepository, service },
+      {
+        findDrifting,
+        prnCollection,
+        prnRepository: guardedRepository,
+        service
+      },
       { isDryRun: false }
     )
 
@@ -342,7 +374,8 @@ describe('reconcileStalePrnProjections', () => {
     prnCollection,
     ledgerCollection,
     prnRepository,
-    service
+    service,
+    findDrifting
   }) => {
     const ids = buildAccreditationId()
     // Awaiting authorisation: created but never issued, so it carries no PRN
@@ -359,7 +392,7 @@ describe('reconcileStalePrnProjections', () => {
     )
 
     const result = await reconcileStalePrnProjections(
-      { prnCollection, prnRepository, service },
+      { findDrifting, prnCollection, prnRepository, service },
       { isDryRun: true }
     )
 

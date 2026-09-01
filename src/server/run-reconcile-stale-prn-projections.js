@@ -1,5 +1,6 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { reconcileStalePrnProjections } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js'
+import { createDriftQuery } from '#packaging-recycling-notes/repository/drift-query.mongodb.js'
 import {
   createPackagingRecyclingNotesRepository,
   COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
@@ -28,10 +29,10 @@ const formatReport = (report) =>
   ].join(' ')
 
 /**
- * The scan reads the whole PRN collection, so the cursor takes the raw
- * collection; a repaired projection is written back through the repository's
- * version CAS. Catch-up events come from the waste-balance service over the
- * shared ledger.
+ * `findDrifting` detects the ids behind their ledger in one indexed query; each
+ * is then re-read point-wise off the raw collection and, on repair, written back
+ * through the repository's version CAS. Catch-up events come from the
+ * waste-balance service over the shared ledger.
  *
  * @param {StartedServer} server
  */
@@ -43,6 +44,7 @@ const buildDependencies = async (server) => {
   const ledgerFactory = await createMongoLedgerRepository(server.db)
 
   return {
+    findDrifting: createDriftQuery(server.db),
     prnCollection: server.db.collection(
       PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
     ),

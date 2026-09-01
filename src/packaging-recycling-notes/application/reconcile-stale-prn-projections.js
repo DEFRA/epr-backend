@@ -20,6 +20,7 @@ import { validatePrnRead } from '#packaging-recycling-notes/repository/validatio
 
 /**
  * @typedef {Object} Deps
+ * @property {() => Promise<{ total: number, driftingIds: import('mongodb').ObjectId[] }>} findDrifting
  * @property {import('mongodb').Collection} prnCollection
  * @property {PackagingRecyclingNotesRepository} prnRepository
  * @property {WasteBalanceService} service
@@ -126,14 +127,18 @@ const reconcileOne = async (
 }
 
 /**
- * Scans every PRN projection and detects the ones whose stored status lags
- * their ledger — the drift a dropped write-back leaves behind, which the
- * list/download read paths never fold away (ADR-0047).
+ * Reconciles the PRN projections whose stored status lags their ledger — the
+ * drift a dropped write-back leaves behind, which the list/download read paths
+ * never fold away (ADR-0047).
  *
- * Read-only when `isDryRun`; otherwise it folds each drifting projection and
- * persists it under the repository's version CAS and watermark guard, so a lost
- * race is left for the next run rather than forced. A single unreadable document
- * or unmappable event fails only its own PRN (`failed`); the sweep carries on.
+ * Detection is delegated to `findDrifting`, a single indexed query returning the
+ * ids behind their ledger (and the collection `total` for the summary); the tail
+ * is then re-read per PRN through the validated catch-up path in `reconcileOne`,
+ * so only the affected PRNs are folded. Read-only when `isDryRun`; otherwise it
+ * persists each fold under the repository's version CAS and watermark guard, so
+ * a lost race is left for the next run rather than forced. A PRN deleted or
+ * healed between detection and its re-read is a benign skip; an unreadable
+ * document or unmappable event fails only its own PRN (`failed`).
  *
  * @param {Deps} deps
  * @param {Object} options
@@ -141,7 +146,6 @@ const reconcileOne = async (
  */
 export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
   const tally = {
-    scanned: 0,
     drifting: 0,
     repaired: 0,
     stillDrifting: 0,
@@ -150,23 +154,14 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
   /** @type {DriftReport[]} */
   const reports = []
 
-  // Snapshot the ids, then read each PRN point-wise. A repair sweep issues a
-  // ledger query and a write per PRN, so one streaming cursor held open across
-  // all of them risks a server-side timeout mid-sweep. The scan spans every
-  // organisation: drift is independent of the admin exclusion list, which only
-  // filters reads.
-  const ids = await deps.prnCollection
-    .find({}, { projection: { _id: 1 } })
-    .map((doc) => doc._id)
-    .toArray()
+  const { total, driftingIds } = await deps.findDrifting()
 
-  for (const id of ids) {
+  for (const id of driftingIds) {
     try {
       const { outcome, report } = await reconcileOne(id, deps, isDryRun)
       if (outcome === 'vanished') {
         continue
       }
-      tally.scanned += 1
       if (report) {
         reports.push(report)
         tally.drifting += 1
@@ -184,5 +179,5 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
     }
   }
 
-  return { ...tally, reports }
+  return { scanned: total, ...tally, reports }
 }

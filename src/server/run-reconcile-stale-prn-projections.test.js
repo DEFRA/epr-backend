@@ -16,6 +16,9 @@ vi.mock('#packaging-recycling-notes/repository/mongodb.js', () => ({
   createPackagingRecyclingNotesRepository: vi.fn(),
   COLLECTION_NAME: 'packaging-recycling-notes'
 }))
+vi.mock('#packaging-recycling-notes/repository/drift-query.mongodb.js', () => ({
+  createDriftQuery: vi.fn()
+}))
 vi.mock('#waste-balances/repository/ledger-mongodb.js', () => ({
   createMongoLedgerRepository: vi.fn()
 }))
