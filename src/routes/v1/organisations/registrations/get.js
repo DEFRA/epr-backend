@@ -1,15 +1,11 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
+import { toAccreditationResource } from './accreditation-resource.js'
+import { toRegistrationResource } from './registration-resource.js'
 import {
-  accreditationsForRegistration,
-  resolveDetailedMaterial
-} from '#domain/organisations/registration-utils.js'
-import {
-  toDateRangeResource,
-  toRegistrationResource
-} from './registration-resource.js'
-import {
+  accreditationResponseSchema,
   registrationAccreditationsResponseSchema,
   registrationResponseSchema
 } from './response.schema.js'
@@ -17,12 +13,13 @@ import {
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
-/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 export const registrationGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}'
 
 export const registrationAccreditationsGetPath = `${registrationGetPath}/accreditations`
+
+export const registrationAccreditationGetPath = `${registrationAccreditationsGetPath}/{accreditationId}`
 
 const registrationAuth = { scope: [SCOPES.organisationRead] }
 
@@ -81,6 +78,47 @@ export const registrationAccreditationsGet = {
   }
 }
 
+export const registrationAccreditationGet = {
+  method: 'GET',
+  path: registrationAccreditationGetPath,
+  options: {
+    auth: registrationAuth,
+    tags: ['api'],
+    response: {
+      schema: accreditationResponseSchema
+    }
+  },
+  /**
+   * @param {HapiRequest & {
+   *   params: {
+   *     organisationId: string,
+   *     registrationId: string,
+   *     accreditationId: string
+   *   }
+   * }} request
+   * @param {HapiResponseToolkit} h
+   */
+  handler: async (request, h) => {
+    const { organisation, registration } = await findRegistration(request)
+
+    // Resolved through the registration rather than the organisation, so an
+    // accreditation the organisation holds under a different registration is
+    // not found at this address.
+    const accreditation = accreditationsForRegistration(
+      registration,
+      organisation
+    ).find(({ id }) => id === request.params.accreditationId)
+
+    if (!accreditation) {
+      throw Boom.notFound('Accreditation not found')
+    }
+
+    return h
+      .response(toAccreditationResource(accreditation))
+      .code(StatusCodes.OK)
+  }
+}
+
 /**
  * @param {HapiRequest & {
  *   params: { organisationId: string, registrationId: string }
@@ -102,30 +140,4 @@ async function findRegistration(request) {
   }
 
   return { organisation, registration }
-}
-
-/**
- * The accreditation reads its material the way the registration does: the
- * applicant's answer stays in `application`, and the resolved one sits at the
- * top level where it exists at all.
- *
- * @param {Accreditation} accreditation
- */
-function toAccreditationResource(accreditation) {
-  const material = resolveDetailedMaterial(accreditation)
-
-  return {
-    id: accreditation.id,
-    accreditationNumber: accreditation.accreditationNumber ?? null,
-    status: accreditation.status,
-    ...(material !== null && { material }),
-    reprocessingType: accreditation.reprocessingType ?? null,
-    dateRange: toDateRangeResource(accreditation),
-    application: {
-      orgName: accreditation.orgName,
-      submittedToRegulator: accreditation.submittedToRegulator,
-      material: accreditation.material,
-      wasteProcessingType: accreditation.wasteProcessingType
-    }
-  }
 }
