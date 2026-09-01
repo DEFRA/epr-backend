@@ -212,6 +212,51 @@ describe('reconcileStalePrnProjections', () => {
     expect(result.reports).toEqual([])
   })
 
+  it('skips a PRN flagged as drifting but level by the time it is read', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service
+  }) => {
+    // Detection flags an id; between then and the point read the PRN catches up
+    // (a concurrent write advances its watermark), so nothing is left to apply.
+    // A benign skip, counted towards nothing. `findDrifting` is stubbed to flag
+    // the level PRN because that heal-in-window race cannot be produced reliably
+    // against real Mongo; the read and catch-up below run for real.
+    const ids = buildAccreditationId()
+    const created = await prnRepository.create(
+      buildAwaitingAcceptancePrn({
+        ...underAccreditation(ids),
+        lastAppliedEventNumber: 3
+      })
+    )
+    await ledgerCollection.insertOne(
+      buildPrnRejectedEvent({
+        ...ids,
+        number: 3,
+        payload: { prnId: created.id, amount: 50 }
+      })
+    )
+    const findDrifting = async () => ({
+      total: 1,
+      driftingIds: [ObjectId.createFromHexString(created.id)]
+    })
+
+    const result = await reconcileStalePrnProjections(
+      { findDrifting, prnCollection, prnRepository, service },
+      { isDryRun: false }
+    )
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      drifting: 0,
+      repaired: 0,
+      stillDrifting: 0,
+      failed: 0
+    })
+    expect(result.reports).toEqual([])
+  })
+
   it('isolates a malformed document and still reconciles the rest', async (/** @type {*} */ {
     prnCollection,
     ledgerCollection,
