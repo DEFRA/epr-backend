@@ -43,7 +43,6 @@ import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
-import { runWasteBalanceDuplicateEventsReport } from '#server/run-waste-balance-duplicate-events-report.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -218,7 +217,6 @@ async function createServer(options = {}) {
     )
     runFormsDataMigration(startedServer)
     runOrganisationValidationSweep(startedServer)
-    runWasteBalanceDuplicateEventsReport(startedServer)
   })
 
   return server
