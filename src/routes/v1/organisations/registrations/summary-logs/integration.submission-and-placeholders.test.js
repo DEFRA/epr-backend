@@ -94,7 +94,6 @@ describe('Submission and placeholder tests', () => {
             reprocessingType: 'input',
             submittedToRegulator: 'ea',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             accreditationId
           })
         ],

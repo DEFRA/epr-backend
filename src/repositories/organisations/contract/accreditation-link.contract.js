@@ -18,7 +18,7 @@ import {
 export const testAccreditationLinkValidation = (it) => {
   describe('accreditation link validation', () => {
     let repository
-    const { VALID_FROM, VALID_TO } = getValidDateRange()
+    const { VALID_FROM } = getValidDateRange()
 
     beforeEach(
       async (
@@ -48,7 +48,6 @@ export const testAccreditationLinkValidation = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG123',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               accreditationId
             }
           ]

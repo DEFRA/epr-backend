@@ -41,7 +41,6 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
                 status: ACCREDITATION_STATUS.SUSPENDED,
                 registrationNumber: 'REG12345',
                 validFrom: VALID_FROM,
-                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
@@ -92,7 +91,6 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG1',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT,
             accreditationId: inserted.accreditations[0].id // Link to first accreditation (reprocessor)
           }
@@ -102,7 +100,6 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG2',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             accreditationId: inserted.accreditations[2].id // Link to third accreditation (exporter)
           }
 
@@ -342,7 +339,6 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT,
             accreditationId: inserted.accreditations[0].id
           }
@@ -491,7 +487,6 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 

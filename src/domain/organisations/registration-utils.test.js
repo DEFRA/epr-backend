@@ -58,8 +58,7 @@ const regFixture = {
   wasteProcessingType: 'reprocessor',
   registrationNumber: 'REG-001',
   status: 'approved',
-  validFrom: '2026-01-01',
-  validTo: '2026-12-31'
+  validFrom: '2026-01-01'
 }
 
 /** @returns {Organisation} */

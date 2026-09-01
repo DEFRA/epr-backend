@@ -130,8 +130,7 @@
         }
       ],
       "registrationNumber": null,
-      "validFrom": null,
-      "validTo": null
+      "validFrom": null
     },
     {
       "id": "6507f1f77bcf86cd79943933",
@@ -191,8 +190,7 @@
         "postcode": "BT1 1AA"
       },
       "registrationNumber": null,
-      "validFrom": null,
-      "validTo": null
+      "validFrom": null
     }
   ],
   "accreditations": [

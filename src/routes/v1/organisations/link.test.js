@@ -89,7 +89,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   let server
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
   let organisationsRepository
-  const { VALID_FROM, VALID_TO } = getValidDateRange()
+  const { VALID_FROM } = getValidDateRange()
 
   beforeAll(async () => {
     const organisationsRepositoryFactory =
@@ -221,7 +221,6 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
                     ).cbduNumber || 'CBDU123456',
                   registrationNumber: 'REG1',
                   validFrom: VALID_FROM,
-                  validTo: VALID_TO,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ],

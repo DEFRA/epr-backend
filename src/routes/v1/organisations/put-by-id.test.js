@@ -987,7 +987,6 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
               statusHistory: registrationHistory,
               registrationNumber: 'REG12345',
               validFrom: '2026-01-01',
-              validTo: '2027-01-01',
               reprocessingType: 'input'
             })
           ],

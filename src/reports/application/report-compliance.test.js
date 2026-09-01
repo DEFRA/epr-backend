@@ -32,7 +32,7 @@ async function buildRegisteredOnlyOrg(orgRepo) {
 
   await orgRepo.insert(org)
 
-  const { VALID_FROM, VALID_TO } = getValidDateRange()
+  const { VALID_FROM } = getValidDateRange()
 
   const approvedRegistrations = [
     {
@@ -40,8 +40,7 @@ async function buildRegisteredOnlyOrg(orgRepo) {
       status: REGISTRATION_STATUS.APPROVED,
       registrationNumber: 'REG1',
       reprocessingType: REPROCESSING_TYPE.INPUT,
-      validFrom: VALID_FROM,
-      validTo: VALID_TO
+      validFrom: VALID_FROM
     }
   ]
 

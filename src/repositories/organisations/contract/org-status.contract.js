@@ -13,7 +13,7 @@ import {
 export const testOrgStatusTransitionBehaviour = (it) => {
   describe('organisation status transitions', () => {
     let repository
-    const { VALID_FROM, VALID_TO } = getValidDateRange()
+    const { VALID_FROM } = getValidDateRange()
 
     beforeEach(
       async (
@@ -84,7 +84,6 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],
@@ -109,7 +108,6 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],
@@ -150,7 +148,6 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],
@@ -180,7 +177,6 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],
@@ -205,7 +201,6 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],
@@ -235,7 +230,6 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],
@@ -269,7 +263,6 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],

@@ -86,7 +86,6 @@ describe('Repeated uploads of identical data', () => {
             formSubmission: { id: registrationId, time: new Date() },
             submittedToRegulator: 'ea',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             accreditationId
           })
         ],
