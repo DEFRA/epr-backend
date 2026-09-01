@@ -16,8 +16,7 @@ import { throwWatermarkRegression } from './watermark-guard.js'
 /** @import { FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, PersistProjectionParams, UpdateStatusParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 
-const COLLECTION_NAME = 'packaging-recycling-notes'
-export const PACKAGING_RECYCLING_NOTES_COLLECTION_NAME = COLLECTION_NAME
+export const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**

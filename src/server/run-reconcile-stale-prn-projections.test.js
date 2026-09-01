@@ -14,7 +14,7 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 vi.mock('#packaging-recycling-notes/repository/mongodb.js', () => ({
   createPackagingRecyclingNotesRepository: vi.fn(),
-  PACKAGING_RECYCLING_NOTES_COLLECTION_NAME: 'packaging-recycling-notes'
+  COLLECTION_NAME: 'packaging-recycling-notes'
 }))
 vi.mock('#waste-balances/repository/ledger-mongodb.js', () => ({
   createMongoLedgerRepository: vi.fn()

@@ -6,7 +6,7 @@ import Boom from '@hapi/boom'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   createPackagingRecyclingNotesRepository,
-  PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
+  COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
 } from '#packaging-recycling-notes/repository/mongodb.js'
 import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
 import {

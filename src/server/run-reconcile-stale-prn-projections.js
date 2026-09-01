@@ -2,7 +2,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { reconcileStalePrnProjections } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js'
 import {
   createPackagingRecyclingNotesRepository,
-  PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
+  COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
 } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
