@@ -106,7 +106,7 @@ describe('runReconcileStalePrnProjections (integration)', () => {
     expect(stored.lastAppliedEventNumber).toBe(3)
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (repair): total=1 drifting=1 repaired=1 stillDrifting=0 failed=0'
+        'Reconcile stale PRN projections (repair): total=1 drifting=1 repaired=1 folded=1 stamped=0 stillDrifting=0 failed=0'
     })
   })
 })

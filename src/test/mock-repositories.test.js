@@ -76,6 +76,7 @@ describe('mock-repositories', () => {
         'findByIds',
         'findByStatus',
         'updateStatus',
+        'updateWatermark',
         'persistProjection'
       ]
     },

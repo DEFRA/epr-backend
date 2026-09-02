@@ -16,7 +16,7 @@ import {
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
-/** @import { FindByStatusParams, PaginatedResult, PersistProjectionParams, UpdateStatusParams } from './port.js' */
+/** @import { FindByStatusParams, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 
 /** @typedef {Map<string, PackagingRecyclingNote>} Storage */
 
@@ -58,6 +58,37 @@ const buildVersionConflictError = (id, expected, actual) =>
   new Error(
     `Version conflict: attempted to update PRN ${id} with version ${expected} but current version is ${actual}`
   )
+
+/**
+ * Throws the tagged version conflict a CAS write raises when the stored version
+ * has moved on. Centralised so the message, log event and error stay identical
+ * across the adapter's writes, matching the mongo adapter's guard.
+ *
+ * @param {TypedLogger} logger
+ * @param {string} id
+ * @param {number} expectedVersion
+ * @param {number} actualVersion
+ */
+const assertVersion = (logger, id, expectedVersion, actualVersion) => {
+  if (actualVersion === expectedVersion) {
+    return
+  }
+  const conflictError = buildVersionConflictError(
+    id,
+    expectedVersion,
+    actualVersion
+  )
+  logger.error({
+    err: conflictError,
+    message: `Version conflict detected for PRN ${id}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.DB,
+      action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+      reference: id
+    }
+  })
+  throw Boom.conflict(conflictError.message, { kind: PRN_VERSION_CONFLICT })
+}
 
 /**
  * @param {string} id
@@ -215,21 +246,7 @@ const performUpdateStatus =
       return null
     }
 
-    if (prn.version !== version) {
-      const conflictError = buildVersionConflictError(id, version, prn.version)
-      logger.error({
-        err: conflictError,
-        message: `Version conflict detected for PRN ${id}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-          reference: id
-        }
-      })
-      throw Boom.conflict(conflictError.message, {
-        kind: PRN_VERSION_CONFLICT
-      })
-    }
+    assertVersion(logger, id, version, prn.version)
 
     enforceMonotonicWatermark(
       id,
@@ -280,6 +297,38 @@ const performUpdateStatus =
 /**
  * @param {Storage} storage
  * @param {TypedLogger} logger
+ * @returns {(params: UpdateWatermarkParams) => Promise<PackagingRecyclingNote | null>}
+ */
+const performUpdateWatermark =
+  (storage, logger) =>
+  async ({ id, version, lastAppliedEventNumber }) => {
+    const prn = storage.get(id)
+    if (!prn) {
+      return null
+    }
+
+    assertVersion(logger, id, version, prn.version)
+
+    enforceMonotonicWatermark(
+      id,
+      prn.lastAppliedEventNumber,
+      lastAppliedEventNumber,
+      logger
+    )
+
+    const updated = {
+      ...prn,
+      version: prn.version + 1,
+      lastAppliedEventNumber
+    }
+
+    storage.set(id, structuredClone(updated))
+    return structuredClone(updated)
+  }
+
+/**
+ * @param {Storage} storage
+ * @param {TypedLogger} logger
  * @returns {(params: PersistProjectionParams) => Promise<PackagingRecyclingNote | null>}
  */
 const performPersistProjection =
@@ -291,25 +340,7 @@ const performPersistProjection =
       return null
     }
 
-    if (existing.version !== expectedVersion) {
-      const conflictError = buildVersionConflictError(
-        id,
-        expectedVersion,
-        existing.version
-      )
-      logger.error({
-        err: conflictError,
-        message: `Version conflict detected for PRN ${id}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-          reference: id
-        }
-      })
-      throw Boom.conflict(conflictError.message, {
-        kind: PRN_VERSION_CONFLICT
-      })
-    }
+    assertVersion(logger, id, expectedVersion, existing.version)
 
     enforceMonotonicWatermark(
       id,
@@ -355,6 +386,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findByPrnNumber: performFindByPrnNumber(storage),
     findByStatus: performFindByStatus(storage, excludeOrganisationIds),
     updateStatus: performUpdateStatus(storage, logger),
+    updateWatermark: performUpdateWatermark(storage, logger),
     persistProjection: performPersistProjection(storage, logger)
   })
 }
