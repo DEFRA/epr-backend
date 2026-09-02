@@ -60,6 +60,37 @@ const buildVersionConflictError = (id, expected, actual) =>
   )
 
 /**
+ * Throws the tagged version conflict a CAS write raises when the stored version
+ * has moved on. Centralised so the message, log event and error stay identical
+ * across the adapter's writes, matching the mongo adapter's guard.
+ *
+ * @param {TypedLogger} logger
+ * @param {string} id
+ * @param {number} expectedVersion
+ * @param {number} actualVersion
+ */
+const assertVersion = (logger, id, expectedVersion, actualVersion) => {
+  if (actualVersion === expectedVersion) {
+    return
+  }
+  const conflictError = buildVersionConflictError(
+    id,
+    expectedVersion,
+    actualVersion
+  )
+  logger.error({
+    err: conflictError,
+    message: `Version conflict detected for PRN ${id}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.DB,
+      action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+      reference: id
+    }
+  })
+  throw Boom.conflict(conflictError.message, { kind: PRN_VERSION_CONFLICT })
+}
+
+/**
  * @param {string} id
  * @param {number | undefined} storedEventNumber
  * @param {number | undefined} incomingEventNumber
@@ -215,21 +246,7 @@ const performUpdateStatus =
       return null
     }
 
-    if (prn.version !== version) {
-      const conflictError = buildVersionConflictError(id, version, prn.version)
-      logger.error({
-        err: conflictError,
-        message: `Version conflict detected for PRN ${id}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-          reference: id
-        }
-      })
-      throw Boom.conflict(conflictError.message, {
-        kind: PRN_VERSION_CONFLICT
-      })
-    }
+    assertVersion(logger, id, version, prn.version)
 
     enforceMonotonicWatermark(
       id,
@@ -290,21 +307,7 @@ const performUpdateWatermark =
       return null
     }
 
-    if (prn.version !== version) {
-      const conflictError = buildVersionConflictError(id, version, prn.version)
-      logger.error({
-        err: conflictError,
-        message: `Version conflict detected for PRN ${id}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-          reference: id
-        }
-      })
-      throw Boom.conflict(conflictError.message, {
-        kind: PRN_VERSION_CONFLICT
-      })
-    }
+    assertVersion(logger, id, version, prn.version)
 
     enforceMonotonicWatermark(
       id,
@@ -337,25 +340,7 @@ const performPersistProjection =
       return null
     }
 
-    if (existing.version !== expectedVersion) {
-      const conflictError = buildVersionConflictError(
-        id,
-        expectedVersion,
-        existing.version
-      )
-      logger.error({
-        err: conflictError,
-        message: `Version conflict detected for PRN ${id}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-          reference: id
-        }
-      })
-      throw Boom.conflict(conflictError.message, {
-        kind: PRN_VERSION_CONFLICT
-      })
-    }
+    assertVersion(logger, id, expectedVersion, existing.version)
 
     enforceMonotonicWatermark(
       id,

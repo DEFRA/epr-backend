@@ -231,8 +231,9 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
         tally[repairKind === 'fold' ? 'folded' : 'stamped'] += 1
       } else if (outcome === 'stillDrifting') {
         tally.stillDrifting += 1
+      } else {
+        // 'current' and a dry-run 'drifting' map to no repair outcome.
       }
-      // 'current' and a dry-run 'drifting' map to no repair outcome.
     } catch (err) {
       failures.push({ prnId: String(id), error: String(err) })
       tally.failed += 1
