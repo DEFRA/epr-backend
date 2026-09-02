@@ -140,7 +140,7 @@ const stampWatermark = (prnRepository, prn, projection) =>
  * @param {import('mongodb').Document['_id']} id
  * @param {Deps} deps
  * @param {boolean} isDryRun
- * @returns {Promise<{ outcome: string, report?: DriftReport }>}
+ * @returns {Promise<{ outcome: string, report?: DriftReport, repairKind?: 'fold' | 'watermark' }>}
  */
 const reconcileOne = async (
   id,
@@ -168,12 +168,14 @@ const reconcileOne = async (
   // Status-changing drift (the frozen minority) is repaired by the full fold;
   // benign watermark-behind drift (status already correct) is retired by a
   // watermark-only stamp, so its history and audit fields are left untouched.
+  // The kind is reported so the two populations stay legible in the summary.
   const statusUnchanged =
     projection.status.currentStatus === prn.status.currentStatus
+  const repairKind = statusUnchanged ? 'watermark' : 'fold'
   const outcome = await (statusUnchanged
     ? stampWatermark(prnRepository, prn, projection)
     : repair(prnRepository, prn, projection))
-  return { outcome, report }
+  return { outcome, report, repairKind }
 }
 
 /**
@@ -198,6 +200,8 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
   const tally = {
     drifting: 0,
     repaired: 0,
+    folded: 0,
+    stamped: 0,
     stillDrifting: 0,
     failed: 0
   }
@@ -210,7 +214,11 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
 
   for (const id of driftingIds) {
     try {
-      const { outcome, report } = await reconcileOne(id, deps, isDryRun)
+      const { outcome, report, repairKind } = await reconcileOne(
+        id,
+        deps,
+        isDryRun
+      )
       if (outcome === 'vanished') {
         continue
       }
@@ -220,12 +228,11 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
       }
       if (outcome === 'repaired') {
         tally.repaired += 1
+        tally[repairKind === 'fold' ? 'folded' : 'stamped'] += 1
       } else if (outcome === 'stillDrifting') {
         tally.stillDrifting += 1
-      } else {
-        // 'current' needs no status tally, and a dry-run 'drifting' is already
-        // counted above via its report — neither maps to a repair outcome.
       }
+      // 'current' and a dry-run 'drifting' map to no repair outcome.
     } catch (err) {
       failures.push({ prnId: String(id), error: String(err) })
       tally.failed += 1

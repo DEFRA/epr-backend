@@ -63,6 +63,8 @@ const runReconcile = async (server) => {
     total,
     drifting,
     repaired,
+    folded,
+    stamped,
     stillDrifting,
     failed,
     reports,
@@ -81,7 +83,7 @@ const runReconcile = async (server) => {
 
   const mode = isDryRun ? 'dry-run' : 'repair'
   logger.info({
-    message: `Reconcile stale PRN projections (${mode}): total=${total} drifting=${drifting} repaired=${repaired} stillDrifting=${stillDrifting} failed=${failed}`
+    message: `Reconcile stale PRN projections (${mode}): total=${total} drifting=${drifting} repaired=${repaired} folded=${folded} stamped=${stamped} stillDrifting=${stillDrifting} failed=${failed}`
   })
 }
 
