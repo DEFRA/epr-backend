@@ -41,6 +41,20 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  */
 
 /**
+ * Advance a projection's stream watermark and nothing else. Unlike
+ * `updateStatus`, it writes no status, history, `updatedAt` or `updatedBy`: it
+ * exists to bring a benign watermark-behind projection (status already correct,
+ * watermark never stamped) current without the churn a full fold would inflict.
+ * The watermark is enforced monotonic and the write is gated by the version CAS,
+ * exactly as the other writes.
+ *
+ * @typedef {Object} UpdateWatermarkParams
+ * @property {string} id - PRN ID
+ * @property {number} version - Expected current document version (compare-and-set token for OCC)
+ * @property {number} lastAppliedEventNumber - Stream watermark to stamp; must be greater than or equal to any watermark the PRN already carries
+ */
+
+/**
  * @typedef {Object} FindByStatusParams
  * @property {import('#packaging-recycling-notes/domain/model.js').PrnStatus[]} statuses
  * @property {Date} [dateFrom]
@@ -88,6 +102,7 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  * @property {(params: FindByIdsParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByIds
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
+ * @property {(params: UpdateWatermarkParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateWatermark
  * @property {(params: PersistProjectionParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} persistProjection
  */
 

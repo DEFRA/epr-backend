@@ -16,7 +16,7 @@ import {
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
-/** @import { FindByStatusParams, PaginatedResult, PersistProjectionParams, UpdateStatusParams } from './port.js' */
+/** @import { FindByStatusParams, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 
 /** @typedef {Map<string, PackagingRecyclingNote>} Storage */
 
@@ -280,6 +280,52 @@ const performUpdateStatus =
 /**
  * @param {Storage} storage
  * @param {TypedLogger} logger
+ * @returns {(params: UpdateWatermarkParams) => Promise<PackagingRecyclingNote | null>}
+ */
+const performUpdateWatermark =
+  (storage, logger) =>
+  async ({ id, version, lastAppliedEventNumber }) => {
+    const prn = storage.get(id)
+    if (!prn) {
+      return null
+    }
+
+    if (prn.version !== version) {
+      const conflictError = buildVersionConflictError(id, version, prn.version)
+      logger.error({
+        err: conflictError,
+        message: `Version conflict detected for PRN ${id}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: id
+        }
+      })
+      throw Boom.conflict(conflictError.message, {
+        kind: PRN_VERSION_CONFLICT
+      })
+    }
+
+    enforceMonotonicWatermark(
+      id,
+      prn.lastAppliedEventNumber,
+      lastAppliedEventNumber,
+      logger
+    )
+
+    const updated = {
+      ...prn,
+      version: prn.version + 1,
+      lastAppliedEventNumber
+    }
+
+    storage.set(id, structuredClone(updated))
+    return structuredClone(updated)
+  }
+
+/**
+ * @param {Storage} storage
+ * @param {TypedLogger} logger
  * @returns {(params: PersistProjectionParams) => Promise<PackagingRecyclingNote | null>}
  */
 const performPersistProjection =
@@ -355,6 +401,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findByPrnNumber: performFindByPrnNumber(storage),
     findByStatus: performFindByStatus(storage, excludeOrganisationIds),
     updateStatus: performUpdateStatus(storage, logger),
+    updateWatermark: performUpdateWatermark(storage, logger),
     persistProjection: performPersistProjection(storage, logger)
   })
 }

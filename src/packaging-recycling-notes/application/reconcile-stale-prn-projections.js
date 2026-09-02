@@ -69,24 +69,19 @@ const unappliedEventsFor = (prn, service) =>
   })
 
 /**
- * Writes the folded projection back under the repository's version CAS and
- * watermark guard. The guard's rejections are Boom errors the repository has
- * already logged (a version conflict, or a watermark regression); they mean the
- * drift stands for the next run, as does a `null` return (the PRN was deleted
- * after detection), so both collapse to `stillDrifting`. Any other error is
- * unexpected and unlogged, so it propagates to be surfaced as a failure.
+ * Runs a repository write and maps its result to a repair outcome. A `null`
+ * return (the PRN was deleted after detection) and a Boom rejection (a version
+ * conflict or watermark regression the repository has already logged) both mean
+ * the drift stands for the next run, so both collapse to `stillDrifting`. Any
+ * other error is unexpected and unlogged, so it propagates to be surfaced as a
+ * failure.
  *
- * @param {PackagingRecyclingNotesRepository} prnRepository
- * @param {PackagingRecyclingNote} prn
- * @param {PackagingRecyclingNote} projection
+ * @param {() => Promise<PackagingRecyclingNote | null>} write
  * @returns {Promise<'repaired' | 'stillDrifting'>}
  */
-const repair = async (prnRepository, prn, projection) => {
+const persistOutcome = async (write) => {
   try {
-    const persisted = await prnRepository.persistProjection({
-      projection,
-      expectedVersion: prn.version
-    })
+    const persisted = await write()
     return persisted ? 'repaired' : 'stillDrifting'
   } catch (err) {
     if (/** @type {*} */ (err)?.isBoom) {
@@ -95,6 +90,47 @@ const repair = async (prnRepository, prn, projection) => {
     throw err
   }
 }
+
+/**
+ * Repairs status-changing drift by persisting the full fold under the version
+ * CAS and watermark guard: the stored status is wrong, so the whole projection
+ * is rewritten.
+ *
+ * @param {PackagingRecyclingNotesRepository} prnRepository
+ * @param {PackagingRecyclingNote} prn
+ * @param {PackagingRecyclingNote} projection
+ * @returns {Promise<'repaired' | 'stillDrifting'>}
+ */
+const repair = (prnRepository, prn, projection) =>
+  persistOutcome(() =>
+    prnRepository.persistProjection({
+      projection,
+      expectedVersion: prn.version
+    })
+  )
+
+/**
+ * Retires benign drift by stamping only the watermark the fold settled on,
+ * under the same CAS and guard. The stored status already matches the fold, so
+ * writing the full projection would churn `updatedAt` and duplicate the history
+ * for no gain; advancing the watermark alone brings the PRN current and leaves
+ * the sweep for good.
+ *
+ * @param {PackagingRecyclingNotesRepository} prnRepository
+ * @param {PackagingRecyclingNote} prn
+ * @param {PackagingRecyclingNote} projection
+ * @returns {Promise<'repaired' | 'stillDrifting'>}
+ */
+const stampWatermark = (prnRepository, prn, projection) =>
+  persistOutcome(() =>
+    prnRepository.updateWatermark({
+      id: prn.id,
+      version: prn.version,
+      lastAppliedEventNumber: /** @type {number} */ (
+        projection.lastAppliedEventNumber
+      )
+    })
+  )
 
 /**
  * Reconciles one PRN by id. Reads it point-wise, folds any events past its
@@ -128,7 +164,16 @@ const reconcileOne = async (
   if (isDryRun) {
     return { outcome: 'drifting', report }
   }
-  return { outcome: await repair(prnRepository, prn, projection), report }
+
+  // Status-changing drift (the frozen minority) is repaired by the full fold;
+  // benign watermark-behind drift (status already correct) is retired by a
+  // watermark-only stamp, so its history and audit fields are left untouched.
+  const statusUnchanged =
+    projection.status.currentStatus === prn.status.currentStatus
+  const outcome = await (statusUnchanged
+    ? stampWatermark(prnRepository, prn, projection)
+    : repair(prnRepository, prn, projection))
+  return { outcome, report }
 }
 
 /**
