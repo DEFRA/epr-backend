@@ -37,6 +37,8 @@ const cleanResult = {
   total: 2,
   drifting: 0,
   repaired: 0,
+  folded: 0,
+  stamped: 0,
   stillDrifting: 0,
   failed: 0,
   reports: [],
@@ -90,7 +92,7 @@ describe('runReconcileStalePrnProjections', () => {
     expect(mockLock.free).toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (dry-run): total=2 drifting=0 repaired=0 stillDrifting=0 failed=0'
+        'Reconcile stale PRN projections (dry-run): total=2 drifting=0 repaired=0 folded=0 stamped=0 stillDrifting=0 failed=0'
     })
   })
 
@@ -100,6 +102,8 @@ describe('runReconcileStalePrnProjections', () => {
       total: 2,
       drifting: 1,
       repaired: 1,
+      folded: 1,
+      stamped: 0,
       stillDrifting: 0,
       failed: 1,
       reports: [
@@ -133,7 +137,7 @@ describe('runReconcileStalePrnProjections', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (repair): total=2 drifting=1 repaired=1 stillDrifting=0 failed=1'
+        'Reconcile stale PRN projections (repair): total=2 drifting=1 repaired=1 folded=1 stamped=0 stillDrifting=0 failed=1'
     })
   })
 

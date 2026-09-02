@@ -13,7 +13,7 @@ import { throwWatermarkRegression } from './watermark-guard.js'
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
-/** @import { FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, PersistProjectionParams, UpdateStatusParams } from './port.js' */
+/** @import { FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 
 export const COLLECTION_NAME = 'packaging-recycling-notes'
@@ -463,6 +463,43 @@ const performUpdateStatus = async (
 }
 
 /**
+ * Stamps only the stream watermark, under the same version CAS and
+ * monotonic-watermark guard as the other writes. It sets no status, history or
+ * audit fields, so a benign watermark-behind projection is brought current
+ * without the churn a full fold would inflict. A missed CAS resolves to a 404, a
+ * 409 version conflict or a 500 watermark regression, exactly as elsewhere.
+ *
+ * @param {Db} db
+ * @param {TypedLogger} logger
+ * @param {UpdateWatermarkParams} params
+ * @returns {Promise<PackagingRecyclingNote | null>}
+ */
+const performUpdateWatermark = async (
+  db,
+  logger,
+  { id, version, lastAppliedEventNumber }
+) => {
+  const versionMatches = { $eq: [{ $ifNull: ['$version', 1] }, version] }
+
+  const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
+    {
+      _id: ObjectId.createFromHexString(id),
+      $expr: {
+        $and: [versionMatches, watermarkNotRegressing(lastAppliedEventNumber)]
+      }
+    },
+    { $set: { lastAppliedEventNumber, version: version + 1 } },
+    { returnDocument: 'after' }
+  )
+
+  if (!result) {
+    return resolveMissedUpdate(db, id, version, lastAppliedEventNumber, logger)
+  }
+
+  return validatePrnRead({ ...result, id: result._id.toHexString() })
+}
+
+/**
  * @param {Db} db
  * @param {TypedLogger} logger
  * @param {PersistProjectionParams} params
@@ -537,6 +574,7 @@ export const createPackagingRecyclingNotesRepository = async (
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
     findByStatus: performFindByStatus(db, excludeOrganisationIds),
     updateStatus: (params) => performUpdateStatus(db, logger, params),
+    updateWatermark: (params) => performUpdateWatermark(db, logger, params),
     persistProjection: (params) => performPersistProjection(db, logger, params)
   })
 }

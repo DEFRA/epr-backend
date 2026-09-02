@@ -13,6 +13,7 @@ import {
   buildAccreditationId,
   buildAwaitingAcceptancePrn,
   buildAwaitingAuthorisationPrn,
+  buildCancelledPrn,
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -22,6 +23,8 @@ import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from '#waste-balances/repository/ledger-mongodb.js'
 import {
+  buildPrnCancelledAfterIssueEvent,
+  buildPrnCreatedEvent,
   buildPrnIssuedEvent,
   buildPrnRejectedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
@@ -105,6 +108,38 @@ const seedDriftingPrn = async (prnRepository, ledgerCollection) => {
       payload: { prnId: created.id, amount: 50 }
     })
   )
+  return created
+}
+
+/**
+ * Seeds a benign watermark-behind PRN in the real production shape: stored at
+ * `cancelled` with NO watermark, so the catch-up replays the whole lifecycle
+ * (created, issued, cancelled). The fold lands back on `cancelled`, so the
+ * status is already correct and only the watermark lags — the backfill
+ * population option A retires. Returns the created PRN.
+ */
+const seedBenignDriftingPrn = async (prnRepository, ledgerCollection) => {
+  const ids = buildAccreditationId()
+  const created = await prnRepository.create(
+    buildCancelledPrn(underAccreditation(ids))
+  )
+  await ledgerCollection.insertMany([
+    buildPrnCreatedEvent({
+      ...ids,
+      number: 1,
+      payload: { prnId: created.id, amount: 50 }
+    }),
+    buildPrnIssuedEvent({
+      ...ids,
+      number: 2,
+      payload: { prnId: created.id, amount: 50 }
+    }),
+    buildPrnCancelledAfterIssueEvent({
+      ...ids,
+      number: 3,
+      payload: { prnId: created.id, amount: 50 }
+    })
+  ])
   return created
 }
 
@@ -355,6 +390,8 @@ describe('reconcileStalePrnProjections', () => {
       total: 1,
       drifting: 1,
       repaired: 1,
+      folded: 1,
+      stamped: 0,
       stillDrifting: 0
     })
 
@@ -363,6 +400,84 @@ describe('reconcileStalePrnProjections', () => {
     expect(stored.status.currentStatus).toBe(PRN_STATUS.AWAITING_CANCELLATION)
     expect(stored.lastAppliedEventNumber).toBe(3)
     expect(stored.status.rejected).toBeDefined()
+  })
+
+  it('stamps only the watermark for benign drift, leaving status and history untouched', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service,
+    findDrifting
+  }) => {
+    const created = await seedBenignDriftingPrn(prnRepository, ledgerCollection)
+    const before = await findStored(prnCollection, created.id)
+
+    const result = await reconcileStalePrnProjections(
+      { findDrifting, prnCollection, prnRepository, service },
+      { isDryRun: false }
+    )
+
+    expect(result).toMatchObject({
+      total: 1,
+      drifting: 1,
+      repaired: 1,
+      folded: 0,
+      stamped: 1,
+      stillDrifting: 0,
+      failed: 0
+    })
+    // The fold would have replayed the whole lifecycle (no watermark), which is
+    // exactly the case a full fold would have duplicated a five-entry history.
+    expect(result.reports[0].unappliedCount).toBe(3)
+
+    const after = await findStored(prnCollection, created.id)
+    // The watermark advanced to the latest event and the CAS bumped the version.
+    expect(after.lastAppliedEventNumber).toBe(3)
+    expect(after.version).toBe(before.version + 1)
+    // Nothing else moved: no fold, so the status subtree, history and audit
+    // fields are byte-identical to the stored document.
+    expect(after.status).toEqual(before.status)
+    expect(after.updatedAt).toEqual(before.updatedAt)
+    expect(after.updatedBy).toEqual(before.updatedBy)
+
+    // And it no longer lags the ledger, so it leaves the sweep for good.
+    const { driftingIds } = await findDrifting()
+    expect(driftingIds).toEqual([])
+  })
+
+  it('reports benign drift in dry-run without writing', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service,
+    findDrifting
+  }) => {
+    const created = await seedBenignDriftingPrn(prnRepository, ledgerCollection)
+    const before = await findStored(prnCollection, created.id)
+
+    const result = await reconcileStalePrnProjections(
+      { findDrifting, prnCollection, prnRepository, service },
+      { isDryRun: true }
+    )
+
+    // Option A keeps detection semantics: the benign PRN is still surfaced, its
+    // report marking it benign by folding to the status it already carries.
+    expect(result).toMatchObject({ total: 1, drifting: 1, repaired: 0 })
+    expect(result.reports).toEqual([
+      {
+        prnId: created.id,
+        prnNumber: created.prnNumber,
+        currentStatus: PRN_STATUS.CANCELLED,
+        lastAppliedEventNumber: undefined,
+        unappliedCount: 3,
+        minUnappliedNumber: 1,
+        wouldBecomeStatus: PRN_STATUS.CANCELLED
+      }
+    ])
+
+    const after = await findStored(prnCollection, created.id)
+    expect(after.version).toBe(before.version)
+    expect(after.lastAppliedEventNumber).toBeUndefined()
   })
 
   it('repairs the rest and counts the losers when a persist loses its race', async (/** @type {*} */ {
@@ -407,6 +522,8 @@ describe('reconcileStalePrnProjections', () => {
       total: 3,
       drifting: 3,
       repaired: 1,
+      folded: 1,
+      stamped: 0,
       stillDrifting: 2
     })
 
