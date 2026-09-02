@@ -1,4 +1,5 @@
 import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
+import { LEDGER_EVENT_KIND_TO_PRN_STATUS } from '#packaging-recycling-notes/domain/prn-transition.js'
 
 import { COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME } from './mongodb.js'
 
@@ -9,17 +10,45 @@ import { COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME } from './
 /**
  * @typedef {Object} DriftResult
  * @property {number} total - every PRN document, drifting or not
- * @property {ObjectId[]} driftingIds - the `_id`s of documents behind their ledger
+ * @property {ObjectId[]} driftingIds - the `_id`s of documents whose stored status disagrees with their ledger
  */
 
 /**
- * Detects which PRN documents lag their ledger, keyed per-PRN so a sibling
- * advancing the shared `(registrationId, accreditationId)` slot sequence cannot
- * falsely flag one (ADR-0047). The `$lookup` sub-pipeline joins each PRN to
- * events for ITS OWN `payload.prnId` past its watermark (a missing watermark
- * reads as `0`) and stops at the first — this is an existence probe, not a
- * fetch, so the caller re-reads the tail through the validated catch-up path.
- * Index-backed by `prn_watermark_catchup`; returns only the drifting `_id`s.
+ * The status the read-side fold would settle a PRN on, expressed for Mongo: a
+ * `$switch` from the latest unapplied event's `kind` to the status that kind
+ * projects to. Built from `LEDGER_EVENT_KIND_TO_PRN_STATUS`, the same table the
+ * JS fold derives from, so the query and the fold cannot drift. An unmapped kind
+ * folds to `null` — never equal to a stored status, so it surfaces as drift for
+ * the per-PRN re-read to fail loudly rather than the query to hide it.
+ */
+const FOLDED_STATUS_FROM_LATEST_EVENT = {
+  $switch: {
+    branches: Object.entries(LEDGER_EVENT_KIND_TO_PRN_STATUS).map(
+      ([kind, status]) => ({
+        case: { $eq: [{ $arrayElemAt: ['$unappliedTail.kind', 0] }, kind] },
+        then: status
+      })
+    ),
+    default: null
+  }
+}
+
+/**
+ * Detects which PRN documents carry a stored status that disagrees with their
+ * ledger's latest event, keyed per-PRN so a sibling advancing the shared
+ * `(registrationId, accreditationId)` slot sequence cannot falsely flag one
+ * (ADR-0047). The `$lookup` sub-pipeline joins each PRN to events for ITS OWN
+ * `payload.prnId` past its watermark (a missing watermark reads as `0`) and
+ * keeps only the latest — enough to name the status the fold would settle on,
+ * since the fold is last-write-wins. The caller re-reads the full tail through
+ * the validated catch-up path. Index-backed by `prn_watermark_catchup`.
+ *
+ * The watermark-behind population splits two ways: projections whose stored
+ * status already matches the fold (a benign backfill left the watermark unset)
+ * and those genuinely frozen a transition behind. Only the latter is
+ * user-facing, so the pipeline folds the latest event to a status and keeps a
+ * PRN only when that status differs from the stored one. The benign backfill is
+ * left for the data-quality follow-up rather than surfaced on every sweep.
  *
  * The join omits `organisationId` (the catch-up read includes it): an
  * accreditation belongs to one registration belongs to one organisation, so
@@ -49,12 +78,16 @@ const DRIFTING_IDS_PIPELINE = [
             }
           }
         },
-        { $limit: 1 }
+        { $sort: { number: -1 } },
+        { $limit: 1 },
+        { $project: { _id: 0, kind: 1 } }
       ],
       as: 'unappliedTail'
     }
   },
   { $match: { 'unappliedTail.0': { $exists: true } } },
+  { $set: { foldedStatus: FOLDED_STATUS_FROM_LATEST_EVENT } },
+  { $match: { $expr: { $ne: ['$foldedStatus', '$status.currentStatus'] } } },
   { $project: { _id: 1 } }
 ]
 

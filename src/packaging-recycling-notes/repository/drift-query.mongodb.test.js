@@ -9,13 +9,18 @@ import {
 import {
   buildAccreditationId,
   buildAwaitingAcceptancePrn,
+  buildCancelledPrn,
   underAccreditation
 } from './contract/test-data.js'
 import {
   ensureLedgerCollection,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from '#waste-balances/repository/ledger-mongodb.js'
-import { buildPrnRejectedEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  buildPrnAcceptedEvent,
+  buildPrnCancelledAfterIssueEvent,
+  buildPrnRejectedEvent
+} from '#waste-balances/repository/ledger-test-data.js'
 
 import { createDriftQuery } from './drift-query.mongodb.js'
 
@@ -117,5 +122,71 @@ describe('createDriftQuery', () => {
     expect(total).toBe(2)
     expect(flagged).toEqual([drifter.id])
     expect(flagged).not.toContain(level.id)
+  })
+
+  it('flags a drifting PRN whose latest event folds to a different status', async (/** @type {*} */ {
+    prnRepository,
+    ledgerCollection,
+    findDrifting
+  }) => {
+    // The production signal: a PRN frozen at awaiting_acceptance whose ledger has
+    // moved on to accepted. The latest unapplied event folds to a status that
+    // disagrees with the stored one, so it is genuine, user-facing drift.
+    const ids = buildAccreditationId()
+    const stale = await prnRepository.create(
+      buildAwaitingAcceptancePrn({
+        ...underAccreditation(ids),
+        lastAppliedEventNumber: 2
+      })
+    )
+    await ledgerCollection.insertOne(
+      buildPrnAcceptedEvent({
+        ...ids,
+        number: 3,
+        payload: { prnId: stale.id, amount: 50 }
+      })
+    )
+
+    const { driftingIds } = await findDrifting()
+
+    expect(driftingIds.map((id) => id.toHexString())).toEqual([stale.id])
+  })
+
+  it('does not flag a drifting PRN whose latest event folds to its stored status', async (/** @type {*} */ {
+    prnRepository,
+    ledgerCollection,
+    findDrifting
+  }) => {
+    // The benign backfill population: status already correct (cancelled), only
+    // the watermark lags. The latest unapplied event folds to the stored status,
+    // so nothing user-facing has changed and it must not be surfaced. The two
+    // events are inserted latest-first so a probe that skipped the sort would
+    // wrongly pick the accepted event and flag it.
+    const ids = buildAccreditationId()
+    const benign = await prnRepository.create(
+      buildCancelledPrn({
+        ...underAccreditation(ids),
+        lastAppliedEventNumber: 2
+      })
+    )
+    await ledgerCollection.insertOne(
+      buildPrnCancelledAfterIssueEvent({
+        ...ids,
+        number: 4,
+        payload: { prnId: benign.id, amount: 50 }
+      })
+    )
+    await ledgerCollection.insertOne(
+      buildPrnAcceptedEvent({
+        ...ids,
+        number: 3,
+        payload: { prnId: benign.id, amount: 50 }
+      })
+    )
+
+    const { total, driftingIds } = await findDrifting()
+
+    expect(total).toBe(1)
+    expect(driftingIds).toEqual([])
   })
 })

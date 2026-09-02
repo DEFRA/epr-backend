@@ -123,6 +123,13 @@ const reconcileOne = async (
   }
 
   const projection = applyCatchupEventsToPrn(prn, catchupEvents)
+  if (projection.status.currentStatus === prn.status.currentStatus) {
+    // Belt-and-braces against query/fold divergence: the drift query surfaces
+    // only status-changing PRNs, so a fold that lands on the stored status means
+    // one slipped through (a benign watermark-behind backfill). Leave it be
+    // rather than churn updatedAt/history on a document already correct.
+    return { outcome: 'current' }
+  }
   const report = buildReport(prn, catchupEvents, projection)
 
   if (isDryRun) {

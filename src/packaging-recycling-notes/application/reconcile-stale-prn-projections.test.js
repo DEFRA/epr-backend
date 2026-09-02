@@ -13,6 +13,7 @@ import {
   buildAccreditationId,
   buildAwaitingAcceptancePrn,
   buildAwaitingAuthorisationPrn,
+  buildCancelledPrn,
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -22,6 +23,7 @@ import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from '#waste-balances/repository/ledger-mongodb.js'
 import {
+  buildPrnCancelledAfterIssueEvent,
   buildPrnIssuedEvent,
   buildPrnRejectedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
@@ -454,6 +456,56 @@ describe('reconcileStalePrnProjections', () => {
     expect(result.failures).toEqual([
       { prnId: created.id, error: 'Error: connection reset' }
     ])
+  })
+
+  it('leaves a drifting projection untouched when the fold does not change its status', async (/** @type {*} */ {
+    prnCollection,
+    ledgerCollection,
+    prnRepository,
+    service
+  }) => {
+    // Belt-and-braces: the query surfaces only status-changing drift, but should
+    // one slip through with an unchanged status (query/fold divergence), the
+    // reconciler must not churn updatedAt/history on a document already correct.
+    // A cancelled PRN whose watermark lags a cancel event folds back to
+    // cancelled. `findDrifting` is stubbed to force it through, because the real
+    // query now excludes it.
+    const ids = buildAccreditationId()
+    const created = await prnRepository.create(
+      buildCancelledPrn({
+        ...underAccreditation(ids),
+        lastAppliedEventNumber: 2
+      })
+    )
+    await ledgerCollection.insertOne(
+      buildPrnCancelledAfterIssueEvent({
+        ...ids,
+        number: 3,
+        payload: { prnId: created.id, amount: 50 }
+      })
+    )
+    const findDrifting = async () => ({
+      total: 1,
+      driftingIds: [ObjectId.createFromHexString(created.id)]
+    })
+
+    const result = await reconcileStalePrnProjections(
+      { findDrifting, prnCollection, prnRepository, service },
+      { isDryRun: false }
+    )
+
+    expect(result).toMatchObject({
+      total: 1,
+      drifting: 0,
+      repaired: 0,
+      stillDrifting: 0,
+      failed: 0
+    })
+    expect(result.reports).toEqual([])
+    const stored = await findStored(prnCollection, created.id)
+    expect(stored.version).toBe(1)
+    expect(stored.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
+    expect(stored.lastAppliedEventNumber).toBe(2)
   })
 
   it('folds a projection that has applied no events, reporting a null PRN number', async (/** @type {*} */ {
