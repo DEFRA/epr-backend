@@ -14,6 +14,8 @@ import {
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
 
+/** @import { Organisation } from '#domain/organisations/model.js' */
+
 const { validToken } = entraIdMockAuthTokens
 
 describe('GET /v1/organisations/{id}', () => {
@@ -80,12 +82,9 @@ describe('GET /v1/organisations/{id}', () => {
         validTo: '2026-12-31',
         statusHistory: [{ status: 'approved', updatedAt: '2024-01-01' }]
       })
-      const org =
-        /** @type {import('#domain/organisations/model.js').Organisation} */ (
-          /** @type {unknown} */ (
-            buildOrganisation({ registrations: [registration] })
-          )
-        )
+      const org = /** @type {Organisation} */ (
+        buildOrganisation({ registrations: [registration] })
+      )
       const legacyRepositoryFactory = createInMemoryOrganisationsRepository([
         org
       ])
