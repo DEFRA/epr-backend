@@ -38,8 +38,10 @@ const cleanResult = {
   drifting: 0,
   repaired: 0,
   stillDrifting: 0,
+  skippedUnchanged: 0,
   failed: 0,
   reports: [],
+  divergences: [],
   failures: []
 }
 
@@ -90,7 +92,7 @@ describe('runReconcileStalePrnProjections', () => {
     expect(mockLock.free).toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (dry-run): total=2 drifting=0 repaired=0 stillDrifting=0 failed=0'
+        'Reconcile stale PRN projections (dry-run): total=2 drifting=0 repaired=0 stillDrifting=0 skippedUnchanged=0 failed=0'
     })
   })
 
@@ -101,6 +103,7 @@ describe('runReconcileStalePrnProjections', () => {
       drifting: 1,
       repaired: 1,
       stillDrifting: 0,
+      skippedUnchanged: 0,
       failed: 1,
       reports: [
         {
@@ -113,6 +116,7 @@ describe('runReconcileStalePrnProjections', () => {
           wouldBecomeStatus: 'awaiting_cancellation'
         }
       ],
+      divergences: [],
       failures: [{ prnId: 'prn-2', error: 'Error: connection reset' }]
     })
 
@@ -133,7 +137,37 @@ describe('runReconcileStalePrnProjections', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (repair): total=2 drifting=1 repaired=1 stillDrifting=0 failed=1'
+        'Reconcile stale PRN projections (repair): total=2 drifting=1 repaired=1 stillDrifting=0 skippedUnchanged=0 failed=1'
+    })
+  })
+
+  it('warns on a query/fold divergence and counts it in the summary', async () => {
+    vi.mocked(reconcileStalePrnProjections).mockResolvedValue({
+      ...cleanResult,
+      total: 3,
+      skippedUnchanged: 1,
+      divergences: [
+        {
+          prnId: 'prn-9',
+          prnNumber: 'TT2600009',
+          currentStatus: 'cancelled',
+          lastAppliedEventNumber: 2,
+          unappliedCount: 1,
+          minUnappliedNumber: 3,
+          wouldBecomeStatus: 'cancelled'
+        }
+      ]
+    })
+
+    await runReconcileStalePrnProjections(mockServer)
+
+    expect(logger.warn).toHaveBeenCalledWith({
+      message:
+        'Reconcile query/fold divergence (query flagged, fold left status unchanged): prnId=prn-9 currentStatus=cancelled wouldBecomeStatus=cancelled unapplied=1 minUnappliedNumber=3'
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Reconcile stale PRN projections (dry-run): total=3 drifting=0 repaired=0 stillDrifting=0 skippedUnchanged=1 failed=0'
     })
   })
 

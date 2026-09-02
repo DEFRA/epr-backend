@@ -28,6 +28,17 @@ const formatReport = (report) =>
     `wouldBecomeStatus=${report.wouldBecomeStatus}`
   ].join(' ')
 
+/** @param {DriftReport} report */
+const formatDivergence = (report) =>
+  [
+    'Reconcile query/fold divergence (query flagged, fold left status unchanged):',
+    `prnId=${report.prnId}`,
+    `currentStatus=${report.currentStatus}`,
+    `wouldBecomeStatus=${report.wouldBecomeStatus}`,
+    `unapplied=${report.unappliedCount}`,
+    `minUnappliedNumber=${report.minUnappliedNumber}`
+  ].join(' ')
+
 /**
  * `findDrifting` detects the ids behind their ledger in one indexed query; each
  * is then re-read point-wise off the raw collection and, on repair, written back
@@ -64,13 +75,19 @@ const runReconcile = async (server) => {
     drifting,
     repaired,
     stillDrifting,
+    skippedUnchanged,
     failed,
     reports,
+    divergences,
     failures
   } = await reconcileStalePrnProjections(deps, { isDryRun })
 
   for (const report of reports) {
     logger.info({ message: formatReport(report) })
+  }
+
+  for (const divergence of divergences) {
+    logger.warn({ message: formatDivergence(divergence) })
   }
 
   for (const failure of failures) {
@@ -81,7 +98,7 @@ const runReconcile = async (server) => {
 
   const mode = isDryRun ? 'dry-run' : 'repair'
   logger.info({
-    message: `Reconcile stale PRN projections (${mode}): total=${total} drifting=${drifting} repaired=${repaired} stillDrifting=${stillDrifting} failed=${failed}`
+    message: `Reconcile stale PRN projections (${mode}): total=${total} drifting=${drifting} repaired=${repaired} stillDrifting=${stillDrifting} skippedUnchanged=${skippedUnchanged} failed=${failed}`
   })
 }
 
@@ -92,8 +109,10 @@ const runReconcile = async (server) => {
  * `reconcileStalePrnProjections` flag lets it repair.
  *
  * Findings log at info, not warn: they are for a human to confirm and info
- * keeps them off the OpenSearch alerts. Runs under a cross-instance lock so one
- * pod per deploy sweeps.
+ * keeps them off the OpenSearch alerts. A query/fold divergence (the query
+ * flagged a PRN the fold then left unchanged) logs at warn instead: that path is
+ * unreachable by design, so it should draw attention. Runs under a
+ * cross-instance lock so one pod per deploy sweeps.
  *
  * @param {StartedServer} server
  */

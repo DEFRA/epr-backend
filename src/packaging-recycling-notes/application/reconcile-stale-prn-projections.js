@@ -99,7 +99,9 @@ const repair = async (prnRepository, prn, projection) => {
 /**
  * Reconciles one PRN by id. Reads it point-wise, folds any events past its
  * watermark, and (unless dry-run) persists the correction. A PRN deleted since
- * the id snapshot reads as `vanished`; one with nothing unapplied as `current`.
+ * the id snapshot reads as `vanished`; one with nothing unapplied as `current`;
+ * one whose fold leaves the status unchanged as `unchanged` (a divergence the
+ * caller warns on, since the query should never surface it).
  *
  * @param {import('mongodb').Document['_id']} id
  * @param {Deps} deps
@@ -123,14 +125,16 @@ const reconcileOne = async (
   }
 
   const projection = applyCatchupEventsToPrn(prn, catchupEvents)
+  const report = buildReport(prn, catchupEvents, projection)
   if (projection.status.currentStatus === prn.status.currentStatus) {
     // Belt-and-braces against query/fold divergence: the drift query surfaces
     // only status-changing PRNs, so a fold that lands on the stored status means
-    // one slipped through (a benign watermark-behind backfill). Leave it be
-    // rather than churn updatedAt/history on a document already correct.
-    return { outcome: 'current' }
+    // one slipped through. Leave the document untouched rather than churn its
+    // updatedAt/history, but surface it as `unchanged` so the sweep can warn:
+    // this path is meant to be unreachable, and a defence that engages silently
+    // is a mask, not a defence.
+    return { outcome: 'unchanged', report }
   }
-  const report = buildReport(prn, catchupEvents, projection)
 
   if (isDryRun) {
     return { outcome: 'drifting', report }
@@ -161,10 +165,13 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
     drifting: 0,
     repaired: 0,
     stillDrifting: 0,
+    skippedUnchanged: 0,
     failed: 0
   }
   /** @type {DriftReport[]} */
   const reports = []
+  /** @type {DriftReport[]} */
+  const divergences = []
   /** @type {Array<{ prnId: string, error: string }>} */
   const failures = []
 
@@ -174,6 +181,14 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
     try {
       const { outcome, report } = await reconcileOne(id, deps, isDryRun)
       if (outcome === 'vanished') {
+        continue
+      }
+      if (outcome === 'unchanged') {
+        // A PRN the query flagged as status-changing that the fold left
+        // unchanged: not counted as drift (the document is already correct), but
+        // recorded so the sweep can warn on an unreachable-by-design path.
+        divergences.push(/** @type {DriftReport} */ (report))
+        tally.skippedUnchanged += 1
         continue
       }
       if (report) {
@@ -194,5 +209,5 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
     }
   }
 
-  return { total, ...tally, reports, failures }
+  return { total, ...tally, reports, divergences, failures }
 }

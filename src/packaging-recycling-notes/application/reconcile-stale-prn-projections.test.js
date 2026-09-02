@@ -458,7 +458,7 @@ describe('reconcileStalePrnProjections', () => {
     ])
   })
 
-  it('leaves a drifting projection untouched when the fold does not change its status', async (/** @type {*} */ {
+  it('records a divergence and leaves the document untouched when the fold does not change its status', async (/** @type {*} */ {
     prnCollection,
     ledgerCollection,
     prnRepository,
@@ -466,10 +466,11 @@ describe('reconcileStalePrnProjections', () => {
   }) => {
     // Belt-and-braces: the query surfaces only status-changing drift, but should
     // one slip through with an unchanged status (query/fold divergence), the
-    // reconciler must not churn updatedAt/history on a document already correct.
-    // A cancelled PRN whose watermark lags a cancel event folds back to
-    // cancelled. `findDrifting` is stubbed to force it through, because the real
-    // query now excludes it.
+    // reconciler must not churn updatedAt/history on a document already correct,
+    // and must record the divergence so the sweep can warn on it. A cancelled
+    // PRN whose watermark lags a cancel event folds back to cancelled.
+    // `findDrifting` is stubbed to force it through, because the real query now
+    // excludes it.
     const ids = buildAccreditationId()
     const created = await prnRepository.create(
       buildCancelledPrn({
@@ -499,9 +500,21 @@ describe('reconcileStalePrnProjections', () => {
       drifting: 0,
       repaired: 0,
       stillDrifting: 0,
+      skippedUnchanged: 1,
       failed: 0
     })
     expect(result.reports).toEqual([])
+    expect(result.divergences).toEqual([
+      {
+        prnId: created.id,
+        prnNumber: created.prnNumber,
+        currentStatus: PRN_STATUS.CANCELLED,
+        lastAppliedEventNumber: 2,
+        unappliedCount: 1,
+        minUnappliedNumber: 3,
+        wouldBecomeStatus: PRN_STATUS.CANCELLED
+      }
+    ])
     const stored = await findStored(prnCollection, created.id)
     expect(stored.version).toBe(1)
     expect(stored.status.currentStatus).toBe(PRN_STATUS.CANCELLED)

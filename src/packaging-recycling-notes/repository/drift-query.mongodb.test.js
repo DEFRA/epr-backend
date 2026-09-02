@@ -159,9 +159,11 @@ describe('createDriftQuery', () => {
   }) => {
     // The benign backfill population: status already correct (cancelled), only
     // the watermark lags. The latest unapplied event folds to the stored status,
-    // so nothing user-facing has changed and it must not be surfaced. The two
-    // events are inserted latest-first so a probe that skipped the sort would
-    // wrongly pick the accepted event and flag it.
+    // so nothing user-facing has changed and it must not be surfaced. Two events
+    // sit past the watermark; without the descending sort the ascending
+    // prn_watermark_catchup index serves the match lowest-number-first, so a bare
+    // $limit:1 would take the accept event (number 3) and wrongly flag it. The
+    // sort is what makes the probe read the latest (cancel) event instead.
     const ids = buildAccreditationId()
     const benign = await prnRepository.create(
       buildCancelledPrn({
