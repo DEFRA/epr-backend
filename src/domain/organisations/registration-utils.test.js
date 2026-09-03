@@ -57,6 +57,7 @@ const regFixture = {
   suppliers: 'Local authority kerbside collections',
   wasteProcessingType: 'reprocessor',
   registrationNumber: 'REG-001',
+  samplingInspectionPlanPart1FileUploads: [],
   status: 'approved',
   validFrom: '2026-01-01',
   validTo: '2026-12-31'
