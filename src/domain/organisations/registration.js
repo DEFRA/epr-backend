@@ -63,17 +63,23 @@
  */
 
 /**
- * A weight declared for a single material against a form-year's input or
- * output totals, actual or estimated.
+ * A form-year's declared input totals, actual or estimated.
  * @typedef {{
  *  type: 'actual'|'estimated';
- *  ukPackagingWasteInTonnes?: number;
- *  nonUkPackagingWasteInTonnes?: number;
- *  nonPackagingWasteInTonnes?: number;
- *  sentToAnotherSiteInTonnes?: number;
- *  contaminantsInTonnes?: number;
- *  processLossInTonnes?: number;
- * }} YearlyMetricsFlow
+ *  ukPackagingWasteInTonnes: number;
+ *  nonUkPackagingWasteInTonnes: number;
+ *  nonPackagingWasteInTonnes: number;
+ * }} YearlyMetricsInput
+ */
+
+/**
+ * A form-year's declared output totals, actual or estimated.
+ * @typedef {{
+ *  type: 'actual'|'estimated';
+ *  sentToAnotherSiteInTonnes: number;
+ *  contaminantsInTonnes: number;
+ *  processLossInTonnes: number;
+ * }} YearlyMetricsOutput
  */
 
 /**
@@ -94,9 +100,9 @@
  * A reprocessor's declared input/output tonnages for a single year.
  * @typedef {{
  *  year: number;
- *  input: YearlyMetricsFlow;
+ *  input: YearlyMetricsInput;
  *  rawMaterialInputs: RawMaterialInput[];
- *  output: YearlyMetricsFlow;
+ *  output: YearlyMetricsOutput;
  *  productsMadeFromRecycling: ProductMadeFromRecycling[];
  * }} YearlyMetrics
  */
@@ -110,6 +116,13 @@
  */
 
 /**
+ * `?` marks a field the write-side schema (schema/registration.js) makes
+ * conditional on `wasteProcessingType` rather than freely optional:
+ * `orsFileUploads` is required (min 1) for an exporter registration and
+ * forbidden for a reprocessor one; `yearlyMetrics` is the other way round
+ * — required (min 1) for a reprocessor, forbidden for an exporter. Not
+ * modelled as a discriminated union here — `?` is the pragmatic JSDoc
+ * approximation.
  * @typedef {{ id: string } & StatusHistoryOf<RegistrationStatus> & {
  *  accreditation: Accreditation | null;
  *  accreditationId?: string;
