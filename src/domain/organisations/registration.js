@@ -63,6 +63,53 @@
  */
 
 /**
+ * A weight declared for a single material against a form-year's input or
+ * output totals, actual or estimated.
+ * @typedef {{
+ *  type: 'actual'|'estimated';
+ *  ukPackagingWasteInTonnes?: number;
+ *  nonUkPackagingWasteInTonnes?: number;
+ *  nonPackagingWasteInTonnes?: number;
+ *  sentToAnotherSiteInTonnes?: number;
+ *  contaminantsInTonnes?: number;
+ *  processLossInTonnes?: number;
+ * }} YearlyMetricsFlow
+ */
+
+/**
+ * @typedef {{
+ *  material: string;
+ *  weightInTonnes: number;
+ * }} RawMaterialInput
+ */
+
+/**
+ * @typedef {{
+ *  name: string;
+ *  weightInTonnes: number;
+ * }} ProductMadeFromRecycling
+ */
+
+/**
+ * A reprocessor's declared input/output tonnages for a single year.
+ * @typedef {{
+ *  year: number;
+ *  input: YearlyMetricsFlow;
+ *  rawMaterialInputs: RawMaterialInput[];
+ *  output: YearlyMetricsFlow;
+ *  productsMadeFromRecycling: ProductMadeFromRecycling[];
+ * }} YearlyMetrics
+ */
+
+/**
+ * @typedef {{
+ *  defraFormUploadedFileId: string;
+ *  defraFormUserDownloadLink: string;
+ *  s3Uri?: string;
+ * }} FormFileUpload
+ */
+
+/**
  * @typedef {{ id: string } & StatusHistoryOf<RegistrationStatus> & {
  *  accreditation: Accreditation | null;
  *  accreditationId?: string;
@@ -75,7 +122,9 @@
  *  glassRecyclingProcess?: GlassRecyclingProcess[];
  *  noticeAddress?: RegistrationAddress;
  *  orgName: string;
+ *  orsFileUploads?: FormFileUpload[];
  *  plantEquipmentDetails?: string;
+ *  samplingInspectionPlanPart1FileUploads: FormFileUpload[];
  *  site: RegistrationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;
@@ -84,6 +133,7 @@
  *  wasteProcessingType: string;
  *  reprocessingType?: ReprocessingType;
  *  overseasSites?: Record<string, {overseasSiteId: string}>;
+ *  yearlyMetrics?: YearlyMetrics[];
  * }} RegistrationBase
  */
 
