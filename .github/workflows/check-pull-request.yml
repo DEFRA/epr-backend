@@ -41,8 +41,8 @@ jobs:
             console.log(`Documentation-only changes: ${docsOnly}`);
             console.log(`Changed files: ${files.map(f => f.filename).join(', ')}`)
 
-  pr-validator:
-    name: Run Pull Request Checks
+  test-and-scan:
+    name: Test and Scan
     runs-on: ubuntu-latest
     needs: pr-prep
     if: needs.pr-prep.outputs.docs-only != 'true'
@@ -96,6 +96,43 @@ jobs:
         with:
           fail-on: all
 
+  # The one context the branch ruleset requires from this workflow, so every
+  # blocking job must appear in `needs` below. Two jobs are left out on purpose:
+  # test-journey, because `Run Journey Tests` is separately required, and
+  # typecheck-burndown, because it is advisory (continue-on-error).
+  pr-checks:
+    name: Run Pull Request Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs:
+      - pr-prep
+      - test-and-scan
+      - type-check-prod
+      - type-check-tests
+      - dependency-review
+    if: always()
+    steps:
+      - name: Check results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          EXPECTED: 5
+        run: |
+          echo "$RESULTS"
+          COUNT=$(echo "$RESULTS" | jq -r 'length')
+          if [ "$COUNT" -ne "$EXPECTED" ]; then
+            echo "Expected $EXPECTED jobs in needs, found $COUNT: update EXPECTED when you add a job"
+            exit 1
+          fi
+          NOT_PASSED=$(echo "$RESULTS" | jq -r 'to_entries
+            | map(select(.value.result != "success" and .value.result != "skipped"))
+            | .[] | "\(.key)=\(.value.result)"')
+          if [ -n "$NOT_PASSED" ]; then
+            echo "Did not pass: $(echo "$NOT_PASSED" | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "Every pull request check passed"
+
   typecheck-burndown:
     name: Typecheck strictness burndown
     runs-on: ubuntu-latest
@@ -127,6 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: pr-prep
     if: needs.pr-prep.outputs.docs-only != 'true'
+    timeout-minutes: 90
     permissions:
       contents: read
       pull-requests: write

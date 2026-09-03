@@ -25,7 +25,9 @@ process.env.SERVICE_MAINTAINER_EMAILS =
   '["me@example.com", "you@example.com", "readonly@example.com"]'
 process.env.SERVICE_MAINTAINER_WRITE_EMAILS =
   '["me@example.com", "you@example.com"]'
-process.env.SUPPORT_EMAILS = '[]'
+// `support@example.com` is in no other list, so it resolves to the lowest
+// admin tier and tests can exercise `support` against read routes.
+process.env.SUPPORT_EMAILS = '["support@example.com"]'
 
 // AWS - test credentials
 process.env.AWS_ACCESS_KEY_ID = 'test'

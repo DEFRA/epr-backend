@@ -211,9 +211,9 @@
  * @property {number} year
  * @property {string} cadence
  * @property {number} period
- * @property {string} startDate - Bare calendar date (YYYY-MM-DD)
- * @property {string} endDate - Bare calendar date (YYYY-MM-DD)
- * @property {string} dueDate - Bare calendar date (YYYY-MM-DD)
+ * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD)
+ * @property {CalendarDate} endDate - Bare calendar date (YYYY-MM-DD)
+ * @property {CalendarDate} dueDate - Bare calendar date (YYYY-MM-DD)
  * @property {ReportStatusObject} status
  * @property {string} [material]
  * @property {string} [wasteProcessingType]
@@ -261,34 +261,6 @@
  */
 
 /**
- * A raw report document as the periodic-report projections select it. The
- * activity payloads are optional because the two projections differ: the
- * calendar one (`findPeriodicReports`) omits them entirely, the estate-wide one
- * (`findAllPeriodicReports`) selects the summary fields above. A full `Report`
- * satisfies this too.
- *
- * @typedef {Pick<
- *   Report,
- *   | 'cadence'
- *   | 'dueDate'
- *   | 'endDate'
- *   | 'id'
- *   | 'period'
- *   | 'startDate'
- *   | 'submissionNumber'
- *   | 'year'
- * > & {
- *   exportActivity?: ExportActivitySummary,
- *   prn?: PrnData,
- *   recyclingActivity?: RecyclingActivitySummary,
- *   resubmissionRequired?: ReportResubmissionRequired | null,
- *   status: Pick<ReportStatusObject, 'created' | 'currentStatus' | 'submitted'>,
- *   supportingInformation?: string,
- *   wasteSent?: WasteSentSummary
- * }} PeriodicReportDoc
- */
-
-/**
  * @typedef {{
  *   id: string,
  *   exportActivity?: ExportActivitySummary,
@@ -312,11 +284,11 @@
 
 /**
  * @typedef {Object} ReportPerPeriod
- * @property {string} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
+ * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
  *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive
  *   a concrete instant.
- * @property {string} endDate - Bare calendar date (YYYY-MM-DD), no timezone.
- * @property {string} dueDate - Bare calendar date (YYYY-MM-DD), no timezone.
+ * @property {CalendarDate} endDate - Bare calendar date (YYYY-MM-DD), no timezone.
+ * @property {CalendarDate} dueDate - Bare calendar date (YYYY-MM-DD), no timezone.
  * @property {ReportSummary|null} current
  * @property {ReportSummary[]} previousSubmissions
  */
@@ -349,11 +321,11 @@
  * @property {number} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
- * @property {string} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
+ * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
  *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive
  *   a concrete instant.
- * @property {string} endDate - Bare calendar date (YYYY-MM-DD), no timezone.
- * @property {string} dueDate - Bare calendar date (YYYY-MM-DD), no timezone.
+ * @property {CalendarDate} endDate - Bare calendar date (YYYY-MM-DD), no timezone.
+ * @property {CalendarDate} dueDate - Bare calendar date (YYYY-MM-DD), no timezone.
  * @property {UserSummary} changedBy
  * @property {number} submissionNumber
  * @property {string} [material]
@@ -443,6 +415,7 @@
  */
 
 /**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { PeriodRef } from '#reports/domain/period-key.js'
  * @import { FinalDestination, Supplier } from '#reports/domain/aggregation/aggregate-report-detail.js'
  */

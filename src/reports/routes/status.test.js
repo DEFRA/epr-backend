@@ -5,7 +5,6 @@ import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -110,8 +109,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           reportsRepository: reportsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       return {
@@ -139,8 +137,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           reportsRepository: createInMemoryReportsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       return {
@@ -739,8 +736,7 @@ describe(`POST ${reportsStatusPath}`, () => {
       const registrationId = new ObjectId().toString()
 
       const server = await createTestServer({
-        repositories: {},
-        featureFlags: createInMemoryFeatureFlags()
+        repositories: {}
       })
 
       const response = await server.inject({

@@ -10,9 +10,9 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { config } from '#root/config.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -66,6 +66,7 @@ const buildPrn = (currentStatus) => ({
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },
+  obligationYear: 2026,
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: 50,
   isExport: false,
@@ -84,7 +85,6 @@ const buildPrn = (currentStatus) => ({
  * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number) => ({
-  id: `event-${number}`,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,
@@ -103,8 +103,8 @@ let ledgerRepository
 /**
  * Starts a test server wired with real in-memory adapters: the PRN store, the
  * event stream, and the waste-balance store sharing that stream. The read-side
- * fold always runs, bringing the persisted doc current from the stream tail
- * before the transition decision.
+ * fold always runs, catching the persisted doc up to the stream before the
+ * transition decision.
  *
  * @param {object} params
  * @param {PrnStatus} params.currentStatus
@@ -126,8 +126,7 @@ const startServer = async ({ currentStatus, events }) => {
         ]),
       ledgerRepository: () => ledgerRepository,
       organisationsRepository: () => ({})
-    },
-    featureFlags: createInMemoryFeatureFlags()
+    }
   })
   return server
 }
@@ -198,6 +197,21 @@ describe('mapTransitionError', () => {
   // Both wired external routes (accept, reject) drive PRODUCER-only transitions,
   // so a wrong-actor error never arises through them. The mapping is exercised
   // here directly to keep the generic handler's 400 path verified.
+  it('maps a ledger slot conflict to a 409 without naming the ledger', () => {
+    const error = new LedgerSlotConflictError({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1',
+      number: 2
+    })
+
+    const result = mapTransitionError(error, '/test', { error: () => {} })
+
+    expect(result.isBoom).toBe(true)
+    expect(result.output.statusCode).toBe(StatusCodes.CONFLICT)
+    expect(result.output.payload.message).not.toContain('acc-1')
+  })
+
   it('maps an unauthorised transition to a 400', () => {
     const error = new UnauthorisedTransitionError(
       PRN_STATUS.AWAITING_CANCELLATION,

@@ -35,7 +35,8 @@ export const CANCELLED_PRN_STATUSES = new Set([
 export const PRN_ACTOR = Object.freeze({
   REPROCESSOR_EXPORTER: 'reprocessor_exporter',
   SIGNATORY: 'signatory',
-  PRODUCER: 'producer'
+  PRODUCER: 'producer',
+  SERVICE_MAINTAINER: 'service_maintainer'
 })
 
 /**
@@ -61,9 +62,15 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
   ],
   [PRN_STATUS.AWAITING_ACCEPTANCE]: [
     { status: PRN_STATUS.ACCEPTED, actors: [PRN_ACTOR.PRODUCER] },
-    { status: PRN_STATUS.AWAITING_CANCELLATION, actors: [PRN_ACTOR.PRODUCER] }
+    { status: PRN_STATUS.AWAITING_CANCELLATION, actors: [PRN_ACTOR.PRODUCER] },
+    { status: PRN_STATUS.CANCELLED, actors: [PRN_ACTOR.SERVICE_MAINTAINER] }
   ],
-  [PRN_STATUS.ACCEPTED]: [],
+  [PRN_STATUS.ACCEPTED]: [
+    {
+      status: PRN_STATUS.CANCELLED,
+      actors: [PRN_ACTOR.SERVICE_MAINTAINER]
+    }
+  ],
   [PRN_STATUS.AWAITING_CANCELLATION]: [
     { status: PRN_STATUS.CANCELLED, actors: [PRN_ACTOR.SIGNATORY] }
   ],
@@ -108,14 +115,6 @@ export class UnauthorisedTransitionError extends Error {
   }
 }
 
-/**
- * Validates a status transition, throwing a descriptive error on failure.
- * @param {PrnStatus} currentStatus
- * @param {PrnStatus} newStatus
- * @param {PrnActor} actor
- * @throws {StatusConflictError} when no transition from currentStatus to newStatus exists
- * @throws {UnauthorisedTransitionError} when the transition exists but the actor is not permitted
- */
 export class AccreditationStatusError extends Error {
   /**
    * @param {'create'|'issue'} action - the PRN action being attempted
@@ -127,37 +126,51 @@ export class AccreditationStatusError extends Error {
 }
 
 /**
- * Asserts that an accreditation permits issuing a PRN. Issuing is blocked while
- * the accreditation is suspended (temporary) or cancelled (terminal). A PRN can
- * still be created (drafted) while suspended.
+ * The refusal when an accreditation does not permit issuing a PRN. Issuing is
+ * blocked while the accreditation is suspended (temporary) or cancelled
+ * (terminal); a PRN can still be created (drafted) while suspended. Only
+ * issuance is governed, so any other target status passes.
+ *
+ * @param {PrnStatus} newStatus
  * @param {{ status: AccreditationStatus } | null | undefined} accreditation
- * @throws {AccreditationStatusError} when the accreditation is suspended or cancelled
+ * @returns {AccreditationStatusError | undefined}
  */
-export function assertAccreditationCanIssue(accreditation) {
-  const status = accreditation?.status
-  if (
-    status === ACCREDITATION_STATUS.SUSPENDED ||
-    status === ACCREDITATION_STATUS.CANCELLED
-  ) {
-    throw new AccreditationStatusError('issue', status)
+export function issuanceRefusal(newStatus, accreditation) {
+  if (newStatus !== PRN_STATUS.AWAITING_ACCEPTANCE) {
+    return undefined
   }
+  const status = accreditation?.status
+  return status === ACCREDITATION_STATUS.SUSPENDED ||
+    status === ACCREDITATION_STATUS.CANCELLED
+    ? new AccreditationStatusError('issue', status)
+    : undefined
 }
 
-export function validateTransition(currentStatus, newStatus, actor) {
+/**
+ * The refusal when the state machine does not permit this actor to make this
+ * transition: `StatusConflictError` when no such transition exists at all,
+ * `UnauthorisedTransitionError` when it exists but is closed to this actor.
+ *
+ * @param {PrnStatus} currentStatus
+ * @param {PrnStatus} newStatus
+ * @param {PrnActor} actor
+ * @returns {StatusConflictError | UnauthorisedTransitionError | undefined}
+ */
+export function transitionRefusal(currentStatus, newStatus, actor) {
   const transitions = PRN_STATUS_TRANSITIONS[currentStatus] ?? []
   const transitionExists = transitions.some((t) => t.status === newStatus)
 
   if (!transitionExists) {
-    throw new StatusConflictError(currentStatus, newStatus)
+    return new StatusConflictError(currentStatus, newStatus)
   }
 
   const actorPermitted = transitions.some(
     (t) => t.status === newStatus && t.actors.includes(actor)
   )
 
-  if (!actorPermitted) {
-    throw new UnauthorisedTransitionError(currentStatus, newStatus, actor)
-  }
+  return actorPermitted
+    ? undefined
+    : new UnauthorisedTransitionError(currentStatus, newStatus, actor)
 }
 
 /**
@@ -174,7 +187,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   id: string;
  *   accreditationNumber: string;
  *   accreditationYear: number;
- *   material: import('#domain/organisations/model.js').Material;
+ *   material: import('#domain/organisations/model.js').AppliedForMaterial;
  *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue;
  *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess;
  *   siteAddress?: {
@@ -229,6 +242,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   organisation: OrganisationNameAndId;
  *   registrationId: string;
  *   accreditation: AccreditationSnapshot;
+ *   obligationYear: number;
  *   issuedToOrganisation: OrganisationNameAndId;
  *   tonnage: number;
  *   isExport: boolean;
@@ -258,6 +272,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   accreditationYear: number | null;
  *   createdAt: Date;
  *   isDecemberWaste: boolean;
+ *   obligationYear: number;
  *   issuedToOrganisation: OrganisationNameAndId;
  *   material: string;
  *   notes: string | null;

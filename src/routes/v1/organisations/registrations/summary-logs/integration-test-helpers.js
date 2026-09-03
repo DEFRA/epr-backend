@@ -7,7 +7,6 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -29,7 +28,7 @@ import assert from 'node:assert/strict'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { StatusHistoryEntry, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { Material, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { AppliedForMaterial, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
@@ -597,8 +596,6 @@ export const createTestInfrastructure = async (
     logger: mockLogger
   })
 
-  const featureFlags = createInMemoryFeatureFlags()
-
   const server = await createTestServer({
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
@@ -606,8 +603,7 @@ export const createTestInfrastructure = async (
     },
     workers: {
       summaryLogsWorker: { validate: validateSummaryLog }
-    },
-    featureFlags
+    }
   })
 
   return { server, summaryLogsRepository }
@@ -619,7 +615,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   material = 'paper',
   organisationId = new ObjectId().toString(),
   registrationId = new ObjectId().toString(),
-  featureFlagOverrides = {},
   reportsRepository = createInMemoryReportsRepository()(),
   accredited = true
 } = {}) => {
@@ -642,8 +637,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const organisationsRepository = createInMemoryOrganisationsRepository([
     { ...testOrg, status: 'active' }
   ])()
-
-  const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
   const ledgerRepository = createInMemoryLedgerRepository()()
   const summaryLogRowStatesRepository =
@@ -743,8 +736,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
         syncWasteRecords,
         validateSummaryLog
       })
-    },
-    featureFlags
+    }
   })
 
   return {
@@ -820,13 +812,12 @@ const buildComplexTestOrg = ({
       { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
       { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
     ]),
-    material: /** @type {Material} */ (material),
+    material: /** @type {AppliedForMaterial} */ (material),
     wasteProcessingType: processingType,
     reprocessingType: /** @type {ReprocessingType} */ (reprocessingType),
     formSubmission: { id: registrationId, time: new Date() },
     submittedToRegulator: 'ea',
     validFrom: VALID_FROM,
-    validTo: VALID_TO,
     // A registered-only operator has no accreditation, which makes the
     // registration report on a quarterly cadence rather than monthly.
     ...(accredited && { accreditationId }),

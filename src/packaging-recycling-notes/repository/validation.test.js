@@ -105,6 +105,14 @@ describe('validatePrnRead', () => {
     expect(result).not.toHaveProperty('notes')
   })
 
+  it('defaults a legacy document obligationYear to its accreditation year', () => {
+    const { obligationYear: _obligationYear, ...data } = buildReadDocument()
+
+    const result = validatePrnRead(data)
+
+    expect(result.obligationYear).toBe(data.accreditation.accreditationYear)
+  })
+
   it('throws Boom.badImplementation for invalid read data', () => {
     const data = buildReadDocument()
     delete (/** @type {Record<string, unknown>} */ (data).id)

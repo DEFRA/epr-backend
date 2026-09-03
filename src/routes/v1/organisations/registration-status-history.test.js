@@ -1,5 +1,4 @@
 import { ledgerIdFor } from '#application/summary-logs/ledger-id.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
@@ -30,9 +29,7 @@ vi.mock('@defra/cdp-auditing', () => ({
  * Builds an organisation with a target registration whose statusHistory ends
  * in the given status, plus an unrelated second (exporter) registration used
  * to assert that changing the target's status leaves other registrations
- * untouched. A created registration has no number or validFrom yet. validTo
- * defaults to already being present, mirroring the application data, so that
- * grant tests can prove the granted window overwrites it.
+ * untouched. A created registration has no number or validFrom yet.
  * @param {string} status
  * @param {{ registrationOverrides?: object }} [options]
  */
@@ -42,7 +39,6 @@ const buildOrgWithRegistrationStatus = (
 ) => {
   const registration = buildRegistration({
     reprocessingType: 'input',
-    validTo: '2026-12-31',
     statusHistory:
       status === 'created'
         ? [{ status: 'created', updatedAt: '2024-01-01' }]
@@ -87,7 +83,6 @@ const buildOrgWithLinkedAccreditation = (accStatus) => {
     reprocessingType: 'input',
     registrationNumber: 'REG123456',
     validFrom: '2024-01-01',
-    validTo: '2026-12-31',
     accreditationId,
     statusHistory: [
       { status: 'created', updatedAt: '2024-01-01' },
@@ -126,14 +121,10 @@ const buildOrgWithLinkedAccreditation = (accStatus) => {
 const statusHistoryUrl = ({ organisationId, registrationId }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/status-history`
 
-// validTo deliberately differs from the seeded fixture value so the grant
-// assertions prove the persisted window came from the request, not the
-// application data that was already there.
 const grantPayload = {
   fromStatus: 'created',
   toStatus: 'approved',
   validFrom: '2026-08-01',
-  validTo: '2027-03-31',
   registrationNumber: 'REG999999'
 }
 
@@ -151,8 +142,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const getResponse = await server.inject({
@@ -194,7 +184,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
                 registrationNumber,
                 reprocessingType: 'input',
                 validFrom: '2020-01-01',
-                validTo: '2021-01-01',
                 statusHistory: [
                   { status: 'created', updatedAt: '2019-01-01' },
                   { status: 'approved', updatedAt: '2019-06-01' },
@@ -233,9 +222,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(registration.status).toBe('approved')
       expect(registration.registrationNumber).toBe('REG999999')
       expect(registration.validFrom).toBe('2026-08-01')
-      // Overwrites the seeded 2026-12-31, proving the window came from the
-      // request rather than the pre-existing application data.
-      expect(registration.validTo).toBe('2027-03-31')
       expect(registration.statusHistory.map((entry) => entry.status)).toEqual([
         'created',
         'approved'
@@ -317,7 +303,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     it('returns 422 when granting would create a duplicate approved-registration key with another registration', async () => {
       const targetRegistration = buildRegistration({
         reprocessingType: 'input',
-        validTo: '2026-12-31',
         statusHistory: [{ status: 'created', updatedAt: '2024-01-01' }]
       })
       // Same wasteProcessingType, material, site and reprocessingType as
@@ -328,7 +313,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         reprocessingType: 'input',
         registrationNumber: 'REG777777',
         validFrom: '2024-01-01',
-        validTo: '2025-01-01',
         statusHistory: [
           { status: 'created', updatedAt: '2024-01-01' },
           { status: 'approved', updatedAt: '2024-01-15' }
@@ -351,8 +335,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             fixture
           ]),
           systemLogsRepository: createSystemLogsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({
@@ -387,70 +370,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
       expect(body.message).toMatch(/reprocessingType/)
-    })
-
-    it('returns 422 when the supplied validFrom is after the supplied validTo', async () => {
-      const ctx = await seedOrg('created')
-
-      const response = await server.inject({
-        method: 'POST',
-        url: statusHistoryUrl(ctx),
-        payload: { ...grantPayload, validFrom: '2027-06-01' },
-        headers: { Authorization: `Bearer ${validToken}` }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /validFrom 2027-06-01 is after validTo 2027-03-31/
-      )
-    })
-
-    it('compares the supplied dates even when the registration has no stored validTo', async () => {
-      const ctx = await seedOrg('created', {
-        registrationOverrides: { validTo: null }
-      })
-
-      const response = await server.inject({
-        method: 'POST',
-        url: statusHistoryUrl(ctx),
-        payload: { ...grantPayload, validFrom: '2027-06-01' },
-        headers: { Authorization: `Bearer ${validToken}` }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /validFrom 2027-06-01 is after validTo 2027-03-31/
-      )
-    })
-
-    it('grants a registration that has no stored validTo, setting it from the payload', async () => {
-      const ctx = await seedOrg('created', {
-        registrationOverrides: { validTo: null }
-      })
-
-      const response = await server.inject({
-        method: 'POST',
-        url: statusHistoryUrl(ctx),
-        payload: grantPayload,
-        headers: { Authorization: `Bearer ${validToken}` }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-
-      const getResponse = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${ctx.organisationId}`,
-        headers: { Authorization: `Bearer ${validToken}` }
-      })
-      const registration = JSON.parse(getResponse.payload).registrations.find(
-        (reg) => reg.id === ctx.registrationId
-      )
-
-      expect(registration.status).toBe('approved')
-      expect(registration.validFrom).toBe('2026-08-01')
-      expect(registration.validTo).toBe('2027-03-31')
     })
 
     it.each(['approved', 'rejected', 'cancelled'])(
@@ -594,8 +513,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           systemLogsRepository: createSystemLogsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
       const getResponse = await server.inject({
         method: 'GET',
@@ -680,7 +598,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         reprocessingType: 'input',
         registrationNumber: 'REG888888',
         validFrom: '2024-01-01',
-        validTo: '2026-12-31',
         statusHistory: [
           { status: 'created', updatedAt: '2024-01-01' },
           { status: 'approved', updatedAt: '2024-01-15' },
@@ -695,7 +612,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         reprocessingType: 'input',
         registrationNumber: 'REG777777',
         validFrom: '2024-01-01',
-        validTo: '2025-01-01',
         statusHistory: [
           { status: 'created', updatedAt: '2024-01-01' },
           { status: 'approved', updatedAt: '2024-01-15' }
@@ -718,8 +634,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             fixture
           ]),
           systemLogsRepository: createSystemLogsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({
@@ -770,7 +685,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         'a grant is missing validFrom',
         { ...grantPayload, validFrom: undefined }
       ],
-      ['a grant is missing validTo', { ...grantPayload, validTo: undefined }],
       [
         'a grant is missing the registration number',
         { ...grantPayload, registrationNumber: undefined }
@@ -784,20 +698,11 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         { ...grantPayload, validFrom: '2026-02-30' }
       ],
       [
-        'a grant has an invalid validTo date',
-        { ...grantPayload, validTo: '2027-13-45' }
-      ],
-      [
-        'a grant has a validTo day that does not exist in that month',
-        { ...grantPayload, validTo: '2027-02-30' }
-      ],
-      [
         'a grant uses the legacy appliesFrom field name',
         {
           fromStatus: 'created',
           toStatus: 'approved',
           appliesFrom: '2026-08-01',
-          validTo: '2027-03-31',
           registrationNumber: 'REG999999'
         }
       ],
@@ -885,8 +790,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const grantResponse = await integrationServer.inject({
@@ -946,8 +850,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
           systemLogsRepository: createSystemLogsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const grantResponse = await integrationServer.inject({

@@ -350,6 +350,30 @@ describe('buildCreditedTonnageReport', () => {
     expect(materials).toEqual(new Set(['glass_re_melt', 'glass_other']))
   })
 
+  it('leaves the material blank for a glass registration that has not been split', async () => {
+    const unsplit = makeAccreditation({
+      orgId: 500001,
+      material: MATERIAL.GLASS,
+      glassRecyclingProcess: [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
+      ]
+    })
+
+    const { report } = run({
+      organisations: [unsplit.organisation],
+      entries: [unsplit.ledgerEntry],
+      rowStatesByAccreditationId: {
+        [unsplit.accreditationId]: [receivedRow('2026-01-10', 10)]
+      }
+    })
+
+    const materials = new Set(
+      (await report).data.map((r) => r.accreditation.material)
+    )
+    expect(materials).toEqual(new Set(['']))
+  })
+
   it('excludes test organisations by external reference', async () => {
     const real = makeAccreditation({ orgId: 500001 })
     const testOrg = makeAccreditation({ orgId: TEST_ORG_ID })

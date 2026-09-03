@@ -12,6 +12,10 @@ import {
 } from './create-report-validation.js'
 import { canRequestResubmission } from './resubmission-service.js'
 import { findReportIdBySubmissionNumber } from './submission-lookup.js'
+import {
+  assertReportDataComplete,
+  summariseIncompleteData
+} from './report-mandatory/assert-report-data-complete.js'
 
 /**
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
@@ -102,6 +106,10 @@ function formatSiteAddress(address) {
 }
 
 /**
+ * A report is about a material, so `material` is empty only for a registration
+ * that has resolved to none. The repository refuses such a report rather than
+ * writing one against a material the registration is only half for.
+ *
  * @typedef {Pick<AggregatedReportDetail, 'source' | 'recyclingActivity' | 'exportActivity' | 'wasteSent'> & {
  *   material: string,
  *   wasteProcessingType: string,
@@ -120,7 +128,7 @@ function buildReportData(aggregated, registration) {
   const { recyclingActivity, exportActivity, wasteSent, prn, source } =
     aggregated
   return {
-    material: resolveDetailedMaterial(registration),
+    material: resolveDetailedMaterial(registration) ?? '',
     wasteProcessingType: registration.wasteProcessingType,
     siteAddress: formatSiteAddress(registration.site?.address),
     source,
@@ -128,6 +136,29 @@ function buildReportData(aggregated, registration) {
     prn,
     ...(exportActivity && { exportActivity }),
     wasteSent
+  }
+}
+
+/**
+ * Wraps a stored report with its `canRequestResubmission` flag for the
+ * fetch-or-generate result. The completeness signal is a preview-only concern,
+ * so the stored branch never carries it.
+ *
+ * @param {import('#reports/repository/port.js').Report} storedReport
+ * @param {PeriodicReport[]} periodicReports
+ * @returns {import('#reports/repository/port.js').Report & { canRequestResubmission: boolean }}
+ */
+function buildStoredReportResult(storedReport, periodicReports) {
+  return {
+    ...storedReport,
+    canRequestResubmission: canRequestResubmission(periodicReports, {
+      status: storedReport.status.currentStatus,
+      resubmissionRequired: storedReport.resubmissionRequired,
+      year: storedReport.year,
+      cadence: /** @type {Cadence} */ (storedReport.cadence),
+      period: storedReport.period,
+      submissionNumber: storedReport.submissionNumber
+    })
   }
 }
 
@@ -148,7 +179,8 @@ function buildReportData(aggregated, registration) {
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
- * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean }>}
+ * @param {boolean} [params.reportDataValidationEnabled]
+ * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean, incompleteSummaryLogRows?: { total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } }>}
  */
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
@@ -162,7 +194,8 @@ export async function fetchOrGenerateReportForPeriod({
   year,
   cadence,
   period,
-  submissionNumber
+  submissionNumber,
+  reportDataValidationEnabled
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationId,
@@ -182,24 +215,22 @@ export async function fetchOrGenerateReportForPeriod({
     : null
 
   if (storedReport) {
-    return {
-      ...storedReport,
-      canRequestResubmission: canRequestResubmission(periodicReports, {
-        status: storedReport.status.currentStatus,
-        resubmissionRequired: storedReport.resubmissionRequired,
-        year: storedReport.year,
-        cadence: /** @type {Cadence} */ (storedReport.cadence),
-        period: storedReport.period,
-        submissionNumber: storedReport.submissionNumber
-      })
-    }
+    return buildStoredReportResult(storedReport, periodicReports)
   }
 
   const operatorCategory = getOperatorCategory(registration)
 
+  const { latestSubmission, wasteRecordStates } = await readSubmissionRowStates(
+    {
+      ledgerRepository,
+      summaryLogRowStatesRepository,
+      organisationId,
+      registrationId,
+      registration
+    }
+  )
+
   const aggregatedReportDetail = await getAggregatedReportDetail({
-    ledgerRepository,
-    summaryLogRowStatesRepository,
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
     operatorCategory,
@@ -208,10 +239,29 @@ export async function fetchOrGenerateReportForPeriod({
     registration,
     year,
     cadence,
-    period
+    period,
+    wasteRecordStates,
+    latestSubmission
   })
 
-  return { ...aggregatedReportDetail, canRequestResubmission: false }
+  // Attached on every generate-branch preview (any period without a stored
+  // report) regardless of period status: a not-yet-ended period resolves to a
+  // null period status yet still generates. The frontend controller redirects
+  // to the validation-error screen unconditionally on this signal, with no
+  // period-status check. What keeps a not-yet-ended period off that screen is
+  // the reports list upstream, which only offers a link into the generate
+  // branch for Due/Over Due (or requires-resubmission) periods, never a future
+  // one (PAE-1420).
+  const incompleteSummaryLogRows = summariseIncompleteDataIfEnabled(
+    reportDataValidationEnabled,
+    wasteRecordStates
+  )
+
+  return {
+    ...aggregatedReportDetail,
+    canRequestResubmission: false,
+    ...(incompleteSummaryLogRows && { incompleteSummaryLogRows })
+  }
 }
 
 /**
@@ -231,11 +281,48 @@ function toSource(latestSubmission) {
 }
 
 /**
- * Aggregates a registration's waste-record states at its latest submitted
- * summary log into a report and appends issued PRN tonnage.
+ * Reads a registration's waste-record states at its latest submitted summary
+ * log, in one head resolution so the row states and their submission metadata
+ * describe the same submission — a submission committing mid-read cannot skew
+ * them apart. Callers pass the result to the completeness gate and the
+ * aggregation so both see identical data.
+ *
  * @param {object} params
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {Registration} params.registration
+ */
+async function readSubmissionRowStates({
+  ledgerRepository,
+  summaryLogRowStatesRepository,
+  organisationId,
+  registrationId,
+  registration
+}) {
+  const accreditationId = registration.accreditationId ?? null
+  const ledgerId = { organisationId, registrationId, accreditationId }
+
+  const latestSubmission = await latestSubmittedSummaryLog(
+    ledgerRepository,
+    ledgerId
+  )
+  const wasteRecordStates = await wasteRecordStatesForHead(
+    summaryLogRowStatesRepository,
+    ledgerId,
+    latestSubmission === null ? null : latestSubmission.summaryLogId
+  )
+
+  return { latestSubmission, wasteRecordStates }
+}
+
+/**
+ * Aggregates a registration's waste-record states at its latest submitted
+ * summary log into a report and appends issued PRN tonnage. The row states and
+ * their submission metadata are read once by the caller and passed in, so the
+ * completeness gate and this aggregation describe the same submission.
+ * @param {object} params
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {OperatorCategory} params.operatorCategory
@@ -245,11 +332,11 @@ function toSource(latestSubmission) {
  * @param {number} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.wasteRecordStates
+ * @param {Awaited<ReturnType<typeof latestSubmittedSummaryLog>>} params.latestSubmission
  * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | null }>}
  */
 async function getAggregatedReportDetail({
-  ledgerRepository,
-  summaryLogRowStatesRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   operatorCategory,
@@ -258,25 +345,10 @@ async function getAggregatedReportDetail({
   registration,
   year,
   cadence,
-  period
+  period,
+  wasteRecordStates,
+  latestSubmission
 }) {
-  const accreditationId = registration.accreditationId ?? null
-  const ledgerId = { organisationId, registrationId, accreditationId }
-
-  // One head resolution serves both reads: the row states and the source
-  // metadata must describe the same submission, so a submission committing
-  // mid-read cannot skew them apart.
-  const latestSubmission = await latestSubmittedSummaryLog(
-    ledgerRepository,
-    ledgerId
-  )
-
-  const wasteRecordStates = await wasteRecordStatesForHead(
-    summaryLogRowStatesRepository,
-    ledgerId,
-    latestSubmission === null ? null : latestSubmission.summaryLogId
-  )
-
   const source = toSource(latestSubmission)
 
   const orsDetailsMap = await getOrsDetailsMap(
@@ -305,6 +377,96 @@ async function getAggregatedReportDetail({
 }
 
 /**
+ * Asserts a report can be created for the period. Loads the registration's
+ * periodic reports and rejects a duplicate submission before a disallowed
+ * resubmission: existence is the more fundamental precondition, so a duplicate
+ * is reported as such regardless of whether a fresh create would have been
+ * permitted.
+ *
+ * @param {object} params
+ * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {number} params.year
+ * @param {Cadence} params.cadence
+ * @param {number} params.period
+ * @param {number} params.submissionNumber
+ * @returns {Promise<void>}
+ */
+async function assertReportCreationAllowed({
+  reportsRepository,
+  organisationId,
+  registrationId,
+  year,
+  cadence,
+  period,
+  submissionNumber
+}) {
+  const periodicReports = await reportsRepository.findPeriodicReports({
+    organisationId,
+    registrationId
+  })
+
+  assertNoExistingReport(
+    periodicReports,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  )
+  assertResubmissionAllowed(
+    periodicReports,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  )
+}
+
+/**
+ * Runs the report-data completeness gate when the feature flag is on. The gate
+ * checks every row in the summary log, not just the rows this report
+ * aggregates, so an incomplete row from any period blocks creation; its per-row
+ * policy lookup skips any processing type without rules, so the feature flag is
+ * the only guard needed here.
+ *
+ * @param {boolean | undefined} reportDataValidationEnabled
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @param {string} reference
+ * @returns {void}
+ */
+function assertReportDataCompleteIfEnabled(
+  reportDataValidationEnabled,
+  wasteRecordStates,
+  reference
+) {
+  if (reportDataValidationEnabled) {
+    assertReportDataComplete(wasteRecordStates, reference)
+  }
+}
+
+/**
+ * Summarises incomplete summary-log rows for the GET report-detail preview when
+ * the feature flag is on, mirroring the POST gate's issue payload without
+ * throwing. Returns `null` when the flag is off — or on but nothing is missing —
+ * so the generate branch attaches the field only when there is something to
+ * report.
+ *
+ * @param {boolean | undefined} reportDataValidationEnabled
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @returns {{ total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } | null}
+ */
+function summariseIncompleteDataIfEnabled(
+  reportDataValidationEnabled,
+  wasteRecordStates
+) {
+  if (!reportDataValidationEnabled) {
+    return null
+  }
+  return summariseIncompleteData(wasteRecordStates)
+}
+
+/**
  * Creates a report for a given period. Validates the period has ended,
  * checks no report already exists, aggregates waste data, and persists.
  *
@@ -322,6 +484,7 @@ async function getAggregatedReportDetail({
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {import('#reports/repository/port.js').UserSummary} params.changedBy
+ * @param {boolean} [params.reportDataValidationEnabled]
  * @returns {Promise<import('#reports/repository/port.js').Report>}
  */
 export async function createReportForPeriod({
@@ -337,7 +500,8 @@ export async function createReportForPeriod({
   cadence,
   period,
   submissionNumber,
-  changedBy
+  changedBy,
+  reportDataValidationEnabled
 }) {
   const { startDate, endDate, dueDate } = getValidatedPeriodInfo(
     cadence,
@@ -345,35 +509,35 @@ export async function createReportForPeriod({
     period
   )
 
-  const periodicReports = await reportsRepository.findPeriodicReports({
+  await assertReportCreationAllowed({
+    reportsRepository,
     organisationId,
-    registrationId
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber
   })
-
-  // Existence is the more fundamental precondition: a duplicate submission is
-  // reported as such regardless of whether a fresh create would have been
-  // permitted, so the duplicate check runs before the resubmission gate.
-  assertNoExistingReport(
-    periodicReports,
-    year,
-    cadence,
-    period,
-    submissionNumber
-  )
-
-  assertResubmissionAllowed(
-    periodicReports,
-    year,
-    cadence,
-    period,
-    submissionNumber
-  )
 
   const operatorCategory = getOperatorCategory(registration)
 
+  const { latestSubmission, wasteRecordStates } = await readSubmissionRowStates(
+    {
+      ledgerRepository,
+      summaryLogRowStatesRepository,
+      organisationId,
+      registrationId,
+      registration
+    }
+  )
+
+  assertReportDataCompleteIfEnabled(
+    reportDataValidationEnabled,
+    wasteRecordStates,
+    registrationId
+  )
+
   const aggregatedReportData = await getAggregatedReportDetail({
-    ledgerRepository,
-    summaryLogRowStatesRepository,
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
     operatorCategory,
@@ -382,7 +546,9 @@ export async function createReportForPeriod({
     registration,
     year,
     cadence,
-    period
+    period,
+    wasteRecordStates,
+    latestSubmission
   })
 
   return reportsRepository.createReport({

@@ -6,17 +6,17 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { PrnNumberConflictError } from './port.js'
+import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
 import { validatePrnInsert, validatePrnRead } from './validation.js'
 import { throwWatermarkRegression } from './watermark-guard.js'
 
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
-/** @import { FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, PersistProjectionParams, RollbackParams, UpdateStatusParams } from './port.js' */
+/** @import { FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 
-const COLLECTION_NAME = 'packaging-recycling-notes'
+export const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**
@@ -190,6 +190,50 @@ const performFindByAccreditation = async (
 }
 
 /**
+ * A note id reaches this repository from a stored waste-balance ledger event,
+ * whose schema constrains the id to a string and no further. Anything that is
+ * not a document id cannot name a stored note, so it is dropped rather than
+ * handed to the driver, which would throw on it.
+ *
+ * @param {string} id
+ * @returns {boolean}
+ */
+const isDocumentId = (id) => /^[0-9a-f]{24}$/i.test(id)
+
+/**
+ * @param {Db} db
+ * @param {FindByIdsParams} params
+ * @returns {Promise<PackagingRecyclingNote[]>}
+ */
+const performFindByIds = async (
+  db,
+  { organisationId, registrationId, accreditationId, ids }
+) => {
+  const documentIds = ids
+    .filter(isDocumentId)
+    .map((id) => ObjectId.createFromHexString(id))
+
+  if (documentIds.length === 0) {
+    return []
+  }
+
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({
+      _id: { $in: documentIds },
+      'organisation.id': organisationId,
+      registrationId,
+      'accreditation.id': accreditationId,
+      'status.currentStatus': { $ne: PRN_STATUS.DELETED }
+    })
+    .toArray()
+
+  return docs.map((doc) =>
+    validatePrnRead({ ...doc, id: doc._id.toHexString() })
+  )
+}
+
+/**
  * @param {Organisation['id'][]} excludeOrganisationIds
  * @returns {(params: Omit<FindByStatusParams, 'limit'>) => Filter<Document>}
  */
@@ -322,7 +366,9 @@ const resolveMissedUpdate = async (
         reference: id
       }
     })
-    throw Boom.conflict(versionConflictError.message)
+    throw Boom.conflict(versionConflictError.message, {
+      kind: PRN_VERSION_CONFLICT
+    })
   }
 
   return throwWatermarkRegression(
@@ -417,6 +463,43 @@ const performUpdateStatus = async (
 }
 
 /**
+ * Stamps only the stream watermark, under the same version CAS and
+ * monotonic-watermark guard as the other writes. It sets no status, history or
+ * audit fields, so a benign watermark-behind projection is brought current
+ * without the churn a full fold would inflict. A missed CAS resolves to a 404, a
+ * 409 version conflict or a 500 watermark regression, exactly as elsewhere.
+ *
+ * @param {Db} db
+ * @param {TypedLogger} logger
+ * @param {UpdateWatermarkParams} params
+ * @returns {Promise<PackagingRecyclingNote | null>}
+ */
+const performUpdateWatermark = async (
+  db,
+  logger,
+  { id, version, lastAppliedEventNumber }
+) => {
+  const versionMatches = { $eq: [{ $ifNull: ['$version', 1] }, version] }
+
+  const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
+    {
+      _id: ObjectId.createFromHexString(id),
+      $expr: {
+        $and: [versionMatches, watermarkNotRegressing(lastAppliedEventNumber)]
+      }
+    },
+    { $set: { lastAppliedEventNumber, version: version + 1 } },
+    { returnDocument: 'after' }
+  )
+
+  if (!result) {
+    return resolveMissedUpdate(db, id, version, lastAppliedEventNumber, logger)
+  }
+
+  return validatePrnRead({ ...result, id: result._id.toHexString() })
+}
+
+/**
  * @param {Db} db
  * @param {TypedLogger} logger
  * @param {PersistProjectionParams} params
@@ -473,77 +556,6 @@ const performPersistProjection = async (
 
 /**
  * @param {Db} db
- * @param {TypedLogger} logger
- * @param {RollbackParams} params
- * @param {{ revertedStatus: import('#packaging-recycling-notes/domain/model.js').PrnStatus, slotsToUnset: Array<'issued' | 'cancelled' | 'deleted'>, unsetPrnNumber?: boolean }} options
- * @returns {Promise<PackagingRecyclingNote | null>}
- */
-const performRollback = async (
-  db,
-  logger,
-  { id, expectedVersion, updatedBy, updatedAt, lastAppliedEventNumber },
-  { revertedStatus, slotsToUnset, unsetPrnNumber }
-) => {
-  const setFields = {
-    'status.currentStatus': revertedStatus,
-    'status.currentStatusAt': updatedAt,
-    updatedAt,
-    updatedBy
-  }
-
-  if (lastAppliedEventNumber !== undefined) {
-    setFields.lastAppliedEventNumber = lastAppliedEventNumber
-  }
-
-  /** @type {Record<string, ''>} */
-  const unsetFields = {}
-  for (const slot of slotsToUnset) {
-    unsetFields[`status.${slot}`] = ''
-  }
-  if (unsetPrnNumber) {
-    unsetFields.prnNumber = ''
-  }
-
-  const versionMatches = {
-    $eq: [{ $ifNull: ['$version', 1] }, expectedVersion]
-  }
-
-  const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
-    {
-      _id: ObjectId.createFromHexString(id),
-      $expr: {
-        $and: [versionMatches, watermarkNotRegressing(lastAppliedEventNumber)]
-      }
-    },
-    {
-      $set: { ...setFields, version: expectedVersion + 1 },
-      $unset: unsetFields,
-      $push: /** @type {*} */ ({
-        'status.history': {
-          status: revertedStatus,
-          at: updatedAt,
-          by: updatedBy
-        }
-      })
-    },
-    { returnDocument: 'after' }
-  )
-
-  if (!result) {
-    return resolveMissedUpdate(
-      db,
-      id,
-      expectedVersion,
-      lastAppliedEventNumber,
-      logger
-    )
-  }
-
-  return validatePrnRead({ ...result, id: result._id.toHexString() })
-}
-
-/**
- * @param {Db} db
  * @param {Organisation['id'][]} excludeOrganisationIds
  * @returns {Promise<PackagingRecyclingNotesRepositoryFactory>}
  */
@@ -557,26 +569,12 @@ export const createPackagingRecyclingNotesRepository = async (
     create: (prn) => performCreate(db, prn),
     findByAccreditation: (accreditationId) =>
       performFindByAccreditation(db, accreditationId),
+    findByIds: (params) => performFindByIds(db, params),
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
     findByStatus: performFindByStatus(db, excludeOrganisationIds),
     updateStatus: (params) => performUpdateStatus(db, logger, params),
-    persistProjection: (params) => performPersistProjection(db, logger, params),
-    rollbackIssuance: (params) =>
-      performRollback(db, logger, params, {
-        revertedStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        slotsToUnset: ['issued'],
-        unsetPrnNumber: true
-      }),
-    rollbackPendingCancellation: (params) =>
-      performRollback(db, logger, params, {
-        revertedStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        slotsToUnset: ['cancelled', 'deleted']
-      }),
-    rollbackIssuedCancellation: (params) =>
-      performRollback(db, logger, params, {
-        revertedStatus: PRN_STATUS.AWAITING_CANCELLATION,
-        slotsToUnset: ['cancelled']
-      })
+    updateWatermark: (params) => performUpdateWatermark(db, logger, params),
+    persistProjection: (params) => performPersistProjection(db, logger, params)
   })
 }

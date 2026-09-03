@@ -107,12 +107,11 @@ export const createMockPackagingRecyclingNotesRepository = (
   findByPrnNumber: vi.fn(),
   create: vi.fn(),
   findByAccreditation: vi.fn(),
+  findByIds: vi.fn(),
   findByStatus: vi.fn(),
   updateStatus: vi.fn(),
+  updateWatermark: vi.fn(),
   persistProjection: vi.fn(),
-  rollbackIssuance: vi.fn(),
-  rollbackPendingCancellation: vi.fn(),
-  rollbackIssuedCancellation: vi.fn(),
   ...overrides
 })
 

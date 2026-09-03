@@ -116,7 +116,10 @@ export const reportsGetDetail = {
       year,
       cadence,
       period,
-      submissionNumber
+      submissionNumber,
+      reportDataValidationEnabled: request.config.get(
+        'featureFlags.reportDataValidation'
+      )
     })
 
     warnIfWasteRecordsExcluded(request, report, organisationId, registrationId)

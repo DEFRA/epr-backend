@@ -155,12 +155,12 @@ describe('csv-columns', () => {
       site: { address: {}, gridReference: 'TQ123456', siteCapacity: [] },
       submittedToRegulator: 'ea',
       submitterContactDetails: userFixture,
+      suppliers: 'Local authority kerbside collections',
       wasteProcessingType: 'reprocessor',
       registrationNumber: 'REG-001',
       status: 'approved',
       statusHistory: [],
-      validFrom: '2026-01-01',
-      validTo: '2026-12-31'
+      validFrom: '2026-01-01'
     }
 
     /** @type {Accreditation} */
@@ -169,6 +169,7 @@ describe('csv-columns', () => {
       statusHistory: [],
       formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
       material: 'plastic',
+      orgName: 'Acme Ltd',
       prnIssuance: {
         incomeBusinessPlan: [],
         signatories: [],
@@ -248,6 +249,17 @@ describe('csv-columns', () => {
         })
       })
       expect(row[METADATA_COL_INDEX['Material']]).toBe('glass_re_melt')
+    })
+
+    it('emits an empty Material column for a glass registration that has not been split', () => {
+      const row = buildDataRow({
+        ...baseInput,
+        registration: buildReg({
+          material: 'glass',
+          glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+        })
+      })
+      expect(row[METADATA_COL_INDEX['Material']]).toBe('')
     })
 
     it('emits an empty Registration Number when the registration has none', () => {

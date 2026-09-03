@@ -9,7 +9,6 @@ import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-no
 import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   cognitoJwksUrl,
   setupAuthContext
@@ -96,8 +95,7 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
       },
       repositories: {
         packagingRecyclingNotesRepository: () => repository
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
   }
 

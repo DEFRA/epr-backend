@@ -41,6 +41,33 @@ Forms are defined and maintained in DEFRA Forms Designer. Once deployed, users c
 > [!WARNING]
 > Never upload production JSON files directly to test without URL replacement. They will submit data to the production epr-backend API.
 
+## Blank page titles
+
+DEFRA Forms used to fall back to the first non-Markdown question's title when a page had no title of its own. That overwrite was **removed as part of the Welsh translation work**, because it broke the translation framework — confirmed by the DEFRA Forms team in [this Slack thread](https://defra-digital-team.slack.com/archives/C080WP62PJP/p1787136873848939) (PAE-1830).
+
+As a result, some pages are now submitted with an empty page title, with the question text living only on the component:
+
+```json
+{
+  "title": "",
+  "path": "/do-you-have-an-organisation-id-number",
+  "components": [
+    { "type": "YesNoField", "title": "Do you have an Organisation ID number?" }
+  ]
+}
+```
+
+Every production form definition is affected — 34 blank-titled pages in total (3 in each accreditation form, 10 in exporter registration, 8 in reprocessor registration, 10 in organisation details).
+
+Because `extractAnswers` groups answers by page title, two or more blank titles used to collide and throw `Duplicate page title detected: ""` (PAE-1830). `extractAnswers` now resolves the page key as:
+
+1. `page.title`, if non-blank
+2. otherwise the first non-Markdown component's `title`
+3. otherwise the page is skipped — this only affects `/summary`, which is Markdown-only and carries no answers
+
+> [!IMPORTANT]
+> Most fixtures in this directory were captured before this change and still have every page title populated. Only `reprocessor-steel-blank-page-titles.json` reflects the current shape, so keep it blank-titled — re-exporting it with titles filled in would silently remove the regression coverage.
+
 ### Test data fixtures
 
 ### Organisation
@@ -66,10 +93,11 @@ Forms are defined and maintained in DEFRA Forms Designer. Once deployed, users c
 
 ### Accreditation
 
-| Test data                                                    | description                                                                                                                                                |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [503176](./accreditation/reprocessor-paper.json)             | Reprocessor accreditation for Paper                                                                                                                        |
-| [503176](./accreditation/reprocessor-wood.json)              | Reprocessor accreditation for wood with first line of address not same as registration. "78 Portland Place" during registration vs 78 during accreditation |
-| [503177](./accreditation/exporter-without-registration.json) | Exporter accreditation for glass without registration                                                                                                      |
-| [503181](./accreditation/exporter.json)                      | Exporter accreditation for glass                                                                                                                           |
-| [503176](./accreditation/reprocessor-glass.json)             | Reprocessor accreditation for glass                                                                                                                        |
+| Test data                                                          | description                                                                                                                                                |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [503176](./accreditation/reprocessor-paper.json)                   | Reprocessor accreditation for Paper                                                                                                                        |
+| [503176](./accreditation/reprocessor-wood.json)                    | Reprocessor accreditation for wood with first line of address not same as registration. "78 Portland Place" during registration vs 78 during accreditation |
+| [503177](./accreditation/exporter-without-registration.json)       | Exporter accreditation for glass without registration                                                                                                      |
+| [503181](./accreditation/exporter.json)                            | Exporter accreditation for glass                                                                                                                           |
+| [503176](./accreditation/reprocessor-glass.json)                   | Reprocessor accreditation for glass                                                                                                                        |
+| [503176](./accreditation/reprocessor-steel-blank-page-titles.json) | Reprocessor accreditation for steel with **blank page titles** — see [Blank page titles](#blank-page-titles) below                                         |

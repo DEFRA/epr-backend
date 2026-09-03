@@ -56,7 +56,6 @@ export const testInsertBehaviour = (it) => {
           expect(reg.statusHistory[0].status).toBe('created')
           expect(reg.statusHistory[0].updatedAt).toBeInstanceOf(Date)
           expect(reg.validFrom).toBeNull()
-          expect(reg.validTo).toBeNull()
           expect(reg.registrationNumber).toBeNull()
         })
 

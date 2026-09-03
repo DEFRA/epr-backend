@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { assertPresent } from '#test/type-helpers.js'
 import {
   mergeReportingPeriods,
@@ -55,17 +56,17 @@ describe('mergeReportingPeriods', () => {
     {
       year: 2026,
       period: 1,
-      startDate: '2026-01-01',
-      endDate: '2026-01-31',
-      dueDate: '2026-02-20',
+      startDate: calendarDate('2026-01-01'),
+      endDate: calendarDate('2026-01-31'),
+      dueDate: calendarDate('2026-02-20'),
       report: null
     },
     {
       year: 2026,
       period: 2,
-      startDate: '2026-02-01',
-      endDate: '2026-02-28',
-      dueDate: '2026-03-20',
+      startDate: calendarDate('2026-02-01'),
+      endDate: calendarDate('2026-02-28'),
+      dueDate: calendarDate('2026-03-20'),
       report: null
     }
   ]
@@ -212,7 +213,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -265,7 +266,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 
@@ -306,7 +307,7 @@ describe('mergeReportingPeriods', () => {
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      periodicReports,
+      asPeriodicReports(periodicReports),
       'monthly'
     )
 

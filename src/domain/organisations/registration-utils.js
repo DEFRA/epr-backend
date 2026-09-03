@@ -1,11 +1,12 @@
 import {
   ACTIVE_ACCREDITATION_STATUSES,
+  MATERIAL,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
-/** @import { AccreditationStatus, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
-/** @import { Registration, ReportableRegistration } from '#domain/organisations/registration.js' */
+/** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
+/** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
@@ -93,25 +94,24 @@ export function activeAccreditationValidFrom(accreditation) {
 }
 
 /**
- * Returns the registration's material at its finest granularity. Glass is the
- * only material that sub-divides: each glass registration carries a single
- * recycling process (submissions are split per process upstream), so the
- * process value (glass_re_melt / glass_other) is returned in place of 'glass'.
- * All other materials are returned unchanged.
+ * Returns the material the record is for, or null when it is for none yet.
  *
- * @param {Pick<Registration, 'material' | 'glassRecyclingProcess'>} registration
- * @returns {Material | GlassRecyclingProcess}
+ * Glass is the only material that sub-divides. A glass submission is split
+ * upstream into one record per recycling process, so a glass record is for the
+ * precise material named by the single process it carries. One that carries no
+ * process, or more than one, has not been split, and so is not yet for either
+ * of them. All other materials are their own answer.
+ *
+ * @param {{ material: AppliedForMaterial, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
+ * @returns {Material | null}
  */
-export function resolveDetailedMaterial(registration) {
-  const glassProcess = registration.glassRecyclingProcess
-  if (
-    registration.material === 'glass' &&
-    glassProcess &&
-    glassProcess.length > 0
-  ) {
-    return glassProcess[0]
+export function resolveDetailedMaterial(record) {
+  if (record.material !== MATERIAL.GLASS) {
+    return record.material
   }
-  return registration.material
+
+  const [process, ...furtherProcesses] = record.glassRecyclingProcess ?? []
+  return process !== undefined && furtherProcesses.length === 0 ? process : null
 }
 
 /**
@@ -134,5 +134,27 @@ export function resolveAccreditation(registration, org) {
         a.id === registration.accreditationId &&
         ACTIVE_ACCREDITATION_STATUSES.has(a.status)
     ) ?? null
+  )
+}
+
+/**
+ * Returns the accreditations the registration holds.
+ *
+ * `registration.accreditationId` names at most one, so the result holds no
+ * more than one entry. The result is a collection because a registration will
+ * hold several once the model carries them.
+ *
+ * @param {{ accreditationId?: string | null }} registration
+ * @param {{ accreditations: Accreditation[] }} org
+ * @returns {Accreditation[]}
+ */
+export function accreditationsForRegistration(registration, org) {
+  const { accreditationId } = registration
+  if (!accreditationId) {
+    return []
+  }
+
+  return org.accreditations.filter(
+    (accreditation) => accreditation.id === accreditationId
   )
 }

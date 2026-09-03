@@ -1,4 +1,3 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { buildAwaitingAuthorisationPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
@@ -51,12 +50,11 @@ const buildOrgWithAccreditationStatus = (
     accreditationId,
     reprocessingType: 'input',
     ...(registrationStatus !== 'created' && {
-      // registrationNumber/validFrom/validTo are only required once a
+      // registrationNumber/validFrom are only required once a
       // registration has been approved, but non-created registrations get
       // them for realism (mirrors buildOrgWithRegistrationStatus).
       registrationNumber: 'REG123456',
       validFrom: '2024-01-01',
-      validTo: '2025-01-01',
       statusHistory: [
         { status: 'created', updatedAt: '2024-01-01' },
         { status: registrationStatus, updatedAt: '2024-01-15' }
@@ -136,8 +134,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     const getResponse = await server.inject({
@@ -1100,8 +1097,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const suspendResponse = await integrationServer.inject({
@@ -1190,8 +1186,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           ledgerRepository: () => ledgerRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const reinstateResponse = await integrationServer.inject({
@@ -1257,8 +1252,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const cancelResponse = await integrationServer.inject({
@@ -1347,8 +1341,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           ledgerRepository: () => ledgerRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const reinstateResponse = await integrationServer.inject({

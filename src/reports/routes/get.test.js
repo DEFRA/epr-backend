@@ -1,11 +1,11 @@
 import { ObjectId } from 'mongodb'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -57,8 +57,7 @@ describe(`GET ${reportsGetPath}`, () => {
           ...(reportsRepositoryFactory && {
             reportsRepository: reportsRepositoryFactory
           })
-        },
-        featureFlags: createInMemoryFeatureFlags({})
+        }
       })
 
       return {
@@ -341,8 +340,7 @@ describe(`GET ${reportsGetPath}`, () => {
             organisationsRepository: createInMemoryOrganisationsRepository([
               partialMock(org)
             ])
-          },
-          featureFlags: createInMemoryFeatureFlags({})
+          }
         })
 
         return {
@@ -403,8 +401,7 @@ describe(`GET ${reportsGetPath}`, () => {
             organisationsRepository: createInMemoryOrganisationsRepository([
               partialMock(org)
             ])
-          },
-          featureFlags: createInMemoryFeatureFlags({})
+          }
         })
 
         const response = await makeRequest(server, org.id, registration.id)
@@ -477,9 +474,9 @@ describe(`GET ${reportsGetPath}`, () => {
           year: new Date().getUTCFullYear(),
           cadence: 'monthly',
           period: 1,
-          startDate: `${new Date().getUTCFullYear()}-01-01`,
-          endDate: `${new Date().getUTCFullYear()}-01-31`,
-          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          startDate: calendarDate(`${new Date().getUTCFullYear()}-01-01`),
+          endDate: calendarDate(`${new Date().getUTCFullYear()}-01-31`),
+          dueDate: calendarDate(`${new Date().getUTCFullYear()}-02-20`),
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           submissionNumber: 1,
           material: 'plastic',
@@ -535,9 +532,9 @@ describe(`GET ${reportsGetPath}`, () => {
           year,
           cadence: 'monthly',
           period: 1,
-          startDate: `${year}-01-01`,
-          endDate: `${year}-01-31`,
-          dueDate: `${year}-02-20`,
+          startDate: calendarDate(`${year}-01-01`),
+          endDate: calendarDate(`${year}-01-31`),
+          dueDate: calendarDate(`${year}-02-20`),
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           submissionNumber: 1,
           material: 'plastic',
@@ -635,9 +632,9 @@ describe(`GET ${reportsGetPath}`, () => {
           year: new Date().getUTCFullYear(),
           cadence: 'monthly',
           period: 1,
-          startDate: `${new Date().getUTCFullYear()}-01-01`,
-          endDate: `${new Date().getUTCFullYear()}-01-31`,
-          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          startDate: calendarDate(`${new Date().getUTCFullYear()}-01-01`),
+          endDate: calendarDate(`${new Date().getUTCFullYear()}-01-31`),
+          dueDate: calendarDate(`${new Date().getUTCFullYear()}-02-20`),
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           submissionNumber: 1,
           material: 'plastic',
@@ -698,9 +695,9 @@ describe(`GET ${reportsGetPath}`, () => {
           year: new Date().getUTCFullYear(),
           cadence: 'monthly',
           period: 1,
-          startDate: `${new Date().getUTCFullYear()}-01-01`,
-          endDate: `${new Date().getUTCFullYear()}-01-31`,
-          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          startDate: calendarDate(`${new Date().getUTCFullYear()}-01-01`),
+          endDate: calendarDate(`${new Date().getUTCFullYear()}-01-31`),
+          dueDate: calendarDate(`${new Date().getUTCFullYear()}-02-20`),
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           submissionNumber: 1,
           material: 'plastic',
@@ -762,9 +759,9 @@ describe(`GET ${reportsGetPath}`, () => {
           year: new Date().getUTCFullYear(),
           cadence: 'monthly',
           period: 1,
-          startDate: `${new Date().getUTCFullYear()}-01-01`,
-          endDate: `${new Date().getUTCFullYear()}-01-31`,
-          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          startDate: calendarDate(`${new Date().getUTCFullYear()}-01-01`),
+          endDate: calendarDate(`${new Date().getUTCFullYear()}-01-31`),
+          dueDate: calendarDate(`${new Date().getUTCFullYear()}-02-20`),
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           submissionNumber: 1,
           material: 'plastic',
@@ -817,9 +814,9 @@ describe(`GET ${reportsGetPath}`, () => {
           year: new Date().getUTCFullYear(),
           cadence: 'monthly',
           period: 1,
-          startDate: `${new Date().getUTCFullYear()}-01-01`,
-          endDate: `${new Date().getUTCFullYear()}-01-31`,
-          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          startDate: calendarDate(`${new Date().getUTCFullYear()}-01-01`),
+          endDate: calendarDate(`${new Date().getUTCFullYear()}-01-31`),
+          dueDate: calendarDate(`${new Date().getUTCFullYear()}-02-20`),
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           submissionNumber: 1,
           material: 'plastic',
@@ -872,9 +869,9 @@ describe(`GET ${reportsGetPath}`, () => {
           year: new Date().getUTCFullYear(),
           cadence: 'monthly',
           period: 1,
-          startDate: `${new Date().getUTCFullYear()}-01-01`,
-          endDate: `${new Date().getUTCFullYear()}-01-31`,
-          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          startDate: calendarDate(`${new Date().getUTCFullYear()}-01-01`),
+          endDate: calendarDate(`${new Date().getUTCFullYear()}-01-31`),
+          dueDate: calendarDate(`${new Date().getUTCFullYear()}-02-20`),
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           submissionNumber: 1,
           material: 'plastic',
@@ -916,9 +913,13 @@ describe(`GET ${reportsGetPath}`, () => {
       // 28th keeps a valid calendar day for every month; the calendar item's
       // own dates come from the computed period, so only ISO validity matters.
       const monthDates = (year, period) => ({
-        startDate: `${year}-${String(period).padStart(2, '0')}-01`,
-        endDate: `${year}-${String(period).padStart(2, '0')}-28`,
-        dueDate: `${year}-${String(period + 1).padStart(2, '0')}-20`
+        startDate: calendarDate(
+          `${year}-${String(period).padStart(2, '0')}-01`
+        ),
+        endDate: calendarDate(`${year}-${String(period).padStart(2, '0')}-28`),
+        dueDate: calendarDate(
+          `${year}-${String(period + 1).padStart(2, '0')}-20`
+        )
       })
 
       const buildCreatePayload = ({
@@ -1378,9 +1379,9 @@ describe(`GET ${reportsGetPath}`, () => {
           year: new Date().getUTCFullYear(),
           cadence: 'monthly',
           period: 1,
-          startDate: `${new Date().getUTCFullYear()}-01-01`,
-          endDate: `${new Date().getUTCFullYear()}-01-31`,
-          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          startDate: calendarDate(`${new Date().getUTCFullYear()}-01-01`),
+          endDate: calendarDate(`${new Date().getUTCFullYear()}-01-31`),
+          dueDate: calendarDate(`${new Date().getUTCFullYear()}-02-20`),
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           submissionNumber: 1,
           material: 'plastic',
@@ -1497,9 +1498,9 @@ describe(`GET ${reportsGetPath}`, () => {
           year: 2026,
           cadence: 'monthly',
           period: 1,
-          startDate: '2026-01-01',
-          endDate: '2026-01-31',
-          dueDate: '2026-02-20',
+          startDate: calendarDate('2026-01-01'),
+          endDate: calendarDate('2026-01-31'),
+          dueDate: calendarDate('2026-02-20'),
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           submissionNumber: 1,
           material: 'plastic',
@@ -1839,8 +1840,7 @@ describe(`GET ${reportsGetPath}`, () => {
       const registrationId = new ObjectId().toString()
 
       const server = await createTestServer({
-        repositories: {},
-        featureFlags: createInMemoryFeatureFlags({})
+        repositories: {}
       })
 
       const response = await server.inject({

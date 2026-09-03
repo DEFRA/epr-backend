@@ -84,7 +84,6 @@ const buildPrn = (overrides = {}) => ({
  * @returns {import('#waste-balances/repository/ledger-schema.js').LedgerEvent}
  */
 const buildOpeningBalanceEvent = ({ amount, availableAmount }) => ({
-  id: 'opening-balance',
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,
@@ -241,6 +240,35 @@ describe('updatePrnStatus', () => {
         })
       ).rejects.toThrow('PRN not found')
     })
+  })
+
+  describe('the waste-balance write boundary', () => {
+    // Tonnage is validated positive at the route and in the PRN schema, so a
+    // PRN that reaches the write without one is corruption. The deciders test
+    // sufficiency with `<`, which a non-positive amount passes, so the guard
+    // has to refuse before the balance is decided against. `NaN` passes that
+    // check too, and is the only value that reaches it from the wrong side.
+    it.each([0, -100, NaN])(
+      'refuses a tonnage of %s as a broken invariant, appending nothing',
+      async (tonnage) => {
+        const repositories = seedRepositories({
+          prn: buildPrn({ tonnage }),
+          balance: { amount: 1000, availableAmount: 1000 }
+        })
+
+        await expect(
+          callUpdate({
+            ...repositories,
+            newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+          })
+        ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 500 } })
+
+        expect(
+          await readBalance(repositories.wasteBalanceService)
+        ).toMatchObject({ amount: 1000, availableAmount: 1000 })
+      }
+    )
   })
 
   describe('transition rules', () => {
@@ -542,7 +570,7 @@ describe('updatePrnStatus', () => {
             findById: vi.fn().mockResolvedValue(prn),
             updateStatus: vi.fn().mockResolvedValue(null)
           },
-          wasteBalanceService: {},
+          ledgerRepository: createInMemoryLedgerRepository()(),
           organisationsRepository: {},
           newStatus: PRN_STATUS.DISCARDED,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER
@@ -597,7 +625,6 @@ describe('updatePrnStatus', () => {
       ])(createMockLogger())
       const ledgerRepository = createInMemoryLedgerRepository([
         {
-          id: 'opening-balance',
           registrationId: DEFAULT_REG_ID,
           accreditationId: ACC_ID,
           organisationId: DEFAULT_ORG_ID,

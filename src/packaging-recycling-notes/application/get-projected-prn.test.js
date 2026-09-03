@@ -65,7 +65,8 @@ const buildPrn = (overrides = {}) => ({
     currentStatusAt: baseAt,
     history: []
   },
-  ...overrides
+  ...overrides,
+  obligationYear: overrides.obligationYear ?? 2026
 })
 
 /**
@@ -75,7 +76,6 @@ const buildPrn = (overrides = {}) => ({
  * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number, createdAt) => ({
-  id: `event-${number}`,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,
@@ -107,7 +107,7 @@ const buildRepositories = ({ prn = null, events = [] }) => {
 }
 
 describe('getProjectedPrnById', () => {
-  it('folds tail events past the watermark onto the PRN', async () => {
+  it('folds catch-up events past the watermark onto the PRN', async () => {
     const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({
         prn: buildPrn({
@@ -226,7 +226,7 @@ describe('getProjectedPrnById', () => {
 })
 
 describe('getProjectedPrnByNumber', () => {
-  it('folds the stream tail onto the PRN found by number', async () => {
+  it('folds the catch-up events onto the PRN found by number', async () => {
     const { packagingRecyclingNotesRepository, ledgerRepository } =
       buildRepositories({
         prn: buildPrn(),

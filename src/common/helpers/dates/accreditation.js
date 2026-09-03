@@ -1,11 +1,48 @@
+import { calendarDate, toCalendarDate } from '#common/helpers/date-formatter.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
+/** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
 /** @import {AccreditationStatus} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{ updatedAt: number, status: AccreditationStatus }} StatusHistoryDateTime
  */
+
+/**
+ * The period an accreditation is valid for, both bounds present. Branded so it
+ * can only arrive from `accreditationWindow`, which is the one place that
+ * establishes both are there — an accreditation may carry neither, and the
+ * range check has no sensible answer for half a window.
+ *
+ * @typedef {{
+ *   validFrom: CalendarDate,
+ *   validTo: CalendarDate
+ * } & { readonly __brand: 'AccreditationWindow' }} AccreditationWindow
+ */
+
+/**
+ * The window an accreditation is valid for, or null when it has never had one.
+ *
+ * Deliberately keyed on the dates being present rather than on current status.
+ * An accreditation that was approved and later cancelled keeps the window it
+ * held while it was live — the schema allows exactly that, requiring the dates
+ * only for `approved`/`suspended` and permitting them otherwise — and loads
+ * made before the cancellation are still accredited. Status decides whether a
+ * *given date* falls inside the window (see `isSuspendedOrCancelledAtDate`),
+ * not whether a window exists at all.
+ *
+ * @param {Accreditation} accreditation
+ * @returns {AccreditationWindow | null}
+ */
+export function accreditationWindow({ validFrom, validTo }) {
+  return validFrom && validTo
+    ? /** @type {AccreditationWindow} */ ({
+        validFrom: calendarDate(validFrom),
+        validTo: calendarDate(validTo)
+      })
+    : null
+}
 
 /**
  * Checks if all dates are accredited
@@ -17,14 +54,14 @@ export function isAccreditedAtDates(dates, accreditation) {
   if (!accreditation) {
     return true
   }
-  const { validFrom, validTo } = accreditation
-  if (!validFrom || !validTo) {
+  const window = accreditationWindow(accreditation)
+  if (window === null) {
     return false
   }
   const sortedHistory = getStatusHistoryDateTimes(accreditation.statusHistory)
   return dates.every(
     (date) =>
-      isWithinAccreditationDateRange(date, { validFrom, validTo }) &&
+      isWithinAccreditationDateRange(date, window) &&
       !isSuspendedOrCancelledAtDate(date, sortedHistory)
   )
 }
@@ -44,16 +81,19 @@ export function getStatusHistoryDateTimes(statusHistory) {
 
 /**
  * Checks if a date is within the accreditation date range.
+ *
+ * Compared as calendar dates, not instants: the bounds are bare dates, so an
+ * instant later in the day would otherwise sort after the bound it shares a
+ * day with and drop the last day of the window.
+ *
  * @param { Date|string } date - The date to check
- * @param { {validFrom: string, validTo: string} } accreditation - Accreditation with date range
+ * @param { AccreditationWindow } window - The accreditation's validity window
  * @returns { boolean } True if date is within range (inclusive)
  */
-export function isWithinAccreditationDateRange(date, accreditation) {
-  const compareDate = new Date(date)
-  const validFrom = new Date(accreditation.validFrom)
-  const validTo = new Date(accreditation.validTo)
+export function isWithinAccreditationDateRange(date, window) {
+  const day = toCalendarDate(date)
 
-  return compareDate >= validFrom && compareDate <= validTo
+  return day >= window.validFrom && day <= window.validTo
 }
 
 /**

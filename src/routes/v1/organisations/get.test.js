@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildOrganisation,
@@ -11,7 +10,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
-import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
+import {
+  testOnlyServiceMaintainerCanAccess,
+  testRegulatorCanRead
+} from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -33,11 +35,9 @@ describe('GET /v1/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
   })
 
@@ -399,27 +399,125 @@ describe('GET /v1/organisations', () => {
     })
   })
 
+  const makeListRequest = async () => {
+    await organisationsRepository.insert(buildOrganisation())
+    return {
+      method: 'GET',
+      url: '/v1/organisations?page=1&pageSize=10'
+    }
+  }
+
   testInvalidTokenScenarios({
     server: () => server,
-    makeRequest: async () => {
-      const org1 = buildOrganisation()
-      await organisationsRepository.insert(org1)
-      return {
-        method: 'GET',
-        url: `/v1/organisations/${org1.id}`
-      }
-    }
+    makeRequest: makeListRequest
   })
 
   testOnlyServiceMaintainerCanAccess({
     server: () => server,
-    makeRequest: async () => {
-      const org1 = buildOrganisation()
-      await organisationsRepository.insert(org1)
-      return {
+    makeRequest: makeListRequest
+  })
+
+  describe('the organisation.search scope', () => {
+    testRegulatorCanRead({
+      server: () => server,
+      makeRequest: makeListRequest
+    })
+
+    it.each([
+      ['service_maintainer_write', entraIdMockAuthTokens.validToken],
+      ['service_maintainer', entraIdMockAuthTokens.readOnlyMaintainerToken],
+      ['support', entraIdMockAuthTokens.supportToken]
+    ])('returns 200 for an admin user on the %s tier', async (_tier, token) => {
+      const requestConfig = await makeListRequest()
+
+      const response = await server.inject({
+        ...requestConfig,
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+  })
+  describe('the width of the response', () => {
+    const LIST_ITEM_KEYS = [
+      'accreditations',
+      'companyDetails',
+      'id',
+      'orgId',
+      'registrations',
+      'status',
+      'submittedToRegulator'
+    ]
+
+    const CREDENTIALS = [
+      ['a regulator', entraIdMockAuthTokens.regulatorToken],
+      ['an admin', entraIdMockAuthTokens.validToken]
+    ]
+
+    /**
+     * @param {string} token
+     * @returns {Promise<import('#application/organisations/organisations-list-view.js').OrganisationListPage>}
+     */
+    const listWith = async (token) => {
+      const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${org1.id}`
-      }
+        url: '/v1/organisations?page=1&pageSize=10',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      return JSON.parse(response.payload)
     }
+
+    beforeEach(async () => {
+      await organisationsRepository.insert(
+        buildOrganisation({
+          users: [
+            {
+              contactId: 'contact-1',
+              email: 'jo.sample@example.com',
+              fullName: 'Jo Sample',
+              roles: ['standard_user']
+            }
+          ],
+          linkedDefraOrganisation: {
+            orgId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+            orgName: 'Linked Ltd',
+            linkedAt: '2026-01-02T00:00:00.000Z',
+            linkedBy: {
+              id: '3f2504e0-4f89-11d3-9a0c-0305e82c3302',
+              email: 'maintainer@example.com'
+            }
+          }
+        })
+      )
+    })
+
+    it.each(CREDENTIALS)(
+      'gives %s the organisation identity and the published numbers',
+      async (_label, token) => {
+        const { items } = await listWith(token)
+
+        expect(items.map((item) => Object.keys(item).sort())).toEqual([
+          LIST_ITEM_KEYS
+        ])
+      }
+    )
+
+    it('shapes the no-criteria branch the same way', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/organisations',
+        headers: {
+          Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
+        }
+      })
+
+      /** @type {import('#application/organisations/organisations-list-view.js').OrganisationListItem[]} */
+      const organisations = JSON.parse(response.payload)
+      expect(organisations.map((item) => Object.keys(item).sort())).toEqual([
+        LIST_ITEM_KEYS
+      ])
+    })
   })
 })

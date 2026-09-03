@@ -352,23 +352,23 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    preCpaResubmissionBackfill: {
-      doc: 'Feature Flag: Backfill requires-resubmission on stale pre-CPA submitted reports on startup (PAE-1768).',
+    reportDataValidation: {
+      doc: 'Feature Flag: Block report creation when mandatory summary-log row data is incomplete (PAE-1420)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_BACKFILL'
+      env: 'FEATURE_FLAG_REPORT_DATA_VALIDATION'
     },
-    preCpaResubmissionReport: {
-      doc: 'Feature Flag: Run the estate-wide pre-CPA resubmission sizing diagnostic on startup (PAE-1747)',
+    prnAdminCancellation: {
+      doc: 'Feature Flag: Allow an admin to cancel an accepted PRN/PERN (PAE-1823)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_PRE_CPA_RESUBMISSION_REPORT'
+      env: 'FEATURE_FLAG_PRN_ADMIN_CANCELLATION'
     },
-    staleIssuedTonnageReport: {
-      doc: 'Feature Flag: Run the estate-wide stale issued-tonnage discrepancy diagnostic on startup (PAE-1665)',
+    reconcileStalePrnProjections: {
+      doc: 'Feature Flag: Let the startup sweep repair PRN projections whose status lags their ledger, rather than only reporting them (PAE-1908)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_STALE_ISSUED_TONNAGE_REPORT'
+      env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
     }
   },
   formSubmissionOverrides: {

@@ -73,12 +73,11 @@ describe('mock-repositories', () => {
         'findByPrnNumber',
         'create',
         'findByAccreditation',
+        'findByIds',
         'findByStatus',
         'updateStatus',
-        'persistProjection',
-        'rollbackIssuance',
-        'rollbackPendingCancellation',
-        'rollbackIssuedCancellation'
+        'updateWatermark',
+        'persistProjection'
       ]
     },
     createMockOverseasSitesRepository: {

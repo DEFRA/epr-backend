@@ -1,4 +1,3 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
@@ -36,14 +35,12 @@ describe('PUT /v1/organisations/{id}', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
-      },
-      featureFlags
+      }
     })
   })
 
@@ -152,7 +149,11 @@ describe('PUT /v1/organisations/{id}', () => {
         expect(payload.scope).toEqual([
           'admin.read',
           'admin.write',
-          'admin.dlq.purge'
+          'admin.dlq.purge',
+          'organisation.search',
+          'organisation.read',
+          'waste-balance.ledger.read',
+          'summary-log.read'
         ])
       }
 
@@ -433,8 +434,7 @@ describe('PUT /v1/organisations/{id}', () => {
         repositories: {
           organisationsRepository: instance,
           systemLogsRepository: createSystemLogsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const fetchResponse = await testServer.inject({
@@ -508,8 +508,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository(),
         overseasSitesRepository: overseasSitesRepoFactory
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
   })
 
@@ -755,8 +754,7 @@ describe('PUT /v1/organisations/{id} status change guard', () => {
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
   })
 
@@ -989,7 +987,6 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
               statusHistory: registrationHistory,
               registrationNumber: 'REG12345',
               validFrom: '2026-01-01',
-              validTo: '2027-01-01',
               reprocessingType: 'input'
             })
           ],
@@ -1012,8 +1009,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
           fixture
         ]),
         systemLogsRepository: createSystemLogsRepository()
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     return { server, org: await getOrganisation(server, fixture.id) }

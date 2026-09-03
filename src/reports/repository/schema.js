@@ -1,4 +1,5 @@
 import { toDecimal } from '#common/helpers/decimal-utils.js'
+import { isoDateString } from '#common/validation/iso-date-schema.js'
 import { tonnage, wholeTonnage } from '#common/validation/tonnage-schema.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
@@ -19,12 +20,9 @@ const YEAR_SCHEMA = Joi.number()
 const MONGO_ID_LENGTH = 24
 const MONGO_ID_SCHEMA = Joi.string().hex().length(MONGO_ID_LENGTH).required()
 
-const CALENDAR_DATE_SCHEMA = Joi.string()
-  .pattern(/^\d{4}-\d{2}-\d{2}$/)
-  .required()
-  .messages({
-    'string.pattern.base': 'must be a bare YYYY-MM-DD date, not a full datetime'
-  })
+const CALENDAR_DATE_SCHEMA = isoDateString().required().messages({
+  'string.pattern.base': 'must be a bare YYYY-MM-DD date, not a full datetime'
+})
 
 export const cadenceSchema = Joi.string()
   .valid(...Object.values(CADENCE))

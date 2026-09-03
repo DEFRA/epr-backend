@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { ObjectId } from 'mongodb'
 
 import {
@@ -155,9 +156,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
       year: 2025,
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January,
-      startDate: '2025-01-01',
-      endDate: '2025-01-31',
-      dueDate: '2025-02-20'
+      startDate: calendarDate('2025-01-01'),
+      endDate: calendarDate('2025-01-31'),
+      dueDate: calendarDate('2025-02-20')
     })
 
   const emptyChange = () => ({
@@ -767,9 +768,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
       year: 2025,
       cadence: 'quarterly',
       period: QUARTERLY_PERIODS.Q1,
-      startDate: '2025-01-01',
-      endDate: '2025-03-31',
-      dueDate: '2025-05-20'
+      startDate: calendarDate('2025-01-01'),
+      endDate: calendarDate('2025-03-31'),
+      dueDate: calendarDate('2025-05-20')
     })
 
     const loadsByReportingPeriod = await uploadAndValidate(

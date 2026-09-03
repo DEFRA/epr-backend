@@ -1,7 +1,9 @@
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
@@ -11,6 +13,8 @@ import {
 } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+
+/** @import { Organisation } from '#domain/organisations/model.js' */
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -23,11 +27,9 @@ describe('GET /v1/organisations/{id}', () => {
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
   })
 
@@ -68,6 +70,40 @@ describe('GET /v1/organisations/{id}', () => {
       expect(response.headers['cache-control']).toBe(
         'no-cache, no-store, must-revalidate'
       )
+    })
+
+    it('does not return validTo on a registration stored before PAE-1904, without a migration', async () => {
+      const registration = buildRegistration({
+        reprocessingType: 'input',
+        registrationNumber: 'REG123456',
+        validFrom: '2024-01-01',
+        // Stored by an application that predates PAE-1904: registrations no
+        // longer write validTo, but old documents may still carry it.
+        validTo: '2026-12-31',
+        statusHistory: [{ status: 'approved', updatedAt: '2024-01-01' }]
+      })
+      const org = /** @type {Organisation} */ (
+        buildOrganisation({ registrations: [registration] })
+      )
+      const legacyRepositoryFactory = createInMemoryOrganisationsRepository([
+        org
+      ])
+      const legacyServer = await createTestServer({
+        repositories: { organisationsRepository: legacyRepositoryFactory }
+      })
+
+      const response = await legacyServer.inject({
+        method: 'GET',
+        url: `/v1/organisations/${org.id}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      const returnedRegistration = result.registrations.find(
+        (reg) => reg.id === registration.id
+      )
+      expect(returnedRegistration).not.toHaveProperty('validTo')
     })
   })
 
@@ -166,8 +202,7 @@ describe('GET /v1/organisations/{id}', () => {
               password: 'changeme'
             }
           },
-          repositories: { organisationsRepository: factory },
-          featureFlags: createInMemoryFeatureFlags()
+          repositories: { organisationsRepository: factory }
         })
       })
 

@@ -119,7 +119,10 @@ export const reportsPost = {
         cadence,
         period,
         submissionNumber,
-        changedBy: extractChangedBy(request.auth.credentials)
+        changedBy: extractChangedBy(request.auth.credentials),
+        reportDataValidationEnabled: request.config.get(
+          'featureFlags.reportDataValidation'
+        )
       })
 
       await auditReportCreate(request, {

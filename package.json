@@ -32,7 +32,7 @@
     "#waste-records-export/*": "./src/waste-records-export/*"
   },
   "engines": {
-    "node": "^24.19.0"
+    "node": "^24.20.0"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
@@ -109,7 +109,6 @@
   "overrides": {
     "@apidevtools/json-schema-ref-parser": "15.3.6",
     "@apidevtools/swagger-parser": "12.1.0",
-    "fast-uri": "3.1.5",
     "glob": "11.1.0",
     "joi": "18.2.1",
     "uuid": "14.0.0"

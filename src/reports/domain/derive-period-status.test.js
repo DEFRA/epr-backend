@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { REPORT_STATUS } from './report-status.js'
 import { PERIOD_STATUS } from './period-status.js'
 import { derivePeriodStatus } from './derive-period-status.js'
@@ -33,8 +34,8 @@ describe('#derivePeriodStatus', () => {
 
       expect(
         derivePeriodStatus({
-          endDate: '2026-01-31',
-          dueDate: '2026-02-20',
+          endDate: calendarDate('2026-01-31'),
+          dueDate: calendarDate('2026-02-20'),
           report
         })
       ).toBe(status)
@@ -44,8 +45,8 @@ describe('#derivePeriodStatus', () => {
   it('returns null when the period has not ended', () => {
     expect(
       derivePeriodStatus({
-        endDate: '2026-03-31',
-        dueDate: '2026-04-20',
+        endDate: calendarDate('2026-03-31'),
+        dueDate: calendarDate('2026-04-20'),
         report: null
       })
     ).toBeNull()
@@ -54,8 +55,8 @@ describe('#derivePeriodStatus', () => {
   it('returns "due" when the period has ended but the due date has not passed', () => {
     expect(
       derivePeriodStatus({
-        endDate: '2026-02-28',
-        dueDate: '2026-03-20',
+        endDate: calendarDate('2026-02-28'),
+        dueDate: calendarDate('2026-03-20'),
         report: null
       })
     ).toBe(PERIOD_STATUS.DUE)
@@ -64,8 +65,8 @@ describe('#derivePeriodStatus', () => {
   it('returns "overdue" when the due date has passed', () => {
     expect(
       derivePeriodStatus({
-        endDate: '2025-12-31',
-        dueDate: '2026-01-20',
+        endDate: calendarDate('2025-12-31'),
+        dueDate: calendarDate('2026-01-20'),
         report: null
       })
     ).toBe(PERIOD_STATUS.OVERDUE)
@@ -81,8 +82,8 @@ describe('#derivePeriodStatus', () => {
 
       expect(
         derivePeriodStatus({
-          endDate: '2026-01-31',
-          dueDate: '2026-02-20',
+          endDate: calendarDate('2026-01-31'),
+          dueDate: calendarDate('2026-02-20'),
           report: null
         })
       ).toBe(PERIOD_STATUS.DUE)
@@ -93,8 +94,8 @@ describe('#derivePeriodStatus', () => {
 
       expect(
         derivePeriodStatus({
-          endDate: '2026-01-31',
-          dueDate: '2026-02-20',
+          endDate: calendarDate('2026-01-31'),
+          dueDate: calendarDate('2026-02-20'),
           report: null
         })
       ).toBe(PERIOD_STATUS.OVERDUE)

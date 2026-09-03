@@ -8,7 +8,7 @@ import {
 } from './contract/test-data.js'
 
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').AccreditationSnapshot} AccreditationSnapshot */
-/** @typedef {import('#domain/organisations/model.js').Material} Material */
+/** @typedef {import('#domain/organisations/model.js').AppliedForMaterial} AppliedForMaterial */
 
 const buildReadDocument = (overrides = {}) => ({
   id: '507f1f77bcf86cd799439011',
@@ -208,6 +208,12 @@ describe('PRN insert schema', () => {
       expect(error).toBeDefined()
     })
 
+    it('rejects when obligationYear is missing', () => {
+      const { obligationYear: _obligationYear, ...data } = buildValidPrnInsert()
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
     it('rejects when accreditation.id is missing', () => {
       const data = {
         ...buildValidPrnInsert(),
@@ -336,7 +342,7 @@ describe('PRN insert schema', () => {
     })
 
     it('accepts all valid material values', () => {
-      /** @type {Material[]} */
+      /** @type {AppliedForMaterial[]} */
       const materials = [
         'aluminium',
         'fibre',
@@ -575,6 +581,20 @@ describe('PRN read schema', () => {
     const { error, value } = prnReadSchema.validate(data)
     expect(error).toBeUndefined()
     expect(value).not.toHaveProperty('notes')
+  })
+
+  it('defaults a legacy document obligationYear to its accreditation year', () => {
+    const { obligationYear: _obligationYear, ...data } = buildReadDocument()
+    const { error, value } = prnReadSchema.validate(data)
+    expect(error).toBeUndefined()
+    expect(value.obligationYear).toBe(data.accreditation.accreditationYear)
+  })
+
+  it('retains an explicit obligationYear on a document', () => {
+    const data = buildReadDocument({ obligationYear: 2027 })
+    const { error, value } = prnReadSchema.validate(data)
+    expect(error).toBeUndefined()
+    expect(value.obligationYear).toBe(2027)
   })
 
   it('round-trips a lastAppliedEventNumber watermark under stripUnknown', () => {

@@ -1,5 +1,6 @@
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
+import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/cancellation.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
@@ -17,6 +18,7 @@ export const mapToAdminPrn = (prn) => ({
   material: prn.accreditation.material,
   processToBeUsed: getProcessCode(prn.accreditation.material),
   isDecemberWaste: prn.isDecemberWaste,
+  obligationYear: prn.obligationYear,
   notes: prn.notes ?? null,
   issuedAt: prn.status.issued?.at ?? null,
   issuedBy: prn.status.issued?.by ?? null,
@@ -27,5 +29,10 @@ export const mapToAdminPrn = (prn) => ({
     ? WASTE_PROCESSING_TYPE.EXPORTER
     : WASTE_PROCESSING_TYPE.REPROCESSOR,
   organisationName: prn.organisation.name,
-  createdAt: prn.createdAt
+  createdAt: prn.createdAt,
+  regulatorCancellable: isRegulatorCancellable(
+    prn.status.currentStatus,
+    prn.accreditation.accreditationYear,
+    new Date()
+  )
 })

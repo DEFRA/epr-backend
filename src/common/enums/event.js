@@ -35,8 +35,6 @@ export const LOGGING_EVENT_ACTIONS = {
   SUMMARY_LOG_SUPERSEDED: 'summary_log_superseded',
   SUMMARY_LOG_VALIDATION_ISSUE: 'summary_log_validation_issue',
   SUMMARY_LOG_VALIDATION_COMPLETED: 'summary_log_validation_completed',
-  COMPENSATION_FAILURE: 'compensation_failure',
-  COMPENSATION_SUCCESS: 'compensation_success',
   WASTE_BALANCE_UPDATED: 'waste_balance_updated',
   REPORT_RESPONSE_SCHEMA_VIOLATION: 'report_response_schema_violation',
   LEGACY_STALE_SHAPE_NORMALISED: 'legacy_stale_shape_normalised'

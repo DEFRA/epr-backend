@@ -10,6 +10,10 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  issuePrn as decideIssuePrn,
+  PRN_COMMAND_STATUS
+} from '#waste-balances/domain/commands.js'
 
 import {
   asOperator,
@@ -132,6 +136,29 @@ describe('Waste balance arithmetic integration tests', () => {
   ) => {
     await uploadAndValidate(env, summaryLogId, fileId, filename, uploadData)
     await submitAndPoll(env, summaryLogId)
+  }
+
+  /**
+   * Debit the total balance straight on the stream, standing in for a competing
+   * writer issuing a PRN these tests do not otherwise model. A real issuance
+   * rules on the PRN's own status first; there is no such PRN here, so the
+   * balance decision is supplied on its own.
+   */
+  const debitTotalBalanceOutOfBand = async (env, prnId, amount) => {
+    const { balance, append } =
+      await env.wasteBalanceService.readBalanceForUpdate(
+        {
+          organisationId: env.organisationId,
+          registrationId: env.registrationId,
+          accreditationId: env.accreditationId
+        },
+        { id: 'test-user' }
+      )
+    const decision = decideIssuePrn(balance, { prnId, amount })
+    if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
+      throw new Error(`expected a committed decision, got ${decision.reason}`)
+    }
+    return append(decision.events)
   }
 
   const createPrn = async (env, tonnage) => {
@@ -450,8 +477,6 @@ describe('Waste balance arithmetic integration tests', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { accreditationId } = env
-
       // Credit: 100
       await performSummaryLogSubmission(
         env,
@@ -474,15 +499,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBe(50)
 
       // Manually reduce total balance to simulate concurrent deduction
-      await env.wasteBalanceService.issuePrn(
-        {
-          organisationId: env.organisationId,
-          registrationId: env.registrationId,
-          accreditationId
-        },
-        { prnId: 'other-prn', amount: 80 },
-        { id: 'test-user' }
-      )
+      await debitTotalBalanceOutOfBand(env, 'other-prn', 80)
 
       balance = await getWasteBalance(env)
       expect(balance.amount).toBe(20) // 100 - 80
@@ -931,7 +948,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { packagingRecyclingNotesRepository, accreditationId } = env
+      const { packagingRecyclingNotesRepository } = env
 
       await performSummaryLogSubmission(
         env,
@@ -944,15 +961,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn = await createPrn(env, 50)
       await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      await env.wasteBalanceService.issuePrn(
-        {
-          organisationId: env.organisationId,
-          registrationId: env.registrationId,
-          accreditationId
-        },
-        { prnId: 'other-prn', amount: 80 },
-        { id: 'test-user' }
-      )
+      await debitTotalBalanceOutOfBand(env, 'other-prn', 80)
 
       const result = await transitionPrnStatus(
         env,
@@ -975,7 +984,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
-      const { packagingRecyclingNotesRepository, accreditationId } = env
+      const { packagingRecyclingNotesRepository } = env
 
       await performSummaryLogSubmission(
         env,
@@ -991,15 +1000,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prnB = await createPrn(env, 50)
       await transitionPrnStatus(env, prnB.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      await env.wasteBalanceService.issuePrn(
-        {
-          organisationId: env.organisationId,
-          registrationId: env.registrationId,
-          accreditationId
-        },
-        { prnId: 'other-prn', amount: 20 },
-        { id: 'test-user' }
-      )
+      await debitTotalBalanceOutOfBand(env, 'other-prn', 20)
 
       await Promise.allSettled([
         transitionPrnStatus(env, prnA.id, PRN_STATUS.AWAITING_ACCEPTANCE),

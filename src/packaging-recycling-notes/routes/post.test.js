@@ -9,7 +9,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -72,8 +71,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           organisationsRepository: () => organisationsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       await server.initialize()
@@ -111,6 +109,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(body.notes).toBeNull()
         expect(body.isDecemberWaste).toBe(false)
         expect(body.accreditationYear).toBe(2026)
+        expect(body.obligationYear).toBe(2026)
         expect(body.wasteProcessingType).toBe(WASTE_PROCESSING_TYPE.REPROCESSOR)
       })
 
@@ -127,8 +126,35 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             organisation: expect.objectContaining({ id: organisationId }),
             registrationId,
             accreditation: expect.objectContaining({ id: accreditationId }),
+            obligationYear: 2026,
             issuedToOrganisation: validPayload.issuedToOrganisation
           })
+        )
+      })
+
+      it('sets obligationYear from the accreditation year', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          status: 'approved',
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2027-01-01',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          submittedToRegulator: 'ea',
+          site: {
+            address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
+          }
+        })
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: validPayload
+        })
+
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({ obligationYear: 2027 })
         )
       })
 

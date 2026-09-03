@@ -10,9 +10,11 @@ import {
   StatusConflictError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
+import { InvalidObligationYearError } from '#packaging-recycling-notes/domain/obligation-year.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 import { getProjectedPrnByNumber } from '#packaging-recycling-notes/application/get-projected-prn.js'
+import { writeConflictRefusal } from './write-conflict-refusal.js'
 
 /**
  * @import { Request, Lifecycle } from '@hapi/hapi'
@@ -48,6 +50,30 @@ function resolveTransitionContext(request, timestampField) {
   )
 
   return { timestamp, user: { id, name } }
+}
+
+/**
+ * Extracts the optional obligation year from a validated external request
+ * payload. Hapi's broad payload type also permits streams and buffers, which
+ * do not carry JSON properties.
+ *
+ * @param {ExternalTransitionRequest} request
+ * @returns {number | undefined}
+ */
+function resolveObligationYear(request) {
+  const { payload } = request
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !('obligationYear' in payload)
+  ) {
+    return undefined
+  }
+
+  const { obligationYear } = /** @type {{ obligationYear?: number }} */ (
+    payload
+  )
+  return obligationYear
 }
 
 /**
@@ -114,7 +140,8 @@ export function createExternalTransitionHandler({
           actor: PRN_ACTOR.PRODUCER,
           user,
           providedPrn: prn,
-          updatedAt: timestamp
+          updatedAt: timestamp,
+          obligationYear: resolveObligationYear(request)
         })
 
         await auditPrnStatusTransition(request, prn.id, prn, updatedPrn)
@@ -137,6 +164,15 @@ export function createExternalTransitionHandler({
 }
 
 export function mapTransitionError(error, path, logger) {
+  const conflict = writeConflictRefusal(error)
+  if (conflict) {
+    return conflict
+  }
+
+  if (error instanceof InvalidObligationYearError) {
+    return Boom.badRequest(error.message)
+  }
+
   if (error instanceof StatusConflictError) {
     return Boom.conflict(error.message)
   }

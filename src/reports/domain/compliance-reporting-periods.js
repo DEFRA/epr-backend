@@ -3,27 +3,21 @@ import { periodKey } from './period-key.js'
 import { generateReportingPeriods } from './generate-reporting-periods.js'
 
 /**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { GeneratedPeriod } from './generate-reporting-periods.js'
+ */
+
+/**
  * @typedef {{
  *   key: string;
  *   cadence: string;
  *   year: number;
  *   period: number;
  *   label: string;
- *   startDate: string;
- *   endDate: string;
- *   dueDate: string;
+ *   startDate: CalendarDate;
+ *   endDate: CalendarDate;
+ *   dueDate: CalendarDate;
  * }} CompliancePeriod
- */
-
-/**
- * @typedef {{
- *   dueDate: string;
- *   endDate: string;
- *   period: number;
- *   report: null;
- *   startDate: string;
- *   year: number;
- * }} ReportingPeriod
  */
 
 const MONTHS_PER_QUARTER = 3
@@ -55,7 +49,7 @@ function complianceLabel(cadence, period) {
 }
 
 /**
- * @param {ReportingPeriod} p - Period from generateReportingPeriods
+ * @param {GeneratedPeriod} p - Period from generateReportingPeriods
  * @param {string} cadence
  * @returns {CompliancePeriod}
  */
@@ -80,7 +74,7 @@ function isQuarterEnd(p) {
 /**
  * @param {number} year
  * @param {Date} now
- * @returns {Map<number, ReportingPeriod>}
+ * @returns {Map<number, GeneratedPeriod>}
  */
 function quarterlyByPeriod(year, now) {
   return new Map(
@@ -107,7 +101,7 @@ export function generateComplianceReportingPeriods() {
   for (const p of generateReportingPeriods(CADENCE.monthly, year, now)) {
     result.push(annotate(p, CADENCE.monthly))
     if (isQuarterEnd(p)) {
-      const quarter = /** @type {ReportingPeriod} */ (
+      const quarter = /** @type {GeneratedPeriod} */ (
         quarterly.get(p.period / MONTHS_PER_QUARTER)
       )
       result.push(annotate(quarter, CADENCE.quarterly))

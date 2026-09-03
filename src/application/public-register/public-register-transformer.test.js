@@ -14,7 +14,7 @@ import {
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { formatDate } from '#common/helpers/date-formatter.js'
+import { calendarDate, formatDate } from '#common/helpers/date-formatter.js'
 import { invalidArg, partialMock } from '#test/type-helpers.js'
 
 describe('transform', () => {
@@ -45,7 +45,6 @@ describe('transform', () => {
       material: MATERIAL.PLASTIC,
       registrationNumber: 'R12345678PL',
       validFrom: VALID_FROM,
-      validTo: VALID_TO,
       site: { address: baseSiteAddress },
       ...overrides
     })
@@ -301,8 +300,7 @@ describe('transform', () => {
           buildRegistration({
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'R11111111PL',
-            validFrom: VALID_FROM,
-            validTo: VALID_TO
+            validFrom: VALID_FROM
           })
         ),
         partialMock(
@@ -341,7 +339,6 @@ describe('transform', () => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'R11111111PL',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             accreditationId: accreditationId.toString(),
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.PLASTIC,
@@ -414,7 +411,6 @@ describe('transform', () => {
             material: MATERIAL.PLASTIC,
             registrationNumber: 'R11111111PL',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             site: {
               address: {
                 line1: '2 Waste Site',
@@ -431,7 +427,6 @@ describe('transform', () => {
             material: MATERIAL.PAPER,
             registrationNumber: 'R22222222PL',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             site: {
               address: {
                 line1: '2 Waste Site',
@@ -467,7 +462,6 @@ describe('transform', () => {
             material: MATERIAL.ALUMINIUM,
             registrationNumber: 'R44444444AL',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             site: null
           })
         )
@@ -602,9 +596,9 @@ describe('transform', () => {
       year: 2026,
       period: 1,
       label: 'Jan Report',
-      startDate: '2026-01-01',
-      endDate: '2026-01-31',
-      dueDate: '2026-02-28'
+      startDate: calendarDate('2026-01-01'),
+      endDate: calendarDate('2026-01-31'),
+      dueDate: calendarDate('2026-02-28')
     }
     const periods = [period]
 
@@ -648,7 +642,6 @@ describe('transform', () => {
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.PLASTIC,
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             site: { address: baseSiteAddress }
           })
         )
@@ -670,7 +663,6 @@ describe('transform', () => {
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.PLASTIC,
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             site: { address: baseSiteAddress }
           })
         )

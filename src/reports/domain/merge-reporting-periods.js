@@ -1,4 +1,5 @@
 /**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { PeriodicReport, ReportPerPeriod, ReportSummary } from '../repository/port.js'
  */
 
@@ -77,9 +78,9 @@ function indexPersistedSlots(periodicReports, cadence) {
  * @typedef {{
  *   year: number;
  *   period: number;
- *   startDate: string;
- *   endDate: string;
- *   dueDate: string;
+ *   startDate: CalendarDate;
+ *   endDate: CalendarDate;
+ *   dueDate: CalendarDate;
  *   submissionNumber: number;
  *   report: ReportSummary | null;
  *   previousSubmissions?: ReportSummary[];
@@ -100,7 +101,7 @@ function indexPersistedSlots(periodicReports, cadence) {
  *   `selectSubmittedReports` without an in-flight draft in `report` masking them
  * - Periods with active drafts that aren't in the computed set are appended
  *
- * @param {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string}>} computedPeriods
+ * @param {Array<{year: number, period: number, startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate}>} computedPeriods
  * @param {PeriodicReport[]} periodicReports
  * @param {string} cadence
  * @returns {MergedPeriod[]}

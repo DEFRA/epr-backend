@@ -5,6 +5,7 @@ import {
   isRegistrationAccredited,
   resolveAccreditationNumber,
   resolveAccreditation,
+  accreditationsForRegistration,
   resolveDetailedMaterial
 } from './registration-utils.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
@@ -53,11 +54,11 @@ const regFixture = {
   },
   submittedToRegulator: 'ea',
   submitterContactDetails: userFixture,
+  suppliers: 'Local authority kerbside collections',
   wasteProcessingType: 'reprocessor',
   registrationNumber: 'REG-001',
   status: 'approved',
-  validFrom: '2026-01-01',
-  validTo: '2026-12-31'
+  validFrom: '2026-01-01'
 }
 
 /** @returns {Organisation} */
@@ -334,21 +335,79 @@ describe('resolveDetailedMaterial', () => {
     expect(resolveDetailedMaterial(reg)).toBe('glass_other')
   })
 
-  it('returns glass when a glass registration has no recycling process', () => {
+  it('resolves nothing for a glass registration that carries no recycling process', () => {
     const reg = buildReg({ material: 'glass' })
 
-    expect(resolveDetailedMaterial(reg)).toBe('glass')
+    expect(resolveDetailedMaterial(reg)).toBeNull()
   })
 
-  it('returns glass when the recycling process array is empty', () => {
+  it('resolves nothing when the recycling process array is empty', () => {
     const reg = buildReg({ material: 'glass', glassRecyclingProcess: [] })
 
-    expect(resolveDetailedMaterial(reg)).toBe('glass')
+    expect(resolveDetailedMaterial(reg)).toBeNull()
+  })
+
+  it('resolves nothing for a glass registration carrying both processes, which means it was never split', () => {
+    const reg = buildReg({
+      material: 'glass',
+      glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+    })
+
+    expect(resolveDetailedMaterial(reg)).toBeNull()
   })
 
   it('returns the material unchanged for non-glass registrations', () => {
     const reg = buildReg({ material: 'plastic' })
 
     expect(resolveDetailedMaterial(reg)).toBe('plastic')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// accreditationsForRegistration
+// ---------------------------------------------------------------------------
+
+describe('accreditationsForRegistration', () => {
+  const accreditationFixture = {
+    id: 'acc-1',
+    accreditationNumber: 'ACC-001',
+    status: 'approved',
+    statusHistory: [],
+    validFrom: '2026-01-01',
+    validTo: '2026-12-31',
+    material: 'plastic',
+    wasteProcessingType: 'reprocessor'
+  }
+
+  it('returns the accreditation the registration names', () => {
+    const reg = buildReg({ accreditationId: 'acc-1' })
+    const org = buildOrg({
+      registrations: [reg],
+      accreditations: [accreditationFixture]
+    })
+
+    expect(accreditationsForRegistration(reg, org)).toEqual([
+      accreditationFixture
+    ])
+  })
+
+  it('returns an empty list when the registration names no accreditation', () => {
+    const reg = buildReg({ accreditationId: null })
+    const org = buildOrg({
+      registrations: [reg],
+      accreditations: [accreditationFixture]
+    })
+
+    expect(accreditationsForRegistration(reg, org)).toEqual([])
+  })
+
+  it('returns an empty list when the organisation holds no accreditation of that id', () => {
+    const reg = buildReg({ accreditationId: 'acc-9' })
+    const org = buildOrg({
+      registrations: [reg],
+      accreditations: [accreditationFixture]
+    })
+
+    expect(accreditationsForRegistration(reg, org)).toEqual([])
   })
 })

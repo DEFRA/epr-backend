@@ -2,7 +2,6 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -62,8 +61,7 @@ describe(`POST ${reportsRequestResubmissionPath}`, () => {
           partialMock(org)
         ]),
         reportsRepository: reportsRepositoryFactory
-      },
-      featureFlags: createInMemoryFeatureFlags()
+      }
     })
 
     return {
@@ -209,8 +207,7 @@ describe(`POST ${reportsRequestResubmissionPath}`, () => {
             partialMock(org)
           ]),
           reportsRepository: createInMemoryReportsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({
@@ -246,8 +243,7 @@ describe(`POST ${reportsRequestResubmissionPath}`, () => {
             partialMock(org)
           ]),
           reportsRepository: reportsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({
@@ -293,8 +289,7 @@ describe(`POST ${reportsRequestResubmissionPath}`, () => {
             partialMock(org)
           ]),
           reportsRepository: reportsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({
@@ -339,8 +334,7 @@ describe(`POST ${reportsRequestResubmissionPath}`, () => {
             partialMock(org)
           ]),
           reportsRepository: reportsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       const response = await server.inject({

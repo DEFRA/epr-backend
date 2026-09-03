@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
@@ -73,8 +72,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       repositories: {
         ledgerRepository: await buildLedgerRepository(balances),
         organisationsRepository: buildOrganisationsRepository(organisations)
-      },
-      featureFlags: createInMemoryFeatureFlags({})
+      }
     })
 
   describe('with valid authentication and standard data', () => {

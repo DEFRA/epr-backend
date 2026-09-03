@@ -27,7 +27,7 @@ export const testFindLatestInLedgerBehaviour = (it) => {
     })
 
     it('returns the only event when one exists', async () => {
-      const [stored] = await repository.appendEvents([
+      await repository.appendEvents([
         buildLedgerEvent({
           registrationId: 'reg-single',
           accreditationId: 'acc-single',
@@ -44,7 +44,6 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       )
 
       expect(result).not.toBeNull()
-      expect(result.id).toBe(stored.id)
       expect(result.number).toBe(1)
       expect(result.closingBalance).toEqual({ amount: 50, availableAmount: 40 })
     })

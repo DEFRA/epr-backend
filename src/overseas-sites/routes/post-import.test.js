@@ -10,7 +10,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
@@ -45,8 +44,7 @@ describe(`${orsImportCreatePath} route`, () => {
         repositories: {
           orsImportsRepository: () => orsImportsRepository,
           uploadsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags({})
+        }
       })
     })
 
@@ -115,7 +113,15 @@ describe(`${orsImportCreatePath} route`, () => {
         expect(stored.createdBy).toEqual({
           id: 'test-maintainer-id',
           email: 'maintainer@example.com',
-          scope: ['admin.read', 'admin.write', 'admin.dlq.purge']
+          scope: [
+            'admin.read',
+            'admin.write',
+            'admin.dlq.purge',
+            'organisation.search',
+            'organisation.read',
+            'waste-balance.ledger.read',
+            'summary-log.read'
+          ]
         })
       })
 

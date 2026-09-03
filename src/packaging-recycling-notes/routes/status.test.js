@@ -10,7 +10,6 @@ import {
   afterEach
 } from 'vitest'
 
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -24,6 +23,7 @@ import {
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
@@ -79,6 +79,7 @@ const createMockPrn = (overrides = {}) => ({
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },
+  obligationYear: 2026,
   issuedToOrganisation: {
     id: 'producer-org-789',
     name: 'Producer Org'
@@ -130,8 +131,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             packagingRecyclingNotesRepository,
           ledgerRepository: () => ledgerRepository,
           organisationsRepository: () => organisationsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags()
+        }
       })
 
       await server.initialize()
@@ -176,6 +176,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const body = JSON.parse(response.payload)
         expect(body.id).toBe(prnId)
         expect(body.status).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
+        expect(body.obligationYear).toBe(2026)
 
         expect(
           packagingRecyclingNotesRepository.persistProjection
@@ -388,10 +389,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
 
-        // Should have been called twice - once without suffix, once with A
+        // Two number reservations - one without suffix, one with A - then the
+        // projection persist that follows the appended event.
         expect(
           packagingRecyclingNotesRepository.persistProjection
-        ).toHaveBeenCalledTimes(2)
+        ).toHaveBeenCalledTimes(3)
 
         // Second call should carry the A suffix
         const secondCall =
@@ -432,9 +434,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
+        // Four number reservations, then the projection persist that follows
+        // the appended event.
         expect(
           packagingRecyclingNotesRepository.persistProjection
-        ).toHaveBeenCalledTimes(4)
+        ).toHaveBeenCalledTimes(5)
 
         // Fourth call should carry the C suffix
         const fourthCall =
@@ -618,7 +622,33 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(response.payload).toContain('Version conflict')
+        // The versions the repository names are for the logs; a caller that
+        // hits a conflict is told what happened and what to do about it.
+        expect(response.payload).not.toContain('Version conflict')
+        expect(JSON.parse(response.payload).message).toBe(
+          'This PRN was updated by another request. Please try again.'
+        )
+      })
+
+      it('returns 409 when another writer takes the ledger slot first', async () => {
+        ledgerRepository.appendEvents = vi.fn().mockRejectedValue(
+          new LedgerSlotConflictError({
+            organisationId,
+            registrationId,
+            accreditationId,
+            number: 2
+          })
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asOperator(),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(response.payload).not.toContain(accreditationId)
       })
 
       it('returns 404 when PRN belongs to different organisation', async () => {
@@ -664,6 +694,41 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
         expect(response.payload).toContain('No transition exists from')
+      })
+
+      it('returns 400 when an operator attempts to cancel an accepted PRN (PAE-1823, service-maintainer-only edge)', async () => {
+        // accepted -> cancelled is a real transition (INTERNAL_ACTOR_BY_STATUS
+        // has no entry for 'accepted', so the operator route can never resolve
+        // an actor for it) - only the admin route can drive it, as
+        // PRN_ACTOR.SERVICE_MAINTAINER, which this route can never supply.
+        const createdPrnId = '507f1f77bcf86cd799439044'
+        const createdPrn = createMockPrn({
+          id: createdPrnId,
+          status: {
+            currentStatus: PRN_STATUS.ACCEPTED,
+            history: [
+              {
+                status: PRN_STATUS.ACCEPTED,
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
+              }
+            ]
+          }
+        })
+
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createdPrn
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${createdPrnId}/status`,
+          ...asOperator(),
+          payload: { status: PRN_STATUS.CANCELLED }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(response.payload).toContain('is not permitted')
       })
 
       it('returns 400 when PRN has unknown current status', async () => {

@@ -11,6 +11,14 @@ export class PrnNumberConflictError extends Error {
 }
 
 /**
+ * Tags the `Boom.conflict` an implementation raises when a write asserts a
+ * document version another writer has already moved. The message on that error
+ * names the two versions and is written for the logs; a write route recognises
+ * the tag and answers the client in its own words.
+ */
+export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
+
+/**
  * The identity of an accreditation: the accreditation, and the registration and
  * organisation above it. A PRN belongs to an accreditation, so selecting the
  * PRNs of one names the whole chain. `RegistrationOrAccreditationId` with its
@@ -33,6 +41,20 @@ export class PrnNumberConflictError extends Error {
  */
 
 /**
+ * Advance a projection's stream watermark and nothing else. Unlike
+ * `updateStatus`, it writes no status, history, `updatedAt` or `updatedBy`: it
+ * exists to bring a benign watermark-behind projection (status already correct,
+ * watermark never stamped) current without the churn a full fold would inflict.
+ * The watermark is enforced monotonic and the write is gated by the version CAS,
+ * exactly as the other writes.
+ *
+ * @typedef {Object} UpdateWatermarkParams
+ * @property {string} id - PRN ID
+ * @property {number} version - Expected current document version (compare-and-set token for OCC)
+ * @property {number} lastAppliedEventNumber - Stream watermark to stamp; must be greater than or equal to any watermark the PRN already carries
+ */
+
+/**
  * @typedef {Object} FindByStatusParams
  * @property {import('#packaging-recycling-notes/domain/model.js').PrnStatus[]} statuses
  * @property {Date} [dateFrom]
@@ -42,23 +64,22 @@ export class PrnNumberConflictError extends Error {
  */
 
 /**
+ * Names the notes a ledger read wants, scoped to the accreditation whose ledger
+ * it is reading. The scope is what keeps a note belonging to another
+ * accreditation from being read here, so it is required rather than optional.
+ *
+ * @typedef {Object} FindByIdsParams
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {string} accreditationId
+ * @property {string[]} ids
+ */
+
+/**
  * @typedef {Object} PaginatedResult
  * @property {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} items
  * @property {string | null} nextCursor
  * @property {boolean} hasMore
- */
-
-/**
- * Reverses a forward status transition that has already been committed by
- * updateStatus, when a follow-on side-effect failed and the document needs
- * to be returned to its prior state.
- *
- * @typedef {Object} RollbackParams
- * @property {string} id - PRN ID
- * @property {number} expectedVersion - Document version after the forward write (CAS gate)
- * @property {{ id: string; name: string }} updatedBy - Actor recorded against the rollback history entry
- * @property {Date} updatedAt - Timestamp of the rollback
- * @property {number} [lastAppliedEventNumber] - Stream watermark to carry forward; subject to the same monotonic guard as updateStatus. A migrated PRN (one that already carries a watermark) must carry one on its rollback too; a PRN that has never carried one may omit it.
  */
 
 /**
@@ -78,12 +99,11 @@ export class PrnNumberConflictError extends Error {
  * @property {(prnNumber: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findByPrnNumber
  * @property {(prn: Omit<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} create
  * @property {(accreditationId: AccreditationId) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
+ * @property {(params: FindByIdsParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByIds
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
+ * @property {(params: UpdateWatermarkParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateWatermark
  * @property {(params: PersistProjectionParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} persistProjection
- * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackIssuance
- * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackPendingCancellation
- * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackIssuedCancellation
  */
 
 /**

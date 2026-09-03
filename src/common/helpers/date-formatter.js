@@ -37,15 +37,14 @@ const britishDateTimeDotsFormatter = new Intl.DateTimeFormat('en-GB', {
 
 /**
  * Formats a Date object or date string to British format (DD/MM/YYYY)
- * @param {Date|string|null|undefined} date - Date object or ISO date string (YYYY-MM-DD) to format
+ * @param {Date|string|null|undefined} date - Date object, or a date string that is either bare YYYY-MM-DD or a full ISO datetime
  * @returns {string} - Formatted date string (e.g., '22/01/2026'), or '' when date is null/undefined
  */
 export function formatDate(date) {
   if (!date) {
     return ''
   }
-  const dateObj =
-    typeof date === 'string' ? new Date(date + 'T00:00:00.000Z') : date
+  const dateObj = typeof date === 'string' ? startOfDay(date) : date
   return britishFormatter.format(dateObj)
 }
 
@@ -85,6 +84,28 @@ export function formatDateISO(year, month, day) {
 export function calendarDate(dateString) {
   return /** @type {CalendarDate} */ (dateString.slice(0, 10))
 }
+
+/**
+ * The calendar date an instant falls on **in UTC**. Named for the zone
+ * because the answer is zone-dependent: 00:30 on a British summer morning is
+ * still the previous day in UTC, so this is not always the date a UK user
+ * would name. Use it where the value is a stored or machine-derived instant;
+ * reach for a UK-local formatter where the value is shown to a user.
+ * @param {Date} date
+ * @returns {CalendarDate}
+ */
+export const utcCalendarDate = (date) => calendarDate(date.toISOString())
+
+/**
+ * The calendar date a value falls on, whichever shape it arrives in — a `Date`
+ * (read in UTC, see `utcCalendarDate`), a bare date string, or a full ISO
+ * datetime string. For call sites that compare against a bare date and cannot
+ * assume which of those they were handed.
+ * @param {Date | string} value
+ * @returns {CalendarDate}
+ */
+export const toCalendarDate = (value) =>
+  value instanceof Date ? utcCalendarDate(value) : calendarDate(value)
 
 /**
  * Expands a calendar-date string (bare YYYY-MM-DD or a full ISO datetime,
