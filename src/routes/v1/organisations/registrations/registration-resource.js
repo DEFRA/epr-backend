@@ -33,7 +33,7 @@ export function toRegistrationResource(registration, organisation) {
     status: registration.status,
     ...(material !== null && { material }),
     reprocessingType: registration.reprocessingType ?? null,
-    dateRange: toDateRangeResource(registration),
+    dateRange: toRegistrationDateRangeResource(registration),
     accreditations: accreditationsForRegistration(
       registration,
       organisation
@@ -104,6 +104,15 @@ function toAccreditationLink(accreditation) {
     id: accreditation.id,
     accreditationNumber: accreditation.accreditationNumber ?? null,
     status: accreditation.status
+  }
+}
+
+/**
+ * @param {{ validFrom?: string | null }} record
+ */
+function toRegistrationDateRangeResource({ validFrom }) {
+  return {
+    validFrom: validFrom ?? null
   }
 }
 

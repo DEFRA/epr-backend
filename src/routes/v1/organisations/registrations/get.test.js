@@ -153,7 +153,7 @@ describe(`GET ${registrationGetPath}`, () => {
       status: 'created',
       material: 'glass_re_melt',
       reprocessingType: 'input',
-      dateRange: { validFrom: null, validTo: null },
+      dateRange: { validFrom: null },
       accreditations: [],
       application: {
         orgName: registration.orgName,

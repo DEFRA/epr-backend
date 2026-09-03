@@ -35,10 +35,20 @@ const siteSchema = Joi.object({
 })
 
 /**
- * Each bound is nullable on its own. The store requires both only while a
- * record is approved, or approved or suspended for an accreditation, and
- * outside that each is independently optional, so the range is always present
- * and says nothing about whether it is filled in.
+ * Registrations don't expire, so their range is just validFrom. The store
+ * requires it only while the registration is approved, and it's optional
+ * outside that, so it's always present and says nothing about whether it's
+ * filled in.
+ */
+const registrationDateRangeSchema = Joi.object({
+  validFrom: Joi.string().allow(null).required()
+})
+
+/**
+ * Each bound is nullable on its own. The store requires both only while the
+ * accreditation is approved or suspended, and outside that each is
+ * independently optional, so the range is always present and says nothing
+ * about whether it's filled in.
  */
 const dateRangeSchema = Joi.object({
   validFrom: Joi.string().allow(null).required(),
@@ -156,7 +166,7 @@ export const registrationResponseSchema = Joi.object({
     .required(),
   material: materialSchema,
   reprocessingType: reprocessingTypeSchema.required(),
-  dateRange: dateRangeSchema.required(),
+  dateRange: registrationDateRangeSchema.required(),
   accreditations: Joi.array().items(accreditationLinkSchema).required(),
   application: registrationApplicationSchema.required()
 })

@@ -79,7 +79,6 @@ export const registrationSchema = Joi.object({
     .default(null),
   reprocessingType: makeReprocessingTypeSchema(requiredWhenApproved),
   validFrom: dateRequiredWhenApproved(),
-  validTo: dateRequiredWhenApproved(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),

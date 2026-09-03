@@ -410,7 +410,6 @@ export const testReplaceBehaviour = (it) => {
               status: REGISTRATION_STATUS.REJECTED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],
@@ -761,7 +760,6 @@ export const testReplaceBehaviour = (it) => {
                 status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG12345',
                 validFrom: VALID_FROM,
-                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
@@ -806,7 +804,6 @@ export const testReplaceBehaviour = (it) => {
                 status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG12345',
                 validFrom: VALID_FROM,
-                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
@@ -832,7 +829,6 @@ export const testReplaceBehaviour = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             submitterContactDetails: {
               fullName: 'Different Submitter Name',
               email: 'SUBMITTER@EXAMPLE.COM',
@@ -928,7 +924,6 @@ export const testReplaceBehaviour = (it) => {
                 cbduNumber: 'CBDU12345',
                 registrationNumber: 'REG123',
                 validFrom: VALID_FROM,
-                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
@@ -995,7 +990,6 @@ export const testReplaceBehaviour = (it) => {
                 status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: VALID_FROM,
-                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               },
               {
@@ -1080,7 +1074,6 @@ export const testReplaceBehaviour = (it) => {
                 status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: VALID_FROM,
-                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
@@ -1153,7 +1146,6 @@ export const testReplaceBehaviour = (it) => {
                 status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: VALID_FROM,
-                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
@@ -1219,7 +1211,6 @@ export const testReplaceBehaviour = (it) => {
                 status: REGISTRATION_STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: VALID_FROM,
-                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],

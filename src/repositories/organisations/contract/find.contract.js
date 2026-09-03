@@ -258,7 +258,7 @@ export const testFindBehaviour = (it) => {
       const OTHER_USER_EMAIL = 'other.user@example.com'
       const DEFRA_ORG_ID = '550e8400-e29b-41d4-a716-446655440001'
       const USER_ID = '660e8400-e29b-41d4-a716-446655440001'
-      const { VALID_FROM, VALID_TO } = getValidDateRange()
+      const { VALID_FROM } = getValidDateRange()
 
       const buildOrgWithSubmitter = (email, overrides = {}) =>
         buildOrganisation({
@@ -281,7 +281,6 @@ export const testFindBehaviour = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ],

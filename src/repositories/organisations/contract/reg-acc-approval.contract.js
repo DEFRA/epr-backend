@@ -87,7 +87,6 @@ export const testRegAccApprovalValidation = (it) => {
           status: REGISTRATION_STATUS.APPROVED,
           validFrom: VALID_FROM,
           registrationNumber: 'REG12345',
-          validTo: VALID_TO,
           reprocessingType: REPROCESSING_TYPE.INPUT,
           accreditationId: inserted.accreditations[0].id
         }
@@ -194,7 +193,6 @@ export const testRegAccApprovalValidation = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }))
           }
@@ -284,8 +282,7 @@ export const testRegAccApprovalValidation = (it) => {
               ...reg,
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
-              validFrom: VALID_FROM,
-              validTo: VALID_TO
+              validFrom: VALID_FROM
             }))
           }
 
@@ -356,8 +353,7 @@ export const testRegAccApprovalValidation = (it) => {
                 WASTE_PROCESSING_TYPE.REPROCESSOR && {
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }),
-              validFrom: VALID_FROM,
-              validTo: VALID_TO
+              validFrom: VALID_FROM
             }))
           }
 
@@ -499,7 +495,6 @@ export const testRegAccApprovalValidation = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }))
           }
@@ -568,7 +563,6 @@ export const testRegAccApprovalValidation = (it) => {
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: VALID_FROM,
-              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }))
           }
@@ -612,8 +606,7 @@ export const testRegAccApprovalValidation = (it) => {
               ...reg,
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
-              validFrom: VALID_FROM,
-              validTo: VALID_TO
+              validFrom: VALID_FROM
             }))
           }
 
@@ -658,8 +651,7 @@ export const testRegAccApprovalValidation = (it) => {
               ...reg,
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
-              validFrom: VALID_FROM,
-              validTo: VALID_TO
+              validFrom: VALID_FROM
             }))
           }
 
@@ -708,8 +700,7 @@ export const testRegAccApprovalValidation = (it) => {
               ...reg,
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
-              validFrom: VALID_FROM,
-              validTo: VALID_TO
+              validFrom: VALID_FROM
             }))
           }
 
@@ -761,8 +752,7 @@ export const testRegAccApprovalValidation = (it) => {
               ...reg,
               status: REGISTRATION_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
-              validFrom: VALID_FROM,
-              validTo: VALID_TO
+              validFrom: VALID_FROM
             }))
           }
 
@@ -791,8 +781,7 @@ export const testRegAccApprovalValidation = (it) => {
             ...inserted.registrations[0],
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
-            validFrom: VALID_FROM,
-            validTo: VALID_TO
+            validFrom: VALID_FROM
           }
 
           await expect(
@@ -845,8 +834,7 @@ export const testRegAccApprovalValidation = (it) => {
             ...inserted.registrations[0],
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: null,
-            validFrom: VALID_FROM,
-            validTo: VALID_TO
+            validFrom: VALID_FROM
           }
 
           await expect(
@@ -872,7 +860,6 @@ export const testRegAccApprovalValidation = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -898,7 +885,6 @@ export const testRegAccApprovalValidation = (it) => {
           expect(updatedReg.status).toBe(REGISTRATION_STATUS.APPROVED)
           expect(updatedReg.registrationNumber).toBe('REG12345')
           expect(updatedReg.validFrom).toBe(VALID_FROM)
-          expect(updatedReg.validTo).toBe(VALID_TO)
         })
 
         it('rejects update when registration status changes to suspended (not an allowed registration status)', async () => {
@@ -911,7 +897,6 @@ export const testRegAccApprovalValidation = (it) => {
             status: ACCREDITATION_STATUS.SUSPENDED,
             registrationNumber: 'REG12345',
             validFrom: VALID_FROM,
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -981,7 +966,6 @@ export const testRegAccApprovalValidation = (it) => {
                   status: REGISTRATION_STATUS.APPROVED,
                   validFrom: VALID_FROM,
                   registrationNumber: 'REG12345',
-                  validTo: VALID_TO,
                   accreditationId: inserted.accreditations[0].id,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }
@@ -1060,7 +1044,7 @@ export const testRegAccApprovalValidation = (it) => {
         })
       })
 
-      describe('validFrom and validTo for registrations', () => {
+      describe('validFrom for registrations', () => {
         it('rejects update when registration status changes to approved without validFrom', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
@@ -1071,7 +1055,6 @@ export const testRegAccApprovalValidation = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: null,
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -1088,47 +1071,18 @@ export const testRegAccApprovalValidation = (it) => {
           )
         })
 
-        it('rejects update when registration status changes to approved without validTo', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const registrationToUpdate = {
-            ...inserted.registrations[0],
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'REG12345',
-            validFrom: VALID_FROM,
-            reprocessingType: REPROCESSING_TYPE.INPUT,
-            validTo: null
-          }
-
-          await expect(
-            repository.replace(
-              organisation.id,
-              1,
-              prepareOrgUpdate(inserted, {
-                registrations: [registrationToUpdate]
-              })
-            )
-          ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.validTo:.*contains an invalid value/
-          )
-        })
-
-        it('allows update when registration status changes to approved with validFrom and validTo', async () => {
+        it('allows update when registration status changes to approved with validFrom', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
           const inserted = await repository.findById(organisation.id)
 
           const validFrom = VALID_FROM
-          const validTo = VALID_TO
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom,
-            validTo,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -1153,9 +1107,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           expect(updatedReg.status).toBe(REGISTRATION_STATUS.APPROVED)
           expect(updatedReg.validFrom).toEqual(validFrom)
-          expect(updatedReg.validTo).toEqual(validTo)
           expect(updatedReg.validFrom).toBe(VALID_FROM)
-          expect(updatedReg.validTo).toBe(VALID_TO)
         })
 
         it('rejects update when registration has invalid validFrom date format', async () => {
@@ -1168,7 +1120,6 @@ export const testRegAccApprovalValidation = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: '2025-13-45', // Invalid date
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -1182,33 +1133,6 @@ export const testRegAccApprovalValidation = (it) => {
             )
           ).rejects.toThrow(
             /Invalid organisation data: registrations\.0\.validFrom:.*Date must be in YYYY-MM-DD format/
-          )
-        })
-
-        it('rejects update when registration has invalid validTo date format', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const registrationToUpdate = {
-            ...inserted.registrations[0],
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'REG12345',
-            validFrom: VALID_FROM,
-            validTo: '01/01/2025',
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-
-          await expect(
-            repository.replace(
-              organisation.id,
-              1,
-              prepareOrgUpdate(inserted, {
-                registrations: [registrationToUpdate]
-              })
-            )
-          ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.validTo:.*Date must be in YYYY-MM-DD format/
           )
         })
 
@@ -1222,7 +1146,6 @@ export const testRegAccApprovalValidation = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: 'not-a-date',
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -1239,33 +1162,6 @@ export const testRegAccApprovalValidation = (it) => {
           )
         })
 
-        it('rejects update when registration validTo is a non-date string', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const registrationToUpdate = {
-            ...inserted.registrations[0],
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'REG12345',
-            validFrom: VALID_FROM,
-            validTo: 'abc',
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-
-          await expect(
-            repository.replace(
-              organisation.id,
-              1,
-              prepareOrgUpdate(inserted, {
-                registrations: [registrationToUpdate]
-              })
-            )
-          ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.validTo:.*Date must be in YYYY-MM-DD format/
-          )
-        })
-
         it('rejects update when registration validFrom is an empty string', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
@@ -1276,7 +1172,6 @@ export const testRegAccApprovalValidation = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: '',
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -1293,33 +1188,6 @@ export const testRegAccApprovalValidation = (it) => {
           )
         })
 
-        it('rejects update when registration validTo is an empty string', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const registrationToUpdate = {
-            ...inserted.registrations[0],
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'REG12345',
-            validFrom: VALID_FROM,
-            validTo: '',
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-
-          await expect(
-            repository.replace(
-              organisation.id,
-              1,
-              prepareOrgUpdate(inserted, {
-                registrations: [registrationToUpdate]
-              })
-            )
-          ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.validTo:/
-          )
-        })
-
         it('rejects update when registration validFrom is a number', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
@@ -1330,7 +1198,6 @@ export const testRegAccApprovalValidation = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: 20250101,
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -1347,33 +1214,6 @@ export const testRegAccApprovalValidation = (it) => {
           )
         })
 
-        it('rejects update when registration validTo is a number', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const registrationToUpdate = {
-            ...inserted.registrations[0],
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'REG12345',
-            validFrom: VALID_FROM,
-            validTo: 20251231,
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-
-          await expect(
-            repository.replace(
-              organisation.id,
-              1,
-              prepareOrgUpdate(inserted, {
-                registrations: [registrationToUpdate]
-              })
-            )
-          ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.validTo:.*must be a string/
-          )
-        })
-
         it('rejects update when registration validFrom is a partial date', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
@@ -1384,7 +1224,6 @@ export const testRegAccApprovalValidation = (it) => {
             status: REGISTRATION_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: '2025-01',
-            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -1401,7 +1240,7 @@ export const testRegAccApprovalValidation = (it) => {
           )
         })
 
-        it('allows update when registration status is not approved without validFrom and validTo', async () => {
+        it('allows update when registration status is not approved without validFrom', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
           const inserted = await repository.findById(organisation.id)
@@ -1412,8 +1251,7 @@ export const testRegAccApprovalValidation = (it) => {
             ...regBase,
             material: 'plastic',
             glassRecyclingProcess: null,
-            validFrom: null,
-            validTo: null
+            validFrom: null
           }
 
           await repository.replace(
@@ -1431,7 +1269,6 @@ export const testRegAccApprovalValidation = (it) => {
 
           expect(updatedReg.material).toBe('plastic')
           expect(updatedReg.validFrom).toBeNull()
-          expect(updatedReg.validTo).toBeNull()
         })
       })
 
@@ -1516,7 +1353,6 @@ export const testRegAccApprovalValidation = (it) => {
                   status: REGISTRATION_STATUS.APPROVED,
                   validFrom: VALID_FROM,
                   registrationNumber: 'REG12345',
-                  validTo: VALID_TO,
                   accreditationId: inserted.accreditations[0].id,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }
@@ -1562,7 +1398,6 @@ export const testRegAccApprovalValidation = (it) => {
                     status: REGISTRATION_STATUS.APPROVED,
                     validFrom: VALID_FROM,
                     registrationNumber: 'REG12345',
-                    validTo: VALID_TO,
                     accreditationId: inserted.accreditations[0].id,
                     reprocessingType: REPROCESSING_TYPE.INPUT
                   }

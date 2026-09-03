@@ -50,12 +50,11 @@ const buildOrgWithAccreditationStatus = (
     accreditationId,
     reprocessingType: 'input',
     ...(registrationStatus !== 'created' && {
-      // registrationNumber/validFrom/validTo are only required once a
+      // registrationNumber/validFrom are only required once a
       // registration has been approved, but non-created registrations get
       // them for realism (mirrors buildOrgWithRegistrationStatus).
       registrationNumber: 'REG123456',
       validFrom: '2024-01-01',
-      validTo: '2025-01-01',
       statusHistory: [
         { status: 'created', updatedAt: '2024-01-01' },
         { status: registrationStatus, updatedAt: '2024-01-15' }
