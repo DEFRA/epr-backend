@@ -13,6 +13,7 @@ import {
 } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
@@ -167,6 +168,32 @@ const throwCreatePrnError = (error, logger) => {
   )
 }
 
+/**
+ * Reject draft creation when the requested tonnage exceeds the available waste
+ * balance, reusing the 409 the confirm-time transition raises for
+ * INSUFFICIENT_AVAILABLE_BALANCE. Point-in-time validation, not a reservation:
+ * the balance is ringfenced only at the draft → awaiting_authorisation
+ * transition. An empty ledger resolves to zero available, so any positive
+ * tonnage is refused.
+ *
+ * @param {Object} params
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
+ * @param {number} params.tonnage
+ */
+const assertSufficientAvailableBalance = async ({
+  ledgerRepository,
+  ledgerId,
+  tonnage
+}) => {
+  const balance =
+    await createWasteBalanceService(ledgerRepository).currentBalance(ledgerId)
+
+  if (tonnage > (balance?.availableAmount ?? 0)) {
+    throw Boom.conflict('Insufficient available waste balance')
+  }
+}
+
 export const packagingRecyclingNotesCreate = {
   method: 'POST',
   path: packagingRecyclingNotesCreatePath,
@@ -189,6 +216,7 @@ export const packagingRecyclingNotesCreate = {
     const {
       packagingRecyclingNotesRepository,
       organisationsRepository,
+      ledgerRepository,
       params,
       payload,
       logger,
@@ -213,6 +241,12 @@ export const packagingRecyclingNotesCreate = {
       if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
         throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
       }
+
+      await assertSufficientAvailableBalance({
+        ledgerRepository,
+        ledgerId: { organisationId, registrationId, accreditationId },
+        tonnage: payload.tonnage
+      })
 
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER

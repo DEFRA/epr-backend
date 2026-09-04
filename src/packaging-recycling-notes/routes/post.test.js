@@ -5,15 +5,19 @@ import {
   it,
   expect,
   beforeAll,
+  beforeEach,
   afterAll,
   afterEach
 } from 'vitest'
 
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesCreatePath } from './post.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
@@ -22,6 +26,38 @@ import { createMockLogger } from '#test/mock-logger.js'
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
 const accreditationId = 'acc-789'
+
+const SEED_BALANCE = { amount: 500, availableAmount: 500 }
+
+/**
+ * An in-memory stream seeded with one summary-log submission, opening the
+ * ledgerId's ledger at the given balance so the create route's pre-check
+ * resolves against it. Passing `null` leaves the ledger absent, which resolves
+ * to zero available.
+ *
+ * @param {{ amount: number, availableAmount: number } | null} [closingBalance]
+ */
+const seedStream = (closingBalance = SEED_BALANCE) =>
+  createInMemoryLedgerRepository(
+    closingBalance
+      ? [
+          partialMock(
+            buildLedgerEvent({
+              registrationId,
+              accreditationId,
+              organisationId,
+              number: 1,
+              payload: {
+                summaryLogId: 'log-1',
+                creditTotal: closingBalance.amount
+              },
+              openingBalance: { amount: 0, availableAmount: 0 },
+              closingBalance
+            })
+          )
+        ]
+      : []
+  )()
 
 const validPayload = {
   issuedToOrganisation: {
@@ -39,6 +75,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     let server
     let packagingRecyclingNotesRepository
     let organisationsRepository
+    let ledgerRepository
 
     beforeAll(async () => {
       packagingRecyclingNotesRepository =
@@ -70,11 +107,16 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
-          organisationsRepository: () => organisationsRepository
+          organisationsRepository: () => organisationsRepository,
+          ledgerRepository: () => ledgerRepository
         }
       })
 
       await server.initialize()
+    })
+
+    beforeEach(() => {
+      ledgerRepository = seedStream()
     })
 
     afterEach(() => {
@@ -532,6 +574,101 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CREATED)
+      })
+    })
+
+    describe('waste balance validation', () => {
+      const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`
+
+      it('returns 409 and creates no draft when tonnage exceeds the available balance', async () => {
+        ledgerRepository = seedStream({ amount: 50, availableAmount: 50 })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 51 }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(response.payload).toContain(
+          'Insufficient available waste balance'
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('creates the draft when tonnage equals the available balance', async () => {
+        ledgerRepository = seedStream({ amount: 100, availableAmount: 100 })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 100 }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalled()
+      })
+
+      it('returns 409 for an exporter (PERN) journey when tonnage exceeds the balance', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          status: 'approved',
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2026-01-01',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          submittedToRegulator: 'ea'
+        })
+        ledgerRepository = seedStream({ amount: 50, availableAmount: 50 })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 51 }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(response.payload).toContain(
+          'Insufficient available waste balance'
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('returns 409 when the accreditation has no ledger (zero available)', async () => {
+        ledgerRepository = seedStream(null)
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 1 }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('uses the balance at submission time, rejecting after it drops below the tonnage', async () => {
+        const first = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 200 }
+        })
+        expect(first.statusCode).toBe(StatusCodes.CREATED)
+
+        ledgerRepository = seedStream({ amount: 100, availableAmount: 100 })
+
+        const second = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 200 }
+        })
+        expect(second.statusCode).toBe(StatusCodes.CONFLICT)
       })
     })
 
