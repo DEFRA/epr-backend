@@ -63,6 +63,66 @@
  */
 
 /**
+ * A form-year's declared input totals, actual or estimated.
+ * @typedef {{
+ *  type: 'actual'|'estimated';
+ *  ukPackagingWasteInTonnes: number;
+ *  nonUkPackagingWasteInTonnes: number;
+ *  nonPackagingWasteInTonnes: number;
+ * }} YearlyMetricsInput
+ */
+
+/**
+ * A form-year's declared output totals, actual or estimated.
+ * @typedef {{
+ *  type: 'actual'|'estimated';
+ *  sentToAnotherSiteInTonnes: number;
+ *  contaminantsInTonnes: number;
+ *  processLossInTonnes: number;
+ * }} YearlyMetricsOutput
+ */
+
+/**
+ * @typedef {{
+ *  material: string;
+ *  weightInTonnes: number;
+ * }} RawMaterialInput
+ */
+
+/**
+ * @typedef {{
+ *  name: string;
+ *  weightInTonnes: number;
+ * }} ProductMadeFromRecycling
+ */
+
+/**
+ * A reprocessor's declared input/output tonnages for a single year.
+ * @typedef {{
+ *  year: number;
+ *  input: YearlyMetricsInput;
+ *  rawMaterialInputs: RawMaterialInput[];
+ *  output: YearlyMetricsOutput;
+ *  productsMadeFromRecycling: ProductMadeFromRecycling[];
+ * }} YearlyMetrics
+ */
+
+/**
+ * @typedef {{
+ *  defraFormUploadedFileId: string;
+ *  defraFormUserDownloadLink: string;
+ *  s3Uri?: string;
+ * }} FormFileUpload
+ */
+
+/**
+ * `?` marks a field the write-side schema (schema/registration.js) makes
+ * conditional on `wasteProcessingType` rather than freely optional:
+ * `orsFileUploads` is required (min 1) for an exporter registration and
+ * forbidden for a reprocessor one; `yearlyMetrics` is the other way round
+ * — required (min 1) for a reprocessor, forbidden for an exporter. Not
+ * modelled as a discriminated union here — `?` is the pragmatic JSDoc
+ * approximation.
  * @typedef {{ id: string } & StatusHistoryOf<RegistrationStatus> & {
  *  accreditation: Accreditation | null;
  *  accreditationId?: string;
@@ -75,7 +135,9 @@
  *  glassRecyclingProcess?: GlassRecyclingProcess[];
  *  noticeAddress?: RegistrationAddress;
  *  orgName: string;
+ *  orsFileUploads?: FormFileUpload[];
  *  plantEquipmentDetails?: string;
+ *  samplingInspectionPlanPart1FileUploads: FormFileUpload[];
  *  site: RegistrationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;
@@ -84,6 +146,7 @@
  *  wasteProcessingType: string;
  *  reprocessingType?: ReprocessingType;
  *  overseasSites?: Record<string, {overseasSiteId: string}>;
+ *  yearlyMetrics?: YearlyMetrics[];
  * }} RegistrationBase
  */
 

@@ -57,14 +57,23 @@
  */
 
 /**
+ * @typedef {{
+ *  defraFormUploadedFileId: string;
+ *  defraFormUserDownloadLink: string;
+ *  s3Uri?: string;
+ * }} FormFileUpload
+ */
+
+/**
  * @typedef {{ id: string } & StatusHistory & {
  *  formSubmission: { id: string; time: Date };
  *  glassRecyclingProcess?: GlassRecyclingProcess[] | null;
  *  material: AppliedForMaterial;
  *  orgName: string;
- *  orsFileUploads?: object[];
+ *  orsFileUploads?: FormFileUpload[];
  *  prnIssuance: PrnIssuance;
  *  reprocessingType?: ReprocessingType;
+ *  samplingInspectionPlanPart2FileUploads: FormFileUpload[];
  *  site?: AccreditationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;

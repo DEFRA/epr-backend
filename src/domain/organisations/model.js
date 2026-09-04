@@ -215,7 +215,6 @@ export const USER_ROLES = Object.freeze({
  * @typedef {{
  *   name: string;
  *   tradingName?: string;
- *   registrationNumber?: string;
  *   companiesHouseNumber?: string;
  *   registeredAddress?: Address;
  *   address?: Address;

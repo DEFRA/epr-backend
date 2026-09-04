@@ -158,6 +158,7 @@ describe('csv-columns', () => {
       suppliers: 'Local authority kerbside collections',
       wasteProcessingType: 'reprocessor',
       registrationNumber: 'REG-001',
+      samplingInspectionPlanPart1FileUploads: [],
       status: 'approved',
       statusHistory: [],
       validFrom: '2026-01-01'
@@ -175,6 +176,7 @@ describe('csv-columns', () => {
         signatories: [],
         tonnageBand: '500'
       },
+      samplingInspectionPlanPart2FileUploads: [],
       submittedToRegulator: 'ea',
       submitterContactDetails: userFixture,
       wasteProcessingType: 'reprocessor',
