@@ -456,14 +456,10 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.amount).toBe(creditAmount)
       expect(balance.availableAmount).toBe(creditAmount)
 
-      // Attempt to create PRN for 150 (more than available) - should be rejected
+      // Attempt to create a PRN for 150 (more than the 100 available) - the
+      // create route rejects it up front, before any draft exists.
       const highTonnage = 150
-      const prn1 = await createPrn(env, highTonnage)
-      const result = await transitionPrnStatus(
-        env,
-        prn1.id,
-        PRN_STATUS.AWAITING_AUTHORISATION
-      )
+      const result = await createPrn(env, highTonnage)
       expect(result.statusCode).toBe(409)
       expect(result.message).toBe('Insufficient available waste balance')
 
