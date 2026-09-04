@@ -369,6 +369,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
+    },
+    streamTransitionDiagnostic: {
+      doc: 'Feature Flag: Run the startup diagnostic reporting organisations that have switched between the registered-only and accredited summary-log streams (PAE-1924)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_STREAM_TRANSITION_DIAGNOSTIC'
     }
   },
   formSubmissionOverrides: {
