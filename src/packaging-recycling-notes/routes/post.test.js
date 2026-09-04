@@ -17,7 +17,10 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  buildLedgerEvent,
+  buildPrnCreatedEvent
+} from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesCreatePath } from './post.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
@@ -637,7 +640,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
       })
 
-      it('returns 409 when the accreditation has no ledger (zero available)', async () => {
+      it('returns 409 when the accreditation has no credited balance yet', async () => {
+        // A newly-approved accreditation that has submitted no summary logs has
+        // no ledger, so its available balance is zero and any tonnage exceeds it.
         ledgerRepository = seedStream(null)
 
         const response = await server.inject({
@@ -651,7 +656,8 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
       })
 
-      it('uses the balance at submission time, rejecting after it drops below the tonnage', async () => {
+      it('reads the current ledger on each submission, rejecting after the balance drops', async () => {
+        // Seeded balance is 500 available (beforeEach); 200 is comfortably within it.
         const first = await server.inject({
           method: 'POST',
           url,
@@ -660,7 +666,19 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         })
         expect(first.statusCode).toBe(StatusCodes.CREATED)
 
-        ledgerRepository = seedStream({ amount: 100, availableAmount: 100 })
+        // A competing PRN ringfences 400 on the same ledger, dropping available
+        // to 100 — the route must re-read this, not the balance it first saw.
+        await ledgerRepository.appendEvents([
+          buildPrnCreatedEvent({
+            organisationId,
+            registrationId,
+            accreditationId,
+            number: 2,
+            payload: { prnId: 'competing-prn', amount: 400 },
+            openingBalance: { amount: 500, availableAmount: 500 },
+            closingBalance: { amount: 500, availableAmount: 100 }
+          })
+        ])
 
         const second = await server.inject({
           method: 'POST',
