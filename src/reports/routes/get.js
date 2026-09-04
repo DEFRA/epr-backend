@@ -15,6 +15,7 @@ import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.j
 import { reportsCalendarResponseSchema } from './response.schema.js'
 
 /**
+ * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
@@ -32,6 +33,14 @@ import { reportsCalendarResponseSchema } from './response.schema.js'
 
 export const reportsGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/calendar'
+
+/**
+ * The years the calendar will answer for. Wide enough to cover every year the
+ * service holds data for, and narrow enough that a typo is rejected rather than
+ * generating periods for the year 40000.
+ */
+const MIN_YEAR = 2024
+const MAX_YEAR = 2100
 
 /**
  * Curates the full report summary down to the list-response shape so the
@@ -72,7 +81,9 @@ export const reportsGet = {
         registrationId: Joi.string().required()
       }),
       query: Joi.object({
-        expand: Joi.string().valid('submissions')
+        expand: Joi.string().valid('submissions'),
+        year: Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR),
+        cadence: Joi.string().valid(...Object.values(CADENCE))
       })
     },
     response: {
@@ -96,25 +107,51 @@ export const reportsGet = {
       registrationId
     )
 
-    const cadence = isRegistrationAccredited(registration)
-      ? CADENCE.monthly
-      : CADENCE.quarterly
+    const { cadence: askedCadence, year: askedYear } =
+      /** @type {{ cadence?: Cadence, year?: number }} */ (request.query)
+
+    const cadence =
+      askedCadence ??
+      (isRegistrationAccredited(registration)
+        ? CADENCE.monthly
+        : CADENCE.quarterly)
 
     /**
-     * We simply return for the current year for now for both Registered-Only
-     * and Accredited Operators. Registered-only operators will need multi-year
-     * support once outstanding historical reports are submitted.
+     * Without a year the calendar answers for the current one, as it always
+     * has. A caller reading a period that has already closed - a regulator
+     * opening a registered-only year, say - names the year it wants.
      */
-    const currentYear = new Date().getUTCFullYear()
+    const year = askedYear ?? new Date().getUTCFullYear()
 
-    // An accredited operator owes monthly reports only from the date their
-    // accreditation began; generateReportingPeriods bounds to validFrom.
-    const validFrom = activeAccreditationValidFrom(registration.accreditation)
+    /**
+     * What the periods are bounded by depends on who is asking.
+     *
+     * Left to itself, the calendar answers the cadence the registration owes
+     * *now*, and an accredited operator owes monthly reports only from the date
+     * their accreditation began - so that date is the bound.
+     *
+     * A caller naming a cadence is asking a different question: which periods
+     * did this registration owe under that cadence. Bounding those to the
+     * accreditation would be wrong in both directions - it would trim the
+     * quarters owed before the accreditation began, which are exactly the ones
+     * being asked for, and it says nothing at all where no accreditation was
+     * ever granted. The registration's own start date is the honest bound:
+     * nothing is owed before the registration existed.
+     *
+     * A registration that was never approved carries no start date, and
+     * `generateReportingPeriods` applies a bound only when it has one - so an
+     * unapproved registration is bounded by nothing rather than by a date it
+     * does not hold.
+     */
+    const fromDate = askedCadence
+      ? registration.validFrom
+      : activeAccreditationValidFrom(registration.accreditation)
+
     const computedPeriods = generateReportingPeriods(
       cadence,
-      currentYear,
+      year,
       undefined,
-      validFrom
+      fromDate
     )
 
     const periodicReports = await reportsRepository.findPeriodicReports({

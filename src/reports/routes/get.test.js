@@ -1564,6 +1564,130 @@ describe(`GET ${reportsGetPath}`, () => {
       })
     })
 
+    describe('a named year and cadence (?year=&cadence=)', () => {
+      // A regulator opening a registered-only period asks the calendar a
+      // different question from the one an operator's dashboard asks: which
+      // periods did this registration owe under a given cadence, in a given
+      // year - rather than what does it owe now.
+      const lastYear = new Date().getUTCFullYear() - 1
+
+      it('answers the named year rather than the current one', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'exporter',
+          accreditationId: undefined,
+          validFrom: `${lastYear}-01-01`
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?year=${lastYear}&cadence=quarterly`,
+          ...asOperator()
+        })
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.cadence).toBe('quarterly')
+        expect(payload.reportingPeriods).toHaveLength(4)
+        expect(payload.reportingPeriods.every((p) => p.year === lastYear)).toBe(
+          true
+        )
+      })
+
+      // Without this the quarters a registration owed before its accreditation
+      // began - exactly the ones a registered-only period is about - would be
+      // trimmed away by the accreditation's own start date.
+      it('bounds a named cadence by the registration rather than the accreditation', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            validFrom: `${lastYear}-01-01`
+          },
+          undefined,
+          'approved'
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?year=${lastYear}&cadence=quarterly`,
+          ...asOperator()
+        })
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.reportingPeriods).toHaveLength(4)
+      })
+
+      it('owes nothing before the registration began', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'exporter',
+          accreditationId: undefined,
+          validFrom: `${lastYear}-07-01`
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?year=${lastYear}&cadence=quarterly`,
+          ...asOperator()
+        })
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.reportingPeriods.map((p) => p.period)).toStrictEqual([
+          3, 4
+        ])
+      })
+
+      // An unapproved registration holds no start date, so there is nothing to
+      // bound by and every ended period of the named year is answered.
+      it('bounds by nothing where the registration was never approved', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'exporter',
+          accreditationId: undefined,
+          validFrom: undefined
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?year=${lastYear}&cadence=quarterly`,
+          ...asOperator()
+        })
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.reportingPeriods).toHaveLength(4)
+      })
+
+      it('rejects a year the service does not answer for', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'exporter',
+          accreditationId: undefined
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?year=1999`,
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('rejects a cadence that is not one the service reports on', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'exporter',
+          accreditationId: undefined
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${makeUrl(organisationId, registrationId)}?cadence=weekly`,
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+    })
+
     describe('expanded submissions view (?expand=submissions)', () => {
       const changedBy = { id: 'user-1', name: 'Test', position: 'Officer' }
       const year = new Date().getUTCFullYear()
