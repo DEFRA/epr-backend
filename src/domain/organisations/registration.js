@@ -155,7 +155,6 @@
  *  registrationNumber: string;
  *  status: Extract<RegistrationStatus, 'approved'>;
  *  validFrom: string;
- *  validTo: string;
  * }} RegistrationApproved
  */
 
@@ -164,7 +163,6 @@
  *  registrationNumber?: string;
  *  status: Extract<RegistrationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
- *  validTo?: string
  * }} RegistrationOther
  */
 
@@ -175,12 +173,11 @@
 /**
  * A registration that appears in regulator reports: approved, or cancelled
  * after approval. A cancelled registration was previously approved, so it
- * carries its registration number and validity dates.
+ * carries its registration number and validFrom.
  * @typedef {RegistrationBase & {
  *  registrationNumber: string;
  *  status: Extract<RegistrationStatus, 'approved'|'cancelled'>;
  *  validFrom: string;
- *  validTo: string;
  * }} ReportableRegistration
  */
 

@@ -59,8 +59,7 @@ const regFixture = {
   registrationNumber: 'REG-001',
   samplingInspectionPlanPart1FileUploads: [],
   status: 'approved',
-  validFrom: '2026-01-01',
-  validTo: '2026-12-31'
+  validFrom: '2026-01-01'
 }
 
 /** @returns {Organisation} */

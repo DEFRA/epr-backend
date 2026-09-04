@@ -33,7 +33,6 @@ export const registrationStatusHistory = {
    *      fromStatus: RegistrationStatus,
    *      toStatus: RegistrationStatus,
    *      validFrom: string,
-   *      validTo: string,
    *      registrationNumber: string
    *    }
    * > & {
@@ -76,14 +75,6 @@ export const registrationStatusHistory = {
     assertRegistrationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
-      // Granting sets the whole validity window, so compare the two supplied
-      // dates against each other and reject an inverted window.
-      if (new Date(grant.validFrom) > new Date(grant.validTo)) {
-        throw Boom.badData(
-          `Cannot grant registration: validFrom ${grant.validFrom} is after validTo ${grant.validTo}`
-        )
-      }
-
       // Granting issues the registration number, which must not already be
       // in use by any registration in any organisation, whatever its status.
       // This uniqueness is enforced here only: there is no unique index on
@@ -102,8 +93,7 @@ export const registrationStatusHistory = {
     const grantFields = grant
       ? {
           registrationNumber: grant.registrationNumber,
-          validFrom: grant.validFrom,
-          validTo: grant.validTo
+          validFrom: grant.validFrom
         }
       : {}
 

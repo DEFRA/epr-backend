@@ -69,11 +69,11 @@ const SUFFIX_LENGTH = 3
  *
  * @param {Omit<Organisation, 'status'>} org - Organisation data
  * @param {string} approvedTesterEmail - Email for approved tester
- * @param {{ VALID_FROM: string, VALID_TO: string }} dateRange - Valid date range
+ * @param {{ VALID_FROM: string }} dateRange - Valid date range
  * @returns {Registration[]} Approved registrations
  */
 function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
-  const { VALID_FROM, VALID_TO } = dateRange
+  const { VALID_FROM } = dateRange
 
   return org.registrations.map((reg, index) => {
     const isReprocessor = reg.wasteProcessingType === 'reprocessor'
@@ -100,7 +100,6 @@ function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
       cbduNumber: `${CBDU_PREFIX}${orgIdSuffix}${sequenceNumber}`,
       ...(isReprocessor && { reprocessingType: REPROCESSING_TYPE.INPUT }),
       validFrom: VALID_FROM,
-      validTo: VALID_TO,
       ...(index === 0 && {
         approvedPersons: [
           ...reg.approvedPersons,

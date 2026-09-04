@@ -247,6 +247,40 @@ describe('MongoDB organisations repository', () => {
     })
   })
 
+  describe('registration validTo backward compatibility (PAE-1904)', () => {
+    it('does not return validTo on a registration document stored before PAE-1904, without a migration', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const organisation = buildOrganisation()
+      await repository.insert(organisation)
+
+      // Simulate a document written by an application that predates
+      // PAE-1904, i.e. before validTo was removed from the insert/replace
+      // schema: write it directly to the collection, bypassing the
+      // repository so it never passes through today's schema at all.
+      const collection = mongoClient
+        .db(DATABASE_NAME)
+        .collection(COLLECTION_NAME)
+      await collection.updateOne(
+        { _id: ObjectId.createFromHexString(organisation.id) },
+        { $set: { 'registrations.0.validTo': '2026-12-31' } }
+      )
+
+      const rawDoc = /** @type {Record<string, any>} */ (
+        await collection.findOne({
+          _id: ObjectId.createFromHexString(organisation.id)
+        })
+      )
+      expect(rawDoc.registrations[0].validTo).toBe('2026-12-31')
+
+      const result = await repository.findById(organisation.id)
+
+      expect(result.registrations[0]).not.toHaveProperty('validTo')
+    })
+  })
+
   describe('findAllForOverseasSitesAdminList', () => {
     it('returns only fields required by the ORS admin list endpoint', async ({
       organisationsRepository

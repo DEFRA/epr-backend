@@ -10,15 +10,14 @@ import { isoDateString } from '#common/validation/iso-date-schema.js'
  * in the domain map.
  */
 
-// Granting issues the registration number and sets the validity window from
-// the supplied validFrom and validTo dates (PAE-1814). Both are required: the
-// persistence schema demands them on an approved registration, so the grant
-// supplies them rather than relying on whatever was already stored.
+// Granting issues the registration number and sets validFrom (PAE-1814).
+// Required: the persistence schema demands it on an approved registration, so
+// the grant supplies it rather than relying on whatever was already stored.
+// Registrations do not expire (PAE-1904), so there is no validTo to supply.
 const createdToApprovedSchema = Joi.object({
   fromStatus: Joi.string().valid(REGISTRATION_STATUS.CREATED).required(),
   toStatus: Joi.string().valid(REGISTRATION_STATUS.APPROVED).required(),
   validFrom: isoDateString().required(),
-  validTo: isoDateString().required(),
   registrationNumber: Joi.string().trim().min(1).required()
 })
 
