@@ -11,6 +11,7 @@ import {
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
+  createPrn as decideCreatePrn,
   issuePrn as decideIssuePrn,
   PRN_COMMAND_STATUS
 } from '#waste-balances/domain/commands.js'
@@ -155,6 +156,29 @@ describe('Waste balance arithmetic integration tests', () => {
         { id: 'test-user' }
       )
     const decision = decideIssuePrn(balance, { prnId, amount })
+    if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
+      throw new Error(`expected a committed decision, got ${decision.reason}`)
+    }
+    return append(decision.events)
+  }
+
+  /**
+   * Ringfence available balance straight on the stream, standing in for a
+   * competing writer raising a PRN these tests do not otherwise model — the
+   * canonical way the available balance falls between a draft being created and
+   * being authorised.
+   */
+  const debitAvailableBalanceOutOfBand = async (env, prnId, amount) => {
+    const { balance, append } =
+      await env.wasteBalanceService.readBalanceForUpdate(
+        {
+          organisationId: env.organisationId,
+          registrationId: env.registrationId,
+          accreditationId: env.accreditationId
+        },
+        { id: 'test-user' }
+      )
+    const decision = decideCreatePrn(balance, { prnId, amount })
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)
     }
@@ -467,6 +491,49 @@ describe('Waste balance arithmetic integration tests', () => {
       balance = await getWasteBalance(env)
       expect(balance.amount).toBe(100)
       expect(balance.availableAmount).toBe(100)
+    })
+
+    it('should reject the transition when the balance drops below the draft tonnage after creation', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+
+      // Credit: 100
+      await performSummaryLogSubmission(
+        env,
+        'log-race',
+        'file-race',
+        'waste-race.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+      )
+
+      // The draft is created while 100 is available, so the create-time check
+      // passes. Creation does not ringfence — the balance is only spent when a
+      // PRN is authorised.
+      const draft = await createPrn(env, 60)
+
+      // A competing PRN then ringfences 50, dropping the available balance to
+      // 50 before this draft is authorised.
+      await debitAvailableBalanceOutOfBand(env, 'competing-prn', 50)
+
+      let balance = await getWasteBalance(env)
+      expect(balance.availableAmount).toBe(50)
+
+      // The draft can no longer be authorised: 50 available < 60 needed. The
+      // confirm-time backstop rejects it with the same 409, exercising the race
+      // the create-time check cannot pre-empt.
+      const result = await transitionPrnStatus(
+        env,
+        draft.id,
+        PRN_STATUS.AWAITING_AUTHORISATION
+      )
+      expect(result.statusCode).toBe(409)
+      expect(result.message).toBe('Insufficient available waste balance')
+
+      // Only the competing ringfence stands; the draft's transition changed nothing.
+      balance = await getWasteBalance(env)
+      expect(balance.amount).toBe(100)
+      expect(balance.availableAmount).toBe(50)
     })
 
     it('should reject PRN issue when tonnage exceeds total balance', async () => {
