@@ -25,6 +25,7 @@
     "#root/*": "./src/*",
     "#routes/*": "./src/routes/*",
     "#server/*": "./src/server/*",
+    "#stream-transition-diagnostic/*": "./src/stream-transition-diagnostic/*",
     "#test/*": "./src/test/*",
     "#vite/*": "./.vite/*",
     "#waste-balances/*": "./src/waste-balances/*",

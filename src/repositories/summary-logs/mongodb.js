@@ -18,7 +18,7 @@ import {
   validateSummaryLogUpdate
 } from './validation.js'
 
-const COLLECTION_NAME = 'summary-logs'
+export const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**

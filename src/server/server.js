@@ -45,6 +45,7 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
+import { runStreamTransitionDiagnostic } from '#stream-transition-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -219,6 +220,7 @@ async function createServer(options = {}) {
     runFormsDataMigration(startedServer)
     runOrganisationValidationSweep(startedServer)
     runReconcileStalePrnProjections(startedServer)
+    runStreamTransitionDiagnostic(startedServer)
   })
 
   return server
