@@ -63,7 +63,11 @@ describe('mock-repositories', () => {
         'findRegistrationsBySystemReference',
         'findAllOrganisations',
         'findOrganisationById',
-        'findAllFormSubmissionIds'
+        'findAllFormSubmissionIds',
+        'allocateOrgId',
+        'insertOrganisation',
+        'insertRegistration',
+        'insertAccreditation'
       ]
     },
     createMockPackagingRecyclingNotesRepository: {

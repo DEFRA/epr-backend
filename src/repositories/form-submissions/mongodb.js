@@ -2,6 +2,13 @@ import { ObjectId } from 'mongodb'
 import { ORG_ID_START_NUMBER } from '#common/enums/db.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/**
+ * @import {
+ *   AccreditationSubmission,
+ *   OrganisationSubmission,
+ *   RegistrationSubmission
+ * } from '#domain/form-submissions/submission-records.js'
+ */
 
 const ACCREDITATIONS_COLLECTION = 'accreditation'
 const REGISTRATIONS_COLLECTION = 'registration'
@@ -53,6 +60,17 @@ async function findHighestOrgId(db) {
 }
 
 /**
+ * The counters collection keys its documents by name rather than by ObjectId.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {import('mongodb').Collection<{_id: string, seq: number}>}
+ */
+const countersCollection = (db) =>
+  /** @type {import('mongodb').Collection<{_id: string, seq: number}>} */ (
+    db.collection(COUNTERS_COLLECTION)
+  )
+
+/**
  * Seeds the orgId counter from existing data on first run.
  * Uses $setOnInsert so it only writes when the counter doesn't exist yet.
  *
@@ -62,15 +80,92 @@ async function findHighestOrgId(db) {
 async function seedOrgIdCounter(db, logger) {
   const seq = await findHighestOrgId(db)
 
-  await db
-    .collection(COUNTERS_COLLECTION)
-    .updateOne(
-      { _id: /** @type {*} */ ('orgId') },
-      { $setOnInsert: { seq } },
-      { upsert: true }
-    )
+  await countersCollection(db).updateOne(
+    { _id: 'orgId' },
+    { $setOnInsert: { seq } },
+    { upsert: true }
+  )
 
   logger.info({ message: `orgId counter seeded at ${seq}` })
+}
+
+/**
+ * @param {import('mongodb').Db} db
+ * @returns {() => Promise<number>}
+ */
+const allocateOrgId = (db) => async () => {
+  const result = await countersCollection(db).findOneAndUpdate(
+    { _id: 'orgId' },
+    { $inc: { seq: 1 } },
+    { returnDocument: 'after' }
+  )
+
+  if (result?.seq === undefined) {
+    throw new Error('Failed to generate orgId: counter returned invalid result')
+  }
+
+  return result.seq
+}
+
+/**
+ * The write error MongoDB raises when a document fails the collection's
+ * $jsonSchema validator.
+ *
+ * @typedef {Error & {
+ *   errInfo?: {
+ *     details?: {
+ *       schemaRulesNotSatisfied?: {
+ *         propertiesNotSatisfied?: {propertyName: string, description: string}[]
+ *       }[]
+ *     }
+ *   }
+ * }} MongoWriteError
+ */
+
+/**
+ * Decodes the fields a schema validator rejected onto the driver's own error,
+ * so the caller keeps the original error while gaining the field detail.
+ *
+ * @param {MongoWriteError} error
+ * @returns {import('./port.js').FormSubmissionInsertError}
+ */
+const withSchemaViolations = (error) =>
+  Object.assign(error, {
+    schemaViolations: (error?.errInfo?.details?.schemaRulesNotSatisfied ?? [])
+      .flatMap((rule) => rule.propertiesNotSatisfied ?? [])
+      .map((prop) => `${prop.propertyName} - ${prop.description}`)
+  })
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {string} collectionName
+ * @returns {(submission: OrganisationSubmission | RegistrationSubmission | AccreditationSubmission) => Promise<string>}
+ */
+const insertInto = (db, collectionName) => async (submission) => {
+  try {
+    const { insertedId } = await db
+      .collection(collectionName)
+      .insertOne(submission)
+    return insertedId.toString()
+  } catch (error) {
+    throw withSchemaViolations(error)
+  }
+}
+
+/**
+ * Registrations and accreditations already carry the reference number they were
+ * filed against, so the document id the store mints is of no use to the caller.
+ *
+ * @param {import('mongodb').Db} db
+ * @param {string} collectionName
+ * @returns {(submission: RegistrationSubmission | AccreditationSubmission) => Promise<void>}
+ */
+const insertDiscardingId = (db, collectionName) => {
+  const insert = insertInto(db, collectionName)
+
+  return async (submission) => {
+    await insert(submission)
+  }
 }
 
 const mapDocument = (doc) => {
@@ -207,7 +302,11 @@ export const createFormSubmissionsRepository = async (db, logger) => {
       findRegistrationById: performFindRegistrationById(db),
       findAllOrganisations: performFindAllOrganisations(db),
       findOrganisationById: performFindOrganisationById(db),
-      findAllFormSubmissionIds: findAllFormSubmissionIds(db)
+      findAllFormSubmissionIds: findAllFormSubmissionIds(db),
+      allocateOrgId: allocateOrgId(db),
+      insertOrganisation: insertInto(db, ORGANISATION_COLLECTION),
+      insertRegistration: insertDiscardingId(db, REGISTRATIONS_COLLECTION),
+      insertAccreditation: insertDiscardingId(db, ACCREDITATIONS_COLLECTION)
     }
   }
 }

@@ -1,8 +1,11 @@
 import crypto from 'node:crypto'
 import { ObjectId } from 'mongodb'
+import { ORG_ID_START_NUMBER } from '#common/enums/index.js'
 
-const ORG_ID_START = 500000
-export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
+export const generateOrgId = () =>
+  ORG_ID_START_NUMBER + crypto.randomInt(0, 100000)
+
+export const generateReferenceNumber = () => new ObjectId().toString()
 
 const buildFormSubmission = (overrides = {}) => {
   return {

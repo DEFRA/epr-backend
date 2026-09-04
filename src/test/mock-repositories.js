@@ -90,6 +90,10 @@ export const createMockFormSubmissionsRepository = (overrides = {}) => ({
   findAllOrganisations: vi.fn(),
   findOrganisationById: vi.fn(),
   findAllFormSubmissionIds: vi.fn(),
+  allocateOrgId: vi.fn(),
+  insertOrganisation: vi.fn(),
+  insertRegistration: vi.fn(),
+  insertAccreditation: vi.fn(),
   ...overrides
 })
 
