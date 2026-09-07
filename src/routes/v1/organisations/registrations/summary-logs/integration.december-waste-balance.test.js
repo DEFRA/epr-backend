@@ -143,7 +143,6 @@ describe('December waste balance accrual', () => {
 
       expect(balance.amount).toBe(300)
       expect(balance.decemberAmount).toBe(200)
-      expect(balance.amount - balance.decemberAmount).toBe(100)
     })
 
     it('accrues nothing to December when no tonnage falls in December (AC2, AC6)', async () => {
@@ -263,7 +262,6 @@ describe('December waste balance accrual', () => {
 
       expect(balance.amount).toBe(300)
       expect(balance.decemberAmount).toBe(200)
-      expect(balance.amount - balance.decemberAmount).toBe(100)
     })
 
     it('deducts a December sent-on row from the December portion (uniform date-field rule)', async () => {
@@ -305,7 +303,6 @@ describe('December waste balance accrual', () => {
       // December: 500 credit - 100 sent-on = 400. General: 300 (June).
       expect(balance.amount).toBe(700)
       expect(balance.decemberAmount).toBe(400)
-      expect(balance.amount - balance.decemberAmount).toBe(300)
     })
   })
 
