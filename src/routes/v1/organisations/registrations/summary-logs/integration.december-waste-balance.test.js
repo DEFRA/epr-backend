@@ -305,6 +305,67 @@ describe('December waste balance accrual', () => {
       expect(balance.amount).toBe(700)
       expect(balance.decemberAmount).toBe(400)
     })
+
+    it('moves a sent-on deduction between the general and December portions when its date is corrected', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
+
+      const received = [
+        {
+          rowId: 1001,
+          tonnageReceived: 300,
+          dateReceived: '2025-06-16T00:00:00.000Z'
+        },
+        {
+          rowId: 1002,
+          tonnageReceived: 500,
+          dateReceived: '2025-12-05T00:00:00.000Z'
+        }
+      ]
+
+      // First submission: the sent-on row is dated June, so its deduction lands
+      // on the general portion; December keeps its full 500 credit.
+      await submit(env, meta, {
+        summaryLogId: 'summary-sent-move-1',
+        fileId: 'file-sent-move-1',
+        filename: 'waste-data-v1.xlsx',
+        data: uploadData(received, [
+          {
+            rowId: 5001,
+            tonnageSent: 100,
+            dateLeft: '2025-06-20T00:00:00.000Z'
+          }
+        ])
+      })
+
+      let balance = await getWasteBalance(env)
+      // Total 700; December 500 (undeducted); general 200 (300 - 100 sent-on).
+      expect(balance.amount).toBe(700)
+      expect(balance.decemberAmount).toBe(500)
+
+      // Resubmission moves the same sent-on row into December: the total is
+      // unchanged, but the deduction now falls on the December portion and the
+      // general portion recovers.
+      await submit(env, meta, {
+        summaryLogId: 'summary-sent-move-2',
+        fileId: 'file-sent-move-2',
+        filename: 'waste-data-v2.xlsx',
+        data: uploadData(received, [
+          {
+            rowId: 5001,
+            tonnageSent: 100,
+            dateLeft: '2025-12-20T00:00:00.000Z'
+          }
+        ])
+      })
+
+      balance = await getWasteBalance(env)
+      // Total still 700; December 400 (500 - 100 sent-on); general 300.
+      expect(balance.amount).toBe(700)
+      expect(balance.decemberAmount).toBe(400)
+    })
   })
 
   describe('reprocessor output', () => {
