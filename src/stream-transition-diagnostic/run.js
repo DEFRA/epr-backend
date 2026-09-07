@@ -23,11 +23,12 @@ const formatTransitionLine = (r) =>
     `registrationNumber=${r.registrationNumber}`,
     `accreditationId=${r.accreditationId}`,
     `accreditationNumber=${r.accreditationNumber}`,
-    `direction=${r.direction}`,
     `registeredOnlySubmissions=${r.registeredOnlySubmissions}`,
     `accreditedSubmissions=${r.accreditedSubmissions}`,
+    `registeredOnlyFirstSubmittedAt=${r.registeredOnlyFirstSubmittedAt}`,
     `registeredOnlyLastSubmittedAt=${r.registeredOnlyLastSubmittedAt}`,
     `accreditedFirstSubmittedAt=${r.accreditedFirstSubmittedAt}`,
+    `accreditedLastSubmittedAt=${r.accreditedLastSubmittedAt}`,
     `registrationHistory="${r.registrationHistory}"`,
     `accreditationHistory="${r.accreditationHistory}"`,
     `material=${r.material}`
@@ -86,7 +87,7 @@ const runDiagnostic = async (server) => {
   }
 
   logger.info({
-    message: `Stream transition diagnostic: scanned=${transitionSummary.scanned} affectedOrganisations=${transitionSummary.affectedOrganisations} registeredToAccredited=${transitionSummary.registeredToAccredited} accreditedToRegistered=${transitionSummary.accreditedToRegistered} registeredOnlySubmissions=${transitionSummary.registeredOnlySubmissions} accreditedSubmissions=${transitionSummary.accreditedSubmissions}`
+    message: `Stream transition diagnostic: scanned=${transitionSummary.scanned} affectedOrganisations=${transitionSummary.affectedOrganisations} registeredOnlySubmissions=${transitionSummary.registeredOnlySubmissions} accreditedSubmissions=${transitionSummary.accreditedSubmissions}`
   })
 
   const { reports: statusReports, summary: statusSummary } =
@@ -103,10 +104,9 @@ const runDiagnostic = async (server) => {
 
 /**
  * Read-only startup diagnostic for PAE-1924: sizes how many operators have
- * switched between the registered-only and accredited summary-log streams
- * (ADR 0048), and separately reports every registration/accreditation that
- * has ever been suspended or cancelled, including ones since reverted to
- * approved that a current-status check would miss.
+ * usage on both the registered-only and accredited summary-log streams
+ * (ADR 0048), and separately reports every registration/accreditation ever
+ * suspended or cancelled, including ones since reverted to approved.
  *
  * Unlike the sibling sweeps this job gates on its flag BEFORE acquiring the
  * lock: it has no dry-run/repair duality, so a flag-off pod should do no

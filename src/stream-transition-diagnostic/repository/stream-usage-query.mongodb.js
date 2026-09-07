@@ -15,8 +15,10 @@ import { COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
  * @property {string} registrationId
  * @property {number} registeredOnlySubmissions - count of successful registered-only submissions
  * @property {number} accreditedSubmissions - count of successful accredited submissions
+ * @property {Date} registeredOnlyFirstSubmittedAt
  * @property {Date} registeredOnlyLastSubmittedAt
  * @property {Date} accreditedFirstSubmittedAt
+ * @property {Date} accreditedLastSubmittedAt
  * @property {string[]} registrationNumbers - distinct `meta.REGISTRATION_NUMBER` values seen
  * @property {string[]} accreditationNumbers - distinct `meta.ACCREDITATION_NUMBER` values seen
  */
@@ -61,6 +63,11 @@ const STREAM_USAGE_PIPELINE = [
       accreditedSubmissions: {
         $sum: { $cond: [{ $eq: ['$_stream', 'accredited'] }, 1, 0] }
       },
+      registeredOnlyFirstSubmittedAt: {
+        $min: {
+          $cond: [{ $eq: ['$_stream', 'registeredOnly'] }, '$submittedAt', null]
+        }
+      },
       registeredOnlyLastSubmittedAt: {
         $max: {
           $cond: [{ $eq: ['$_stream', 'registeredOnly'] }, '$submittedAt', null]
@@ -68,6 +75,11 @@ const STREAM_USAGE_PIPELINE = [
       },
       accreditedFirstSubmittedAt: {
         $min: {
+          $cond: [{ $eq: ['$_stream', 'accredited'] }, '$submittedAt', null]
+        }
+      },
+      accreditedLastSubmittedAt: {
+        $max: {
           $cond: [{ $eq: ['$_stream', 'accredited'] }, '$submittedAt', null]
         }
       },
@@ -98,14 +110,16 @@ export const createStreamUsageQuery = (db) => {
     ])
 
     // Both streams are guaranteed present by the pipeline's final $match, so
-    // registeredOnlyLastSubmittedAt/accreditedFirstSubmittedAt are always set.
+    // every boundary timestamp is always set.
     const usages = docs.map((doc) => ({
       organisationId: doc._id.organisationId,
       registrationId: doc._id.registrationId,
       registeredOnlySubmissions: doc.registeredOnlySubmissions,
       accreditedSubmissions: doc.accreditedSubmissions,
+      registeredOnlyFirstSubmittedAt: doc.registeredOnlyFirstSubmittedAt,
       registeredOnlyLastSubmittedAt: doc.registeredOnlyLastSubmittedAt,
       accreditedFirstSubmittedAt: doc.accreditedFirstSubmittedAt,
+      accreditedLastSubmittedAt: doc.accreditedLastSubmittedAt,
       registrationNumbers: doc.registrationNumbers.filter(Boolean),
       accreditationNumbers: doc.accreditationNumbers.filter(Boolean)
     }))

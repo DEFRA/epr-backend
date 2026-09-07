@@ -95,9 +95,15 @@ describe('createStreamUsageQuery', () => {
       accreditationNumbers: ['A26ER5000000001PL']
     })
     expect(
+      new Date(usages[0].registeredOnlyFirstSubmittedAt).toISOString()
+    ).toBe('2026-01-15T00:00:00.000Z')
+    expect(
       new Date(usages[0].registeredOnlyLastSubmittedAt).toISOString()
     ).toBe('2026-01-15T00:00:00.000Z')
     expect(new Date(usages[0].accreditedFirstSubmittedAt).toISOString()).toBe(
+      '2026-04-05T00:00:00.000Z'
+    )
+    expect(new Date(usages[0].accreditedLastSubmittedAt).toISOString()).toBe(
       '2026-04-05T00:00:00.000Z'
     )
   })
@@ -133,12 +139,30 @@ describe('createStreamUsageQuery', () => {
       submittedAt: '2026-05-01T00:00:00.000Z',
       meta: accreditedMeta
     })
+    await insertSummaryLog(summaryLogsCollection, {
+      organisationId,
+      registrationId,
+      submittedAt: '2026-06-01T00:00:00.000Z',
+      meta: accreditedMeta
+    })
 
     const { usages } = await streamUsageQuery()
 
     const usage = usages.find((u) => u.registrationId === registrationId)
     expect(usage.registeredOnlySubmissions).toBe(2)
-    expect(usage.accreditedSubmissions).toBe(1)
+    expect(usage.accreditedSubmissions).toBe(2)
+    expect(new Date(usage.registeredOnlyFirstSubmittedAt).toISOString()).toBe(
+      '2026-01-01T00:00:00.000Z'
+    )
+    expect(new Date(usage.registeredOnlyLastSubmittedAt).toISOString()).toBe(
+      '2026-02-01T00:00:00.000Z'
+    )
+    expect(new Date(usage.accreditedFirstSubmittedAt).toISOString()).toBe(
+      '2026-05-01T00:00:00.000Z'
+    )
+    expect(new Date(usage.accreditedLastSubmittedAt).toISOString()).toBe(
+      '2026-06-01T00:00:00.000Z'
+    )
   })
 
   it('excludes a pair whose logs are all on one stream', async (/** @type {*} */ {

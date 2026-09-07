@@ -17,7 +17,7 @@ import {
  * @typedef {Object} RegAccStatusReport
  * @property {string} organisationId
  * @property {number} orgId
- * @property {string} orgName
+ * @property {string | null} orgName
  * @property {'registration' | 'accreditation'} kind
  * @property {'currentlySuspended' | 'currentlyCancelled' | 'previously'} line
  * @property {string | null} registrationId
@@ -109,7 +109,7 @@ const selectLineAndKind = (
  * @param {{
  *   registration: Registration | null,
  *   accreditation: Accreditation | null,
- *   orgInfo: { organisationId: string, orgId: number, orgName: string },
+ *   orgInfo: { organisationId: string, orgId: number, orgName: string | null },
  *   line: RegAccStatusReport['line'],
  *   kind: RegAccStatusReport['kind'],
  *   currentRegStatus: string | null,
@@ -158,7 +158,7 @@ const buildRegAccStatusReport = ({
  *
  * @param {Registration | null} registration
  * @param {Accreditation | null} accreditation
- * @param {{ organisationId: string, orgId: number, orgName: string }} orgInfo
+ * @param {{ organisationId: string, orgId: number, orgName: string | null }} orgInfo
  * @returns {RegAccStatusReport | null}
  */
 export const classifyRegAccStatus = (registration, accreditation, orgInfo) => {

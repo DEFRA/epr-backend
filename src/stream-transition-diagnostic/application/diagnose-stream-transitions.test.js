@@ -14,7 +14,7 @@ import {
 import { diagnoseStreamTransitions } from './diagnose-stream-transitions.js'
 
 describe('diagnoseStreamTransitions', () => {
-  it('reports registered_to_accredited when registered-only submissions precede the approval', () => {
+  it('reports the first and last submission on each stream, alongside the accreditation and registration', () => {
     const org = orgWithAccreditationHistory([
       { status: 'created', updatedAt: '2026-01-01' },
       { status: 'approved', updatedAt: '2026-04-01' }
@@ -27,8 +27,10 @@ describe('diagnoseStreamTransitions', () => {
       registrationId: registration.id,
       registeredOnlySubmissions: 3,
       accreditedSubmissions: 5,
+      registeredOnlyFirstSubmittedAt: new Date('2026-01-20'),
       registeredOnlyLastSubmittedAt: new Date('2026-03-28'),
       accreditedFirstSubmittedAt: new Date('2026-04-02'),
+      accreditedLastSubmittedAt: new Date('2026-06-15'),
       registrationNumbers: [TEST_REGISTRATION_NUMBER],
       accreditationNumbers: [TEST_ACCREDITATION_NUMBER]
     }
@@ -44,18 +46,53 @@ describe('diagnoseStreamTransitions', () => {
       orgId: org.orgId,
       registrationId: registration.id,
       accreditationId: accreditation.id,
-      direction: 'registered_to_accredited',
       registeredOnlySubmissions: 3,
-      accreditedSubmissions: 5
+      accreditedSubmissions: 5,
+      registeredOnlyFirstSubmittedAt: '2026-01-20',
+      registeredOnlyLastSubmittedAt: '2026-03-28',
+      accreditedFirstSubmittedAt: '2026-04-02',
+      accreditedLastSubmittedAt: '2026-06-15'
     })
     expect(summary).toMatchObject({
       scanned: 10,
       affectedOrganisations: 1,
-      registeredToAccredited: 1,
-      accreditedToRegistered: 0,
       registeredOnlySubmissions: 3,
       accreditedSubmissions: 5
     })
+  })
+
+  it('carries the full status trail rather than asserting why the pair used both streams', () => {
+    const org = orgWithAccreditationHistory([
+      { status: 'created', updatedAt: '2026-01-01' },
+      { status: 'approved', updatedAt: '2026-02-01' },
+      { status: 'suspended', updatedAt: '2026-05-01' },
+      { status: 'approved', updatedAt: '2026-06-01' },
+      { status: 'cancelled', updatedAt: '2026-08-01' }
+    ])
+    const [registration] = org.registrations
+
+    const usage = {
+      organisationId: org.id,
+      registrationId: registration.id,
+      registeredOnlySubmissions: 1,
+      accreditedSubmissions: 1,
+      registeredOnlyFirstSubmittedAt: new Date('2026-01-15'),
+      registeredOnlyLastSubmittedAt: new Date('2026-01-15'),
+      accreditedFirstSubmittedAt: new Date('2026-03-01'),
+      accreditedLastSubmittedAt: new Date('2026-03-01'),
+      registrationNumbers: [TEST_REGISTRATION_NUMBER],
+      accreditationNumbers: [TEST_ACCREDITATION_NUMBER]
+    }
+
+    const { reports } = diagnoseStreamTransitions(
+      { scanned: 1, usages: [usage] },
+      [org]
+    )
+
+    expect(reports).toHaveLength(1)
+    expect(reports[0].accreditationHistory).toBe(
+      'created@2026-01-01 -> approved@2026-02-01 -> suspended@2026-05-01 -> approved@2026-06-01 -> cancelled@2026-08-01'
+    )
   })
 
   it('renders null orgName and material when the organisation/registration carry none', () => {
@@ -73,8 +110,10 @@ describe('diagnoseStreamTransitions', () => {
       registrationId: registration.id,
       registeredOnlySubmissions: 1,
       accreditedSubmissions: 1,
+      registeredOnlyFirstSubmittedAt: new Date('2026-03-28'),
       registeredOnlyLastSubmittedAt: new Date('2026-03-28'),
       accreditedFirstSubmittedAt: new Date('2026-04-02'),
+      accreditedLastSubmittedAt: new Date('2026-04-02'),
       registrationNumbers: [TEST_REGISTRATION_NUMBER],
       accreditationNumbers: [TEST_ACCREDITATION_NUMBER]
     }
@@ -89,97 +128,7 @@ describe('diagnoseStreamTransitions', () => {
     expect(reports[0].material).toBeNull()
   })
 
-  it('reports accredited_to_registered when accredited submissions precede the cancellation', () => {
-    const org = orgWithAccreditationHistory([
-      { status: 'created', updatedAt: '2026-01-01' },
-      { status: 'approved', updatedAt: '2026-02-01' },
-      { status: 'cancelled', updatedAt: '2026-08-01' }
-    ])
-    const [registration] = org.registrations
-
-    const usage = {
-      organisationId: org.id,
-      registrationId: registration.id,
-      registeredOnlySubmissions: 2,
-      accreditedSubmissions: 4,
-      registeredOnlyLastSubmittedAt: new Date('2026-09-01'),
-      accreditedFirstSubmittedAt: new Date('2026-03-01'),
-      registrationNumbers: [TEST_REGISTRATION_NUMBER],
-      accreditationNumbers: [TEST_ACCREDITATION_NUMBER]
-    }
-
-    const { reports, summary } = diagnoseStreamTransitions(
-      { scanned: 5, usages: [usage] },
-      [org]
-    )
-
-    expect(reports).toHaveLength(1)
-    expect(reports[0].direction).toBe('accredited_to_registered')
-    expect(summary.accreditedToRegistered).toBe(1)
-    expect(summary.registeredToAccredited).toBe(0)
-  })
-
-  it('reports both directions for an org that switched both ways', () => {
-    const org = orgWithAccreditationHistory([
-      { status: 'created', updatedAt: '2026-01-01' },
-      { status: 'approved', updatedAt: '2026-02-01' },
-      { status: 'suspended', updatedAt: '2026-05-01' },
-      { status: 'cancelled', updatedAt: '2026-08-01' }
-    ])
-    const [registration] = org.registrations
-
-    const usage = {
-      organisationId: org.id,
-      registrationId: registration.id,
-      registeredOnlySubmissions: 1,
-      accreditedSubmissions: 1,
-      // registered-only submission before the approval...
-      registeredOnlyLastSubmittedAt: new Date('2026-01-15'),
-      // ...and accredited submission before the cancellation.
-      accreditedFirstSubmittedAt: new Date('2026-03-01'),
-      registrationNumbers: [TEST_REGISTRATION_NUMBER],
-      accreditationNumbers: [TEST_ACCREDITATION_NUMBER]
-    }
-
-    const { reports, summary } = diagnoseStreamTransitions(
-      { scanned: 1, usages: [usage] },
-      [org]
-    )
-
-    expect(reports).toHaveLength(2)
-    expect(reports.map((r) => r.direction).sort()).toEqual([
-      'accredited_to_registered',
-      'registered_to_accredited'
-    ])
-    expect(summary.affectedOrganisations).toBe(1)
-  })
-
-  it('skips a usage whose accreditation has no approved/cancelled entry', () => {
-    const org = orgWithAccreditationHistory([
-      { status: 'created', updatedAt: '2026-01-01' }
-    ])
-    const [registration] = org.registrations
-
-    const usage = {
-      organisationId: org.id,
-      registrationId: registration.id,
-      registeredOnlySubmissions: 1,
-      accreditedSubmissions: 1,
-      registeredOnlyLastSubmittedAt: new Date('2026-01-05'),
-      accreditedFirstSubmittedAt: new Date('2026-01-10'),
-      registrationNumbers: [],
-      accreditationNumbers: []
-    }
-
-    const { reports } = diagnoseStreamTransitions(
-      { scanned: 1, usages: [usage] },
-      [org]
-    )
-
-    expect(reports).toEqual([])
-  })
-
-  it('skips a usage whose registration has no linked accreditation', () => {
+  it('reports a usage row even when its registration has no linked accreditation, with null accreditation fields', () => {
     const registration = buildRegistration({ accreditationId: undefined })
     const org = buildReadOrganisation({
       registrations: [partialMock(registration)],
@@ -191,8 +140,10 @@ describe('diagnoseStreamTransitions', () => {
       registrationId: registration.id,
       registeredOnlySubmissions: 1,
       accreditedSubmissions: 1,
+      registeredOnlyFirstSubmittedAt: new Date('2026-01-05'),
       registeredOnlyLastSubmittedAt: new Date('2026-01-05'),
       accreditedFirstSubmittedAt: new Date('2026-01-10'),
+      accreditedLastSubmittedAt: new Date('2026-01-10'),
       registrationNumbers: [],
       accreditationNumbers: []
     }
@@ -202,7 +153,9 @@ describe('diagnoseStreamTransitions', () => {
       [org]
     )
 
-    expect(reports).toEqual([])
+    expect(reports).toHaveLength(1)
+    expect(reports[0].accreditationId).toBeNull()
+    expect(reports[0].accreditationHistory).toBe('none')
   })
 
   it('skips a usage whose registration is not found on the organisation', () => {
@@ -216,8 +169,10 @@ describe('diagnoseStreamTransitions', () => {
       registrationId: 'missing-registration',
       registeredOnlySubmissions: 1,
       accreditedSubmissions: 1,
+      registeredOnlyFirstSubmittedAt: new Date('2026-01-05'),
       registeredOnlyLastSubmittedAt: new Date('2026-01-05'),
       accreditedFirstSubmittedAt: new Date('2026-01-10'),
+      accreditedLastSubmittedAt: new Date('2026-01-10'),
       registrationNumbers: [],
       accreditationNumbers: []
     }
@@ -236,8 +191,10 @@ describe('diagnoseStreamTransitions', () => {
       registrationId: 'missing-reg',
       registeredOnlySubmissions: 1,
       accreditedSubmissions: 1,
+      registeredOnlyFirstSubmittedAt: new Date('2026-01-05'),
       registeredOnlyLastSubmittedAt: new Date('2026-01-05'),
       accreditedFirstSubmittedAt: new Date('2026-01-10'),
+      accreditedLastSubmittedAt: new Date('2026-01-10'),
       registrationNumbers: [],
       accreditationNumbers: []
     }

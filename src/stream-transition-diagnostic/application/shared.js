@@ -58,21 +58,19 @@ export const formatStatusHistory = (statusHistory) => {
 }
 
 /**
- * How many times, and when, `statusHistory` entered `targetStatus`.
+ * How many times `statusHistory` entered `targetStatus`.
  *
  * @param {StatusHistoryEntryLike[] | undefined} statusHistory
  * @param {string} targetStatus
- * @returns {{ everHeld: boolean, count: number, latestUpdatedAt: number | null }}
+ * @returns {{ everHeld: boolean, count: number }}
  */
 export const occurrencesOf = (statusHistory, targetStatus) => {
   const matches = (statusHistory ?? []).filter(
     (entry) => entry.status === targetStatus
   )
-  const dated = sortedStatusHistoryDateTimes(matches)
   return {
     everHeld: matches.length > 0,
-    count: matches.length,
-    latestUpdatedAt: dated[0]?.updatedAt ?? null
+    count: matches.length
   }
 }
 

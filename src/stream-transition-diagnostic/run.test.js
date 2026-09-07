@@ -31,8 +31,6 @@ const emptyTransitionResult = {
   summary: {
     scanned: 0,
     affectedOrganisations: 0,
-    registeredToAccredited: 0,
-    accreditedToRegistered: 0,
     registeredOnlySubmissions: 0,
     accreditedSubmissions: 0
   }
@@ -129,11 +127,12 @@ describe('runStreamTransitionDiagnostic', () => {
           registrationNumber: 'R26ER5000000001PL',
           accreditationId: 'acc-1',
           accreditationNumber: 'A26ER5000000001PL',
-          direction: 'registered_to_accredited',
           registeredOnlySubmissions: 3,
           accreditedSubmissions: 5,
+          registeredOnlyFirstSubmittedAt: '2026-01-20',
           registeredOnlyLastSubmittedAt: '2026-03-28',
           accreditedFirstSubmittedAt: '2026-04-02',
+          accreditedLastSubmittedAt: '2026-06-15',
           registrationHistory: 'created@2026-01-12 -> approved@2026-02-01',
           accreditationHistory:
             'created@2026-02-10 -> approved@2026-04-01 -> suspended@2026-07-15',
@@ -143,8 +142,6 @@ describe('runStreamTransitionDiagnostic', () => {
       summary: {
         scanned: 1234,
         affectedOrganisations: 1,
-        registeredToAccredited: 1,
-        accreditedToRegistered: 0,
         registeredOnlySubmissions: 3,
         accreditedSubmissions: 5
       }
@@ -154,11 +151,11 @@ describe('runStreamTransitionDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Stream transition: organisationId=org-1 orgId=500123 orgName="Acme Ltd" registrationId=reg-1 registrationNumber=R26ER5000000001PL accreditationId=acc-1 accreditationNumber=A26ER5000000001PL direction=registered_to_accredited registeredOnlySubmissions=3 accreditedSubmissions=5 registeredOnlyLastSubmittedAt=2026-03-28 accreditedFirstSubmittedAt=2026-04-02 registrationHistory="created@2026-01-12 -> approved@2026-02-01" accreditationHistory="created@2026-02-10 -> approved@2026-04-01 -> suspended@2026-07-15" material=plastic'
+        'Stream transition: organisationId=org-1 orgId=500123 orgName="Acme Ltd" registrationId=reg-1 registrationNumber=R26ER5000000001PL accreditationId=acc-1 accreditationNumber=A26ER5000000001PL registeredOnlySubmissions=3 accreditedSubmissions=5 registeredOnlyFirstSubmittedAt=2026-01-20 registeredOnlyLastSubmittedAt=2026-03-28 accreditedFirstSubmittedAt=2026-04-02 accreditedLastSubmittedAt=2026-06-15 registrationHistory="created@2026-01-12 -> approved@2026-02-01" accreditationHistory="created@2026-02-10 -> approved@2026-04-01 -> suspended@2026-07-15" material=plastic'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Stream transition diagnostic: scanned=1234 affectedOrganisations=1 registeredToAccredited=1 accreditedToRegistered=0 registeredOnlySubmissions=3 accreditedSubmissions=5'
+        'Stream transition diagnostic: scanned=1234 affectedOrganisations=1 registeredOnlySubmissions=3 accreditedSubmissions=5'
     })
   })
 
