@@ -73,20 +73,15 @@ describe('createWasteBalanceService', () => {
       expect(event.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       expect(event.payload).toEqual({
         summaryLogId: 'log-A',
-        creditTotal: 150,
-        decemberCreditTotal: 0
+        creditTotal: 150
       })
       expect(event.openingBalance).toEqual({
         amount: 0,
-        availableAmount: 0,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 0
       })
       expect(event.closingBalance).toEqual({
         amount: 150,
-        availableAmount: 150,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 150
       })
       expect(event.createdBy).toEqual(createdBy)
       expect(event.createdAt).toBeInstanceOf(Date)
@@ -108,15 +103,11 @@ describe('createWasteBalanceService', () => {
       expect(event.number).toBe(2)
       expect(event.openingBalance).toEqual({
         amount: 150,
-        availableAmount: 150,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 150
       })
       expect(event.closingBalance).toEqual({
         amount: 200,
-        availableAmount: 200,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 200
       })
     })
 
@@ -215,9 +206,7 @@ describe('createWasteBalanceService', () => {
       expect(event.payload).toEqual({ prnId: 'prn-1', amount: 100 })
       expect(event.closingBalance).toEqual({
         amount: 1000,
-        availableAmount: 900,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 900
       })
     })
 
@@ -264,9 +253,7 @@ describe('createWasteBalanceService', () => {
       expect(result.status).toBe(PRN_COMMAND_STATUS.COMMITTED)
       expect(result.events[0].closingBalance).toEqual({
         amount: 925,
-        availableAmount: 1000,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 1000
       })
     })
 
@@ -298,9 +285,7 @@ describe('createWasteBalanceService', () => {
       )
       expect(result.events[0].closingBalance).toEqual({
         amount: 1000,
-        availableAmount: 1000,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 1000
       })
     })
 
@@ -318,9 +303,7 @@ describe('createWasteBalanceService', () => {
       )
       expect(result.events[0].closingBalance).toEqual({
         amount: 1000,
-        availableAmount: 1100,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 1100
       })
     })
 
@@ -335,9 +318,7 @@ describe('createWasteBalanceService', () => {
       expect(result.events[0].kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
       expect(result.events[0].closingBalance).toEqual({
         amount: 1000,
-        availableAmount: 1000,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 1000
       })
     })
 
@@ -352,9 +333,7 @@ describe('createWasteBalanceService', () => {
       expect(result.events[0].kind).toBe(LEDGER_EVENT_KIND.PRN_REJECTED)
       expect(result.events[0].closingBalance).toEqual({
         amount: 1000,
-        availableAmount: 1000,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 1000
       })
     })
 

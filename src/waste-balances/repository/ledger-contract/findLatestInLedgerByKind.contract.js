@@ -169,15 +169,11 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
 
       expect(nullResult.closingBalance).toEqual({
         amount: 10,
-        availableAmount: 10,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 10
       })
       expect(nonNullResult.closingBalance).toEqual({
         amount: 999,
-        availableAmount: 999,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 999
       })
     })
 

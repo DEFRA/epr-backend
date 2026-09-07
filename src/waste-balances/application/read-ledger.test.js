@@ -76,18 +76,8 @@ describe('reading a waste balance ledger', () => {
     expect(result.events).toEqual([
       expect.objectContaining({
         balance: {
-          opening: {
-            total: 10,
-            available: 8,
-            decemberTotal: 0,
-            decemberAvailable: 0
-          },
-          closing: {
-            total: 30,
-            available: 28,
-            decemberTotal: 0,
-            decemberAvailable: 0
-          }
+          opening: { total: 10, available: 8 },
+          closing: { total: 30, available: 28 }
         }
       })
     ])
@@ -137,33 +127,23 @@ describe('reading a waste balance ledger', () => {
     ])
   })
 
-  it('resolves a missing December portion to zero for a pre-feature event', async () => {
-    // An event written before December accrual carries no December fields on
-    // its balance snapshots. Read directly (bypassing the schema defaults an
-    // append applies), it must still surface December as zero.
-    const preFeatureRepository = partialMock({
+  it('surfaces no December split for a balance that has no December portion', async () => {
+    // An event whose balance carries no December portion (an output
+    // accreditation, or a pre-feature event) surfaces only the total and
+    // available figures, with no December fields.
+    const noDecemberRepository = partialMock({
       findAllInLedger: async () => [buildLedgerEvent()]
     })
 
     const result = await readLedger(
-      preFeatureRepository,
+      noDecemberRepository,
       noteReader,
       buildLedgerId()
     )
 
     expect(result.events[0].balance).toEqual({
-      opening: {
-        total: 0,
-        available: 0,
-        decemberTotal: 0,
-        decemberAvailable: 0
-      },
-      closing: {
-        total: 100,
-        available: 100,
-        decemberTotal: 0,
-        decemberAvailable: 0
-      }
+      opening: { total: 0, available: 0 },
+      closing: { total: 100, available: 100 }
     })
   })
 

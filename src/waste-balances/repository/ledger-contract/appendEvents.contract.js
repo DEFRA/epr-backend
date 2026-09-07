@@ -31,20 +31,9 @@ export const testAppendEventsBehaviour = (it) => {
       expect(stored.accreditationId).toBe('acc-append')
       expect(stored.number).toBe(1)
       expect(stored.kind).toBe(event.kind)
-      expect(stored.payload).toEqual({
-        ...event.payload,
-        decemberCreditTotal: 0
-      })
-      expect(stored.openingBalance).toEqual({
-        ...event.openingBalance,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
-      })
-      expect(stored.closingBalance).toEqual({
-        ...event.closingBalance,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
-      })
+      expect(stored.payload).toEqual(event.payload)
+      expect(stored.openingBalance).toEqual(event.openingBalance)
+      expect(stored.closingBalance).toEqual(event.closingBalance)
     })
 
     it('inserts multiple events and returns them in order', async () => {

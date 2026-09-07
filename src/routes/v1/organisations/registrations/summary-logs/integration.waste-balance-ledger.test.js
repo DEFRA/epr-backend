@@ -150,9 +150,7 @@ describe('Waste balance stream (Exporter)', () => {
     ).toBe(300)
     expect(latest.closingBalance).toEqual({
       amount: 300,
-      availableAmount: 300,
-      decemberAmount: 0,
-      decemberAvailableAmount: 0
+      availableAmount: 300
     })
 
     const resolvedBalance = await wasteBalanceService.currentBalance({
@@ -245,9 +243,7 @@ describe('Waste balance stream (Exporter)', () => {
     ).toBe(200)
     expect(latest.closingBalance).toEqual({
       amount: 200,
-      availableAmount: 200,
-      decemberAmount: 0,
-      decemberAvailableAmount: 0
+      availableAmount: 200
     })
   })
 

@@ -133,14 +133,11 @@ describe('performUpdateViaLedger', () => {
       expect(latest.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       expect(latest.payload).toEqual({
         summaryLogId: 'log-A',
-        creditTotal: 150,
-        decemberCreditTotal: 0
+        creditTotal: 150
       })
       expect(latest.closingBalance).toEqual({
         amount: 150,
-        availableAmount: 150,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 150
       })
     })
   })
@@ -178,14 +175,11 @@ describe('performUpdateViaLedger', () => {
       expect(latest.number).toBe(2)
       expect(latest.payload).toEqual({
         summaryLogId: 'log-B',
-        creditTotal: 200,
-        decemberCreditTotal: 0
+        creditTotal: 200
       })
       expect(latest.closingBalance).toEqual({
         amount: 200,
-        availableAmount: 200,
-        decemberAmount: 0,
-        decemberAvailableAmount: 0
+        availableAmount: 200
       })
     })
   })

@@ -255,42 +255,14 @@ describe('ledger event validation', () => {
   describe('validateLedgerEventRead', () => {
     it('returns the stored event as written', () => {
       const event = buildLedgerEvent()
-      const expected = {
-        ...event,
-        openingBalance: {
-          ...event.openingBalance,
-          decemberAmount: 0,
-          decemberAvailableAmount: 0
-        },
-        closingBalance: {
-          ...event.closingBalance,
-          decemberAmount: 0,
-          decemberAvailableAmount: 0
-        },
-        payload: { ...event.payload, decemberCreditTotal: 0 }
-      }
-      expect(validateLedgerEventRead(event)).toEqual(expected)
+      expect(validateLedgerEventRead(event)).toEqual(event)
     })
 
     it('keeps the document id the store gave the event', () => {
       const event = buildLedgerEvent()
-      const expected = {
-        ...event,
-        openingBalance: {
-          ...event.openingBalance,
-          decemberAmount: 0,
-          decemberAvailableAmount: 0
-        },
-        closingBalance: {
-          ...event.closingBalance,
-          decemberAmount: 0,
-          decemberAvailableAmount: 0
-        },
-        payload: { ...event.payload, decemberCreditTotal: 0 }
-      }
       const result = validateLedgerEventRead({ _id: 'mongo-1', ...event })
       expect(result).not.toHaveProperty('_id')
-      expect(result).toEqual(expected)
+      expect(result).toEqual(event)
     })
 
     it('names the event by its ledger and number when it refuses one', () => {

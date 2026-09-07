@@ -41,8 +41,9 @@ export const currentWasteBalance = async (ledgerRepository, ledgerId) => {
     ...ledgerId,
     amount: latest.closingBalance.amount,
     availableAmount: latest.closingBalance.availableAmount,
-    decemberAmount: latest.closingBalance.decemberAmount ?? 0,
-    decemberAvailableAmount: latest.closingBalance.decemberAvailableAmount ?? 0,
+    // Pass the December portion through as-is: absent when the balance has none.
+    decemberAmount: latest.closingBalance.decemberAmount,
+    decemberAvailableAmount: latest.closingBalance.decemberAvailableAmount,
     eventNumber: latest.number,
     creditTotal,
     decemberCreditTotal

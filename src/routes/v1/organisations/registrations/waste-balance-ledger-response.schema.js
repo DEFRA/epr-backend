@@ -16,8 +16,10 @@ const ledgerSchema = Joi.object({
 const balanceSchema = Joi.object({
   total: Joi.number().required(),
   available: Joi.number().required(),
-  decemberTotal: Joi.number().required(),
-  decemberAvailable: Joi.number().required()
+  // Present only when the balance has a December portion; an output
+  // accreditation's balance carries neither.
+  decemberTotal: Joi.number(),
+  decemberAvailable: Joi.number()
 })
 
 /**

@@ -162,9 +162,10 @@ describe('December waste balance accrual', () => {
 
       const balance = await getWasteBalance(env)
 
-      // The general balance carries the whole total; December stays zero.
+      // The general balance carries the whole total; with no December tonnage
+      // the balance has no December portion at all.
       expect(balance.amount).toBe(300)
-      expect(balance.decemberAmount).toBe(0)
+      expect(balance.decemberAmount).toBeUndefined()
     })
 
     it('self-corrects the December portion when a resubmission moves a row into and out of December (AC5)', async () => {
@@ -182,7 +183,7 @@ describe('December waste balance accrual', () => {
 
       let balance = await getWasteBalance(env)
       expect(balance.amount).toBe(100)
-      expect(balance.decemberAmount).toBe(0)
+      expect(balance.decemberAmount).toBeUndefined()
 
       // Resubmission moves the same row into December: it now accrues to
       // December, and the general portion drops to zero.
@@ -342,9 +343,10 @@ describe('December waste balance accrual', () => {
       const balance = await getWasteBalance(env)
 
       // The load-left-site date is not a received-for-recycling date, so the
-      // row credits the general balance but accrues no December portion.
+      // row credits the general balance but the output accreditation has no
+      // December portion at all.
       expect(balance.amount).toBe(100)
-      expect(balance.decemberAmount).toBe(0)
+      expect(balance.decemberAmount).toBeUndefined()
     })
   })
 })

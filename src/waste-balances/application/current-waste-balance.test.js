@@ -51,8 +51,6 @@ describe('currentWasteBalance', () => {
       accreditationId: 'acc-1',
       amount: 1000,
       availableAmount: 700,
-      decemberAmount: 0,
-      decemberAvailableAmount: 0,
       eventNumber: 2,
       creditTotal: 1000,
       decemberCreditTotal: 0
@@ -86,12 +84,12 @@ describe('currentWasteBalance', () => {
     expect(balance?.creditTotal).toBe(1000)
   })
 
-  it('coalesces a missing December portion to zero for a pre-feature event', async () => {
-    // A submission event written before December accrual carries no December
-    // fields on its closing balance or payload. Reading it directly (bypassing
-    // the schema defaults an append would apply) must still resolve December to
-    // zero rather than undefined.
-    const preFeatureEvent = {
+  it('passes through an absent December portion and coalesces the credit total to zero', async () => {
+    // A submission event that credits no December carries no December fields on
+    // its closing balance and no `decemberCreditTotal` on its payload. The
+    // balance portion is passed through absent, while the credit-total base
+    // (an internal number) coalesces to zero.
+    const noDecemberEvent = {
       ...ledgerId,
       number: 1,
       kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
@@ -102,14 +100,14 @@ describe('currentWasteBalance', () => {
       createdBy: { id: 'system' }
     }
     const repository = partialMock({
-      findLatestInLedger: async () => preFeatureEvent,
-      findLatestInLedgerByKind: async () => preFeatureEvent
+      findLatestInLedger: async () => noDecemberEvent,
+      findLatestInLedgerByKind: async () => noDecemberEvent
     })
 
     const balance = await currentWasteBalance(repository, ledgerId)
 
-    expect(balance?.decemberAmount).toBe(0)
-    expect(balance?.decemberAvailableAmount).toBe(0)
+    expect(balance?.decemberAmount).toBeUndefined()
+    expect(balance?.decemberAvailableAmount).toBeUndefined()
     expect(balance?.decemberCreditTotal).toBe(0)
   })
 

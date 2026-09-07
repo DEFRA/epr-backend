@@ -8,9 +8,12 @@
  * @property {number} total Credits minus debits.
  * @property {number} available The total, minus the tonnage a created note
  *   holds back.
- * @property {number} decemberTotal The portion of `total` accrued from
- *   December-dated tonnage. The general portion is the difference.
- * @property {number} decemberAvailable The portion of `available` for December.
+ * @property {number} [decemberTotal] The portion of `total` accrued from
+ *   December-dated tonnage. The general portion is the difference. Absent when
+ *   the balance has no December portion (an output accreditation, or a balance
+ *   before its first December load).
+ * @property {number} [decemberAvailable] The portion of `available` for
+ *   December. Absent alongside `decemberTotal`.
  */
 
 /**
@@ -111,8 +114,12 @@ const toBalance = ({
 }) => ({
   total: amount,
   available: availableAmount,
-  decemberTotal: decemberAmount ?? 0,
-  decemberAvailable: decemberAvailableAmount ?? 0
+  // Surface the December split only when the balance carries one, so an output
+  // accreditation's events read as having no December portion rather than zero.
+  ...(decemberAmount !== undefined && {
+    decemberTotal: decemberAmount,
+    decemberAvailable: decemberAvailableAmount
+  })
 })
 
 /**

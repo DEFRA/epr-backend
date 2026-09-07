@@ -104,15 +104,11 @@ describe(`GET ${registrationWasteBalanceLedgerGetPath}`, () => {
       balance: {
         opening: {
           total: 0,
-          available: 0,
-          decemberTotal: 0,
-          decemberAvailable: 0
+          available: 0
         },
         closing: {
           total: 100,
-          available: 100,
-          decemberTotal: 0,
-          decemberAvailable: 0
+          available: 100
         }
       },
       summaryLog: { id: 'log-1', creditTotal: 100 }

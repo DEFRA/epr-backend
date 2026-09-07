@@ -91,7 +91,13 @@ export const submitSummaryLog = (
   return [
     {
       kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-      payload: { summaryLogId, creditTotal, decemberCreditTotal },
+      // Carry `decemberCreditTotal` only when this submission credits December;
+      // a submission with none leaves it off, and readers coalesce to 0.
+      payload: {
+        summaryLogId,
+        creditTotal,
+        ...(decemberCreditTotal !== 0 && { decemberCreditTotal })
+      },
       openingBalance: balance,
       closingBalance: closingForSummaryLogSubmitted(
         balance,

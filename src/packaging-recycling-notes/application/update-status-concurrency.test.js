@@ -475,9 +475,7 @@ describe('updatePrnStatus concurrency', () => {
     expect(latest?.number).toBe(2)
     expect(latest?.closingBalance).toEqual({
       amount: ISSUED_AMOUNT + TONNAGE,
-      availableAmount: RINGFENCED_AVAILABLE + TONNAGE,
-      decemberAmount: 0,
-      decemberAvailableAmount: 0
+      availableAmount: RINGFENCED_AVAILABLE + TONNAGE
     })
   })
 
@@ -582,9 +580,7 @@ describe('updatePrnStatus concurrency', () => {
     expect(latest?.number).toBe(3)
     expect(latest?.closingBalance).toEqual({
       amount: ISSUED_AMOUNT + TONNAGE,
-      availableAmount: RINGFENCED_AVAILABLE + TONNAGE,
-      decemberAmount: 0,
-      decemberAvailableAmount: 0
+      availableAmount: RINGFENCED_AVAILABLE + TONNAGE
     })
   })
 

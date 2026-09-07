@@ -110,15 +110,11 @@ describe(`GET ${accreditationWasteBalanceLedgerGetPath}`, () => {
       balance: {
         opening: {
           total: 100,
-          available: 100,
-          decemberTotal: 0,
-          decemberAvailable: 0
+          available: 100
         },
         closing: {
           total: 100,
-          available: 50,
-          decemberTotal: 0,
-          decemberAvailable: 0
+          available: 50
         }
       },
       prn: { id: 'prn-1', prnNumber: null, tonnage: 50 }
