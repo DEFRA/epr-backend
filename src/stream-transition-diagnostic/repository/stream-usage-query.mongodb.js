@@ -27,6 +27,7 @@ const REGISTERED_ONLY = [...REGISTERED_ONLY_PROCESSING_TYPES]
 
 const STREAM_REGISTERED_ONLY = 'registeredOnly'
 const STREAM_ACCREDITED = 'accredited'
+const SUBMITTED_AT_FIELD = '$submittedAt'
 
 /**
  * Successful submissions only: a rejected or failed upload produced no
@@ -70,7 +71,7 @@ const STREAM_USAGE_PIPELINE = [
         $min: {
           $cond: [
             { $eq: ['$_stream', STREAM_REGISTERED_ONLY] },
-            '$submittedAt',
+            SUBMITTED_AT_FIELD,
             null
           ]
         }
@@ -79,7 +80,7 @@ const STREAM_USAGE_PIPELINE = [
         $max: {
           $cond: [
             { $eq: ['$_stream', STREAM_REGISTERED_ONLY] },
-            '$submittedAt',
+            SUBMITTED_AT_FIELD,
             null
           ]
         }
@@ -88,7 +89,7 @@ const STREAM_USAGE_PIPELINE = [
         $min: {
           $cond: [
             { $eq: ['$_stream', STREAM_ACCREDITED] },
-            '$submittedAt',
+            SUBMITTED_AT_FIELD,
             null
           ]
         }
@@ -97,7 +98,7 @@ const STREAM_USAGE_PIPELINE = [
         $max: {
           $cond: [
             { $eq: ['$_stream', STREAM_ACCREDITED] },
-            '$submittedAt',
+            SUBMITTED_AT_FIELD,
             null
           ]
         }
