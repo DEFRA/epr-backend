@@ -7,12 +7,14 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   WASTE_PROCESSING_TYPE,
   ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
@@ -32,6 +34,13 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 export const packagingRecyclingNotesCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes'
+
+/**
+ * Response-body `code` the create-draft 409 carries when tonnage exceeds the
+ * available balance. Contract shared with the frontend, which discriminates on
+ * `error.output.payload.code` to render a friendly inline tonnage error.
+ */
+const INSUFFICIENT_AVAILABLE_BALANCE_CODE = 'INSUFFICIENT_AVAILABLE_BALANCE'
 
 /**
  * Build PRN data for creation
@@ -167,6 +176,47 @@ const throwCreatePrnError = (error, logger) => {
   )
 }
 
+/**
+ * Reject draft creation when the requested tonnage exceeds the available waste
+ * balance, reusing the 409 the confirm-time transition raises for
+ * INSUFFICIENT_AVAILABLE_BALANCE. Point-in-time validation, not a reservation:
+ * the balance is ringfenced only at the draft → awaiting_authorisation
+ * transition. An empty ledger resolves to zero available, so any positive
+ * tonnage is refused.
+ *
+ * The 409 carries a machine-readable `code` in its body so the frontend can
+ * render a friendly inline tonnage error rather than the raw error page; the
+ * frontend discriminates on `error.output.payload.code`.
+ *
+ * @param {Object} params
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
+ * @param {number} params.tonnage
+ */
+const assertSufficientAvailableBalance = async ({
+  ledgerRepository,
+  ledgerId,
+  tonnage
+}) => {
+  const balance =
+    await createWasteBalanceService(ledgerRepository).currentBalance(ledgerId)
+
+  const availableAmount = balance?.availableAmount ?? 0
+  if (tonnage > availableAmount) {
+    throw conflict(
+      'Insufficient available waste balance',
+      INSUFFICIENT_AVAILABLE_BALANCE_CODE,
+      {
+        event: {
+          action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
+          reason: `tonnage=${tonnage} available=${availableAmount} rejected=${INSUFFICIENT_AVAILABLE_BALANCE_CODE}`
+        },
+        payload: { code: INSUFFICIENT_AVAILABLE_BALANCE_CODE }
+      }
+    )
+  }
+}
+
 export const packagingRecyclingNotesCreate = {
   method: 'POST',
   path: packagingRecyclingNotesCreatePath,
@@ -189,6 +239,7 @@ export const packagingRecyclingNotesCreate = {
     const {
       packagingRecyclingNotesRepository,
       organisationsRepository,
+      ledgerRepository,
       params,
       payload,
       logger,
@@ -213,6 +264,12 @@ export const packagingRecyclingNotesCreate = {
       if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
         throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
       }
+
+      await assertSufficientAvailableBalance({
+        ledgerRepository,
+        ledgerId: { organisationId, registrationId, accreditationId },
+        tonnage: payload.tonnage
+      })
 
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
