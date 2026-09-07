@@ -11,6 +11,7 @@ import { resolveOverseasSiteDetails } from '#overseas-sites/application/resolve-
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { OverseasSiteDetail } from '#overseas-sites/application/resolve-overseas-site-details.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
@@ -21,6 +22,25 @@ const objectId = () =>
   Joi.string()
     .pattern(/^[a-f0-9]{24}$/)
     .required()
+
+/**
+ * Approval is granted per accreditation and re-decided each scheme year, so an
+ * approval date is a fact about an accreditation rather than about a
+ * registration's site list. A regulator reads it from the accreditation-keyed
+ * route.
+ *
+ * @param {Record<string, OverseasSiteDetail>} sites
+ * @returns {Record<string, Omit<OverseasSiteDetail, 'validFrom'>>}
+ */
+const withoutApprovalDate = (sites) =>
+  Object.fromEntries(
+    Object.entries(sites).map(
+      ([orsId, { name, country, address, coordinates }]) => [
+        orsId,
+        { name, country, address, coordinates }
+      ]
+    )
+  )
 
 export const registrationOverseasSitesList = {
   method: 'GET',
@@ -57,9 +77,11 @@ export const registrationOverseasSitesList = {
         registrationId
       )
 
-      const sites = await resolveOverseasSiteDetails(
-        overseasSitesRepository,
-        registration.overseasSites
+      const sites = withoutApprovalDate(
+        await resolveOverseasSiteDetails(
+          overseasSitesRepository,
+          registration.overseasSites
+        )
       )
 
       logger.info({

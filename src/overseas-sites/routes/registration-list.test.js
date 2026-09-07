@@ -102,6 +102,8 @@ const buildReprocessor = () => {
 const pathFor = ({ organisationId, registrationId }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/overseas-sites`
 
+// No validFrom: approval belongs to an accreditation, not to the registration's
+// site list, so this route does not serve it.
 const expectedDetail = {
   '001': {
     name: 'Beta Reprocessor',
@@ -113,8 +115,7 @@ const expectedDetail = {
       stateOrRegion: 'Berlin-Mitte',
       postcode: '10115'
     },
-    coordinates: '52.5200,13.4050',
-    validFrom: approvedFrom.toISOString()
+    coordinates: '52.5200,13.4050'
   },
   '002': {
     name: 'Alpha Reprocessor',
@@ -123,8 +124,7 @@ const expectedDetail = {
       line1: '1 Rue de Test',
       townOrCity: 'Paris'
     },
-    coordinates: null,
-    validFrom: null
+    coordinates: null
   }
 }
 
