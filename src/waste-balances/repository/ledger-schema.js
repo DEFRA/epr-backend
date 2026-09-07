@@ -27,7 +27,7 @@ const PRN_KINDS = new Set([
 
 /**
  * `decemberAmount` and `decemberAvailableAmount` are the portions of `amount`
- * and `availableAmount` accrued from December-dated tonnage (PAE-1920). December
+ * and `availableAmount` accrued from December-dated tonnage. December
  * is additive: the general balance is `amount - decemberAmount`, derived and
  * never stored. They are optional on the type because events written before
  * this feature (and yet to be backfilled) carry no December portion; the schema

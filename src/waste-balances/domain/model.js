@@ -17,7 +17,7 @@
  * ledger has no submission yet.
  *
  * `decemberAmount` and `decemberAvailableAmount` are the December portions of
- * `amount` and `availableAmount` (PAE-1920); the general balance is
+ * `amount` and `availableAmount`; the general balance is
  * `amount - decemberAmount`, derived and never stored. `decemberCreditTotal` is
  * the December counterpart of `creditTotal`, the base the next submission's
  * December delta is measured against.

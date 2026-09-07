@@ -9,7 +9,7 @@
  * @property {number} available The total, minus the tonnage a created note
  *   holds back.
  * @property {number} decemberTotal The portion of `total` accrued from
- *   December-dated tonnage (PAE-1920). The general portion is the difference.
+ *   December-dated tonnage. The general portion is the difference.
  * @property {number} decemberAvailable The portion of `available` for December.
  */
 
