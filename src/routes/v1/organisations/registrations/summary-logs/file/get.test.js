@@ -157,7 +157,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
     })
 
-    it('returns 403 when user is not a service maintainer', async () => {
+    it('returns 403 when the caller holds neither scope', async () => {
       const { server } = await createServer()
 
       const response = await server.inject({
@@ -167,6 +167,49 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       })
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
+    // Both are required, so holding either alone is refused. Reading a
+    // summary log means reading an organisation's record, and the second
+    // scope is what says which organisations the caller may read.
+    it.each([
+      ['summary-log.read alone', ['summary-log.read']],
+      ['organisation.read alone', ['organisation.read']]
+    ])('returns 403 for a caller holding %s', async (_, scope) => {
+      const { server } = await createServer()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`,
+        ...asServiceMaintainer({ scope })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
+    // A regulator holds this pair and no admin scope. The file hangs off the
+    // ledger a regulator reads, so it is reachable on the same entitlement as
+    // the record itself rather than on an admin tier.
+    it('serves the file to a caller holding both scopes and no admin scope', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
+        })
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`,
+        ...asServiceMaintainer({
+          scope: ['summary-log.read', 'organisation.read']
+        })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
     })
   })
 })

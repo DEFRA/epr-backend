@@ -17,9 +17,19 @@ export const summaryLogFile = {
   path: summaryLogFilePath,
   options: {
     auth: {
-      scope: [SCOPES.adminRead]
+      // Both required (+ prefix): the caller must hold summary-log.read AND
+      // organisation.read - the same pair the sibling document endpoint
+      // requires, this being the same record in its original form. Admins and
+      // regulators have a blanket organisation.read; an operator only holds it
+      // for their own org, so this scopes the file to callers entitled to read
+      // that organisation.
+      //
+      // This was admin-only until a regulator was given the ledger the file
+      // hangs off. No admin lost access in the change: every admin tier
+      // already holds both scopes.
+      scope: [`+${SCOPES.summaryLogRead}`, `+${SCOPES.organisationRead}`]
     },
-    tags: ['api', 'admin']
+    tags: ['api']
   },
   /**
    * @param {HapiRequest & {
