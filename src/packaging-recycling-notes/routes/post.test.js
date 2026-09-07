@@ -597,6 +597,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(response.payload).toContain(
           'Insufficient available waste balance'
         )
+        expect(JSON.parse(response.payload).code).toBe(
+          'INSUFFICIENT_AVAILABLE_BALANCE'
+        )
         expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
       })
 
@@ -636,6 +639,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
         expect(response.payload).toContain(
           'Insufficient available waste balance'
+        )
+        expect(JSON.parse(response.payload).code).toBe(
+          'INSUFFICIENT_AVAILABLE_BALANCE'
         )
         expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
       })

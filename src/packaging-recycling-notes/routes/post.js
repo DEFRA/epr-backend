@@ -7,6 +7,7 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   WASTE_PROCESSING_TYPE,
   ACCREDITATION_STATUS
@@ -33,6 +34,13 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 export const packagingRecyclingNotesCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes'
+
+/**
+ * Response-body `code` the create-draft 409 carries when tonnage exceeds the
+ * available balance. Contract shared with the frontend, which discriminates on
+ * `error.output.payload.code` to render a friendly inline tonnage error.
+ */
+const INSUFFICIENT_AVAILABLE_BALANCE_CODE = 'INSUFFICIENT_AVAILABLE_BALANCE'
 
 /**
  * Build PRN data for creation
@@ -176,6 +184,10 @@ const throwCreatePrnError = (error, logger) => {
  * transition. An empty ledger resolves to zero available, so any positive
  * tonnage is refused.
  *
+ * The 409 carries a machine-readable `code` in its body so the frontend can
+ * render a friendly inline tonnage error rather than the raw error page; the
+ * frontend discriminates on `error.output.payload.code`.
+ *
  * @param {Object} params
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
@@ -189,8 +201,19 @@ const assertSufficientAvailableBalance = async ({
   const balance =
     await createWasteBalanceService(ledgerRepository).currentBalance(ledgerId)
 
-  if (tonnage > (balance?.availableAmount ?? 0)) {
-    throw Boom.conflict('Insufficient available waste balance')
+  const availableAmount = balance?.availableAmount ?? 0
+  if (tonnage > availableAmount) {
+    throw conflict(
+      'Insufficient available waste balance',
+      INSUFFICIENT_AVAILABLE_BALANCE_CODE,
+      {
+        event: {
+          action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
+          reason: `tonnage=${tonnage} available=${availableAmount} rejected=${INSUFFICIENT_AVAILABLE_BALANCE_CODE}`
+        },
+        payload: { code: INSUFFICIENT_AVAILABLE_BALANCE_CODE }
+      }
+    )
   }
 }
 
