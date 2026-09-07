@@ -6,6 +6,7 @@ import {
   RECEIVED_LOADS_FOR_REPROCESSING_FIELDS,
   SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/shared/fields.js'
+import { RECEIVED_LOADS_FIELDS as EXPORTER_RECEIVED_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { partialMock } from '#test/type-helpers.js'
 
@@ -48,6 +49,20 @@ const sentOnRow = (dateLeft, transactionAmount) => ({
   }
 })
 
+const exporterRow = (dateReceivedByOsr, transactionAmount) => ({
+  rowId: 'e',
+  wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+  data: {
+    processingType: PROCESSING_TYPES.EXPORTER,
+    [EXPORTER_RECEIVED_FIELDS.DATE_RECEIVED_BY_OSR]: dateReceivedByOsr
+  },
+  classification: {
+    outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+    reasons: [],
+    transactionAmount
+  }
+})
+
 describe('decemberCreditTotalFor', () => {
   it('sums only December-dated contributions, carrying their signs', () => {
     const rows = [
@@ -57,6 +72,19 @@ describe('decemberCreditTotalFor', () => {
     ]
 
     expect(decemberCreditTotalFor(rows, ACCREDITATION)).toBe(150)
+  })
+
+  // Locks which crediting rows accrue December for each processing type that
+  // reaches this code. December is only computed for accredited submissions, so
+  // the registered-only template variants never arrive here and are out of
+  // scope. If the crediting table for a type ever changes, one of these breaks.
+  it('accrues December for an exporter row keyed on its received-by-OSR date', () => {
+    const rows = [
+      exporterRow('2025-12-18T00:00:00.000Z', 200),
+      exporterRow('2025-06-18T00:00:00.000Z', 100)
+    ]
+
+    expect(decemberCreditTotalFor(rows, ACCREDITATION)).toBe(200)
   })
 
   it('excludes the adjacent months and the prior year December (year boundary)', () => {

@@ -86,7 +86,7 @@ describe('December waste balance accrual', () => {
       ...asOperator()
     })
 
-    await pollWhileStatus(
+    const status = await pollWhileStatus(
       server,
       organisationId,
       registrationId,
@@ -95,6 +95,10 @@ describe('December waste balance accrual', () => {
         waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
       }
     )
+
+    // Guard against a silently failed or timed-out submission: the balance
+    // assertions that follow only mean something once the log is submitted.
+    expect(status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
   }
 
   describe('exporter', () => {

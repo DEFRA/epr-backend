@@ -27,6 +27,10 @@ import { getTargetAmount } from './target-amount.js'
  * @returns {number}
  */
 export const decemberCreditTotalFor = (classifiedRows, accreditation) => {
+  // Accreditation windows are calendar-year aligned, so the year the
+  // accreditation starts is the year of its spendable December: the December
+  // key is that year's `-12`. An accreditation with no validFrom yields no
+  // December key and so accrues nothing.
   const decemberKey = `${accreditation.validFrom?.slice(0, 4)}-12`
 
   let total = 0
