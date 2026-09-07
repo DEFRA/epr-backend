@@ -24,10 +24,8 @@ const objectId = () =>
     .required()
 
 /**
- * Approval is granted per accreditation and re-decided each scheme year, so an
- * approval date is a fact about an accreditation rather than about a
- * registration's site list. A regulator reads it from the accreditation-keyed
- * route.
+ * This resource serves where a site is, not whether it is approved. Approval
+ * dates are served by the accreditation-keyed route.
  *
  * @param {Record<string, OverseasSiteDetail>} sites
  * @returns {Record<string, Omit<OverseasSiteDetail, 'validFrom'>>}

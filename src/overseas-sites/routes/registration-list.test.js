@@ -102,8 +102,6 @@ const buildReprocessor = () => {
 const pathFor = ({ organisationId, registrationId }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/overseas-sites`
 
-// No validFrom: approval belongs to an accreditation, not to the registration's
-// site list, so this route does not serve it.
 const expectedDetail = {
   '001': {
     name: 'Beta Reprocessor',
