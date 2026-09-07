@@ -25,6 +25,9 @@ import { COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
 
 const REGISTERED_ONLY = [...REGISTERED_ONLY_PROCESSING_TYPES]
 
+const STREAM_REGISTERED_ONLY = 'registeredOnly'
+const STREAM_ACCREDITED = 'accredited'
+
 /**
  * Successful submissions only: a rejected or failed upload produced no
  * reported data, so it is not one of the times an operator "got data in" on a
@@ -44,8 +47,8 @@ const STREAM_USAGE_PIPELINE = [
       _stream: {
         $cond: [
           { $in: ['$meta.PROCESSING_TYPE', REGISTERED_ONLY] },
-          'registeredOnly',
-          'accredited'
+          STREAM_REGISTERED_ONLY,
+          STREAM_ACCREDITED
         ]
       }
     }
@@ -58,29 +61,45 @@ const STREAM_USAGE_PIPELINE = [
       },
       streams: { $addToSet: '$_stream' },
       registeredOnlySubmissions: {
-        $sum: { $cond: [{ $eq: ['$_stream', 'registeredOnly'] }, 1, 0] }
+        $sum: { $cond: [{ $eq: ['$_stream', STREAM_REGISTERED_ONLY] }, 1, 0] }
       },
       accreditedSubmissions: {
-        $sum: { $cond: [{ $eq: ['$_stream', 'accredited'] }, 1, 0] }
+        $sum: { $cond: [{ $eq: ['$_stream', STREAM_ACCREDITED] }, 1, 0] }
       },
       registeredOnlyFirstSubmittedAt: {
         $min: {
-          $cond: [{ $eq: ['$_stream', 'registeredOnly'] }, '$submittedAt', null]
+          $cond: [
+            { $eq: ['$_stream', STREAM_REGISTERED_ONLY] },
+            '$submittedAt',
+            null
+          ]
         }
       },
       registeredOnlyLastSubmittedAt: {
         $max: {
-          $cond: [{ $eq: ['$_stream', 'registeredOnly'] }, '$submittedAt', null]
+          $cond: [
+            { $eq: ['$_stream', STREAM_REGISTERED_ONLY] },
+            '$submittedAt',
+            null
+          ]
         }
       },
       accreditedFirstSubmittedAt: {
         $min: {
-          $cond: [{ $eq: ['$_stream', 'accredited'] }, '$submittedAt', null]
+          $cond: [
+            { $eq: ['$_stream', STREAM_ACCREDITED] },
+            '$submittedAt',
+            null
+          ]
         }
       },
       accreditedLastSubmittedAt: {
         $max: {
-          $cond: [{ $eq: ['$_stream', 'accredited'] }, '$submittedAt', null]
+          $cond: [
+            { $eq: ['$_stream', STREAM_ACCREDITED] },
+            '$submittedAt',
+            null
+          ]
         }
       },
       registrationNumbers: { $addToSet: '$meta.REGISTRATION_NUMBER' },
