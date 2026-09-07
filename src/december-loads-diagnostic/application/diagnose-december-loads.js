@@ -1,5 +1,5 @@
 import { processingTypeFor } from '#waste-balances/domain/credited-tonnage.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import {
   accreditationDecemberKey,
@@ -10,7 +10,7 @@ import {
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
- * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
+ * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationContext} AccreditationContext
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
  */
@@ -41,59 +41,6 @@ import {
  * @property {DecemberLoadRow[]} reports
  * @property {DecemberLoadsSummary} summary
  */
-
-/**
- * @typedef {Object} AccreditationContext
- * @property {Organisation} organisation
- * @property {import('#domain/organisations/registration.js').Registration} registration
- * @property {import('#domain/organisations/accreditation.js').Accreditation} accreditation
- */
-
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
-
-/**
- * Index every non-test organisation's accreditations by id, carrying the linked
- * registration and owning organisation. No status filtering: the diagnostic
- * reports on what a submission holds, not the accreditation's current status.
- * Test organisations' accreditation ids are collected separately so an
- * unmatched ledger entry can be told apart from an orphan.
- *
- * @param {Organisation[]} organisations
- * @returns {{ index: Map<string, AccreditationContext>, testOrgAccreditationIds: Set<string> }}
- */
-const indexAccreditations = (organisations) => {
-  /** @type {Map<string, AccreditationContext>} */
-  const index = new Map()
-  /** @type {Set<string>} */
-  const testOrgAccreditationIds = new Set()
-  for (const organisation of organisations) {
-    if (TEST_ORGANISATIONS.has(organisation.orgId)) {
-      for (const accreditation of organisation.accreditations) {
-        testOrgAccreditationIds.add(accreditation.id)
-      }
-      continue
-    }
-    const accreditationById = new Map(
-      organisation.accreditations.map((accreditation) => [
-        accreditation.id,
-        accreditation
-      ])
-    )
-    for (const registration of organisation.registrations) {
-      const accreditation = registration.accreditationId
-        ? accreditationById.get(registration.accreditationId)
-        : undefined
-      if (accreditation) {
-        index.set(accreditation.id, {
-          organisation,
-          registration,
-          accreditation
-        })
-      }
-    }
-  }
-  return { index, testOrgAccreditationIds }
-}
 
 /**
  * Sort affected rows by organisation reference (numerically) then accreditation
