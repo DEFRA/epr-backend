@@ -14,6 +14,8 @@ import {
  * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
  * @property {number} creditTotal - The latest summary-log credit total, the base
  *   the next submission's delta is measured against.
+ * @property {number} decemberCreditTotal - The latest summary-log December credit
+ *   total, the base the next submission's December delta is measured against.
  */
 
 /**
@@ -62,7 +64,11 @@ export const PRN_COMMAND_REJECTION = Object.freeze({
  * The state a summary-log submission opens a ledger from when none exists.
  * @type {LedgerState}
  */
-const EMPTY_STATE = { balance: ZERO_BALANCE, creditTotal: 0 }
+const EMPTY_STATE = {
+  balance: ZERO_BALANCE,
+  creditTotal: 0,
+  decemberCreditTotal: 0
+}
 
 /**
  * Record a summary-log submission. An empty ledger is permissible — the first
@@ -73,17 +79,26 @@ const EMPTY_STATE = { balance: ZERO_BALANCE, creditTotal: 0 }
  * @param {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload} submission
  * @returns {BalanceEvent[]}
  */
-export const submitSummaryLog = (state, { summaryLogId, creditTotal }) => {
-  const { balance, creditTotal: previousCreditTotal } = state ?? EMPTY_STATE
+export const submitSummaryLog = (
+  state,
+  { summaryLogId, creditTotal, decemberCreditTotal = 0 }
+) => {
+  const {
+    balance,
+    creditTotal: previousCreditTotal,
+    decemberCreditTotal: previousDecemberCreditTotal = 0
+  } = state ?? EMPTY_STATE
   return [
     {
       kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-      payload: { summaryLogId, creditTotal },
+      payload: { summaryLogId, creditTotal, decemberCreditTotal },
       openingBalance: balance,
       closingBalance: closingForSummaryLogSubmitted(
         balance,
         creditTotal,
-        previousCreditTotal
+        previousCreditTotal,
+        decemberCreditTotal,
+        previousDecemberCreditTotal
       )
     }
   ]

@@ -16,49 +16,110 @@ import {
 describe('submitSummaryLog', () => {
   it('opens a ledger from zero on the first submission', () => {
     expect(
-      submitSummaryLog(null, { summaryLogId: 'log-1', creditTotal: 150 })
+      submitSummaryLog(null, {
+        summaryLogId: 'log-1',
+        creditTotal: 150,
+        decemberCreditTotal: 40
+      })
     ).toEqual([
       {
         kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-1', creditTotal: 150 },
+        payload: {
+          summaryLogId: 'log-1',
+          creditTotal: 150,
+          decemberCreditTotal: 40
+        },
         openingBalance: ZERO_BALANCE,
-        closingBalance: { amount: 150, availableAmount: 150 }
+        closingBalance: {
+          amount: 150,
+          availableAmount: 150,
+          decemberAmount: 40,
+          decemberAvailableAmount: 40
+        }
       }
     ])
   })
 
   it('shifts the balance by the delta against the previous credit total', () => {
     const state = {
-      balance: { amount: 150, availableAmount: 120 },
-      creditTotal: 150
+      balance: {
+        amount: 150,
+        availableAmount: 120,
+        decemberAmount: 40,
+        decemberAvailableAmount: 40
+      },
+      creditTotal: 150,
+      decemberCreditTotal: 40
     }
 
     expect(
-      submitSummaryLog(state, { summaryLogId: 'log-2', creditTotal: 200 })
+      submitSummaryLog(state, {
+        summaryLogId: 'log-2',
+        creditTotal: 200,
+        decemberCreditTotal: 60
+      })
     ).toEqual([
       {
         kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-2', creditTotal: 200 },
-        openingBalance: { amount: 150, availableAmount: 120 },
-        closingBalance: { amount: 200, availableAmount: 170 }
+        payload: {
+          summaryLogId: 'log-2',
+          creditTotal: 200,
+          decemberCreditTotal: 60
+        },
+        openingBalance: {
+          amount: 150,
+          availableAmount: 120,
+          decemberAmount: 40,
+          decemberAvailableAmount: 40
+        },
+        closingBalance: {
+          amount: 200,
+          availableAmount: 170,
+          decemberAmount: 60,
+          decemberAvailableAmount: 60
+        }
       }
     ])
   })
 
   it('lowers the balance when a resubmission reduces the credit total', () => {
     const state = {
-      balance: { amount: 200, availableAmount: 170 },
-      creditTotal: 200
+      balance: {
+        amount: 200,
+        availableAmount: 170,
+        decemberAmount: 60,
+        decemberAvailableAmount: 60
+      },
+      creditTotal: 200,
+      decemberCreditTotal: 60
     }
 
     expect(
-      submitSummaryLog(state, { summaryLogId: 'log-3', creditTotal: 150 })
+      submitSummaryLog(state, {
+        summaryLogId: 'log-3',
+        creditTotal: 150,
+        decemberCreditTotal: 40
+      })
     ).toEqual([
       {
         kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'log-3', creditTotal: 150 },
-        openingBalance: { amount: 200, availableAmount: 170 },
-        closingBalance: { amount: 150, availableAmount: 120 }
+        payload: {
+          summaryLogId: 'log-3',
+          creditTotal: 150,
+          decemberCreditTotal: 40
+        },
+        openingBalance: {
+          amount: 200,
+          availableAmount: 170,
+          decemberAmount: 60,
+          decemberAvailableAmount: 60
+        },
+        closingBalance: {
+          amount: 150,
+          availableAmount: 120,
+          decemberAmount: 40,
+          decemberAvailableAmount: 40
+        }
       }
     ])
   })

@@ -108,8 +108,18 @@ describe(`GET ${accreditationWasteBalanceLedgerGetPath}`, () => {
       createdAt: '2026-01-15T10:00:00.000Z',
       createdBy: { id: 'user-1', name: 'Test User' },
       balance: {
-        opening: { total: 100, available: 100 },
-        closing: { total: 100, available: 50 }
+        opening: {
+          total: 100,
+          available: 100,
+          decemberTotal: 0,
+          decemberAvailable: 0
+        },
+        closing: {
+          total: 100,
+          available: 50,
+          decemberTotal: 0,
+          decemberAvailable: 0
+        }
       },
       prn: { id: 'prn-1', prnNumber: null, tonnage: 50 }
     })

@@ -190,7 +190,9 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     expect(latestEvent.payload).toEqual({ prnId, amount: 500 })
     expect(latestEvent.closingBalance).toEqual({
       amount: SEED_BALANCE.amount + 500,
-      availableAmount: SEED_BALANCE.availableAmount + 500
+      availableAmount: SEED_BALANCE.availableAmount + 500,
+      decemberAmount: 0,
+      decemberAvailableAmount: 0
     })
 
     expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
@@ -537,7 +539,9 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
       expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
       expect(latestEvent.closingBalance).toEqual({
         amount: SEED_BALANCE.amount + 500,
-        availableAmount: SEED_BALANCE.availableAmount + 500
+        availableAmount: SEED_BALANCE.availableAmount + 500,
+        decemberAmount: 0,
+        decemberAvailableAmount: 0
       })
 
       expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
@@ -658,7 +662,9 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
     expect(latestEvent.closingBalance).toEqual({
       amount: SEED_BALANCE.amount + 500,
-      availableAmount: SEED_BALANCE.availableAmount + 500
+      availableAmount: SEED_BALANCE.availableAmount + 500,
+      decemberAmount: 0,
+      decemberAvailableAmount: 0
     })
   })
 })

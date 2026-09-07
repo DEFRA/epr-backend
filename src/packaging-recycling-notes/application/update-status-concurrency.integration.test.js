@@ -245,7 +245,9 @@ describe('PRN status concurrency against real MongoDB', () => {
     })
     expect(balance?.closingBalance).toEqual({
       amount: OPENING + TONNAGE,
-      availableAmount: OPENING + TONNAGE
+      availableAmount: OPENING + TONNAGE,
+      decemberAmount: 0,
+      decemberAvailableAmount: 0
     })
   })
 

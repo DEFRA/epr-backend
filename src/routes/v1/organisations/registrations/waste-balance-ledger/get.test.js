@@ -102,8 +102,18 @@ describe(`GET ${registrationWasteBalanceLedgerGetPath}`, () => {
       createdAt: '2026-01-15T10:00:00.000Z',
       createdBy: { id: 'user-1', name: 'Test User' },
       balance: {
-        opening: { total: 0, available: 0 },
-        closing: { total: 100, available: 100 }
+        opening: {
+          total: 0,
+          available: 0,
+          decemberTotal: 0,
+          decemberAvailable: 0
+        },
+        closing: {
+          total: 100,
+          available: 100,
+          decemberTotal: 0,
+          decemberAvailable: 0
+        }
       },
       summaryLog: { id: 'log-1', creditTotal: 100 }
     })

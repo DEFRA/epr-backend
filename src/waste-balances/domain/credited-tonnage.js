@@ -142,7 +142,7 @@ const expandMonthRange = ({ fromMonth, toMonth }) => {
  * @param {ProcessingType} processingType
  * @returns {RowContribution | null}
  */
-const contributionFor = (rowState, processingType) => {
+export const contributionFor = (rowState, processingType) => {
   const { wasteRecordType, data } = rowState
 
   if (processingType === PROCESSING_TYPES.EXPORTER) {

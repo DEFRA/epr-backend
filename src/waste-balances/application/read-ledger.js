@@ -8,6 +8,9 @@
  * @property {number} total Credits minus debits.
  * @property {number} available The total, minus the tonnage a created note
  *   holds back.
+ * @property {number} decemberTotal The portion of `total` accrued from
+ *   December-dated tonnage (PAE-1920). The general portion is the difference.
+ * @property {number} decemberAvailable The portion of `available` for December.
  */
 
 /**
@@ -100,9 +103,16 @@ const toLedger = ({ organisationId, registrationId, accreditationId }) => ({
  * @param {LedgerBalanceSnapshot} snapshot
  * @returns {LedgerBalance}
  */
-const toBalance = ({ amount, availableAmount }) => ({
+const toBalance = ({
+  amount,
+  availableAmount,
+  decemberAmount,
+  decemberAvailableAmount
+}) => ({
   total: amount,
-  available: availableAmount
+  available: availableAmount,
+  decemberTotal: decemberAmount ?? 0,
+  decemberAvailable: decemberAvailableAmount ?? 0
 })
 
 /**

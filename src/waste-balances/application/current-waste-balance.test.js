@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { createInMemoryLedgerRepository } from '../repository/ledger-inmemory.js'
 import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
 import { buildLedgerEvent } from '../repository/ledger-test-data.js'
+import { partialMock } from '#test/type-helpers.js'
 import { currentWasteBalance } from './current-waste-balance.js'
 
 const ledgerId = {
@@ -50,8 +51,11 @@ describe('currentWasteBalance', () => {
       accreditationId: 'acc-1',
       amount: 1000,
       availableAmount: 700,
+      decemberAmount: 0,
+      decemberAvailableAmount: 0,
       eventNumber: 2,
-      creditTotal: 1000
+      creditTotal: 1000,
+      decemberCreditTotal: 0
     })
   })
 
@@ -80,6 +84,33 @@ describe('currentWasteBalance', () => {
     const balance = await currentWasteBalance(repository, ledgerId)
 
     expect(balance?.creditTotal).toBe(1000)
+  })
+
+  it('coalesces a missing December portion to zero for a pre-feature event', async () => {
+    // A submission event written before December accrual carries no December
+    // fields on its closing balance or payload. Reading it directly (bypassing
+    // the schema defaults an append would apply) must still resolve December to
+    // zero rather than undefined.
+    const preFeatureEvent = {
+      ...ledgerId,
+      number: 1,
+      kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+      payload: { summaryLogId: 'log-1', creditTotal: 1000 },
+      openingBalance: { amount: 0, availableAmount: 0 },
+      closingBalance: { amount: 1000, availableAmount: 1000 },
+      createdAt: new Date(),
+      createdBy: { id: 'system' }
+    }
+    const repository = partialMock({
+      findLatestInLedger: async () => preFeatureEvent,
+      findLatestInLedgerByKind: async () => preFeatureEvent
+    })
+
+    const balance = await currentWasteBalance(repository, ledgerId)
+
+    expect(balance?.decemberAmount).toBe(0)
+    expect(balance?.decemberAvailableAmount).toBe(0)
+    expect(balance?.decemberCreditTotal).toBe(0)
   })
 
   it('reports a zero credit total for a ledgerId with no submission event', async () => {

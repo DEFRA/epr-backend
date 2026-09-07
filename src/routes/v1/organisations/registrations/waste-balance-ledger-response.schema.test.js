@@ -8,8 +8,13 @@ const commonKeys = () => ({
   createdAt: new Date('2026-01-15T10:00:00.000Z'),
   createdBy: { id: 'user-1', name: 'Jo Sample', email: 'jo@example.com' },
   balance: {
-    opening: { total: 0, available: 0 },
-    closing: { total: 100, available: 100 }
+    opening: { total: 0, available: 0, decemberTotal: 0, decemberAvailable: 0 },
+    closing: {
+      total: 100,
+      available: 100,
+      decemberTotal: 0,
+      decemberAvailable: 0
+    }
   }
 })
 

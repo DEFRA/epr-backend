@@ -6,6 +6,7 @@ import {
   buildLedgerId,
   buildPrnAcceptedEvent
 } from '../repository/ledger-test-data.js'
+import { partialMock } from '#test/type-helpers.js'
 import { readLedger } from './read-ledger.js'
 
 /**
@@ -75,11 +76,95 @@ describe('reading a waste balance ledger', () => {
     expect(result.events).toEqual([
       expect.objectContaining({
         balance: {
-          opening: { total: 10, available: 8 },
-          closing: { total: 30, available: 28 }
+          opening: {
+            total: 10,
+            available: 8,
+            decemberTotal: 0,
+            decemberAvailable: 0
+          },
+          closing: {
+            total: 30,
+            available: 28,
+            decemberTotal: 0,
+            decemberAvailable: 0
+          }
         }
       })
     ])
+  })
+
+  it('carries the December closing and available portions of each balance', async () => {
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        openingBalance: {
+          amount: 10,
+          availableAmount: 8,
+          decemberAmount: 3,
+          decemberAvailableAmount: 3
+        },
+        closingBalance: {
+          amount: 30,
+          availableAmount: 28,
+          decemberAmount: 12,
+          decemberAvailableAmount: 12
+        }
+      })
+    ])
+
+    const result = await readLedger(
+      ledgerRepository,
+      noteReader,
+      buildLedgerId()
+    )
+
+    expect(result.events).toEqual([
+      expect.objectContaining({
+        balance: {
+          opening: {
+            total: 10,
+            available: 8,
+            decemberTotal: 3,
+            decemberAvailable: 3
+          },
+          closing: {
+            total: 30,
+            available: 28,
+            decemberTotal: 12,
+            decemberAvailable: 12
+          }
+        }
+      })
+    ])
+  })
+
+  it('resolves a missing December portion to zero for a pre-feature event', async () => {
+    // An event written before December accrual carries no December fields on
+    // its balance snapshots. Read directly (bypassing the schema defaults an
+    // append applies), it must still surface December as zero.
+    const preFeatureRepository = partialMock({
+      findAllInLedger: async () => [buildLedgerEvent()]
+    })
+
+    const result = await readLedger(
+      preFeatureRepository,
+      noteReader,
+      buildLedgerId()
+    )
+
+    expect(result.events[0].balance).toEqual({
+      opening: {
+        total: 0,
+        available: 0,
+        decemberTotal: 0,
+        decemberAvailable: 0
+      },
+      closing: {
+        total: 100,
+        available: 100,
+        decemberTotal: 0,
+        decemberAvailable: 0
+      }
+    })
   })
 
   it('names the summary log a submission event credits', async () => {

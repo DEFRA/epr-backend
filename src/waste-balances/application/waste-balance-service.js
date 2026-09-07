@@ -59,9 +59,12 @@ const createLedgerCommands = (ledgerRepository) => {
       state: {
         balance: {
           amount: balance.amount,
-          availableAmount: balance.availableAmount
+          availableAmount: balance.availableAmount,
+          decemberAmount: balance.decemberAmount,
+          decemberAvailableAmount: balance.decemberAvailableAmount
         },
-        creditTotal: balance.creditTotal
+        creditTotal: balance.creditTotal,
+        decemberCreditTotal: balance.decemberCreditTotal
       },
       head: balance.eventNumber
     }

@@ -28,17 +28,23 @@ export const currentWasteBalance = async (ledgerRepository, ledgerId) => {
     LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
   )
 
-  const creditTotal = latestSubmission
-    ? /** @type {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload} */ (
-        latestSubmission.payload
-      ).creditTotal
+  const submissionPayload =
+    /** @type {import('../repository/ledger-schema.js').SummaryLogSubmittedPayload} */ (
+      latestSubmission?.payload
+    )
+  const creditTotal = latestSubmission ? submissionPayload.creditTotal : 0
+  const decemberCreditTotal = latestSubmission
+    ? (submissionPayload.decemberCreditTotal ?? 0)
     : 0
 
   return {
     ...ledgerId,
     amount: latest.closingBalance.amount,
     availableAmount: latest.closingBalance.availableAmount,
+    decemberAmount: latest.closingBalance.decemberAmount ?? 0,
+    decemberAvailableAmount: latest.closingBalance.decemberAvailableAmount ?? 0,
     eventNumber: latest.number,
-    creditTotal
+    creditTotal,
+    decemberCreditTotal
   }
 }

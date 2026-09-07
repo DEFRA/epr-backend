@@ -45,7 +45,12 @@ export const testFindLatestInLedgerBehaviour = (it) => {
 
       expect(result).not.toBeNull()
       expect(result.number).toBe(1)
-      expect(result.closingBalance).toEqual({ amount: 50, availableAmount: 40 })
+      expect(result.closingBalance).toEqual({
+        amount: 50,
+        availableAmount: 40,
+        decemberAmount: 0,
+        decemberAvailableAmount: 0
+      })
     })
 
     it('returns the highest-numbered event when many exist', async () => {
@@ -85,7 +90,12 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       )
 
       expect(result.number).toBe(3)
-      expect(result.closingBalance).toEqual({ amount: 30, availableAmount: 25 })
+      expect(result.closingBalance).toEqual({
+        amount: 30,
+        availableAmount: 25,
+        decemberAmount: 0,
+        decemberAvailableAmount: 0
+      })
     })
 
     it('isolates results by ledgerId', async () => {
@@ -172,11 +182,15 @@ export const testFindLatestInLedgerBehaviour = (it) => {
 
       expect(nullLedger.closingBalance).toEqual({
         amount: 0,
-        availableAmount: 0
+        availableAmount: 0,
+        decemberAmount: 0,
+        decemberAvailableAmount: 0
       })
       expect(nonNullLedger.closingBalance).toEqual({
         amount: 999,
-        availableAmount: 999
+        availableAmount: 999,
+        decemberAmount: 0,
+        decemberAvailableAmount: 0
       })
     })
 

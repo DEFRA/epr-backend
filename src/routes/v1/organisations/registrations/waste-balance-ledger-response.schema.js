@@ -15,7 +15,9 @@ const ledgerSchema = Joi.object({
 
 const balanceSchema = Joi.object({
   total: Joi.number().required(),
-  available: Joi.number().required()
+  available: Joi.number().required(),
+  decemberTotal: Joi.number().required(),
+  decemberAvailable: Joi.number().required()
 })
 
 /**
