@@ -77,13 +77,15 @@ describe('closingForSummaryLogSubmitted', () => {
           decemberAvailableAmount: 0
         },
         0.3,
+        0.1,
+        0.3,
         0.1
       )
     ).toEqual({
       amount: 0.2,
       availableAmount: 0.2,
-      decemberAmount: 0,
-      decemberAvailableAmount: 0
+      decemberAmount: 0.2,
+      decemberAvailableAmount: 0.2
     })
   })
 
