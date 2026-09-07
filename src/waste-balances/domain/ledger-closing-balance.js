@@ -10,10 +10,10 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
  * `availableAmount` shift by delta.
  *
  * The December portion moves by its own `decemberCreditTotal` delta in the same
- * way (PAE-1920): a resubmission moving tonnage into or out of December
- * self-corrects because the delta is measured against the previous submission's
- * December total. With no ringfencing yet (PAE-1922),
- * `decemberAvailableAmount` tracks `decemberAmount`.
+ * way: a resubmission moving tonnage into or out of December self-corrects
+ * because the delta is measured against the previous submission's December
+ * total. `decemberAmount` and `decemberAvailableAmount` move together by that
+ * delta.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
  * @param {number} creditTotal
@@ -47,10 +47,9 @@ export const closingForSummaryLogSubmitted = (
 /**
  * Compute closing balance for a PRN event.
  *
- * The December portion is carried through unchanged (PAE-1920): December
- * spending is out of scope (PAE-1922), but the latest event's closing balance
- * must still surface December, so every PRN event preserves the opening
- * December amounts by spreading `opening`.
+ * A PRN event moves the total fields but leaves the December amounts as they
+ * opened, so the latest event's closing balance still surfaces the December
+ * portion. Every case spreads `opening` to carry those amounts through.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
  * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
