@@ -6,6 +6,35 @@ import { contributionFor } from '#waste-balances/domain/credited-tonnage.js'
 import { getTargetAmount } from './target-amount.js'
 
 /**
+ * The signed tonnage a single classified row accrues to the December portion:
+ * its target amount when it contributes to the balance and its balance-
+ * affecting date falls in the December bucket, and zero otherwise.
+ * Reprocessor-output rows and rows whose table does not contribute return zero
+ * before their date is read.
+ *
+ * @param {import('./target-amount.js').ClassifiedRow} row
+ * @param {string} decemberKey - the `YYYY-MM` key of the accreditation-year December
+ * @returns {number}
+ */
+const decemberAmountForRow = (row, decemberKey) => {
+  const processingType = row.data.processingType
+  if (processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
+    return 0
+  }
+
+  const contribution = contributionFor(row, processingType)
+  if (contribution === null) {
+    return 0
+  }
+
+  if (monthKeyForDate(row.data[contribution.dateField]) !== decemberKey) {
+    return 0
+  }
+
+  return getTargetAmount(row.classification)
+}
+
+/**
  * The signed tonnage that accrues to the December portion of a summary-log
  * submission: the sum, over the classified rows, of each row's signed target
  * amount whose balance-affecting date falls in December of the accreditation
@@ -35,21 +64,7 @@ export const decemberCreditTotalFor = (classifiedRows, accreditation) => {
 
   let total = 0
   for (const row of classifiedRows) {
-    const processingType = row.data.processingType
-    if (processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
-      continue
-    }
-
-    const contribution = contributionFor(row, processingType)
-    if (contribution === null) {
-      continue
-    }
-
-    if (monthKeyForDate(row.data[contribution.dateField]) !== decemberKey) {
-      continue
-    }
-
-    total = toNumber(add(total, getTargetAmount(row.classification)))
+    total = toNumber(add(total, decemberAmountForRow(row, decemberKey)))
   }
 
   return total
