@@ -86,7 +86,7 @@ export const submitSummaryLog = (
   const {
     balance,
     creditTotal: previousCreditTotal,
-    decemberCreditTotal: previousDecemberCreditTotal = 0
+    decemberCreditTotal: previousDecemberCreditTotal
   } = state ?? EMPTY_STATE
   return [
     {
