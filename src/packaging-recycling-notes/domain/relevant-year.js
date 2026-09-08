@@ -89,3 +89,22 @@ export function relevantYearWindowRefusal(relevantYear, now) {
     ? undefined
     : new RelevantYearWindowExpiredError(relevantYear)
 }
+
+/**
+ * The relevant year an accreditation's `validFrom` names. Approved
+ * accreditations always carry `validFrom`; a missing value here means the
+ * caller reached this on a path that should never have — every relevant-year
+ * consumer only ever serves approved accreditations.
+ *
+ * @param {{ id: string; validFrom?: string }} accreditation
+ * @returns {number}
+ * @throws {Error} if validFrom is missing
+ */
+export function deriveAccreditationYear(accreditation) {
+  if (!accreditation.validFrom) {
+    throw new Error(
+      `Accreditation ${accreditation.id} is missing validFrom — cannot derive accreditation year`
+    )
+  }
+  return new Date(accreditation.validFrom).getFullYear()
+}
