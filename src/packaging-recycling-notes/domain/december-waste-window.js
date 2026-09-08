@@ -1,3 +1,4 @@
+import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/relevant-year.js'
 
 /**
@@ -12,37 +13,10 @@ import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/rel
  * `windowStart` is resolved against `now` in UK local time (Europe/London),
  * because unlike `relevant-year.js`'s fixed 31 January boundary (always GMT
  * by coincidence) a configured start can fall in any month, including one
- * inside British Summer Time. Resolved by formatting the real instant to a
- * UK-local string via `Intl.DateTimeFormat` and comparing strings, not by
- * constructing a UK-local instant from wall-clock fields - the latter needs
- * hand-rolled DST arithmetic and produced a silently wrong result by an hour
- * when tried during design.
+ * inside British Summer Time.
  */
 
 const UK_TIME_ZONE = 'Europe/London'
-
-const ukDateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
-  timeZone: UK_TIME_ZONE,
-  hour12: false,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit'
-})
-
-/**
- * @param {Date} date
- * @returns {string} `YYYY-MM-DDTHH:mm` in UK local time
- */
-function formatUkDateTime(date) {
-  /** @type {Record<string, string>} */
-  const parts = ukDateTimeFormatter
-    .formatToParts(date)
-    .reduce((acc, { type, value }) => ({ ...acc, [type]: value }), {})
-
-  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
-}
 
 /**
  * Whether `now` falls within the December Waste declaration window for an
@@ -58,11 +32,11 @@ export function isWithinDecemberWasteWindow(
   now,
   { windowStart }
 ) {
-  const stamp = formatUkDateTime(now)
+  const stamp = formatLocalDateTime(now, UK_TIME_ZONE)
   const start = `${relevantYear}-${windowStart}`
 
   // Deliberate string comparison, not numeric: both sides are zero-padded
   // `YYYY-MM-DDTHH:mm` and sort chronologically as strings - that is the
-  // whole point of the format, see formatUkDateTime above.
-  return stamp >= start && isBeforeEndOfRelevantYear(relevantYear, now) // NOSONAR: javascript:S3003
+  // whole point of the format, see formatLocalDateTime.
+  return stamp >= start && isBeforeEndOfRelevantYear(relevantYear, now)
 }

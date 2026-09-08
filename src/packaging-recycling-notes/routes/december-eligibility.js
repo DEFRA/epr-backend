@@ -8,8 +8,8 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { isWithinDecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js'
-import { deriveAccreditationYear } from '#packaging-recycling-notes/domain/relevant-year.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */

@@ -138,6 +138,16 @@ export const testCreateBehaviour = (it) => {
 
         expect(prn1.id).not.toBe(prn2.id)
       })
+
+      it('preserves isDecemberWaste when creating', async () => {
+        const prnInput = buildDraftPrn({ isDecemberWaste: true })
+
+        const created = await repository.create(prnInput)
+        const found = await repository.findById(created.id)
+
+        expect(created.isDecemberWaste).toBe(true)
+        expect(found.isDecemberWaste).toBe(true)
+      })
     })
 
     describe('optional fields', () => {

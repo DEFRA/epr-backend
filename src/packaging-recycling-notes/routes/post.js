@@ -7,6 +7,7 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   WASTE_PROCESSING_TYPE,
@@ -14,7 +15,6 @@ import {
 } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { deriveAccreditationYear } from '#packaging-recycling-notes/domain/relevant-year.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
