@@ -352,7 +352,16 @@ describe('GET registration overseas-sites', () => {
       sites: [siteOne, siteTwo]
     })
 
-    const response = await server.inject({
+    const underItsOwner = await server.inject({
+      method: 'GET',
+      url: pathFor({
+        organisationId: otherOrganisation.id,
+        registrationId: othersOwnSites.id
+      }),
+      ...asRegulator()
+    })
+
+    const underTheOtherOrganisation = await server.inject({
       method: 'GET',
       url: pathFor({
         organisationId: organisation.id,
@@ -361,7 +370,8 @@ describe('GET registration overseas-sites', () => {
       ...asRegulator()
     })
 
-    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(underItsOwner.statusCode).toBe(StatusCodes.OK)
+    expect(underTheOtherOrganisation.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
   it('404s when the organisation does not exist', async () => {
