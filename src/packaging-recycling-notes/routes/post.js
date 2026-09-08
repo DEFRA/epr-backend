@@ -29,6 +29,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  *   issuedToOrganisation: { id: string; name: string; tradingName?: string; registrationType?: string };
  *   tonnage: number;
  *   notes?: string;
+ *   isDecemberWaste: boolean;
  * }} PackagingRecyclingNotesCreatePayload
  */
 
@@ -97,7 +98,7 @@ const buildPrnData = ({
     tonnage: payload.tonnage,
     isExport,
     ...(payload.notes && { notes: payload.notes }),
-    isDecemberWaste: false,
+    isDecemberWaste: payload.isDecemberWaste,
     status: {
       currentStatus: PRN_STATUS.DRAFT,
       currentStatusAt: now,

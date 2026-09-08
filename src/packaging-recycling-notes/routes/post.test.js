@@ -158,6 +158,34 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(body.wasteProcessingType).toBe(WASTE_PROCESSING_TYPE.REPROCESSOR)
       })
 
+      it('persists isDecemberWaste true when submitted', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: { ...validPayload, isDecemberWaste: true }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+        const body = JSON.parse(response.payload)
+        expect(body.isDecemberWaste).toBe(true)
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({ isDecemberWaste: true })
+        )
+      })
+
+      it('persists isDecemberWaste false when submitted explicitly', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: { ...validPayload, isDecemberWaste: false }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+        expect(JSON.parse(response.payload).isDecemberWaste).toBe(false)
+      })
+
       it('creates PRN with correct organisation and registration', async () => {
         await server.inject({
           method: 'POST',
@@ -522,6 +550,20 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: {
             ...validPayload,
             notes: 'a'.repeat(201)
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 422 when isDecemberWaste is not a boolean', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: {
+            ...validPayload,
+            isDecemberWaste: 'yes'
           }
         })
 
