@@ -32,6 +32,9 @@ import { reportsPostPath } from './post.js'
 import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
 
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
+
 vi.mock('#reports/application/audit.js', () => ({
   auditReportCreate: vi.fn().mockResolvedValue(undefined),
   auditReportDelete: vi.fn().mockResolvedValue(undefined)
@@ -59,6 +62,10 @@ describe(`POST ${reportsPostPath}`, () => {
     })
   ]
 
+  /**
+   * @param {Omit<Organisation, 'status'>} org
+   * @param {SummaryLogRowStateEntry[]} [rows]
+   */
   const seedRepositories = async (org, registration, rows = DEFAULT_ROWS) => {
     const accreditationId = registration.accreditationId ?? null
     const ledgerId = {
@@ -116,7 +123,7 @@ describe(`POST ${reportsPostPath}`, () => {
    * @param {object} [registrationOverrides]
    * @param {object} [options]
    * @param {boolean} [options.reportDataValidationEnabled]
-   * @param {any[]} [options.rows]
+   * @param {SummaryLogRowStateEntry[]} [options.rows]
    * @param {boolean} [options.accredited] - Link an approved accreditation (monthly cadence).
    */
   const createServer = async (
