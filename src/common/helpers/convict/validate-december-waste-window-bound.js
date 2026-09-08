@@ -2,14 +2,20 @@ import Joi from 'joi'
 
 const BOUND_PATTERN = /^(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/
 
-const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+const FIRST_MONTH = 1
+const LAST_MONTH = 12
+const FIRST_DAY = 1
 
 /**
+ * The last real day of `month` (1-indexed), for the current year - relies on
+ * `new Date`'s day-0-of-next-month rollback rather than a hardcoded
+ * days-per-month table, so leap years resolve correctly without a table
+ * lookup.
  * @param {number} month - 1-indexed
  * @returns {number}
  */
 function maxDayOfMonth(month) {
-  return DAYS_IN_MONTH[month - 1]
+  return new Date(new Date().getFullYear(), month, 0).getDate()
 }
 
 /**
@@ -24,7 +30,12 @@ function validateDecemberWasteWindowBound(value) {
   const month = Number(value.slice(0, 2))
   const day = Number(value.slice(3, 5))
 
-  if (month < 1 || month > 12 || day < 1 || day > maxDayOfMonth(month)) {
+  if (
+    month < FIRST_MONTH ||
+    month > LAST_MONTH ||
+    day < FIRST_DAY ||
+    day > maxDayOfMonth(month)
+  ) {
     throw new Error(
       `decemberWaste.windowStart must name a real date, got "${value}"`
     )
