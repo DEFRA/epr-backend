@@ -60,5 +60,22 @@ export const testFindByIdsBehaviour = (it) => {
 
       expect(result).toStrictEqual([])
     })
+
+    it('skips ids that are not well formed', async () => {
+      const site = await repository.create(
+        buildOverseasSite({ name: 'Only One' })
+      )
+
+      const result = await repository.findByIds([site.id, 'not-an-object-id'])
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('Only One')
+    })
+
+    it('returns empty array when every id is not well formed', async () => {
+      const result = await repository.findByIds(['', 'not-an-object-id'])
+
+      expect(result).toStrictEqual([])
+    })
   })
 }
