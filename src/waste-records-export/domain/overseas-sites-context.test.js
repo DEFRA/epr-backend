@@ -61,15 +61,40 @@ describe('buildOverseasSitesContext', () => {
     })
   })
 
-  it('emits null validFrom, siteName and country when the referenced site is missing from the map', () => {
+  it('omits the key when the referenced site is missing from the map', () => {
     const registration = {
       overseasSites: {
         '001': { overseasSiteId: 'site-missing' }
       }
     }
     const sitesById = new Map()
+    expect(buildOverseasSitesContext(registration, sitesById)).toEqual({})
+  })
+
+  it('keeps the keys that do resolve when another does not', () => {
+    const registration = {
+      overseasSites: {
+        '001': { overseasSiteId: 'site-missing' },
+        '042': { overseasSiteId: 'site-a' }
+      }
+    }
+    const sitesById = new Map([
+      [
+        'site-a',
+        buildSite({
+          id: 'site-a',
+          validFrom: new Date('2026-01-01'),
+          name: 'Acme Recycling',
+          country: 'Germany'
+        })
+      ]
+    ])
     expect(buildOverseasSitesContext(registration, sitesById)).toEqual({
-      '001': { validFrom: null, siteName: null, country: null }
+      '042': {
+        validFrom: new Date('2026-01-01'),
+        siteName: 'Acme Recycling',
+        country: 'Germany'
+      }
     })
   })
 })
