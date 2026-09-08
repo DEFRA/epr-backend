@@ -1,24 +1,40 @@
 import { describe, it, expect, vi } from 'vitest'
 
 import { getOrsDetailsMap } from './get-ors-details-map.js'
+import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
+
+/** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
+
+/**
+ * A stored site, as the repository would return it. The identifier is taken
+ * before the builder runs and applied after it, so an identifier the caller
+ * passes cannot be discarded by the spread.
+ *
+ * @param {Partial<OverseasSite>} [overrides]
+ * @returns {OverseasSite}
+ */
+const storedSite = ({ id = 'site-aaa', ...overrides } = {}) => ({
+  ...buildOverseasSite(overrides),
+  id
+})
 
 describe('getOrsDetailsMap', () => {
   it('returns a map keyed by ORS key with siteName, country, and validFrom', async () => {
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn().mockResolvedValue([
-        {
+        storedSite({
           id: 'site-aaa',
           name: 'EuroPlast GmbH',
           country: 'Germany',
           validFrom: new Date('2025-01-15')
-        },
-        {
+        }),
+        storedSite({
           id: 'site-bbb',
           name: 'RecyclePlast SA',
           country: 'France',
           validFrom: new Date('2024-06-01')
-        }
+        })
       ])
     })
     const overseasSites = {
