@@ -13,7 +13,8 @@ export const packagingRecyclingNotesCreatePayloadSchema = Joi.object({
     registrationType: Joi.string().optional()
   }).required(),
   tonnage: wholeTonnage().min(POSITIVE_INTEGER).required(),
-  notes: Joi.string().max(MAX_NOTES_LENGTH).allow('').optional()
+  notes: Joi.string().max(MAX_NOTES_LENGTH).allow('').optional(),
+  isDecemberWaste: Joi.boolean().default(false)
 }).messages({
   'any.required': '{#label} is required',
   'number.min': '{#label} must be at least {#limit}',
