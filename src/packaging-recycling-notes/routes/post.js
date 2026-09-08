@@ -14,6 +14,7 @@ import {
 } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { deriveAccreditationYear } from '#packaging-recycling-notes/domain/relevant-year.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
@@ -109,20 +110,6 @@ const buildPrnData = ({
     updatedAt: now,
     updatedBy: user
   }
-}
-
-/**
- * @param {{ id: string; validFrom?: string }} accreditation
- * @returns {number}
- * @throws {Error} if validFrom is missing — approved accreditations must have it
- */
-const deriveAccreditationYear = (accreditation) => {
-  if (!accreditation.validFrom) {
-    throw new Error(
-      `Accreditation ${accreditation.id} is missing validFrom — cannot derive accreditation year`
-    )
-  }
-  return new Date(accreditation.validFrom).getFullYear()
 }
 
 /**
