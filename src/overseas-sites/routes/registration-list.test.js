@@ -344,34 +344,36 @@ describe('GET registration overseas-sites', () => {
 
   it('404s when the registration belongs to another organisation', async () => {
     const { organisation } = buildRegisteredOnlyExporter()
-    const { organisation: otherOrganisation, registration: othersOwnSites } =
-      buildRegisteredOnlyExporter()
+    const {
+      organisation: owningOrganisation,
+      registration: theirRegistration
+    } = buildRegisteredOnlyExporter()
     await startServer({
       organisation,
-      otherOrganisations: [otherOrganisation],
+      otherOrganisations: [owningOrganisation],
       sites: [siteOne, siteTwo]
     })
 
     const underItsOwner = await server.inject({
       method: 'GET',
       url: pathFor({
-        organisationId: otherOrganisation.id,
-        registrationId: othersOwnSites.id
+        organisationId: owningOrganisation.id,
+        registrationId: theirRegistration.id
       }),
       ...asRegulator()
     })
 
-    const underTheOtherOrganisation = await server.inject({
+    const underTheWrongOrganisation = await server.inject({
       method: 'GET',
       url: pathFor({
         organisationId: organisation.id,
-        registrationId: othersOwnSites.id
+        registrationId: theirRegistration.id
       }),
       ...asRegulator()
     })
 
     expect(underItsOwner.statusCode).toBe(StatusCodes.OK)
-    expect(underTheOtherOrganisation.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(underTheWrongOrganisation.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
   it('404s when the organisation does not exist', async () => {
