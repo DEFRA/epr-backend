@@ -45,7 +45,8 @@ describe('mock-repositories', () => {
         'findAllByOrgReg',
         'findAllSummaryLogStatsByRegistrationId',
         'transitionToSubmittingExclusive',
-        'getDownloadUrl'
+        'getDownloadUrl',
+        'getDownloadUrlByFileId'
       ]
     },
     createMockSystemLogsRepository: {

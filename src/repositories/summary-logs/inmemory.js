@@ -189,22 +189,31 @@ const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
 
 const SIXTY_SECONDS = 60
 
-const getDownloadUrl = (staleCache) => async (summaryLogId) => {
-  const validatedId = validateId(summaryLogId)
-  const doc = staleCache.get(validatedId)
-
+const signDownload = (doc, reference) => {
   if (!doc?.summaryLog?.file?.uri) {
     throw Boom.notFound('Summary log file not found')
   }
 
-  const { Bucket, Key } = parseSummaryLogUri(
-    doc.summaryLog.file.uri,
-    validatedId
-  )
+  const { Bucket, Key } = parseSummaryLogUri(doc.summaryLog.file.uri, reference)
   const url = `https://${Bucket}.test/${Key}/download`
   const expiresAt = new Date(Date.now() + SIXTY_SECONDS * 1000).toISOString()
 
   return { url, expiresAt }
+}
+
+const getDownloadUrl = (staleCache) => async (summaryLogId) => {
+  const validatedId = validateId(summaryLogId)
+
+  return signDownload(staleCache.get(validatedId), validatedId)
+}
+
+const getDownloadUrlByFileId = (staleCache) => async (fileId) => {
+  const validatedId = validateId(fileId)
+  const doc = [...staleCache.values()].find(
+    (held) => held?.summaryLog?.file?.id === validatedId
+  )
+
+  return signDownload(doc, validatedId)
 }
 
 const transitionToSubmittingExclusive =
@@ -286,6 +295,7 @@ export const createInMemorySummaryLogsRepository = () => {
       storage,
       staleCache
     ),
-    getDownloadUrl: getDownloadUrl(staleCache)
+    getDownloadUrl: getDownloadUrl(staleCache),
+    getDownloadUrlByFileId: getDownloadUrlByFileId(staleCache)
   })
 }

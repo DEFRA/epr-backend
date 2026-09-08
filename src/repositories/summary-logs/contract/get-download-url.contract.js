@@ -79,4 +79,60 @@ export const testGetDownloadUrlBehaviour = (it) => {
       )
     })
   })
+
+  // The waste balance ledger records a submission by its file, so a download
+  // reached from the ledger arrives with that id and no other.
+  describe('getDownloadUrlByFileId', () => {
+    let repository
+
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repository = summaryLogsRepository
+      }
+    )
+
+    it('returns a download URL for the log holding that file', async () => {
+      const id = `contract-${randomUUID()}`
+      const fileId = `file-${randomUUID()}`
+      await repository.insert(
+        id,
+        summaryLogFactory.submitted({
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          file: { id: fileId, uri: 's3://re-ex-summary-logs/uploads/f.xlsx' }
+        })
+      )
+
+      const result = await repository.getDownloadUrlByFileId(fileId)
+
+      expect(result.url).toContain('uploads/f.xlsx')
+      expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(Date.now())
+    })
+
+    it('throws 404 when no summary log holds that file', async () => {
+      await expect(
+        repository.getDownloadUrlByFileId(`file-${randomUUID()}`)
+      ).rejects.toThrow('Summary log file not found')
+    })
+
+    it('does not answer to the summary log id', async () => {
+      const id = `contract-${randomUUID()}`
+      await repository.insert(
+        id,
+        summaryLogFactory.submitted({
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
+        })
+      )
+
+      await expect(repository.getDownloadUrlByFileId(id)).rejects.toThrow(
+        'Summary log file not found'
+      )
+    })
+  })
 }

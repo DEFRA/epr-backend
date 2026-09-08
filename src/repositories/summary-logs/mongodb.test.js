@@ -58,6 +58,84 @@ describe('MongoDB summary logs repository', () => {
     testSummaryLogsRepositoryContract(it)
   })
 
+  // Not a contract assertion: the in-memory adapter fabricates its URL.
+  describe('getDownloadUrl names the file', () => {
+    /** @returns {Promise<string | undefined>} */
+    const lastSignedDisposition = async () => {
+      const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner')
+      const input = /** @type {{ ResponseContentDisposition?: string }} */ (
+        vi.mocked(getSignedUrl).mock.lastCall?.[1].input
+      )
+
+      return input?.ResponseContentDisposition
+    }
+
+    /**
+     * @param {SummaryLogsRepository} repository
+     * @param {Record<string, unknown>} [overrides]
+     * @returns {Promise<string>}
+     */
+    const insertSubmitted = async (repository, overrides = {}) => {
+      const id = `mongo-${randomUUID()}`
+      await repository.insert(
+        id,
+        summaryLogFactory.submitted({
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' },
+          ...overrides
+        })
+      )
+
+      return id
+    }
+
+    it('names it for the registration and the moment it was submitted', async ({
+      summaryLogsRepository
+    }) => {
+      const id = await insertSubmitted(summaryLogsRepository)
+
+      await summaryLogsRepository.getDownloadUrl(id, 'R26ER5000000002PA')
+
+      expect(await lastSignedDisposition()).toBe(
+        'attachment; filename="R26ER5000000002PA-2024-01-01-000000.xlsx"'
+      )
+    })
+
+    it('names a resubmission on the same day differently', async ({
+      summaryLogsRepository
+    }) => {
+      const morning = await insertSubmitted(summaryLogsRepository, {
+        submittedAt: '2024-01-01T09:15:30.000Z'
+      })
+      const afternoon = await insertSubmitted(summaryLogsRepository, {
+        submittedAt: '2024-01-01T16:42:07.000Z'
+      })
+
+      await summaryLogsRepository.getDownloadUrl(morning, 'R26ER5000000002PA')
+      const first = await lastSignedDisposition()
+
+      await summaryLogsRepository.getDownloadUrl(afternoon, 'R26ER5000000002PA')
+
+      expect(first).toBe(
+        'attachment; filename="R26ER5000000002PA-2024-01-01-091530.xlsx"'
+      )
+      expect(await lastSignedDisposition()).toBe(
+        'attachment; filename="R26ER5000000002PA-2024-01-01-164207.xlsx"'
+      )
+    })
+
+    it('names it not at all where the registration carries no number', async ({
+      summaryLogsRepository
+    }) => {
+      const id = await insertSubmitted(summaryLogsRepository)
+
+      await summaryLogsRepository.getDownloadUrl(id)
+
+      expect(await lastSignedDisposition()).toBeUndefined()
+    })
+  })
+
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
       const mockDb = createMockDb({
