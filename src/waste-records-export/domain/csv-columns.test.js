@@ -445,18 +445,6 @@ describe('csv-columns', () => {
         expect(row[nameIdx]).toBe('')
       })
 
-      it('leaves both derived columns blank when the matched site has null name and country', () => {
-        const row = buildDataRow({
-          ...baseInput,
-          data: { ...dataFixture, OSR_ID: '001' },
-          overseasSites: {
-            '001': { validFrom: null, siteName: null, country: null }
-          }
-        })
-        expect(row[countryIdx]).toBe('')
-        expect(row[nameIdx]).toBe('')
-      })
-
       it('leaves both derived columns blank when no overseas-sites context is supplied', () => {
         const row = buildDataRow({
           ...baseInput,

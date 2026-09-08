@@ -15,9 +15,22 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
+
+/** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+
+/**
+ * @param {string} id
+ * @param {Partial<OverseasSite>} [overrides]
+ * @returns {OverseasSite}
+ */
+const overseasSite = (id, overrides) => ({
+  ...buildOverseasSite(overrides),
+  id
+})
 
 const collect = async (gen) => {
   const out = []
@@ -139,7 +152,7 @@ const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
  *   orgs?: any[],
  *   seeds?: any[],
  *   summaryLogs?: Record<string, any[]>,
- *   sites?: any[],
+ *   sites?: OverseasSite[],
  *   organisationId?: string,
  *   registrationId?: string
  * }} [options]
@@ -387,7 +400,9 @@ describe('streamCsvExport', () => {
     })
     const findAll = vi
       .fn()
-      .mockResolvedValue([{ id: 'site-a', validFrom: new Date('2026-01-01') }])
+      .mockResolvedValue([
+        overseasSite('site-a', { validFrom: new Date('2026-01-01') })
+      ])
     const deps = await buildDeps({
       orgs: [org],
       seeds: [
@@ -427,7 +442,7 @@ describe('streamCsvExport', () => {
     })
     const deps = await buildDeps({
       orgs: [org],
-      sites: [{ id: 'site-a', validFrom: new Date('2026-09-01') }],
+      sites: [overseasSite('site-a', { validFrom: new Date('2026-09-01') })],
       seeds: [
         {
           accreditationId: 'acc-1',
@@ -480,12 +495,11 @@ describe('streamCsvExport', () => {
         }
       ],
       sites: [
-        {
-          id: 'site-a',
+        overseasSite('site-a', {
           validFrom: new Date('2026-01-01'),
           name: 'Acme Recycling',
           country: 'Germany'
-        }
+        })
       ]
     })
 
