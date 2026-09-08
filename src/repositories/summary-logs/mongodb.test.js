@@ -94,7 +94,7 @@ describe('MongoDB summary logs repository', () => {
       return id
     }
 
-    it('names it for the registration and the day it was submitted', async ({
+    it('names it for the registration and the moment it was submitted', async ({
       summaryLogsRepository
     }) => {
       const id = await insertSubmitted(summaryLogsRepository)
@@ -102,7 +102,32 @@ describe('MongoDB summary logs repository', () => {
       await summaryLogsRepository.getDownloadUrl(id, 'R26ER5000000002PA')
 
       expect(await lastSignedDisposition()).toBe(
-        'attachment; filename="R26ER5000000002PA-2024-01-01.xlsx"'
+        'attachment; filename="R26ER5000000002PA-2024-01-01-000000.xlsx"'
+      )
+    })
+
+    // A rejected log is corrected and sent again the same day, so the date
+    // alone would leave a regulator with two files it could not tell apart.
+    it('names a resubmission on the same day differently', async ({
+      summaryLogsRepository
+    }) => {
+      const morning = await insertSubmitted(summaryLogsRepository, {
+        submittedAt: '2024-01-01T09:15:30.000Z'
+      })
+      const afternoon = await insertSubmitted(summaryLogsRepository, {
+        submittedAt: '2024-01-01T16:42:07.000Z'
+      })
+
+      await summaryLogsRepository.getDownloadUrl(morning, 'R26ER5000000002PA')
+      const first = await lastSignedDisposition()
+
+      await summaryLogsRepository.getDownloadUrl(afternoon, 'R26ER5000000002PA')
+
+      expect(first).toBe(
+        'attachment; filename="R26ER5000000002PA-2024-01-01-091530.xlsx"'
+      )
+      expect(await lastSignedDisposition()).toBe(
+        'attachment; filename="R26ER5000000002PA-2024-01-01-164207.xlsx"'
       )
     })
 

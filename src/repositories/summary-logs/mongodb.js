@@ -317,11 +317,12 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
-const ISO_DATE_LENGTH = 10
+const ISO_SECONDS_LENGTH = 19
 
 /**
- * Names a download for its registration and the day it was submitted, so a
- * regulator gathering several can tell them apart.
+ * Names a download for its registration and the moment it was submitted, so a
+ * regulator gathering several can tell them apart. Down to the second, because
+ * a rejected log is often corrected and resubmitted the same day.
  *
  * Composed here rather than by the caller because only this read holds
  * `submittedAt`, while the number is the caller's to look up. Any log with a
@@ -331,8 +332,14 @@ const ISO_DATE_LENGTH = 10
  * @param {string} submittedAt
  * @returns {string}
  */
-const downloadDisposition = (registrationNumber, submittedAt) =>
-  `attachment; filename="${registrationNumber}-${submittedAt.slice(0, ISO_DATE_LENGTH)}.xlsx"`
+const downloadDisposition = (registrationNumber, submittedAt) => {
+  const submitted = submittedAt
+    .slice(0, ISO_SECONDS_LENGTH)
+    .replace('T', '-')
+    .replaceAll(':', '')
+
+  return `attachment; filename="${registrationNumber}-${submitted}.xlsx"`
+}
 
 const getDownloadUrl =
   (db, s3Client, preSignedUrlExpiry) =>
