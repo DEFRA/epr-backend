@@ -15,6 +15,11 @@
  * destination country used to populate the derived OSR_NAME_REVISED /
  * OSR_COUNTRY_REVISED export columns.
  *
+ * A reference that resolves to no stored site is omitted rather than carried
+ * with null fields, so classification reads it as a site it cannot find
+ * (VAL015) rather than one awaiting approval (VAL014), and the derived export
+ * columns fall back to blank as they already do for a row with no OSR_ID.
+ *
  * Pure function — no IO. Use after pre-loading all sites once via
  * `overseasSitesRepository.findAll()`.
  *
@@ -29,10 +34,12 @@ export const buildOverseasSitesContext = (registration, sitesById) => {
   const context = {}
   for (const [osrKey, { overseasSiteId }] of entries) {
     const site = sitesById.get(overseasSiteId)
-    context[osrKey] = {
-      validFrom: site?.validFrom ?? null,
-      siteName: site?.name ?? null,
-      country: site?.country ?? null
+    if (site) {
+      context[osrKey] = {
+        validFrom: site.validFrom ?? null,
+        siteName: site.name ?? null,
+        country: site.country ?? null
+      }
     }
   }
   return context

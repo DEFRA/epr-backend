@@ -105,7 +105,7 @@ describe('resolveOverseasSites', () => {
     ).rejects.toThrow('Registration not found: reg-1 for organisation org-1')
   })
 
-  it('sets validFrom to null when overseas site is not found', async () => {
+  it('omits the key when the referenced overseas site does not resolve', async () => {
     const organisationsRepository = createMockOrganisationsRepository({
       findRegistrationById: vi.fn().mockResolvedValue({
         overseasSites: {
@@ -124,9 +124,31 @@ describe('resolveOverseasSites', () => {
       'reg-1'
     )
 
-    expect(result).toEqual({
-      '001': { validFrom: null }
+    expect(result).toEqual({})
+  })
+
+  it('keeps the keys that do resolve when another does not', async () => {
+    const organisationsRepository = createMockOrganisationsRepository({
+      findRegistrationById: vi.fn().mockResolvedValue({
+        overseasSites: {
+          '001': { overseasSiteId: 'missing-site' },
+          '002': { overseasSiteId: 'site-b' }
+        }
+      })
     })
+    const validFrom = new Date('2026-01-01')
+    const overseasSitesRepository = createMockOverseasSitesRepository({
+      findByIds: vi.fn().mockResolvedValue([{ id: 'site-b', validFrom }])
+    })
+
+    const result = await resolveOverseasSites(
+      organisationsRepository,
+      overseasSitesRepository,
+      'org-1',
+      'reg-1'
+    )
+
+    expect(result).toEqual({ '002': { validFrom } })
   })
 
   it('sets validFrom to null when overseas site has no validFrom', async () => {
