@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
+import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
@@ -7,6 +8,13 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { RegistrationOther } from '#domain/organisations/registration.js' */
+/** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
+/** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
+/** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
+import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
@@ -14,22 +22,40 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
 
-const buildOrganisation = (overrides = {}) => ({
-  id: 'org-1',
-  companyDetails: { name: 'Acme Ltd' },
-  submittedToRegulator: 'ea',
-  registrations: [],
-  ...overrides
-})
+const [CONTRACT_REGISTRATION] = buildReadOrganisation().registrations
 
+/**
+ * Vary a complete registration, so a fixture stays one however few of its
+ * fields a test cares about. The contract builder leaves a registration
+ * unapproved and the export reads nothing that turns on approval, so these stay
+ * on that arm of the union rather than inventing an approval.
+ *
+ * @param {Partial<RegistrationOther>} [overrides]
+ * @returns {RegistrationOther}
+ */
 const buildRegistration = (overrides = {}) => ({
+  ...CONTRACT_REGISTRATION,
   id: 'reg-1',
   material: 'plastic',
   submittedToRegulator: 'ea',
   accreditation: null,
   overseasSites: {},
+  status: REGISTRATION_STATUS.CREATED,
   ...overrides
 })
+
+/**
+ * @param {Partial<Organisation>} [overrides]
+ * @returns {Organisation}
+ */
+const buildOrganisation = (overrides = {}) =>
+  buildReadOrganisation({
+    id: 'org-1',
+    companyDetails: { name: 'Acme Ltd' },
+    submittedToRegulator: 'ea',
+    registrations: [],
+    ...overrides
+  })
 
 const receivedRowState = (overrides = {}) => ({
   rowId: '1001',
@@ -47,16 +73,29 @@ const receivedRowState = (overrides = {}) => ({
 const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
 
 /**
+ * A registration's submitted summary log and the rows committed under it. The
+ * identity fields fall back to the single-registration defaults, so a seed that
+ * only carries rows still lands on a ledger the export can resolve.
+ *
+ * @typedef {Object} LedgerSeed
+ * @property {string} [organisationId]
+ * @property {string} [registrationId]
+ * @property {string | null} [accreditationId]
+ * @property {string} [summaryLogId]
+ * @property {SummaryLogRowStateEntry[]} [rows]
+ */
+
+/**
  * Stand up a test server whose export reads from the real in-memory ledger and
  * row-state adapters. `seeds` records each registration's submitted summary log
  * and its committed rows, so the export resolves that summary log as the
  * registration's latest and reads its rows.
  *
  * @param {{
- *   organisations?: any[],
- *   seeds?: any[],
- *   summaryLogs?: any[],
- *   overseasSites?: any[]
+ *   organisations?: Organisation[],
+ *   seeds?: LedgerSeed[],
+ *   summaryLogs?: SummaryLogWithId[],
+ *   overseasSites?: OverseasSite[]
  * }} [options]
  */
 const createServerWithRepos = async ({
@@ -167,7 +206,10 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
         summaryLogs: [
           {
             id: 'sl-1',
-            summaryLog: { submittedAt: '2026-04-15T09:00:00Z' }
+            version: 1,
+            summaryLog: summaryLogFactory.submitted({
+              submittedAt: '2026-04-15T09:00:00Z'
+            })
           }
         ]
       })

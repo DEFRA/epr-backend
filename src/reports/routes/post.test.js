@@ -10,6 +10,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+/** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -59,6 +60,7 @@ describe(`POST ${reportsPostPath}`, () => {
     })
   ]
 
+  /** @param {SummaryLogRowStateEntry[]} [rows] */
   const seedRepositories = async (org, registration, rows = DEFAULT_ROWS) => {
     const accreditationId = registration.accreditationId ?? null
     const ledgerId = {
@@ -116,7 +118,7 @@ describe(`POST ${reportsPostPath}`, () => {
    * @param {object} [registrationOverrides]
    * @param {object} [options]
    * @param {boolean} [options.reportDataValidationEnabled]
-   * @param {any[]} [options.rows]
+   * @param {SummaryLogRowStateEntry[]} [options.rows]
    * @param {boolean} [options.accredited] - Link an approved accreditation (monthly cadence).
    */
   const createServer = async (
