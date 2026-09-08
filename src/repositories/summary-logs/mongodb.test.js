@@ -58,6 +58,69 @@ describe('MongoDB summary logs repository', () => {
     testSummaryLogsRepositoryContract(it)
   })
 
+  // Only this adapter signs a URL, so the disposition cannot be a contract
+  // assertion - the in-memory adapter fabricates its URL.
+  describe('getDownloadUrl names the file', () => {
+    /**
+     * The disposition carried by the command last handed to the signer.
+     * @returns {Promise<string | undefined>}
+     */
+    const lastSignedDisposition = async () => {
+      const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner')
+      const input = /** @type {{ ResponseContentDisposition?: string }} */ (
+        vi.mocked(getSignedUrl).mock.lastCall?.[1].input
+      )
+
+      return input?.ResponseContentDisposition
+    }
+
+    it('signs the URL with the name the operator uploaded', async ({
+      summaryLogsRepository
+    }) => {
+      const id = `mongo-${randomUUID()}`
+      await summaryLogsRepository.insert(
+        id,
+        summaryLogFactory.submitted({
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          file: {
+            name: 'Q3 2026 paper.xlsx',
+            uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx'
+          }
+        })
+      )
+
+      await summaryLogsRepository.getDownloadUrl(id)
+
+      expect(await lastSignedDisposition()).toBe(
+        'attachment; filename="Q3 2026 paper.xlsx"'
+      )
+    })
+
+    it('falls back to the summary log id for an unusable name', async ({
+      summaryLogsRepository
+    }) => {
+      const id = `mongo-${randomUUID()}`
+      await summaryLogsRepository.insert(
+        id,
+        summaryLogFactory.submitted({
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          file: {
+            name: '...',
+            uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx'
+          }
+        })
+      )
+
+      await summaryLogsRepository.getDownloadUrl(id)
+
+      expect(await lastSignedDisposition()).toBe(
+        `attachment; filename="${id}.xlsx"`
+      )
+    })
+  })
+
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
       const mockDb = createMockDb({

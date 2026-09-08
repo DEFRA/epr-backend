@@ -11,6 +11,7 @@ import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
 import { parseSummaryLogUri } from './parse-uri.js'
+import { summaryLogContentDisposition } from './content-disposition.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
 import {
   validateId,
@@ -329,7 +330,14 @@ const getDownloadUrl =
     }
 
     const { Bucket, Key } = parseSummaryLogUri(doc.file.uri, validatedId)
-    const command = new GetObjectCommand({ Bucket, Key })
+    const command = new GetObjectCommand({
+      Bucket,
+      Key,
+      ResponseContentDisposition: summaryLogContentDisposition(
+        doc.file.name,
+        validatedId
+      )
+    })
     const url = await getSignedUrl(s3Client, command, {
       expiresIn: preSignedUrlExpiry
     })
