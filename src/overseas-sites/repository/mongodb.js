@@ -162,13 +162,13 @@ const performFindByProperties = async (db, properties) => {
  * @returns {Promise<OverseasSite[]>}
  */
 const performFindByIds = async (db, ids) => {
-  if (ids.length === 0) {
+  const objectIds = ids
+    .filter((id) => ObjectId.isValid(id))
+    .map((id) => ObjectId.createFromHexString(id))
+
+  if (objectIds.length === 0) {
     return []
   }
-
-  const objectIds = ids.map((id) =>
-    ObjectId.createFromHexString(validateOverseasSiteId(id))
-  )
 
   const docs = await db
     .collection(COLLECTION_NAME)

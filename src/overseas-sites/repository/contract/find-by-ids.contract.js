@@ -60,5 +60,26 @@ export const testFindByIdsBehaviour = (it) => {
 
       expect(result).toStrictEqual([])
     })
+
+    it('treats a malformed id as a miss', async () => {
+      const site = await repository.create(
+        buildOverseasSite({ name: 'Only One' })
+      )
+
+      const result = await repository.findByIds([site.id, 'not-a-valid-id'])
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('Only One')
+    })
+
+    it('returns empty array when every id is malformed', async () => {
+      const result = await repository.findByIds([
+        '',
+        'not-a-valid-id',
+        '123456789012'
+      ])
+
+      expect(result).toStrictEqual([])
+    })
   })
 }

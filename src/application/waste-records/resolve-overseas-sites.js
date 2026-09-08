@@ -7,6 +7,10 @@ import Boom from '@hapi/boom'
  * Resolves overseas sites for an exporter registration into a lookup map
  * keyed by the 3-digit zero-padded OSR ID string (e.g. "099").
  *
+ * A reference that resolves to no stored site is omitted rather than carried
+ * with a null approval date, so classification reads it as a site it cannot
+ * find (VAL015) rather than one awaiting approval (VAL014).
+ *
  * Used during waste balance classification to check ORS approval status (VAL014).
  *
  * @param {OrganisationsRepository} organisationsRepository
@@ -46,7 +50,9 @@ export const resolveOverseasSites = async (
   const resolved = {}
   for (const [osrKey, { overseasSiteId }] of entries) {
     const site = sitesById.get(overseasSiteId)
-    resolved[osrKey] = { validFrom: site?.validFrom ?? null }
+    if (site) {
+      resolved[osrKey] = { validFrom: site.validFrom ?? null }
+    }
   }
 
   return resolved
