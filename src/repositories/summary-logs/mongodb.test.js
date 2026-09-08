@@ -58,13 +58,9 @@ describe('MongoDB summary logs repository', () => {
     testSummaryLogsRepositoryContract(it)
   })
 
-  // Only this adapter signs a URL, so the disposition cannot be a contract
-  // assertion - the in-memory adapter fabricates its URL.
+  // Not a contract assertion: the in-memory adapter fabricates its URL.
   describe('getDownloadUrl names the file', () => {
-    /**
-     * The disposition carried by the command last handed to the signer.
-     * @returns {Promise<string | undefined>}
-     */
+    /** @returns {Promise<string | undefined>} */
     const lastSignedDisposition = async () => {
       const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner')
       const input = /** @type {{ ResponseContentDisposition?: string }} */ (
@@ -106,8 +102,6 @@ describe('MongoDB summary logs repository', () => {
       )
     })
 
-    // A rejected log is corrected and sent again the same day, so the date
-    // alone would leave a regulator with two files it could not tell apart.
     it('names a resubmission on the same day differently', async ({
       summaryLogsRepository
     }) => {
@@ -131,8 +125,6 @@ describe('MongoDB summary logs repository', () => {
       )
     })
 
-    // A registration is given its number at approval, so one that has none
-    // leaves the file to be named by whatever asked for it.
     it('names it not at all where the registration carries no number', async ({
       summaryLogsRepository
     }) => {

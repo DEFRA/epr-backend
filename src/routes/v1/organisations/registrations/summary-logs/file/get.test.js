@@ -151,8 +151,6 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     })
   })
 
-  // The number names the download. A registration that cannot be read costs
-  // the file its name rather than the caller their download.
   describe('naming the download', () => {
     const withRegistration = async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -203,6 +201,82 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     })
   })
 
+  describe('addressed by file id', () => {
+    const fileId = new ObjectId().toString()
+
+    const withFile = async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          file: {
+            id: fileId,
+            uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx'
+          }
+        })
+      )
+
+      return server
+    }
+
+    const requestByFileId = (server, id = fileId) =>
+      server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/files/${id}`,
+        ...asServiceMaintainer()
+      })
+
+    it('redirects to the download URL', async () => {
+      const response = await requestByFileId(await withFile())
+
+      expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+      expect(response.headers.location).toContain('uploads/test-file.xlsx')
+    })
+
+    it('returns 404 when no summary log holds that file', async () => {
+      const response = await requestByFileId(
+        await withFile(),
+        new ObjectId().toString()
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('records an audit log entry for the download', async () => {
+      await requestByFileId(await withFile())
+
+      expect(mockAuditSummaryLogDownload).toHaveBeenCalledWith(
+        expect.anything(),
+        { summaryLogId: fileId, organisationId, registrationId }
+      )
+    })
+
+    it('returns 401 when not authenticated', async () => {
+      const server = await withFile()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/files/${fileId}`
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    })
+
+    it('returns 403 when the caller holds neither scope', async () => {
+      const server = await withFile()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/files/${fileId}`,
+        ...asServiceMaintainer({ scope: ['standardUser'] })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+  })
+
   describe('authentication', () => {
     it('returns 401 when not authenticated', async () => {
       const { server } = await createServer()
@@ -227,9 +301,6 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
     })
 
-    // Both are required, so holding either alone is refused. Reading a
-    // summary log means reading an organisation's record, and the second
-    // scope is what says which organisations the caller may read.
     it.each([
       ['summary-log.read alone', ['summary-log.read']],
       ['organisation.read alone', ['organisation.read']]
@@ -245,9 +316,6 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
     })
 
-    // A regulator holds this pair and no admin scope. The file hangs off the
-    // ledger a regulator reads, so it is reachable on the same entitlement as
-    // the record itself rather than on an admin tier.
     it('serves the file to a caller holding both scopes and no admin scope', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(

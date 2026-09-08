@@ -44,6 +44,10 @@ async function ensureCollection(db) {
   // TTL index for automatic cleanup of non-submitted summary logs
   await collection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 
+  // The waste balance ledger records a submission by its file, so a download
+  // reached from the ledger is looked up that way.
+  await collection.createIndex({ 'file.id': 1 })
+
   // Optimises findLatestSubmittedForOrgReg query which filters by org/reg/status
   // and sorts by submittedAt descending
   await collection.createIndex({
@@ -320,14 +324,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
 const ISO_SECONDS_LENGTH = 19
 
 /**
- * Names a download for its registration and the moment it was submitted, so a
- * regulator gathering several can tell them apart. Down to the second, because
- * a rejected log is often corrected and resubmitted the same day.
- *
- * Composed here rather than by the caller because only this read holds
- * `submittedAt`, while the number is the caller's to look up. Any log with a
- * file to download carries a submitted date - the insert schema requires one
- * from `submitting` onwards.
+ * Down to the second: a rejected log is often resubmitted the same day.
  * @param {string} registrationNumber
  * @param {string} submittedAt
  * @returns {string}
@@ -341,19 +338,16 @@ const downloadDisposition = (registrationNumber, submittedAt) => {
   return `attachment; filename="${registrationNumber}-${submitted}.xlsx"`
 }
 
-const getDownloadUrl =
+const signDownload =
   (db, s3Client, preSignedUrlExpiry) =>
-  async (summaryLogId, registrationNumber) => {
-    const validatedId = validateId(summaryLogId)
-    /** @type {any} */
-    const filter = { _id: validatedId }
+  async (filter, reference, registrationNumber) => {
     const doc = await db.collection(COLLECTION_NAME).findOne(filter)
 
     if (!doc?.file?.uri) {
       throw Boom.notFound('Summary log file not found')
     }
 
-    const { Bucket, Key } = parseSummaryLogUri(doc.file.uri, validatedId)
+    const { Bucket, Key } = parseSummaryLogUri(doc.file.uri, reference)
     const command = new GetObjectCommand({
       Bucket,
       Key,
@@ -372,6 +366,29 @@ const getDownloadUrl =
     ).toISOString()
 
     return { url, expiresAt }
+  }
+
+const getDownloadUrl =
+  (db, s3Client, preSignedUrlExpiry) =>
+  async (summaryLogId, registrationNumber) => {
+    const validatedId = validateId(summaryLogId)
+
+    return signDownload(db, s3Client, preSignedUrlExpiry)(
+      /** @type {any} */ ({ _id: validatedId }),
+      validatedId,
+      registrationNumber
+    )
+  }
+
+const getDownloadUrlByFileId =
+  (db, s3Client, preSignedUrlExpiry) => async (fileId, registrationNumber) => {
+    const validatedId = validateId(fileId)
+
+    return signDownload(db, s3Client, preSignedUrlExpiry)(
+      /** @type {any} */ ({ 'file.id': validatedId }),
+      validatedId,
+      registrationNumber
+    )
   }
 
 /**
@@ -398,6 +415,11 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
       findAllSummaryLogStatsByRegistrationId(db),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(db),
     getDownloadUrl: getDownloadUrl(
+      db,
+      s3Config.s3Client,
+      s3Config.preSignedUrlExpiry
+    ),
+    getDownloadUrlByFileId: getDownloadUrlByFileId(
       db,
       s3Config.s3Client,
       s3Config.preSignedUrlExpiry
