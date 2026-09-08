@@ -1,7 +1,7 @@
 import { convictValidateDecemberWasteWindowBound } from './validate-december-waste-window-bound.js'
 
 describe('#convictValidateDecemberWasteWindowBound', () => {
-  test.each(['12-01T00:00', '01-31T23:59', '02-29T00:00'])(
+  test.each(['12-01T00:00', '01-31T23:59'])(
     'accepts a valid MM-DDTHH:mm bound "%s"',
     (value) => {
       expect(() =>
@@ -9,6 +9,26 @@ describe('#convictValidateDecemberWasteWindowBound', () => {
       ).not.toThrow()
     }
   )
+
+  describe('29 February (depends on the current year being a leap year)', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('accepts 02-29 when the current year is a leap year', () => {
+      vi.setSystemTime(new Date('2028-06-01'))
+      expect(() =>
+        convictValidateDecemberWasteWindowBound.validate('02-29T00:00')
+      ).not.toThrow()
+    })
+
+    it('rejects 02-29 when the current year is not a leap year', () => {
+      vi.setSystemTime(new Date('2026-06-01'))
+      expect(() =>
+        convictValidateDecemberWasteWindowBound.validate('02-29T00:00')
+      ).toThrow(/must name a real date/)
+    })
+  })
 
   test.each(['12-1T00:00', '12-01 00:00', '12-01T24:00', 'abc', ''])(
     'throws for a malformed bound "%s"',

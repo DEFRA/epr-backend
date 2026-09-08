@@ -61,5 +61,8 @@ export function isWithinDecemberWasteWindow(
   const stamp = formatUkDateTime(now)
   const start = `${relevantYear}-${windowStart}`
 
-  return stamp >= start && isBeforeEndOfRelevantYear(relevantYear, now)
+  // Deliberate string comparison, not numeric: both sides are zero-padded
+  // `YYYY-MM-DDTHH:mm` and sort chronologically as strings - that is the
+  // whole point of the format, see formatUkDateTime above.
+  return stamp >= start && isBeforeEndOfRelevantYear(relevantYear, now) // NOSONAR: javascript:S3003
 }
