@@ -6,6 +6,11 @@ const FIRST_MONTH = 1
 const LAST_MONTH = 12
 const FIRST_DAY = 1
 
+const MONTH_START = 0
+const MONTH_END = 2
+const DAY_START = 3
+const DAY_END = 5
+
 /**
  * The last real day of `month` (1-indexed), for the current year - relies on
  * `new Date`'s day-0-of-next-month rollback rather than a hardcoded
@@ -27,8 +32,8 @@ function validateDecemberWasteWindowBound(value) {
   // The pattern above already guarantees this fixed-width shape, so the
   // month/day can be sliced directly rather than re-extracted from a second
   // `exec` whose null case Joi.assert has already ruled out.
-  const month = Number(value.slice(0, 2))
-  const day = Number(value.slice(3, 5))
+  const month = Number(value.slice(MONTH_START, MONTH_END))
+  const day = Number(value.slice(DAY_START, DAY_END))
 
   if (
     month < FIRST_MONTH ||
