@@ -12,6 +12,7 @@
     "#auth/*": "./src/common/helpers/auth/*",
     "#common/*": "./src/common/*",
     "#data/*": "./src/data/*",
+    "#december-loads-diagnostic/*": "./src/december-loads-diagnostic/*",
     "#domain/*": "./src/domain/*",
     "#feature-flags/*": "./src/feature-flags/*",
     "#formsubmission/*": "./src/forms-submission-data/*",
