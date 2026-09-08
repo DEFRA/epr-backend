@@ -42,6 +42,79 @@ describe('closingForSummaryLogSubmitted', () => {
       closingForSummaryLogSubmitted({ amount: 0, availableAmount: 0 }, 0.3, 0.1)
     ).toEqual({ amount: 0.2, availableAmount: 0.2 })
   })
+
+  describe('the December portion', () => {
+    it('materialises a December portion when the opening has none and December moves', () => {
+      expect(
+        closingForSummaryLogSubmitted(
+          { amount: 0, availableAmount: 0 },
+          1000,
+          0,
+          250,
+          0
+        )
+      ).toEqual({
+        amount: 1000,
+        availableAmount: 1000,
+        decemberAmount: 250,
+        decemberAvailableAmount: 250
+      })
+    })
+
+    it('carries an existing December portion unchanged when December does not move', () => {
+      expect(
+        closingForSummaryLogSubmitted(
+          {
+            amount: 1000,
+            availableAmount: 1000,
+            decemberAmount: 250,
+            decemberAvailableAmount: 250
+          },
+          1200,
+          1000,
+          250,
+          250
+        )
+      ).toEqual({
+        amount: 1200,
+        availableAmount: 1200,
+        decemberAmount: 250,
+        decemberAvailableAmount: 250
+      })
+    })
+
+    it('self-corrects the December portion to zero when tonnage is moved out of December', () => {
+      expect(
+        closingForSummaryLogSubmitted(
+          {
+            amount: 1000,
+            availableAmount: 1000,
+            decemberAmount: 250,
+            decemberAvailableAmount: 250
+          },
+          1000,
+          1000,
+          0,
+          250
+        )
+      ).toEqual({
+        amount: 1000,
+        availableAmount: 1000,
+        decemberAmount: 0,
+        decemberAvailableAmount: 0
+      })
+    })
+
+    it('leaves no December fields when the opening has none and December does not move', () => {
+      const closing = closingForSummaryLogSubmitted(
+        { amount: 1000, availableAmount: 1000 },
+        1200,
+        1000
+      )
+      expect(closing).toEqual({ amount: 1200, availableAmount: 1200 })
+      expect(closing).not.toHaveProperty('decemberAmount')
+    })
+  })
 })
 
 describe('closingForPrn', () => {
@@ -89,5 +162,54 @@ describe('closingForPrn', () => {
     expect(() =>
       closingForPrn(opening, LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED, 200)
     ).toThrow('Unknown PRN event kind: summary-log-submitted')
+  })
+
+  describe('carrying the December portion through', () => {
+    // A December portion the opening holds must survive every PRN event: a PRN
+    // moves the general balance but never the December amounts, so the latest
+    // event's closing balance still surfaces the portion (including after a
+    // cancellation).
+    const openingWithDecember = {
+      amount: 1000,
+      availableAmount: 800,
+      decemberAmount: 250,
+      decemberAvailableAmount: 200
+    }
+
+    it.each([
+      {
+        kind: LEDGER_EVENT_KIND.PRN_CREATED,
+        expected: { amount: 1000, availableAmount: 600 }
+      },
+      {
+        kind: LEDGER_EVENT_KIND.PRN_ISSUED,
+        expected: { amount: 800, availableAmount: 800 }
+      },
+      {
+        kind: LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
+        expected: { amount: 1000, availableAmount: 1000 }
+      },
+      {
+        kind: LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+        expected: { amount: 1200, availableAmount: 1000 }
+      },
+      {
+        kind: LEDGER_EVENT_KIND.PRN_ACCEPTED,
+        expected: { amount: 1000, availableAmount: 800 }
+      },
+      {
+        kind: LEDGER_EVENT_KIND.PRN_REJECTED,
+        expected: { amount: 1000, availableAmount: 800 }
+      }
+    ])(
+      'preserves both December amounts on a $kind event',
+      ({ kind, expected }) => {
+        expect(closingForPrn(openingWithDecember, kind, 200)).toEqual({
+          ...expected,
+          decemberAmount: 250,
+          decemberAvailableAmount: 200
+        })
+      }
+    )
   })
 })

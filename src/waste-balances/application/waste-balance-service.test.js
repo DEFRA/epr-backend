@@ -402,6 +402,57 @@ describe('createWasteBalanceService', () => {
         append(committedEvents(decideCreatePrn(balance, payload)))
       ).rejects.toBeInstanceOf(LedgerSlotConflictError)
     })
+
+    it('carries the December portion through the whole PRN lifecycle', async () => {
+      // Open a ledger that holds a December portion.
+      await service.commitSummaryLogSubmittedEvent(
+        ledgerId,
+        { summaryLogId: 'seed', creditTotal: 1000, decemberCreditTotal: 250 },
+        createdBy
+      )
+      expect(await service.currentBalance(ledgerId)).toMatchObject({
+        amount: 1000,
+        decemberAmount: 250,
+        decemberAvailableAmount: 250
+      })
+
+      // The fold hands each command a balance that still carries December, and
+      // every PRN event leaves those amounts as they opened.
+      const created = await runCommand(decideCreatePrn, {
+        prnId: 'prn-1',
+        amount: 100
+      })
+      expect(created.events[0].closingBalance).toMatchObject({
+        availableAmount: 900,
+        decemberAmount: 250,
+        decemberAvailableAmount: 250
+      })
+
+      const issued = await runCommand(decideIssuePrn, {
+        prnId: 'prn-2',
+        amount: 300
+      })
+      expect(issued.events[0].closingBalance).toMatchObject({
+        amount: 700,
+        decemberAmount: 250,
+        decemberAvailableAmount: 250
+      })
+
+      const cancelled = await runCommand(decideCancelPrnCreation, {
+        prnId: 'prn-1',
+        amount: 100
+      })
+      expect(cancelled.events[0].closingBalance).toMatchObject({
+        decemberAmount: 250,
+        decemberAvailableAmount: 250
+      })
+
+      // After all the PRN activity the resolved balance still surfaces December.
+      expect(await service.currentBalance(ledgerId)).toMatchObject({
+        decemberAmount: 250,
+        decemberAvailableAmount: 250
+      })
+    })
   })
 
   describe('prnCatchupEvents', () => {

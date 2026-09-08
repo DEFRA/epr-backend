@@ -1,26 +1,12 @@
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
-import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
+import {
+  decemberKeyForYearOf,
+  monthKeyForDate
+} from '#common/helpers/dates/year-month.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { contributionFor } from '#waste-balances/domain/credited-tonnage.js'
 
 import { getTargetAmount } from './target-amount.js'
-
-const DECEMBER = '12'
-const YEAR_LENGTH = 4
-
-/**
- * The `YYYY-12` month key of the accreditation year — the December an
- * accreditation's tonnage accrues against — taken from the year of `validFrom`.
- * Null when `validFrom` is absent or too short to carry a year, so a caller
- * that cannot place a December accrues nothing rather than guessing one.
- *
- * @param {{ validFrom?: string }} accreditation
- * @returns {string | null}
- */
-const accreditationDecemberKey = ({ validFrom }) =>
-  typeof validFrom === 'string' && validFrom.length >= YEAR_LENGTH
-    ? `${validFrom.slice(0, YEAR_LENGTH)}-${DECEMBER}`
-    : null
 
 /**
  * The signed tonnage a single classified row accrues to the December portion:
@@ -78,7 +64,7 @@ const decemberAmountForRow = (row, decemberKey) => {
  * @returns {number}
  */
 export const decemberCreditTotalFor = (classifiedRows, accreditation) => {
-  const decemberKey = accreditationDecemberKey(accreditation)
+  const decemberKey = decemberKeyForYearOf(accreditation.validFrom)
   if (decemberKey === null) {
     return 0
   }

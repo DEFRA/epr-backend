@@ -62,3 +62,20 @@ export const monthKeyForDate = (value, timeZone = 'UTC') => {
   }
   return `${year}-${month}`
 }
+
+const DECEMBER = '12'
+const YEAR_LENGTH = 4
+
+/**
+ * The `YYYY-12` month key of the year an ISO date string falls in: the December
+ * a calendar-year window (such as an accreditation year) accrues its waste
+ * against. Null when the value is not a string long enough to carry a year, so a
+ * caller that cannot place a December accrues nothing rather than guessing one.
+ *
+ * @param {string | undefined} isoDate - an ISO date string (`YYYY-MM-DD` or longer)
+ * @returns {string | null}
+ */
+export const decemberKeyForYearOf = (isoDate) =>
+  typeof isoDate === 'string' && isoDate.length >= YEAR_LENGTH
+    ? `${isoDate.slice(0, YEAR_LENGTH)}-${DECEMBER}`
+    : null
