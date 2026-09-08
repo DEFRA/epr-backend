@@ -51,8 +51,37 @@ describe('currentWasteBalance', () => {
       amount: 1000,
       availableAmount: 700,
       eventNumber: 2,
-      creditTotal: 1000
+      creditTotal: 1000,
+      decemberCreditTotal: 0
     })
+  })
+
+  it('surfaces the December portion and its credit total when the balance carries one', async () => {
+    const repository = createInMemoryLedgerRepository()()
+
+    await repository.appendEvents([
+      buildLedgerEvent({
+        number: 1,
+        kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+        payload: {
+          summaryLogId: 'log-1',
+          creditTotal: 1000,
+          decemberCreditTotal: 250
+        },
+        closingBalance: {
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 250,
+          decemberAvailableAmount: 250
+        }
+      })
+    ])
+
+    const balance = await currentWasteBalance(repository, ledgerId)
+
+    expect(balance?.decemberAmount).toBe(250)
+    expect(balance?.decemberAvailableAmount).toBe(250)
+    expect(balance?.decemberCreditTotal).toBe(250)
   })
 
   it('carries the latest credit total when several submissions precede a PRN', async () => {

@@ -30,7 +30,8 @@ describe('submitSummaryLog', () => {
   it('shifts the balance by the delta against the previous credit total', () => {
     const state = {
       balance: { amount: 150, availableAmount: 120 },
-      creditTotal: 150
+      creditTotal: 150,
+      decemberCreditTotal: 0
     }
 
     expect(
@@ -48,7 +49,8 @@ describe('submitSummaryLog', () => {
   it('lowers the balance when a resubmission reduces the credit total', () => {
     const state = {
       balance: { amount: 200, availableAmount: 170 },
-      creditTotal: 200
+      creditTotal: 200,
+      decemberCreditTotal: 0
     }
 
     expect(

@@ -59,9 +59,16 @@ const createLedgerCommands = (ledgerRepository) => {
       state: {
         balance: {
           amount: balance.amount,
-          availableAmount: balance.availableAmount
+          availableAmount: balance.availableAmount,
+          // Carry the December portion only when the balance has one, so an
+          // opening with no December stays absent through the next decision.
+          ...(balance.decemberAmount !== undefined && {
+            decemberAmount: balance.decemberAmount,
+            decemberAvailableAmount: balance.decemberAvailableAmount
+          })
         },
-        creditTotal: balance.creditTotal
+        creditTotal: balance.creditTotal,
+        decemberCreditTotal: balance.decemberCreditTotal
       },
       head: balance.eventNumber
     }

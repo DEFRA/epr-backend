@@ -26,9 +26,21 @@ const PRN_KINDS = new Set([
 ])
 
 /**
+ * `decemberAmount` and `decemberAvailableAmount` are the portions of `amount`
+ * and `availableAmount` accrued from December-dated tonnage. December is
+ * additive: the general balance is `amount - decemberAmount`, derived and never
+ * stored. They are absent when the balance has no December portion at all: on
+ * output accreditations, which never accrue December, and on any balance before
+ * its first December-dated load. A portion is materialised only once one
+ * exists, and once present it stays (0 after being fully drawn down or
+ * corrected away). Readers that need a number coalesce a missing value to 0;
+ * readers that surface the split pass the absence through.
+ *
  * @typedef {Object} LedgerBalanceSnapshot
  * @property {number} amount
  * @property {number} availableAmount
+ * @property {number} [decemberAmount]
+ * @property {number} [decemberAvailableAmount]
  */
 
 /** @type {Readonly<LedgerBalanceSnapshot>} */
@@ -58,7 +70,11 @@ export const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
 export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
- * @typedef {{ summaryLogId: string, creditTotal: number }} SummaryLogSubmittedPayload
+ * `decemberCreditTotal` is optional: it is the December counterpart of
+ * `creditTotal`, absent on a submission that credits no December tonnage and on
+ * pre-feature events. Readers coalesce a missing value to 0.
+ *
+ * @typedef {{ summaryLogId: string, creditTotal: number, decemberCreditTotal?: number }} SummaryLogSubmittedPayload
  */
 
 /**
@@ -135,12 +151,15 @@ const userSummarySchema = Joi.object({
 
 const balanceSnapshotSchema = Joi.object({
   amount: Joi.number().required(),
-  availableAmount: Joi.number().required()
+  availableAmount: Joi.number().required(),
+  decemberAmount: Joi.number(),
+  decemberAvailableAmount: Joi.number()
 })
 
 const summaryLogPayloadSchema = Joi.object({
   summaryLogId: Joi.string().required(),
-  creditTotal: Joi.number().required()
+  creditTotal: Joi.number().required(),
+  decemberCreditTotal: Joi.number()
 })
 
 const prnPayloadSchema = Joi.object({
