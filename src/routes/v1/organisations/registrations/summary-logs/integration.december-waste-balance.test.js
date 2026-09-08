@@ -139,7 +139,7 @@ describe('December waste balance accrual', () => {
     return JSON.parse(response.payload)
   }
 
-  describe('B1: December tonnage accrues to a separate portion', () => {
+  describe('December tonnage accrues to a separate portion', () => {
     it('splits an exporter balance into a December portion and leaves non-December untouched', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
@@ -196,7 +196,7 @@ describe('December waste balance accrual', () => {
     })
   })
 
-  describe('B2: reprocessor-output accrues no December portion', () => {
+  describe('reprocessor-output accrues no December portion', () => {
     it('accrues a December-dated processed load to the general balance only', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
@@ -229,7 +229,7 @@ describe('December waste balance accrual', () => {
     })
   })
 
-  describe('B3: a resubmission across the December boundary self-corrects', () => {
+  describe('a resubmission across the December boundary self-corrects', () => {
     it('moves the portion to zero when December tonnage is corrected out', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
@@ -295,7 +295,7 @@ describe('December waste balance accrual', () => {
     })
   })
 
-  describe('B4: no December tonnage means no December portion', () => {
+  describe('no December tonnage means no December portion', () => {
     it('leaves the December fields absent when nothing is December-dated', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
@@ -322,7 +322,7 @@ describe('December waste balance accrual', () => {
     })
   })
 
-  describe('B5: a December date outside the accreditation window accrues nowhere', () => {
+  describe('a December date outside the accreditation window accrues nowhere', () => {
     it('ignores a previous-year December load in both the general and December portions', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
@@ -354,7 +354,7 @@ describe('December waste balance accrual', () => {
     })
   })
 
-  describe('B8a: the read endpoint emits the December fields', () => {
+  describe('the read endpoint emits the December fields', () => {
     it('surfaces decemberTotal and decemberAvailable on the closing balance', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
