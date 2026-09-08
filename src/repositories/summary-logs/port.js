@@ -46,7 +46,7 @@
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
- * @property {(summaryLogId: string) => Promise<DownloadUrlResult>} getDownloadUrl
+ * @property {(summaryLogId: string, filename?: string) => Promise<DownloadUrlResult>} getDownloadUrl
  */
 
 /**

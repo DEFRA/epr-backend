@@ -74,50 +74,48 @@ describe('MongoDB summary logs repository', () => {
       return input?.ResponseContentDisposition
     }
 
-    it('signs the URL with the name the operator uploaded', async ({
-      summaryLogsRepository
-    }) => {
+    /**
+     * @param {SummaryLogsRepository} repository
+     * @param {Record<string, unknown>} [overrides]
+     * @returns {Promise<string>}
+     */
+    const insertSubmitted = async (repository, overrides = {}) => {
       const id = `mongo-${randomUUID()}`
-      await summaryLogsRepository.insert(
+      await repository.insert(
         id,
         summaryLogFactory.submitted({
           organisationId: 'org-1',
           registrationId: 'reg-1',
-          file: {
-            name: 'Q3 2026 paper.xlsx',
-            uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx'
-          }
+          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' },
+          ...overrides
         })
       )
 
-      await summaryLogsRepository.getDownloadUrl(id)
+      return id
+    }
+
+    it('names it for the registration and the day it was submitted', async ({
+      summaryLogsRepository
+    }) => {
+      const id = await insertSubmitted(summaryLogsRepository)
+
+      await summaryLogsRepository.getDownloadUrl(id, 'R26ER5000000002PA')
 
       expect(await lastSignedDisposition()).toBe(
-        'attachment; filename="Q3 2026 paper.xlsx"'
+        'attachment; filename="R26ER5000000002PA-2024-01-01.xlsx"'
       )
     })
 
-    it('falls back to the summary log id for an unusable name', async ({
+    // A registration is given its number at approval, so one that has none
+    // leaves the file to be named by whatever asked for it.
+    it('names it not at all where the registration carries no number', async ({
       summaryLogsRepository
     }) => {
-      const id = `mongo-${randomUUID()}`
-      await summaryLogsRepository.insert(
-        id,
-        summaryLogFactory.submitted({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          file: {
-            name: '...',
-            uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx'
-          }
-        })
-      )
+      const id = await insertSubmitted(summaryLogsRepository)
 
       await summaryLogsRepository.getDownloadUrl(id)
 
-      expect(await lastSignedDisposition()).toBe(
-        `attachment; filename="${id}.xlsx"`
-      )
+      expect(await lastSignedDisposition()).toBeUndefined()
     })
   })
 

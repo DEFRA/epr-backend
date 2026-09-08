@@ -5,11 +5,17 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import {
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import './get.js'
 
@@ -142,6 +148,58 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const response = await makeRequest(server)
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+  })
+
+  // The number names the download. A registration that cannot be read costs
+  // the file its name rather than the caller their download.
+  describe('naming the download', () => {
+    const withRegistration = async () => {
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const summaryLogsRepository =
+        summaryLogsRepositoryFactory(createMockLogger())
+      const getDownloadUrl = vi.spyOn(summaryLogsRepository, 'getDownloadUrl')
+
+      const server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: () => summaryLogsRepository,
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            partialMock(
+              buildOrganisation({
+                id: organisationId,
+                registrations: [
+                  buildRegistration({
+                    id: registrationId,
+                    registrationNumber: 'R26ER5000000002PA'
+                  })
+                ]
+              })
+            )
+          ])
+        }
+      })
+
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
+        })
+      )
+
+      return { server, getDownloadUrl }
+    }
+
+    it('passes the registration number through to the store', async () => {
+      const { server, getDownloadUrl } = await withRegistration()
+
+      await makeRequest(server)
+
+      expect(getDownloadUrl).toHaveBeenCalledWith(
+        summaryLogId,
+        'R26ER5000000002PA'
+      )
     })
   })
 

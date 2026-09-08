@@ -40,10 +40,22 @@ export const summaryLogFile = {
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { summaryLogsRepository, logger } = request
+    const { summaryLogsRepository, organisationsRepository, logger } = request
     const { organisationId, registrationId, summaryLogId } = request.params
 
-    const { url } = await summaryLogsRepository.getDownloadUrl(summaryLogId)
+    // Only to name the download. A registration this cannot read costs the
+    // file its name, not the caller their download - this endpoint has never
+    // verified the address's registration, and starting here would change who
+    // it answers rather than what it calls the file.
+    const registrationNumber = await organisationsRepository
+      .findRegistrationById(organisationId, registrationId)
+      .then((registration) => registration.registrationNumber)
+      .catch(() => undefined)
+
+    const { url } = await summaryLogsRepository.getDownloadUrl(
+      summaryLogId,
+      registrationNumber
+    )
 
     await auditSummaryLogDownload(request, {
       summaryLogId,

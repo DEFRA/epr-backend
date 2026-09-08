@@ -11,7 +11,6 @@ import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
 import { parseSummaryLogUri } from './parse-uri.js'
-import { summaryLogContentDisposition } from './content-disposition.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
 import {
   validateId,
@@ -318,8 +317,26 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
+const ISO_DATE_LENGTH = 10
+
+/**
+ * Names a download for its registration and the day it was submitted, so a
+ * regulator gathering several can tell them apart.
+ *
+ * Composed here rather than by the caller because only this read holds
+ * `submittedAt`, while the number is the caller's to look up. Any log with a
+ * file to download carries a submitted date - the insert schema requires one
+ * from `submitting` onwards.
+ * @param {string} registrationNumber
+ * @param {string} submittedAt
+ * @returns {string}
+ */
+const downloadDisposition = (registrationNumber, submittedAt) =>
+  `attachment; filename="${registrationNumber}-${submittedAt.slice(0, ISO_DATE_LENGTH)}.xlsx"`
+
 const getDownloadUrl =
-  (db, s3Client, preSignedUrlExpiry) => async (summaryLogId) => {
+  (db, s3Client, preSignedUrlExpiry) =>
+  async (summaryLogId, registrationNumber) => {
     const validatedId = validateId(summaryLogId)
     /** @type {any} */
     const filter = { _id: validatedId }
@@ -333,10 +350,12 @@ const getDownloadUrl =
     const command = new GetObjectCommand({
       Bucket,
       Key,
-      ResponseContentDisposition: summaryLogContentDisposition(
-        doc.file.name,
-        validatedId
-      )
+      ...(registrationNumber && {
+        ResponseContentDisposition: downloadDisposition(
+          registrationNumber,
+          doc.submittedAt
+        )
+      })
     })
     const url = await getSignedUrl(s3Client, command, {
       expiresIn: preSignedUrlExpiry
