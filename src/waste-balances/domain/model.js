@@ -16,6 +16,14 @@
  * the base the next submission's delta is measured against. Zero when the
  * ledger has no submission yet.
  *
+ * `decemberAmount` and `decemberAvailableAmount` are the December portions of
+ * `amount` and `availableAmount`; the general balance is
+ * `amount - decemberAmount`, derived and never stored. They are absent when the
+ * balance has no December portion (an output accreditation, or a balance before
+ * its first December load). `decemberCreditTotal` is the December counterpart of
+ * `creditTotal`, the base the next submission's December delta is measured
+ * against, coalesced to 0 when the latest submission credited no December.
+ *
  * DECIMAL PRECISION: Amount fields use decimal.js arithmetic to avoid floating
  * point rounding errors, converting to/from JavaScript numbers at the ledger
  * boundary.
@@ -23,8 +31,11 @@
  * @typedef {import('../repository/ledger-schema.js').WasteBalanceLedgerId & {
  *   amount: number,
  *   availableAmount: number,
+ *   decemberAmount?: number,
+ *   decemberAvailableAmount?: number,
  *   eventNumber: number,
- *   creditTotal: number
+ *   creditTotal: number,
+ *   decemberCreditTotal: number
  * }} WasteBalance
  */
 

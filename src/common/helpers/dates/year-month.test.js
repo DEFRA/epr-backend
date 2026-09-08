@@ -1,4 +1,8 @@
-import { monthKeyForDate, toYearMonth } from './year-month.js'
+import {
+  decemberKeyForYearOf,
+  monthKeyForDate,
+  toYearMonth
+} from './year-month.js'
 
 describe('toYearMonth', () => {
   it('slices the year-month from an ISO date string', () => {
@@ -36,5 +40,22 @@ describe('monthKeyForDate', () => {
     expect(
       monthKeyForDate(new Date('2026-06-30T23:30:00.000Z'), 'Europe/London')
     ).toBe('2026-07')
+  })
+})
+
+describe('decemberKeyForYearOf', () => {
+  it('is the December of the year the ISO date falls in', () => {
+    expect(decemberKeyForYearOf('2026-01-01')).toBe('2026-12')
+  })
+
+  it('reads only the year, so any month resolves to that December', () => {
+    expect(decemberKeyForYearOf('2025-07-15')).toBe('2025-12')
+  })
+
+  it.each([
+    { description: 'undefined', value: undefined },
+    { description: 'a value too short to carry a year', value: '26' }
+  ])('is null for $description', ({ value }) => {
+    expect(decemberKeyForYearOf(value)).toBeNull()
   })
 })

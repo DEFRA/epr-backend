@@ -3,6 +3,7 @@
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
 import { recordWasteBalanceUpdateAudit } from './audit.js'
+import { decemberCreditTotalFor } from './december-credit-total.js'
 import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 
 /**
@@ -57,9 +58,14 @@ export const performUpdateViaLedger = async ({
     creditTotal = toNumber(add(creditTotal, getTargetAmount(classification)))
   }
 
+  const decemberCreditTotal = decemberCreditTotalFor(
+    classifiedRows,
+    accreditation
+  )
+
   const [event] = await commitSummaryLogSubmittedEvent(
     { registrationId, accreditationId: accreditation.id, organisationId },
-    { summaryLogId, creditTotal },
+    { summaryLogId, creditTotal, decemberCreditTotal },
     {
       id: user.id,
       ...(user.name && { name: user.name }),

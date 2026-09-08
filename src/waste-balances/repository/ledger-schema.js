@@ -26,9 +26,15 @@ const PRN_KINDS = new Set([
 ])
 
 /**
+ * `decemberAmount`/`decemberAvailableAmount` are the December portions of
+ * `amount`/`availableAmount`, additive (general = `amount - decemberAmount`) and
+ * absent until a December portion exists.
+ *
  * @typedef {Object} LedgerBalanceSnapshot
  * @property {number} amount
  * @property {number} availableAmount
+ * @property {number} [decemberAmount]
+ * @property {number} [decemberAvailableAmount]
  */
 
 /** @type {Readonly<LedgerBalanceSnapshot>} */
@@ -58,7 +64,11 @@ export const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
 export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
- * @typedef {{ summaryLogId: string, creditTotal: number }} SummaryLogSubmittedPayload
+ * `decemberCreditTotal` is optional: it is the December counterpart of
+ * `creditTotal`, absent on a submission that credits no December tonnage and on
+ * pre-feature events. Readers coalesce a missing value to 0.
+ *
+ * @typedef {{ summaryLogId: string, creditTotal: number, decemberCreditTotal?: number }} SummaryLogSubmittedPayload
  */
 
 /**
@@ -135,12 +145,15 @@ const userSummarySchema = Joi.object({
 
 const balanceSnapshotSchema = Joi.object({
   amount: Joi.number().required(),
-  availableAmount: Joi.number().required()
+  availableAmount: Joi.number().required(),
+  decemberAmount: Joi.number(),
+  decemberAvailableAmount: Joi.number()
 })
 
 const summaryLogPayloadSchema = Joi.object({
   summaryLogId: Joi.string().required(),
-  creditTotal: Joi.number().required()
+  creditTotal: Joi.number().required(),
+  decemberCreditTotal: Joi.number()
 })
 
 const prnPayloadSchema = Joi.object({

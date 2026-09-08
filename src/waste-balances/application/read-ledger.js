@@ -8,6 +8,12 @@
  * @property {number} total Credits minus debits.
  * @property {number} available The total, minus the tonnage a created note
  *   holds back.
+ * @property {number} [decemberTotal] The portion of `total` accrued from
+ *   December-dated tonnage. The general portion is the difference. Absent when
+ *   the balance has no December portion (an output accreditation, or a balance
+ *   before its first December load).
+ * @property {number} [decemberAvailable] The portion of `available` for
+ *   December. Absent alongside `decemberTotal`.
  */
 
 /**
@@ -100,9 +106,20 @@ const toLedger = ({ organisationId, registrationId, accreditationId }) => ({
  * @param {LedgerBalanceSnapshot} snapshot
  * @returns {LedgerBalance}
  */
-const toBalance = ({ amount, availableAmount }) => ({
+const toBalance = ({
+  amount,
+  availableAmount,
+  decemberAmount,
+  decemberAvailableAmount
+}) => ({
   total: amount,
-  available: availableAmount
+  available: availableAmount,
+  // Surface the December split only when the balance carries one, so an output
+  // accreditation's events read as having no December portion rather than zero.
+  ...(decemberAmount !== undefined && {
+    decemberTotal: decemberAmount,
+    decemberAvailable: decemberAvailableAmount
+  })
 })
 
 /**
