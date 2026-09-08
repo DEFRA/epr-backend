@@ -99,6 +99,9 @@ const buildReprocessor = () => {
   }
 }
 
+/** @type {ReturnType<typeof buildOrganisation>[]} */
+const NO_OTHER_ORGANISATIONS = []
+
 const pathFor = ({ organisationId, registrationId }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/overseas-sites`
 
@@ -131,12 +134,16 @@ describe('GET registration overseas-sites', () => {
 
   let server
 
-  const startServer = async ({ organisation, sites }, config = {}) => {
+  const startServer = async (
+    { organisation, otherOrganisations = NO_OTHER_ORGANISATIONS, sites },
+    config = {}
+  ) => {
     server = await createTestServer({
       config,
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
-          organisation
+          organisation,
+          ...otherOrganisations
         ]),
         overseasSitesRepository: createInMemoryOverseasSitesRepository(sites)
       }
@@ -328,6 +335,28 @@ describe('GET registration overseas-sites', () => {
       url: pathFor({
         organisationId: organisation.id,
         registrationId: new ObjectId().toString()
+      }),
+      ...asRegulator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+  })
+
+  it('404s when the registration belongs to another organisation', async () => {
+    const { organisation } = buildRegisteredOnlyExporter()
+    const { organisation: otherOrganisation, registration: othersOwnSites } =
+      buildRegisteredOnlyExporter()
+    await startServer({
+      organisation,
+      otherOrganisations: [otherOrganisation],
+      sites: [siteOne, siteTwo]
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: pathFor({
+        organisationId: organisation.id,
+        registrationId: othersOwnSites.id
       }),
       ...asRegulator()
     })
