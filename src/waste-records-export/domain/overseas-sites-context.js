@@ -3,8 +3,8 @@
 /**
  * @typedef {Object} OverseasSiteContextEntry
  * @property {Date | null} validFrom - Approval date used by classifyForWasteBalance.
- * @property {string | null} siteName - Approved site name (for OSR_NAME_REVISED).
- * @property {string | null} country - Destination country (for OSR_COUNTRY_REVISED).
+ * @property {string} siteName - Approved site name (for OSR_NAME_REVISED).
+ * @property {string} country - Destination country (for OSR_COUNTRY_REVISED).
  */
 
 /**
@@ -37,8 +37,8 @@ export const buildOverseasSitesContext = (registration, sitesById) => {
     if (site) {
       context[osrKey] = {
         validFrom: site.validFrom ?? null,
-        siteName: site.name ?? null,
-        country: site.country ?? null
+        siteName: site.name,
+        country: site.country
       }
     }
   }
