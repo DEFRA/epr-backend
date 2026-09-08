@@ -10,7 +10,6 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
-/** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -32,6 +31,9 @@ import {
 import { reportsPostPath } from './post.js'
 import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
+
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportCreate: vi.fn().mockResolvedValue(undefined),
@@ -60,7 +62,10 @@ describe(`POST ${reportsPostPath}`, () => {
     })
   ]
 
-  /** @param {SummaryLogRowStateEntry[]} [rows] */
+  /**
+   * @param {Omit<Organisation, 'status'>} org
+   * @param {SummaryLogRowStateEntry[]} [rows]
+   */
   const seedRepositories = async (org, registration, rows = DEFAULT_ROWS) => {
     const accreditationId = registration.accreditationId ?? null
     const ledgerId = {
