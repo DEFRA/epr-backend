@@ -22,27 +22,31 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
 
-const [CONTRACT_REGISTRATION] = buildReadOrganisation().registrations
-
 /**
  * Vary a complete registration, so a fixture stays one however few of its
- * fields a test cares about. The contract builder leaves a registration
- * unapproved and the export reads nothing that turns on approval, so these stay
- * on that arm of the union rather than inventing an approval.
+ * fields a test cares about. The exporter arm of the contract sample carries no
+ * accreditation link, so a fixture built on it inherits no identifier pointing
+ * at an accreditation this organisation does not hold. The contract builder
+ * leaves a registration unapproved and the export reads nothing that turns on
+ * approval, so these stay on that arm of the union rather than inventing an
+ * approval.
  *
  * @param {Partial<RegistrationOther>} [overrides]
  * @returns {RegistrationOther}
  */
-const buildRegistration = (overrides = {}) => ({
-  ...CONTRACT_REGISTRATION,
-  id: 'reg-1',
-  material: 'plastic',
-  submittedToRegulator: 'ea',
-  accreditation: null,
-  overseasSites: {},
-  status: REGISTRATION_STATUS.CREATED,
-  ...overrides
-})
+const buildRegistration = (overrides = {}) => {
+  const [, exporterRegistration] = buildReadOrganisation().registrations
+  return {
+    ...exporterRegistration,
+    id: 'reg-1',
+    material: 'plastic',
+    submittedToRegulator: 'ea',
+    accreditation: null,
+    overseasSites: {},
+    status: REGISTRATION_STATUS.CREATED,
+    ...overrides
+  }
+}
 
 /**
  * @param {Partial<Organisation>} [overrides]
@@ -57,6 +61,10 @@ const buildOrganisation = (overrides = {}) =>
     ...overrides
   })
 
+/**
+ * @param {Partial<SummaryLogRowStateEntry>} [overrides]
+ * @returns {SummaryLogRowStateEntry}
+ */
 const receivedRowState = (overrides = {}) => ({
   rowId: '1001',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,

@@ -7,14 +7,14 @@ import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 
 /**
- * A stored site, as the repository would return it. The identifier is taken
- * before the builder runs and applied after it, so an identifier the caller
- * passes cannot be discarded by the spread.
+ * A stored site, as the repository would return it. The builder supplies every
+ * field but the identifier, which the caller names so two sites in one array
+ * cannot collide.
  *
- * @param {Partial<OverseasSite>} [overrides]
+ * @param {Partial<OverseasSite> & { id: string }} overrides
  * @returns {OverseasSite}
  */
-const storedSite = ({ id = 'site-aaa', ...overrides } = {}) => ({
+const storedSite = ({ id, ...overrides }) => ({
   ...buildOverseasSite(overrides),
   id
 })
