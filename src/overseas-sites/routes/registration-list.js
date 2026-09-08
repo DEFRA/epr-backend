@@ -11,20 +11,38 @@ import { resolveOverseasSiteDetails } from '#overseas-sites/application/resolve-
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { OverseasSiteDetail } from '#overseas-sites/application/resolve-overseas-site-details.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
-export const accreditationOverseasSitesPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/overseas-sites'
+export const registrationOverseasSitesPath =
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/overseas-sites'
 
 const objectId = () =>
   Joi.string()
     .pattern(/^[a-f0-9]{24}$/)
     .required()
 
-export const accreditationOverseasSitesList = {
+/**
+ * This resource serves where a site is, not whether it is approved. Approval
+ * dates are served by the accreditation-keyed route.
+ *
+ * @param {Record<string, OverseasSiteDetail>} sites
+ * @returns {Record<string, Omit<OverseasSiteDetail, 'validFrom'>>}
+ */
+const withoutApprovalDate = (sites) =>
+  Object.fromEntries(
+    Object.entries(sites).map(
+      ([orsId, { name, country, address, coordinates }]) => [
+        orsId,
+        { name, country, address, coordinates }
+      ]
+    )
+  )
+
+export const registrationOverseasSitesList = {
   method: 'GET',
-  path: accreditationOverseasSitesPath,
+  path: registrationOverseasSitesPath,
   options: {
     auth: {
       strategies: ['access-token', BASIC_AUTH],
@@ -34,8 +52,7 @@ export const accreditationOverseasSitesList = {
     validate: {
       params: Joi.object({
         organisationId: objectId(),
-        registrationId: objectId(),
-        accreditationId: objectId()
+        registrationId: objectId()
       })
     }
   },
@@ -43,44 +60,34 @@ export const accreditationOverseasSitesList = {
    * @param {HapiRequest & {
    *   organisationsRepository: OrganisationsRepository,
    *   overseasSitesRepository: OverseasSitesRepository,
-   *   params: { organisationId: string, registrationId: string, accreditationId: string }
+   *   params: { organisationId: string, registrationId: string }
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { organisationsRepository, overseasSitesRepository, params, logger } =
       request
-    const { organisationId, registrationId, accreditationId } = params
+    const { organisationId, registrationId } = params
 
     try {
-      const [registration] = await Promise.all([
-        organisationsRepository.findRegistrationById(
-          organisationId,
-          registrationId
-        ),
-        organisationsRepository.findAccreditationById(
-          organisationId,
-          accreditationId
-        )
-      ])
+      const registration = await organisationsRepository.findRegistrationById(
+        organisationId,
+        registrationId
+      )
 
-      if (registration.accreditationId !== accreditationId) {
-        throw Boom.notFound(
-          `Accreditation with id ${accreditationId} not found for registration ${registrationId}`
+      const sites = withoutApprovalDate(
+        await resolveOverseasSiteDetails(
+          overseasSitesRepository,
+          registration.overseasSites
         )
-      }
-
-      const sites = await resolveOverseasSiteDetails(
-        overseasSitesRepository,
-        registration.overseasSites
       )
 
       logger.info({
-        message: `Overseas sites listed for accreditation: ${accreditationId}, count=${Object.keys(sites).length}`,
+        message: `Overseas sites listed for registration: ${registrationId}, count=${Object.keys(sites).length}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
-          reference: accreditationId
+          reference: registrationId
         }
       })
 
@@ -92,7 +99,7 @@ export const accreditationOverseasSitesList = {
 
       logger.error({
         err: error,
-        message: `Failure on ${accreditationOverseasSitesPath}`,
+        message: `Failure on ${registrationOverseasSitesPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -105,7 +112,7 @@ export const accreditationOverseasSitesList = {
       })
 
       throw Boom.badImplementation(
-        `Failure on ${accreditationOverseasSitesPath}`
+        `Failure on ${registrationOverseasSitesPath}`
       )
     }
   }
