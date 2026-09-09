@@ -17,7 +17,7 @@ import {
 
 /**
  * One affected summary log: an accreditation whose current submission already
- * holds rows that would move its December waste portion.
+ * holds December-dated loads that contribute to the balance.
  *
  * @typedef {Object} DecemberLoadRow
  * @property {string} organisationId - internal id
@@ -108,9 +108,9 @@ const scanAccreditation = async ({
 
 /**
  * Sweep every accreditation's latest submitted summary log and report those
- * that already hold December-dated loads — rows whose balance-affecting date
- * lands in the accreditation-year December, so they would move a December waste
- * portion. Read-only: it counts, it does not write. Reprocessor-output
+ * that already hold December-dated loads: rows whose balance-affecting date
+ * lands in the accreditation-year December and contribute to the balance.
+ * Read-only: it counts, it does not write. Reprocessor-output
  * submissions never accrue December, so they are scanned but never reported.
  *
  * @param {Object} params

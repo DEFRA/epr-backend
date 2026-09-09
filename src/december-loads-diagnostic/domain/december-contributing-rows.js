@@ -27,13 +27,16 @@ export const accreditationDecemberKey = ({ validFrom }) =>
   decemberKeyForYearOf(validFrom)
 
 /**
- * How many of an accreditation's row states would affect its December waste
- * portion — in either direction. A row counts when it contributes to the
- * balance under the accreditation's processing type (`contributionFor` is
- * non-null: exporter exported loads, reprocessor-input received and sent-on
- * loads) and its balance-affecting date falls in the accreditation-year
- * December. Reprocessor-output never accrues a December portion, so it counts
- * nothing regardless of its rows' dates.
+ * How many of an accreditation's row states are December-dated loads that
+ * contribute to the balance under its processing type. A row counts when
+ * `contributionFor` is non-null (exporter exported loads, reprocessor-input
+ * received and sent-on loads) and its balance-affecting date falls in the
+ * accreditation-year December. This flags every accreditation holding a
+ * December-dated load for review; it is not the December waste portion itself.
+ * A December-dated sent-on load counts here yet, per PAE-1920, deducts only from
+ * the general balance and never from the December portion. Reprocessor-output
+ * never accrues a December portion, so it counts nothing regardless of its
+ * rows' dates.
  *
  * This reuses `contributionFor` — the single source of the balance-affecting
  * date per row type — so the diagnostic buckets a December load exactly as the

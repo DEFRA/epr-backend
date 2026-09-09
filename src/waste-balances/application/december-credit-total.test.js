@@ -114,15 +114,21 @@ describe('decemberCreditTotalFor', () => {
     })
   })
 
-  describe('reprocessor-input credits and deducts, signed', () => {
-    it('sums a December received credit and a December sent-on deduction net', () => {
+  describe('reprocessor-input: the December portion is credits-only', () => {
+    it('accrues a December received credit but not a December sent-on load', () => {
       const rows = [
-        receivedRow('2026-12-10', included(100)),
-        sentOnRow('2026-12-20', included(-30)),
+        receivedRow('2026-12-10', included(300)),
+        sentOnRow('2026-12-20', included(-200)),
         receivedRow('2026-06-10', included(500))
       ]
 
-      expect(decemberCreditTotalFor(rows, REPROCESSOR_INPUT)).toBe(70)
+      expect(decemberCreditTotalFor(rows, REPROCESSOR_INPUT)).toBe(300)
+    })
+
+    it('accrues nothing for a December-dated sent-on load on its own', () => {
+      const rows = [sentOnRow('2026-12-20', included(-200))]
+
+      expect(decemberCreditTotalFor(rows, REPROCESSOR_INPUT)).toBe(0)
     })
   })
 
