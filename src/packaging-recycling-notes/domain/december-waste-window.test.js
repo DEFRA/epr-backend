@@ -1,8 +1,37 @@
 import { describe, it, expect } from 'vitest'
 
-import { isWithinDecemberWasteWindow } from './december-waste-window.js'
+import {
+  WASTE_PROCESSING_TYPE,
+  REPROCESSING_TYPE
+} from '#domain/organisations/model.js'
+import {
+  assertDecemberWasteDeclarable,
+  declaresDecemberWasteManually,
+  DECEMBER_WASTE_NOT_DECLARABLE_CODE,
+  isWithinDecemberWasteWindow
+} from './december-waste-window.js'
 
 const DEFAULT_CONFIG = { windowStart: '12-01T00:00' }
+
+const outputReprocessor = {
+  id: 'acc-output',
+  wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+  reprocessingType: REPROCESSING_TYPE.OUTPUT,
+  validFrom: '2026-01-01'
+}
+
+const inputReprocessor = {
+  id: 'acc-input',
+  wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+  reprocessingType: REPROCESSING_TYPE.INPUT,
+  validFrom: '2026-01-01'
+}
+
+const exporter = {
+  id: 'acc-exporter',
+  wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+  validFrom: '2026-01-01'
+}
 
 describe('isWithinDecemberWasteWindow', () => {
   it.each([
@@ -66,5 +95,103 @@ describe('isWithinDecemberWasteWindow', () => {
         widened
       )
     ).toBe(false)
+  })
+})
+
+describe('declaresDecemberWasteManually', () => {
+  it('is true for a reprocessor on output', () => {
+    expect(declaresDecemberWasteManually(outputReprocessor)).toBe(true)
+  })
+
+  it('is false for a reprocessor on input', () => {
+    expect(declaresDecemberWasteManually(inputReprocessor)).toBe(false)
+  })
+
+  it('is false for an exporter', () => {
+    expect(declaresDecemberWasteManually(exporter)).toBe(false)
+  })
+})
+
+describe('assertDecemberWasteDeclarable', () => {
+  const inWindow = new Date('2026-12-15T12:00:00.000Z')
+  const outsideWindow = new Date('2026-06-15T12:00:00.000Z')
+
+  it('does not throw when isDecemberWaste is false, regardless of type or window', () => {
+    expect(() =>
+      assertDecemberWasteDeclarable({
+        accreditation: exporter,
+        isDecemberWaste: false,
+        now: inWindow,
+        config: DEFAULT_CONFIG
+      })
+    ).not.toThrow()
+  })
+
+  it('does not throw for an output reprocessor inside the window', () => {
+    expect(() =>
+      assertDecemberWasteDeclarable({
+        accreditation: outputReprocessor,
+        isDecemberWaste: true,
+        now: inWindow,
+        config: DEFAULT_CONFIG
+      })
+    ).not.toThrow()
+  })
+
+  it('throws for an output reprocessor outside the window', () => {
+    expect(() =>
+      assertDecemberWasteDeclarable({
+        accreditation: outputReprocessor,
+        isDecemberWaste: true,
+        now: outsideWindow,
+        config: DEFAULT_CONFIG
+      })
+    ).toThrow(
+      expect.objectContaining({
+        output: expect.objectContaining({
+          payload: expect.objectContaining({
+            code: DECEMBER_WASTE_NOT_DECLARABLE_CODE
+          })
+        })
+      })
+    )
+  })
+
+  it('throws for an input reprocessor even inside the window', () => {
+    expect(() =>
+      assertDecemberWasteDeclarable({
+        accreditation: inputReprocessor,
+        isDecemberWaste: true,
+        now: inWindow,
+        config: DEFAULT_CONFIG
+      })
+    ).toThrow(
+      expect.objectContaining({
+        output: expect.objectContaining({
+          payload: expect.objectContaining({
+            code: DECEMBER_WASTE_NOT_DECLARABLE_CODE
+          })
+        })
+      })
+    )
+  })
+
+  it('throws for an exporter even inside the window', () => {
+    expect(() =>
+      assertDecemberWasteDeclarable({
+        accreditation: exporter,
+        isDecemberWaste: true,
+        now: inWindow,
+        config: DEFAULT_CONFIG
+      })
+    ).toThrow(
+      expect.objectContaining({
+        output: expect.objectContaining({
+          payload: expect.objectContaining({
+            code: DECEMBER_WASTE_NOT_DECLARABLE_CODE
+          })
+        })
+      })
+    )
   })
 })
