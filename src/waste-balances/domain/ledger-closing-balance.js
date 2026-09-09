@@ -60,26 +60,46 @@ export const closingForSummaryLogSubmitted = (
 /**
  * Compute closing balance for a PRN event.
  *
- * A PRN event moves the total fields but leaves the December amounts as they
- * opened, so the latest event's closing balance still surfaces the December
- * portion. Every case spreads `opening` to carry those amounts through.
+ * A general PRN moves only the total fields, leaving the December amounts as
+ * they opened. A December PRN draws from the December pool: its debit moves the
+ * December field alongside the total, so the general portion (total less
+ * December) is left whole. Every case spreads `opening` to carry the amounts it
+ * does not touch through, so the latest event's closing balance still surfaces
+ * the December portion.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
  * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
  * @param {number} prnAmount
+ * @param {boolean} [isDecemberWaste]
  * @returns {import('../repository/ledger-schema.js').LedgerBalanceSnapshot}
  */
-export const closingForPrn = (opening, kind, prnAmount) => {
+export const closingForPrn = (opening, kind, prnAmount, isDecemberWaste) => {
   switch (kind) {
     case LEDGER_EVENT_KIND.PRN_CREATED:
       return {
         ...opening,
-        availableAmount: toNumber(subtract(opening.availableAmount, prnAmount))
+        availableAmount: toNumber(subtract(opening.availableAmount, prnAmount)),
+        // A committed December PRN always opens with a December portion: the
+        // decider refuses one that would draw from an absent or short pool, so
+        // the amount is present here.
+        ...(isDecemberWaste && {
+          decemberAvailableAmount: toNumber(
+            subtract(
+              /** @type {number} */ (opening.decemberAvailableAmount),
+              prnAmount
+            )
+          )
+        })
       }
     case LEDGER_EVENT_KIND.PRN_ISSUED:
       return {
         ...opening,
-        amount: toNumber(subtract(opening.amount, prnAmount))
+        amount: toNumber(subtract(opening.amount, prnAmount)),
+        ...(isDecemberWaste && {
+          decemberAmount: toNumber(
+            subtract(/** @type {number} */ (opening.decemberAmount), prnAmount)
+          )
+        })
       }
     case LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED:
       return {

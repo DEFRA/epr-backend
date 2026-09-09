@@ -42,7 +42,7 @@ const SEED_BALANCE = { amount: 500, availableAmount: 500 }
  * Passing `null` leaves the ledger absent, which the commands reject as
  * `NO_LEDGER`.
  *
- * @param {{ amount: number, availableAmount: number } | null} [closingBalance]
+ * @param {import('#waste-balances/repository/ledger-schema.js').LedgerBalanceSnapshot | null} [closingBalance]
  */
 const seedStream = (closingBalance = SEED_BALANCE) =>
   createInMemoryLedgerRepository(
@@ -207,6 +207,85 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const { projection } =
           packagingRecyclingNotesRepository.persistProjection.mock.calls[0][0]
         expect(projection).not.toHaveProperty('prnNumber')
+      })
+    })
+
+    describe('December waste balance movement', () => {
+      const ledgerId = { organisationId, registrationId, accreditationId }
+      // 100 of the 500 balance is December-reserved.
+      const balanceWithDecember = {
+        amount: 500,
+        availableAmount: 500,
+        decemberAmount: 100,
+        decemberAvailableAmount: 100
+      }
+
+      const latestLedgerEvent = async () =>
+        (await ledgerRepository.findAllInLedger(ledgerId)).at(-1)
+
+      it('ringfences the December pool when a December PRN is raised', async () => {
+        ledgerRepository = seedStream(balanceWithDecember)
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn({ isDecemberWaste: true, tonnage: 40 })
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asOperator(),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        const event = await latestLedgerEvent()
+        expect(event.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
+        expect(event.payload).toMatchObject({ isDecemberWaste: true })
+        expect(event.closingBalance).toEqual({
+          amount: 500,
+          availableAmount: 460,
+          decemberAmount: 100,
+          decemberAvailableAmount: 60
+        })
+      })
+
+      it('deducts the December pool when a December PRN is issued', async () => {
+        ledgerRepository = seedStream(balanceWithDecember)
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn({
+            isDecemberWaste: true,
+            tonnage: 40,
+            status: {
+              currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+              history: [
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date(),
+                  by: { id: 'user-123', name: 'Test User' }
+                }
+              ]
+            }
+          })
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asOperator(),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        const event = await latestLedgerEvent()
+        expect(event.kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
+        expect(event.payload).toMatchObject({ isDecemberWaste: true })
+        expect(event.closingBalance).toEqual({
+          amount: 460,
+          availableAmount: 500,
+          decemberAmount: 60,
+          decemberAvailableAmount: 100
+        })
       })
     })
 

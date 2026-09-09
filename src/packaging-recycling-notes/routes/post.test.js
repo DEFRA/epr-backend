@@ -43,7 +43,7 @@ const SEED_BALANCE = { amount: 500, availableAmount: 500 }
  * resolves against it. Passing `null` leaves the ledger absent, which resolves
  * to zero available.
  *
- * @param {{ amount: number, availableAmount: number } | null} [closingBalance]
+ * @param {import('#waste-balances/repository/ledger-schema.js').LedgerBalanceSnapshot | null} [closingBalance]
  */
 const seedStream = (closingBalance = SEED_BALANCE) =>
   createInMemoryLedgerRepository(
@@ -167,6 +167,14 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
       it('persists isDecemberWaste true when submitted by an output reprocessor inside the window', async () => {
         vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+        // A December PRN draws from the December pool, so the balance must carry
+        // one for the draft to clear the pool-aware balance check.
+        ledgerRepository = seedStream({
+          amount: 500,
+          availableAmount: 500,
+          decemberAmount: 100,
+          decemberAvailableAmount: 100
+        })
 
         const response = await server.inject({
           method: 'POST',
@@ -847,6 +855,66 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CREATED)
+      })
+
+      // A balance carrying a December portion: 100 of the 500 available is
+      // December-reserved. The default accreditation is an output reprocessor,
+      // so a December declaration inside the window is permitted.
+      const balanceWithDecember = {
+        amount: 500,
+        availableAmount: 500,
+        decemberAmount: 100,
+        decemberAvailableAmount: 100
+      }
+
+      it('creates the draft when a December PRN is within the December available balance', async () => {
+        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+        ledgerRepository = seedStream(balanceWithDecember)
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 100, isDecemberWaste: true }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+      })
+
+      it('returns 409 and creates no draft when a December PRN exceeds the December available balance', async () => {
+        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+        ledgerRepository = seedStream(balanceWithDecember)
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 101, isDecemberWaste: true }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          'INSUFFICIENT_AVAILABLE_BALANCE'
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('returns 409 when a general PRN exceeds available minus the reserved December portion', async () => {
+        // available 500 minus December-available 100 leaves 400 for general; 401 is refused.
+        ledgerRepository = seedStream(balanceWithDecember)
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 401, isDecemberWaste: false }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          'INSUFFICIENT_AVAILABLE_BALANCE'
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
       })
     })
 

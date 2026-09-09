@@ -1,3 +1,5 @@
+import { subtract, toNumber } from '#common/helpers/decimal-utils.js'
+
 import { LEDGER_EVENT_KIND, ZERO_BALANCE } from '../repository/ledger-schema.js'
 import {
   closingForSummaryLogSubmitted,
@@ -123,7 +125,12 @@ const committed = (kind, opening, payload) => ({
       kind,
       payload,
       openingBalance: opening,
-      closingBalance: closingForPrn(opening, kind, payload.amount)
+      closingBalance: closingForPrn(
+        opening,
+        kind,
+        payload.amount,
+        payload.isDecemberWaste
+      )
     }
   ]
 })
@@ -138,28 +145,53 @@ const rejected = (reason) => ({
 })
 
 /**
+ * The tonnage a PRN may draw from a balance field: the December portion when
+ * the PRN is December waste, otherwise the general portion — the total less the
+ * December tonnage the December pool reserves. A missing December portion
+ * coalesces to zero, so a balance with none behaves exactly as it did before
+ * December pools existed.
+ *
+ * @param {number} total
+ * @param {number} [decemberPortion]
+ * @param {boolean} [isDecemberWaste]
+ * @returns {number}
+ */
+const drawableCeiling = (total, decemberPortion, isDecemberWaste) =>
+  isDecemberWaste
+    ? (decemberPortion ?? 0)
+    : toNumber(subtract(total, decemberPortion ?? 0))
+
+/**
  * Ringfence available balance for a new PRN. Rejects when the tonnage exceeds
- * the balance available to ringfence.
+ * the available balance of the pool the PRN draws from.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
  * @param {import('../repository/ledger-schema.js').PrnPayload} payload
  * @returns {PrnDecision}
  */
 export const createPrn = (balance, payload) =>
-  balance.availableAmount < payload.amount
+  drawableCeiling(
+    balance.availableAmount,
+    balance.decemberAvailableAmount,
+    payload.isDecemberWaste
+  ) < payload.amount
     ? rejected(PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE)
     : committed(LEDGER_EVENT_KIND.PRN_CREATED, balance, payload)
 
 /**
  * Deduct total balance as a PRN is issued. Rejects when the tonnage exceeds the
- * total balance.
+ * total balance of the pool the PRN draws from.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} balance
  * @param {import('../repository/ledger-schema.js').PrnPayload} payload
  * @returns {PrnDecision}
  */
 export const issuePrn = (balance, payload) =>
-  balance.amount < payload.amount
+  drawableCeiling(
+    balance.amount,
+    balance.decemberAmount,
+    payload.isDecemberWaste
+  ) < payload.amount
     ? rejected(PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE)
     : committed(LEDGER_EVENT_KIND.PRN_ISSUED, balance, payload)
 

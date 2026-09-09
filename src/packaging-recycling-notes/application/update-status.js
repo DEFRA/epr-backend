@@ -304,6 +304,9 @@ function buildCommandPayload(prn, obligationYear) {
   return {
     prnId: prn.id,
     amount: prn.tonnage,
+    // Carried only when set, so a general PRN's command is unchanged and the
+    // pool-aware deciders coalesce its absence to the general pool.
+    ...(prn.isDecemberWaste && { isDecemberWaste: true }),
     ...(selectedObligationYear === undefined
       ? {}
       : { obligationYear: selectedObligationYear })

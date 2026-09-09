@@ -243,6 +243,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     expect(latest?.payload).toEqual({
       prnId: PRN_ID,
       amount: TONNAGE,
+      isDecemberWaste: true,
       obligationYear: 2027
     })
     expect(reread?.obligationYear).toBe(2027)

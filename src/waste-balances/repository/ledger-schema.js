@@ -72,7 +72,11 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * @typedef {{ prnId: string, amount: number }} PrnPayload
+ * `isDecemberWaste` records which pool the PRN drew from: present and true when
+ * the PRN is December waste, absent otherwise (readers coalesce to general). It
+ * is carried so a later restore knows the pool without re-reading the PRN.
+ *
+ * @typedef {{ prnId: string, amount: number, isDecemberWaste?: boolean }} PrnPayload
  */
 
 /**
@@ -158,7 +162,8 @@ const summaryLogPayloadSchema = Joi.object({
 
 const prnPayloadSchema = Joi.object({
   prnId: Joi.string().required(),
-  amount: Joi.number().required()
+  amount: Joi.number().required(),
+  isDecemberWaste: Joi.boolean()
 })
 
 const prnAcceptedPayloadSchema = prnPayloadSchema.keys({

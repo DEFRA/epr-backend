@@ -212,4 +212,48 @@ describe('closingForPrn', () => {
       }
     )
   })
+
+  describe('debiting the December portion for a December PRN', () => {
+    // A December PRN draws from the December pool: its debit moves the December
+    // field alongside the total, so the general portion (total minus December)
+    // is left whole.
+    const openingWithDecember = {
+      amount: 1000,
+      availableAmount: 800,
+      decemberAmount: 250,
+      decemberAvailableAmount: 200
+    }
+
+    it('ringfences both the December available and the general available on creation', () => {
+      expect(
+        closingForPrn(
+          openingWithDecember,
+          LEDGER_EVENT_KIND.PRN_CREATED,
+          50,
+          true
+        )
+      ).toEqual({
+        amount: 1000,
+        availableAmount: 750,
+        decemberAmount: 250,
+        decemberAvailableAmount: 150
+      })
+    })
+
+    it('deducts both the December total and the general total on issue', () => {
+      expect(
+        closingForPrn(
+          openingWithDecember,
+          LEDGER_EVENT_KIND.PRN_ISSUED,
+          50,
+          true
+        )
+      ).toEqual({
+        amount: 950,
+        availableAmount: 800,
+        decemberAmount: 200,
+        decemberAvailableAmount: 200
+      })
+    })
+  })
 })

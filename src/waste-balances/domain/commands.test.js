@@ -166,6 +166,157 @@ describe('issuePrn', () => {
   })
 })
 
+describe('createPrn — December pool', () => {
+  // A balance carrying a December portion: 100 of the 500 available is
+  // December-reserved.
+  const balanceWithDecember = {
+    amount: 500,
+    availableAmount: 500,
+    decemberAmount: 100,
+    decemberAvailableAmount: 100
+  }
+
+  it('ringfences both the December and the general available on a December PRN', () => {
+    expect(
+      createPrn(balanceWithDecember, {
+        prnId: 'prn-1',
+        amount: 40,
+        isDecemberWaste: true
+      })
+    ).toEqual({
+      status: PRN_COMMAND_STATUS.COMMITTED,
+      events: [
+        {
+          kind: LEDGER_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 40, isDecemberWaste: true },
+          openingBalance: balanceWithDecember,
+          closingBalance: {
+            amount: 500,
+            availableAmount: 460,
+            decemberAmount: 100,
+            decemberAvailableAmount: 60
+          }
+        }
+      ]
+    })
+  })
+
+  it('refuses a December PRN when the balance has no December pool at all', () => {
+    // AC5 at the extreme: an operator with zero December available (no December
+    // tonnage ever accrued, so the field is absent) cannot raise a December PRN.
+    expect(
+      createPrn(
+        { amount: 500, availableAmount: 500 },
+        { prnId: 'prn-1', amount: 10, isDecemberWaste: true }
+      )
+    ).toEqual({
+      status: PRN_COMMAND_STATUS.REJECTED,
+      reason: PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE
+    })
+  })
+
+  it('rejects a December PRN over the December available, though the general balance has room', () => {
+    expect(
+      createPrn(balanceWithDecember, {
+        prnId: 'prn-1',
+        amount: 150,
+        isDecemberWaste: true
+      })
+    ).toEqual({
+      status: PRN_COMMAND_STATUS.REJECTED,
+      reason: PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE
+    })
+  })
+
+  it('reserves the December portion from a general PRN, capping it at available minus December', () => {
+    // available 500 minus December-available 100 leaves 400 for general; 401 is refused.
+    expect(
+      createPrn(balanceWithDecember, { prnId: 'prn-1', amount: 401 })
+    ).toEqual({
+      status: PRN_COMMAND_STATUS.REJECTED,
+      reason: PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE
+    })
+  })
+
+  it('commits a general PRN within available minus December, leaving the December portion untouched', () => {
+    expect(
+      createPrn(balanceWithDecember, { prnId: 'prn-1', amount: 400 })
+    ).toEqual({
+      status: PRN_COMMAND_STATUS.COMMITTED,
+      events: [
+        {
+          kind: LEDGER_EVENT_KIND.PRN_CREATED,
+          payload: { prnId: 'prn-1', amount: 400 },
+          openingBalance: balanceWithDecember,
+          closingBalance: {
+            amount: 500,
+            availableAmount: 100,
+            decemberAmount: 100,
+            decemberAvailableAmount: 100
+          }
+        }
+      ]
+    })
+  })
+})
+
+describe('issuePrn — December pool', () => {
+  const balanceWithDecember = {
+    amount: 500,
+    availableAmount: 500,
+    decemberAmount: 100,
+    decemberAvailableAmount: 100
+  }
+
+  it('deducts both the December and the general total on a December PRN', () => {
+    expect(
+      issuePrn(balanceWithDecember, {
+        prnId: 'prn-1',
+        amount: 40,
+        isDecemberWaste: true
+      })
+    ).toEqual({
+      status: PRN_COMMAND_STATUS.COMMITTED,
+      events: [
+        {
+          kind: LEDGER_EVENT_KIND.PRN_ISSUED,
+          payload: { prnId: 'prn-1', amount: 40, isDecemberWaste: true },
+          openingBalance: balanceWithDecember,
+          closingBalance: {
+            amount: 460,
+            availableAmount: 500,
+            decemberAmount: 60,
+            decemberAvailableAmount: 100
+          }
+        }
+      ]
+    })
+  })
+
+  it('rejects a December PRN issue over the December total balance', () => {
+    expect(
+      issuePrn(balanceWithDecember, {
+        prnId: 'prn-1',
+        amount: 150,
+        isDecemberWaste: true
+      })
+    ).toEqual({
+      status: PRN_COMMAND_STATUS.REJECTED,
+      reason: PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE
+    })
+  })
+
+  it('reserves the December portion from a general PRN issue, capping it at total minus December', () => {
+    // total 500 minus December 100 leaves 400 for general; 401 is refused.
+    expect(
+      issuePrn(balanceWithDecember, { prnId: 'prn-1', amount: 401 })
+    ).toEqual({
+      status: PRN_COMMAND_STATUS.REJECTED,
+      reason: PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE
+    })
+  })
+})
+
 describe('cancelPrnCreation', () => {
   it('commits a prn-creation-cancelled event crediting the available balance', () => {
     expect(
