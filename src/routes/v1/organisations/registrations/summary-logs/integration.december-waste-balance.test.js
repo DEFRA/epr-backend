@@ -194,6 +194,34 @@ describe('December waste balance accrual', () => {
       expect(balance.decemberAmount).toBe(100)
       expect(balance.decemberAvailableAmount).toBe(100)
     })
+
+    it('excludes a December sent-on load from the December portion (PAE-1920)', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
+
+      // Receive 300t in December, send on 200t in December (ADR-0049 example).
+      // The sent-on load nets the general total to 100, but the December
+      // portion is credits-only, so it stays at the gross 300 received.
+      await submitLoads(
+        env,
+        createWasteBalanceMeta('REPROCESSOR_INPUT'),
+        'b1-sent-on',
+        reprocessorInputData(
+          [{ rowId: 1001, tonnageReceived: 300, dateReceived: DEC }],
+          [{ rowId: 5001, tonnageSent: 200, dateLeft: DEC }]
+        )
+      )
+
+      const balance = await getWasteBalance(env)
+
+      expect(balance.amount).toBe(100)
+      expect(balance.decemberAmount).toBe(300)
+      expect(balance.decemberAvailableAmount).toBe(300)
+      // The general portion carries the whole deduction: total minus December.
+      expect(balance.amount - (balance.decemberAmount ?? 0)).toBe(-200)
+    })
   })
 
   describe('reprocessor-output accrues no December portion', () => {
