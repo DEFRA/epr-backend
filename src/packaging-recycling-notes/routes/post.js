@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { config } from '#root/config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -13,6 +14,7 @@ import {
   WASTE_PROCESSING_TYPE,
   ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
+import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -252,6 +254,13 @@ export const packagingRecyclingNotesCreate = {
       if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
         throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
       }
+
+      assertDecemberWasteDeclarable({
+        accreditation,
+        isDecemberWaste: payload.isDecemberWaste,
+        now,
+        config: config.get('decemberWaste')
+      })
 
       await assertSufficientAvailableBalance({
         ledgerRepository,

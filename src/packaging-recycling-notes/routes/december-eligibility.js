@@ -9,7 +9,10 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
-import { isWithinDecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js'
+import {
+  declaresDecemberWasteManually,
+  isWithinDecemberWasteWindow
+} from '#packaging-recycling-notes/domain/december-waste-window.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
@@ -18,10 +21,13 @@ export const packagingRecyclingNotesDecemberEligibilityPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/december-prn-eligibility'
 
 /**
- * Whether the December Waste declaration window is currently open for an
- * accreditation's relevant year (PAE-1913). Timing only - whether a
- * reprocessor is on output, and which balance a PRN draws from, are separate
- * concerns the frontend and later stories (PAE-1920/1922) own.
+ * Whether an accreditation's December Waste declaration control should be
+ * shown, and whether it may currently be submitted (PAE-1913). Two
+ * independent answers: `declaresDecemberWasteManually` is a fixed property of
+ * the accreditation's type (only a reprocessor on output today - see
+ * declaresDecemberWasteManually in december-waste-window.js), while
+ * `windowOpen` is time-varying. The frontend composes the two; this endpoint
+ * states them separately so it never has to restate the rule.
  */
 export const packagingRecyclingNotesDecemberEligibility = {
   method: 'GET',
@@ -48,13 +54,19 @@ export const packagingRecyclingNotesDecemberEligibility = {
       )
 
       const relevantYear = deriveAccreditationYear(accreditation)
-      const eligible = isWithinDecemberWasteWindow(
+      const windowOpen = isWithinDecemberWasteWindow(
         relevantYear,
         new Date(),
         config.get('decemberWaste')
       )
 
-      return h.response({ eligible }).code(StatusCodes.OK)
+      return h
+        .response({
+          declaresDecemberWasteManually:
+            declaresDecemberWasteManually(accreditation),
+          windowOpen
+        })
+        .code(StatusCodes.OK)
     } catch (error) {
       if (error.isBoom) {
         throw error

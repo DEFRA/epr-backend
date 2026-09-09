@@ -13,6 +13,10 @@ import {
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import {
+  WASTE_PROCESSING_TYPE,
+  REPROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { packagingRecyclingNotesDecemberEligibilityPath } from './december-eligibility.js'
 
 const organisationId = 'org-123'
@@ -32,7 +36,9 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
       findAccreditationById: vi.fn(async () => ({
         id: accreditationId,
         validFrom: '2026-01-01',
-        status: 'approved'
+        status: 'approved',
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        reprocessingType: REPROCESSING_TYPE.OUTPUT
       }))
     }
 
@@ -54,7 +60,7 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     await server.stop()
   })
 
-  it('returns eligible: true when now is within the December window', async () => {
+  it('returns windowOpen: true when now is within the December window', async () => {
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
 
     const response = await server.inject({
@@ -64,10 +70,13 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({ eligible: true })
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      declaresDecemberWasteManually: true,
+      windowOpen: true
+    })
   })
 
-  it('returns eligible: false when now is outside the December window', async () => {
+  it('returns windowOpen: false when now is outside the December window', async () => {
     vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
 
     const response = await server.inject({
@@ -77,10 +86,13 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({ eligible: false })
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      declaresDecemberWasteManually: true,
+      windowOpen: false
+    })
   })
 
-  it('returns eligible: true in January the year after the accreditation year', async () => {
+  it('returns windowOpen: true in January the year after the accreditation year', async () => {
     vi.setSystemTime(new Date('2027-01-31T23:59:00.000Z'))
 
     const response = await server.inject({
@@ -90,10 +102,13 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({ eligible: true })
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      declaresDecemberWasteManually: true,
+      windowOpen: true
+    })
   })
 
-  it('returns eligible: false the day after the deadline', async () => {
+  it('returns windowOpen: false the day after the deadline', async () => {
     vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
 
     const response = await server.inject({
@@ -103,7 +118,55 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({ eligible: false })
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      declaresDecemberWasteManually: true,
+      windowOpen: false
+    })
+  })
+
+  it('returns declaresDecemberWasteManually: false for an input reprocessor, even when the window is open', async () => {
+    vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+    organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+      id: accreditationId,
+      validFrom: '2026-01-01',
+      status: 'approved',
+      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      reprocessingType: REPROCESSING_TYPE.INPUT
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      declaresDecemberWasteManually: false,
+      windowOpen: true
+    })
+  })
+
+  it('returns declaresDecemberWasteManually: false for an exporter, even when the window is open', async () => {
+    vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+    organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+      id: accreditationId,
+      validFrom: '2026-01-01',
+      status: 'approved',
+      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      declaresDecemberWasteManually: false,
+      windowOpen: true
+    })
   })
 
   it('returns 404 when the accreditation does not exist', async () => {
