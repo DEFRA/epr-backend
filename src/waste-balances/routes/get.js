@@ -83,18 +83,34 @@ export const wasteBalanceGet = {
         return {
           accreditationId,
           amount: balance?.amount ?? 0,
-          availableAmount: balance?.availableAmount ?? 0
+          availableAmount: balance?.availableAmount ?? 0,
+          decemberAmount: balance?.decemberAmount,
+          decemberAvailableAmount: balance?.decemberAvailableAmount
         }
       })
     )
 
-    /** @type {Record<string, { amount: number, availableAmount: number }>} */
+    /**
+     * @type {Record<string, {
+     *   amount: number,
+     *   availableAmount: number,
+     *   decemberAmount?: number,
+     *   decemberAvailableAmount?: number
+     * }>}
+     */
     const balanceMap = {}
     for (const balance of balances) {
       if (balance) {
         balanceMap[balance.accreditationId] = {
           amount: balance.amount,
-          availableAmount: balance.availableAmount
+          availableAmount: balance.availableAmount,
+          // Only surfaced when the accreditation holds a December portion.
+          ...(balance.decemberAmount !== undefined && {
+            decemberAmount: balance.decemberAmount
+          }),
+          ...(balance.decemberAvailableAmount !== undefined && {
+            decemberAvailableAmount: balance.decemberAvailableAmount
+          })
         }
       }
     }
