@@ -116,9 +116,6 @@ describe('decemberCreditTotalFor', () => {
 
   describe('reprocessor-input: the December portion is credits-only', () => {
     it('accrues a December received credit but not a December sent-on load', () => {
-      // ADR-0049 example (PAE-1920): receive 300t in December, send on 200t in
-      // December. The December portion is credits-only, so it is 300; the
-      // sent-on load deducts only from the general (non-December) balance.
       const rows = [
         receivedRow('2026-12-10', included(300)),
         sentOnRow('2026-12-20', included(-200)),
