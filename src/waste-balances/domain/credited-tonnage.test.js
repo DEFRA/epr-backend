@@ -10,9 +10,13 @@ const RANGE = { fromMonth: '2026-01', toMonth: '2026-03' }
 
 /** @type {import('./credited-tonnage.js').SkippedRows} */
 const NO_ROWS_SKIPPED = {
-  noUsableDate: { rowCount: 0, tonnage: 0 },
-  beforeWindowStart: { rowCount: 0, tonnage: 0 },
-  afterWindowEnd: { rowCount: 0, tonnage: 0 }
+  noUsableDate: { rowCount: 0, totalCredited: 0, eligibleForWasteBalance: 0 },
+  beforeWindowStart: {
+    rowCount: 0,
+    totalCredited: 0,
+    eligibleForWasteBalance: 0
+  },
+  afterWindowEnd: { rowCount: 0, totalCredited: 0, eligibleForWasteBalance: 0 }
 }
 
 const REPROCESSOR_INPUT = {
@@ -358,7 +362,11 @@ describe('creditedTonnageByMonth', () => {
 
         expect(result.skippedRows).toEqual({
           ...NO_ROWS_SKIPPED,
-          noUsableDate: { rowCount: 1, tonnage: 10 }
+          noUsableDate: {
+            rowCount: 1,
+            totalCredited: 10,
+            eligibleForWasteBalance: 10
+          }
         })
         expect(result.months.every((entry) => entry.totalCredited === 0)).toBe(
           true
@@ -377,16 +385,49 @@ describe('creditedTonnageByMonth', () => {
       )
 
       expect(result.skippedRows).toEqual({
-        noUsableDate: { rowCount: 0, tonnage: 0 },
-        beforeWindowStart: { rowCount: 1, tonnage: 10 },
-        afterWindowEnd: { rowCount: 1, tonnage: 25 }
+        noUsableDate: {
+          rowCount: 0,
+          totalCredited: 0,
+          eligibleForWasteBalance: 0
+        },
+        beforeWindowStart: {
+          rowCount: 1,
+          totalCredited: 10,
+          eligibleForWasteBalance: 10
+        },
+        afterWindowEnd: {
+          rowCount: 1,
+          totalCredited: 25,
+          eligibleForWasteBalance: 25
+        }
       })
       expect(result.months.every((entry) => entry.totalCredited === 0)).toBe(
         true
       )
     })
 
-    it('counts a sent-on row it cannot place but leaves its deduction out of the skipped tonnage', () => {
+    it('reports no eligible tonnage for a dropped row the waste balance ignored, though its crediting column is not zero', () => {
+      const result = creditedTonnageByMonth(
+        [
+          receivedRow(
+            '1000',
+            '2025-12-31',
+            10,
+            notIncluded(WASTE_BALANCE_OUTCOME.IGNORED)
+          )
+        ],
+        REPROCESSOR_INPUT,
+        RANGE
+      )
+
+      expect(result.skippedRows.beforeWindowStart).toEqual({
+        rowCount: 1,
+        totalCredited: 10,
+        eligibleForWasteBalance: 0
+      })
+    })
+
+    it('counts a sent-on row it cannot place but leaves both tonnage figures alone', () => {
       const result = creditedTonnageByMonth(
         [sentOnRow('5000', 'not-a-date', 12)],
         REPROCESSOR_INPUT,
@@ -395,7 +436,11 @@ describe('creditedTonnageByMonth', () => {
 
       expect(result.skippedRows).toEqual({
         ...NO_ROWS_SKIPPED,
-        noUsableDate: { rowCount: 1, tonnage: 0 }
+        noUsableDate: {
+          rowCount: 1,
+          totalCredited: 0,
+          eligibleForWasteBalance: 0
+        }
       })
       expect(result.months.every((entry) => entry.sentOnDeductions === 0)).toBe(
         true
@@ -407,7 +452,12 @@ describe('creditedTonnageByMonth', () => {
         [
           receivedRow('1000', '2026-02-01', 10, included(10)),
           receivedRow('1001', '2025-11-30', 99, included(99)),
-          receivedRow('1002', '2025-10-15', 1, included(1)),
+          receivedRow(
+            '1002',
+            '2025-10-15',
+            1,
+            notIncluded(WASTE_BALANCE_OUTCOME.EXCLUDED)
+          ),
           receivedRow('1003', '2026-09-01', 88, included(88))
         ],
         REPROCESSOR_INPUT,
@@ -415,9 +465,21 @@ describe('creditedTonnageByMonth', () => {
       )
 
       expect(result.skippedRows).toEqual({
-        noUsableDate: { rowCount: 0, tonnage: 0 },
-        beforeWindowStart: { rowCount: 2, tonnage: 100 },
-        afterWindowEnd: { rowCount: 1, tonnage: 88 }
+        noUsableDate: {
+          rowCount: 0,
+          totalCredited: 0,
+          eligibleForWasteBalance: 0
+        },
+        beforeWindowStart: {
+          rowCount: 2,
+          totalCredited: 100,
+          eligibleForWasteBalance: 99
+        },
+        afterWindowEnd: {
+          rowCount: 1,
+          totalCredited: 88,
+          eligibleForWasteBalance: 88
+        }
       })
       expect(monthFor(result, '2026-02').totalCredited).toBe(10)
     })
@@ -434,7 +496,8 @@ describe('creditedTonnageByMonth', () => {
 
       expect(result.skippedRows.beforeWindowStart).toEqual({
         rowCount: 2,
-        tonnage: 0.3
+        totalCredited: 0.3,
+        eligibleForWasteBalance: 0.3
       })
     })
   })

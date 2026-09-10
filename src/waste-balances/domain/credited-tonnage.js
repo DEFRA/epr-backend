@@ -67,21 +67,30 @@ const YES = 'Yes'
  */
 
 /**
- * How many rows one population of unplaceable rows holds, and the gross
- * crediting tonnage on them. A deducting row adds to `rowCount` but not to
- * `tonnage`, so the figure stays a size of what the report leaves out rather
- * than a net balance.
+ * How many rows one population of unplaceable rows holds, and the tonnage on
+ * them in the same two figures a month carries.
+ *
+ * Both are needed because they answer different questions and routinely
+ * disagree. A row dated before the reporting window is usually dated before its
+ * accreditation's `validFrom` as well, so the classifier ignores it: its
+ * crediting column is non-zero while the waste balance holds nothing for it.
+ * `totalCredited` alone would report such a row as recoverable tonnage when
+ * there is none to recover.
+ *
+ * A deducting row raises `rowCount` only, so neither figure becomes a net
+ * balance.
  *
  * @typedef {Object} SkippedRowTally
  * @property {number} rowCount
- * @property {number} tonnage - 2dp
+ * @property {number} totalCredited - gross tonnage on crediting rows, 2dp
+ * @property {number} eligibleForWasteBalance - tonnage the balance holds for them (INCLUDED classification), 2dp
  */
 
 /**
  * The rows no month could be found for, split by why. `noUsableDate` rows have
  * no reporting period at all; the other two are dated outside the range the
  * caller asked for, which are different populations: rows before the start are
- * tonnage the ledger counts and the report hides, and rows after the end are
+ * the ones that might hold tonnage the report hides, and rows after the end are
  * future-dated.
  *
  * @typedef {Object} SkippedRows
@@ -161,7 +170,7 @@ const expandMonthRange = ({ fromMonth, toMonth }) => {
  * with a usable month and no bucket is dated outside it, and anything not
  * before the start is after the end.
  *
- * `YYYY-MM` keys sort lexically, so the comparison is a string comparison.
+ * `YYYY-MM` keys are fixed-width, so ordering them is a string comparison.
  *
  * @param {string | null} month
  * @param {SkippedRows} skippedRows
@@ -172,9 +181,48 @@ const skippedPopulationFor = (month, skippedRows, fromMonth) => {
   if (month === null) {
     return skippedRows.noUsableDate
   }
-  return month < fromMonth
+  return month.localeCompare(fromMonth) < 0
     ? skippedRows.beforeWindowStart
     : skippedRows.afterWindowEnd
+}
+
+/**
+ * Add a row the range has no bucket for to the population it belongs to,
+ * carrying the same two tonnage figures the row would have added to a month.
+ *
+ * @param {SkippedRows} skippedRows
+ * @param {string | null} month
+ * @param {string} fromMonth
+ * @param {CreditableWasteRecordState} rowState
+ * @param {RowContribution} contribution
+ * @returns {void}
+ */
+const tallySkippedRow = (
+  skippedRows,
+  month,
+  fromMonth,
+  rowState,
+  contribution
+) => {
+  const tally = skippedPopulationFor(month, skippedRows, fromMonth)
+  tally.rowCount += 1
+
+  if (!contribution.credits) {
+    return
+  }
+
+  tally.totalCredited = toNumber(
+    addRounded(tally.totalCredited, contribution.tonnage, 2)
+  )
+  if (rowState.classification.outcome === WASTE_BALANCE_OUTCOME.INCLUDED) {
+    tally.eligibleForWasteBalance = toNumber(
+      addRounded(
+        tally.eligibleForWasteBalance,
+        rowState.classification.transactionAmount,
+        2
+      )
+    )
+  }
 }
 
 /**
@@ -287,9 +335,17 @@ export const creditedTonnageByMonth = (
 
   /** @type {SkippedRows} */
   const skippedRows = {
-    noUsableDate: { rowCount: 0, tonnage: 0 },
-    beforeWindowStart: { rowCount: 0, tonnage: 0 },
-    afterWindowEnd: { rowCount: 0, tonnage: 0 }
+    noUsableDate: { rowCount: 0, totalCredited: 0, eligibleForWasteBalance: 0 },
+    beforeWindowStart: {
+      rowCount: 0,
+      totalCredited: 0,
+      eligibleForWasteBalance: 0
+    },
+    afterWindowEnd: {
+      rowCount: 0,
+      totalCredited: 0,
+      eligibleForWasteBalance: 0
+    }
   }
 
   for (const rowState of rowStates) {
@@ -301,17 +357,13 @@ export const creditedTonnageByMonth = (
     const month = monthKeyForDate(rowState.data[contribution.dateField])
     const bucket = month === null ? undefined : buckets.get(month)
     if (bucket === undefined) {
-      const tally = skippedPopulationFor(
-        month,
+      tallySkippedRow(
         skippedRows,
-        monthRange.fromMonth
+        month,
+        monthRange.fromMonth,
+        rowState,
+        contribution
       )
-      tally.rowCount += 1
-      if (contribution.credits) {
-        tally.tonnage = toNumber(
-          addRounded(tally.tonnage, contribution.tonnage, 2)
-        )
-      }
       continue
     }
 

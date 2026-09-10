@@ -96,6 +96,19 @@ const compareRows = (a, b) =>
  * @param {Date} params.now - clock reading supplied by the caller; the report's upper month bound
  * @returns {Promise<CreditedTonnageReport>}
  */
+/**
+ * The two tonnage figures on one population of skipped rows, for the log line.
+ * Both are given because they routinely differ: a row dated before the
+ * reporting window is usually outside its accreditation period as well, so it
+ * carries a crediting column the report loses while the waste balance holds
+ * nothing for it. Only the eligible figure is tonnage anyone could recover.
+ *
+ * @param {import('#waste-balances/domain/credited-tonnage.js').SkippedRowTally} tally
+ * @returns {string}
+ */
+const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
+  `(${totalCredited}t credited, ${eligibleForWasteBalance}t eligible)`
+
 export const buildCreditedTonnageReport = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
@@ -184,9 +197,9 @@ export const buildCreditedTonnageReport = async ({
       logger.info({
         message:
           `Credited tonnage report skipped ${skippedTotal} row(s) for accreditation ${accreditation.id}: ` +
-          `${noUsableDate.rowCount} with no usable date (${noUsableDate.tonnage}t), ` +
-          `${beforeWindowStart.rowCount} dated before ${monthRange.fromMonth} (${beforeWindowStart.tonnage}t), ` +
-          `${afterWindowEnd.rowCount} dated after ${monthRange.toMonth} (${afterWindowEnd.tonnage}t)`,
+          `${noUsableDate.rowCount} with no usable date ${describeTonnage(noUsableDate)}, ` +
+          `${beforeWindowStart.rowCount} dated before ${monthRange.fromMonth} ${describeTonnage(beforeWindowStart)}, ` +
+          `${afterWindowEnd.rowCount} dated after ${monthRange.toMonth} ${describeTonnage(afterWindowEnd)}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: 'credited_tonnage_rows_skipped',
