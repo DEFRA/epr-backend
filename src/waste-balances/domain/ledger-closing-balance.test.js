@@ -240,6 +240,35 @@ describe('closingForPrn', () => {
       })
     })
 
+    it('restores only the total when a December PRN creation is cancelled (PAE-1923 will restore the December portion)', () => {
+      // The credit side of the December split is deferred to PAE-1923: today a
+      // cancelled December PRN returns tonnage to the general total only,
+      // leaving the December portion understated. Opening is the balance after a
+      // 50t December raise (availableAmount and decemberAvailableAmount both
+      // down 50); cancelling restores availableAmount but not
+      // decemberAvailableAmount. This pins the known-incomplete behaviour so
+      // PAE-1923 has a red test to flip.
+      const openingAfterDecemberRaise = {
+        amount: 1000,
+        availableAmount: 750,
+        decemberAmount: 250,
+        decemberAvailableAmount: 150
+      }
+      expect(
+        closingForPrn(
+          openingAfterDecemberRaise,
+          LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
+          50,
+          true
+        )
+      ).toEqual({
+        amount: 1000,
+        availableAmount: 800,
+        decemberAmount: 250,
+        decemberAvailableAmount: 150
+      })
+    })
+
     it('deducts both the December total and the general total on issue', () => {
       expect(
         closingForPrn(

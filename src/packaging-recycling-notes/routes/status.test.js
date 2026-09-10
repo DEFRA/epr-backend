@@ -287,6 +287,43 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           decemberAvailableAmount: 100
         })
       })
+
+      it('reserves the December total from a general issue, refusing above total minus December', async () => {
+        // General cap = amount(500) minus decemberAmount(100) = 400; issuing 401
+        // is refused even though 401 is below the 500 total, because December
+        // stays reserved. Proves the reservation end-to-end on the issue path:
+        // under the old total-only check, 401 < 500 would have committed.
+        ledgerRepository = seedStream(balanceWithDecember)
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn({
+            tonnage: 401,
+            status: {
+              currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+              history: [
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date(),
+                  by: { id: 'user-123', name: 'Test User' }
+                }
+              ]
+            }
+          })
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asOperator(),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(response.payload).toContain('Insufficient total waste balance')
+
+        // Nothing moved: the ledger still holds only the seeded summary-log event.
+        const event = await latestLedgerEvent()
+        expect(event.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
+      })
     })
 
     describe('PRN number generation', () => {
