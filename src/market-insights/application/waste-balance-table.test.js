@@ -450,6 +450,18 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
+    it('says the count is not scoped to the year being served', async () => {
+      const { logger } = await withUndatedDeduction()
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'spans every submission read rather than 2026 alone'
+          )
+        })
+      )
+    })
+
     it('counts a dropped crediting row against the gross tonnage', async () => {
       const { table, logger } = await run({
         organisations: [operator.organisation],
@@ -504,6 +516,44 @@ describe('buildWasteBalanceTable', () => {
           netCredit: 40
         }
       ])
+    })
+
+    it('says how much tonnage it held back', async () => {
+      const { logger } = await run({
+        organisations: [operator.organisation],
+        submissions: [
+          {
+            ...operator,
+            rows: [
+              receivedRow('row-1', '2026-12-10', 999),
+              sentOnRow('row-2', '2026-11-05', 30)
+            ]
+          }
+        ]
+      })
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            '1 sent-on row(s) totalling 30 tonnes and 1 crediting row(s) totalling 999 tonnes'
+          ),
+          event: expect.objectContaining({
+            action: 'market_insights_future_dated_rows'
+          })
+        })
+      )
+    })
+
+    it('says nothing about a row belonging to another reporting year', async () => {
+      const { table, logger } = await run({
+        organisations: [operator.organisation],
+        submissions: [
+          { ...operator, rows: [receivedRow('row-1', '2027-03-10', 999)] }
+        ]
+      })
+
+      expect(table.data).toEqual([])
+      expect(logger.warn).not.toHaveBeenCalled()
     })
   })
 
@@ -591,10 +641,10 @@ describe('buildWasteBalanceTable', () => {
     expect(table.data.map((row) => row.month)).toEqual(['2026-01'])
   })
 
-  it('leaves out a test organisation', async () => {
+  it('leaves out a test organisation without remarking on it', async () => {
     const operator = makeOperator({ orgId: TEST_ORG_ID })
 
-    const { table } = await run({
+    const { table, logger } = await run({
       organisations: [operator.organisation],
       submissions: [
         { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
@@ -602,12 +652,13 @@ describe('buildWasteBalanceTable', () => {
     })
 
     expect(table.data).toEqual([])
+    expect(logger.warn).not.toHaveBeenCalled()
   })
 
-  it('leaves out a partition whose accreditation no longer resolves', async () => {
+  it('names the partition it left out when the accreditation no longer resolves', async () => {
     const operator = makeOperator({ orgId: 500009 })
 
-    const { table } = await run({
+    const { table, logger } = await run({
       organisations: [],
       submissions: [
         { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
@@ -615,6 +666,15 @@ describe('buildWasteBalanceTable', () => {
     })
 
     expect(table.data).toEqual([])
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('acc-500009'),
+        event: expect.objectContaining({
+          action: 'market_insights_partition_unmatched',
+          reference: 'acc-500009'
+        })
+      })
+    )
   })
 
   it('leaves out a registered-only partition sharing a summary log with an accredited one', async () => {

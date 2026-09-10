@@ -21,7 +21,7 @@ import {
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceFigures} WasteBalanceFigures
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} PublishedWasteBalanceFigures
- * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationContext} AccreditationContext
+ * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationIndex} AccreditationIndex
  * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
  * @typedef {import('#waste-records/repository/port.js').SubmittedRowState} SubmittedRowState
  * @typedef {import('#domain/organisations/registration.js').Registration} Registration
@@ -82,28 +82,45 @@ const compareRows = (a, b) =>
   a.month.localeCompare(b.month)
 
 /**
- * A registered-only partition holds no credits, so it publishes under no
- * accreditation.
- *
- * @param {LatestSubmittedSummaryLogPerLedger['ledgerId']} ledgerId
- * @param {Map<string, AccreditationContext>} index
- * @returns {AccreditationContext | undefined}
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {string} accreditationId
  */
-const publishedContextFor = ({ accreditationId }, index) =>
-  accreditationId === null ? undefined : index.get(accreditationId)
+const warnAboutUnmatchedPartition = (logger, accreditationId) => {
+  logger.warn({
+    message: `Market insights waste balance left out a ledger partition whose accreditation no longer resolves: ${accreditationId}. Everything that partition reported is absent from the publication.`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: 'market_insights_partition_unmatched',
+      reference: accreditationId
+    }
+  })
+}
 
 /**
  * @param {LatestSubmittedSummaryLogPerLedger[]} entries
- * @param {Map<string, AccreditationContext>} index
+ * @param {AccreditationIndex} accreditations
  * @param {Map<string, import('#overseas-sites/repository/port.js').OverseasSite>} sitesById
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @returns {Map<string, PublishedPartition>}
  */
-const resolvePublishedPartitions = (entries, index, sitesById) => {
+const resolvePublishedPartitions = (
+  entries,
+  { index, testOrgAccreditationIds },
+  sitesById,
+  logger
+) => {
   /** @type {Map<string, PublishedPartition>} */
   const partitions = new Map()
   for (const { ledgerId, summaryLogId } of entries) {
-    const context = publishedContextFor(ledgerId, index)
+    const { accreditationId } = ledgerId
+    if (accreditationId === null) {
+      continue
+    }
+    const context = index.get(accreditationId)
     if (context === undefined) {
+      if (!testOrgAccreditationIds.has(accreditationId)) {
+        warnAboutUnmatchedPartition(logger, accreditationId)
+      }
       continue
     }
     partitions.set(partitionKey(ledgerId), {
@@ -177,80 +194,117 @@ const foldIntoCell = (cells, registration, month, figures) => {
 }
 
 /**
- * A month later than the clock cannot have happened, so a mis-keyed future date
- * is held back rather than published as supply.
- *
  * @param {number} reportingYear
- * @param {Date} now - clock reading supplied by the caller
  * @returns {(month: string) => boolean}
  */
-const publishableMonthsOf = (reportingYear, now) => {
+const reportingYearMonthsOf = (reportingYear) => {
   const monthPrefix = `${reportingYear}-`
-  const currentMonth = /** @type {string} */ (
-    monthKeyForDate(now, UK_TIME_ZONE)
-  )
-  return (month) =>
-    month.startsWith(monthPrefix) && month.localeCompare(currentMonth) <= 0
+  return (month) => month.startsWith(monthPrefix)
 }
 
 /**
- * @typedef {Object} UndatedTally
+ * A month later than the clock cannot have happened yet, so a row dated into one
+ * is a mis-keyed date rather than supply.
+ *
+ * @param {Date} now - clock reading supplied by the caller
+ * @returns {(month: string) => boolean}
+ */
+const futureMonthsOf = (now) => {
+  const currentMonth = /** @type {string} */ (
+    monthKeyForDate(now, UK_TIME_ZONE)
+  )
+  return (month) => month.localeCompare(currentMonth) > 0
+}
+
+/**
+ * @typedef {Object} DroppedTally
  * @property {{ rowCount: number, tonnage: number }} credits
  * @property {{ rowCount: number, tonnage: number }} deductions
  */
 
-/** @returns {UndatedTally} */
-const newUndatedTally = () => ({
+/** @returns {DroppedTally} */
+const newDroppedTally = () => ({
   credits: { rowCount: 0, tonnage: 0 },
   deductions: { rowCount: 0, tonnage: 0 }
 })
 
 /**
- * @param {UndatedTally} undated
+ * @param {DroppedTally} dropped
  * @param {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} contribution
  */
-const recordUndated = (undated, { deducts, figures }) => {
-  const side = deducts ? undated.deductions : undated.credits
+const recordDropped = (dropped, { deducts, figures }) => {
+  const side = deducts ? dropped.deductions : dropped.credits
   const tonnage = deducts ? figures.sentOnDeductions : figures.totalCredited
   side.rowCount += 1
   side.tonnage = toNumber(addRounded(side.tonnage, tonnage, 2))
 }
 
 /**
- * @param {{ cells: Map<string, WasteBalanceCell>, undated: UndatedTally, isPublishedMonth: (month: string) => boolean }} into
+ * @param {{ cells: Map<string, WasteBalanceCell>, undated: DroppedTally, heldBack: DroppedTally, inReportingYear: (month: string) => boolean, isFutureMonth: (month: string) => boolean }} into
  * @param {PublishedRow} published
  */
 const recordRow = (
-  { cells, undated, isPublishedMonth },
+  { cells, undated, heldBack, inReportingYear, isFutureMonth },
   { registration, contribution }
 ) => {
   const { month, figures } = contribution
   if (month === null) {
-    recordUndated(undated, contribution)
+    recordDropped(undated, contribution)
     return
   }
-  if (isPublishedMonth(month)) {
-    foldIntoCell(cells, registration, month, figures)
+  if (!inReportingYear(month)) {
+    return
   }
+  if (isFutureMonth(month)) {
+    recordDropped(heldBack, contribution)
+    return
+  }
+  foldIntoCell(cells, registration, month, figures)
 }
 
 /**
- * A row's month comes from a date cell the summary log can leave blank. The
- * count spans every submission read, not one reporting year, because a row with
- * no date belongs to no year.
- *
- * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {UndatedTally} undated
+ * @param {DroppedTally} dropped
+ * @returns {string | null} null when the tally is empty
  */
-const warnAboutUndatedRows = (logger, { credits, deductions }) => {
-  if (credits.rowCount + deductions.rowCount === 0) {
+const describeDropped = ({ credits, deductions }) =>
+  credits.rowCount + deductions.rowCount === 0
+    ? null
+    : `${deductions.rowCount} sent-on row(s) totalling ${deductions.tonnage} tonnes and ${credits.rowCount} crediting row(s) totalling ${credits.tonnage} tonnes`
+
+/**
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {number} reportingYear
+ * @param {DroppedTally} undated
+ */
+const warnAboutUndatedRows = (logger, reportingYear, undated) => {
+  const dropped = describeDropped(undated)
+  if (dropped === null) {
     return
   }
   logger.warn({
-    message: `Market insights waste balance dropped ${deductions.rowCount} sent-on row(s) totalling ${deductions.tonnage} tonnes and ${credits.rowCount} crediting row(s) totalling ${credits.tonnage} tonnes with no usable date, understating the deductions and the gross credited tonnage`,
+    message: `Market insights waste balance found ${dropped} with no usable date, understating the deductions and the gross credited tonnage of whichever year they belong to. A row with no date belongs to no reporting year, so this count spans every submission read rather than ${reportingYear} alone.`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: 'market_insights_undated_rows'
+    }
+  })
+}
+
+/**
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {number} reportingYear
+ * @param {DroppedTally} heldBack
+ */
+const warnAboutFutureDatedRows = (logger, reportingYear, heldBack) => {
+  const dropped = describeDropped(heldBack)
+  if (dropped === null) {
+    return
+  }
+  logger.warn({
+    message: `Market insights waste balance held back ${dropped} dated later in ${reportingYear} than the current month, understating the deductions and the gross credited tonnage it publishes for that year.`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: 'market_insights_future_dated_rows'
     }
   })
 }
@@ -284,11 +338,11 @@ export const buildWasteBalanceTable = async ({
     overseasSitesRepository.findAll()
   ])
 
-  const { index } = indexAccreditations(organisations)
   const partitions = resolvePublishedPartitions(
     entries,
-    index,
-    new Map(allSites.map((site) => [site.id, site]))
+    indexAccreditations(organisations),
+    new Map(allSites.map((site) => [site.id, site])),
+    logger
   )
 
   const summaryLogIds = entries
@@ -298,8 +352,10 @@ export const buildWasteBalanceTable = async ({
   const into = {
     /** @type {Map<string, WasteBalanceCell>} */
     cells: new Map(),
-    undated: newUndatedTally(),
-    isPublishedMonth: publishableMonthsOf(reportingYear, now)
+    undated: newDroppedTally(),
+    heldBack: newDroppedTally(),
+    inReportingYear: reportingYearMonthsOf(reportingYear),
+    isFutureMonth: futureMonthsOf(now)
   }
 
   for await (const rowState of summaryLogRowStatesRepository.streamRowStatesForSummaryLogs(
@@ -312,7 +368,8 @@ export const buildWasteBalanceTable = async ({
     recordRow(into, published)
   }
 
-  warnAboutUndatedRows(logger, into.undated)
+  warnAboutUndatedRows(logger, reportingYear, into.undated)
+  warnAboutFutureDatedRows(logger, reportingYear, into.heldBack)
 
   const data = [...into.cells.values()]
     .map(({ figures, ...cell }) => ({ ...cell, ...withNetCredit(figures) }))
