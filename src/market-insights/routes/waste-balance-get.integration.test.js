@@ -8,10 +8,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
-import {
-  createMongoSummaryLogRowStatesRepository,
-  SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
-} from '#waste-records/repository/mongodb.js'
+import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -23,15 +20,28 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
-import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  buildAccreditation,
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
+import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { TestServer } from '#test/create-test-server.js' */
 
 /**
- * @typedef {TestServer & { db: Db }} TestServerWithRealDb
+ * @typedef {TestServer & {
+ *   db: Db,
+ *   repositories: {
+ *     ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
+ *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *     overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
+ *     summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository
+ *   }
+ * }} TestServerWithRealDb
  */
 
 /**
@@ -49,25 +59,25 @@ const it =
           const client = await MongoClient.connect(db)
           try {
             const mongoDb = client.db(DATABASE_NAME)
-            const server = await createTestServer({
-              db: mongoDb,
-              repositories: {
-                ledgerRepository: (
-                  await createMongoLedgerRepository(mongoDb)
-                )(),
-                organisationsRepository: (
-                  await createOrganisationsRepository(mongoDb)
-                )(),
-                overseasSitesRepository: (
-                  await createOverseasSitesRepository(mongoDb)
-                )(),
-                summaryLogRowStatesRepository: (
-                  await createMongoSummaryLogRowStatesRepository(mongoDb)
-                )()
-              }
-            })
+            const repositories = {
+              ledgerRepository: (await createMongoLedgerRepository(mongoDb))(),
+              organisationsRepository: (
+                await createOrganisationsRepository(mongoDb)
+              )(),
+              overseasSitesRepository: (
+                await createOverseasSitesRepository(mongoDb)
+              )(),
+              summaryLogRowStatesRepository: (
+                await createMongoSummaryLogRowStatesRepository(mongoDb)
+              )()
+            }
+            const server = await createTestServer({ db: mongoDb, repositories })
 
-            await use(/** @type {TestServerWithRealDb} */ (server))
+            await use(
+              /** @type {TestServerWithRealDb} */ (
+                Object.assign(server, { repositories })
+              )
+            )
 
             await server.stop()
           } finally {
@@ -79,147 +89,143 @@ const it =
     })
   )
 
-const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
-
-const orgId = '507f1f77bcf86cd799439011'
-const regId = 'REG-001'
-const accreditationId = 'ACC-001'
-const summaryLogId = 'sl-REG-001'
 
 const approvedHistory = [
   { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
   { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
 ]
 
-/** @param {Db} db */
-const seedAccreditedOrganisation = (db) =>
-  db.collection(ORGANISATIONS_COLLECTION).insertOne({
-    _id: new ObjectId(orgId),
-    orgId: 500123,
-    statusHistory: approvedHistory,
-    registrations: [
-      {
-        id: regId,
-        accreditationId,
-        statusHistory: approvedHistory,
-        material: MATERIAL.PLASTIC,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        reprocessingType: REPROCESSING_TYPE.INPUT
-      }
-    ],
-    accreditations: [
-      {
-        id: accreditationId,
-        accreditationNumber: 'ACC-500123',
-        statusHistory: approvedHistory,
-        validFrom: '2026-01-01',
-        validTo: '2026-12-31',
-        material: MATERIAL.PLASTIC,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        reprocessingType: REPROCESSING_TYPE.INPUT
-      }
-    ]
+const summaryLogId = 'sl-REG-001'
+
+/**
+ * An accredited plastic reprocessor built from the organisations fixture, so
+ * the document the route reads back is one the write schema accepts.
+ */
+const buildAccreditedOperator = () => {
+  const accreditationId = new ObjectId().toString()
+  const registration = buildRegistration({
+    accreditationId,
+    material: MATERIAL.PLASTIC,
+    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+    reprocessingType: REPROCESSING_TYPE.INPUT,
+    glassRecyclingProcess: null,
+    statusHistory: approvedHistory
   })
+  const accreditation = buildAccreditation({
+    id: accreditationId,
+    material: MATERIAL.PLASTIC,
+    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+    reprocessingType: REPROCESSING_TYPE.INPUT,
+    validFrom: '2026-01-01',
+    validTo: '2026-12-31',
+    glassRecyclingProcess: null,
+    statusHistory: approvedHistory
+  })
+  const organisation = buildOrganisation({
+    registrations: [registration],
+    accreditations: [accreditation]
+  })
+
+  return {
+    organisation,
+    ledgerId: {
+      organisationId: organisation.id,
+      registrationId: registration.id,
+      accreditationId
+    }
+  }
+}
+
+const STAMPED_EXCLUDED = {
+  outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
+  reasons: [],
+  transactionAmount: 0
+}
 
 /**
  * A received load carrying every field the waste-balance classifier reads.
  * Stamped as counting for nothing, so a table reading the stamp rather than
  * re-deriving cannot produce the expected figures.
- *
- * @param {Db} db
- * @param {string} rowId
- * @param {string} date
- * @param {number} tonnage
  */
-const seedReceivedRow = (db, rowId, date, tonnage) =>
-  db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).insertOne({
-    organisationId: orgId,
-    registrationId: regId,
-    accreditationId,
-    rowId,
-    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-    data: {
-      DATE_RECEIVED_FOR_REPROCESSING: date,
-      EWC_CODE: '15 01 02',
-      DESCRIPTION_WASTE: 'Plastic packaging',
-      WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
-      GROSS_WEIGHT: tonnage + 1,
-      TARE_WEIGHT: 1,
-      PALLET_WEIGHT: 0,
-      NET_WEIGHT: tonnage,
-      BAILING_WIRE_PROTOCOL: 'No',
-      HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
-      WEIGHT_OF_NON_TARGET_MATERIALS: 0,
-      RECYCLABLE_PROPORTION_PERCENTAGE: 100,
-      TONNAGE_RECEIVED_FOR_RECYCLING: tonnage
-    },
-    classification: {
-      outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
-      reasons: [],
-      transactionAmount: 0
-    },
-    summaryLogIds: [summaryLogId]
-  })
+const receivedRow = (rowId, date, tonnage) => ({
+  rowId,
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+  data: {
+    DATE_RECEIVED_FOR_REPROCESSING: date,
+    EWC_CODE: '15 01 02',
+    DESCRIPTION_WASTE: 'Plastic packaging',
+    WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+    GROSS_WEIGHT: tonnage + 1,
+    TARE_WEIGHT: 1,
+    PALLET_WEIGHT: 0,
+    NET_WEIGHT: tonnage,
+    BAILING_WIRE_PROTOCOL: 'No',
+    HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
+    WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+    RECYCLABLE_PROPORTION_PERCENTAGE: 100,
+    TONNAGE_RECEIVED_FOR_RECYCLING: tonnage
+  },
+  classification: STAMPED_EXCLUDED
+})
+
+const sentOnRow = (rowId, tonnage) => ({
+  rowId,
+  wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+  data: {
+    DATE_LOAD_LEFT_SITE: '2026-02-20',
+    TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: tonnage
+  },
+  classification: STAMPED_EXCLUDED
+})
 
 /**
- * @param {Db} db
- * @param {number} tonnage
+ * Seed one submission through the write side of the same adapters the route
+ * reads back through, so no test builds a stored document by hand.
+ *
+ * @param {TestServerWithRealDb['repositories']} repositories
+ * @param {import('#waste-records/repository/schema.js').SummaryLogRowStateEntry[]} rows
  */
-const seedSentOnRow = (db, tonnage) =>
-  db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).insertOne({
-    organisationId: orgId,
-    registrationId: regId,
-    accreditationId,
-    rowId: 'row-sent-on',
-    wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
-    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-    data: {
-      DATE_LOAD_LEFT_SITE: '2026-02-20',
-      TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: tonnage
-    },
-    classification: {
-      outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
-      reasons: [],
-      transactionAmount: 0
-    },
-    summaryLogIds: [summaryLogId]
-  })
+const submit = async (repositories, rows) => {
+  const { organisation, ledgerId } = buildAccreditedOperator()
 
-/** @param {Db} db */
-const seedSubmittedSummaryLog = (db) =>
-  db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).insertOne({
-    organisationId: orgId,
-    registrationId: regId,
-    accreditationId,
-    number: 1,
-    kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-    payload: { summaryLogId, creditTotal: 0 }
-  })
+  await repositories.organisationsRepository.insert(organisation)
+  await repositories.summaryLogRowStatesRepository.upsertSummaryLogRowStates(
+    ledgerId,
+    rows,
+    summaryLogId
+  )
+  await repositories.ledgerRepository.appendEvents([
+    partialMock(
+      buildLedgerEvent({
+        ...ledgerId,
+        number: 1,
+        payload: { summaryLogId, creditTotal: 0 }
+      })
+    )
+  ])
+}
 
 describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
   setupAuthContext()
 
   beforeEach(
     async (/** @type {{ server: TestServerWithRealDb }} */ { server }) => {
-      await server.db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-      await server.db
-        .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-        .deleteMany({})
-      await server.db
-        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
-        .deleteMany({})
+      for (const { name } of await server.db.listCollections().toArray()) {
+        await server.db.collection(name).deleteMany({})
+      }
     }
   )
 
   it('serves the waste balance figures to a regulator holding market-data.read', async ({
     server
   }) => {
-    await seedAccreditedOrganisation(server.db)
-    await seedReceivedRow(server.db, 'row-1', '2026-02-10', 100)
-    await seedSentOnRow(server.db, 30)
-    await seedSubmittedSummaryLog(server.db)
+    await submit(server.repositories, [
+      receivedRow('row-1', '2026-02-10', 100),
+      sentOnRow('row-sent-on', 30)
+    ])
 
     const response = await server.inject({
       method: 'GET',
@@ -245,9 +251,7 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
   })
 
   it('refuses a caller holding no market-data.read', async ({ server }) => {
-    await seedAccreditedOrganisation(server.db)
-    await seedReceivedRow(server.db, 'row-1', '2026-02-10', 100)
-    await seedSubmittedSummaryLog(server.db)
+    await submit(server.repositories, [receivedRow('row-1', '2026-02-10', 100)])
 
     const response = await server.inject({
       method: 'GET',
