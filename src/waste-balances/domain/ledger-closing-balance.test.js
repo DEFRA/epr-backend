@@ -257,33 +257,29 @@ describe('closingForPrn', () => {
       })
     })
 
-    // Defensive: the decider only sets useDecemberBalance once the opening
-    // carries a December portion, so these paths are unreachable through it -
-    // an absent field is treated as 0 rather than producing NaN.
-    it('opens the December available pool from zero on creation when the opening carries none', () => {
-      expect(
+    // The decider only sets useDecemberBalance once the opening carries a
+    // December portion, so reaching here without one is a broken invariant.
+    // It fails loud rather than silently materialising a negative December pool.
+    it('throws on creation when useDecemberBalance is set but the opening carries no December portion', () => {
+      expect(() =>
         closingForPrn(
           { amount: 1000, availableAmount: 800 },
           LEDGER_EVENT_KIND.PRN_CREATED,
           100,
           true
         )
-      ).toEqual({
-        amount: 1000,
-        availableAmount: 700,
-        decemberAvailableAmount: -100
-      })
+      ).toThrow('Cannot debit the December pool')
     })
 
-    it('opens the December amount pool from zero on issue when the opening carries none', () => {
-      expect(
+    it('throws on issue when useDecemberBalance is set but the opening carries no December portion', () => {
+      expect(() =>
         closingForPrn(
           { amount: 1000, availableAmount: 800 },
           LEDGER_EVENT_KIND.PRN_ISSUED,
           100,
           true
         )
-      ).toEqual({ amount: 900, availableAmount: 800, decemberAmount: -100 })
+      ).toThrow('Cannot debit the December pool')
     })
   })
 })

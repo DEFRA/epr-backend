@@ -58,6 +58,27 @@ export const closingForSummaryLogSubmitted = (
 }
 
 /**
+ * Debit a December pool field by `prnAmount`. The decider only sets
+ * `useDecemberBalance` once the opening carries a December portion (its
+ * sufficiency check reads the same field), so reaching here with the field
+ * absent is a broken invariant, not a state to coalesce away. Fail loud rather
+ * than silently materialise a negative December pool.
+ *
+ * @param {number | undefined} openingPortion
+ * @param {number} prnAmount
+ * @param {string} field
+ * @returns {number}
+ */
+const debitDecemberPortion = (openingPortion, prnAmount, field) => {
+  if (openingPortion === undefined) {
+    throw new Error(
+      `Cannot debit the December pool: opening balance carries no ${field}`
+    )
+  }
+  return toNumber(subtract(openingPortion, prnAmount))
+}
+
+/**
  * Compute closing balance for a PRN event.
  *
  * A general PRN moves the total fields but leaves the December amounts as they
@@ -66,9 +87,7 @@ export const closingForSummaryLogSubmitted = (
  *
  * A December PRN (`useDecemberBalance`) moves its pool by the same delta it
  * applies to the total: creation ringfences `decemberAvailableAmount` alongside
- * `availableAmount`, issue deducts `decemberAmount` alongside `amount`. The
- * decider only sets the flag once the opening carries a December portion, so an
- * absent field is defaulted to 0 defensively rather than expected.
+ * `availableAmount`, issue deducts `decemberAmount` alongside `amount`.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
  * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
@@ -88,8 +107,10 @@ export const closingForPrn = (
         ...opening,
         availableAmount: toNumber(subtract(opening.availableAmount, prnAmount)),
         ...(useDecemberBalance && {
-          decemberAvailableAmount: toNumber(
-            subtract(opening.decemberAvailableAmount ?? 0, prnAmount)
+          decemberAvailableAmount: debitDecemberPortion(
+            opening.decemberAvailableAmount,
+            prnAmount,
+            'decemberAvailableAmount'
           )
         })
       }
@@ -98,8 +119,10 @@ export const closingForPrn = (
         ...opening,
         amount: toNumber(subtract(opening.amount, prnAmount)),
         ...(useDecemberBalance && {
-          decemberAmount: toNumber(
-            subtract(opening.decemberAmount ?? 0, prnAmount)
+          decemberAmount: debitDecemberPortion(
+            opening.decemberAmount,
+            prnAmount,
+            'decemberAmount'
           )
         })
       }
