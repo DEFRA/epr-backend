@@ -517,44 +517,6 @@ describe('buildWasteBalanceTable', () => {
         }
       ])
     })
-
-    it('says how much tonnage it held back', async () => {
-      const { logger } = await run({
-        organisations: [operator.organisation],
-        submissions: [
-          {
-            ...operator,
-            rows: [
-              receivedRow('row-1', '2026-12-10', 999),
-              sentOnRow('row-2', '2026-11-05', 30)
-            ]
-          }
-        ]
-      })
-
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            '1 sent-on row(s) totalling 30 tonnes and 1 crediting row(s) totalling 999 tonnes'
-          ),
-          event: expect.objectContaining({
-            action: 'market_insights_future_dated_rows'
-          })
-        })
-      )
-    })
-
-    it('says nothing about a row belonging to another reporting year', async () => {
-      const { table, logger } = await run({
-        organisations: [operator.organisation],
-        submissions: [
-          { ...operator, rows: [receivedRow('row-1', '2027-03-10', 999)] }
-        ]
-      })
-
-      expect(table.data).toEqual([])
-      expect(logger.warn).not.toHaveBeenCalled()
-    })
   })
 
   it('separates materials and accreditation types into their own cells, ordered', async () => {

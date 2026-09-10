@@ -194,117 +194,81 @@ const foldIntoCell = (cells, registration, month, figures) => {
 }
 
 /**
- * @param {number} reportingYear
- * @returns {(month: string) => boolean}
- */
-const reportingYearMonthsOf = (reportingYear) => {
-  const monthPrefix = `${reportingYear}-`
-  return (month) => month.startsWith(monthPrefix)
-}
-
-/**
- * A month later than the clock cannot have happened yet, so a row dated into one
- * is a mis-keyed date rather than supply.
+ * A month later than the clock cannot have happened, so a mis-keyed future date
+ * is held back rather than published as supply.
  *
+ * @param {number} reportingYear
  * @param {Date} now - clock reading supplied by the caller
  * @returns {(month: string) => boolean}
  */
-const futureMonthsOf = (now) => {
+const publishableMonthsOf = (reportingYear, now) => {
+  const monthPrefix = `${reportingYear}-`
   const currentMonth = /** @type {string} */ (
     monthKeyForDate(now, UK_TIME_ZONE)
   )
-  return (month) => month.localeCompare(currentMonth) > 0
+  return (month) =>
+    month.startsWith(monthPrefix) && month.localeCompare(currentMonth) <= 0
 }
 
 /**
- * @typedef {Object} DroppedTally
+ * @typedef {Object} UndatedTally
  * @property {{ rowCount: number, tonnage: number }} credits
  * @property {{ rowCount: number, tonnage: number }} deductions
  */
 
-/** @returns {DroppedTally} */
-const newDroppedTally = () => ({
+/** @returns {UndatedTally} */
+const newUndatedTally = () => ({
   credits: { rowCount: 0, tonnage: 0 },
   deductions: { rowCount: 0, tonnage: 0 }
 })
 
 /**
- * @param {DroppedTally} dropped
+ * @param {UndatedTally} undated
  * @param {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} contribution
  */
-const recordDropped = (dropped, { deducts, figures }) => {
-  const side = deducts ? dropped.deductions : dropped.credits
+const recordUndated = (undated, { deducts, figures }) => {
+  const side = deducts ? undated.deductions : undated.credits
   const tonnage = deducts ? figures.sentOnDeductions : figures.totalCredited
   side.rowCount += 1
   side.tonnage = toNumber(addRounded(side.tonnage, tonnage, 2))
 }
 
 /**
- * @param {{ cells: Map<string, WasteBalanceCell>, undated: DroppedTally, heldBack: DroppedTally, inReportingYear: (month: string) => boolean, isFutureMonth: (month: string) => boolean }} into
+ * @param {{ cells: Map<string, WasteBalanceCell>, undated: UndatedTally, isPublishedMonth: (month: string) => boolean }} into
  * @param {PublishedRow} published
  */
 const recordRow = (
-  { cells, undated, heldBack, inReportingYear, isFutureMonth },
+  { cells, undated, isPublishedMonth },
   { registration, contribution }
 ) => {
   const { month, figures } = contribution
   if (month === null) {
-    recordDropped(undated, contribution)
+    recordUndated(undated, contribution)
     return
   }
-  if (!inReportingYear(month)) {
-    return
+  if (isPublishedMonth(month)) {
+    foldIntoCell(cells, registration, month, figures)
   }
-  if (isFutureMonth(month)) {
-    recordDropped(heldBack, contribution)
-    return
-  }
-  foldIntoCell(cells, registration, month, figures)
 }
-
-/**
- * @param {DroppedTally} dropped
- * @returns {string | null} null when the tally is empty
- */
-const describeDropped = ({ credits, deductions }) =>
-  credits.rowCount + deductions.rowCount === 0
-    ? null
-    : `${deductions.rowCount} sent-on row(s) totalling ${deductions.tonnage} tonnes and ${credits.rowCount} crediting row(s) totalling ${credits.tonnage} tonnes`
 
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @param {number} reportingYear
- * @param {DroppedTally} undated
+ * @param {UndatedTally} undated
  */
-const warnAboutUndatedRows = (logger, reportingYear, undated) => {
-  const dropped = describeDropped(undated)
-  if (dropped === null) {
+const warnAboutUndatedRows = (
+  logger,
+  reportingYear,
+  { credits, deductions }
+) => {
+  if (credits.rowCount + deductions.rowCount === 0) {
     return
   }
   logger.warn({
-    message: `Market insights waste balance found ${dropped} with no usable date, understating the deductions and the gross credited tonnage of whichever year they belong to. A row with no date belongs to no reporting year, so this count spans every submission read rather than ${reportingYear} alone.`,
+    message: `Market insights waste balance found ${deductions.rowCount} sent-on row(s) totalling ${deductions.tonnage} tonnes and ${credits.rowCount} crediting row(s) totalling ${credits.tonnage} tonnes with no usable date, understating the deductions and the gross credited tonnage of whichever year they belong to. A row with no date belongs to no reporting year, so this count spans every submission read rather than ${reportingYear} alone.`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: 'market_insights_undated_rows'
-    }
-  })
-}
-
-/**
- * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {number} reportingYear
- * @param {DroppedTally} heldBack
- */
-const warnAboutFutureDatedRows = (logger, reportingYear, heldBack) => {
-  const dropped = describeDropped(heldBack)
-  if (dropped === null) {
-    return
-  }
-  logger.warn({
-    message: `Market insights waste balance held back ${dropped} dated later in ${reportingYear} than the current month, understating the deductions and the gross credited tonnage it publishes for that year.`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: 'market_insights_future_dated_rows'
     }
   })
 }
@@ -352,10 +316,8 @@ export const buildWasteBalanceTable = async ({
   const into = {
     /** @type {Map<string, WasteBalanceCell>} */
     cells: new Map(),
-    undated: newDroppedTally(),
-    heldBack: newDroppedTally(),
-    inReportingYear: reportingYearMonthsOf(reportingYear),
-    isFutureMonth: futureMonthsOf(now)
+    undated: newUndatedTally(),
+    isPublishedMonth: publishableMonthsOf(reportingYear, now)
   }
 
   for await (const rowState of summaryLogRowStatesRepository.streamRowStatesForSummaryLogs(
@@ -369,7 +331,6 @@ export const buildWasteBalanceTable = async ({
   }
 
   warnAboutUndatedRows(logger, reportingYear, into.undated)
-  warnAboutFutureDatedRows(logger, reportingYear, into.heldBack)
 
   const data = [...into.cells.values()]
     .map(({ figures, ...cell }) => ({ ...cell, ...withNetCredit(figures) }))
