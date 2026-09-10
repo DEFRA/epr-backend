@@ -75,7 +75,8 @@ describe('GET /v1/admin/me', () => {
           SCOPES.organisationSearch,
           SCOPES.organisationRead,
           SCOPES.wasteBalanceLedgerRead,
-          SCOPES.summaryLogRead
+          SCOPES.summaryLogRead,
+          SCOPES.marketDataRead
         ]
       })
     })
@@ -95,7 +96,8 @@ describe('GET /v1/admin/me', () => {
           SCOPES.organisationSearch,
           SCOPES.organisationRead,
           SCOPES.wasteBalanceLedgerRead,
-          SCOPES.summaryLogRead
+          SCOPES.summaryLogRead,
+          SCOPES.marketDataRead
         ]
       })
     })
@@ -114,7 +116,8 @@ describe('GET /v1/admin/me', () => {
           SCOPES.organisationSearch,
           SCOPES.organisationRead,
           SCOPES.wasteBalanceLedgerRead,
-          SCOPES.summaryLogRead
+          SCOPES.summaryLogRead,
+          SCOPES.marketDataRead
         ]
       })
     })

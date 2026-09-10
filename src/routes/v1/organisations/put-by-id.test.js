@@ -153,7 +153,8 @@ describe('PUT /v1/organisations/{id}', () => {
           'organisation.search',
           'organisation.read',
           'waste-balance.ledger.read',
-          'summary-log.read'
+          'summary-log.read',
+          'market-data.read'
         ])
       }
 
