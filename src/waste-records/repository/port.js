@@ -33,7 +33,7 @@
 /**
  * A row as it was submitted, carrying no waste-balance classification.
  *
- * @typedef {WasteBalanceLedgerId & Pick<SummaryLogRowState, 'summaryLogIds' | 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
+ * @typedef {WasteBalanceLedgerId & Pick<SummaryLogRowState, 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
  */
 
 /**
@@ -53,10 +53,8 @@
  * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
  *   Return every state document for the given row identity.
  * @property {(summaryLogIds: string[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
- *   Yield every state document whose membership contains any of `summaryLogIds`,
- *   once each however many of them it belongs to, carrying its whole membership.
- *   A summary log id does not identify a ledger, so the caller narrows to the
- *   partitions and submissions it wants.
+ *   Yield each state document whose membership contains at least one of
+ *   `summaryLogIds`, at most once however many of them it holds.
  * @property {() => Promise<string[]>} findDistinctDataKeys
  *   Return the union of every key observed on `data` across every state
  *   document in the collection. Used by the CSV export to compose its dynamic

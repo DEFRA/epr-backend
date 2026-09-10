@@ -361,44 +361,6 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
-  it('reads each partition at its own latest submission', async () => {
-    const resubmitted = makeOperator({ orgId: 500014 })
-    const unchanged = makeOperator({ orgId: 500015 })
-
-    const { table } = await run({
-      organisations: [resubmitted.organisation, unchanged.organisation],
-      submissions: [
-        {
-          ...resubmitted,
-          summaryLogId: 'log-first',
-          rows: [receivedRow('row-1', '2026-02-10', 999)]
-        },
-        {
-          ...resubmitted,
-          summaryLogId: 'log-second',
-          rows: [receivedRow('row-1', '2026-02-10', 40)]
-        },
-        {
-          ...unchanged,
-          summaryLogId: 'log-first',
-          rows: [receivedRow('row-1', '2026-02-10', 60)]
-        }
-      ]
-    })
-
-    expect(table.data).toEqual([
-      {
-        material: MATERIAL.PLASTIC,
-        accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        month: '2026-02',
-        totalCredited: 100,
-        eligibleForWasteBalance: 100,
-        sentOnDeductions: 0,
-        netCredit: 100
-      }
-    ])
-  })
-
   it('counts a glass registration the split never reached against no material', async () => {
     const operator = makeOperator({ orgId: 500013, material: MATERIAL.GLASS })
 

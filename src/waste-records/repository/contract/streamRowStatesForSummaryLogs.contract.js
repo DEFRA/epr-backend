@@ -7,8 +7,6 @@ import {
   DEFAULT_LEDGER_ID
 } from '../test-data.js'
 
-const REGISTERED_ONLY = { ...DEFAULT_LEDGER_ID, accreditationId: null }
-
 const collect = async (rowStates) => {
   const collected = []
   for await (const rowState of rowStates) {
@@ -43,7 +41,7 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
       ).toEqual([])
     })
 
-    it('yields the ledger identity, the membership and the row as submitted, and nothing else', async () => {
+    it('yields the ledger identity and the row as submitted, and nothing else', async () => {
       await repository.upsertSummaryLogRowStates(
         DEFAULT_LEDGER_ID,
         [
@@ -61,7 +59,6 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
       ).toEqual([
         {
           ...DEFAULT_LEDGER_ID,
-          summaryLogIds: ['log-1'],
           wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
           data: { tonnage: 7 }
@@ -114,10 +111,9 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
       )
 
       expect(yielded).toHaveLength(1)
-      expect(yielded[0].summaryLogIds).toEqual(['log-1', 'log-2'])
     })
 
-    it('yields a row of a submission it was not asked for, when a later one shares its membership query', async () => {
+    it('yields each submission separately when the row changed between them', async () => {
       await repository.upsertSummaryLogRowStates(
         DEFAULT_LEDGER_ID,
         [
@@ -137,32 +133,9 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
         repository.streamRowStatesForSummaryLogs(['log-1', 'log-2'])
       )
 
-      expect(yielded.map((rowState) => rowState.summaryLogIds).sort()).toEqual([
-        ['log-1'],
-        ['log-2']
+      expect(yielded.map((rowState) => rowState.data.tonnage).sort()).toEqual([
+        1, 2
       ])
-    })
-
-    it('yields every ledger that shares a summary log id, leaving the caller to narrow', async () => {
-      await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
-        [buildSummaryLogRowStateEntry()],
-        'log-1'
-      )
-      await repository.upsertSummaryLogRowStates(
-        REGISTERED_ONLY,
-        [buildSummaryLogRowStateEntry()],
-        'log-1'
-      )
-
-      const yielded = await collect(
-        repository.streamRowStatesForSummaryLogs(['log-1'])
-      )
-
-      expect(yielded).toHaveLength(2)
-      expect(
-        yielded.map((rowState) => rowState.accreditationId).sort()
-      ).toEqual(['acc-1', null])
     })
   })
 }

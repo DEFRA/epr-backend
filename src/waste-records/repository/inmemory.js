@@ -159,7 +159,6 @@ export const createInMemorySummaryLogRowStatesRepository = (
             organisationId: doc.organisationId,
             registrationId: doc.registrationId,
             accreditationId: doc.accreditationId,
-            summaryLogIds: doc.summaryLogIds,
             wasteRecordType: doc.wasteRecordType,
             processingType: doc.processingType,
             data: doc.data

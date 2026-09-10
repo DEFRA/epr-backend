@@ -119,18 +119,6 @@ const resolvePublishedPartitions = (entries, index, sitesById) => {
 }
 
 /**
- * The stream matches a partition's earlier submissions too, and a row the
- * operator has since changed is a second document still carrying the earlier
- * one.
- *
- * @param {SubmittedRowState} rowState
- * @param {PublishedPartition} partition
- * @returns {boolean}
- */
-const isFromLatestSubmission = (rowState, partition) =>
-  rowState.summaryLogIds.includes(partition.summaryLogId)
-
-/**
  * Eligibility is derived against today's accreditation and overseas-site data
  * rather than read from the classification stamped at submission.
  *
@@ -143,10 +131,6 @@ const publishedContribution = (rowState, partitions) => {
   if (partition === undefined) {
     return null
   }
-  if (!isFromLatestSubmission(rowState, partition)) {
-    return null
-  }
-
   const { registration, accreditation, overseasSites } = partition
   const classification = classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },

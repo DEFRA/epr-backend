@@ -284,7 +284,6 @@ const SUBMITTED_ROW_STATE_PROJECTION = {
   organisationId: 1,
   registrationId: 1,
   accreditationId: 1,
-  summaryLogIds: 1,
   wasteRecordType: 1,
   processingType: 1,
   data: 1
@@ -298,7 +297,6 @@ const toSubmittedRowState = ({
   organisationId,
   registrationId,
   accreditationId,
-  summaryLogIds,
   wasteRecordType,
   processingType,
   data
@@ -306,7 +304,6 @@ const toSubmittedRowState = ({
   organisationId,
   registrationId,
   accreditationId,
-  summaryLogIds,
   wasteRecordType,
   processingType,
   data
