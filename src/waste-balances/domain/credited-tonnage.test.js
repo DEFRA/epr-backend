@@ -8,6 +8,7 @@ import {
 
 const RANGE = { fromMonth: '2026-01', toMonth: '2026-03' }
 
+/** @type {import('./credited-tonnage.js').SkippedRows} */
 const NO_ROWS_SKIPPED = {
   noUsableDate: { rowCount: 0, tonnage: 0 },
   beforeWindowStart: { rowCount: 0, tonnage: 0 },
