@@ -35,7 +35,9 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       organisationId: orgId,
       registrationId,
       amount,
-      availableAmount
+      availableAmount,
+      decemberAmount,
+      decemberAvailableAmount
     } of balances) {
       await ledgerRepository.appendEvents([
         buildLedgerEvent({
@@ -43,7 +45,14 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
           organisationId: orgId,
           registrationId,
           number: 1,
-          closingBalance: { amount, availableAmount }
+          closingBalance: {
+            amount,
+            availableAmount,
+            ...(decemberAmount !== undefined && { decemberAmount }),
+            ...(decemberAvailableAmount !== undefined && {
+              decemberAvailableAmount
+            })
+          }
         })
       ])
     }
@@ -376,6 +385,100 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
       expect(result).toEqual({})
+    })
+  })
+
+  describe('December waste balance', () => {
+    it('exposes the separate December total and available amounts', async () => {
+      const server = await buildServer({
+        balances: [
+          {
+            accreditationId: accreditationId1,
+            organisationId,
+            registrationId: registrationId1,
+            amount: 1000,
+            availableAmount: 750,
+            decemberAmount: 400,
+            decemberAvailableAmount: 250
+          }
+        ],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              }
+            ]
+          }
+        ]
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result).toEqual({
+        [accreditationId1]: {
+          amount: 1000,
+          availableAmount: 750,
+          decemberAmount: 400,
+          decemberAvailableAmount: 250
+        }
+      })
+    })
+
+    it('surfaces an in-window empty December pool as zero, not absent', async () => {
+      const server = await buildServer({
+        balances: [
+          {
+            accreditationId: accreditationId1,
+            organisationId,
+            registrationId: registrationId1,
+            amount: 1000,
+            availableAmount: 750,
+            decemberAmount: 0,
+            decemberAvailableAmount: 0
+          }
+        ],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              }
+            ]
+          }
+        ]
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result).toEqual({
+        [accreditationId1]: {
+          amount: 1000,
+          availableAmount: 750,
+          decemberAmount: 0,
+          decemberAvailableAmount: 0
+        }
+      })
     })
   })
 

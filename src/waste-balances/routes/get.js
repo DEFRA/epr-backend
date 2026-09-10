@@ -5,6 +5,23 @@ import { wasteBalanceResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseObject, HapiResponseToolkit } from '#common/hapi-types.js' */
 
+/**
+ * The separate December portion of a balance, surfaced only when the
+ * accreditation holds one. A drained in-window pool still reports `0`; an
+ * accreditation with no December portion omits the fields entirely.
+ *
+ * @param {{ decemberAmount?: number, decemberAvailableAmount?: number } | null} [balance]
+ * @returns {{ decemberAmount?: number, decemberAvailableAmount?: number }}
+ */
+const decemberFields = (balance) => ({
+  ...(balance?.decemberAmount !== undefined && {
+    decemberAmount: balance.decemberAmount
+  }),
+  ...(balance?.decemberAvailableAmount !== undefined && {
+    decemberAvailableAmount: balance.decemberAvailableAmount
+  })
+})
+
 export const wasteBalanceGetPath =
   '/v1/organisations/{organisationId}/waste-balances'
 
@@ -83,18 +100,27 @@ export const wasteBalanceGet = {
         return {
           accreditationId,
           amount: balance?.amount ?? 0,
-          availableAmount: balance?.availableAmount ?? 0
+          availableAmount: balance?.availableAmount ?? 0,
+          ...decemberFields(balance)
         }
       })
     )
 
-    /** @type {Record<string, { amount: number, availableAmount: number }>} */
+    /**
+     * @type {Record<string, {
+     *   amount: number,
+     *   availableAmount: number,
+     *   decemberAmount?: number,
+     *   decemberAvailableAmount?: number
+     * }>}
+     */
     const balanceMap = {}
     for (const balance of balances) {
       if (balance) {
         balanceMap[balance.accreditationId] = {
           amount: balance.amount,
-          availableAmount: balance.availableAmount
+          availableAmount: balance.availableAmount,
+          ...decemberFields(balance)
         }
       }
     }
