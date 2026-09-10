@@ -53,7 +53,8 @@ export const ADMIN_ROLES = {
     SCOPES.organisationSearch,
     SCOPES.organisationRead,
     SCOPES.wasteBalanceLedgerRead,
-    SCOPES.summaryLogRead
+    SCOPES.summaryLogRead,
+    SCOPES.marketDataRead
   ],
   service_maintainer: [
     SCOPES.adminRead,
@@ -61,13 +62,15 @@ export const ADMIN_ROLES = {
     SCOPES.organisationSearch,
     SCOPES.organisationRead,
     SCOPES.wasteBalanceLedgerRead,
-    SCOPES.summaryLogRead
+    SCOPES.summaryLogRead,
+    SCOPES.marketDataRead
   ],
   support: [
     SCOPES.adminRead,
     SCOPES.organisationSearch,
     SCOPES.organisationRead,
     SCOPES.wasteBalanceLedgerRead,
-    SCOPES.summaryLogRead
+    SCOPES.summaryLogRead,
+    SCOPES.marketDataRead
   ]
 }

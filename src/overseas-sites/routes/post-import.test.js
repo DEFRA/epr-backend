@@ -120,7 +120,8 @@ describe(`${orsImportCreatePath} route`, () => {
             'organisation.search',
             'organisation.read',
             'waste-balance.ledger.read',
-            'summary-log.read'
+            'summary-log.read',
+            'market-data.read'
           ]
         })
       })

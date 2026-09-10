@@ -45,10 +45,10 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
     })
 
-    it('returns 403 for an admin tier, which holds no market-data.read', async () => {
+    it('returns 200 for an admin tier, which holds market-data.read', async () => {
       const response = await injectTable(server, asServiceMaintainerRead())
 
-      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
     it('returns 200 for a regulator, who holds market-data.read', async () => {
