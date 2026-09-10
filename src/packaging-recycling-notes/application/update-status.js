@@ -11,6 +11,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { decidePrnTransition } from '#packaging-recycling-notes/domain/prn-transition.js'
 import { selectObligationYearForAcceptance } from '#packaging-recycling-notes/domain/obligation-year.js'
+import { resolveUseDecemberBalance } from '#packaging-recycling-notes/domain/use-december-balance.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
@@ -25,6 +26,19 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  * @typedef {import('#reports/application/prn-cancellation-events.js').OnPrnCancelled} OnPrnCancelled
  */
+
+/**
+ * The two transitions that move a balance pool and so resolve
+ * useDecemberBalance from the accreditation: the ringfence (draft →
+ * awaiting_authorisation) and issue (awaiting_authorisation →
+ * awaiting_acceptance). The accreditation is read for both.
+ *
+ * @type {Set<PrnStatus>}
+ */
+const POOL_MOVING_TARGET_STATUSES = new Set([
+  PRN_STATUS.AWAITING_AUTHORISATION,
+  PRN_STATUS.AWAITING_ACCEPTANCE
+])
 
 /**
  * What a caller asks for: the collaborators to reach through, the PRN and the
@@ -161,7 +175,8 @@ async function applyPrnTransition(ctx) {
   const { newStatus, actor, user, now, ledgerId, obligationYear } = ctx
 
   // Phase 1 — gather.
-  const { balance, append, prn, issuance } = await gatherTransitionState(ctx)
+  const { balance, append, prn, issuance, accreditation } =
+    await gatherTransitionState(ctx)
   const fromStatus = prn.status.currentStatus
 
   // Phase 2 — decide. The only place the transition rules compose, and pure:
@@ -174,7 +189,7 @@ async function applyPrnTransition(ctx) {
     accreditationYear: prn.accreditation.accreditationYear,
     now,
     balance,
-    payload: buildCommandPayload(prn, obligationYear),
+    payload: buildCommandPayload(prn, obligationYear, accreditation),
     updatedBy: { id: user.id, name: user.name }
   })
 
@@ -225,6 +240,7 @@ async function applyPrnTransition(ctx) {
  * @param {PrnTransitionContext} ctx
  * @returns {Promise<import('#waste-balances/application/waste-balance-service.js').BalanceForUpdate & {
  *   prn: PackagingRecyclingNote,
+ *   accreditation: import('#domain/organisations/accreditation.js').Accreditation | undefined,
  *   issuance: { accreditation: import('#domain/organisations/accreditation.js').Accreditation } | undefined
  * }>}
  */
@@ -235,17 +251,23 @@ async function gatherTransitionState(ctx) {
 
   const prn = await loadPrn(ctx)
 
+  // The accreditation is read for the two pool-moving transitions: the
+  // ringfence (create) and issue both resolve useDecemberBalance from it
+  // (PAE-1922), and issue additionally stamps the PRN number from it. Read once
+  // here, after the balance, so nothing the ruling uses predates the head.
+  const accreditation = POOL_MOVING_TARGET_STATUSES.has(newStatus)
+    ? await organisationsRepository.findAccreditationById(
+        ledgerId.organisationId,
+        ledgerId.accreditationId
+      )
+    : undefined
+
   const issuance =
-    newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
-      ? {
-          accreditation: await organisationsRepository.findAccreditationById(
-            ledgerId.organisationId,
-            ledgerId.accreditationId
-          )
-        }
+    newStatus === PRN_STATUS.AWAITING_ACCEPTANCE && accreditation
+      ? { accreditation }
       : undefined
 
-  return { balance, append, prn, issuance }
+  return { balance, append, prn, accreditation, issuance }
 }
 
 /**
@@ -285,11 +307,19 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
  * slipping past the deciders' `<` sufficiency check. `NaN` is the only value
  * that passes that check, so it is refused by name.
  *
+ * The pool-routing flag is resolved here, on the pool-moving transitions,
+ * where the accreditation is in hand: `useDecemberBalance = isDecemberWaste &&
+ * accruesDecember` (ADR-0049). It is carried only when true, mirroring
+ * `decemberCreditTotal`, so a general PRN's payload stays `{ prnId, amount }`
+ * and readers coalesce its absence to false. The accreditation is absent on
+ * transitions that move no pool, where the flag is irrelevant.
+ *
  * @param {PackagingRecyclingNote} prn
  * @param {number} [obligationYear]
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} [accreditation]
  * @returns {import('#waste-balances/repository/ledger-schema.js').PrnAcceptedPayload}
  */
-function buildCommandPayload(prn, obligationYear) {
+function buildCommandPayload(prn, obligationYear, accreditation) {
   if (Number.isNaN(prn.tonnage) || prn.tonnage <= 0) {
     throw Boom.badImplementation(
       `PRN tonnage must be positive at the waste-balance write boundary; received ${prn.tonnage}`
@@ -301,9 +331,17 @@ function buildCommandPayload(prn, obligationYear) {
     obligationYear
   )
 
+  const useDecemberBalance =
+    accreditation !== undefined &&
+    resolveUseDecemberBalance({
+      isDecemberWaste: prn.isDecemberWaste,
+      accreditation
+    })
+
   return {
     prnId: prn.id,
     amount: prn.tonnage,
+    ...(useDecemberBalance && { useDecemberBalance: true }),
     ...(selectedObligationYear === undefined
       ? {}
       : { obligationYear: selectedObligationYear })

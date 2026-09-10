@@ -15,9 +15,11 @@ import {
   ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
+import { resolveUseDecemberBalance } from '#packaging-recycling-notes/domain/use-december-balance.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { availableForPool } from '#waste-balances/domain/pool-balances.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
@@ -178,20 +180,37 @@ const throwCreatePrnError = (error, logger) => {
  * render a friendly inline tonnage error rather than the raw error page; the
  * frontend discriminates on `error.output.payload.code`.
  *
+ * The pool checked matches the one the ringfence will debit (ADR-0049): a
+ * December raise (`useDecemberBalance`) is bounded by the December pool, a
+ * general raise by the derived non-December, which reserves December tonnage.
+ * The arithmetic is shared with the decider (`availableForPool`) so the
+ * pre-check and the ringfence cannot disagree.
+ *
  * @param {Object} params
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {number} params.tonnage
+ * @param {boolean} params.isDecemberWaste
+ * @param {Object} params.accreditation
  */
 const assertSufficientAvailableBalance = async ({
   ledgerRepository,
   ledgerId,
-  tonnage
+  tonnage,
+  isDecemberWaste,
+  accreditation
 }) => {
+  const useDecemberBalance = resolveUseDecemberBalance({
+    isDecemberWaste,
+    accreditation
+  })
   const balance =
     await createWasteBalanceService(ledgerRepository).currentBalance(ledgerId)
 
-  const availableAmount = balance?.availableAmount ?? 0
+  const availableAmount = availableForPool(
+    balance ?? { amount: 0, availableAmount: 0 },
+    useDecemberBalance
+  )
   if (tonnage > availableAmount) {
     throw conflict(
       'Insufficient available waste balance',
@@ -199,7 +218,7 @@ const assertSufficientAvailableBalance = async ({
       {
         event: {
           action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
-          reason: `tonnage=${tonnage} available=${availableAmount} rejected=${INSUFFICIENT_AVAILABLE_BALANCE_CODE}`
+          reason: `tonnage=${tonnage} available=${availableAmount} useDecemberBalance=${useDecemberBalance} rejected=${INSUFFICIENT_AVAILABLE_BALANCE_CODE}`
         },
         payload: { code: INSUFFICIENT_AVAILABLE_BALANCE_CODE }
       }
@@ -265,7 +284,9 @@ export const packagingRecyclingNotesCreate = {
       await assertSufficientAvailableBalance({
         ledgerRepository,
         ledgerId: { organisationId, registrationId, accreditationId },
-        tonnage: payload.tonnage
+        tonnage: payload.tonnage,
+        isDecemberWaste: payload.isDecemberWaste,
+        accreditation
       })
 
       const isExport =

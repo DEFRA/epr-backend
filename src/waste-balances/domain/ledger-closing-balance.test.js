@@ -212,4 +212,78 @@ describe('closingForPrn', () => {
       }
     )
   })
+
+  describe('debiting the December pool when useDecemberBalance is set', () => {
+    // A December PRN moves its pool by the same delta it applies to the total:
+    // creation ringfences decemberAvailableAmount alongside availableAmount;
+    // issue deducts decemberAmount alongside amount. The untouched dimension of
+    // each pool is carried through unchanged.
+    const openingWithDecember = {
+      amount: 1000,
+      availableAmount: 800,
+      decemberAmount: 300,
+      decemberAvailableAmount: 250
+    }
+
+    it('ringfences the December available amount alongside the total on creation', () => {
+      expect(
+        closingForPrn(
+          openingWithDecember,
+          LEDGER_EVENT_KIND.PRN_CREATED,
+          100,
+          true
+        )
+      ).toEqual({
+        amount: 1000,
+        availableAmount: 700,
+        decemberAmount: 300,
+        decemberAvailableAmount: 150
+      })
+    })
+
+    it('deducts the December amount alongside the total on issue', () => {
+      expect(
+        closingForPrn(
+          openingWithDecember,
+          LEDGER_EVENT_KIND.PRN_ISSUED,
+          100,
+          true
+        )
+      ).toEqual({
+        amount: 900,
+        availableAmount: 800,
+        decemberAmount: 200,
+        decemberAvailableAmount: 250
+      })
+    })
+
+    // Defensive: the decider only sets useDecemberBalance once the opening
+    // carries a December portion, so these paths are unreachable through it -
+    // an absent field is treated as 0 rather than producing NaN.
+    it('opens the December available pool from zero on creation when the opening carries none', () => {
+      expect(
+        closingForPrn(
+          { amount: 1000, availableAmount: 800 },
+          LEDGER_EVENT_KIND.PRN_CREATED,
+          100,
+          true
+        )
+      ).toEqual({
+        amount: 1000,
+        availableAmount: 700,
+        decemberAvailableAmount: -100
+      })
+    })
+
+    it('opens the December amount pool from zero on issue when the opening carries none', () => {
+      expect(
+        closingForPrn(
+          { amount: 1000, availableAmount: 800 },
+          LEDGER_EVENT_KIND.PRN_ISSUED,
+          100,
+          true
+        )
+      ).toEqual({ amount: 900, availableAmount: 800, decemberAmount: -100 })
+    })
+  })
 })

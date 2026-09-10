@@ -72,7 +72,13 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * @typedef {{ prnId: string, amount: number }} PrnPayload
+ * `useDecemberBalance` is the pool-routing flag (ADR-0049), resolved once from
+ * the PRN's `isDecemberWaste` and whether the accreditation accrues December,
+ * and echoed onto every balance event the PRN produces. Optional and carried
+ * only when true: absent means the PRN draws the general balance (pre-feature
+ * events and every general PRN), which readers coalesce to false.
+ *
+ * @typedef {{ prnId: string, amount: number, useDecemberBalance?: boolean }} PrnPayload
  */
 
 /**
@@ -158,7 +164,8 @@ const summaryLogPayloadSchema = Joi.object({
 
 const prnPayloadSchema = Joi.object({
   prnId: Joi.string().required(),
-  amount: Joi.number().required()
+  amount: Joi.number().required(),
+  useDecemberBalance: Joi.boolean()
 })
 
 const prnAcceptedPayloadSchema = prnPayloadSchema.keys({

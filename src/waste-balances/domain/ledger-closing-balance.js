@@ -60,26 +60,48 @@ export const closingForSummaryLogSubmitted = (
 /**
  * Compute closing balance for a PRN event.
  *
- * A PRN event moves the total fields but leaves the December amounts as they
+ * A general PRN moves the total fields but leaves the December amounts as they
  * opened, so the latest event's closing balance still surfaces the December
  * portion. Every case spreads `opening` to carry those amounts through.
+ *
+ * A December PRN (`useDecemberBalance`) moves its pool by the same delta it
+ * applies to the total: creation ringfences `decemberAvailableAmount` alongside
+ * `availableAmount`, issue deducts `decemberAmount` alongside `amount`. The
+ * decider only sets the flag once the opening carries a December portion, so an
+ * absent field is defaulted to 0 defensively rather than expected.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
  * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
  * @param {number} prnAmount
+ * @param {boolean} [useDecemberBalance]
  * @returns {import('../repository/ledger-schema.js').LedgerBalanceSnapshot}
  */
-export const closingForPrn = (opening, kind, prnAmount) => {
+export const closingForPrn = (
+  opening,
+  kind,
+  prnAmount,
+  useDecemberBalance = false
+) => {
   switch (kind) {
     case LEDGER_EVENT_KIND.PRN_CREATED:
       return {
         ...opening,
-        availableAmount: toNumber(subtract(opening.availableAmount, prnAmount))
+        availableAmount: toNumber(subtract(opening.availableAmount, prnAmount)),
+        ...(useDecemberBalance && {
+          decemberAvailableAmount: toNumber(
+            subtract(opening.decemberAvailableAmount ?? 0, prnAmount)
+          )
+        })
       }
     case LEDGER_EVENT_KIND.PRN_ISSUED:
       return {
         ...opening,
-        amount: toNumber(subtract(opening.amount, prnAmount))
+        amount: toNumber(subtract(opening.amount, prnAmount)),
+        ...(useDecemberBalance && {
+          decemberAmount: toNumber(
+            subtract(opening.decemberAmount ?? 0, prnAmount)
+          )
+        })
       }
     case LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED:
       return {

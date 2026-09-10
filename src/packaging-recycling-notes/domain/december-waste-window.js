@@ -74,10 +74,15 @@ export const DECEMBER_WASTE_NOT_DECLARABLE_CODE =
   'DECEMBER_WASTE_NOT_DECLARABLE'
 
 /**
- * Asserts both halves of the December Waste rule together at PRN creation:
- * the accreditation must declare manually, and the declaration window must
- * be open. No-ops unless `isDecemberWaste` is actually set, so the common
- * path is untouched.
+ * Asserts the December Waste declaration window is open at PRN creation. No-ops
+ * unless `isDecemberWaste` is actually set, so the common path is untouched.
+ *
+ * The window gates every declarer alike (PAE-1922): the disclosure duty is
+ * uniform across accreditation types (paras 24(4)/27(3)), so an exporter or
+ * input reprocessor may declare December inside the window just as an output
+ * reprocessor may. Which accreditation accrues a December balance governs pool
+ * routing (`useDecemberBalance`, see `use-december-balance.js`), not whether
+ * the declaration is permitted - so the type predicate no longer gates here.
  *
  * @param {Object} params
  * @param {{ id: string, wasteProcessingType: string, reprocessingType?: string, validFrom?: string }} params.accreditation
@@ -95,20 +100,18 @@ export function assertDecemberWasteDeclarable({
     return
   }
 
-  const declarable =
-    declaresDecemberWasteManually(accreditation) &&
+  if (
     isWithinDecemberWasteWindow(
       deriveAccreditationYear(accreditation),
       now,
       config
     )
-
-  if (declarable) {
+  ) {
     return
   }
 
   throw conflict(
-    'December Waste cannot be declared on this accreditation',
+    'December Waste can only be declared within the declaration window',
     DECEMBER_WASTE_NOT_DECLARABLE_CODE,
     {
       event: {
