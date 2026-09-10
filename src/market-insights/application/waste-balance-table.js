@@ -175,22 +175,28 @@ const publishedContribution = (rowState, partitions) => {
 
 /**
  * @param {Map<string, WasteBalanceCell>} cells
- * @param {Registration} registration
- * @param {string} month
+ * @param {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>} cell
  * @param {WasteBalanceFigures} figures
  */
-const foldIntoCell = (cells, registration, month, figures) => {
-  const cell = {
-    material: resolveDetailedMaterial(registration) ?? '',
-    accreditationType: registration.wasteProcessingType,
-    month
-  }
+const foldIntoCell = (cells, cell, figures) => {
   const key = cellKey(cell)
 
   cells.set(key, {
     ...cell,
     figures: addFigures(cells.get(key)?.figures ?? NO_FIGURES, figures)
   })
+}
+
+/**
+ * @param {Map<string, WasteBalanceFigures>} unattributed
+ * @param {string} registrationId
+ * @param {WasteBalanceFigures} figures
+ */
+const recordUnattributed = (unattributed, registrationId, figures) => {
+  unattributed.set(
+    registrationId,
+    addFigures(unattributed.get(registrationId) ?? NO_FIGURES, figures)
+  )
 }
 
 /**
@@ -234,11 +240,11 @@ const recordUndated = (undated, { deducts, figures }) => {
 }
 
 /**
- * @param {{ cells: Map<string, WasteBalanceCell>, undated: UndatedTally, isPublishedMonth: (month: string) => boolean }} into
+ * @param {{ cells: Map<string, WasteBalanceCell>, undated: UndatedTally, unattributed: Map<string, WasteBalanceFigures>, isPublishedMonth: (month: string) => boolean }} into
  * @param {PublishedRow} published
  */
 const recordRow = (
-  { cells, undated, isPublishedMonth },
+  { cells, undated, unattributed, isPublishedMonth },
   { registration, contribution }
 ) => {
   const { month, figures } = contribution
@@ -246,8 +252,38 @@ const recordRow = (
     recordUndated(undated, contribution)
     return
   }
-  if (isPublishedMonth(month)) {
-    foldIntoCell(cells, registration, month, figures)
+  if (!isPublishedMonth(month)) {
+    return
+  }
+  const material = resolveDetailedMaterial(registration)
+  if (material === null) {
+    recordUnattributed(unattributed, registration.id, figures)
+  }
+  foldIntoCell(
+    cells,
+    {
+      material: material ?? '',
+      accreditationType: registration.wasteProcessingType,
+      month
+    },
+    figures
+  )
+}
+
+/**
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {Map<string, WasteBalanceFigures>} unattributed
+ */
+const warnAboutUnattributedTonnage = (logger, unattributed) => {
+  for (const [registrationId, figures] of unattributed) {
+    logger.warn({
+      message: `Market insights waste balance could not resolve the material of registration ${registrationId}, so its ${figures.totalCredited} tonnes credited and ${figures.sentOnDeductions} tonnes sent on are published against no material. A glass registration the process split never reached belongs to neither published glass row.`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: 'market_insights_material_unresolved',
+        reference: registrationId
+      }
+    })
   }
 }
 
@@ -317,6 +353,8 @@ export const buildWasteBalanceTable = async ({
     /** @type {Map<string, WasteBalanceCell>} */
     cells: new Map(),
     undated: newUndatedTally(),
+    /** @type {Map<string, WasteBalanceFigures>} */
+    unattributed: new Map(),
     isPublishedMonth: publishableMonthsOf(reportingYear, now)
   }
 
@@ -331,6 +369,7 @@ export const buildWasteBalanceTable = async ({
   }
 
   warnAboutUndatedRows(logger, reportingYear, into.undated)
+  warnAboutUnattributedTonnage(logger, into.unattributed)
 
   const data = [...into.cells.values()]
     .map(({ figures, ...cell }) => ({ ...cell, ...withNetCredit(figures) }))

@@ -361,17 +361,44 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
-  it('counts a glass registration the split never reached against no material', async () => {
+  describe('a glass registration the split never reached', () => {
     const operator = makeOperator({ orgId: 500013, material: MATERIAL.GLASS })
 
-    const { table } = await run({
-      organisations: [operator.organisation],
-      submissions: [
-        { ...operator, rows: [receivedRow('row-1', '2026-03-10', 100)] }
-      ]
+    const withUnsplitGlass = () =>
+      run({
+        organisations: [operator.organisation],
+        submissions: [
+          {
+            ...operator,
+            rows: [
+              receivedRow('row-1', '2026-03-10', 100),
+              sentOnRow('row-2', '2026-03-12', 30)
+            ]
+          }
+        ]
+      })
+
+    it('counts its tonnage against no material', async () => {
+      const { table } = await withUnsplitGlass()
+
+      expect(table.data.map(({ material }) => material)).toEqual([''])
     })
 
-    expect(table.data.map(({ material }) => material)).toEqual([''])
+    it('names the registration and the tonnage published against no material', async () => {
+      const { logger } = await withUnsplitGlass()
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            '100 tonnes credited and 30 tonnes sent on'
+          ),
+          event: expect.objectContaining({
+            action: 'market_insights_material_unresolved',
+            reference: 'reg-500013'
+          })
+        })
+      )
+    })
   })
 
   it('ignores a table that does not count under the accreditation', async () => {
