@@ -1,17 +1,20 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { config } from '#root/config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   WASTE_PROCESSING_TYPE,
   ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
+import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -29,6 +32,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  *   issuedToOrganisation: { id: string; name: string; tradingName?: string; registrationType?: string };
  *   tonnage: number;
  *   notes?: string;
+ *   isDecemberWaste: boolean;
  * }} PackagingRecyclingNotesCreatePayload
  */
 
@@ -97,7 +101,7 @@ const buildPrnData = ({
     tonnage: payload.tonnage,
     isExport,
     ...(payload.notes && { notes: payload.notes }),
-    isDecemberWaste: false,
+    isDecemberWaste: payload.isDecemberWaste,
     status: {
       currentStatus: PRN_STATUS.DRAFT,
       currentStatusAt: now,
@@ -108,20 +112,6 @@ const buildPrnData = ({
     updatedAt: now,
     updatedBy: user
   }
-}
-
-/**
- * @param {{ id: string; validFrom?: string }} accreditation
- * @returns {number}
- * @throws {Error} if validFrom is missing — approved accreditations must have it
- */
-const deriveAccreditationYear = (accreditation) => {
-  if (!accreditation.validFrom) {
-    throw new Error(
-      `Accreditation ${accreditation.id} is missing validFrom — cannot derive accreditation year`
-    )
-  }
-  return new Date(accreditation.validFrom).getFullYear()
 }
 
 /**
@@ -264,6 +254,13 @@ export const packagingRecyclingNotesCreate = {
       if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
         throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
       }
+
+      assertDecemberWasteDeclarable({
+        accreditation,
+        isDecemberWaste: payload.isDecemberWaste,
+        now,
+        config: config.get('decemberWaste')
+      })
 
       await assertSufficientAvailableBalance({
         ledgerRepository,

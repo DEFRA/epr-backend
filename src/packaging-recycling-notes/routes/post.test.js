@@ -15,7 +15,12 @@ import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { DECEMBER_WASTE_NOT_DECLARABLE_CODE } from '#packaging-recycling-notes/domain/december-waste-window.js'
+import {
+  MATERIAL,
+  WASTE_PROCESSING_TYPE,
+  REPROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
   buildLedgerEvent,
@@ -99,6 +104,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           material: MATERIAL.PLASTIC,
           validFrom: '2026-01-01',
           wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          reprocessingType: REPROCESSING_TYPE.OUTPUT,
           submittedToRegulator: 'ea',
           site: {
             address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
@@ -123,6 +129,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     })
 
     afterEach(() => {
+      vi.useRealTimers()
       vi.clearAllMocks()
     })
 
@@ -156,6 +163,36 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(body.accreditationYear).toBe(2026)
         expect(body.obligationYear).toBe(2026)
         expect(body.wasteProcessingType).toBe(WASTE_PROCESSING_TYPE.REPROCESSOR)
+      })
+
+      it('persists isDecemberWaste true when submitted by an output reprocessor inside the window', async () => {
+        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: { ...validPayload, isDecemberWaste: true }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+        const body = JSON.parse(response.payload)
+        expect(body.isDecemberWaste).toBe(true)
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({ isDecemberWaste: true })
+        )
+      })
+
+      it('persists isDecemberWaste false when submitted explicitly', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: { ...validPayload, isDecemberWaste: false }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+        expect(JSON.parse(response.payload).isDecemberWaste).toBe(false)
       })
 
       it('creates PRN with correct organisation and registration', async () => {
@@ -527,6 +564,20 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
+
+      it('returns 422 when isDecemberWaste is not a boolean', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: {
+            ...validPayload,
+            isDecemberWaste: 'yes'
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
     })
 
     describe('accreditation status', () => {
@@ -693,6 +744,109 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: { ...validPayload, tonnage: 200 }
         })
         expect(second.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+    })
+
+    describe('december waste validation', () => {
+      const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`
+
+      afterEach(() => {
+        vi.useRealTimers()
+      })
+
+      it('returns 409 and creates no draft when the window is closed, even for an output reprocessor', async () => {
+        vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, isDecemberWaste: true }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          DECEMBER_WASTE_NOT_DECLARABLE_CODE
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('returns 409 and creates no draft for an input reprocessor, even inside the window', async () => {
+        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          status: 'approved',
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2026-01-01',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          reprocessingType: REPROCESSING_TYPE.INPUT,
+          submittedToRegulator: 'ea',
+          site: {
+            address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
+          }
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, isDecemberWaste: true }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          DECEMBER_WASTE_NOT_DECLARABLE_CODE
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('returns 409 and creates no draft for an exporter, even inside the window', async () => {
+        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          status: 'approved',
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2026-01-01',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          submittedToRegulator: 'ea'
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, isDecemberWaste: true }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          DECEMBER_WASTE_NOT_DECLARABLE_CODE
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('creates the draft when isDecemberWaste is false outside the window, for any accreditation type', async () => {
+        vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          status: 'approved',
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2026-01-01',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          submittedToRegulator: 'ea'
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, isDecemberWaste: false }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
       })
     })
 

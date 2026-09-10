@@ -2,8 +2,10 @@ import convict from 'convict'
 import convictFormatWithValidator from 'convict-format-with-validator'
 
 import { convictValidateMongoUri } from '#common/helpers/convict/validate-mongo-uri.js'
+import { convictValidateDecemberWasteWindowBound } from '#common/helpers/convict/validate-december-waste-window-bound.js'
 
 convict.addFormat(convictValidateMongoUri)
+convict.addFormat(convictValidateDecemberWasteWindowBound)
 convict.addFormats(convictFormatWithValidator)
 
 const isProduction = process.env.NODE_ENV === 'production'
@@ -505,6 +507,14 @@ const baseConfig = {
       nullable: true,
       default: '',
       env: 'BASIC_AUTH_PASSWORD'
+    }
+  },
+  decemberWaste: {
+    windowStart: {
+      doc: 'Recurring annual start (inclusive) of the December Waste declaration window, as MM-DDTHH:mm in UK local time (Europe/London), for the accreditation relevant year. The window always closes 31 January the year after relevantYear.',
+      format: 'december-waste-window-bound',
+      default: '12-01T00:00',
+      env: 'DECEMBER_WASTE_WINDOW_START'
     }
   }
 }
