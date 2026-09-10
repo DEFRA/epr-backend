@@ -325,6 +325,17 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
  * and readers coalesce its absence to false. The accreditation is absent on
  * transitions that move no pool, where the flag is irrelevant.
  *
+ * ADR-0049 resolves the flag once at the first balance event and has later
+ * events carry that copy; here it is re-derived per transition instead. That is
+ * safe because both inputs are immutable: `accruesDecember` reads only the
+ * accreditation's processing type, and `isDecemberWaste` is fixed on the PRN,
+ * so a re-derivation always equals the original, and the issue path re-uses the
+ * accreditation it already loads to stamp the PRN number. The reversal restore
+ * (PAE-1923) must NOT copy this shortcut: it credits a specific pool, so it
+ * should read `useDecemberBalance` off the PRN's raise event (via
+ * `service.prnCatchupEvents`) rather than the accreditation, which is both what
+ * the ADR mandates and robust to a since-changed accreditation.
+ *
  * @param {PackagingRecyclingNote} prn
  * @param {number} [obligationYear]
  * @param {import('#domain/organisations/accreditation.js').Accreditation} [accreditation]

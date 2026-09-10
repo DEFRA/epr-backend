@@ -128,6 +128,13 @@ export const LEDGER_MISSING_AFTER_ISSUE = 'ledger-missing-after-issue'
  * reversal that drew on the December pool is refused rather than silently
  * corrupting the balance.
  *
+ * Only the balance-moving reversals are listed, so `prn-rejected` (which moves
+ * nothing) still succeeds. A rejected December PRN therefore reaches
+ * `awaiting_cancellation` and is then stranded there, because completing the
+ * cancellation is refused. This is an accepted temporary limitation: the whole
+ * December-cancellation flow is unavailable until PAE-1923, and a stranded PRN
+ * is safe (nothing moved). PAE-1923 removes this guard.
+ *
  * @type {Set<LedgerEventKind>}
  */
 const REVERSING_EVENT_KINDS = new Set([
