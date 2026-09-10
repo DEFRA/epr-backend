@@ -104,9 +104,9 @@ const publishedContextFor = ({ accreditationId }, index) =>
 /**
  * The partitions whose figures the publication sums, keyed by ledger identity:
  * every accredited partition with a submission, whose accreditation still
- * resolves to a live registration outside the test organisations. A
- * registered-only partition can share a summary log with an accredited one, so
- * it is turned away here rather than by summary log.
+ * resolves to a live registration outside the test organisations. The stream
+ * that follows is queried by summary log id, which does not name a ledger, so a
+ * partition is turned away here rather than by summary log.
  *
  * @param {LatestSubmittedSummaryLogPerLedger[]} entries
  * @param {Map<string, AccreditationContext>} index

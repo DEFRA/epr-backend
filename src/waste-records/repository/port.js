@@ -59,11 +59,12 @@
  * @property {(summaryLogIds: string[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
  *   Yield every state document whose membership contains any of `summaryLogIds`,
  *   once each however many of them it belongs to, carrying its whole membership
- *   so the caller can tell which submission it belongs to. Neither a ledger nor
- *   a submission identifies a row on its own here: one summary log id can belong
- *   to more than one ledger, and one ledger's rows can belong to submissions
- *   other than the one asked for, so this yields the union and the caller
- *   narrows. Yields rather than returns so a reader aggregating the whole
+ *   so the caller can tell which submission it belongs to. A summary log id does
+ *   not identify a ledger, which is why `findRowStatesForSummaryLog` takes both,
+ *   and one ledger's rows can belong to submissions other than the one asked
+ *   for. So this yields the union of the ids and the caller narrows to the
+ *   partitions and submissions it wants. Yields rather than returns so a reader
+ *   aggregating the whole
  *   service holds one batch at a time rather than every row of every
  *   submission.
  * @property {() => Promise<string[]>} findDistinctDataKeys
