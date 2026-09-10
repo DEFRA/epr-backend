@@ -48,16 +48,19 @@ export function isWithinDecemberWasteWindow(
 }
 
 /**
- * Whether an accreditation's December Waste must be declared by the operator,
- * independent of the declaration window: true in June as well as December.
+ * Whether an accreditation must declare its December Waste manually, rather than
+ * have it derived from a December balance: true only for a reprocessor on
+ * output. An output accreditation accrues no December balance (see
+ * `december-credit-total.js`, which zeroes `REPROCESSOR_OUTPUT` rows), so it has
+ * no tonnage to derive the marker from and the operator self-declares it for
+ * disclosure. Input reprocessors and exporters do accrue a December balance
+ * (PAE-1922), so they stay false here and their pool routing is decided by
+ * `resolveUseDecemberBalance` in `use-december-balance.js` instead.
  *
- * Only a reprocessor on output today (PAE-1913), because it is the one type
- * with no automatic December balance to derive the tonnage from - see
- * `december-credit-total.js`, which zeroes `REPROCESSOR_OUTPUT` rows for the
- * same reason. Input reprocessors and exporters get a December balance in
- * later stories and so stay false here: they will have December waste too,
- * derived rather than declared. This is the single place that changes as
- * those stories land.
+ * This is now only the disclosure signal (does the operator declare manually),
+ * not a proxy for "has no December balance": that distinction moved to
+ * `accruesDecember`. The `december-eligibility` route consumes it to decide
+ * whether to prompt for a manual declaration.
  *
  * @param {{ wasteProcessingType: string, reprocessingType?: string }} accreditation
  * @returns {boolean}
