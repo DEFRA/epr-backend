@@ -441,7 +441,7 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
-  describe('a sent-on row with no usable date', () => {
+  describe('a row with no usable date', () => {
     const operator = makeOperator({ orgId: 500011 })
 
     const withUndatedDeduction = () =>
@@ -482,9 +482,22 @@ describe('buildWasteBalanceTable', () => {
         expect.objectContaining({
           message: expect.stringContaining('2 sent-on row(s) totalling 42.5'),
           event: expect.objectContaining({
-            action: 'market_insights_undated_sent_on_rows',
-            reference: '2026'
+            action: 'market_insights_undated_rows'
           })
+        })
+      )
+    })
+
+    it('counts a dropped crediting row against the gross tonnage', async () => {
+      const { table, logger } = await run({
+        organisations: [operator.organisation],
+        submissions: [{ ...operator, rows: [receivedRow('row-1', '', 100)] }]
+      })
+
+      expect(table.data).toEqual([])
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('1 crediting row(s) totalling 100')
         })
       )
     })
@@ -499,14 +512,36 @@ describe('buildWasteBalanceTable', () => {
 
       expect(logger.warn).not.toHaveBeenCalled()
     })
+  })
 
-    it('leaves an undated crediting row uncounted', async () => {
-      const { logger } = await run({
+  describe('a month later than the clock', () => {
+    const operator = makeOperator({ orgId: 500012 })
+
+    it('holds the row back rather than publishing it as supply', async () => {
+      const { table } = await run({
         organisations: [operator.organisation],
-        submissions: [{ ...operator, rows: [receivedRow('row-1', '', 100)] }]
+        submissions: [
+          {
+            ...operator,
+            rows: [
+              receivedRow('row-1', '2026-06-10', 40),
+              receivedRow('row-2', '2026-12-10', 999)
+            ]
+          }
+        ]
       })
 
-      expect(logger.warn).not.toHaveBeenCalled()
+      expect(table.data).toEqual([
+        {
+          material: MATERIAL.PLASTIC,
+          accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          month: '2026-06',
+          totalCredited: 40,
+          eligibleForWasteBalance: 40,
+          sentOnDeductions: 0,
+          netCredit: 40
+        }
+      ])
     })
   })
 

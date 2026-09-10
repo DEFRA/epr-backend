@@ -1,4 +1,8 @@
 import { addRounded, toNumber } from '#common/helpers/decimal-utils.js'
+import {
+  monthKeyForDate,
+  REPORTING_TIME_ZONE
+} from '#common/helpers/dates/year-month.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
@@ -19,6 +23,10 @@ import {
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceFigures} WasteBalanceFigures
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} PublishedWasteBalanceFigures
+ * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationContext} AccreditationContext
+ * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
+ * @typedef {import('#waste-records/repository/port.js').SubmittedRowState} SubmittedRowState
+ * @typedef {import('#domain/organisations/registration.js').Registration} Registration
  */
 
 /**
@@ -63,7 +71,7 @@ const partitionKey = ({ organisationId, registrationId, accreditationId }) =>
   JSON.stringify([organisationId, registrationId, accreditationId])
 
 /**
- * @param {WasteBalanceCell} cell
+ * @param {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>} cell
  * @returns {string}
  */
 const cellKey = ({ material, accreditationType, month }) =>
@@ -80,14 +88,27 @@ const compareRows = (a, b) =>
   a.month.localeCompare(b.month)
 
 /**
+ * The accreditation a partition publishes under, or nothing when it has none: a
+ * registered-only partition holds no credits, and an accreditation that no
+ * longer resolves to a live registration outside the test organisations is not
+ * published.
+ *
+ * @param {LatestSubmittedSummaryLogPerLedger['ledgerId']} ledgerId
+ * @param {Map<string, AccreditationContext>} index
+ * @returns {AccreditationContext | undefined}
+ */
+const publishedContextFor = ({ accreditationId }, index) =>
+  accreditationId === null ? undefined : index.get(accreditationId)
+
+/**
  * The partitions whose figures the publication sums, keyed by ledger identity:
  * every accredited partition with a submission, whose accreditation still
  * resolves to a live registration outside the test organisations. A
- * registered-only partition holds no credits, and can share a summary log with
- * an accredited one, so it is turned away here rather than by summary log.
+ * registered-only partition can share a summary log with an accredited one, so
+ * it is turned away here rather than by summary log.
  *
- * @param {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger[]} entries
- * @param {Map<string, import('#waste-balances/application/accreditation-index.js').AccreditationContext>} index
+ * @param {LatestSubmittedSummaryLogPerLedger[]} entries
+ * @param {Map<string, AccreditationContext>} index
  * @param {Map<string, import('#overseas-sites/repository/port.js').OverseasSite>} sitesById
  * @returns {Map<string, PublishedPartition>}
  */
@@ -95,11 +116,7 @@ const resolvePublishedPartitions = (entries, index, sitesById) => {
   /** @type {Map<string, PublishedPartition>} */
   const partitions = new Map()
   for (const { ledgerId, summaryLogId } of entries) {
-    const { accreditationId } = ledgerId
-    if (accreditationId === null) {
-      continue
-    }
-    const context = index.get(accreditationId)
+    const context = publishedContextFor(ledgerId, index)
     if (context === undefined) {
       continue
     }
@@ -111,6 +128,141 @@ const resolvePublishedPartitions = (entries, index, sitesById) => {
     })
   }
   return partitions
+}
+
+/**
+ * The figures a streamed row contributes to the publication, with the
+ * registration whose material and processing type label them, or nothing when
+ * the row is not one the publication counts. Eligibility is derived here
+ * against today's accreditation and overseas-site data rather than read from
+ * the classification stamped at submission.
+ *
+ * @param {SubmittedRowState} rowState
+ * @param {Map<string, PublishedPartition>} partitions
+ * @returns {{ registration: Registration, contribution: import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution } | null}
+ */
+const publishedContribution = (rowState, partitions) => {
+  const partition = partitions.get(partitionKey(rowState))
+  if (partition === undefined) {
+    return null
+  }
+  // A partition's earlier submissions match the stream's membership query too,
+  // and a row the operator has since changed is a second document that still
+  // carries the earlier submission. Reading each partition at its own latest
+  // submission is what keeps a superseded row out of the sums.
+  if (!rowState.summaryLogIds.includes(partition.summaryLogId)) {
+    return null
+  }
+
+  const { registration, accreditation, overseasSites } = partition
+  const classification = classifyRecordForWasteBalance(
+    { type: rowState.wasteRecordType, data: rowState.data },
+    rowState.processingType,
+    accreditation,
+    overseasSites
+  )
+
+  const contribution = monthlyContribution(
+    { ...rowState, classification },
+    {
+      wasteProcessingType: /** @type {WasteProcessingTypeValue} */ (
+        registration.wasteProcessingType
+      ),
+      reprocessingType: registration.reprocessingType
+    }
+  )
+
+  return contribution === null ? null : { registration, contribution }
+}
+
+/**
+ * Fold one row's figures into the cell for its material, accreditation type and
+ * month, creating the cell on first sight.
+ *
+ * @param {Map<string, WasteBalanceCell>} cells
+ * @param {Registration} registration
+ * @param {string} month
+ * @param {WasteBalanceFigures} figures
+ */
+const foldIntoCell = (cells, registration, month, figures) => {
+  const cell = {
+    material: resolveDetailedMaterial(registration) ?? '',
+    accreditationType: registration.wasteProcessingType,
+    month
+  }
+  const key = cellKey(cell)
+
+  cells.set(key, {
+    ...cell,
+    figures: addFigures(cells.get(key)?.figures ?? NO_FIGURES, figures)
+  })
+}
+
+/**
+ * Whether a row's month is one the publication prints for this reporting year.
+ * A month later than the clock cannot have happened, so a mis-keyed future date
+ * is held back rather than published as supply, which is the bound the
+ * credited-tonnage report puts on its own window.
+ *
+ * @param {number} reportingYear
+ * @param {Date} now - clock reading supplied by the caller
+ * @returns {(month: string) => boolean}
+ */
+const publishableMonthsOf = (reportingYear, now) => {
+  const monthPrefix = `${reportingYear}-`
+  const currentMonth = /** @type {string} */ (
+    monthKeyForDate(now, REPORTING_TIME_ZONE)
+  )
+  return (month) => month.startsWith(monthPrefix) && month <= currentMonth
+}
+
+/**
+ * The rows the publication had to drop for want of a date, counted on each
+ * side of the balance so the tally says which figure fell short.
+ *
+ * @typedef {Object} UndatedTally
+ * @property {{ rowCount: number, tonnage: number }} credits
+ * @property {{ rowCount: number, tonnage: number }} deductions
+ */
+
+/** @returns {UndatedTally} */
+const newUndatedTally = () => ({
+  credits: { rowCount: 0, tonnage: 0 },
+  deductions: { rowCount: 0, tonnage: 0 }
+})
+
+/**
+ * @param {UndatedTally} undated
+ * @param {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} contribution
+ */
+const recordUndated = (undated, { deducts, figures }) => {
+  const side = deducts ? undated.deductions : undated.credits
+  const tonnage = deducts ? figures.sentOnDeductions : figures.totalCredited
+  side.rowCount += 1
+  side.tonnage = toNumber(addRounded(side.tonnage, tonnage, 2))
+}
+
+/**
+ * A row's month comes from a date cell the summary log can leave blank, and a
+ * blank one puts the row in no month at all. Such a row leaves the publication
+ * silently, so the publication says how much of each side it is missing. The
+ * count spans every submission read, not one reporting year, because a row with
+ * no date belongs to no year.
+ *
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {UndatedTally} undated
+ */
+const warnAboutUndatedRows = (logger, { credits, deductions }) => {
+  if (credits.rowCount + deductions.rowCount === 0) {
+    return
+  }
+  logger.warn({
+    message: `Market insights waste balance dropped ${deductions.rowCount} sent-on row(s) totalling ${deductions.tonnage} tonnes and ${credits.rowCount} crediting row(s) totalling ${credits.tonnage} tonnes with no usable date, understating the deductions and the gross credited tonnage`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: 'market_insights_undated_rows'
+    }
+  })
 }
 
 /**
@@ -166,94 +318,31 @@ export const buildWasteBalanceTable = async ({
     .filter((entry) => partitions.has(partitionKey(entry.ledgerId)))
     .map((entry) => entry.summaryLogId)
 
-  const monthPrefix = `${reportingYear}-`
+  const publishedMonths = publishableMonthsOf(reportingYear, now)
 
   /** @type {Map<string, WasteBalanceCell>} */
   const cells = new Map()
-  const undatedDeductions = { rowCount: 0, tonnage: 0 }
+  const undated = newUndatedTally()
 
   for await (const rowState of summaryLogRowStatesRepository.streamRowStatesForSummaryLogs(
     summaryLogIds
   )) {
-    const partition = partitions.get(partitionKey(rowState))
-    if (partition === undefined) {
-      continue
-    }
-    // A partition's earlier submissions match the stream's membership query too,
-    // and a row the operator has since changed is a second document that still
-    // carries the earlier submission. Reading each partition at its own latest
-    // submission is what keeps a superseded row out of the sums.
-    if (!rowState.summaryLogIds.includes(partition.summaryLogId)) {
+    const published = publishedContribution(rowState, partitions)
+    if (published === null) {
       continue
     }
 
-    const { registration, accreditation, overseasSites } = partition
-    const classification = classifyRecordForWasteBalance(
-      { type: rowState.wasteRecordType, data: rowState.data },
-      rowState.processingType,
-      accreditation,
-      overseasSites
-    )
+    const { registration, contribution } = published
+    const { month, figures } = contribution
 
-    const contribution = monthlyContribution(
-      { ...rowState, classification },
-      {
-        wasteProcessingType: /** @type {WasteProcessingTypeValue} */ (
-          registration.wasteProcessingType
-        ),
-        reprocessingType: registration.reprocessingType
-      }
-    )
-    if (contribution === null) {
-      continue
+    if (month === null) {
+      recordUndated(undated, contribution)
+    } else if (publishedMonths(month)) {
+      foldIntoCell(cells, registration, month, figures)
     }
-    if (contribution.month === null) {
-      if (contribution.deducts) {
-        undatedDeductions.rowCount += 1
-        undatedDeductions.tonnage = toNumber(
-          addRounded(
-            undatedDeductions.tonnage,
-            contribution.figures.sentOnDeductions,
-            2
-          )
-        )
-      }
-      continue
-    }
-    if (!contribution.month.startsWith(monthPrefix)) {
-      continue
-    }
-
-    const cell = {
-      material: resolveDetailedMaterial(registration) ?? '',
-      accreditationType: registration.wasteProcessingType,
-      month: contribution.month,
-      figures: contribution.figures
-    }
-    const key = cellKey(cell)
-    const existing = cells.get(key)
-
-    cells.set(key, {
-      ...cell,
-      figures: addFigures(existing?.figures ?? NO_FIGURES, contribution.figures)
-    })
   }
 
-  // A sent-on row's deduction is read straight from its own data: the sent-on
-  // table declares no waste-balance classifier, so nothing upstream refuses a
-  // row whose date cell is blank. Such a row leaves the deductions silently and
-  // overstates the net credit the publication prints, so the publication says
-  // how much it is missing.
-  if (undatedDeductions.rowCount > 0) {
-    logger.warn({
-      message: `Market insights waste balance dropped ${undatedDeductions.rowCount} sent-on row(s) totalling ${undatedDeductions.tonnage} tonnes with no usable date, understating the deductions for reporting year ${reportingYear}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: 'market_insights_undated_sent_on_rows',
-        reference: String(reportingYear)
-      }
-    })
-  }
+  warnAboutUndatedRows(logger, undated)
 
   const data = [...cells.values()]
     .map(({ figures, ...cell }) => ({ ...cell, ...withNetCredit(figures) }))

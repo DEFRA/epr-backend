@@ -9,6 +9,12 @@ import { wasteBalanceResponseSchema } from './waste-balance-response.schema.js'
 export const marketInsightsWasteBalancePath =
   '/v1/market-insights/waste-balance'
 
+// The publication keys its months `YYYY-MM`, so a reporting year is a
+// four-digit year, and one before packaging waste was reported at all is a typo
+// rather than an empty year.
+const EARLIEST_REPORTING_YEAR = 2000
+const LATEST_REPORTING_YEAR = 9999
+
 export const marketInsightsWasteBalanceGet = {
   method: 'GET',
   path: marketInsightsWasteBalancePath,
@@ -19,7 +25,11 @@ export const marketInsightsWasteBalanceGet = {
     tags: ['api', 'market-insights'],
     validate: {
       query: Joi.object({
-        year: Joi.number().integer().min(2000).max(9999).required()
+        year: Joi.number()
+          .integer()
+          .min(EARLIEST_REPORTING_YEAR)
+          .max(LATEST_REPORTING_YEAR)
+          .required()
       })
     },
     response: {
