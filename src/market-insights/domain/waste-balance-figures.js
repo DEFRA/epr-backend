@@ -17,8 +17,7 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
  */
 
 /**
- * The three figures the published Waste Balance tab sums. `netCredit` is not
- * among them because it is derived from two of them rather than accumulated.
+ * The three figures the published Waste Balance tab sums.
  *
  * @typedef {Object} WasteBalanceFigures
  * @property {number} totalCredited - gross tonnage on crediting rows, 2dp
@@ -54,8 +53,6 @@ export const addFigures = (a, b) => ({
 
 /**
  * Attach the published net credit: eligible tonnage less sent-on deductions.
- * This subtraction is the whole of the arithmetic the publication adds on top
- * of what the service already supplies.
  *
  * @param {WasteBalanceFigures} figures
  * @returns {PublishedWasteBalanceFigures}
@@ -68,10 +65,6 @@ export const withNetCredit = (figures) => ({
 })
 
 /**
- * What one row moves, and which reporting month it moves it in. `month` is null
- * when the row's month-assignment date is missing or unparseable, so it belongs
- * to no month and its figures reach no cell.
- *
  * @typedef {Object} MonthlyContribution
  * @property {string | null} month - `YYYY-MM`, or null when the row has no usable date
  * @property {boolean} deducts - whether the row deducts rather than credits
@@ -79,13 +72,8 @@ export const withNetCredit = (figures) => ({
  */
 
 /**
- * What one row contributes to the publication, or `null` when its table does
- * not count at all under the accreditation's processing type.
- *
- * Which table credits and which deducts is the accreditation's question, so the
- * crediting rules come from `contributionFor` rather than being restated here.
- * Eligibility comes from the classification the caller supplies; only the
- * bucketing and the sums belong to the publication.
+ * Null when the row's table does not count at all under the accreditation's
+ * processing type.
  *
  * @param {CreditableWasteRecordState} rowState
  * @param {AccreditationContext} accreditation

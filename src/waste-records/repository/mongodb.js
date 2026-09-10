@@ -276,9 +276,8 @@ const performFindRowHistory =
   }
 
 /**
- * The fields `streamRowStatesForSummaryLogs` reads. Projecting away `data`'s
- * neighbours is not the saving — skipping `validateSummaryLogRowStateRead` is,
- * and a projected document has nothing to validate against the read schema.
+ * The saving is skipping `validateSummaryLogRowStateRead`: a projected document
+ * has nothing to validate against the read schema.
  */
 const SUBMITTED_ROW_STATE_PROJECTION = {
   _id: 0,

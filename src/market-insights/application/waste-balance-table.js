@@ -31,11 +31,6 @@ import {
  */
 
 /**
- * A partition being published: the submission its figures are read at, the
- * registration whose material and processing type label them, and the
- * accreditation and overseas-site context its rows classify against, all
- * resolved once for the whole partition.
- *
  * @typedef {Object} PublishedPartition
  * @property {string} summaryLogId - the partition's latest submission
  * @property {import('#domain/organisations/registration.js').Registration} registration
@@ -44,8 +39,8 @@ import {
  */
 
 /**
- * One published cell: the figures for one material, accreditation type and
- * reporting month, summed across every operator that reported into it.
+ * The figures for one material, accreditation type and reporting month, summed
+ * across every operator that reported into it.
  *
  * @typedef {Object} WasteBalanceCell
  * @property {string} material
@@ -89,10 +84,8 @@ const compareRows = (a, b) =>
   a.month.localeCompare(b.month)
 
 /**
- * The accreditation a partition publishes under, or nothing when it has none: a
- * registered-only partition holds no credits, and an accreditation that no
- * longer resolves to a live registration outside the test organisations is not
- * published.
+ * A registered-only partition holds no credits, so it publishes under no
+ * accreditation.
  *
  * @param {LatestSubmittedSummaryLogPerLedger['ledgerId']} ledgerId
  * @param {Map<string, AccreditationContext>} index
@@ -102,12 +95,6 @@ const publishedContextFor = ({ accreditationId }, index) =>
   accreditationId === null ? undefined : index.get(accreditationId)
 
 /**
- * The partitions whose figures the publication sums, keyed by ledger identity:
- * every accredited partition with a submission, whose accreditation still
- * resolves to a live registration outside the test organisations. The stream
- * that follows is queried by summary log id, which does not name a ledger, so a
- * partition is turned away here rather than by summary log.
- *
  * @param {LatestSubmittedSummaryLogPerLedger[]} entries
  * @param {Map<string, AccreditationContext>} index
  * @param {Map<string, import('#overseas-sites/repository/port.js').OverseasSite>} sitesById
@@ -132,11 +119,20 @@ const resolvePublishedPartitions = (entries, index, sitesById) => {
 }
 
 /**
- * The figures a streamed row contributes to the publication, with the
- * registration whose material and processing type label them, or nothing when
- * the row is not one the publication counts. Eligibility is derived here
- * against today's accreditation and overseas-site data rather than read from
- * the classification stamped at submission.
+ * The stream matches a partition's earlier submissions too, and a row the
+ * operator has since changed is a second document still carrying the earlier
+ * one.
+ *
+ * @param {SubmittedRowState} rowState
+ * @param {PublishedPartition} partition
+ * @returns {boolean}
+ */
+const isFromLatestSubmission = (rowState, partition) =>
+  rowState.summaryLogIds.includes(partition.summaryLogId)
+
+/**
+ * Eligibility is derived against today's accreditation and overseas-site data
+ * rather than read from the classification stamped at submission.
  *
  * @param {SubmittedRowState} rowState
  * @param {Map<string, PublishedPartition>} partitions
@@ -147,11 +143,7 @@ const publishedContribution = (rowState, partitions) => {
   if (partition === undefined) {
     return null
   }
-  // A partition's earlier submissions match the stream's membership query too,
-  // and a row the operator has since changed is a second document that still
-  // carries the earlier submission. Reading each partition at its own latest
-  // submission is what keeps a superseded row out of the sums.
-  if (!rowState.summaryLogIds.includes(partition.summaryLogId)) {
+  if (!isFromLatestSubmission(rowState, partition)) {
     return null
   }
 
@@ -183,9 +175,6 @@ const publishedContribution = (rowState, partitions) => {
  */
 
 /**
- * Fold one row's figures into the cell for its material, accreditation type and
- * month, creating the cell on first sight.
- *
  * @param {Map<string, WasteBalanceCell>} cells
  * @param {Registration} registration
  * @param {string} month
@@ -206,10 +195,8 @@ const foldIntoCell = (cells, registration, month, figures) => {
 }
 
 /**
- * Whether a row's month is one the publication prints for this reporting year.
  * A month later than the clock cannot have happened, so a mis-keyed future date
- * is held back rather than published as supply, which is the bound the
- * credited-tonnage report puts on its own window.
+ * is held back rather than published as supply.
  *
  * @param {number} reportingYear
  * @param {Date} now - clock reading supplied by the caller
@@ -225,9 +212,6 @@ const publishableMonthsOf = (reportingYear, now) => {
 }
 
 /**
- * The rows the publication had to drop for want of a date, counted on each
- * side of the balance so the tally says which figure fell short.
- *
  * @typedef {Object} UndatedTally
  * @property {{ rowCount: number, tonnage: number }} credits
  * @property {{ rowCount: number, tonnage: number }} deductions
@@ -251,9 +235,6 @@ const recordUndated = (undated, { deducts, figures }) => {
 }
 
 /**
- * Take one published row into the table cell it belongs in, or into the tally
- * of rows the publication had to drop for want of a usable month.
- *
  * @param {{ cells: Map<string, WasteBalanceCell>, undated: UndatedTally, isPublishedMonth: (month: string) => boolean }} into
  * @param {PublishedRow} published
  */
@@ -272,9 +253,7 @@ const recordRow = (
 }
 
 /**
- * A row's month comes from a date cell the summary log can leave blank, and a
- * blank one puts the row in no month at all. Such a row leaves the publication
- * silently, so the publication says how much of each side it is missing. The
+ * A row's month comes from a date cell the summary log can leave blank. The
  * count spans every submission read, not one reporting year, because a row with
  * no date belongs to no year.
  *
@@ -295,21 +274,8 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
 }
 
 /**
- * Aggregate the published UK Waste Balance figures for a reporting year: the
- * gross credited tonnage, the tonnage eligible for the waste balance, the
- * sent-on deductions and the net credit, summed by material, accreditation type
- * and reporting month.
- *
- * The figures are the ones the service already computes. Each row's eligibility
- * is derived against today's accreditation and overseas-site data, as the
- * credited-tonnage report derives it, so approving an overseas site or amending
- * a validity period moves the publication without waiting for the operator to
- * submit again. The publication's own arithmetic is the sums and the net-credit
- * subtraction.
- *
- * The read is shaped for what the table prints: one indexed pass over every
- * published partition's rows, streamed so memory holds the cells rather than
- * the rows, and no per-accreditation figures built and then discarded.
+ * Aggregate the published UK Waste Balance figures for a reporting year, summed
+ * by material, accreditation type and reporting month.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository

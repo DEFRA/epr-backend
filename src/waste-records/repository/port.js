@@ -31,11 +31,7 @@
  */
 
 /**
- * A row as it was submitted: the ledger identity that owns it, the submissions
- * that committed it, the template it reported under, and its coerced data. It
- * carries no waste-balance classification, because a reader that answers a
- * question about the present derives one against today's accreditation and
- * overseas-site data rather than the reading stamped at submission.
+ * A row as it was submitted, carrying no waste-balance classification.
  *
  * @typedef {WasteBalanceLedgerId & Pick<SummaryLogRowState, 'summaryLogIds' | 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
  */
@@ -58,15 +54,9 @@
  *   Return every state document for the given row identity.
  * @property {(summaryLogIds: string[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
  *   Yield every state document whose membership contains any of `summaryLogIds`,
- *   once each however many of them it belongs to, carrying its whole membership
- *   so the caller can tell which submission it belongs to. A summary log id does
- *   not identify a ledger, which is why `findRowStatesForSummaryLog` takes both,
- *   and one ledger's rows can belong to submissions other than the one asked
- *   for. So this yields the union of the ids and the caller narrows to the
- *   partitions and submissions it wants. Yields rather than returns so a reader
- *   aggregating the whole
- *   service holds one batch at a time rather than every row of every
- *   submission.
+ *   once each however many of them it belongs to, carrying its whole membership.
+ *   A summary log id does not identify a ledger, so the caller narrows to the
+ *   partitions and submissions it wants.
  * @property {() => Promise<string[]>} findDistinctDataKeys
  *   Return the union of every key observed on `data` across every state
  *   document in the collection. Used by the CSV export to compose its dynamic
