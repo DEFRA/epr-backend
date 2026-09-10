@@ -46,13 +46,16 @@ export const organisationsOverviewGet = {
         organisation.accreditations.map((acc) => [acc.id, acc])
       )
 
+      const linkedAccreditationIds = new Set(
+        organisation.registrations
+          .map((reg) => reg.accreditationId)
+          .filter((accreditationId) => !!accreditationId)
+      )
+
       const registrations = organisation.registrations.map((reg) => {
         const linkedAccreditation = reg.accreditationId
           ? accreditationsById.get(reg.accreditationId)
           : undefined
-
-        const isExporter =
-          reg.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
         return {
           id: reg.id,
@@ -60,7 +63,8 @@ export const organisationsOverviewGet = {
           status: reg.status,
           material: reg.material,
           processingType: getProcessingType(reg),
-          site: isExporter ? null : reg.site.address.line1,
+          reprocessingType: reg.reprocessingType ?? null,
+          site: getSite(reg),
           ...(linkedAccreditation && {
             accreditation: {
               id: linkedAccreditation.id,
@@ -71,10 +75,25 @@ export const organisationsOverviewGet = {
         }
       })
 
+      // An accreditation is unlinked when no registration on this organisation
+      // claims it. Nothing on the record itself says so, and nothing should:
+      // the link lives on the registration.
+      const unlinkedAccreditations = organisation.accreditations
+        .filter((acc) => !linkedAccreditationIds.has(acc.id))
+        .map((acc) => ({
+          id: acc.id,
+          accreditationNumber: acc.accreditationNumber,
+          status: acc.status,
+          material: acc.material,
+          processingType: getProcessingType(acc),
+          site: getSite(acc)
+        }))
+
       const response = {
         id: organisation.id,
         companyName: organisation.companyDetails.name,
-        registrations
+        registrations,
+        unlinkedAccreditations
       }
 
       if (organisation.linkedDefraOrganisation) {
@@ -114,14 +133,29 @@ export const organisationsOverviewGet = {
 }
 
 /**
- * @param {{ wasteProcessingType: string, reprocessingType?: string | null }} registration
+ * Shared by registrations and accreditations so the overview table labels both
+ * the same way.
+ * @param {{ wasteProcessingType: string, reprocessingType?: string | null }} item
  * @returns {string}
  */
-function getProcessingType(registration) {
-  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
+function getProcessingType(item) {
+  if (item.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
     return WASTE_PROCESSING_TYPE.EXPORTER
   }
-  return registration.reprocessingType
-    ? `${WASTE_PROCESSING_TYPE.REPROCESSOR} - ${registration.reprocessingType}`
+  return item.reprocessingType
+    ? `${WASTE_PROCESSING_TYPE.REPROCESSOR} - ${item.reprocessingType}`
     : WASTE_PROCESSING_TYPE.REPROCESSOR
+}
+
+/**
+ * @param {{ wasteProcessingType: string, site?: { address: { line1?: string } } }} item
+ * @returns {string | null}
+ */
+function getSite(item) {
+  if (item.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
+    return null
+  }
+  // A reprocessor always has a site with a line1: the persistence schema
+  // requires one of both registrations and accreditations.
+  return /** @type {{ address: { line1: string } }} */ (item.site).address.line1
 }

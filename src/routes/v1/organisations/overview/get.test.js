@@ -49,7 +49,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(Array.isArray(result.registrations)).toBe(true)
   })
 
-  it('returns only id, companyName, and registrations fields at the top level', async () => {
+  it('returns only id, companyName, registrations and unlinkedAccreditations fields at the top level', async () => {
     const org = buildOrganisation()
     await organisationsRepository.insert(org)
 
@@ -64,7 +64,8 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(Object.keys(result).sort()).toEqual([
       'companyName',
       'id',
-      'registrations'
+      'registrations',
+      'unlinkedAccreditations'
     ])
   })
 
@@ -105,6 +106,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
       'material',
       'processingType',
       'registrationNumber',
+      'reprocessingType',
       'site',
       'status'
     ])
@@ -130,6 +132,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
       'material',
       'processingType',
       'registrationNumber',
+      'reprocessingType',
       'site',
       'status',
       'accreditation'
@@ -227,6 +230,44 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(result.registrations[0].site).toBeNull()
   })
 
+  it.each(['input', 'output'])(
+    'returns reprocessingType %s alongside the processingType display string',
+    async (reprocessingType) => {
+      const registration = buildRegistration({
+        wasteProcessingType: 'reprocessor',
+        reprocessingType
+      })
+      const org = buildOrganisation({ registrations: [registration] })
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makePath(org.id),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result.registrations[0].reprocessingType).toBe(reprocessingType)
+    }
+  )
+
+  it('returns null reprocessingType for a registration that has none', async () => {
+    const registration = buildRegistration({ wasteProcessingType: 'exporter' })
+    const org = buildOrganisation({ registrations: [registration] })
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result.registrations[0].reprocessingType).toBeNull()
+  })
+
   it('includes linked accreditation with id, accreditationNumber, and status', async () => {
     const accreditation = buildAccreditation({ accreditationNumber: 'ACC0001' })
     const registration = buildRegistration({
@@ -276,6 +317,134 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
     expect(result.registrations[0]).not.toHaveProperty('accreditation')
+  })
+
+  describe('unlinked accreditations', () => {
+    it('returns an accreditation that no registration claims, with the expected fields', async () => {
+      const unlinked = buildAccreditation({ reprocessingType: 'input' })
+      const org = buildOrganisation({
+        registrations: [buildRegistration()],
+        accreditations: [unlinked]
+      })
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makePath(org.id),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result.unlinkedAccreditations).toHaveLength(1)
+      const [accreditation] = result.unlinkedAccreditations
+      expect(Object.keys(accreditation).sort()).toEqual([
+        'accreditationNumber',
+        'id',
+        'material',
+        'processingType',
+        'site',
+        'status'
+      ])
+      expect(accreditation.id).toBe(unlinked.id)
+      expect(accreditation.material).toBe(unlinked.material)
+      expect(accreditation.status).toBe('created')
+      expect(accreditation.processingType).toBe('reprocessor - input')
+      expect(accreditation.site).toBe(unlinked.site?.address.line1)
+    })
+
+    it('returns a null accreditationNumber for an accreditation that is not yet approved', async () => {
+      const org = buildOrganisation({
+        registrations: [buildRegistration()],
+        accreditations: [buildAccreditation()]
+      })
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makePath(org.id),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result.unlinkedAccreditations[0].accreditationNumber).toBeNull()
+    })
+
+    it('returns a null site for an unlinked exporter accreditation', async () => {
+      const unlinked = buildAccreditation({
+        wasteProcessingType: 'exporter',
+        material: 'plastic',
+        glassRecyclingProcess: null,
+        site: undefined,
+        orsFileUploads: [
+          {
+            defraFormUploadedFileId: 'file-ors',
+            defraFormUserDownloadLink: 'https://example.com/ors'
+          }
+        ]
+      })
+      const org = buildOrganisation({
+        registrations: [buildRegistration()],
+        accreditations: [unlinked]
+      })
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makePath(org.id),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result.unlinkedAccreditations[0].site).toBeNull()
+      expect(result.unlinkedAccreditations[0].processingType).toBe('exporter')
+    })
+
+    it('leaves a linked accreditation out, so it appears only under its registration', async () => {
+      const accreditation = buildAccreditation({
+        accreditationNumber: 'ACC0001'
+      })
+      const registration = buildRegistration({
+        accreditationId: accreditation.id
+      })
+      const org = buildOrganisation({
+        registrations: [registration],
+        accreditations: [accreditation]
+      })
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makePath(org.id),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result.unlinkedAccreditations).toEqual([])
+      expect(result.registrations[0].accreditation.id).toBe(accreditation.id)
+    })
+
+    it('returns an empty collection, not a missing key, when the organisation has no accreditations', async () => {
+      const org = buildOrganisation({
+        registrations: [buildRegistration()],
+        accreditations: []
+      })
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makePath(org.id),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result).toHaveProperty('unlinkedAccreditations')
+      expect(result.unlinkedAccreditations).toEqual([])
+    })
   })
 
   it('omits linkedDefraOrganisation when the organisation is not linked', async () => {
