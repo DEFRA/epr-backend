@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
+  GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
@@ -36,6 +37,7 @@ const approvedHistory = [
  * @param {{
  *   orgId: number,
  *   material?: string,
+ *   glassRecyclingProcess?: string[],
  *   wasteProcessingType?: string,
  *   reprocessingType?: string,
  *   overseasSites?: Record<string, { overseasSiteId: string }>,
@@ -46,6 +48,7 @@ const approvedHistory = [
 const makeOperator = ({
   orgId,
   material = MATERIAL.PLASTIC,
+  glassRecyclingProcess,
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType = REPROCESSING_TYPE.INPUT,
   overseasSites,
@@ -67,6 +70,7 @@ const makeOperator = ({
           accreditationId,
           statusHistory: approvedHistory,
           material,
+          glassRecyclingProcess,
           wasteProcessingType,
           reprocessingType,
           overseasSites
@@ -390,7 +394,7 @@ describe('buildWasteBalanceTable', () => {
       expect(logger.warn).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining(
-            '100 tonnes credited and 30 tonnes sent on'
+            '100 eligible tonnes, 30 tonnes sent on, 100 gross credited'
           ),
           event: expect.objectContaining({
             action: 'market_insights_material_unresolved',
@@ -399,6 +403,99 @@ describe('buildWasteBalanceTable', () => {
         })
       )
     })
+
+    it('says how many processes it carries, so both unsplit states are told apart', async () => {
+      const { logger } = await withUnsplitGlass()
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'registered for glass carrying 0 glass recycling process(es)'
+          )
+        })
+      )
+    })
+  })
+
+  it('raises the alarm for a glass registration split across both processes', async () => {
+    const operator = makeOperator({
+      orgId: 500015,
+      material: MATERIAL.GLASS,
+      glassRecyclingProcess: [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
+      ]
+    })
+
+    const { logger } = await run({
+      organisations: [operator.organisation],
+      submissions: [
+        { ...operator, rows: [receivedRow('row-1', '2026-03-10', 100)] }
+      ]
+    })
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'carrying 2 glass recycling process(es)'
+        ),
+        event: expect.objectContaining({
+          action: 'market_insights_material_unresolved',
+          reference: 'reg-500015'
+        })
+      })
+    )
+  })
+
+  it('raises the alarm for a registration carrying no material at all', async () => {
+    const operator = makeOperator({ orgId: 500016, material: '' })
+
+    const { table, logger } = await run({
+      organisations: [operator.organisation],
+      submissions: [
+        { ...operator, rows: [receivedRow('row-1', '2026-03-10', 100)] }
+      ]
+    })
+
+    expect(table.data.map(({ material }) => material)).toEqual([''])
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: expect.objectContaining({
+          action: 'market_insights_material_unresolved',
+          reference: 'reg-500016'
+        })
+      })
+    )
+  })
+
+  it('raises one alarm per unresolved registration, not one per request', async () => {
+    const first = makeOperator({ orgId: 500017, material: MATERIAL.GLASS })
+    const second = makeOperator({ orgId: 500018, material: MATERIAL.GLASS })
+
+    const { logger } = await run({
+      organisations: [first.organisation, second.organisation],
+      submissions: [
+        { ...first, rows: [receivedRow('row-1', '2026-03-10', 100)] },
+        {
+          ...second,
+          rows: [
+            receivedRow('row-2', '2026-03-11', 40),
+            receivedRow('row-3', '2026-04-11', 60)
+          ]
+        }
+      ]
+    })
+
+    const unresolved = logger.warn.mock.calls
+      .map(([entry]) => entry)
+      .filter(
+        ({ event }) => event.action === 'market_insights_material_unresolved'
+      )
+
+    expect(unresolved.map(({ event }) => event.reference)).toEqual([
+      'reg-500017',
+      'reg-500018'
+    ])
   })
 
   it('ignores a table that does not count under the accreditation', async () => {
