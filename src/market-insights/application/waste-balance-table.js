@@ -27,6 +27,7 @@ import {
  * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
  * @typedef {import('#waste-records/repository/port.js').SubmittedRowState} SubmittedRowState
  * @typedef {import('#domain/organisations/registration.js').Registration} Registration
+ * @typedef {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} MonthlyContribution
  */
 
 /**
@@ -139,7 +140,7 @@ const resolvePublishedPartitions = (entries, index, sitesById) => {
  *
  * @param {SubmittedRowState} rowState
  * @param {Map<string, PublishedPartition>} partitions
- * @returns {{ registration: Registration, contribution: import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution } | null}
+ * @returns {PublishedRow | null}
  */
 const publishedContribution = (rowState, partitions) => {
   const partition = partitions.get(partitionKey(rowState))
@@ -174,6 +175,12 @@ const publishedContribution = (rowState, partitions) => {
 
   return contribution === null ? null : { registration, contribution }
 }
+
+/**
+ * @typedef {Object} PublishedRow
+ * @property {Registration} registration
+ * @property {MonthlyContribution} contribution
+ */
 
 /**
  * Fold one row's figures into the cell for its material, accreditation type and
@@ -213,7 +220,8 @@ const publishableMonthsOf = (reportingYear, now) => {
   const currentMonth = /** @type {string} */ (
     monthKeyForDate(now, REPORTING_TIME_ZONE)
   )
-  return (month) => month.startsWith(monthPrefix) && month <= currentMonth
+  return (month) =>
+    month.startsWith(monthPrefix) && month.localeCompare(currentMonth) <= 0
 }
 
 /**
@@ -240,6 +248,27 @@ const recordUndated = (undated, { deducts, figures }) => {
   const tonnage = deducts ? figures.sentOnDeductions : figures.totalCredited
   side.rowCount += 1
   side.tonnage = toNumber(addRounded(side.tonnage, tonnage, 2))
+}
+
+/**
+ * Take one published row into the table cell it belongs in, or into the tally
+ * of rows the publication had to drop for want of a usable month.
+ *
+ * @param {{ cells: Map<string, WasteBalanceCell>, undated: UndatedTally, isPublishedMonth: (month: string) => boolean }} into
+ * @param {PublishedRow} published
+ */
+const recordRow = (
+  { cells, undated, isPublishedMonth },
+  { registration, contribution }
+) => {
+  const { month, figures } = contribution
+  if (month === null) {
+    recordUndated(undated, contribution)
+    return
+  }
+  if (isPublishedMonth(month)) {
+    foldIntoCell(cells, registration, month, figures)
+  }
 }
 
 /**
@@ -318,11 +347,12 @@ export const buildWasteBalanceTable = async ({
     .filter((entry) => partitions.has(partitionKey(entry.ledgerId)))
     .map((entry) => entry.summaryLogId)
 
-  const publishedMonths = publishableMonthsOf(reportingYear, now)
-
-  /** @type {Map<string, WasteBalanceCell>} */
-  const cells = new Map()
-  const undated = newUndatedTally()
+  const into = {
+    /** @type {Map<string, WasteBalanceCell>} */
+    cells: new Map(),
+    undated: newUndatedTally(),
+    isPublishedMonth: publishableMonthsOf(reportingYear, now)
+  }
 
   for await (const rowState of summaryLogRowStatesRepository.streamRowStatesForSummaryLogs(
     summaryLogIds
@@ -331,20 +361,12 @@ export const buildWasteBalanceTable = async ({
     if (published === null) {
       continue
     }
-
-    const { registration, contribution } = published
-    const { month, figures } = contribution
-
-    if (month === null) {
-      recordUndated(undated, contribution)
-    } else if (publishedMonths(month)) {
-      foldIntoCell(cells, registration, month, figures)
-    }
+    recordRow(into, published)
   }
 
-  warnAboutUndatedRows(logger, undated)
+  warnAboutUndatedRows(logger, into.undated)
 
-  const data = [...cells.values()]
+  const data = [...into.cells.values()]
     .map(({ figures, ...cell }) => ({ ...cell, ...withNetCredit(figures) }))
     .sort(compareRows)
 
