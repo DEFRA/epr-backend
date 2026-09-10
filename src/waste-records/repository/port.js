@@ -31,6 +31,16 @@
  */
 
 /**
+ * A row as it was submitted: the ledger identity that owns it, the submissions
+ * that committed it, the template it reported under, and its coerced data. It
+ * carries no waste-balance classification, because a reader that answers a
+ * question about the present derives one against today's accreditation and
+ * overseas-site data rather than the reading stamped at submission.
+ *
+ * @typedef {WasteBalanceLedgerId & Pick<SummaryLogRowState, 'summaryLogIds' | 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
+ */
+
+/**
  * @typedef {Object} SummaryLogRowStatesRepository
  * @property {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>} upsertSummaryLogRowStates
  *   For each row, find the existing state document for that row identity whose
@@ -46,6 +56,16 @@
  *   identity matches nothing.
  * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
  *   Return every state document for the given row identity.
+ * @property {(summaryLogIds: string[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
+ *   Yield every state document whose membership contains any of `summaryLogIds`,
+ *   once each however many of them it belongs to, carrying its whole membership
+ *   so the caller can tell which submission it belongs to. Neither a ledger nor
+ *   a submission identifies a row on its own here: one summary log id can belong
+ *   to more than one ledger, and one ledger's rows can belong to submissions
+ *   other than the one asked for, so this yields the union and the caller
+ *   narrows. Yields rather than returns so a reader aggregating the whole
+ *   service holds one batch at a time rather than every row of every
+ *   submission.
  * @property {() => Promise<string[]>} findDistinctDataKeys
  *   Return the union of every key observed on `data` across every state
  *   document in the collection. Used by the CSV export to compose its dynamic

@@ -11,7 +11,8 @@ export const SCOPES = {
   organisationLinkedWrite: 'organisation.linked.write',
   organisationSearch: 'organisation.search',
   wasteBalanceLedgerRead: 'waste-balance.ledger.read',
-  summaryLogRead: 'summary-log.read'
+  summaryLogRead: 'summary-log.read',
+  marketDataRead: 'market-data.read'
 }
 
 /**
@@ -31,7 +32,8 @@ export const REGULATOR_SCOPES = [
   SCOPES.organisationRead,
   SCOPES.organisationSearch,
   SCOPES.wasteBalanceLedgerRead,
-  SCOPES.summaryLogRead
+  SCOPES.summaryLogRead,
+  SCOPES.marketDataRead
 ]
 
 /**

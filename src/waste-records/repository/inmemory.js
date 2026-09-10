@@ -148,6 +148,26 @@ export const createInMemorySummaryLogRowStatesRepository = (
         )
       ),
 
+    /**
+     * @param {string[]} summaryLogIds
+     */
+    streamRowStatesForSummaryLogs: async function* (summaryLogIds) {
+      const asked = new Set(summaryLogIds)
+      for (const doc of storage) {
+        if (doc.summaryLogIds.some((id) => asked.has(id))) {
+          yield structuredClone({
+            organisationId: doc.organisationId,
+            registrationId: doc.registrationId,
+            accreditationId: doc.accreditationId,
+            summaryLogIds: doc.summaryLogIds,
+            wasteRecordType: doc.wasteRecordType,
+            processingType: doc.processingType,
+            data: doc.data
+          })
+        }
+      }
+    },
+
     findDistinctDataKeys: async () => {
       const keys = new Set()
       for (const doc of storage) {

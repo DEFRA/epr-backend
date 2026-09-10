@@ -131,6 +131,14 @@ describe('#getEntraUserRoles', () => {
       expect(result.scopes).toContain(SCOPES.organisationRead)
     })
 
+    test('grants a regulator market-data.read for the market insights publication', async () => {
+      const result = await getEntraUserRoles('regulator@test.gov.uk', [
+        REGULATOR_APP_ROLE
+      ])
+
+      expect(result.scopes).toContain(SCOPES.marketDataRead)
+    })
+
     test('grants a regulator no write scope', async () => {
       const result = await getEntraUserRoles('regulator@test.gov.uk', [
         REGULATOR_APP_ROLE

@@ -276,6 +276,61 @@ const performFindRowHistory =
   }
 
 /**
+ * The fields `streamRowStatesForSummaryLogs` reads. Projecting away `data`'s
+ * neighbours is not the saving — skipping `validateSummaryLogRowStateRead` is,
+ * and a projected document has nothing to validate against the read schema.
+ */
+const SUBMITTED_ROW_STATE_PROJECTION = {
+  _id: 0,
+  organisationId: 1,
+  registrationId: 1,
+  accreditationId: 1,
+  summaryLogIds: 1,
+  wasteRecordType: 1,
+  processingType: 1,
+  data: 1
+}
+
+/**
+ * @param {import('mongodb').Document} doc
+ * @returns {import('./port.js').SubmittedRowState}
+ */
+const toSubmittedRowState = ({
+  organisationId,
+  registrationId,
+  accreditationId,
+  summaryLogIds,
+  wasteRecordType,
+  processingType,
+  data
+}) => ({
+  organisationId,
+  registrationId,
+  accreditationId,
+  summaryLogIds,
+  wasteRecordType,
+  processingType,
+  data
+})
+
+/**
+ * @param {Collection} collection
+ * @returns {(summaryLogIds: string[]) => AsyncIterable<import('./port.js').SubmittedRowState>}
+ */
+const performStreamRowStatesForSummaryLogs = (collection) =>
+  async function* (summaryLogIds) {
+    if (summaryLogIds.length === 0) {
+      return
+    }
+    yield* collection
+      .find(
+        { summaryLogIds: { $in: summaryLogIds } },
+        { projection: SUBMITTED_ROW_STATE_PROJECTION }
+      )
+      .map(toSubmittedRowState)
+  }
+
+/**
  * The union of keys observed on `data` across every state document, computed
  * server-side so the CSV export composes its dynamic header without pulling any
  * document into memory. Cost scales with the count of distinct field names
@@ -308,6 +363,8 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
     upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
     findRowStatesForSummaryLog: performFindRowStatesForSummaryLog(collection),
     findRowHistory: performFindRowHistory(collection),
+    streamRowStatesForSummaryLogs:
+      performStreamRowStatesForSummaryLogs(collection),
     findDistinctDataKeys: performFindDistinctDataKeys(collection)
   })
 }
