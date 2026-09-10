@@ -189,6 +189,47 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     expect(result[nonExistentId]).toBeUndefined()
   })
 
+  it('surfaces the separate December amounts stored on the ledger balance', async () => {
+    const database = dbClient.db(DATABASE_NAME)
+    await database
+      .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+      .deleteMany({})
+
+    const ledgerRepository = (await createMongoLedgerRepository(database))()
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        accreditationId: accreditationId1,
+        organisationId,
+        registrationId: registrationId1,
+        number: 1,
+        closingBalance: {
+          amount: 1000,
+          availableAmount: 750,
+          decemberAmount: 400,
+          decemberAvailableAmount: 250
+        }
+      })
+    ])
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+
+    expect(result[accreditationId1]).toEqual({
+      amount: 1000,
+      availableAmount: 750,
+      decemberAmount: 400,
+      decemberAvailableAmount: 250
+    })
+  })
+
   it('resolves a registered accreditation with no ledger events to zero amounts', async () => {
     await dbClient
       .db(DATABASE_NAME)
