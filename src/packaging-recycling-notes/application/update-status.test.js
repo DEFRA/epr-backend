@@ -909,19 +909,19 @@ describe('updatePrnStatus', () => {
       )
     })
 
-    it('draws the general balance for an output reprocessor that self-declares December, leaving the December reserve untouched', async () => {
+    it('draws the general balance for an output reprocessor that self-declares December', async () => {
+      // An output accreditation accrues no December waste (its summary log
+      // never populates a December portion), so its balance carries none. A
+      // self-declared December raise must resolve to the general pool: were it
+      // routed to the (absent) December pool, the raise would be refused for
+      // insufficient December balance rather than drawing the ample general one.
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
           isDecemberWaste: true,
           status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
         }),
-        balance: {
-          amount: 1000,
-          availableAmount: 1000,
-          decemberAmount: 300,
-          decemberAvailableAmount: 300
-        },
+        balance: { amount: 1000, availableAmount: 1000 },
         accreditation: {
           wasteProcessingType: 'reprocessor',
           reprocessingType: 'output'
@@ -934,14 +934,9 @@ describe('updatePrnStatus', () => {
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER
       })
 
-      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
-        {
-          amount: 1000,
-          availableAmount: 900,
-          decemberAmount: 300,
-          decemberAvailableAmount: 300
-        }
-      )
+      const balance = await readBalance(repositories.wasteBalanceService)
+      expect(balance).toMatchObject({ amount: 1000, availableAmount: 900 })
+      expect(balance?.decemberAvailableAmount).toBeUndefined()
 
       const latest =
         await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
