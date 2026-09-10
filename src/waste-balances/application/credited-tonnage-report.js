@@ -163,7 +163,7 @@ export const buildCreditedTonnageReport = async ({
       }
     )
 
-    const { months, skippedRowCount } = creditedTonnageByMonth(
+    const { months, skippedRows } = creditedTonnageByMonth(
       rowStates,
       {
         wasteProcessingType: /** @type {WasteProcessingTypeValue} */ (
@@ -174,9 +174,19 @@ export const buildCreditedTonnageReport = async ({
       monthRange
     )
 
-    if (skippedRowCount > 0) {
+    const { noUsableDate, beforeWindowStart, afterWindowEnd } = skippedRows
+    const skippedTotal =
+      noUsableDate.rowCount +
+      beforeWindowStart.rowCount +
+      afterWindowEnd.rowCount
+
+    if (skippedTotal > 0) {
       logger.info({
-        message: `Credited tonnage report skipped ${skippedRowCount} row(s) with a missing, unparseable or out-of-range date for accreditation ${accreditation.id}`,
+        message:
+          `Credited tonnage report skipped ${skippedTotal} row(s) for accreditation ${accreditation.id}: ` +
+          `${noUsableDate.rowCount} with no usable date (${noUsableDate.tonnage}t), ` +
+          `${beforeWindowStart.rowCount} dated before ${monthRange.fromMonth} (${beforeWindowStart.tonnage}t), ` +
+          `${afterWindowEnd.rowCount} dated after ${monthRange.toMonth} (${afterWindowEnd.tonnage}t)`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: 'credited_tonnage_rows_skipped',

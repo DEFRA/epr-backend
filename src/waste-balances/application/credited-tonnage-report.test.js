@@ -694,7 +694,7 @@ describe('buildCreditedTonnageReport', () => {
     ])
   })
 
-  it('logs one structured line per accreditation whose rows were skipped for a bad date', async () => {
+  it('logs one structured line per accreditation, splitting the skipped rows by why they could not be placed', async () => {
     const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
       orgId: 500001
     })
@@ -706,7 +706,8 @@ describe('buildCreditedTonnageReport', () => {
         [accreditationId]: [
           receivedRow('2026-02-10', 10),
           receivedRow('not-a-date', 99),
-          receivedRow('2025-01-01', 88)
+          receivedRow('2025-01-01', 88),
+          receivedRow('2036-01-01', 7)
         ]
       }
     })
@@ -716,7 +717,11 @@ describe('buildCreditedTonnageReport', () => {
     expect(logger.info).toHaveBeenCalledTimes(1)
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('skipped 2 row(s)'),
+        message:
+          'Credited tonnage report skipped 3 row(s) for accreditation acc-500001: ' +
+          '1 with no usable date (99t), ' +
+          '1 dated before 2026-01 (88t), ' +
+          '1 dated after 2026-03 (7t)',
         event: expect.objectContaining({ reference: 'acc-500001' })
       })
     )

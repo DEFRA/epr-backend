@@ -67,13 +67,37 @@ const YES = 'Yes'
  */
 
 /**
+ * How many rows one population of unplaceable rows holds, and the gross
+ * crediting tonnage on them. A deducting row adds to `rowCount` but not to
+ * `tonnage`, so the figure stays a size of what the report leaves out rather
+ * than a net balance.
+ *
+ * @typedef {Object} SkippedRowTally
+ * @property {number} rowCount
+ * @property {number} tonnage - 2dp
+ */
+
+/**
+ * The rows no month could be found for, split by why. `noUsableDate` rows have
+ * no reporting period at all; the other two are dated outside the range the
+ * caller asked for, which are different populations: rows before the start are
+ * tonnage the ledger counts and the report hides, and rows after the end are
+ * future-dated.
+ *
+ * @typedef {Object} SkippedRows
+ * @property {SkippedRowTally} noUsableDate
+ * @property {SkippedRowTally} beforeWindowStart
+ * @property {SkippedRowTally} afterWindowEnd
+ */
+
+/**
  * The aggregation result: one entry per month across the injected range
- * (ascending, zero-filled), plus the count of rows dropped for a missing,
- * unparseable, or out-of-range month-assignment date so the caller can log it.
+ * (ascending, zero-filled), plus the rows no month could be found for so the
+ * caller can log them.
  *
  * @typedef {Object} CreditedTonnageByMonth
  * @property {MonthlyCreditedTonnage[]} months
- * @property {number} skippedRowCount
+ * @property {SkippedRows} skippedRows
  */
 
 /**
@@ -128,6 +152,29 @@ const expandMonthRange = ({ fromMonth, toMonth }) => {
     }
   }
   return months
+}
+
+/**
+ * The population a row the range has no bucket for belongs to.
+ *
+ * `expandMonthRange` builds a bucket for every month of the range, so a row
+ * with a usable month and no bucket is dated outside it, and anything not
+ * before the start is after the end.
+ *
+ * `YYYY-MM` keys sort lexically, so the comparison is a string comparison.
+ *
+ * @param {string | null} month
+ * @param {SkippedRows} skippedRows
+ * @param {string} fromMonth
+ * @returns {SkippedRowTally}
+ */
+const skippedPopulationFor = (month, skippedRows, fromMonth) => {
+  if (month === null) {
+    return skippedRows.noUsableDate
+  }
+  return month < fromMonth
+    ? skippedRows.beforeWindowStart
+    : skippedRows.afterWindowEnd
 }
 
 /**
@@ -212,8 +259,8 @@ export const contributionFor = (rowState, processingType) => {
  * row's outcome is `INCLUDED`. Sent-on rows on a
  * reprocessor-input accreditation add their tonnage to `sentOnDeductions`
  * as a positive number. Rows whose month-assignment date is missing,
- * unparseable, or outside the range are dropped and counted in
- * `skippedRowCount`. Sums are decimal-safe to 2dp.
+ * unparseable, or outside the range are dropped and tallied in `skippedRows`,
+ * separately per population. Sums are decimal-safe to 2dp.
  *
  * @param {CreditableWasteRecordState[]} rowStates
  * @param {AccreditationContext} accreditation
@@ -238,7 +285,12 @@ export const creditedTonnageByMonth = (
     ])
   )
 
-  let skippedRowCount = 0
+  /** @type {SkippedRows} */
+  const skippedRows = {
+    noUsableDate: { rowCount: 0, tonnage: 0 },
+    beforeWindowStart: { rowCount: 0, tonnage: 0 },
+    afterWindowEnd: { rowCount: 0, tonnage: 0 }
+  }
 
   for (const rowState of rowStates) {
     const contribution = contributionFor(rowState, processingType)
@@ -249,7 +301,17 @@ export const creditedTonnageByMonth = (
     const month = monthKeyForDate(rowState.data[contribution.dateField])
     const bucket = month === null ? undefined : buckets.get(month)
     if (bucket === undefined) {
-      skippedRowCount += 1
+      const tally = skippedPopulationFor(
+        month,
+        skippedRows,
+        monthRange.fromMonth
+      )
+      tally.rowCount += 1
+      if (contribution.credits) {
+        tally.tonnage = toNumber(
+          addRounded(tally.tonnage, contribution.tonnage, 2)
+        )
+      }
       continue
     }
 
@@ -280,5 +342,5 @@ export const creditedTonnageByMonth = (
     return { month, ...bucket }
   })
 
-  return { months, skippedRowCount }
+  return { months, skippedRows }
 }

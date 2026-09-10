@@ -8,6 +8,12 @@ import {
 
 const RANGE = { fromMonth: '2026-01', toMonth: '2026-03' }
 
+const NO_ROWS_SKIPPED = {
+  noUsableDate: { rowCount: 0, tonnage: 0 },
+  beforeWindowStart: { rowCount: 0, tonnage: 0 },
+  afterWindowEnd: { rowCount: 0, tonnage: 0 }
+}
+
 const REPROCESSOR_INPUT = {
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType: REPROCESSING_TYPE.INPUT
@@ -154,7 +160,7 @@ describe('creditedTonnageByMonth', () => {
         eligibleForWasteBalance: 0,
         sentOnDeductions: 0
       })
-      expect(result.skippedRowCount).toBe(0)
+      expect(result.skippedRows).toEqual(NO_ROWS_SKIPPED)
     })
 
     it('ignores a processed load on a reprocessor-input accreditation and does not count it as skipped even with an out-of-range date', () => {
@@ -167,7 +173,7 @@ describe('creditedTonnageByMonth', () => {
       expect(result.months.every((entry) => entry.totalCredited === 0)).toBe(
         true
       )
-      expect(result.skippedRowCount).toBe(0)
+      expect(result.skippedRows).toEqual(NO_ROWS_SKIPPED)
     })
 
     it('treats a reprocessor accreditation with no reprocessing type as input, crediting received loads', () => {
@@ -284,7 +290,7 @@ describe('creditedTonnageByMonth', () => {
         eligibleForWasteBalance: 0,
         sentOnDeductions: 0
       })
-      expect(result.skippedRowCount).toBe(0)
+      expect(result.skippedRows).toEqual(NO_ROWS_SKIPPED)
     })
 
     it('contributes nothing for a sent-on row on a reprocessor-output accreditation', () => {
@@ -334,16 +340,14 @@ describe('creditedTonnageByMonth', () => {
     })
   })
 
-  describe('skipping rows with missing, unparseable or out-of-range dates', () => {
+  describe('accounting for rows the report cannot place', () => {
     it.each([
       { description: 'missing (undefined) date', date: undefined },
       { description: 'null date', date: null },
       { description: 'empty-string date', date: '' },
-      { description: 'unparseable date', date: 'not-a-date' },
-      { description: 'date before the range', date: '2025-12-31' },
-      { description: 'date after the range', date: '2026-04-01' }
+      { description: 'unparseable date', date: 'not-a-date' }
     ])(
-      'drops a crediting row with a $description and counts it as skipped',
+      'counts a crediting row with a $description under no usable date, with its tonnage',
       ({ date }) => {
         const result = creditedTonnageByMonth(
           [receivedRow('1000', date, 10, included(10))],
@@ -351,39 +355,86 @@ describe('creditedTonnageByMonth', () => {
           RANGE
         )
 
-        expect(result.skippedRowCount).toBe(1)
+        expect(result.skippedRows).toEqual({
+          ...NO_ROWS_SKIPPED,
+          noUsableDate: { rowCount: 1, tonnage: 10 }
+        })
         expect(result.months.every((entry) => entry.totalCredited === 0)).toBe(
           true
         )
       }
     )
 
-    it('counts a sent-on row with an unparseable date as skipped on a reprocessor-input accreditation', () => {
+    it('separates a crediting row dated before the window start from one dated after the window end', () => {
+      const result = creditedTonnageByMonth(
+        [
+          receivedRow('1000', '2025-12-31', 10, included(10)),
+          receivedRow('1001', '2026-04-01', 25, included(25))
+        ],
+        REPROCESSOR_INPUT,
+        RANGE
+      )
+
+      expect(result.skippedRows).toEqual({
+        noUsableDate: { rowCount: 0, tonnage: 0 },
+        beforeWindowStart: { rowCount: 1, tonnage: 10 },
+        afterWindowEnd: { rowCount: 1, tonnage: 25 }
+      })
+      expect(result.months.every((entry) => entry.totalCredited === 0)).toBe(
+        true
+      )
+    })
+
+    it('counts a sent-on row it cannot place but leaves its deduction out of the skipped tonnage', () => {
       const result = creditedTonnageByMonth(
         [sentOnRow('5000', 'not-a-date', 12)],
         REPROCESSOR_INPUT,
         RANGE
       )
 
-      expect(result.skippedRowCount).toBe(1)
+      expect(result.skippedRows).toEqual({
+        ...NO_ROWS_SKIPPED,
+        noUsableDate: { rowCount: 1, tonnage: 0 }
+      })
       expect(result.months.every((entry) => entry.sentOnDeductions === 0)).toBe(
         true
       )
     })
 
-    it('counts each dropped row and still aggregates the in-range rows', () => {
+    it('sums a population over several rows and still aggregates the rows it can place', () => {
       const result = creditedTonnageByMonth(
         [
           receivedRow('1000', '2026-02-01', 10, included(10)),
-          receivedRow('1001', 'not-a-date', 99, included(99)),
-          receivedRow('1002', '2026-09-01', 88, included(88))
+          receivedRow('1001', '2025-11-30', 99, included(99)),
+          receivedRow('1002', '2025-10-15', 1, included(1)),
+          receivedRow('1003', '2026-09-01', 88, included(88))
         ],
         REPROCESSOR_INPUT,
         RANGE
       )
 
-      expect(result.skippedRowCount).toBe(2)
+      expect(result.skippedRows).toEqual({
+        noUsableDate: { rowCount: 0, tonnage: 0 },
+        beforeWindowStart: { rowCount: 2, tonnage: 100 },
+        afterWindowEnd: { rowCount: 1, tonnage: 88 }
+      })
       expect(monthFor(result, '2026-02').totalCredited).toBe(10)
+    })
+
+    it('sums skipped tonnage without binary floating-point drift', () => {
+      const result = creditedTonnageByMonth(
+        [
+          receivedRow('1000', '2025-12-01', 0.1, included(0.1)),
+          receivedRow('1001', '2025-12-02', 0.2, included(0.2))
+        ],
+        REPROCESSOR_INPUT,
+        RANGE
+      )
+
+      expect(result.skippedRows.beforeWindowStart).toEqual({
+        rowCount: 2,
+        tonnage: 0.3
+      })
     })
   })
 
