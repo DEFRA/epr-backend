@@ -1,4 +1,5 @@
 import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
+import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { LOGGING_EVENT_ACTIONS } from '#common/enums/index.js'
@@ -22,8 +23,6 @@ import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/rel
  * by coincidence) a configured start can fall in any month, including one
  * inside British Summer Time.
  */
-
-const UK_TIME_ZONE = 'Europe/London'
 
 /**
  * Whether `now` falls within the December Waste declaration window for an

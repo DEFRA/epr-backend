@@ -9,12 +9,6 @@ export const YEAR_MONTH_LENGTH = 7
 
 export const toYearMonth = (isoDate) => isoDate.slice(0, YEAR_MONTH_LENGTH)
 
-/**
- * The time zone the service reports in: a load that left site late on a British
- * Summer Time evening belongs to that day's month, not the next one.
- */
-export const REPORTING_TIME_ZONE = 'Europe/London'
-
 /** @type {Map<string, Intl.DateTimeFormat>} */
 const monthKeyFormatters = new Map()
 

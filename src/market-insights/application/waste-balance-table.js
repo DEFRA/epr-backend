@@ -1,8 +1,6 @@
 import { addRounded, toNumber } from '#common/helpers/decimal-utils.js'
-import {
-  monthKeyForDate,
-  REPORTING_TIME_ZONE
-} from '#common/helpers/dates/year-month.js'
+import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
+import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
@@ -189,7 +187,7 @@ const foldIntoCell = (cells, registration, month, figures) => {
 const publishableMonthsOf = (reportingYear, now) => {
   const monthPrefix = `${reportingYear}-`
   const currentMonth = /** @type {string} */ (
-    monthKeyForDate(now, REPORTING_TIME_ZONE)
+    monthKeyForDate(now, UK_TIME_ZONE)
   )
   return (month) =>
     month.startsWith(monthPrefix) && month.localeCompare(currentMonth) <= 0
