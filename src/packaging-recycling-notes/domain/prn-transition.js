@@ -121,6 +121,40 @@ const hasBeenIssued = (status) =>
 export const LEDGER_MISSING_AFTER_ISSUE = 'ledger-missing-after-issue'
 
 /**
+ * The reversing events. Crediting tonnage back to the December pool on these is
+ * not yet implemented (PAE-1923): a December raise debits the December pool,
+ * but these cases would restore only the total, leaving the December pool short
+ * and the derived general pool over-credited. Until the restore lands, a
+ * reversal that drew on the December pool is refused rather than silently
+ * corrupting the balance.
+ *
+ * @type {Set<LedgerEventKind>}
+ */
+const REVERSING_EVENT_KINDS = new Set([
+  LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
+  LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
+])
+
+/**
+ * A December-pool reversal was attempted before the restore is implemented
+ * (PAE-1923). Surfaced as 501 by `toTransitionError`, so the attempt fails
+ * loudly and nothing moves, rather than corrupting the pool.
+ */
+export class DecemberReversalNotImplementedError extends Error {
+  /**
+   * @param {PrnStatus} fromStatus
+   * @param {PrnStatus} newStatus
+   */
+  constructor(fromStatus, newStatus) {
+    super(
+      `${fromStatus} -> ${newStatus} would reverse a December-pool movement, which is not yet implemented`
+    )
+    this.fromStatus = fromStatus
+    this.newStatus = newStatus
+  }
+}
+
+/**
  * Why a transition cannot proceed against the ledger state it was ruled
  * against: one of the deciders' own rejections, or this module's ruling that
  * the ledger is missing under a PRN that must have one.
@@ -249,6 +283,12 @@ export function decidePrnTransition({
   )
   if (!effect) {
     return { statusChange: { to: newStatus, at: now, by: updatedBy } }
+  }
+
+  if (payload.useDecemberBalance && REVERSING_EVENT_KINDS.has(effect.kind)) {
+    return {
+      error: new DecemberReversalNotImplementedError(fromStatus, newStatus)
+    }
   }
 
   if (!balance) {

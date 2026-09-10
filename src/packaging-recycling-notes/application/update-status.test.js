@@ -949,6 +949,132 @@ describe('updatePrnStatus', () => {
     })
   })
 
+  describe('refusing December-pool reversals until they are implemented', () => {
+    // A December raise debits the December pool, but crediting it back on
+    // cancellation is not yet built (PAE-1923). Rather than silently corrupt
+    // the pool by restoring only the total, a December-pool reversal is
+    // refused with 501 and nothing moves. General and output-reprocessor PRNs
+    // draw the general balance, so their cancellations are unaffected.
+    const LEDGER_ID = {
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    }
+
+    it('refuses to delete a ringfenced December PRN and leaves the balance untouched', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          isExport: true,
+          isDecemberWaste: true,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: {
+          amount: 1000,
+          availableAmount: 900,
+          decemberAmount: 300,
+          decemberAvailableAmount: 200
+        },
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.DELETED,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 501 } })
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 900,
+          decemberAmount: 300,
+          decemberAvailableAmount: 200
+        }
+      )
+    })
+
+    it('refuses to cancel an issued December PRN and leaves the balance untouched', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 60,
+          isExport: true,
+          isDecemberWaste: true,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            issued: { at: EVENT_AT, by: USER },
+            history: []
+          }
+        }),
+        balance: {
+          amount: 440,
+          availableAmount: 940,
+          decemberAmount: 100,
+          decemberAvailableAmount: 100
+        },
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.CANCELLED,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 501 } })
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 440,
+          availableAmount: 940,
+          decemberAmount: 100,
+          decemberAvailableAmount: 100
+        }
+      )
+    })
+
+    it('allows deleting an output reprocessor PRN that self-declared December, since it drew the general balance', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 75,
+          isDecemberWaste: true,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: { amount: 1000, availableAmount: 925 },
+        accreditation: {
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'output'
+        }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.DELETED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(PRN_STATUS.DELETED)
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 1000
+        }
+      )
+      const latest =
+        await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
+      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED)
+    })
+  })
+
   describe('metrics', () => {
     it('records the status transition metric on a successful update', async () => {
       const repositories = seedRepositories({

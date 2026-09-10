@@ -8,7 +8,8 @@ import Boom from '@hapi/boom'
 
 import {
   LEDGER_MISSING_AFTER_ISSUE,
-  PrnLedgerRejectionError
+  PrnLedgerRejectionError,
+  DecemberReversalNotImplementedError
 } from '#packaging-recycling-notes/domain/prn-transition.js'
 import { PRN_COMMAND_REJECTION } from '#waste-balances/domain/commands.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
@@ -91,7 +92,12 @@ const REJECTION_TO_ERROR = Object.freeze({
  * @param {string} accreditationId
  * @returns {Error}
  */
-export const toTransitionError = (error, accreditationId) =>
-  error instanceof PrnLedgerRejectionError
-    ? REJECTION_TO_ERROR[error.reason](accreditationId, error)
-    : error
+export const toTransitionError = (error, accreditationId) => {
+  if (error instanceof PrnLedgerRejectionError) {
+    return REJECTION_TO_ERROR[error.reason](accreditationId, error)
+  }
+  if (error instanceof DecemberReversalNotImplementedError) {
+    return Boom.notImplemented(error.message)
+  }
+  return error
+}

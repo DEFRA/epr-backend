@@ -28,16 +28,20 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
  */
 
 /**
- * The two transitions that move a balance pool and so resolve
- * useDecemberBalance from the accreditation: the ringfence (draft →
- * awaiting_authorisation) and issue (awaiting_authorisation →
- * awaiting_acceptance). The accreditation is read for both.
+ * The transitions that touch a balance pool and so need the accreditation to
+ * resolve useDecemberBalance: the ringfence (draft → awaiting_authorisation)
+ * and issue (awaiting_authorisation → awaiting_acceptance) that debit it, and
+ * the delete (→ deleted) and cancel (→ cancelled) that reverse it. The raises
+ * record the resolved flag on the event; the reversals read it to refuse a
+ * December-pool reversal until the restore is implemented (PAE-1923).
  *
  * @type {Set<PrnStatus>}
  */
-const POOL_MOVING_TARGET_STATUSES = new Set([
+const POOL_TOUCHING_TARGET_STATUSES = new Set([
   PRN_STATUS.AWAITING_AUTHORISATION,
-  PRN_STATUS.AWAITING_ACCEPTANCE
+  PRN_STATUS.AWAITING_ACCEPTANCE,
+  PRN_STATUS.DELETED,
+  PRN_STATUS.CANCELLED
 ])
 
 /**
@@ -251,11 +255,18 @@ async function gatherTransitionState(ctx) {
 
   const prn = await loadPrn(ctx)
 
-  // The accreditation is read for the two pool-moving transitions: the
-  // ringfence (create) and issue both resolve useDecemberBalance from it
-  // (PAE-1922), and issue additionally stamps the PRN number from it. Read once
-  // here, after the balance, so nothing the ruling uses predates the head.
-  const accreditation = POOL_MOVING_TARGET_STATUSES.has(newStatus)
+  // The accreditation is read when the transition needs it: always on issue
+  // (which stamps the PRN number from it), and on any pool-touching transition
+  // of a December-declared PRN, to resolve useDecemberBalance (PAE-1922) - the
+  // raises record it on the event, the reversals read it to refuse a
+  // December-pool reversal until the restore lands (PAE-1923). A PRN that never
+  // declared December waste cannot use the December pool, so its cancellations
+  // read no accreditation and are unaffected. Read after the balance, so
+  // nothing the ruling uses predates the head.
+  const needsAccreditation =
+    newStatus === PRN_STATUS.AWAITING_ACCEPTANCE ||
+    (prn.isDecemberWaste && POOL_TOUCHING_TARGET_STATUSES.has(newStatus))
+  const accreditation = needsAccreditation
     ? await organisationsRepository.findAccreditationById(
         ledgerId.organisationId,
         ledgerId.accreditationId
