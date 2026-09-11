@@ -1,4 +1,7 @@
-import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import {
+  LEDGER_EVENT_KIND,
+  POOL
+} from '#waste-balances/repository/ledger-schema.js'
 import {
   createPrn,
   issuePrn,
@@ -292,7 +295,10 @@ export function decidePrnTransition({
     return { statusChange: { to: newStatus, at: now, by: updatedBy } }
   }
 
-  if (payload.useDecemberBalance && REVERSING_EVENT_KINDS.has(effect.kind)) {
+  if (
+    payload.pool === POOL.DECEMBER &&
+    REVERSING_EVENT_KINDS.has(effect.kind)
+  ) {
     return {
       error: new DecemberReversalNotImplementedError(fromStatus, newStatus)
     }

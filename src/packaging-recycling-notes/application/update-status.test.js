@@ -7,7 +7,10 @@ import {
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR, ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import {
+  LEDGER_EVENT_KIND,
+  POOL
+} from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -834,7 +837,7 @@ describe('updatePrnStatus', () => {
       expect(latest?.payload).toMatchObject({
         prnId: PRN_ID,
         amount: 100,
-        useDecemberBalance: true
+        pool: POOL.DECEMBER
       })
     })
 
@@ -938,9 +941,11 @@ describe('updatePrnStatus', () => {
       expect(balance).toMatchObject({ amount: 1000, availableAmount: 900 })
       expect(balance?.decemberAvailableAmount).toBeUndefined()
 
+      // The create resolves the pool from the accreditation and writes it, so
+      // the event states general explicitly.
       const latest =
         await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
-      expect(latest?.payload).not.toHaveProperty('useDecemberBalance')
+      expect(latest?.payload).toMatchObject({ pool: POOL.GENERAL })
     })
   })
 

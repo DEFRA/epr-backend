@@ -15,7 +15,7 @@ import {
   ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
-import { resolveUseDecemberBalance } from '#packaging-recycling-notes/domain/use-december-balance.js'
+import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -181,7 +181,7 @@ const throwCreatePrnError = (error, logger) => {
  * frontend discriminates on `error.output.payload.code`.
  *
  * The pool checked matches the one the ringfence will debit (ADR-0049): a
- * December raise (`useDecemberBalance`) is bounded by the December pool, a
+ * December raise (`pool === 'december'`) is bounded by the December pool, a
  * general raise by the derived non-December, which reserves December tonnage.
  * The arithmetic is shared with the decider (`availableForPool`) so the
  * pre-check and the ringfence cannot disagree.
@@ -200,16 +200,13 @@ const assertSufficientAvailableBalance = async ({
   isDecemberWaste,
   accreditation
 }) => {
-  const useDecemberBalance = resolveUseDecemberBalance({
-    isDecemberWaste,
-    accreditation
-  })
+  const pool = resolvePool({ isDecemberWaste, accreditation })
   const balance =
     await createWasteBalanceService(ledgerRepository).currentBalance(ledgerId)
 
   const availableAmount = availableForPool(
     balance ?? { amount: 0, availableAmount: 0 },
-    useDecemberBalance
+    pool
   )
   if (tonnage > availableAmount) {
     throw conflict(
@@ -218,7 +215,7 @@ const assertSufficientAvailableBalance = async ({
       {
         event: {
           action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
-          reason: `tonnage=${tonnage} available=${availableAmount} useDecemberBalance=${useDecemberBalance} rejected=${INSUFFICIENT_AVAILABLE_BALANCE_CODE}`
+          reason: `tonnage=${tonnage} available=${availableAmount} pool=${pool} rejected=${INSUFFICIENT_AVAILABLE_BALANCE_CODE}`
         },
         payload: { code: INSUFFICIENT_AVAILABLE_BALANCE_CODE }
       }

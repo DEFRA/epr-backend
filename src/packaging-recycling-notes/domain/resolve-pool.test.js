@@ -4,10 +4,8 @@ import {
   WASTE_PROCESSING_TYPE,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import {
-  accruesDecember,
-  resolveUseDecemberBalance
-} from './use-december-balance.js'
+import { POOL } from '#waste-balances/repository/ledger-schema.js'
+import { accruesDecember, resolvePool } from './resolve-pool.js'
 
 const outputReprocessor = {
   id: 'acc-output',
@@ -44,46 +42,44 @@ describe('accruesDecember', () => {
   })
 })
 
-describe('resolveUseDecemberBalance', () => {
-  // The full ADR-0049 resolution table: useDecemberBalance is the pool-routing
-  // flag on the balance event, distinct from the PRN's isDecemberWaste
-  // disclosure. Output reprocessors may self-declare December for disclosure
-  // yet always draw the single general balance (useDecemberBalance false).
+describe('resolvePool', () => {
+  // The full ADR-0049 resolution table: the pool is the balance the PRN draws
+  // on, distinct from the PRN's isDecemberWaste disclosure. Output reprocessors
+  // may self-declare December for disclosure yet always draw the single general
+  // balance.
   it.each([
     [
       'exporter declaring December draws the December pool',
       exporter,
       true,
-      true
+      POOL.DECEMBER
     ],
-    ['exporter not declaring draws general', exporter, false, false],
+    ['exporter not declaring draws general', exporter, false, POOL.GENERAL],
     [
       'input reprocessor declaring December draws the December pool',
       inputReprocessor,
       true,
-      true
+      POOL.DECEMBER
     ],
     [
       'input reprocessor not declaring draws general',
       inputReprocessor,
       false,
-      false
+      POOL.GENERAL
     ],
     [
       'output reprocessor declaring December still draws general (disclosure-only)',
       outputReprocessor,
       true,
-      false
+      POOL.GENERAL
     ],
     [
       'output reprocessor not declaring draws general',
       outputReprocessor,
       false,
-      false
+      POOL.GENERAL
     ]
   ])('%s', (_label, accreditation, isDecemberWaste, expected) => {
-    expect(resolveUseDecemberBalance({ isDecemberWaste, accreditation })).toBe(
-      expected
-    )
+    expect(resolvePool({ isDecemberWaste, accreditation })).toBe(expected)
   })
 })

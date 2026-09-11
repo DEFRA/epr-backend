@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 
-import { LEDGER_EVENT_KIND, ZERO_BALANCE } from '../repository/ledger-schema.js'
+import {
+  LEDGER_EVENT_KIND,
+  POOL,
+  ZERO_BALANCE
+} from '../repository/ledger-schema.js'
 import {
   submitSummaryLog,
   createPrn,
@@ -134,19 +138,19 @@ describe('createPrn', () => {
       decemberAvailableAmount: 300
     }
 
-    it('checks and ringfences the December available amount, echoing the flag onto the event', () => {
+    it('checks and ringfences the December available amount, echoing the pool onto the event', () => {
       expect(
         createPrn(openingWithDecember, {
           prnId: 'prn-1',
           amount: 100,
-          useDecemberBalance: true
+          pool: POOL.DECEMBER
         })
       ).toEqual({
         status: PRN_COMMAND_STATUS.COMMITTED,
         events: [
           {
             kind: LEDGER_EVENT_KIND.PRN_CREATED,
-            payload: { prnId: 'prn-1', amount: 100, useDecemberBalance: true },
+            payload: { prnId: 'prn-1', amount: 100, pool: POOL.DECEMBER },
             openingBalance: openingWithDecember,
             closingBalance: {
               amount: 1000,
@@ -168,7 +172,7 @@ describe('createPrn', () => {
             decemberAmount: 50,
             decemberAvailableAmount: 50
           },
-          { prnId: 'prn-1', amount: 100, useDecemberBalance: true }
+          { prnId: 'prn-1', amount: 100, pool: POOL.DECEMBER }
         )
       ).toEqual({
         status: PRN_COMMAND_STATUS.REJECTED,
@@ -265,19 +269,19 @@ describe('issuePrn', () => {
       decemberAvailableAmount: 200
     }
 
-    it('checks and deducts the December amount, echoing the flag onto the event', () => {
+    it('checks and deducts the December amount, echoing the pool onto the event', () => {
       expect(
         issuePrn(openingWithDecember, {
           prnId: 'prn-1',
           amount: 75,
-          useDecemberBalance: true
+          pool: POOL.DECEMBER
         })
       ).toEqual({
         status: PRN_COMMAND_STATUS.COMMITTED,
         events: [
           {
             kind: LEDGER_EVENT_KIND.PRN_ISSUED,
-            payload: { prnId: 'prn-1', amount: 75, useDecemberBalance: true },
+            payload: { prnId: 'prn-1', amount: 75, pool: POOL.DECEMBER },
             openingBalance: openingWithDecember,
             closingBalance: {
               amount: 925,
@@ -299,7 +303,7 @@ describe('issuePrn', () => {
             decemberAmount: 50,
             decemberAvailableAmount: 50
           },
-          { prnId: 'prn-1', amount: 100, useDecemberBalance: true }
+          { prnId: 'prn-1', amount: 100, pool: POOL.DECEMBER }
         )
       ).toEqual({
         status: PRN_COMMAND_STATUS.REJECTED,

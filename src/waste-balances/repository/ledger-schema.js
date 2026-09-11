@@ -16,6 +16,26 @@ export const LEDGER_EVENT_KIND = Object.freeze({
 
 const kindValues = Object.values(LEDGER_EVENT_KIND)
 
+/**
+ * The balance pool a PRN raise draws on (ADR-0049). `general` is the single
+ * balance every PRN drew before December waste existed; `december` is the
+ * ringfenced portion an accruing accreditation's December declaration draws.
+ * The year is not named because it is implicit: a December PRN is only
+ * raisable within its accreditation year's declaration window. Modelled as a
+ * value rather than a boolean flag so a future third pool is a one-line
+ * addition here rather than a second flag to reconcile.
+ */
+export const POOL = Object.freeze({
+  GENERAL: 'general',
+  DECEMBER: 'december'
+})
+
+/**
+ * @typedef {typeof POOL[keyof typeof POOL]} Pool
+ */
+
+const poolValues = Object.values(POOL)
+
 const PRN_KINDS = new Set([
   LEDGER_EVENT_KIND.PRN_CREATED,
   LEDGER_EVENT_KIND.PRN_ISSUED,
@@ -72,13 +92,14 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * `useDecemberBalance` is the pool-routing flag (ADR-0049), resolved once from
- * the PRN's `isDecemberWaste` and whether the accreditation accrues December,
- * and echoed onto every balance event the PRN produces. Optional and carried
- * only when true: absent means the PRN draws the general balance (pre-feature
- * events and every general PRN), which readers coalesce to false.
+ * `pool` is the balance the PRN draws on (ADR-0049), resolved from the PRN's
+ * `isDecemberWaste` and whether the accreditation accrues December. Optional: it
+ * is written only where it was resolved from a loaded accreditation - the raises
+ * that debit a pool, and the December reversals - and omitted on transitions
+ * that load none (accept, reject) rather than guessed. A reader coalesces an
+ * absent pool to `general`, as it does a pre-feature event.
  *
- * @typedef {{ prnId: string, amount: number, useDecemberBalance?: boolean }} PrnPayload
+ * @typedef {{ prnId: string, amount: number, pool?: Pool }} PrnPayload
  */
 
 /**
@@ -165,7 +186,7 @@ const summaryLogPayloadSchema = Joi.object({
 const prnPayloadSchema = Joi.object({
   prnId: Joi.string().required(),
   amount: Joi.number().required(),
-  useDecemberBalance: Joi.boolean()
+  pool: Joi.string().valid(...poolValues)
 })
 
 const prnAcceptedPayloadSchema = prnPayloadSchema.keys({

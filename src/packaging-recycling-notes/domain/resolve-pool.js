@@ -1,5 +1,6 @@
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { processingTypeFor } from '#waste-balances/domain/credited-tonnage.js'
+import { POOL } from '#waste-balances/repository/ledger-schema.js'
 
 /**
  * The processing types that accrue a December waste balance (ADR-0049): every
@@ -38,18 +39,20 @@ export const accruesDecember = (accreditation) =>
   )
 
 /**
- * Resolve the balance event's `useDecemberBalance` flag from the PRN's
- * self-declared `isDecemberWaste` and whether the accreditation accrues
- * December (ADR-0049). This is the pool-routing decision, distinct from the
- * statutory disclosure marker: an output reprocessor self-declares
- * `isDecemberWaste` for disclosure yet resolves to `false` here, because it
- * accrues no December pool to draw on.
+ * Resolve the balance pool a PRN draws on from its self-declared
+ * `isDecemberWaste` and whether the accreditation accrues December (ADR-0049).
+ * This is the pool-routing decision, distinct from the statutory disclosure
+ * marker: an output reprocessor self-declares `isDecemberWaste` for disclosure
+ * yet resolves to `general` here, because it accrues no December pool to draw
+ * on.
  *
  * @param {Object} params
  * @param {boolean} params.isDecemberWaste
  * @param {{ wasteProcessingType: string, reprocessingType?: string }} params.accreditation
- * @returns {boolean}
+ * @returns {import('#waste-balances/repository/ledger-schema.js').Pool}
  */
-export function resolveUseDecemberBalance({ isDecemberWaste, accreditation }) {
+export function resolvePool({ isDecemberWaste, accreditation }) {
   return isDecemberWaste && accruesDecember(accreditation)
+    ? POOL.DECEMBER
+    : POOL.GENERAL
 }

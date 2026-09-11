@@ -55,7 +55,7 @@ export function isWithinDecemberWasteWindow(
  * no tonnage to derive the marker from and the operator self-declares it for
  * disclosure. Input reprocessors and exporters do accrue a December balance
  * (PAE-1922), so they stay false here and their pool routing is decided by
- * `resolveUseDecemberBalance` in `use-december-balance.js` instead.
+ * `resolvePool` in `resolve-pool.js` instead.
  *
  * This is now only the disclosure signal (does the operator declare manually),
  * not a proxy for "has no December balance": that distinction moved to
@@ -84,8 +84,8 @@ export const DECEMBER_WASTE_NOT_DECLARABLE_CODE =
  * uniform across accreditation types (paras 24(4)/27(3)), so an exporter or
  * input reprocessor may declare December inside the window just as an output
  * reprocessor may. Which accreditation accrues a December balance governs pool
- * routing (`useDecemberBalance`, see `use-december-balance.js`), not whether
- * the declaration is permitted - so the type predicate no longer gates here.
+ * routing (`pool`, see `resolve-pool.js`), not whether the declaration is
+ * permitted - so the type predicate no longer gates here.
  *
  * @param {Object} params
  * @param {{ id: string, wasteProcessingType: string, reprocessingType?: string, validFrom?: string }} params.accreditation

@@ -1,6 +1,6 @@
 import { add, subtract, toNumber } from '#common/helpers/decimal-utils.js'
 
-import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
+import { LEDGER_EVENT_KIND, POOL } from '../repository/ledger-schema.js'
 
 /**
  * Compute closing balance for a summary-log-submitted event.
@@ -58,11 +58,11 @@ export const closingForSummaryLogSubmitted = (
 }
 
 /**
- * Debit a December pool field by `prnAmount`. The decider only sets
- * `useDecemberBalance` once the opening carries a December portion (its
- * sufficiency check reads the same field), so reaching here with the field
- * absent is a broken invariant, not a state to coalesce away. Fail loud rather
- * than silently materialise a negative December pool.
+ * Debit a December pool field by `prnAmount`. The decider only routes to the
+ * December pool once the opening carries a December portion (its sufficiency
+ * check reads the same field), so reaching here with the field absent is a
+ * broken invariant, not a state to coalesce away. Fail loud rather than
+ * silently materialise a negative December pool.
  *
  * @param {number | undefined} openingPortion
  * @param {number} prnAmount
@@ -85,28 +85,29 @@ const debitDecemberPortion = (openingPortion, prnAmount, field) => {
  * opened, so the latest event's closing balance still surfaces the December
  * portion. Every case spreads `opening` to carry those amounts through.
  *
- * A December PRN (`useDecemberBalance`) moves its pool by the same delta it
+ * A December PRN (`pool === 'december'`) moves its pool by the same delta it
  * applies to the total: creation ringfences `decemberAvailableAmount` alongside
  * `availableAmount`, issue deducts `decemberAmount` alongside `amount`.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
  * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
  * @param {number} prnAmount
- * @param {boolean} [useDecemberBalance]
+ * @param {import('../repository/ledger-schema.js').Pool} [pool]
  * @returns {import('../repository/ledger-schema.js').LedgerBalanceSnapshot}
  */
 export const closingForPrn = (
   opening,
   kind,
   prnAmount,
-  useDecemberBalance = false
+  pool = POOL.GENERAL
 ) => {
+  const drawsDecember = pool === POOL.DECEMBER
   switch (kind) {
     case LEDGER_EVENT_KIND.PRN_CREATED:
       return {
         ...opening,
         availableAmount: toNumber(subtract(opening.availableAmount, prnAmount)),
-        ...(useDecemberBalance && {
+        ...(drawsDecember && {
           decemberAvailableAmount: debitDecemberPortion(
             opening.decemberAvailableAmount,
             prnAmount,
@@ -118,7 +119,7 @@ export const closingForPrn = (
       return {
         ...opening,
         amount: toNumber(subtract(opening.amount, prnAmount)),
-        ...(useDecemberBalance && {
+        ...(drawsDecember && {
           decemberAmount: debitDecemberPortion(
             opening.decemberAmount,
             prnAmount,

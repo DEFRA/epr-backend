@@ -11,7 +11,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { decidePrnTransition } from '#packaging-recycling-notes/domain/prn-transition.js'
 import { selectObligationYearForAcceptance } from '#packaging-recycling-notes/domain/obligation-year.js'
-import { resolveUseDecemberBalance } from '#packaging-recycling-notes/domain/use-december-balance.js'
+import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
@@ -29,11 +29,11 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
 
 /**
  * The transitions that touch a balance pool and so need the accreditation to
- * resolve useDecemberBalance: the ringfence (draft → awaiting_authorisation)
- * and issue (awaiting_authorisation → awaiting_acceptance) that debit it, and
- * the delete (→ deleted) and cancel (→ cancelled) that reverse it. The raises
- * record the resolved flag on the event; the reversals read it to refuse a
- * December-pool reversal until the restore is implemented (PAE-1923).
+ * resolve the pool: the ringfence (draft → awaiting_authorisation) and issue
+ * (awaiting_authorisation → awaiting_acceptance) that debit it, and the delete
+ * (→ deleted) and cancel (→ cancelled) that reverse it. The raises record the
+ * resolved pool on the event; the reversals read it to refuse a December-pool
+ * reversal until the restore is implemented (PAE-1923).
  *
  * @type {Set<PrnStatus>}
  */
@@ -257,9 +257,9 @@ async function gatherTransitionState(ctx) {
 
   // The accreditation is read when the transition needs it: always on issue
   // (which stamps the PRN number from it), and on any pool-touching transition
-  // of a December-declared PRN, to resolve useDecemberBalance (PAE-1922) - the
-  // raises record it on the event, the reversals read it to refuse a
-  // December-pool reversal until the restore lands (PAE-1923). A PRN that never
+  // of a December-declared PRN, to resolve the pool (PAE-1922) - the raises
+  // record it on the event, the reversals read it to refuse a December-pool
+  // reversal until the restore lands (PAE-1923). A PRN that never
   // declared December waste cannot use the December pool, so its cancellations
   // read no accreditation and are unaffected. Read after the balance, so
   // nothing the ruling uses predates the head.
@@ -318,23 +318,26 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
  * slipping past the deciders' `<` sufficiency check. `NaN` is the only value
  * that passes that check, so it is refused by name.
  *
- * The pool-routing flag is resolved here, on the pool-moving transitions,
- * where the accreditation is in hand: `useDecemberBalance = isDecemberWaste &&
- * accruesDecember` (ADR-0049). It is carried only when true, mirroring
- * `decemberCreditTotal`, so a general PRN's payload stays `{ prnId, amount }`
- * and readers coalesce its absence to false. The accreditation is absent on
- * transitions that move no pool, where the flag is irrelevant.
+ * The pool is written only where it is genuinely resolved - on the transitions
+ * that load the accreditation (the raises, and December pool-touching
+ * reversals) - and omitted where it is not, rather than guessed. A transition
+ * that moves no pool (accept, reject) loads no accreditation, so its event
+ * carries no pool: writing `general` there would be a falsehood on a December
+ * PRN, and nothing reads it anyway (the debit and the reversal restore both
+ * read the raise). A reader coalesces an absent pool to `general`, as it does a
+ * pre-feature event, so an omitted general is read exactly as the flag's
+ * absence was (ADR-0049).
  *
- * ADR-0049 resolves the flag once at the first balance event and has later
+ * ADR-0049 resolves the pool once at the first balance event and has later
  * events carry that copy; here it is re-derived per transition instead. That is
  * safe because both inputs are immutable: `accruesDecember` reads only the
  * accreditation's processing type, and `isDecemberWaste` is fixed on the PRN,
  * so a re-derivation always equals the original, and the issue path re-uses the
  * accreditation it already loads to stamp the PRN number. The reversal restore
  * (PAE-1923) must NOT copy this shortcut: it credits a specific pool, so it
- * should read `useDecemberBalance` off the PRN's raise event (via
- * `service.prnCatchupEvents`) rather than the accreditation, which is both what
- * the ADR mandates and robust to a since-changed accreditation.
+ * should read `pool` off the PRN's raise event (via `service.prnCatchupEvents`)
+ * rather than the accreditation, which is both what the ADR mandates and robust
+ * to a since-changed accreditation.
  *
  * @param {PackagingRecyclingNote} prn
  * @param {number} [obligationYear]
@@ -353,17 +356,15 @@ function buildCommandPayload(prn, obligationYear, accreditation) {
     obligationYear
   )
 
-  const useDecemberBalance =
-    accreditation !== undefined &&
-    resolveUseDecemberBalance({
-      isDecemberWaste: prn.isDecemberWaste,
-      accreditation
-    })
+  const pool =
+    accreditation !== undefined
+      ? resolvePool({ isDecemberWaste: prn.isDecemberWaste, accreditation })
+      : undefined
 
   return {
     prnId: prn.id,
     amount: prn.tonnage,
-    ...(useDecemberBalance && { useDecemberBalance: true }),
+    ...(pool !== undefined && { pool }),
     ...(selectedObligationYear === undefined
       ? {}
       : { obligationYear: selectedObligationYear })
