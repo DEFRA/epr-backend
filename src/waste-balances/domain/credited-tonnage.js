@@ -49,7 +49,8 @@ const YES = 'Yes'
 
 /**
  * An inclusive month range as `YYYY-MM` keys. The service supplies it (January
- * 2026 → the current month); the domain function reads the clock nowhere.
+ * of the reporting year → the reporting month); the domain function reads the
+ * clock nowhere.
  *
  * @typedef {Object} MonthRange
  * @property {string} fromMonth - inclusive start, `YYYY-MM`

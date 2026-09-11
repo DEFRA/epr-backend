@@ -5,7 +5,10 @@ import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas
 import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
-import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
+import {
+  monthKeyForDate,
+  YEAR_LENGTH
+} from '#common/helpers/dates/year-month.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
 /**
@@ -17,8 +20,6 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
  */
-
-const YEAR_LENGTH = 4
 
 /**
  * The first month of the window that ends at `reportingMonth`: January of that
@@ -77,6 +78,19 @@ const compareRows = (a, b) =>
   a.month.localeCompare(b.month)
 
 /**
+ * The two tonnage figures on one population of skipped rows, for the log line.
+ * Both are given because they routinely differ: a row dated before the
+ * reporting window is usually outside its accreditation period as well, so it
+ * carries a crediting column the report loses while the waste balance holds
+ * nothing for it. Only the eligible figure is tonnage anyone could recover.
+ *
+ * @param {import('#waste-balances/domain/credited-tonnage.js').SkippedRowTally} tally
+ * @returns {string}
+ */
+const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
+  `(${totalCredited}t credited, ${eligibleForWasteBalance}t eligible)`
+
+/**
  * Build the credited-tonnage report: one row per accredited-partition per month
  * (January of the reporting year → the reporting month, zero-filled) derived
  * from each accreditation's latest submitted summary log.
@@ -104,19 +118,6 @@ const compareRows = (a, b) =>
  * @param {string} [params.reportingMonth] - `YYYY-MM` to report as at; defaults to the Europe/London calendar month of `now`
  * @returns {Promise<CreditedTonnageReport>}
  */
-/**
- * The two tonnage figures on one population of skipped rows, for the log line.
- * Both are given because they routinely differ: a row dated before the
- * reporting window is usually outside its accreditation period as well, so it
- * carries a crediting column the report loses while the waste balance holds
- * nothing for it. Only the eligible figure is tonnage anyone could recover.
- *
- * @param {import('#waste-balances/domain/credited-tonnage.js').SkippedRowTally} tally
- * @returns {string}
- */
-const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
-  `(${totalCredited}t credited, ${eligibleForWasteBalance}t eligible)`
-
 export const buildCreditedTonnageReport = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,

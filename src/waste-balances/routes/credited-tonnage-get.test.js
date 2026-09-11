@@ -29,6 +29,10 @@ const injectReport = (server, credentials, query = '') =>
 describe(`GET ${creditedTonnageGetPath}`, () => {
   setupAuthContext()
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   describe('access control', () => {
     let server
 
@@ -161,6 +165,10 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
   }
 
   it('returns a credited-tonnage row derived from an accreditation latest submission', async () => {
+    // Unasked, the report covers the reporting year the clock is in, so the
+    // February 2026 submission is only in range while the clock says 2026.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-03-15T12:00:00.000Z'))
     const { server, org, linkedAccreditation } =
       await createServerWithFebruarySubmission()
 
@@ -217,6 +225,20 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       server,
       asServiceMaintainerRead(),
       '?month=2026-13'
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+
+    await server.stop()
+  })
+
+  it('rejects a year the report could not key its months by', async () => {
+    const server = await createTestServer({})
+
+    const response = await injectReport(
+      server,
+      asServiceMaintainerRead(),
+      '?month=0001-02'
     )
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)

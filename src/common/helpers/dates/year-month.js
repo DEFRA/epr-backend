@@ -64,7 +64,7 @@ export const monthKeyForDate = (value, timeZone = 'UTC') => {
 }
 
 const DECEMBER = '12'
-const YEAR_LENGTH = 4
+export const YEAR_LENGTH = 4
 
 /**
  * The `YYYY-12` month key of the year an ISO date string falls in: the December
