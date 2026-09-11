@@ -535,15 +535,17 @@ describe('buildCreditedTonnageReport', () => {
       organisations: [organisation],
       entries: [ledgerEntry],
       rowStatesByAccreditationId: {
-        [accreditationId]: [receivedRow('2026-02-10', 100)]
+        [accreditationId]: [
+          receivedRow('2026-02-10', 100),
+          receivedRow('2026-03-10', 25)
+        ]
       },
       reportingMonth: '2026-02'
     })
 
-    expect((await report).data.map((r) => r.month)).toEqual([
-      '2026-01',
-      '2026-02'
-    ])
+    const rows = (await report).data
+    expect(rows.map((r) => r.month)).toEqual(['2026-01', '2026-02'])
+    expect(rows[1].tonnage.totalCredited).toBe(100)
   })
 
   it('takes the reporting year from the requested month, not from the clock', async () => {

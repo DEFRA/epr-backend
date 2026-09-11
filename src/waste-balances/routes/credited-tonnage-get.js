@@ -9,11 +9,9 @@ import { creditedTonnageResponseSchema } from './credited-tonnage-response.schem
 export const creditedTonnageGetPath =
   '/v1/admin/waste-balances/credited-tonnage'
 
-// The report keys its months `YYYY-MM`, so a reporting month is a four-digit
-// year and a calendar month. The year runs 2000 to 9999, as it does on the
-// market-insights waste balance: one before packaging waste was reported at all
-// is a typo, and a year under four digits builds month keys the response
-// contract cannot carry.
+// A reporting month is a year and a calendar month. The year runs 2000 to 9999,
+// as it does on the market-insights waste balance: one before packaging waste
+// was reported at all is a typo.
 const REPORTING_MONTH_PATTERN = /^[2-9]\d{3}-(0[1-9]|1[0-2])$/
 
 export const creditedTonnageGet = {

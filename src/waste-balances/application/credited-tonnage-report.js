@@ -25,11 +25,10 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  * The first month of the window that ends at `reportingMonth`: January of that
  * month's reporting year.
  *
- * The Environment Agency's publication opens a reporting year at its January
- * and carries nothing forward from the preceding December: the 25 August 2026
- * workbook runs January to July. Whether the January 2027 edition carries
- * December 2026 is still open with them, and this line is where their answer
- * goes.
+ * The report buckets tonnage by the month the waste was received, so a
+ * reporting year opens at its January. The carry-forward the regulations allow
+ * for December-received waste is elective and per-note, so it is a property of
+ * the notes raised against that waste rather than of this window.
  *
  * @param {string} reportingMonth - `YYYY-MM`
  * @returns {string} `YYYY-01`
@@ -106,7 +105,10 @@ const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
  *
  * This report answers what an accreditation has credited as of now, so
  * approving an overseas site or amending a validity period must move the
- * figures without waiting for the operator to submit again.
+ * figures without waiting for the operator to submit again. A requested
+ * reporting month moves the window and nothing else: an earlier month returns
+ * today's position truncated to that month, not the report that month would
+ * have produced.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
@@ -115,7 +117,7 @@ const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {TypedLogger} params.logger
  * @param {Date} params.now - clock reading supplied by the caller
- * @param {string} [params.reportingMonth] - `YYYY-MM` to report as at; defaults to the Europe/London calendar month of `now`
+ * @param {string} [params.reportingMonth] - `YYYY-MM` the window runs to; defaults to the Europe/London calendar month of `now`
  * @returns {Promise<CreditedTonnageReport>}
  */
 export const buildCreditedTonnageReport = async ({

@@ -165,12 +165,13 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
   }
 
   it('returns a credited-tonnage row derived from an accreditation latest submission', async () => {
+    const { server, org, linkedAccreditation } =
+      await createServerWithFebruarySubmission()
+
     // Unasked, the report covers the reporting year the clock is in, so the
     // February 2026 submission is only in range while the clock says 2026.
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-03-15T12:00:00.000Z'))
-    const { server, org, linkedAccreditation } =
-      await createServerWithFebruarySubmission()
 
     const response = await injectReport(server, asServiceMaintainerRead())
 
