@@ -1,5 +1,7 @@
 import Joi from 'joi'
 
+import { materialSchema } from '#common/validation/material-schema.js'
+
 /**
  * Response contract for the published UK Waste Balance table. One row per
  * material, accreditation type and reporting month, with the net credit the
@@ -13,7 +15,7 @@ export const wasteBalanceResponseSchema = Joi.object({
   data: Joi.array()
     .items(
       Joi.object({
-        material: Joi.string().allow('').required(),
+        material: materialSchema.required(),
         accreditationType: Joi.string()
           .valid('reprocessor', 'exporter')
           .required(),
