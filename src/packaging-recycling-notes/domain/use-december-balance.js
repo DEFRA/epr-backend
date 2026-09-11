@@ -1,29 +1,41 @@
-import {
-  WASTE_PROCESSING_TYPE,
-  REPROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { processingTypeFor } from '#waste-balances/domain/credited-tonnage.js'
 
 /**
- * Whether an accreditation accrues a December waste balance (ADR-0049).
+ * The processing types that accrue a December waste balance (ADR-0049): every
+ * accredited type except reprocessor-output. Kept as an allowlist so a new
+ * accruing type is a one-line addition here. Output reprocessors accrue none:
+ * their balance credits from processed rows dated when the load left site, not
+ * a December receipt, which is why `december-credit-total.js` excludes
+ * `REPROCESSOR_OUTPUT` on the accrual side for the same reason.
  *
- * Exporters and input reprocessors accrue December capacity, so a December
- * declaration on one of their PRNs draws the December pool. Output
- * reprocessors accrue none - their balance credits from processed rows, whose
- * balance-affecting date is the date the load left site, not a December
- * receipt - so they hold a single general balance. This mirrors the row-level
- * exclusion in `december-credit-total.js`, which zeroes `REPROCESSOR_OUTPUT`
- * for the same reason.
+ * @type {Set<import('#domain/summary-logs/meta-fields.js').ProcessingType>}
+ */
+const DECEMBER_ACCRUING_PROCESSING_TYPES = new Set([
+  PROCESSING_TYPES.EXPORTER,
+  PROCESSING_TYPES.REPROCESSOR_INPUT
+])
+
+/**
+ * Whether an accreditation accrues a December waste balance, so a December
+ * declaration on one of its PRNs draws the December pool rather than the
+ * general balance (ADR-0049). The accreditation is mapped to its granular
+ * processing type with `processingTypeFor` - the same mapping the credit side
+ * uses - and tested against the accruing allowlist. The cast bridges the
+ * accreditation's widened `wasteProcessingType: string` to the mapping's
+ * narrower type; it is exact at runtime, `processingTypeFor` only compares it.
  *
  * @param {{ wasteProcessingType: string, reprocessingType?: string }} accreditation
  * @returns {boolean}
  */
-export function accruesDecember(accreditation) {
-  if (accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
-    return true
-  }
-
-  return accreditation.reprocessingType === REPROCESSING_TYPE.INPUT
-}
+export const accruesDecember = (accreditation) =>
+  DECEMBER_ACCRUING_PROCESSING_TYPES.has(
+    processingTypeFor(
+      /** @type {import('#waste-balances/domain/credited-tonnage.js').AccreditationContext} */ (
+        accreditation
+      )
+    )
+  )
 
 /**
  * Resolve the balance event's `useDecemberBalance` flag from the PRN's
