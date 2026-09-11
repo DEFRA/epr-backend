@@ -281,7 +281,7 @@ const warnAboutUnattributedTonnage = (logger, unattributed) => {
   for (const [registrationId, { registration, figures }] of unattributed) {
     const processCount = (registration.glassRecyclingProcess ?? []).length
     logger.warn({
-      message: `Market insights waste balance published registration ${registrationId} against no material: ${figures.eligibleForWasteBalance} eligible tonnes, ${figures.sentOnDeductions} tonnes sent on, ${figures.totalCredited} gross credited. It is registered for ${registration.material} carrying ${processCount} glass recycling process(es), and a registration names a published glass row only when exactly one process reached it.`,
+      message: `Market insights waste balance published registration ${registrationId} against no material: ${figures.eligibleForWasteBalance} eligible tonnes, ${figures.sentOnDeductions} tonnes sent on, ${figures.totalCredited} gross credited. It is registered for ${registration.material} carrying ${processCount} glass recycling processes, and only a registration left holding exactly one names a published glass row. Two means the forms ingest split never ran on it; none means a stored record the write path would reject today.`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: 'market_insights_material_unresolved',

@@ -365,8 +365,15 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
-  describe('a glass registration the split never reached', () => {
-    const operator = makeOperator({ orgId: 500013, material: MATERIAL.GLASS })
+  describe('a glass registration carrying both recycling processes', () => {
+    const operator = makeOperator({
+      orgId: 500013,
+      material: MATERIAL.GLASS,
+      glassRecyclingProcess: [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
+      ]
+    })
 
     const withUnsplitGlass = () =>
       run({
@@ -404,28 +411,21 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('says how many processes it carries, so both unsplit states are told apart', async () => {
+    it('blames the split that never ran, not a stored record', async () => {
       const { logger } = await withUnsplitGlass()
 
       expect(logger.warn).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining(
-            'registered for glass carrying 0 glass recycling process(es)'
+            'registered for glass carrying 2 glass recycling processes, and only a registration left holding exactly one names a published glass row. Two means the forms ingest split never ran on it'
           )
         })
       )
     })
   })
 
-  it('raises the alarm for a glass registration split across both processes', async () => {
-    const operator = makeOperator({
-      orgId: 500015,
-      material: MATERIAL.GLASS,
-      glassRecyclingProcess: [
-        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-        GLASS_RECYCLING_PROCESS.GLASS_OTHER
-      ]
-    })
+  it('blames stored data for a glass registration carrying no process', async () => {
+    const operator = makeOperator({ orgId: 500015, material: MATERIAL.GLASS })
 
     const { logger } = await run({
       organisations: [operator.organisation],
@@ -437,7 +437,7 @@ describe('buildWasteBalanceTable', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(
-          'carrying 2 glass recycling process(es)'
+          'carrying 0 glass recycling processes, and only a registration left holding exactly one names a published glass row. Two means the forms ingest split never ran on it; none means a stored record the write path would reject today.'
         ),
         event: expect.objectContaining({
           action: 'market_insights_material_unresolved',
@@ -469,8 +469,20 @@ describe('buildWasteBalanceTable', () => {
   })
 
   it('raises one alarm per unresolved registration, not one per request', async () => {
-    const first = makeOperator({ orgId: 500017, material: MATERIAL.GLASS })
-    const second = makeOperator({ orgId: 500018, material: MATERIAL.GLASS })
+    const bothProcesses = [
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+      GLASS_RECYCLING_PROCESS.GLASS_OTHER
+    ]
+    const first = makeOperator({
+      orgId: 500017,
+      material: MATERIAL.GLASS,
+      glassRecyclingProcess: bothProcesses
+    })
+    const second = makeOperator({
+      orgId: 500018,
+      material: MATERIAL.GLASS,
+      glassRecyclingProcess: bothProcesses
+    })
 
     const { logger } = await run({
       organisations: [first.organisation, second.organisation],
