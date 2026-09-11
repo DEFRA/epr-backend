@@ -18,15 +18,23 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
  */
 
+const YEAR_LENGTH = 4
+
 /**
- * The report covers a fixed window: January 2026 (the first reporting month)
- * through the current month, as of generation. "Current month" is the
- * Europe/London calendar month — consistent with the project's month-boundary
- * decisions — so a submission just before UK midnight at a month end lands in
- * the month the operator sees, not the UTC one. Row dates themselves are
- * date-only strings bucketed in UTC by the domain, and are unaffected.
+ * The first month of the window that ends at `reportingMonth`: January of that
+ * month's reporting year.
+ *
+ * The Environment Agency's publication opens a reporting year at its January
+ * and carries nothing forward from the preceding December: the 25 August 2026
+ * workbook runs January to July. Whether the January 2027 edition carries
+ * December 2026 is still open with them, and this line is where their answer
+ * goes.
+ *
+ * @param {string} reportingMonth - `YYYY-MM`
+ * @returns {string} `YYYY-01`
  */
-const REPORT_START_MONTH = '2026-01'
+const windowStartForReportingMonth = (reportingMonth) =>
+  `${reportingMonth.slice(0, YEAR_LENGTH)}-01`
 
 /**
  * A single flat row of the report — one accreditation in one month.
@@ -70,8 +78,8 @@ const compareRows = (a, b) =>
 
 /**
  * Build the credited-tonnage report: one row per accredited-partition per month
- * (January 2026 → the month of `now`, zero-filled) derived from each
- * accreditation's latest submitted summary log.
+ * (January of the reporting year → the reporting month, zero-filled) derived
+ * from each accreditation's latest submitted summary log.
  *
  * The ledger query yields one entry per accredited partition with a submission,
  * so accreditations with no submission never appear. Each entry's row states are
@@ -92,7 +100,8 @@ const compareRows = (a, b) =>
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {TypedLogger} params.logger
- * @param {Date} params.now - clock reading supplied by the caller; the report's upper month bound
+ * @param {Date} params.now - clock reading supplied by the caller
+ * @param {string} [params.reportingMonth] - `YYYY-MM` to report as at; defaults to the Europe/London calendar month of `now`
  * @returns {Promise<CreditedTonnageReport>}
  */
 /**
@@ -114,11 +123,19 @@ export const buildCreditedTonnageReport = async ({
   organisationsRepository,
   overseasSitesRepository,
   logger,
-  now
+  now,
+  reportingMonth
 }) => {
+  // Unasked, the report runs to the Europe/London calendar month — consistent
+  // with the project's month-boundary decisions — so a submission just before
+  // UK midnight at a month end lands in the month the operator sees, not the
+  // UTC one. Row dates themselves are date-only strings bucketed in UTC by the
+  // domain, and are unaffected.
+  const toMonth =
+    reportingMonth ?? /** @type {string} */ (monthKeyForDate(now, UK_TIME_ZONE))
   const monthRange = {
-    fromMonth: REPORT_START_MONTH,
-    toMonth: /** @type {string} */ (monthKeyForDate(now, UK_TIME_ZONE))
+    fromMonth: windowStartForReportingMonth(toMonth),
+    toMonth
   }
 
   const [entries, organisations, allSites] = await Promise.all([

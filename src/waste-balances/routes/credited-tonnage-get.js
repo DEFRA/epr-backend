@@ -1,3 +1,4 @@
+import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { buildCreditedTonnageReport } from '#waste-balances/application/credited-tonnage-report.js'
@@ -8,6 +9,10 @@ import { creditedTonnageResponseSchema } from './credited-tonnage-response.schem
 export const creditedTonnageGetPath =
   '/v1/admin/waste-balances/credited-tonnage'
 
+// The report keys its months `YYYY-MM`, so a reporting month is a four-digit
+// year and a calendar month.
+const REPORTING_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
+
 export const creditedTonnageGet = {
   method: 'GET',
   path: creditedTonnageGetPath,
@@ -16,12 +21,18 @@ export const creditedTonnageGet = {
       scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
+    validate: {
+      query: Joi.object({
+        month: Joi.string().pattern(REPORTING_MONTH_PATTERN)
+      })
+    },
     response: {
       schema: creditedTonnageResponseSchema
     }
   },
   /**
    * @param {HapiRequest & {
+   *   query: { month?: string },
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
    *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
@@ -36,7 +47,8 @@ export const creditedTonnageGet = {
       summaryLogRowStatesRepository,
       organisationsRepository,
       overseasSitesRepository,
-      logger
+      logger,
+      query
     } = request
 
     const report = await buildCreditedTonnageReport({
@@ -45,7 +57,8 @@ export const creditedTonnageGet = {
       organisationsRepository,
       overseasSitesRepository,
       logger,
-      now: new Date()
+      now: new Date(),
+      reportingMonth: query.month
     })
 
     return h.response(report).code(StatusCodes.OK)
