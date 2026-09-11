@@ -1,15 +1,17 @@
 import Joi from 'joi'
 import {
   ACCREDITATION_STATUS,
-  MATERIAL,
   REGISTRATION_STATUS,
   REGULATOR,
   REPROCESSING_TYPE,
   TIME_SCALE,
-  TONNAGE_MONITORING_MATERIALS,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import {
+  appliedForMaterialSchema,
+  materialSchema
+} from '#common/validation/material-schema.js'
 
 const addressSchema = Joi.object({
   line1: Joi.string().optional(),
@@ -55,19 +57,6 @@ const dateRangeSchema = Joi.object({
   validTo: Joi.string().allow(null).required()
 })
 
-/**
- * What the record is for, once resolved. Glass is the only material that
- * sub-divides, so this reads `glass_re_melt` or `glass_other` where the store
- * holds `glass` beside a single recycling process. Plain `glass` is never a
- * resolved material.
- */
-const materialSchema = Joi.string().valid(...TONNAGE_MONITORING_MATERIALS)
-
-/**
- * The material as the applicant declared it on the form, which is one of the
- * seven the form offers and so includes plain `glass`.
- */
-const appliedForMaterialSchema = Joi.string().valid(...Object.values(MATERIAL))
 const regulatorSchema = Joi.string().valid(...Object.values(REGULATOR))
 const wasteProcessingTypeSchema = Joi.string().valid(
   ...Object.values(WASTE_PROCESSING_TYPE)
