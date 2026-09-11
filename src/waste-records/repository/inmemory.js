@@ -129,6 +129,25 @@ export const createInMemorySummaryLogRowStatesRepository = (
     /**
      * @param {string} organisationId
      * @param {string} registrationId
+     * @param {string} fileId
+     */
+    findRowStatesForSummaryLogFile: async (
+      organisationId,
+      registrationId,
+      fileId
+    ) =>
+      structuredClone(
+        storage.filter(
+          (doc) =>
+            doc.organisationId === organisationId &&
+            doc.registrationId === registrationId &&
+            doc.summaryLogIds.includes(fileId)
+        )
+      ),
+
+    /**
+     * @param {string} organisationId
+     * @param {string} registrationId
      * @param {string} rowId
      * @param {string} wasteRecordType
      */

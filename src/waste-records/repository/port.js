@@ -50,6 +50,12 @@
  *   A row state belongs to the ledger that wrote it, so the summary log alone
  *   does not identify one: the same `summaryLogId` under a different ledger
  *   identity matches nothing.
+ * @property {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLogFile
+ *   Return the row states one submission committed, addressed by the *file*
+ *   id the waste balance ledger records — `summaryLog.file.id`, not the
+ *   summary log document's id. Spans every ledger partition of the
+ *   registration, so a caller that does not know the accreditation reads it
+ *   back off the rows.
  * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
  *   Return every state document for the given row identity.
  * @property {(summaryLogIds: string[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
