@@ -67,13 +67,46 @@ const YES = 'Yes'
  */
 
 /**
+ * How many rows one population of unplaceable rows holds, and the tonnage on
+ * them in the same two figures a month carries.
+ *
+ * Both are needed because they answer different questions and routinely
+ * disagree. A row dated before the reporting window is usually dated before its
+ * accreditation's `validFrom` as well, so the classifier ignores it: its
+ * crediting column is non-zero while the waste balance holds nothing for it.
+ * `totalCredited` alone would report such a row as recoverable tonnage when
+ * there is none to recover.
+ *
+ * A deducting row raises `rowCount` only, so neither figure becomes a net
+ * balance.
+ *
+ * @typedef {Object} SkippedRowTally
+ * @property {number} rowCount
+ * @property {number} totalCredited - gross tonnage on crediting rows, 2dp
+ * @property {number} eligibleForWasteBalance - tonnage the balance holds for them (INCLUDED classification), 2dp
+ */
+
+/**
+ * The rows no month could be found for, split by why. `noUsableDate` rows have
+ * no reporting period at all; the other two are dated outside the range the
+ * caller asked for, which are different populations: rows before the start are
+ * the ones that might hold tonnage the report hides, and rows after the end are
+ * future-dated.
+ *
+ * @typedef {Object} SkippedRows
+ * @property {SkippedRowTally} noUsableDate
+ * @property {SkippedRowTally} beforeWindowStart
+ * @property {SkippedRowTally} afterWindowEnd
+ */
+
+/**
  * The aggregation result: one entry per month across the injected range
- * (ascending, zero-filled), plus the count of rows dropped for a missing,
- * unparseable, or out-of-range month-assignment date so the caller can log it.
+ * (ascending, zero-filled), plus the rows no month could be found for so the
+ * caller can log them.
  *
  * @typedef {Object} CreditedTonnageByMonth
  * @property {MonthlyCreditedTonnage[]} months
- * @property {number} skippedRowCount
+ * @property {SkippedRows} skippedRows
  */
 
 /**
@@ -128,6 +161,68 @@ const expandMonthRange = ({ fromMonth, toMonth }) => {
     }
   }
   return months
+}
+
+/**
+ * The population a row the range has no bucket for belongs to.
+ *
+ * `expandMonthRange` builds a bucket for every month of the range, so a row
+ * with a usable month and no bucket is dated outside it, and anything not
+ * before the start is after the end.
+ *
+ * `YYYY-MM` keys are fixed-width, so ordering them is a string comparison.
+ *
+ * @param {string | null} month
+ * @param {SkippedRows} skippedRows
+ * @param {string} fromMonth
+ * @returns {SkippedRowTally}
+ */
+const skippedPopulationFor = (month, skippedRows, fromMonth) => {
+  if (month === null) {
+    return skippedRows.noUsableDate
+  }
+  return month.localeCompare(fromMonth) < 0
+    ? skippedRows.beforeWindowStart
+    : skippedRows.afterWindowEnd
+}
+
+/**
+ * Add a row the range has no bucket for to the population it belongs to,
+ * carrying the same two tonnage figures the row would have added to a month.
+ *
+ * @param {SkippedRows} skippedRows
+ * @param {string | null} month
+ * @param {string} fromMonth
+ * @param {CreditableWasteRecordState} rowState
+ * @param {RowContribution} contribution
+ * @returns {void}
+ */
+const tallySkippedRow = (
+  skippedRows,
+  month,
+  fromMonth,
+  rowState,
+  contribution
+) => {
+  const tally = skippedPopulationFor(month, skippedRows, fromMonth)
+  tally.rowCount += 1
+
+  if (!contribution.credits) {
+    return
+  }
+
+  tally.totalCredited = toNumber(
+    addRounded(tally.totalCredited, contribution.tonnage, 2)
+  )
+  if (rowState.classification.outcome === WASTE_BALANCE_OUTCOME.INCLUDED) {
+    tally.eligibleForWasteBalance = toNumber(
+      addRounded(
+        tally.eligibleForWasteBalance,
+        rowState.classification.transactionAmount,
+        2
+      )
+    )
+  }
 }
 
 /**
@@ -212,8 +307,8 @@ export const contributionFor = (rowState, processingType) => {
  * row's outcome is `INCLUDED`. Sent-on rows on a
  * reprocessor-input accreditation add their tonnage to `sentOnDeductions`
  * as a positive number. Rows whose month-assignment date is missing,
- * unparseable, or outside the range are dropped and counted in
- * `skippedRowCount`. Sums are decimal-safe to 2dp.
+ * unparseable, or outside the range are dropped and tallied in `skippedRows`,
+ * separately per population. Sums are decimal-safe to 2dp.
  *
  * @param {CreditableWasteRecordState[]} rowStates
  * @param {AccreditationContext} accreditation
@@ -238,7 +333,20 @@ export const creditedTonnageByMonth = (
     ])
   )
 
-  let skippedRowCount = 0
+  /** @type {SkippedRows} */
+  const skippedRows = {
+    noUsableDate: { rowCount: 0, totalCredited: 0, eligibleForWasteBalance: 0 },
+    beforeWindowStart: {
+      rowCount: 0,
+      totalCredited: 0,
+      eligibleForWasteBalance: 0
+    },
+    afterWindowEnd: {
+      rowCount: 0,
+      totalCredited: 0,
+      eligibleForWasteBalance: 0
+    }
+  }
 
   for (const rowState of rowStates) {
     const contribution = contributionFor(rowState, processingType)
@@ -249,7 +357,13 @@ export const creditedTonnageByMonth = (
     const month = monthKeyForDate(rowState.data[contribution.dateField])
     const bucket = month === null ? undefined : buckets.get(month)
     if (bucket === undefined) {
-      skippedRowCount += 1
+      tallySkippedRow(
+        skippedRows,
+        month,
+        monthRange.fromMonth,
+        rowState,
+        contribution
+      )
       continue
     }
 
@@ -280,5 +394,5 @@ export const creditedTonnageByMonth = (
     return { month, ...bucket }
   })
 
-  return { months, skippedRowCount }
+  return { months, skippedRows }
 }

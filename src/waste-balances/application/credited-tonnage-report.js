@@ -95,6 +95,19 @@ const compareRows = (a, b) =>
  * @param {Date} params.now - clock reading supplied by the caller; the report's upper month bound
  * @returns {Promise<CreditedTonnageReport>}
  */
+/**
+ * The two tonnage figures on one population of skipped rows, for the log line.
+ * Both are given because they routinely differ: a row dated before the
+ * reporting window is usually outside its accreditation period as well, so it
+ * carries a crediting column the report loses while the waste balance holds
+ * nothing for it. Only the eligible figure is tonnage anyone could recover.
+ *
+ * @param {import('#waste-balances/domain/credited-tonnage.js').SkippedRowTally} tally
+ * @returns {string}
+ */
+const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
+  `(${totalCredited}t credited, ${eligibleForWasteBalance}t eligible)`
+
 export const buildCreditedTonnageReport = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
@@ -162,7 +175,7 @@ export const buildCreditedTonnageReport = async ({
       }
     )
 
-    const { months, skippedRowCount } = creditedTonnageByMonth(
+    const { months, skippedRows } = creditedTonnageByMonth(
       rowStates,
       {
         wasteProcessingType: /** @type {WasteProcessingTypeValue} */ (
@@ -173,9 +186,19 @@ export const buildCreditedTonnageReport = async ({
       monthRange
     )
 
-    if (skippedRowCount > 0) {
+    const { noUsableDate, beforeWindowStart, afterWindowEnd } = skippedRows
+    const skippedTotal =
+      noUsableDate.rowCount +
+      beforeWindowStart.rowCount +
+      afterWindowEnd.rowCount
+
+    if (skippedTotal > 0) {
       logger.info({
-        message: `Credited tonnage report skipped ${skippedRowCount} row(s) with a missing, unparseable or out-of-range date for accreditation ${accreditation.id}`,
+        message:
+          `Credited tonnage report skipped ${skippedTotal} row(s) for accreditation ${accreditation.id}: ` +
+          `${noUsableDate.rowCount} with no usable date ${describeTonnage(noUsableDate)}, ` +
+          `${beforeWindowStart.rowCount} dated before ${monthRange.fromMonth} ${describeTonnage(beforeWindowStart)}, ` +
+          `${afterWindowEnd.rowCount} dated after ${monthRange.toMonth} ${describeTonnage(afterWindowEnd)}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: 'credited_tonnage_rows_skipped',
