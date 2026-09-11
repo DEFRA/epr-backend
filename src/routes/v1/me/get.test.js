@@ -69,7 +69,8 @@ describe('GET /v1/me', () => {
           SCOPES.organisationSearch,
           SCOPES.organisationRead,
           SCOPES.wasteBalanceLedgerRead,
-          SCOPES.summaryLogRead
+          SCOPES.summaryLogRead,
+          SCOPES.marketDataRead
         ]
       })
     })

@@ -6,6 +6,7 @@ import { resolveDetailedMaterial } from '#domain/organisations/registration-util
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
+import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
@@ -26,8 +27,6 @@ import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
  * date-only strings bucketed in UTC by the domain, and are unaffected.
  */
 const REPORT_START_MONTH = '2026-01'
-
-const REPORT_TIME_ZONE = 'Europe/London'
 
 /**
  * A single flat row of the report — one accreditation in one month.
@@ -119,7 +118,7 @@ export const buildCreditedTonnageReport = async ({
 }) => {
   const monthRange = {
     fromMonth: REPORT_START_MONTH,
-    toMonth: /** @type {string} */ (monthKeyForDate(now, REPORT_TIME_ZONE))
+    toMonth: /** @type {string} */ (monthKeyForDate(now, UK_TIME_ZONE))
   }
 
   const [entries, organisations, allSites] = await Promise.all([

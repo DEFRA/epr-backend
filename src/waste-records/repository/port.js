@@ -31,6 +31,12 @@
  */
 
 /**
+ * A row as it was submitted, carrying no waste-balance classification.
+ *
+ * @typedef {WasteBalanceLedgerId & Pick<SummaryLogRowState, 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
+ */
+
+/**
  * @typedef {Object} SummaryLogRowStatesRepository
  * @property {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>} upsertSummaryLogRowStates
  *   For each row, find the existing state document for that row identity whose
@@ -46,6 +52,9 @@
  *   identity matches nothing.
  * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
  *   Return every state document for the given row identity.
+ * @property {(summaryLogIds: string[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
+ *   Yield each state document whose membership contains at least one of
+ *   `summaryLogIds`, at most once however many of them it holds.
  * @property {() => Promise<string[]>} findDistinctDataKeys
  *   Return the union of every key observed on `data` across every state
  *   document in the collection. Used by the CSV export to compose its dynamic
