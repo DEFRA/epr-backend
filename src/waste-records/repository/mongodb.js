@@ -262,6 +262,23 @@ const performFindRowStatesForSummaryLog =
   }
 
 /**
+ * Rides the multikey `summary_log_membership` index, as
+ * `findRowStatesForSummaryLog` does — a file id is selective enough that the
+ * organisation and registration are a residual filter, not a key prefix.
+ *
+ * @param {Collection} collection
+ * @returns {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>}
+ */
+const performFindRowStatesForSummaryLogFile =
+  (collection) => async (organisationId, registrationId, fileId) => {
+    const docs = await collection
+      .find({ organisationId, registrationId, summaryLogIds: fileId })
+      .sort({ _id: 1 })
+      .toArray()
+    return docs.map(toSummaryLogRowState)
+  }
+
+/**
  * @param {Collection} collection
  * @returns {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>}
  */
@@ -358,6 +375,8 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
   return () => ({
     upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
     findRowStatesForSummaryLog: performFindRowStatesForSummaryLog(collection),
+    findRowStatesForSummaryLogFile:
+      performFindRowStatesForSummaryLogFile(collection),
     findRowHistory: performFindRowHistory(collection),
     streamRowStatesForSummaryLogs:
       performStreamRowStatesForSummaryLogs(collection),

@@ -2,8 +2,10 @@
 
 /**
  * Load all summary logs for a single (org, registration) pair into a Map
- * keyed by summary log id. Used by stream-csv-export to populate the
- * "Submitted At" column without N+1 lookups during streaming.
+ * keyed by the submission's *file* id — the value the waste balance ledger
+ * records and the export looks a row up by, not the summary log document's
+ * id. Used by stream-csv-export to populate the "Submitted At" column without
+ * N+1 lookups during streaming.
  *
  * Memory cost is small (count is bounded by submissions per registration —
  * typically dozens at most).
@@ -25,7 +27,7 @@ export const loadSummaryLogMap = async (
 
   return new Map(
     summaryLogs.map((entry) => [
-      entry.id,
+      entry.summaryLog.file.id,
       { submittedAt: entry.summaryLog.submittedAt ?? '' }
     ])
   )
