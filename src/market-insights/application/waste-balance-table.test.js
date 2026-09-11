@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
+  GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
@@ -36,6 +37,7 @@ const approvedHistory = [
  * @param {{
  *   orgId: number,
  *   material?: string,
+ *   glassRecyclingProcess?: string[],
  *   wasteProcessingType?: string,
  *   reprocessingType?: string,
  *   overseasSites?: Record<string, { overseasSiteId: string }>,
@@ -46,6 +48,7 @@ const approvedHistory = [
 const makeOperator = ({
   orgId,
   material = MATERIAL.PLASTIC,
+  glassRecyclingProcess,
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType = REPROCESSING_TYPE.INPUT,
   overseasSites,
@@ -67,6 +70,7 @@ const makeOperator = ({
           accreditationId,
           statusHistory: approvedHistory,
           material,
+          glassRecyclingProcess,
           wasteProcessingType,
           reprocessingType,
           overseasSites
@@ -361,8 +365,28 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
-  it('counts a glass registration the split never reached against no material', async () => {
-    const operator = makeOperator({ orgId: 500013, material: MATERIAL.GLASS })
+  it('will not type a published row against an unsplit glass material', () => {
+    /** @type {import('./waste-balance-table.js').WasteBalanceTableRow} */
+    const row = {
+      // @ts-expect-error plain glass is not a material a published row can carry
+      material: MATERIAL.GLASS,
+      accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      month: '2026-03',
+      totalCredited: 0,
+      eligibleForWasteBalance: 0,
+      sentOnDeductions: 0,
+      netCredit: 0
+    }
+
+    expect(row.material).toBe(MATERIAL.GLASS)
+  })
+
+  it('publishes a glass registration the split reached under its process', async () => {
+    const operator = makeOperator({
+      orgId: 500013,
+      material: MATERIAL.GLASS,
+      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+    })
 
     const { table } = await run({
       organisations: [operator.organisation],
@@ -371,8 +395,37 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data.map(({ material }) => material)).toEqual([''])
+    expect(table.data.map(({ material }) => material)).toEqual([
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
+    ])
   })
+
+  it.each([
+    [
+      'carrying both recycling processes',
+      Object.values(GLASS_RECYCLING_PROCESS)
+    ],
+    ['carrying no recycling process', undefined],
+    ['carrying an empty recycling process list', []]
+  ])(
+    'refuses to publish a glass registration %s',
+    async (_description, glassRecyclingProcess) => {
+      const operator = makeOperator({
+        orgId: 500021,
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess
+      })
+
+      await expect(
+        run({
+          organisations: [operator.organisation],
+          submissions: [
+            { ...operator, rows: [receivedRow('row-1', '2026-03-10', 100)] }
+          ]
+        })
+      ).rejects.toThrow('reg-500021')
+    }
+  )
 
   it('ignores a table that does not count under the accreditation', async () => {
     const operator = makeOperator({ orgId: 500012 })
