@@ -12,7 +12,10 @@ import {
 } from '#domain/summary-logs/table-schemas/shared/fields.js'
 import { REPROCESSED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
 import { RECEIVED_LOADS_FIELDS as EXPORTER_RECEIVED_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
-import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
+import {
+  monthKeyForDate,
+  YEAR_LENGTH
+} from '#common/helpers/dates/year-month.js'
 
 /**
  * The part of a waste record state the aggregation reads: what the row is, its
@@ -49,7 +52,8 @@ const YES = 'Yes'
 
 /**
  * An inclusive month range as `YYYY-MM` keys. The service supplies it (January
- * 2026 → the current month); the domain function reads the clock nowhere.
+ * of the reporting year → the reporting month); the domain function reads the
+ * clock nowhere.
  *
  * @typedef {Object} MonthRange
  * @property {string} fromMonth - inclusive start, `YYYY-MM`
@@ -153,7 +157,9 @@ const expandMonthRange = ({ fromMonth, toMonth }) => {
   let year = fromYear
   let month = fromMonthNumber
   while (year < toYear || (year === toYear && month <= toMonthNumber)) {
-    months.push(`${year}-${String(month).padStart(2, '0')}`)
+    months.push(
+      `${String(year).padStart(YEAR_LENGTH, '0')}-${String(month).padStart(2, '0')}`
+    )
     month += 1
     if (month > 12) {
       month = 1

@@ -5,7 +5,10 @@ import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas
 import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
-import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
+import {
+  monthKeyForDate,
+  YEAR_LENGTH
+} from '#common/helpers/dates/year-month.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
 /**
@@ -19,14 +22,19 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  */
 
 /**
- * The report covers a fixed window: January 2026 (the first reporting month)
- * through the current month, as of generation. "Current month" is the
- * Europe/London calendar month — consistent with the project's month-boundary
- * decisions — so a submission just before UK midnight at a month end lands in
- * the month the operator sees, not the UTC one. Row dates themselves are
- * date-only strings bucketed in UTC by the domain, and are unaffected.
+ * The first month of the window that ends at `reportingMonth`: January of that
+ * month's reporting year.
+ *
+ * The report buckets tonnage by the month the waste was received, so a
+ * reporting year opens at its January. The carry-forward the regulations allow
+ * for December-received waste is elective and per-note, so it is a property of
+ * the notes raised against that waste rather than of this window.
+ *
+ * @param {string} reportingMonth - `YYYY-MM`
+ * @returns {string} `YYYY-01`
  */
-const REPORT_START_MONTH = '2026-01'
+const windowStartForReportingMonth = (reportingMonth) =>
+  `${reportingMonth.slice(0, YEAR_LENGTH)}-01`
 
 /**
  * A single flat row of the report — one accreditation in one month.
@@ -69,33 +77,6 @@ const compareRows = (a, b) =>
   a.month.localeCompare(b.month)
 
 /**
- * Build the credited-tonnage report: one row per accredited-partition per month
- * (January 2026 → the month of `now`, zero-filled) derived from each
- * accreditation's latest submitted summary log.
- *
- * The ledger query yields one entry per accredited partition with a submission,
- * so accreditations with no submission never appear. Each entry's row states are
- * read at that submission's head, classified against today's accreditation and
- * overseas-site data rather than the reading stamped at submission, and
- * aggregated by the pure domain function; the organisation join attaches the
- * external reference, accreditation number, processing type and effective
- * material, and drops test organisations. Rows dropped for a bad
- * month-assignment date are counted per accreditation in a structured log line.
- *
- * This report answers what an accreditation has credited as of now, so
- * approving an overseas site or amending a validity period must move the
- * figures without waiting for the operator to submit again.
- *
- * @param {Object} params
- * @param {WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {OverseasSitesRepository} params.overseasSitesRepository
- * @param {TypedLogger} params.logger
- * @param {Date} params.now - clock reading supplied by the caller; the report's upper month bound
- * @returns {Promise<CreditedTonnageReport>}
- */
-/**
  * The two tonnage figures on one population of skipped rows, for the log line.
  * Both are given because they routinely differ: a row dated before the
  * reporting window is usually outside its accreditation period as well, so it
@@ -108,17 +89,56 @@ const compareRows = (a, b) =>
 const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
   `(${totalCredited}t credited, ${eligibleForWasteBalance}t eligible)`
 
+/**
+ * Build the credited-tonnage report: one row per accredited-partition per month
+ * (January of the reporting year → the reporting month, zero-filled) derived
+ * from each accreditation's latest submitted summary log.
+ *
+ * The ledger query yields one entry per accredited partition with a submission,
+ * so accreditations with no submission never appear. Each entry's row states are
+ * read at that submission's head, classified against today's accreditation and
+ * overseas-site data rather than the reading stamped at submission, and
+ * aggregated by the pure domain function; the organisation join attaches the
+ * external reference, accreditation number, processing type and effective
+ * material, and drops test organisations. Rows dropped for a bad
+ * month-assignment date are counted per accreditation in a structured log line.
+ *
+ * This report answers what an accreditation has credited as of now, so
+ * approving an overseas site or amending a validity period must move the
+ * figures without waiting for the operator to submit again. A requested
+ * reporting month moves the window and nothing else: an earlier month returns
+ * today's position truncated to that month, not the report that month would
+ * have produced.
+ *
+ * @param {Object} params
+ * @param {WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
+ * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {TypedLogger} params.logger
+ * @param {Date} params.now - clock reading supplied by the caller
+ * @param {string} [params.reportingMonth] - `YYYY-MM` the window runs to; defaults to the Europe/London calendar month of `now`
+ * @returns {Promise<CreditedTonnageReport>}
+ */
 export const buildCreditedTonnageReport = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
   organisationsRepository,
   overseasSitesRepository,
   logger,
-  now
+  now,
+  reportingMonth
 }) => {
+  // Unasked, the report runs to the Europe/London calendar month — consistent
+  // with the project's month-boundary decisions — so a submission just before
+  // UK midnight at a month end lands in the month the operator sees, not the
+  // UTC one. Row dates themselves are date-only strings bucketed in UTC by the
+  // domain, and are unaffected.
+  const toMonth =
+    reportingMonth ?? /** @type {string} */ (monthKeyForDate(now, UK_TIME_ZONE))
   const monthRange = {
-    fromMonth: REPORT_START_MONTH,
-    toMonth: /** @type {string} */ (monthKeyForDate(now, UK_TIME_ZONE))
+    fromMonth: windowStartForReportingMonth(toMonth),
+    toMonth
   }
 
   const [entries, organisations, allSites] = await Promise.all([

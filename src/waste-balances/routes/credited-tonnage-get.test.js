@@ -19,15 +19,19 @@ import { creditedTonnageGetPath } from './credited-tonnage-get.js'
 
 const SUMMARY_LOG_ID = 'sl-credited-1'
 
-const injectReport = (server, credentials) =>
+const injectReport = (server, credentials, query = '') =>
   server.inject({
     method: 'GET',
-    url: creditedTonnageGetPath,
+    url: `${creditedTonnageGetPath}${query}`,
     ...credentials
   })
 
 describe(`GET ${creditedTonnageGetPath}`, () => {
   setupAuthContext()
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
 
   describe('access control', () => {
     let server
@@ -75,7 +79,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     await server.stop()
   })
 
-  it('returns a credited-tonnage row derived from an accreditation latest submission', async () => {
+  const createServerWithFebruarySubmission = async () => {
     const accreditationId = new ObjectId().toString()
     const registration = buildRegistration({
       accreditationId,
@@ -157,6 +161,18 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       }
     })
 
+    return { server, org, linkedAccreditation }
+  }
+
+  it('returns a credited-tonnage row derived from an accreditation latest submission', async () => {
+    const { server, org, linkedAccreditation } =
+      await createServerWithFebruarySubmission()
+
+    // Unasked, the report covers the reporting year the clock is in, so the
+    // February 2026 submission is only in range while the clock says 2026.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-03-15T12:00:00.000Z'))
+
     const response = await injectReport(server, asServiceMaintainerRead())
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -183,6 +199,50 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     expect(
       body.data.every((row) => row.organisation.reference === '500123')
     ).toBe(true)
+
+    await server.stop()
+  })
+
+  it('reports as at a requested month, from January of that month reporting year', async () => {
+    const { server } = await createServerWithFebruarySubmission()
+
+    const response = await injectReport(
+      server,
+      asServiceMaintainerRead(),
+      '?month=2026-02'
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const months = JSON.parse(response.payload).data.map((row) => row.month)
+    expect(months).toEqual(['2026-01', '2026-02'])
+
+    await server.stop()
+  })
+
+  it('rejects a month that is not a calendar month', async () => {
+    const server = await createTestServer({})
+
+    const response = await injectReport(
+      server,
+      asServiceMaintainerRead(),
+      '?month=2026-13'
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+
+    await server.stop()
+  })
+
+  it('rejects a year the report could not key its months by', async () => {
+    const server = await createTestServer({})
+
+    const response = await injectReport(
+      server,
+      asServiceMaintainerRead(),
+      '?month=0001-02'
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
 
     await server.stop()
   })

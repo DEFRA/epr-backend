@@ -214,7 +214,8 @@ const overseasSite = ({ id, validFrom }) => ({
  *   entries: any[],
  *   rowStatesByAccreditationId?: Record<string, any[]>,
  *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
- *   now?: Date
+ *   now?: Date,
+ *   reportingMonth?: string
  * }} options
  */
 const run = ({
@@ -222,7 +223,8 @@ const run = ({
   entries,
   rowStatesByAccreditationId = {},
   overseasSites = [],
-  now = NOW
+  now = NOW,
+  reportingMonth
 }) => {
   const logger = { info: vi.fn(), warn: vi.fn() }
   const ledgerRepository = {
@@ -252,7 +254,8 @@ const run = ({
       ),
       overseasSitesRepository,
       logger: /** @type {TypedLogger} */ (/** @type {unknown} */ (logger)),
-      now
+      now,
+      reportingMonth
     })
   }
 }
@@ -495,6 +498,75 @@ describe('buildCreditedTonnageReport', () => {
 
     const months = (await report).data.map((r) => r.month)
     expect(months[months.length - 1]).toBe('2026-07')
+  })
+
+  it('opens the window at January of the reporting year, so a report generated in a later year carries nothing from the one before', async () => {
+    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
+      orgId: 500001,
+      validFrom: '2026-01-01',
+      validTo: '2027-12-31'
+    })
+
+    const { report } = run({
+      organisations: [organisation],
+      entries: [ledgerEntry],
+      rowStatesByAccreditationId: {
+        [accreditationId]: [
+          receivedRow('2026-11-10', 100),
+          receivedRow('2027-01-10', 50)
+        ]
+      },
+      now: new Date('2027-02-15T12:00:00.000Z')
+    })
+
+    const rows = (await report).data
+    expect(rows.map((r) => [r.month, r.tonnage.totalCredited])).toEqual([
+      ['2027-01', 50],
+      ['2027-02', 0]
+    ])
+  })
+
+  it('ends the window at a requested reporting month rather than the clock', async () => {
+    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
+      orgId: 500001
+    })
+
+    const { report } = run({
+      organisations: [organisation],
+      entries: [ledgerEntry],
+      rowStatesByAccreditationId: {
+        [accreditationId]: [
+          receivedRow('2026-02-10', 100),
+          receivedRow('2026-03-10', 25)
+        ]
+      },
+      reportingMonth: '2026-02'
+    })
+
+    const rows = (await report).data
+    expect(rows.map((r) => r.month)).toEqual(['2026-01', '2026-02'])
+    expect(rows[1].tonnage.totalCredited).toBe(100)
+  })
+
+  it('takes the reporting year from the requested month, not from the clock', async () => {
+    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
+      orgId: 500001
+    })
+
+    const { report } = run({
+      organisations: [organisation],
+      entries: [ledgerEntry],
+      rowStatesByAccreditationId: {
+        [accreditationId]: [receivedRow('2026-02-10', 100)]
+      },
+      now: new Date('2027-05-15T12:00:00.000Z'),
+      reportingMonth: '2026-02'
+    })
+
+    expect((await report).data.map((r) => r.month)).toEqual([
+      '2026-01',
+      '2026-02'
+    ])
   })
 
   it('omits accreditations that have no submitted summary log (absent from the ledger query)', async () => {
