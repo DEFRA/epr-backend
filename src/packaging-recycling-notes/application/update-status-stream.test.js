@@ -240,6 +240,8 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     })
     const reread = await packagingRecyclingNotesRepository.findById(PRN_ID)
 
+    // Acceptance moves no pool, so it loads no accreditation and writes none -
+    // the pool that matters was recorded on the raise.
     expect(latest?.payload).toEqual({
       prnId: PRN_ID,
       amount: TONNAGE,

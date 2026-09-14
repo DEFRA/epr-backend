@@ -32,7 +32,8 @@ const buildResponse = (prns, { wasteProcessingType }) =>
     status: prn.status.currentStatus,
     createdAt: prn.createdAt,
     issuedAt: prn.status.issued?.at ?? null,
-    wasteProcessingType
+    wasteProcessingType,
+    isDecemberWaste: prn.isDecemberWaste
   }))
 
 export const packagingRecyclingNotesList = {

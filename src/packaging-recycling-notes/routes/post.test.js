@@ -43,7 +43,7 @@ const SEED_BALANCE = { amount: 500, availableAmount: 500 }
  * resolves against it. Passing `null` leaves the ledger absent, which resolves
  * to zero available.
  *
- * @param {{ amount: number, availableAmount: number } | null} [closingBalance]
+ * @param {{ amount: number, availableAmount: number, decemberAmount?: number, decemberAvailableAmount?: number } | null} [closingBalance]
  */
 const seedStream = (closingBalance = SEED_BALANCE) =>
   createInMemoryLedgerRepository(
@@ -771,7 +771,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
       })
 
-      it('returns 409 and creates no draft for an input reprocessor, even inside the window', async () => {
+      it('creates the draft for an input reprocessor declaring December inside the window', async () => {
         vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
         organisationsRepository.findAccreditationById.mockResolvedValueOnce({
           id: accreditationId,
@@ -786,6 +786,12 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
           }
         })
+        ledgerRepository = seedStream({
+          amount: 500,
+          availableAmount: 500,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
+        })
 
         const response = await server.inject({
           method: 'POST',
@@ -794,14 +800,11 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: { ...validPayload, isDecemberWaste: true }
         })
 
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload).code).toBe(
-          DECEMBER_WASTE_NOT_DECLARABLE_CODE
-        )
-        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+        expect(JSON.parse(response.payload).isDecemberWaste).toBe(true)
       })
 
-      it('returns 409 and creates no draft for an exporter, even inside the window', async () => {
+      it('creates the draft for an exporter declaring December inside the window', async () => {
         vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
         organisationsRepository.findAccreditationById.mockResolvedValueOnce({
           id: accreditationId,
@@ -812,6 +815,12 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
           submittedToRegulator: 'ea'
         })
+        ledgerRepository = seedStream({
+          amount: 500,
+          availableAmount: 500,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
+        })
 
         const response = await server.inject({
           method: 'POST',
@@ -820,11 +829,8 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: { ...validPayload, isDecemberWaste: true }
         })
 
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload).code).toBe(
-          DECEMBER_WASTE_NOT_DECLARABLE_CODE
-        )
-        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+        expect(JSON.parse(response.payload).isDecemberWaste).toBe(true)
       })
 
       it('creates the draft when isDecemberWaste is false outside the window, for any accreditation type', async () => {
@@ -844,6 +850,97 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           url,
           ...asOperator(),
           payload: { ...validPayload, isDecemberWaste: false }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+      })
+    })
+
+    describe('December pool routing at the create pre-check', () => {
+      const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`
+
+      const exporterAccreditation = {
+        id: accreditationId,
+        status: 'approved',
+        accreditationNumber: 'ACC-001',
+        material: MATERIAL.PLASTIC,
+        validFrom: '2026-01-01',
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        submittedToRegulator: 'ea'
+      }
+
+      afterEach(() => {
+        vi.useRealTimers()
+      })
+
+      it('returns 409 when an exporter December raise exceeds the December pool, even when the total balance covers it', async () => {
+        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
+          exporterAccreditation
+        )
+        ledgerRepository = seedStream({
+          amount: 500,
+          availableAmount: 500,
+          decemberAmount: 50,
+          decemberAvailableAmount: 50
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 100, isDecemberWaste: true }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          'INSUFFICIENT_AVAILABLE_BALANCE'
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('reserves the December pool from a general raise, refusing above total minus December', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
+          exporterAccreditation
+        )
+        // available 500, December reserve 450 -> general cap 50
+        ledgerRepository = seedStream({
+          amount: 500,
+          availableAmount: 500,
+          decemberAmount: 450,
+          decemberAvailableAmount: 450
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 100, isDecemberWaste: false }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          'INSUFFICIENT_AVAILABLE_BALANCE'
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('permits a general raise up to the December-reserved cap', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
+          exporterAccreditation
+        )
+        ledgerRepository = seedStream({
+          amount: 500,
+          availableAmount: 500,
+          decemberAmount: 450,
+          decemberAvailableAmount: 450
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, tonnage: 50, isDecemberWaste: false }
         })
 
         expect(response.statusCode).toBe(StatusCodes.CREATED)

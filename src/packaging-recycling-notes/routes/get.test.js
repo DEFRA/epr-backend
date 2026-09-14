@@ -69,7 +69,7 @@ const mockPrns = [
     },
     tonnage: 120,
     isExport: false,
-    isDecemberWaste: false,
+    isDecemberWaste: true,
     obligationYear: 2027,
     status: {
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
@@ -171,7 +171,8 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           createdAt: '2026-01-15T10:00:00.000Z',
           issuedAt: null,
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          isDecemberWaste: false
         })
         expect(payload[1]).toStrictEqual({
           id: 'prn-002',
@@ -186,7 +187,8 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           createdAt: '2026-01-18T14:30:00.000Z',
           issuedAt: '2026-01-20T09:00:00.000Z',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          isDecemberWaste: true
         })
       })
 

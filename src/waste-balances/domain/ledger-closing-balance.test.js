@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
+import { LEDGER_EVENT_KIND, POOL } from '../repository/ledger-schema.js'
 import {
   closingForSummaryLogSubmitted,
   closingForPrn
@@ -211,5 +211,75 @@ describe('closingForPrn', () => {
         })
       }
     )
+  })
+
+  describe('debiting the December pool for a December PRN', () => {
+    // A December PRN moves its pool by the same delta it applies to the total:
+    // creation ringfences decemberAvailableAmount alongside availableAmount;
+    // issue deducts decemberAmount alongside amount. The untouched dimension of
+    // each pool is carried through unchanged.
+    const openingWithDecember = {
+      amount: 1000,
+      availableAmount: 800,
+      decemberAmount: 300,
+      decemberAvailableAmount: 250
+    }
+
+    it('ringfences the December available amount alongside the total on creation', () => {
+      expect(
+        closingForPrn(
+          openingWithDecember,
+          LEDGER_EVENT_KIND.PRN_CREATED,
+          100,
+          POOL.DECEMBER
+        )
+      ).toEqual({
+        amount: 1000,
+        availableAmount: 700,
+        decemberAmount: 300,
+        decemberAvailableAmount: 150
+      })
+    })
+
+    it('deducts the December amount alongside the total on issue', () => {
+      expect(
+        closingForPrn(
+          openingWithDecember,
+          LEDGER_EVENT_KIND.PRN_ISSUED,
+          100,
+          POOL.DECEMBER
+        )
+      ).toEqual({
+        amount: 900,
+        availableAmount: 800,
+        decemberAmount: 200,
+        decemberAvailableAmount: 250
+      })
+    })
+
+    // The decider only routes to the December pool once the opening carries a
+    // December portion, so reaching here without one is a broken invariant.
+    // It fails loud rather than silently materialising a negative December pool.
+    it('throws on creation when the December pool is drawn but the opening carries no December portion', () => {
+      expect(() =>
+        closingForPrn(
+          { amount: 1000, availableAmount: 800 },
+          LEDGER_EVENT_KIND.PRN_CREATED,
+          100,
+          POOL.DECEMBER
+        )
+      ).toThrow('Cannot debit the December pool')
+    })
+
+    it('throws on issue when the December pool is drawn but the opening carries no December portion', () => {
+      expect(() =>
+        closingForPrn(
+          { amount: 1000, availableAmount: 800 },
+          LEDGER_EVENT_KIND.PRN_ISSUED,
+          100,
+          POOL.DECEMBER
+        )
+      ).toThrow('Cannot debit the December pool')
+    })
   })
 })
