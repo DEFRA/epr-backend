@@ -282,4 +282,76 @@ describe('closingForPrn', () => {
       ).toThrow('Cannot debit the December pool')
     })
   })
+
+  describe('crediting the December pool for a December PRN', () => {
+    // Cancellation reverses whichever movement the raise applied to the December
+    // pool: creation-cancelled returns the ringfenced decemberAvailableAmount
+    // alongside the total availableAmount; cancelled-after-issue returns both
+    // December amounts alongside the totals. The untouched dimension of each pool
+    // is carried through unchanged.
+    const openingWithDecember = {
+      amount: 1000,
+      availableAmount: 800,
+      decemberAmount: 300,
+      decemberAvailableAmount: 250
+    }
+
+    it('returns the ringfenced December available amount alongside the total on creation cancellation', () => {
+      expect(
+        closingForPrn(
+          openingWithDecember,
+          LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
+          100,
+          POOL.DECEMBER
+        )
+      ).toEqual({
+        amount: 1000,
+        availableAmount: 900,
+        decemberAmount: 300,
+        decemberAvailableAmount: 350
+      })
+    })
+
+    it('returns both December amounts alongside the totals when an issued December PRN is cancelled', () => {
+      expect(
+        closingForPrn(
+          openingWithDecember,
+          LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+          100,
+          POOL.DECEMBER
+        )
+      ).toEqual({
+        amount: 1100,
+        availableAmount: 900,
+        decemberAmount: 400,
+        decemberAvailableAmount: 350
+      })
+    })
+
+    // A December-pool reversal reads its pool off the raise event, which
+    // materialised the December portion, so the opening must carry one. Reaching
+    // here without it is a broken invariant: fail loud rather than silently
+    // materialise December capacity from nothing.
+    it('throws on creation cancellation when the December pool is drawn but the opening carries no December portion', () => {
+      expect(() =>
+        closingForPrn(
+          { amount: 1000, availableAmount: 800 },
+          LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED,
+          100,
+          POOL.DECEMBER
+        )
+      ).toThrow('Cannot credit the December pool')
+    })
+
+    it('throws on cancellation after issue when the December pool is drawn but the opening carries no December portion', () => {
+      expect(() =>
+        closingForPrn(
+          { amount: 1000, availableAmount: 800 },
+          LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+          100,
+          POOL.DECEMBER
+        )
+      ).toThrow('Cannot credit the December pool')
+    })
+  })
 })

@@ -12,6 +12,7 @@ import {
 import { decidePrnTransition } from '#packaging-recycling-notes/domain/prn-transition.js'
 import { selectObligationYearForAcceptance } from '#packaging-recycling-notes/domain/obligation-year.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
@@ -28,18 +29,34 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
  */
 
 /**
- * The transitions that touch a balance pool and so need the accreditation to
- * resolve the pool: the ringfence (draft → awaiting_authorisation) and issue
- * (awaiting_authorisation → awaiting_acceptance) that debit it, and the delete
- * (→ deleted) and cancel (→ cancelled) that reverse it. The raises record the
- * resolved pool on the event; the reversals read it to refuse a December-pool
- * reversal until the restore is implemented (PAE-1923).
+ * The transitions that debit a balance pool: the ringfence (draft →
+ * awaiting_authorisation) and the issue (awaiting_authorisation →
+ * awaiting_acceptance). A December-declared one resolves its pool from the
+ * accreditation and records it on the event, so a later reversal can read it
+ * back (ADR-0049).
  *
  * @type {Set<PrnStatus>}
  */
-const POOL_TOUCHING_TARGET_STATUSES = new Set([
+const RAISE_TARGET_STATUSES = new Set([
   PRN_STATUS.AWAITING_AUTHORISATION,
-  PRN_STATUS.AWAITING_ACCEPTANCE,
+  PRN_STATUS.AWAITING_ACCEPTANCE
+])
+
+/**
+ * The transitions that credit a balance pool back: the delete (→ deleted) and
+ * the cancel (→ cancelled). A December-declared one resolves its pool by reading
+ * it off the PRN's raise event rather than the accreditation, so it restores the
+ * pool the raise actually drew even if the accreditation has since changed
+ * (ADR-0049).
+ *
+ * Keyed on target status alone, which is sound only because these targets are
+ * currently reached by exactly one transition each, all balance-crediting. A
+ * future transition reusing `deleted`/`cancelled` as a target from a state that
+ * moves no balance would need this gate to key on the `(from, to)` pair instead.
+ *
+ * @type {Set<PrnStatus>}
+ */
+const REVERSAL_TARGET_STATUSES = new Set([
   PRN_STATUS.DELETED,
   PRN_STATUS.CANCELLED
 ])
@@ -179,7 +196,7 @@ async function applyPrnTransition(ctx) {
   const { newStatus, actor, user, now, ledgerId, obligationYear } = ctx
 
   // Phase 1 — gather.
-  const { balance, append, prn, issuance, accreditation } =
+  const { balance, append, prn, issuance, pool } =
     await gatherTransitionState(ctx)
   const fromStatus = prn.status.currentStatus
 
@@ -193,7 +210,7 @@ async function applyPrnTransition(ctx) {
     accreditationYear: prn.accreditation.accreditationYear,
     now,
     balance,
-    payload: buildCommandPayload(prn, obligationYear, accreditation),
+    payload: buildCommandPayload(prn, obligationYear, pool),
     updatedBy: { id: user.id, name: user.name }
   })
 
@@ -244,8 +261,8 @@ async function applyPrnTransition(ctx) {
  * @param {PrnTransitionContext} ctx
  * @returns {Promise<import('#waste-balances/application/waste-balance-service.js').BalanceForUpdate & {
  *   prn: PackagingRecyclingNote,
- *   accreditation: import('#domain/organisations/accreditation.js').Accreditation | undefined,
- *   issuance: { accreditation: import('#domain/organisations/accreditation.js').Accreditation } | undefined
+ *   issuance: { accreditation: import('#domain/organisations/accreditation.js').Accreditation } | undefined,
+ *   pool: import('#waste-balances/repository/ledger-schema.js').Pool | undefined
  * }>}
  */
 async function gatherTransitionState(ctx) {
@@ -256,16 +273,15 @@ async function gatherTransitionState(ctx) {
   const prn = await loadPrn(ctx)
 
   // The accreditation is read when the transition needs it: always on issue
-  // (which stamps the PRN number from it), and on any pool-touching transition
-  // of a December-declared PRN, to resolve the pool (PAE-1922) - the raises
-  // record it on the event, the reversals read it to refuse a December-pool
-  // reversal until the restore lands (PAE-1923). A PRN that never
-  // declared December waste cannot use the December pool, so its cancellations
-  // read no accreditation and are unaffected. Read after the balance, so
-  // nothing the ruling uses predates the head.
+  // (which stamps the PRN number from it), and on a raise of a December-declared
+  // PRN, to resolve the pool it debits (PAE-1922). A reversal resolves its pool
+  // from the raise event instead (PAE-1923), so it reads no accreditation; a PRN
+  // that never declared December waste draws the general balance, so it reads
+  // none either. Read after the balance, so nothing the ruling uses predates the
+  // head.
   const needsAccreditation =
     newStatus === PRN_STATUS.AWAITING_ACCEPTANCE ||
-    (prn.isDecemberWaste && POOL_TOUCHING_TARGET_STATUSES.has(newStatus))
+    (prn.isDecemberWaste && RAISE_TARGET_STATUSES.has(newStatus))
   const accreditation = needsAccreditation
     ? await organisationsRepository.findAccreditationById(
         ledgerId.organisationId,
@@ -278,7 +294,65 @@ async function gatherTransitionState(ctx) {
       ? { accreditation }
       : undefined
 
-  return { balance, append, prn, accreditation, issuance }
+  const pool = await resolveTransitionPool(ctx, { prn, accreditation })
+
+  return { balance, append, prn, issuance, pool }
+}
+
+/**
+ * The pool a transition's balance movement draws on, or `undefined` when it
+ * touches none. A raise re-derives it from the accreditation — safe because both
+ * inputs are immutable (`accruesDecember` reads only the processing type,
+ * `isDecemberWaste` is fixed on the PRN). A reversal reads it off the PRN's raise
+ * event, so it restores the pool the raise actually drew even if the
+ * accreditation has since changed, which is what ADR-0049 mandates.
+ *
+ * @param {PrnTransitionContext} ctx
+ * @param {Object} gathered
+ * @param {PackagingRecyclingNote} gathered.prn
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} [gathered.accreditation]
+ * @returns {Promise<import('#waste-balances/repository/ledger-schema.js').Pool | undefined>}
+ */
+async function resolveTransitionPool(
+  { service, ledgerId, newStatus },
+  { prn, accreditation }
+) {
+  if (prn.isDecemberWaste && REVERSAL_TARGET_STATUSES.has(newStatus)) {
+    return readRaisePool(service, ledgerId, prn.id)
+  }
+  return accreditation !== undefined
+    ? resolvePool({ isDecemberWaste: prn.isDecemberWaste, accreditation })
+    : undefined
+}
+
+/**
+ * The pool the PRN's raise recorded, read off its `prn-created` event. The whole
+ * PRN history is scanned from the start rather than the read watermark, because
+ * the raise is the earliest event and the reversal must find it whatever the
+ * projection has folded. An absent pool means only a raise recorded before the
+ * pool dimension existed; a current general raise states `general` explicitly
+ * (`resolvePool` never returns `undefined`). Either routes to the general
+ * credit, as the closing-balance reader coalesces an absent pool to general.
+ *
+ * @param {WasteBalanceService} service
+ * @param {WasteBalanceLedgerId & { accreditationId: string }} ledgerId
+ * @param {string} prnId
+ * @returns {Promise<import('#waste-balances/repository/ledger-schema.js').Pool | undefined>}
+ */
+async function readRaisePool(service, ledgerId, prnId) {
+  const events = await service.prnCatchupEvents({
+    ...ledgerId,
+    prnId,
+    afterEventNumber: 0
+  })
+  const raise = events.find(
+    (event) => event.kind === LEDGER_EVENT_KIND.PRN_CREATED
+  )
+  return raise === undefined
+    ? undefined
+    : /** @type {{ pool?: import('#waste-balances/repository/ledger-schema.js').Pool }} */ (
+        raise.payload
+      ).pool
 }
 
 /**
@@ -318,33 +392,21 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
  * slipping past the deciders' `<` sufficiency check. `NaN` is the only value
  * that passes that check, so it is refused by name.
  *
- * The pool is written only where it is genuinely resolved - on the transitions
- * that load the accreditation (the raises, and December pool-touching
- * reversals) - and omitted where it is not, rather than guessed. A transition
- * that moves no pool (accept, reject) loads no accreditation, so its event
- * carries no pool: writing `general` there would be a falsehood on a December
- * PRN, and nothing reads it anyway (the debit and the reversal restore both
- * read the raise). A reader coalesces an absent pool to `general`, as it does a
- * pre-feature event, so an omitted general is read exactly as the flag's
+ * The pool is written only where `resolveTransitionPool` genuinely resolved one
+ * — on the raises (from the accreditation) and the December reversals (off the
+ * raise event) — and omitted where it did not, rather than guessed. A transition
+ * that moves no pool (accept, reject) resolves none, so its event carries no
+ * pool: writing `general` there would be a falsehood on a December PRN, and
+ * nothing reads it anyway. A reader coalesces an absent pool to `general`, as it
+ * does a pre-feature event, so an omitted general is read exactly as the flag's
  * absence was (ADR-0049).
- *
- * ADR-0049 resolves the pool once at the first balance event and has later
- * events carry that copy; here it is re-derived per transition instead. That is
- * safe because both inputs are immutable: `accruesDecember` reads only the
- * accreditation's processing type, and `isDecemberWaste` is fixed on the PRN,
- * so a re-derivation always equals the original, and the issue path re-uses the
- * accreditation it already loads to stamp the PRN number. The reversal restore
- * (PAE-1923) must NOT copy this shortcut: it credits a specific pool, so it
- * should read `pool` off the PRN's raise event (via `service.prnCatchupEvents`)
- * rather than the accreditation, which is both what the ADR mandates and robust
- * to a since-changed accreditation.
  *
  * @param {PackagingRecyclingNote} prn
  * @param {number} [obligationYear]
- * @param {import('#domain/organisations/accreditation.js').Accreditation} [accreditation]
+ * @param {import('#waste-balances/repository/ledger-schema.js').Pool} [pool]
  * @returns {import('#waste-balances/repository/ledger-schema.js').PrnAcceptedPayload}
  */
-function buildCommandPayload(prn, obligationYear, accreditation) {
+function buildCommandPayload(prn, obligationYear, pool) {
   if (Number.isNaN(prn.tonnage) || prn.tonnage <= 0) {
     throw Boom.badImplementation(
       `PRN tonnage must be positive at the waste-balance write boundary; received ${prn.tonnage}`
@@ -355,11 +417,6 @@ function buildCommandPayload(prn, obligationYear, accreditation) {
     prn,
     obligationYear
   )
-
-  const pool =
-    accreditation !== undefined
-      ? resolvePool({ isDecemberWaste: prn.isDecemberWaste, accreditation })
-      : undefined
 
   return {
     prnId: prn.id,
