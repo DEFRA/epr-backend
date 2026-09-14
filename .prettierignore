@@ -2,3 +2,4 @@ package-lock.json
 node_modules
 coverage
 docs/architecture/decisions/index.md
+docs/summary-log-rules.md
