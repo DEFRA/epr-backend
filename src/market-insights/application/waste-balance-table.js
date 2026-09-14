@@ -25,6 +25,7 @@ import {
  * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
  * @typedef {import('#waste-records/repository/port.js').SubmittedRowState} SubmittedRowState
  * @typedef {import('#domain/organisations/registration.js').Registration} Registration
+ * @typedef {import('#domain/organisations/model.js').Material} Material
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} MonthlyContribution
  */
 
@@ -41,14 +42,14 @@ import {
  * across every operator that reported into it.
  *
  * @typedef {Object} WasteBalanceCell
- * @property {string} material
+ * @property {Material} material
  * @property {string} accreditationType
  * @property {string} month - `YYYY-MM`
  * @property {WasteBalanceFigures} figures
  */
 
 /**
- * @typedef {{ material: string, accreditationType: string, month: string } & PublishedWasteBalanceFigures} WasteBalanceTableRow
+ * @typedef {{ material: Material, accreditationType: string, month: string } & PublishedWasteBalanceFigures} WasteBalanceTableRow
  */
 
 /**
