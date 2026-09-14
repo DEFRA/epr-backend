@@ -1,7 +1,7 @@
 /**
  * Builds the "Summary Log Rules Reference" Markdown by introspecting the live
  * table schemas and report-mandatory policies. Pure: it returns the document as
- * a string and has no side effects, so the CLI wrapper can write it and the
+ * a string and has no side effects, so the CLI wrapper can print it and the
  * tests can exercise the helpers. Being derived from the code, it stays in step
  * with what actually validates uploads and gates report creation whenever it is
  * regenerated.
@@ -32,10 +32,10 @@ import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index
 export const TOOL_PATH = 'scripts/generate-summary-log-rules.mjs'
 export const TOOL_REPO = 'DEFRA/epr-backend'
 const TOOL_URL = `https://github.com/${TOOL_REPO}/blob/main/${TOOL_PATH}`
-const BINDER_DOCS =
-  'https://github.com/DEFRA/epr-re-ex-service/blob/main/docs/architecture/defined'
-const CLASSIFICATION_URL = `${BINDER_DOCS}/summary-log-row-validation-classification.md`
-const REPORT_CREATION_URL = `${BINDER_DOCS}/report-creation-mandatory-fields.md`
+// The generated doc is checked into the binder docs alongside these two, so link
+// to them relatively rather than by absolute URL.
+const CLASSIFICATION_URL = 'summary-log-row-validation-classification.md'
+const REPORT_CREATION_URL = 'report-creation-mandatory-fields.md'
 
 const TEMPLATE_ORDER = [
   [PROCESSING_TYPES.EXPORTER, 'Exporter (accredited)'],
@@ -300,7 +300,7 @@ const header = [
   '',
   'The complete, per-column set of rules applied to a Summary Log, for all five templates: in-sheet validation, Waste Balance contribution, and report-creation mandatory fields.',
   '',
-  `> ⚠️ **Generated file - do not edit by hand.** This page is produced by [\`${TOOL_PATH}\`](${TOOL_URL}) in the \`${TOOL_REPO}\` repository, which introspects the live table schemas and report-mandatory policies. To update it, run \`node ${TOOL_PATH}\` from an \`epr-backend\` checkout. Any manual edits will be lost the next time it is generated. Regenerate it after any change to a table schema, field schema or report-mandatory policy so it stays in step with what actually validates uploads.`,
+  `> ⚠️ **Generated file - do not edit by hand.** This page is produced by [\`${TOOL_PATH}\`](${TOOL_URL}) in the \`${TOOL_REPO}\` repository, which introspects the live table schemas and report-mandatory policies. To update it, run \`node ${TOOL_PATH}\` from an \`epr-backend\` checkout and overwrite this file with its output. Any manual edits will be lost the next time it is generated. Regenerate it after any change to a table schema, field schema or report-mandatory policy so it stays in step with what actually validates uploads.`,
   '',
   '## How to read this',
   '',

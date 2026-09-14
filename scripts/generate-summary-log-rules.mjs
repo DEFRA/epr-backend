@@ -1,19 +1,14 @@
 /**
- * Writes the "Summary Log Rules Reference" to docs/summary-log-rules.md.
- * All the logic lives in the pure, testable module beside this file; this
- * wrapper only performs the file write, so regenerating is a single command:
- *   node scripts/generate-summary-log-rules.mjs
+ * Prints the "Summary Log Rules Reference" (Markdown) to stdout. All the logic
+ * lives in the pure, testable module beside this file. The canonical copy is
+ * checked into the epr-re-ex-service (binder) docs, not this repo, so regenerate
+ * with a redirect into that file:
+ *   node scripts/generate-summary-log-rules.mjs \
+ *     > ../../epr-re-ex-service/docs/architecture/defined/summary-log-rules.md
  *
  * Regenerate after any change to a table schema, field schema or
  * report-mandatory policy so the doc stays in step with the code.
  */
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { generateDocument } from './summary-log-rules.mjs'
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const outputPath = join(root, 'docs', 'summary-log-rules.md')
-mkdirSync(dirname(outputPath), { recursive: true })
-writeFileSync(outputPath, generateDocument())
-process.stderr.write(`Wrote ${outputPath}\n`)
+process.stdout.write(generateDocument())
