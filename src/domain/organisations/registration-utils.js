@@ -102,7 +102,7 @@ export function activeAccreditationValidFrom(accreditation) {
  * records that no stored record is unsplit, and this is the one place that
  * claim is asserted. Every other applied for material is already the material.
  *
- * @param {{ id?: string, material: AppliedForMaterial, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
+ * @param {{ id: string, material: AppliedForMaterial, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
  * @returns {Material}
  */
 export function resolveMaterial(record) {

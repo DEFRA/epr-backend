@@ -18,6 +18,7 @@ import {
 } from './report-mandatory/assert-report-data-complete.js'
 
 /**
+ * @import { Material } from '#domain/organisations/model.js'
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
@@ -107,7 +108,7 @@ function formatSiteAddress(address) {
 
 /**
  * @typedef {Pick<AggregatedReportDetail, 'source' | 'recyclingActivity' | 'exportActivity' | 'wasteSent'> & {
- *   material: string,
+ *   material: Material,
  *   wasteProcessingType: string,
  *   siteAddress: string | undefined,
  *   prn: { issuedTonnage: number } | null | undefined
