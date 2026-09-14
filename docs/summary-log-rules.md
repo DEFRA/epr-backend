@@ -4,7 +4,7 @@
 
 The complete, per-column set of rules applied to a Summary Log, for all five templates: in-sheet validation, Waste Balance contribution, and report-creation mandatory fields.
 
-> ⚠️ **Generated file - do not edit by hand.** This page is produced by [`scripts/generate-summary-log-rules.mjs`](https://github.com/DEFRA/epr-backend/blob/main/scripts/generate-summary-log-rules.mjs) in the `DEFRA/epr-backend` repository, which introspects the live table schemas and report-mandatory policies. To update it, run `node scripts/generate-summary-log-rules.mjs` from an `epr-backend` checkout. Any manual edits will be lost the next time it is generated, and because it is derived from the code it cannot drift from what actually validates uploads.
+> ⚠️ **Generated file - do not edit by hand.** This page is produced by [`scripts/generate-summary-log-rules.mjs`](https://github.com/DEFRA/epr-backend/blob/main/scripts/generate-summary-log-rules.mjs) in the `DEFRA/epr-backend` repository, which introspects the live table schemas and report-mandatory policies. To update it, run `node scripts/generate-summary-log-rules.mjs` from an `epr-backend` checkout. Any manual edits will be lost the next time it is generated. Regenerate it after any change to a table schema, field schema or report-mandatory policy so it stays in step with what actually validates uploads.
 
 ## How to read this
 
