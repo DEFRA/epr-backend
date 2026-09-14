@@ -316,7 +316,7 @@ describe('buildWasteBalanceTable', () => {
           month
         }))
       ).toEqual(expect.arrayContaining(grid))
-      expect(table.data).toHaveLength(grid.length)
+      expect(table.data).toHaveLength(96)
     })
 
     it('serves zeroes for a combination the ledger holds nothing for', async () => {

@@ -15,11 +15,7 @@ import {
   asServiceMaintainerRead
 } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import {
-  MATERIAL,
-  TONNAGE_MONITORING_MATERIALS,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
 
 const pathFor = (year, cadence, period) =>
@@ -145,10 +141,7 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const body = JSON.parse(response.payload)
-    expect(body.data).toHaveLength(
-      TONNAGE_MONITORING_MATERIALS.length *
-        Object.values(WASTE_PROCESSING_TYPE).length
-    )
+    expect(body.data).toHaveLength(16)
     expect(body.data).toContainEqual({
       material: MATERIAL.WOOD,
       accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,

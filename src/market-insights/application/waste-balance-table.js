@@ -75,8 +75,8 @@ const cellKey = ({ material, accreditationType, month }) =>
   `${material}::${accreditationType}::${month}`
 
 /**
- * The publication's layout is fixed, so a combination nothing reported into
- * is still a row.
+ * The publication prints every combination, so one nothing reported into is
+ * still a row.
  *
  * @param {string[]} months
  * @returns {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>[]}
