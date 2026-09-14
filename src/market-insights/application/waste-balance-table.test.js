@@ -534,7 +534,7 @@ describe('buildWasteBalanceTable', () => {
             ...operator,
             rows: [
               receivedRow('row-1', '2026-06-10', 40),
-              receivedRow('row-2', '2026-12-10', 999)
+              receivedRow('row-2', '2026-07-10', 999)
             ]
           }
         ]
