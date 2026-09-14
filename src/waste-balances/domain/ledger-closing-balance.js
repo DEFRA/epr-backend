@@ -79,6 +79,83 @@ const debitDecemberPortion = (openingPortion, prnAmount, field) => {
 }
 
 /**
+ * Credit a December pool field by `prnAmount`, reversing a debit the raise
+ * applied. A December-pool reversal reads its pool off the raise event, which
+ * materialised the portion, so the opening must carry it. An absent field is a
+ * broken invariant, not a state to coalesce away. Fail loud rather than silently
+ * materialise December capacity from nothing.
+ *
+ * @param {number | undefined} openingPortion
+ * @param {number} prnAmount
+ * @param {string} field
+ * @returns {number}
+ */
+const creditDecemberPortion = (openingPortion, prnAmount, field) => {
+  if (openingPortion === undefined) {
+    throw new Error(
+      `Cannot credit the December pool: opening balance carries no ${field}`
+    )
+  }
+  return toNumber(add(openingPortion, prnAmount))
+}
+
+/**
+ * December pool movement for a PRN event, mirroring the delta applied to the
+ * total fields: creation ringfences `decemberAvailableAmount`, issue deducts
+ * `decemberAmount`, and each cancellation credits back whichever December
+ * amounts its raise moved. Only consulted once the PRN draws the December pool;
+ * every other event leaves the pool untouched.
+ *
+ * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
+ * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
+ * @param {number} prnAmount
+ * @returns {Partial<import('../repository/ledger-schema.js').LedgerBalanceSnapshot>}
+ */
+const decemberPortionForPrn = (opening, kind, prnAmount) => {
+  switch (kind) {
+    case LEDGER_EVENT_KIND.PRN_CREATED:
+      return {
+        decemberAvailableAmount: debitDecemberPortion(
+          opening.decemberAvailableAmount,
+          prnAmount,
+          'decemberAvailableAmount'
+        )
+      }
+    case LEDGER_EVENT_KIND.PRN_ISSUED:
+      return {
+        decemberAmount: debitDecemberPortion(
+          opening.decemberAmount,
+          prnAmount,
+          'decemberAmount'
+        )
+      }
+    case LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED:
+      return {
+        decemberAvailableAmount: creditDecemberPortion(
+          opening.decemberAvailableAmount,
+          prnAmount,
+          'decemberAvailableAmount'
+        )
+      }
+    case LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE:
+      return {
+        decemberAmount: creditDecemberPortion(
+          opening.decemberAmount,
+          prnAmount,
+          'decemberAmount'
+        ),
+        decemberAvailableAmount: creditDecemberPortion(
+          opening.decemberAvailableAmount,
+          prnAmount,
+          'decemberAvailableAmount'
+        )
+      }
+    default:
+      return {}
+  }
+}
+
+/**
  * Compute closing balance for a PRN event.
  *
  * A general PRN moves the total fields but leaves the December amounts as they
@@ -87,7 +164,10 @@ const debitDecemberPortion = (openingPortion, prnAmount, field) => {
  *
  * A December PRN (`pool === 'december'`) moves its pool by the same delta it
  * applies to the total: creation ringfences `decemberAvailableAmount` alongside
- * `availableAmount`, issue deducts `decemberAmount` alongside `amount`.
+ * `availableAmount`, issue deducts `decemberAmount` alongside `amount`, and each
+ * cancellation credits back whichever December amounts its raise moved
+ * (creation-cancelled `decemberAvailableAmount`; cancelled-after-issue both). A
+ * general PRN leaves the December amounts untouched on every event.
  *
  * @param {import('../repository/ledger-schema.js').LedgerBalanceSnapshot} opening
  * @param {import('../repository/ledger-schema.js').LedgerEventKind} kind
@@ -101,42 +181,35 @@ export const closingForPrn = (
   prnAmount,
   pool = POOL.GENERAL
 ) => {
-  const drawsDecember = pool === POOL.DECEMBER
+  const december =
+    pool === POOL.DECEMBER
+      ? decemberPortionForPrn(opening, kind, prnAmount)
+      : {}
   switch (kind) {
     case LEDGER_EVENT_KIND.PRN_CREATED:
       return {
         ...opening,
         availableAmount: toNumber(subtract(opening.availableAmount, prnAmount)),
-        ...(drawsDecember && {
-          decemberAvailableAmount: debitDecemberPortion(
-            opening.decemberAvailableAmount,
-            prnAmount,
-            'decemberAvailableAmount'
-          )
-        })
+        ...december
       }
     case LEDGER_EVENT_KIND.PRN_ISSUED:
       return {
         ...opening,
         amount: toNumber(subtract(opening.amount, prnAmount)),
-        ...(drawsDecember && {
-          decemberAmount: debitDecemberPortion(
-            opening.decemberAmount,
-            prnAmount,
-            'decemberAmount'
-          )
-        })
+        ...december
       }
     case LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED:
       return {
         ...opening,
-        availableAmount: toNumber(add(opening.availableAmount, prnAmount))
+        availableAmount: toNumber(add(opening.availableAmount, prnAmount)),
+        ...december
       }
     case LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE:
       return {
         ...opening,
         amount: toNumber(add(opening.amount, prnAmount)),
-        availableAmount: toNumber(add(opening.availableAmount, prnAmount))
+        availableAmount: toNumber(add(opening.availableAmount, prnAmount)),
+        ...december
       }
     case LEDGER_EVENT_KIND.PRN_ACCEPTED:
     case LEDGER_EVENT_KIND.PRN_REJECTED:

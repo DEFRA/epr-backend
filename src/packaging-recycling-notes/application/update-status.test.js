@@ -117,6 +117,42 @@ const buildOpeningBalanceEvent = ({
 })
 
 /**
+ * A PRN ledger event (raise or reversal) for the PRN under test, carrying the
+ * `prnId` the reversal reads its pool off and the `pool` the raise resolved. The
+ * caller supplies the opening and closing balances so a realistic raised state
+ * can be seeded ahead of a cancellation.
+ *
+ * @param {{
+ *   kind: import('#waste-balances/repository/ledger-schema.js').LedgerEventKind,
+ *   number: number,
+ *   openingBalance: import('#waste-balances/repository/ledger-schema.js').LedgerBalanceSnapshot,
+ *   closingBalance: import('#waste-balances/repository/ledger-schema.js').LedgerBalanceSnapshot,
+ *   pool?: import('#waste-balances/repository/ledger-schema.js').Pool,
+ *   amount?: number
+ * }} params
+ * @returns {import('#waste-balances/repository/ledger-schema.js').LedgerEvent}
+ */
+const buildPrnLedgerEvent = ({
+  kind,
+  number,
+  openingBalance,
+  closingBalance,
+  pool,
+  amount = 100
+}) => ({
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationId: ORG_ID,
+  number,
+  kind,
+  payload: { prnId: PRN_ID, amount, ...(pool !== undefined && { pool }) },
+  openingBalance,
+  closingBalance,
+  createdAt: EVENT_AT,
+  createdBy: USER
+})
+
+/**
  * An organisation carrying the accreditation under test, with `ORG_ID` and
  * `ACC_ID` pinned so the seeded PRN's links resolve. `withAccreditation: false`
  * removes the accreditation so issuance can't find it.
@@ -158,21 +194,25 @@ const buildOrgWithAccreditation = ({
  *
  * @param {Object} [options]
  * @param {Object} [options.prn] - PRN to seed, or omitted for an empty repo
+ * @param {Object[]} [options.prns] - PRNs to seed, taking precedence over `prn`
  * @param {{ amount: number, availableAmount: number, decemberAmount?: number, decemberAvailableAmount?: number }} [options.balance] - opening balance, or omitted for none
+ * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} [options.ledgerEvents] - raw ledger events to seed, taking precedence over `balance` (for a raised-then-cancelled sequence)
  * @param {Object} [options.accreditation] - accreditation field overrides
  * @param {boolean} [options.withAccreditation]
  */
 const seedRepositories = ({
   prn,
+  prns,
   balance,
+  ledgerEvents,
   accreditation,
   withAccreditation = true
 } = {}) => {
   const prnRepository = createInMemoryPackagingRecyclingNotesRepository(
-    prn ? [prn] : []
+    prns ?? (prn ? [prn] : [])
   )(createMockLogger())
   const ledgerRepository = createInMemoryLedgerRepository(
-    balance ? [buildOpeningBalanceEvent(balance)] : []
+    ledgerEvents ?? (balance ? [buildOpeningBalanceEvent(balance)] : [])
   )()
   const wasteBalanceService = createWasteBalanceService(ledgerRepository)
   const organisationsRepository = createInMemoryOrganisationsRepository([
@@ -949,45 +989,228 @@ describe('updatePrnStatus', () => {
     })
   })
 
-  describe('refusing December-pool reversals until they are implemented', () => {
-    // A December raise debits the December pool, but crediting it back on
-    // cancellation is not yet built (PAE-1923). Rather than silently corrupt
-    // the pool by restoring only the total, a December-pool reversal is
-    // refused with 501 and nothing moves. General and output-reprocessor PRNs
-    // draw the general balance, so their cancellations are unaffected.
+  describe('restoring the December pool on reversal', () => {
+    // A December raise debits the December pool; its cancellation credits back
+    // whichever amounts the raise moved (PAE-1923). The reversal resolves its
+    // pool by reading it off the raise event, so it restores the right pool even
+    // when the accreditation has since changed. General and output-reprocessor
+    // PRNs draw the general balance, so their December amounts never move.
     const LEDGER_ID = {
       organisationId: ORG_ID,
       registrationId: REG_ID,
       accreditationId: ACC_ID
     }
 
-    it('refuses to delete a ringfenced December PRN and leaves the balance untouched', async () => {
+    it('returns the ringfenced December available amount when a not-yet-issued December PRN is cancelled', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
           isExport: true,
           isDecemberWaste: true,
+          lastAppliedEventNumber: 2,
           status: {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
             history: []
           }
         }),
-        balance: {
-          amount: 1000,
-          availableAmount: 900,
-          decemberAmount: 300,
-          decemberAvailableAmount: 200
-        },
+        ledgerEvents: [
+          buildOpeningBalanceEvent({
+            amount: 1000,
+            availableAmount: 1000,
+            decemberAmount: 300,
+            decemberAvailableAmount: 300
+          }),
+          buildPrnLedgerEvent({
+            kind: LEDGER_EVENT_KIND.PRN_CREATED,
+            number: 2,
+            pool: POOL.DECEMBER,
+            amount: 100,
+            openingBalance: {
+              amount: 1000,
+              availableAmount: 1000,
+              decemberAmount: 300,
+              decemberAvailableAmount: 300
+            },
+            closingBalance: {
+              amount: 1000,
+              availableAmount: 900,
+              decemberAmount: 300,
+              decemberAvailableAmount: 200
+            }
+          })
+        ],
         accreditation: { wasteProcessingType: 'exporter' }
       })
 
-      await expect(
-        callUpdate({
-          ...repositories,
-          newStatus: PRN_STATUS.DELETED,
-          actor: PRN_ACTOR.SIGNATORY
-        })
-      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 501 } })
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.DELETED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
+        }
+      )
+    })
+
+    it('returns both December amounts when an issued December PRN is cancelled', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          isExport: true,
+          isDecemberWaste: true,
+          lastAppliedEventNumber: 3,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            issued: { at: EVENT_AT, by: USER },
+            history: []
+          }
+        }),
+        ledgerEvents: [
+          buildOpeningBalanceEvent({
+            amount: 1000,
+            availableAmount: 1000,
+            decemberAmount: 300,
+            decemberAvailableAmount: 300
+          }),
+          buildPrnLedgerEvent({
+            kind: LEDGER_EVENT_KIND.PRN_CREATED,
+            number: 2,
+            pool: POOL.DECEMBER,
+            amount: 100,
+            openingBalance: {
+              amount: 1000,
+              availableAmount: 1000,
+              decemberAmount: 300,
+              decemberAvailableAmount: 300
+            },
+            closingBalance: {
+              amount: 1000,
+              availableAmount: 900,
+              decemberAmount: 300,
+              decemberAvailableAmount: 200
+            }
+          }),
+          buildPrnLedgerEvent({
+            kind: LEDGER_EVENT_KIND.PRN_ISSUED,
+            number: 3,
+            pool: POOL.DECEMBER,
+            amount: 100,
+            openingBalance: {
+              amount: 1000,
+              availableAmount: 900,
+              decemberAmount: 300,
+              decemberAvailableAmount: 200
+            },
+            closingBalance: {
+              amount: 900,
+              availableAmount: 900,
+              decemberAmount: 200,
+              decemberAvailableAmount: 200
+            }
+          })
+        ],
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.CANCELLED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
+        }
+      )
+    })
+
+    it('backs a fresh December raise with the capacity a cancellation restores', async () => {
+      // A distinct second PRN sharing the same ledger as the first, so the fresh
+      // raise draws on the balance the first PRN's cancellation restored.
+      const SECOND_PRN_ID = 'second-december-prn'
+      const repositories = seedRepositories({
+        prns: [
+          buildPrn({
+            tonnage: 100,
+            isExport: true,
+            isDecemberWaste: true,
+            lastAppliedEventNumber: 2,
+            status: {
+              currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+              history: []
+            }
+          }),
+          buildPrn({
+            id: SECOND_PRN_ID,
+            tonnage: 100,
+            isExport: true,
+            isDecemberWaste: true,
+            status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+          })
+        ],
+        ledgerEvents: [
+          buildOpeningBalanceEvent({
+            amount: 1000,
+            availableAmount: 1000,
+            decemberAmount: 300,
+            decemberAvailableAmount: 300
+          }),
+          buildPrnLedgerEvent({
+            kind: LEDGER_EVENT_KIND.PRN_CREATED,
+            number: 2,
+            pool: POOL.DECEMBER,
+            amount: 100,
+            openingBalance: {
+              amount: 1000,
+              availableAmount: 1000,
+              decemberAmount: 300,
+              decemberAvailableAmount: 300
+            },
+            closingBalance: {
+              amount: 1000,
+              availableAmount: 900,
+              decemberAmount: 300,
+              decemberAvailableAmount: 200
+            }
+          })
+        ],
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      // Cancel the first PRN: restores decemberAvailableAmount to 300.
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.DELETED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      // The cancellation returns the full December capacity before it is re-drawn.
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
+        }
+      )
+
+      // The restored capacity backs a fresh December raise of the same tonnage.
+      await callUpdate({
+        ...repositories,
+        id: SECOND_PRN_ID,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+      })
 
       expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
         {
@@ -999,43 +1222,111 @@ describe('updatePrnStatus', () => {
       )
     })
 
-    it('refuses to cancel an issued December PRN and leaves the balance untouched', async () => {
+    it('credits the pool the raise recorded, not the one the current accreditation would resolve', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
-          tonnage: 60,
-          isExport: true,
+          tonnage: 100,
           isDecemberWaste: true,
+          lastAppliedEventNumber: 2,
           status: {
-            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-            issued: { at: EVENT_AT, by: USER },
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
             history: []
           }
         }),
-        balance: {
-          amount: 440,
-          availableAmount: 940,
-          decemberAmount: 100,
-          decemberAvailableAmount: 100
-        },
-        accreditation: { wasteProcessingType: 'exporter' }
+        ledgerEvents: [
+          buildOpeningBalanceEvent({
+            amount: 1000,
+            availableAmount: 1000,
+            decemberAmount: 300,
+            decemberAvailableAmount: 300
+          }),
+          buildPrnLedgerEvent({
+            kind: LEDGER_EVENT_KIND.PRN_CREATED,
+            number: 2,
+            pool: POOL.DECEMBER,
+            amount: 100,
+            openingBalance: {
+              amount: 1000,
+              availableAmount: 1000,
+              decemberAmount: 300,
+              decemberAvailableAmount: 300
+            },
+            closingBalance: {
+              amount: 1000,
+              availableAmount: 900,
+              decemberAmount: 300,
+              decemberAvailableAmount: 200
+            }
+          })
+        ],
+        // Force the raise event and the accreditation to disagree: the raise
+        // drew the December pool, but this accreditation resolves general. The
+        // reversal must credit the pool the raise recorded, so it reads the
+        // event rather than re-deriving from the accreditation. A guard on that
+        // invariant, not a real operator changing processing type.
+        accreditation: {
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'output'
+        }
       })
 
-      await expect(
-        callUpdate({
-          ...repositories,
-          newStatus: PRN_STATUS.CANCELLED,
-          actor: PRN_ACTOR.SIGNATORY
-        })
-      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 501 } })
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.DELETED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
 
       expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
         {
-          amount: 440,
-          availableAmount: 940,
-          decemberAmount: 100,
-          decemberAvailableAmount: 100
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
         }
       )
+    })
+
+    // An output reprocessor accrues no December pool, so a December declaration
+    // on one of its PRNs draws the general balance and its raise records
+    // `pool: general` (ADR-0049). Cancelling it must leave the December amounts
+    // untouched, read off that general raise event rather than re-derived.
+    it('leaves the December amounts untouched when an output reprocessor December PRN drawn from the general pool is cancelled', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          isDecemberWaste: true,
+          lastAppliedEventNumber: 2,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        ledgerEvents: [
+          buildOpeningBalanceEvent({ amount: 1000, availableAmount: 1000 }),
+          buildPrnLedgerEvent({
+            kind: LEDGER_EVENT_KIND.PRN_CREATED,
+            number: 2,
+            pool: POOL.GENERAL,
+            amount: 100,
+            openingBalance: { amount: 1000, availableAmount: 1000 },
+            closingBalance: { amount: 1000, availableAmount: 900 }
+          })
+        ],
+        accreditation: {
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'output'
+        }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.DELETED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const balance = await readBalance(repositories.wasteBalanceService)
+      expect(balance).toMatchObject({ amount: 1000, availableAmount: 1000 })
+      expect(balance?.decemberAvailableAmount).toBeUndefined()
     })
 
     it('allows deleting an output reprocessor PRN that self-declared December, since it drew the general balance', async () => {
