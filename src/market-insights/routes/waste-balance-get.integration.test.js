@@ -240,19 +240,30 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+    /** @type {import('#market-insights/application/waste-balance-table.js').WasteBalanceTable} */
     const payload = JSON.parse(response.payload)
 
-    expect(payload.data).toEqual([
-      {
-        material: MATERIAL.PLASTIC,
-        accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        month: '2026-02',
-        totalCredited: 100,
-        eligibleForWasteBalance: 100,
-        sentOnDeductions: 30,
-        netCredit: 70
-      }
-    ])
+    expect(payload.data).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      month: '2026-02',
+      totalCredited: 100,
+      eligibleForWasteBalance: 100,
+      sentOnDeductions: 30,
+      netCredit: 70
+    })
+    expect(payload.data).toContainEqual({
+      material: MATERIAL.WOOD,
+      accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
+      month: '2026-02',
+      totalCredited: 0,
+      eligibleForWasteBalance: 0,
+      sentOnDeductions: 0,
+      netCredit: 0
+    })
+    expect(
+      payload.data.filter(({ totalCredited }) => totalCredited !== 0)
+    ).toHaveLength(1)
   })
 
   it('refuses a caller holding no market-data.read', async ({ server }) => {
