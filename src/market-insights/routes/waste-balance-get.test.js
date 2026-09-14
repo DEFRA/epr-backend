@@ -103,21 +103,21 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects the month still running', async () => {
+    it('rejects the month still running, to its last moment', async () => {
       vi.useFakeTimers({ toFake: ['Date'] })
-      vi.setSystemTime(new Date('2026-07-15T12:00:00.000Z'))
+      vi.setSystemTime(new Date('2026-06-30T23:59:59.999Z'))
 
       const response = await injectTable(
         server,
         asRegulator(),
-        pathFor(2026, 'monthly', 7)
+        pathFor(2026, 'monthly', 6)
       )
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       expect(JSON.parse(response.payload).periodNotEnded).toEqual({
-        period: 7,
+        period: 6,
         cadence: 'monthly',
-        endDate: '2026-07-31'
+        endDate: '2026-06-30'
       })
     })
 
