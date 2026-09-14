@@ -353,5 +353,16 @@ describe('closingForPrn', () => {
         )
       ).toThrow('Cannot credit the December pool')
     })
+
+    // Acceptance and rejection settle a raised PRN without moving any balance, so
+    // a December PRN reaching them leaves the pool exactly as it opened.
+    it.each([LEDGER_EVENT_KIND.PRN_ACCEPTED, LEDGER_EVENT_KIND.PRN_REJECTED])(
+      'leaves the December pool unchanged on a %s event',
+      (kind) => {
+        expect(
+          closingForPrn(openingWithDecember, kind, 100, POOL.DECEMBER)
+        ).toEqual(openingWithDecember)
+      }
+    )
   })
 })
