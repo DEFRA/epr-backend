@@ -40,19 +40,3 @@ export const amountForPool = (balance, pool) =>
   pool === POOL.DECEMBER
     ? (balance.decemberAmount ?? 0)
     : toNumber(subtract(balance.amount, balance.decemberAmount ?? 0))
-
-/**
- * The non-December remainder of an accreditation's total available amount,
- * for the waste-balances API response: `availableAmount` minus the December
- * pool's own available amount. Reserves December tonnage from a general
- * raise's view of the balance, the same relationship `availableForPool`
- * states for the ledger's own decision.
- *
- * @param {number} availableAmount
- * @param {number} decemberAvailableAmount
- * @returns {number}
- */
-export const nonDecemberAvailableAmount = (
-  availableAmount,
-  decemberAvailableAmount
-) => toNumber(subtract(availableAmount, decemberAvailableAmount))

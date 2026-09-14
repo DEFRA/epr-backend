@@ -1,10 +1,12 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
-import { nonDecemberAvailableAmount } from '#waste-balances/domain/pool-balances.js'
+import { availableForPool } from '#waste-balances/domain/pool-balances.js'
+import { POOL } from '#waste-balances/repository/ledger-schema.js'
 import { wasteBalanceResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseObject, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { LedgerBalanceSnapshot } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * The separate December portion of a balance, plus the derived non-December
@@ -14,20 +16,16 @@ import { wasteBalanceResponseSchema } from './response.schema.js'
  * its whole `availableAmount` already IS the only balance, so there is no
  * meaningful non-December split to report.
  *
- * @param {number} availableAmount - The accreditation's total available amount
- * @param {{ decemberAmount?: number, decemberAvailableAmount?: number } | null} [balance]
+ * @param {LedgerBalanceSnapshot | null} [balance]
  * @returns {{ decemberAmount?: number, decemberAvailableAmount?: number, nonDecemberAvailableAmount?: number }}
  */
-const decemberFields = (availableAmount, balance) => ({
+const decemberFields = (balance) => ({
   ...(balance?.decemberAmount !== undefined && {
     decemberAmount: balance.decemberAmount
   }),
   ...(balance?.decemberAvailableAmount !== undefined && {
     decemberAvailableAmount: balance.decemberAvailableAmount,
-    nonDecemberAvailableAmount: nonDecemberAvailableAmount(
-      availableAmount,
-      balance.decemberAvailableAmount
-    )
+    nonDecemberAvailableAmount: availableForPool(balance, POOL.GENERAL)
   })
 })
 
@@ -106,13 +104,11 @@ export const wasteBalanceGet = {
           accreditationId
         })
 
-        const availableAmount = balance?.availableAmount ?? 0
-
         return {
           accreditationId,
           amount: balance?.amount ?? 0,
-          availableAmount,
-          ...decemberFields(availableAmount, balance)
+          availableAmount: balance?.availableAmount ?? 0,
+          ...decemberFields(balance)
         }
       })
     )
@@ -132,7 +128,7 @@ export const wasteBalanceGet = {
         balanceMap[balance.accreditationId] = {
           amount: balance.amount,
           availableAmount: balance.availableAmount,
-          ...decemberFields(balance.availableAmount, balance)
+          ...decemberFields(balance)
         }
       }
     }
