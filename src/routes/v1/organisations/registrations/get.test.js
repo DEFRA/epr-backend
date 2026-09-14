@@ -358,20 +358,6 @@ describe(`GET ${registrationGetPath}`, () => {
     expect(body.application.material).toBe('plastic')
   })
 
-  it('carries no material at all for a registration that has not resolved one', async () => {
-    const registration = aRegistration({
-      material: 'glass',
-      glassRecyclingProcess: []
-    })
-
-    const response = await read(anOrganisation(registration), registration.id)
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    const body = JSON.parse(response.payload)
-    expect(body).not.toHaveProperty('material')
-    expect(body.application.material).toBe('glass')
-  })
-
   it('keeps the name the applicant typed inside the application, not beside the id', async () => {
     const registration = aRegistration()
     const organisation = anOrganisation(registration)
@@ -571,21 +557,6 @@ describe(`GET ${registrationAccreditationsGetPath}`, () => {
 
     expect(accreditation.reprocessingType).toBeNull()
     expect(accreditation.application.wasteProcessingType).toBe('exporter')
-  })
-
-  it('carries no material at all for an accreditation that has not resolved one', async () => {
-    const unresolved = anAccreditation(ACCREDITATION_STATUS.APPROVED, {
-      glassRecyclingProcess: []
-    })
-    const registration = aRegistration({ accreditationId: unresolved.id })
-
-    const [returned] = await readAccreditations(
-      anOrganisation(registration, [unresolved]),
-      registration.id
-    )
-
-    expect(returned).not.toHaveProperty('material')
-    expect(returned.application.material).toBe('glass')
   })
 
   it('leaves the site to the registration, which already carries it', async () => {

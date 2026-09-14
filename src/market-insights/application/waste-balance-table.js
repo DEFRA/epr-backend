@@ -5,7 +5,7 @@ import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
 import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
-import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   addFigures,
   monthlyContribution,
@@ -181,7 +181,7 @@ const publishedContribution = (rowState, partitions) => {
  */
 const foldIntoCell = (cells, registration, month, figures) => {
   const cell = {
-    material: resolveDetailedMaterial(registration) ?? '',
+    material: resolveMaterial(registration),
     accreditationType: registration.wasteProcessingType,
     month
   }

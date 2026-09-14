@@ -272,7 +272,7 @@ describe('streamCsvExport', () => {
     expect(out[1]).toContain('1001')
   })
 
-  it('emits registration and accreditation numbers and the detailed glass material', async () => {
+  it('emits registration and accreditation numbers and the glass material', async () => {
     const accreditation = {
       id: 'acc-1',
       status: 'approved',

@@ -1,5 +1,5 @@
 import { uppercaseString } from '#common/helpers/formatters.js'
-import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 import * as exporter from '#domain/summary-logs/table-schemas/exporter/fields.js'
@@ -214,7 +214,7 @@ export const buildDataRow = ({
     uppercaseString(registration.submittedToRegulator),
     org.companyDetails.name,
     registration.registrationNumber ?? '',
-    resolveDetailedMaterial(registration) ?? '',
+    resolveMaterial(registration),
     data.processingType,
     accredited,
     accreditation?.accreditationNumber ?? '',

@@ -59,9 +59,7 @@ const dateRangeSchema = Joi.object({
  * What the record is for, once resolved. Glass is the only material that
  * sub-divides, so this reads `glass_re_melt` or `glass_other` where the store
  * holds `glass` beside a single recycling process. Plain `glass` is never a
- * resolved material: a record that carries no process, or more than one, has
- * not been split, and the key is left out rather than carrying a value the
- * record has not earned.
+ * resolved material.
  */
 const materialSchema = Joi.string().valid(...TONNAGE_MONITORING_MATERIALS)
 
@@ -154,8 +152,7 @@ const accreditationLinkSchema = Joi.object({
  * outside `application` are the ones a regulator decides or a process derives:
  * the number, the dates and the reprocessing type are recorded when the
  * registration is approved, the status is derived from the status history, and
- * `material` is what the registration resolved to. That last one is the only
- * optional key: a registration that has resolved to no material carries none.
+ * `material` is what the registration resolved to.
  */
 export const registrationResponseSchema = Joi.object({
   id: Joi.string().required(),

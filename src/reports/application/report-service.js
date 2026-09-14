@@ -1,4 +1,4 @@
-import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
@@ -18,6 +18,7 @@ import {
 } from './report-mandatory/assert-report-data-complete.js'
 
 /**
+ * @import { Material } from '#domain/organisations/model.js'
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
@@ -106,12 +107,8 @@ function formatSiteAddress(address) {
 }
 
 /**
- * A report is about a material, so `material` is empty only for a registration
- * that has resolved to none. The repository refuses such a report rather than
- * writing one against a material the registration is only half for.
- *
  * @typedef {Pick<AggregatedReportDetail, 'source' | 'recyclingActivity' | 'exportActivity' | 'wasteSent'> & {
- *   material: string,
+ *   material: Material,
  *   wasteProcessingType: string,
  *   siteAddress: string | undefined,
  *   prn: { issuedTonnage: number } | null | undefined
@@ -128,7 +125,7 @@ function buildReportData(aggregated, registration) {
   const { recyclingActivity, exportActivity, wasteSent, prn, source } =
     aggregated
   return {
-    material: resolveDetailedMaterial(registration) ?? '',
+    material: resolveMaterial(registration),
     wasteProcessingType: registration.wasteProcessingType,
     siteAddress: formatSiteAddress(registration.site?.address),
     source,
