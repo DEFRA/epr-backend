@@ -197,8 +197,13 @@ jobs:
         id: test-timer
         run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
 
-      - name: Run journey tests on ${{ steps.journey-branch.outputs.ref }}
-        uses: DEFRA/epr-re-ex-journey-tests/run-journey-tests@main
+      # TODO(PAE-1922): hardcoded to this PR's branch as a stopgap so CI can
+      # exercise december-scope/artifact-suffix before journey-tests PR #193
+      # merges - uses: resolves before any step runs, so it can't read
+      # journey-branch's output (that made CI fail outright when tried).
+      # Revert to @main once #193 merges to epr-re-ex-journey-tests.
+      - name: Run journey tests on PAE-1922-dec-balance-debit
+        uses: DEFRA/epr-re-ex-journey-tests/run-journey-tests@PAE-1922-dec-balance-debit
         with:
           epr-backend: ${{github.sha}}
           branch: ${{ steps.journey-branch.outputs.ref }}
