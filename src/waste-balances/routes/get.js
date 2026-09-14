@@ -1,24 +1,33 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
+import { nonDecemberAvailableAmount } from '#waste-balances/domain/pool-balances.js'
 import { wasteBalanceResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseObject, HapiResponseToolkit } from '#common/hapi-types.js' */
 
 /**
- * The separate December portion of a balance, surfaced only when the
- * accreditation holds one. A drained in-window pool still reports `0`; an
- * accreditation with no December portion omits the fields entirely.
+ * The separate December portion of a balance, plus the derived non-December
+ * remainder of `availableAmount`, surfaced only when the accreditation holds
+ * a December portion. A drained in-window pool still reports `0`s; an
+ * accreditation with no December portion omits all three fields entirely -
+ * its whole `availableAmount` already IS the only balance, so there is no
+ * meaningful non-December split to report.
  *
+ * @param {number} availableAmount - The accreditation's total available amount
  * @param {{ decemberAmount?: number, decemberAvailableAmount?: number } | null} [balance]
- * @returns {{ decemberAmount?: number, decemberAvailableAmount?: number }}
+ * @returns {{ decemberAmount?: number, decemberAvailableAmount?: number, nonDecemberAvailableAmount?: number }}
  */
-const decemberFields = (balance) => ({
+const decemberFields = (availableAmount, balance) => ({
   ...(balance?.decemberAmount !== undefined && {
     decemberAmount: balance.decemberAmount
   }),
   ...(balance?.decemberAvailableAmount !== undefined && {
-    decemberAvailableAmount: balance.decemberAvailableAmount
+    decemberAvailableAmount: balance.decemberAvailableAmount,
+    nonDecemberAvailableAmount: nonDecemberAvailableAmount(
+      availableAmount,
+      balance.decemberAvailableAmount
+    )
   })
 })
 
@@ -97,11 +106,13 @@ export const wasteBalanceGet = {
           accreditationId
         })
 
+        const availableAmount = balance?.availableAmount ?? 0
+
         return {
           accreditationId,
           amount: balance?.amount ?? 0,
-          availableAmount: balance?.availableAmount ?? 0,
-          ...decemberFields(balance)
+          availableAmount,
+          ...decemberFields(availableAmount, balance)
         }
       })
     )
@@ -111,7 +122,8 @@ export const wasteBalanceGet = {
      *   amount: number,
      *   availableAmount: number,
      *   decemberAmount?: number,
-     *   decemberAvailableAmount?: number
+     *   decemberAvailableAmount?: number,
+     *   nonDecemberAvailableAmount?: number
      * }>}
      */
     const balanceMap = {}
@@ -120,7 +132,7 @@ export const wasteBalanceGet = {
         balanceMap[balance.accreditationId] = {
           amount: balance.amount,
           availableAmount: balance.availableAmount,
-          ...decemberFields(balance)
+          ...decemberFields(balance.availableAmount, balance)
         }
       }
     }

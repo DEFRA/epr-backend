@@ -430,9 +430,94 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
           amount: 1000,
           availableAmount: 750,
           decemberAmount: 400,
-          decemberAvailableAmount: 250
+          decemberAvailableAmount: 250,
+          nonDecemberAvailableAmount: 500
         }
       })
+    })
+
+    it('derives nonDecemberAvailableAmount decimal-correctly when December is present', async () => {
+      const server = await buildServer({
+        balances: [
+          {
+            accreditationId: accreditationId1,
+            organisationId,
+            registrationId: registrationId1,
+            amount: 1000,
+            availableAmount: 10.3,
+            decemberAmount: 400,
+            decemberAvailableAmount: 5.0
+          }
+        ],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              }
+            ]
+          }
+        ]
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result[accreditationId1].nonDecemberAvailableAmount).toBe(5.3)
+    })
+
+    it('omits nonDecemberAvailableAmount when there is no December portion', async () => {
+      const server = await buildServer({
+        balances: [
+          {
+            accreditationId: accreditationId1,
+            organisationId,
+            registrationId: registrationId1,
+            amount: 1000,
+            availableAmount: 750
+          }
+        ],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              }
+            ]
+          }
+        ]
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result).toEqual({
+        [accreditationId1]: {
+          amount: 1000,
+          availableAmount: 750
+        }
+      })
+      expect(result[accreditationId1]).not.toHaveProperty(
+        'nonDecemberAvailableAmount'
+      )
     })
 
     it('surfaces an in-window empty December pool as zero, not absent', async () => {
@@ -476,7 +561,8 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
           amount: 1000,
           availableAmount: 750,
           decemberAmount: 0,
-          decemberAvailableAmount: 0
+          decemberAvailableAmount: 0,
+          nonDecemberAvailableAmount: 750
         }
       })
     })

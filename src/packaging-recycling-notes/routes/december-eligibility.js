@@ -9,10 +9,8 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
-import {
-  declaresDecemberWasteManually,
-  isWithinDecemberWasteWindow
-} from '#packaging-recycling-notes/domain/december-waste-window.js'
+import { isWithinDecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js'
+import { decemberWasteControlModeFor } from '#packaging-recycling-notes/domain/december-waste-control-mode.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
@@ -21,11 +19,10 @@ export const packagingRecyclingNotesDecemberEligibilityPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/december-prn-eligibility'
 
 /**
- * Whether an accreditation's December Waste declaration control should be
- * shown, and whether it may currently be submitted (PAE-1913). Two
- * independent answers: `declaresDecemberWasteManually` is a fixed property of
- * the accreditation's type (only a reprocessor on output today - see
- * declaresDecemberWasteManually in december-waste-window.js), while
+ * Which December Waste declaration control an accreditation should be shown,
+ * and whether it may currently be submitted (PAE-1913, PAE-1922). `mode` is a
+ * fixed property of the accreditation's type - exactly one of `manual` or
+ * `pool`, never ambiguous (see december-waste-control-mode.js) - while
  * `windowOpen` is time-varying. The frontend composes the two; this endpoint
  * states them separately so it never has to restate the rule.
  */
@@ -62,8 +59,7 @@ export const packagingRecyclingNotesDecemberEligibility = {
 
       return h
         .response({
-          declaresDecemberWasteManually:
-            declaresDecemberWasteManually(accreditation),
+          mode: decemberWasteControlModeFor(accreditation),
           windowOpen
         })
         .code(StatusCodes.OK)
