@@ -13,6 +13,7 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
+ * @typedef {import('#domain/organisations/model.js').Material} Material
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
@@ -31,14 +32,10 @@ const REPORT_START_MONTH = '2026-01'
 /**
  * A single flat row of the report — one accreditation in one month.
  *
- * The material is empty for a registration that has resolved to none, so a
- * record the split never reached shows up uncounted against any material
- * rather than counted against half of what it is.
- *
  * @typedef {Object} CreditedTonnageRow
  * @property {string} month - `YYYY-MM`
  * @property {{ id: string, reference: string }} organisation - internal id and external reference
- * @property {{ id: string, accreditationNumber: string, processingType: string, material: string }} accreditation
+ * @property {{ id: string, accreditationNumber: string, processingType: string, material: Material }} accreditation
  * @property {{ totalCredited: number, eligibleForWasteBalance: number, sentOnDeductions: number }} tonnage
  */
 

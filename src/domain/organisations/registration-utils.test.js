@@ -10,7 +10,7 @@ import {
 } from './registration-utils.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
-/** @import { AccreditationStatus, Organisation } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 
 const userFixture = {
@@ -336,11 +336,14 @@ describe('resolveMaterial', () => {
     expect(resolveMaterial(reg)).toBe('glass_other')
   })
 
-  it.each([
+  /** @type {Array<[string, GlassRecyclingProcess[] | undefined]>} */
+  const unsplitCases = [
     ['no recycling process', undefined],
     ['an empty recycling process list', []],
     ['both recycling processes', ['glass_re_melt', 'glass_other']]
-  ])(
+  ]
+
+  it.each(unsplitCases)(
     'throws, naming the record, when the applied for material is glass and the record carries %s',
     (_label, glassRecyclingProcess) => {
       const reg = buildReg({
