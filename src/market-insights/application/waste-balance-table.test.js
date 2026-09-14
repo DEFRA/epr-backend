@@ -361,19 +361,6 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
-  it('counts a glass registration the split never reached against no material', async () => {
-    const operator = makeOperator({ orgId: 500013, material: MATERIAL.GLASS })
-
-    const { table } = await run({
-      organisations: [operator.organisation],
-      submissions: [
-        { ...operator, rows: [receivedRow('row-1', '2026-03-10', 100)] }
-      ]
-    })
-
-    expect(table.data.map(({ material }) => material)).toEqual([''])
-  })
-
   it('ignores a table that does not count under the accreditation', async () => {
     const operator = makeOperator({ orgId: 500012 })
 

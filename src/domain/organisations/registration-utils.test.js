@@ -6,7 +6,7 @@ import {
   resolveAccreditationNumber,
   resolveAccreditation,
   accreditationsForRegistration,
-  resolveDetailedMaterial
+  resolveMaterial
 } from './registration-utils.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
@@ -314,17 +314,17 @@ describe('resolveAccreditation', () => {
 })
 
 // ---------------------------------------------------------------------------
-// resolveDetailedMaterial
+// resolveMaterial
 // ---------------------------------------------------------------------------
 
-describe('resolveDetailedMaterial', () => {
+describe('resolveMaterial', () => {
   it('returns the glass recycling process for a glass registration', () => {
     const reg = buildReg({
       material: 'glass',
       glassRecyclingProcess: ['glass_re_melt']
     })
 
-    expect(resolveDetailedMaterial(reg)).toBe('glass_re_melt')
+    expect(resolveMaterial(reg)).toBe('glass_re_melt')
   })
 
   it('returns glass_other for a glass-other registration', () => {
@@ -333,34 +333,32 @@ describe('resolveDetailedMaterial', () => {
       glassRecyclingProcess: ['glass_other']
     })
 
-    expect(resolveDetailedMaterial(reg)).toBe('glass_other')
+    expect(resolveMaterial(reg)).toBe('glass_other')
   })
 
-  it('resolves nothing for a glass registration that carries no recycling process', () => {
-    const reg = buildReg({ material: 'glass' })
+  it.each([
+    ['no recycling process', undefined],
+    ['an empty recycling process list', []],
+    ['both recycling processes', ['glass_re_melt', 'glass_other']]
+  ])(
+    'throws, naming the record, when the applied for material is glass and the record carries %s',
+    (_label, glassRecyclingProcess) => {
+      const reg = buildReg({
+        id: 'reg-unsplit',
+        material: 'glass',
+        glassRecyclingProcess
+      })
 
-    expect(resolveDetailedMaterial(reg)).toBeNull()
-  })
-
-  it('resolves nothing when the recycling process array is empty', () => {
-    const reg = buildReg({ material: 'glass', glassRecyclingProcess: [] })
-
-    expect(resolveDetailedMaterial(reg)).toBeNull()
-  })
-
-  it('resolves nothing for a glass registration carrying both processes, which means it was never split', () => {
-    const reg = buildReg({
-      material: 'glass',
-      glassRecyclingProcess: ['glass_re_melt', 'glass_other']
-    })
-
-    expect(resolveDetailedMaterial(reg)).toBeNull()
-  })
+      expect(() => resolveMaterial(reg)).toThrow(
+        'Record reg-unsplit applied for glass but does not carry exactly one recycling process'
+      )
+    }
+  )
 
   it('returns the material unchanged for non-glass registrations', () => {
     const reg = buildReg({ material: 'plastic' })
 
-    expect(resolveDetailedMaterial(reg)).toBe('plastic')
+    expect(resolveMaterial(reg)).toBe('plastic')
   })
 })
 

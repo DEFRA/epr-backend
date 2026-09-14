@@ -2,7 +2,7 @@ import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.
 import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
 import { toWasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
 import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
-import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
@@ -207,7 +207,7 @@ export const buildCreditedTonnageReport = async ({
       })
     }
 
-    const material = resolveDetailedMaterial(registration) ?? ''
+    const material = resolveMaterial(registration)
     const reference = String(organisation.orgId)
     const accreditationNumber = accreditation.accreditationNumber ?? ''
 

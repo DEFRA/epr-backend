@@ -94,24 +94,29 @@ export function activeAccreditationValidFrom(accreditation) {
 }
 
 /**
- * Returns the material the record is for, or null when it is for none yet.
+ * Resolves the material a record is for from the material it applied for.
  *
- * Glass is the only material that sub-divides. A glass submission is split
- * upstream into one record per recycling process, so a glass record is for the
- * precise material named by the single process it carries. One that carries no
- * process, or more than one, has not been split, and so is not yet for either
- * of them. All other materials are their own answer.
+ * Glass is the only applied for material that sub-divides: ingest splits a
+ * glass submission into one record per recycling process, so a record that
+ * applied for glass is for the material that single process names. ADR-0050
+ * records that no stored record is unsplit, and this is the one place that
+ * claim is asserted. Every other applied for material is already the material.
  *
- * @param {{ material: AppliedForMaterial, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
- * @returns {Material | null}
+ * @param {{ id?: string, material: AppliedForMaterial, glassRecyclingProcess?: GlassRecyclingProcess[] | null }} record
+ * @returns {Material}
  */
-export function resolveDetailedMaterial(record) {
+export function resolveMaterial(record) {
   if (record.material !== MATERIAL.GLASS) {
     return record.material
   }
 
   const [process, ...furtherProcesses] = record.glassRecyclingProcess ?? []
-  return process !== undefined && furtherProcesses.length === 0 ? process : null
+  if (process === undefined || furtherProcesses.length > 0) {
+    throw new Error(
+      `Record ${record.id} applied for glass but does not carry exactly one recycling process`
+    )
+  }
+  return process
 }
 
 /**

@@ -1,6 +1,6 @@
 import {
   accreditationsForRegistration,
-  resolveDetailedMaterial
+  resolveMaterial
 } from '#domain/organisations/registration-utils.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -16,22 +16,18 @@ import {
  * outside it carries something the applicant did not supply: the identity of
  * the resource, a decision a regulator made, or a value a process derived.
  * `material` is the one answer with both, so it appears in both places — the
- * applicant's below, the resolved one above. A registration that has not
- * resolved to a material has none of its own, so the top-level key is absent
- * rather than null, and `application.material` is what a client reads instead.
+ * applicant's below, the resolved one above.
  *
  * @param {Registration} registration
  * @param {Organisation} organisation
  */
 export function toRegistrationResource(registration, organisation) {
-  const material = resolveDetailedMaterial(registration)
-
   return {
     id: registration.id,
     organisation: { id: organisation.id },
     registrationNumber: registration.registrationNumber ?? null,
     status: registration.status,
-    ...(material !== null && { material }),
+    material: resolveMaterial(registration),
     reprocessingType: registration.reprocessingType ?? null,
     dateRange: toRegistrationDateRangeResource(registration),
     accreditations: accreditationsForRegistration(
