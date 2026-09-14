@@ -1,6 +1,4 @@
 import { addRounded, toNumber } from '#common/helpers/decimal-utils.js'
-import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
-import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
@@ -54,7 +52,7 @@ import {
 
 /**
  * @typedef {Object} WasteBalanceTable
- * @property {{ generatedAt: string, reportingYear: number }} meta
+ * @property {{ generatedAt: string }} meta
  * @property {WasteBalanceTableRow[]} data
  */
 
@@ -195,23 +193,6 @@ const foldIntoCell = (cells, registration, month, figures) => {
 }
 
 /**
- * A month later than the clock cannot have happened, so a mis-keyed future date
- * is held back rather than published as supply.
- *
- * @param {number} reportingYear
- * @param {Date} now - clock reading supplied by the caller
- * @returns {(month: string) => boolean}
- */
-const publishableMonthsOf = (reportingYear, now) => {
-  const monthPrefix = `${reportingYear}-`
-  const currentMonth = /** @type {string} */ (
-    monthKeyForDate(now, UK_TIME_ZONE)
-  )
-  return (month) =>
-    month.startsWith(monthPrefix) && month.localeCompare(currentMonth) <= 0
-}
-
-/**
  * @typedef {Object} UndatedTally
  * @property {{ rowCount: number, tonnage: number }} credits
  * @property {{ rowCount: number, tonnage: number }} deductions
@@ -254,19 +235,14 @@ const recordRow = (
 
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {number} reportingYear
  * @param {UndatedTally} undated
  */
-const warnAboutUndatedRows = (
-  logger,
-  reportingYear,
-  { credits, deductions }
-) => {
+const warnAboutUndatedRows = (logger, { credits, deductions }) => {
   if (credits.rowCount + deductions.rowCount === 0) {
     return
   }
   logger.warn({
-    message: `Market insights waste balance found ${deductions.rowCount} sent-on row(s) totalling ${deductions.tonnage} tonnes and ${credits.rowCount} crediting row(s) totalling ${credits.tonnage} tonnes with no usable date, understating the deductions and the gross credited tonnage of whichever year they belong to. A row with no date belongs to no reporting year, so this count spans every submission read rather than ${reportingYear} alone.`,
+    message: `Market insights waste balance found ${deductions.rowCount} sent-on row(s) totalling ${deductions.tonnage} tonnes and ${credits.rowCount} crediting row(s) totalling ${credits.tonnage} tonnes with no usable date, understating the deductions and the gross credited tonnage of whichever month they belong to. A row with no date belongs to no reporting month, so this count spans every submission read rather than the months served alone.`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: 'market_insights_undated_rows'
@@ -275,8 +251,10 @@ const warnAboutUndatedRows = (
 }
 
 /**
- * Aggregate the published UK Waste Balance figures for a reporting year, summed
- * by material, accreditation type and reporting month.
+ * Aggregate the published UK Waste Balance figures for the given reporting
+ * months, summed by material, accreditation type and reporting month. A row
+ * dated outside those months is held back, which is what keeps a mis-keyed
+ * future date from being published as supply.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
@@ -284,7 +262,7 @@ const warnAboutUndatedRows = (
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {number} params.reportingYear
+ * @param {string[]} params.months - the `YYYY-MM` reporting months to publish
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<WasteBalanceTable>}
  */
@@ -294,7 +272,7 @@ export const buildWasteBalanceTable = async ({
   organisationsRepository,
   overseasSitesRepository,
   logger,
-  reportingYear,
+  months,
   now
 }) => {
   const [entries, organisations, allSites] = await Promise.all([
@@ -314,11 +292,13 @@ export const buildWasteBalanceTable = async ({
     .filter((entry) => partitions.has(partitionKey(entry.ledgerId)))
     .map((entry) => entry.summaryLogId)
 
+  const publishedMonths = new Set(months)
   const into = {
     /** @type {Map<string, WasteBalanceCell>} */
     cells: new Map(),
     undated: newUndatedTally(),
-    isPublishedMonth: publishableMonthsOf(reportingYear, now)
+    isPublishedMonth: (/** @type {string} */ month) =>
+      publishedMonths.has(month)
   }
 
   for await (const rowState of summaryLogRowStatesRepository.streamRowStatesForSummaryLogs(
@@ -331,14 +311,14 @@ export const buildWasteBalanceTable = async ({
     recordRow(into, published)
   }
 
-  warnAboutUndatedRows(logger, reportingYear, into.undated)
+  warnAboutUndatedRows(logger, into.undated)
 
   const data = [...into.cells.values()]
     .map(({ figures, ...cell }) => ({ ...cell, ...withNetCredit(figures) }))
     .sort(compareRows)
 
   return {
-    meta: { generatedAt: now.toISOString(), reportingYear },
+    meta: { generatedAt: now.toISOString() },
     data
   }
 }

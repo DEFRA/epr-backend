@@ -9,8 +9,7 @@ import { materialSchema } from '#common/validation/material-schema.js'
  */
 export const wasteBalanceResponseSchema = Joi.object({
   meta: Joi.object({
-    generatedAt: Joi.string().isoDate().required(),
-    reportingYear: Joi.number().integer().required()
+    generatedAt: Joi.string().isoDate().required()
   }).required(),
   data: Joi.array()
     .items(
