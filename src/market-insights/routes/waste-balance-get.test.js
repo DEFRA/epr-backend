@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  afterEach,
+  vi
+} from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import {
@@ -9,12 +17,14 @@ import {
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
 
-const injectTable = (server, credentials, query = '?year=2026') =>
-  server.inject({
-    method: 'GET',
-    url: `${marketInsightsWasteBalancePath}${query}`,
-    ...credentials
-  })
+const pathFor = (year, cadence, period) =>
+  marketInsightsWasteBalancePath
+    .replace('{year}', String(year))
+    .replace('{cadence}', cadence)
+    .replace('{period}', String(period))
+
+const injectTable = (server, credentials, url = pathFor(2026, 'monthly', 1)) =>
+  server.inject({ method: 'GET', url, ...credentials })
 
 describe(`GET ${marketInsightsWasteBalancePath}`, () => {
   setupAuthContext()
@@ -29,11 +39,15 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
     await server.stop()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   describe('access control', () => {
     it('returns 401 when unauthenticated', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `${marketInsightsWasteBalancePath}?year=2026`
+        url: pathFor(2026, 'monthly', 1)
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -58,23 +72,66 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
     })
   })
 
-  describe('the reporting year', () => {
-    it('rejects a request that names no year', async () => {
-      const response = await injectTable(server, asRegulator(), '')
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    })
-
+  describe('the reporting period', () => {
     it('rejects a year that is not a year', async () => {
-      const response = await injectTable(server, asRegulator(), '?year=twenty')
+      const response = await injectTable(
+        server,
+        asRegulator(),
+        pathFor('twenty', 'monthly', 1)
+      )
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('reports back the year it answered for', async () => {
-      const response = await injectTable(server, asRegulator(), '?year=2027')
+    it('rejects a quarterly period, since no quarterly publication exists', async () => {
+      const response = await injectTable(
+        server,
+        asRegulator(),
+        pathFor(2026, 'quarterly', 1)
+      )
 
-      expect(JSON.parse(response.payload).meta.reportingYear).toBe(2027)
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('rejects a period no monthly cadence has', async () => {
+      const response = await injectTable(
+        server,
+        asRegulator(),
+        pathFor(2026, 'monthly', 13)
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('rejects the month still running, to its last UK moment', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-06-30T22:59:59.999Z'))
+
+      const response = await injectTable(
+        server,
+        asRegulator(),
+        pathFor(2026, 'monthly', 6)
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(JSON.parse(response.payload).periodNotEnded).toEqual({
+        period: 6,
+        cadence: 'monthly',
+        endDate: '2026-06-30'
+      })
+    })
+
+    it('serves the month that has just ended in UK time, while UTC is still in it', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-06-30T23:30:00.000Z'))
+
+      const response = await injectTable(
+        server,
+        asRegulator(),
+        pathFor(2026, 'monthly', 6)
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
   })
 
@@ -84,6 +141,6 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     const body = JSON.parse(response.payload)
     expect(body.data).toEqual([])
-    expect(typeof body.meta.generatedAt).toBe('string')
+    expect(body.meta).toEqual({ generatedAt: expect.any(String) })
   })
 })

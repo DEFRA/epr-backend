@@ -29,6 +29,11 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
 
+const januaryToFebruary2026 = marketInsightsWasteBalancePath
+  .replace('{year}', '2026')
+  .replace('{cadence}', 'monthly')
+  .replace('{period}', '2')
+
 /** @import { Db } from 'mongodb' */
 /** @import { TestServer } from '#test/create-test-server.js' */
 
@@ -219,24 +224,24 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
     }
   )
 
-  it('serves the waste balance figures to a regulator holding market-data.read', async ({
+  it('serves the waste balance figures up to the requested period to a regulator holding market-data.read', async ({
     server
   }) => {
     await submit(server.repositories, [
       receivedRow('row-1', '2026-02-10', 100),
+      receivedRow('row-after-the-period', '2026-03-10', 999),
       sentOnRow('row-sent-on', 30)
     ])
 
     const response = await server.inject({
       method: 'GET',
-      url: `${marketInsightsWasteBalancePath}?year=2026`,
+      url: januaryToFebruary2026,
       headers: { Authorization: `Bearer ${regulatorToken}` }
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const payload = JSON.parse(response.payload)
 
-    expect(payload.meta.reportingYear).toBe(2026)
     expect(payload.data).toEqual([
       {
         material: MATERIAL.PLASTIC,
@@ -255,7 +260,7 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: `${marketInsightsWasteBalancePath}?year=2026`,
+      url: januaryToFebruary2026,
       headers: { Authorization: `Bearer ${nonServiceMaintainerUserToken}` }
     })
 

@@ -22,6 +22,15 @@ const TEST_ORG_ID = 999999
 
 const NOW = new Date('2026-07-15T12:00:00.000Z')
 
+const JANUARY_TO_JUNE_2026 = [
+  '2026-01',
+  '2026-02',
+  '2026-03',
+  '2026-04',
+  '2026-05',
+  '2026-06'
+]
+
 const ACCREDITED_FROM = '2026-01-01'
 const ACCREDITED_TO = '2026-12-31'
 
@@ -207,7 +216,7 @@ const sentOnRow = (rowId, date, tonnage) => ({
  *   organisations: any[],
  *   submissions: any[],
  *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
- *   reportingYear?: number,
+ *   months?: string[],
  *   now?: Date
  * }} options
  */
@@ -215,7 +224,7 @@ const run = async ({
   organisations,
   submissions,
   overseasSites = [],
-  reportingYear = 2026,
+  months = JANUARY_TO_JUNE_2026,
   now = NOW
 }) => {
   const summaryLogRowStatesRepository =
@@ -252,7 +261,7 @@ const run = async ({
     overseasSitesRepository:
       createInMemoryOverseasSitesRepository(overseasSites)(),
     logger: partialMock(logger),
-    reportingYear,
+    months,
     now
   })
 
@@ -260,11 +269,11 @@ const run = async ({
 }
 
 describe('buildWasteBalanceTable', () => {
-  it('reports the reporting year and the clock it was given', async () => {
+  it('stamps the clock it was given', async () => {
     const { table } = await run({ organisations: [], submissions: [] })
 
-    expect(table).toEqual({
-      meta: { generatedAt: NOW.toISOString(), reportingYear: 2026 },
+    expect(table).toStrictEqual({
+      meta: { generatedAt: NOW.toISOString() },
       data: []
     })
   })
@@ -476,13 +485,13 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('says the count is not scoped to the year being served', async () => {
+    it('says the count is not scoped to the months being served', async () => {
       const { logger } = await withUndatedDeduction()
 
       expect(logger.warn).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining(
-            'spans every submission read rather than 2026 alone'
+            'spans every submission read rather than the months served alone'
           )
         })
       )
@@ -514,7 +523,7 @@ describe('buildWasteBalanceTable', () => {
     })
   })
 
-  describe('a month later than the clock', () => {
+  describe('a month after the window', () => {
     const operator = makeOperator({ orgId: 500012 })
 
     it('holds the row back rather than publishing it as supply', async () => {
@@ -525,7 +534,7 @@ describe('buildWasteBalanceTable', () => {
             ...operator,
             rows: [
               receivedRow('row-1', '2026-06-10', 40),
-              receivedRow('row-2', '2026-12-10', 999)
+              receivedRow('row-2', '2026-07-10', 999)
             ]
           }
         ]
@@ -606,7 +615,7 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
-  it('leaves out the months of other reporting years', async () => {
+  it('leaves out a month before the window', async () => {
     const operator = makeOperator({
       orgId: 500008,
       validFrom: '2025-01-01',
