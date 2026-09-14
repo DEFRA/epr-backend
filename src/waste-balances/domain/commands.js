@@ -3,6 +3,7 @@ import {
   closingForSummaryLogSubmitted,
   closingForPrn
 } from './ledger-closing-balance.js'
+import { availableForPool, amountForPool } from './pool-balances.js'
 
 /**
  * The ledger state a command decides against: the resolved balance and the
@@ -123,7 +124,7 @@ const committed = (kind, opening, payload) => ({
       kind,
       payload,
       openingBalance: opening,
-      closingBalance: closingForPrn(opening, kind, payload.amount)
+      closingBalance: closingForPrn(opening, kind, payload.amount, payload.pool)
     }
   ]
 })
@@ -146,7 +147,7 @@ const rejected = (reason) => ({
  * @returns {PrnDecision}
  */
 export const createPrn = (balance, payload) =>
-  balance.availableAmount < payload.amount
+  availableForPool(balance, payload.pool) < payload.amount
     ? rejected(PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE)
     : committed(LEDGER_EVENT_KIND.PRN_CREATED, balance, payload)
 
@@ -159,7 +160,7 @@ export const createPrn = (balance, payload) =>
  * @returns {PrnDecision}
  */
 export const issuePrn = (balance, payload) =>
-  balance.amount < payload.amount
+  amountForPool(balance, payload.pool) < payload.amount
     ? rejected(PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE)
     : committed(LEDGER_EVENT_KIND.PRN_ISSUED, balance, payload)
 

@@ -7,7 +7,10 @@ import {
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR, ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import {
+  LEDGER_EVENT_KIND,
+  POOL
+} from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -78,20 +81,37 @@ const buildPrn = (overrides = {}) => ({
 /**
  * Seed an opening waste balance as a single stream event. `currentBalance`
  * resolves the latest event's closing balance, so this is the balance the
- * transition opens against.
+ * transition opens against. December fields are seeded only when supplied, so
+ * a general balance stays free of them.
  *
- * @param {{ amount: number, availableAmount: number }} closingBalance
+ * @param {{ amount: number, availableAmount: number, decemberAmount?: number, decemberAvailableAmount?: number }} closingBalance
  * @returns {import('#waste-balances/repository/ledger-schema.js').LedgerEvent}
  */
-const buildOpeningBalanceEvent = ({ amount, availableAmount }) => ({
+const buildOpeningBalanceEvent = ({
+  amount,
+  availableAmount,
+  decemberAmount,
+  decemberAvailableAmount
+}) => ({
   registrationId: REG_ID,
   accreditationId: ACC_ID,
   organisationId: ORG_ID,
   number: 1,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-  payload: { summaryLogId: 'seed-summary-log', creditTotal: amount },
+  payload: {
+    summaryLogId: 'seed-summary-log',
+    creditTotal: amount,
+    ...(decemberAmount !== undefined && { decemberCreditTotal: decemberAmount })
+  },
   openingBalance: { amount: 0, availableAmount: 0 },
-  closingBalance: { amount, availableAmount },
+  closingBalance: {
+    amount,
+    availableAmount,
+    ...(decemberAmount !== undefined && {
+      decemberAmount,
+      decemberAvailableAmount
+    })
+  },
   createdAt: EVENT_AT,
   createdBy: USER
 })
@@ -138,7 +158,7 @@ const buildOrgWithAccreditation = ({
  *
  * @param {Object} [options]
  * @param {Object} [options.prn] - PRN to seed, or omitted for an empty repo
- * @param {{ amount: number, availableAmount: number }} [options.balance] - opening balance, or omitted for none
+ * @param {{ amount: number, availableAmount: number, decemberAmount?: number, decemberAvailableAmount?: number }} [options.balance] - opening balance, or omitted for none
  * @param {Object} [options.accreditation] - accreditation field overrides
  * @param {boolean} [options.withAccreditation]
  */
@@ -769,6 +789,289 @@ describe('updatePrnStatus', () => {
           actor: PRN_ACTOR.SIGNATORY
         })
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
+    })
+  })
+
+  describe('routing the balance to the correct pool (December vs general)', () => {
+    const LEDGER_ID = {
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    }
+
+    it('ringfences both the December and total available amounts for an exporter December raise', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          isExport: true,
+          isDecemberWaste: true,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: {
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
+        },
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+      })
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 900,
+          decemberAmount: 300,
+          decemberAvailableAmount: 200
+        }
+      )
+
+      const latest =
+        await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
+      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
+      expect(latest?.payload).toMatchObject({
+        prnId: PRN_ID,
+        amount: 100,
+        pool: POOL.DECEMBER
+      })
+    })
+
+    it('deducts both the December and total amounts when an exporter December PRN is issued', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 75,
+          isExport: true,
+          isDecemberWaste: true,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: {
+          amount: 1000,
+          availableAmount: 900,
+          decemberAmount: 300,
+          decemberAvailableAmount: 200
+        },
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 925,
+          availableAmount: 900,
+          decemberAmount: 225,
+          decemberAvailableAmount: 200
+        }
+      )
+    })
+
+    it('refuses an exporter December raise the December pool cannot cover, moving nothing, even when the total can', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          isExport: true,
+          isDecemberWaste: true,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: {
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 50,
+          decemberAvailableAmount: 50
+        },
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+        })
+      ).rejects.toThrow('Insufficient available waste balance')
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 50,
+          decemberAvailableAmount: 50
+        }
+      )
+    })
+
+    it('draws the general balance for an output reprocessor that self-declares December', async () => {
+      // An output accreditation accrues no December waste (its summary log
+      // never populates a December portion), so its balance carries none. A
+      // self-declared December raise must resolve to the general pool: were it
+      // routed to the (absent) December pool, the raise would be refused for
+      // insufficient December balance rather than drawing the ample general one.
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          isDecemberWaste: true,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 },
+        accreditation: {
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'output'
+        }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+      })
+
+      const balance = await readBalance(repositories.wasteBalanceService)
+      expect(balance).toMatchObject({ amount: 1000, availableAmount: 900 })
+      expect(balance?.decemberAvailableAmount).toBeUndefined()
+
+      // The create resolves the pool from the accreditation and writes it, so
+      // the event states general explicitly.
+      const latest =
+        await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
+      expect(latest?.payload).toMatchObject({ pool: POOL.GENERAL })
+    })
+  })
+
+  describe('refusing December-pool reversals until they are implemented', () => {
+    // A December raise debits the December pool, but crediting it back on
+    // cancellation is not yet built (PAE-1923). Rather than silently corrupt
+    // the pool by restoring only the total, a December-pool reversal is
+    // refused with 501 and nothing moves. General and output-reprocessor PRNs
+    // draw the general balance, so their cancellations are unaffected.
+    const LEDGER_ID = {
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    }
+
+    it('refuses to delete a ringfenced December PRN and leaves the balance untouched', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          isExport: true,
+          isDecemberWaste: true,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: {
+          amount: 1000,
+          availableAmount: 900,
+          decemberAmount: 300,
+          decemberAvailableAmount: 200
+        },
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.DELETED,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 501 } })
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 900,
+          decemberAmount: 300,
+          decemberAvailableAmount: 200
+        }
+      )
+    })
+
+    it('refuses to cancel an issued December PRN and leaves the balance untouched', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 60,
+          isExport: true,
+          isDecemberWaste: true,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            issued: { at: EVENT_AT, by: USER },
+            history: []
+          }
+        }),
+        balance: {
+          amount: 440,
+          availableAmount: 940,
+          decemberAmount: 100,
+          decemberAvailableAmount: 100
+        },
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.CANCELLED,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 501 } })
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 440,
+          availableAmount: 940,
+          decemberAmount: 100,
+          decemberAvailableAmount: 100
+        }
+      )
+    })
+
+    it('allows deleting an output reprocessor PRN that self-declared December, since it drew the general balance', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 75,
+          isDecemberWaste: true,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: { amount: 1000, availableAmount: 925 },
+        accreditation: {
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'output'
+        }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.DELETED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(PRN_STATUS.DELETED)
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 1000
+        }
+      )
+      const latest =
+        await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
+      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED)
     })
   })
 
