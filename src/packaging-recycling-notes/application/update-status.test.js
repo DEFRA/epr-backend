@@ -1135,7 +1135,9 @@ describe('updatePrnStatus', () => {
     })
 
     it('backs a fresh December raise with the capacity a cancellation restores', async () => {
-      const SECOND_PRN_ID = '507f1f77bcf86cd799439012'
+      // A distinct second PRN sharing the same ledger as the first, so the fresh
+      // raise draws on the balance the first PRN's cancellation restored.
+      const SECOND_PRN_ID = 'second-december-prn'
       const repositories = seedRepositories({
         prns: [
           buildPrn({
@@ -1192,6 +1194,16 @@ describe('updatePrnStatus', () => {
         actor: PRN_ACTOR.SIGNATORY
       })
 
+      // The cancellation returns the full December capacity before it is re-drawn.
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
+        }
+      )
+
       // The restored capacity backs a fresh December raise of the same tonnage.
       await callUpdate({
         ...repositories,
@@ -1210,7 +1222,7 @@ describe('updatePrnStatus', () => {
       )
     })
 
-    it('credits the December pool a cancelled PRN drew even when its accreditation has since changed', async () => {
+    it('credits the pool the raise recorded, not the one the current accreditation would resolve', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
@@ -1247,9 +1259,11 @@ describe('updatePrnStatus', () => {
             }
           })
         ],
-        // The accreditation now resolves to the general pool, so re-deriving the
-        // pool at cancel time would credit the wrong one. Reading it off the
-        // raise event restores the December pool the raise actually drew.
+        // Force the raise event and the accreditation to disagree: the raise
+        // drew the December pool, but this accreditation resolves general. The
+        // reversal must credit the pool the raise recorded, so it reads the
+        // event rather than re-deriving from the accreditation. A guard on that
+        // invariant, not a real operator changing processing type.
         accreditation: {
           wasteProcessingType: 'reprocessor',
           reprocessingType: 'output'
@@ -1272,7 +1286,11 @@ describe('updatePrnStatus', () => {
       )
     })
 
-    it('leaves the December amounts untouched when a general-pool raise on a December-declared PRN is cancelled', async () => {
+    // An output reprocessor accrues no December pool, so a December declaration
+    // on one of its PRNs draws the general balance and its raise records
+    // `pool: general` (ADR-0049). Cancelling it must leave the December amounts
+    // untouched, read off that general raise event rather than re-derived.
+    it('leaves the December amounts untouched when an output reprocessor December PRN drawn from the general pool is cancelled', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
