@@ -26,16 +26,26 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 /** @import {WasteBalanceLedgerRepository, LatestSubmittedSummaryLogPerLedger} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
+/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+/** @import {ReclassificationContext} from '#waste-records/application/reclassify-waste-record-states.js' */
+/** @import {OverseasSiteContextEntry} from '../domain/overseas-sites-context.js' */
 
 /**
  * @typedef {Object} StreamCsvExportDeps
  * @property {Pick<OrganisationsRepository, 'findAll' | 'findById'>} organisationsRepository
- * @property {Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
+ * @property {Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog' | 'findRowStatesForSummaryLogFile' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
  * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
  * @property {string} [organisationId] - When set, export only this organisation.
  * @property {string} [registrationId] - When set (with organisationId), export only this registration.
+ * @property {string} [summaryLogFileId] - When set, export only the submission that file id names, rather than each partition's latest.
+ */
+
+/**
+ * Supplies the waste-balance classification a row is exported under.
+ *
+ * @typedef {(rowState: SummaryLogRowState, context: ReclassificationContext) => SummaryLogRowState['classification']} ClassifyRow
  */
 
 const sortById = (a, b) => a.id.localeCompare(b.id)
@@ -95,21 +105,205 @@ const sortEntriesByAccreditationId = (a, b) =>
   )
 
 /**
- * Yield one CSV row per row state of a single (org, registration) pair. A
- * registration's rows are the membership of the latest submitted summary log
- * of every ledger partition it has written to — one partition per
- * accreditation it has been linked to, plus a null-accreditation partition for
- * registered-only periods (PAE-1773). Each partition's submission timestamp is
- * the "Submitted At" column shared by its rows. A registration with no
- * submitted summary log contributes no rows.
+ * The unscoped export answers a question about the present, so it discards the
+ * reading stamped at submission and recomputes against the accreditation and
+ * overseas sites as they stand at export time.
+ *
+ * @type {ClassifyRow}
+ */
+const recomputedClassification = (rowState, context) =>
+  reclassifyWasteRecordState(toWasteRecordState(rowState), context)
+    .classification
+
+/**
+ * A named submission asks what that submission committed, and the stamped
+ * classification is that reading — the port's invariants say `data` and
+ * `classification` never change once written.
+ *
+ * @type {ClassifyRow}
+ */
+const stampedClassification = (rowState) => rowState.classification
+
+/**
+ * Yield one CSV row per row state of a single ledger partition, ordered by
+ * `(wasteRecordType, rowId)`. The classification comes from `classify` rather
+ * than from this generator, because the two callers answer different
+ * questions about the same row.
+ *
+ * @param {Object} input
+ * @param {Organisation} input.org
+ * @param {Registration} input.registration
+ * @param {WasteBalanceLedgerId} input.ledgerId
+ * @param {SummaryLogRowState[]} input.rowStates
+ * @param {{ submittedAt: string } | null} input.summaryLogEntry
+ * @param {Record<string, OverseasSiteContextEntry>} input.overseasSites
+ * @param {string[]} input.dataFieldColumns
+ * @param {ClassifyRow} input.classify
+ * @returns {AsyncGenerator<string>}
+ */
+async function* streamPartitionRows({
+  org,
+  registration,
+  ledgerId,
+  rowStates,
+  summaryLogEntry,
+  overseasSites,
+  dataFieldColumns,
+  classify
+}) {
+  // The Accredited columns read the partition's own accreditation, resolved
+  // active-only (approved/suspended) as of export time — not the
+  // registration's current link. Rows submitted under a since-cancelled
+  // accreditation or a registered-only period render as not accredited but are
+  // still exported.
+  const accreditation = resolveAccreditation(
+    { accreditationId: ledgerId.accreditationId },
+    org
+  )
+
+  for (const rowState of [...rowStates].sort(sortRowStates)) {
+    yield await encodeRow(
+      buildDataRow({
+        org,
+        registration,
+        accreditation,
+        data: coerceForExport(rowState),
+        wasteRecordType: rowState.wasteRecordType,
+        rowId: rowState.rowId,
+        classification: classify(rowState, { accreditation, overseasSites }),
+        summaryLogEntry,
+        overseasSites,
+        dataFieldColumns
+      })
+    )
+  }
+}
+
+/**
+ * @typedef {Object} RegistrationRowsContext
+ * @property {Organisation} org
+ * @property {Registration} registration
+ * @property {Map<string, { submittedAt: string }>} summaryLogMap
+ * @property {Record<string, OverseasSiteContextEntry>} overseasSites
+ * @property {string[]} dataFieldColumns
+ */
+
+/**
+ * The registration's rows as of now: the membership of the latest submitted
+ * summary log of every ledger partition it has written to, each partition's
+ * rows fetched in turn.
+ *
+ * @param {RegistrationRowsContext & {
+ *   entries: LatestSubmittedSummaryLogPerLedger[],
+ *   summaryLogRowStatesRepository: Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog'>
+ * }} input
+ * @returns {AsyncGenerator<string>}
+ */
+async function* streamLatestSubmissionRows({
+  entries,
+  summaryLogRowStatesRepository,
+  summaryLogMap,
+  ...context
+}) {
+  for (const { ledgerId, summaryLogId } of [...entries].sort(
+    sortEntriesByAccreditationId
+  )) {
+    yield* streamPartitionRows({
+      ...context,
+      ledgerId,
+      rowStates: await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+        ledgerId,
+        summaryLogId
+      ),
+      summaryLogEntry: summaryLogMap.get(summaryLogId) ?? null,
+      classify: recomputedClassification
+    })
+  }
+}
+
+/**
+ * One named submission's rows. They arrive before the partition does — the
+ * caller holds a file id, not a ledger identity — so the partitions are
+ * grouped off the rows and then ordered the way the latest-submission path
+ * orders them.
+ *
+ * @param {RegistrationRowsContext & {
+ *   summaryLogFileId: string,
+ *   summaryLogRowStatesRepository: Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLogFile'>
+ * }} input
+ * @returns {AsyncGenerator<string>}
+ */
+async function* streamSubmissionRows({
+  summaryLogFileId,
+  summaryLogRowStatesRepository,
+  summaryLogMap,
+  ...context
+}) {
+  const rowStates =
+    await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+      context.org.id,
+      context.registration.id,
+      summaryLogFileId
+    )
+
+  for (const { ledgerId, rowStates: partitionRows } of groupByPartition(
+    rowStates
+  ).sort(sortEntriesByAccreditationId)) {
+    yield* streamPartitionRows({
+      ...context,
+      ledgerId,
+      rowStates: partitionRows,
+      summaryLogEntry: summaryLogMap.get(summaryLogFileId) ?? null,
+      classify: stampedClassification
+    })
+  }
+}
+
+/**
+ * Group a submission's row states by the ledger partition that wrote them. A
+ * file id is issued once per upload and a submission writes to one partition,
+ * so this is one group in practice — but the read is defined across
+ * partitions, so the grouping is what keeps that true.
+ *
+ * @param {SummaryLogRowState[]} rowStates
+ * @returns {Array<{ ledgerId: WasteBalanceLedgerId, rowStates: SummaryLogRowState[] }>}
+ */
+const groupByPartition = (rowStates) => {
+  /** @type {Map<string, { ledgerId: WasteBalanceLedgerId, rowStates: SummaryLogRowState[] }>} */
+  const grouped = new Map()
+  for (const rowState of rowStates) {
+    const { organisationId, registrationId, accreditationId } = rowState
+    const key = String(accreditationId)
+    const partition = grouped.get(key)
+    if (partition) {
+      partition.rowStates.push(rowState)
+    } else {
+      grouped.set(key, {
+        ledgerId: { organisationId, registrationId, accreditationId },
+        rowStates: [rowState]
+      })
+    }
+  }
+  return [...grouped.values()]
+}
+
+/**
+ * Yield one CSV row per row state of a single (org, registration) pair —
+ * either the submission `summaryLogFileId` names, or each ledger partition's
+ * latest submission. A partition is one accreditation the registration has
+ * been linked to, plus a null-accreditation partition for registered-only
+ * periods (PAE-1773); its submission timestamp is the "Submitted At" column
+ * shared by its rows. A registration with no submitted summary log
+ * contributes no rows.
  *
  * @param {Object} input
  * @param {Organisation} input.org
  * @param {Registration} input.registration
  * @param {LatestSubmittedSummaryLogPerLedger[]} input.entries - The registration's per-partition latest submissions.
+ * @param {string} [input.summaryLogFileId]
  * @param {Map<string, OverseasSite>} input.sitesById
  * @param {string[]} input.dataFieldColumns
- * @param {Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog'>} input.summaryLogRowStatesRepository
+ * @param {Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog' | 'findRowStatesForSummaryLogFile'>} input.summaryLogRowStatesRepository
  * @param {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} input.summaryLogsRepository
  * @returns {AsyncGenerator<string>}
  */
@@ -117,73 +311,42 @@ async function* streamRegistrationRows({
   org,
   registration,
   entries,
+  summaryLogFileId,
   sitesById,
   dataFieldColumns,
   summaryLogRowStatesRepository,
   summaryLogsRepository
 }) {
-  if (entries.length === 0) {
+  if (!summaryLogFileId && entries.length === 0) {
     return
   }
 
-  const overseasSites = buildOverseasSitesContext(registration, sitesById)
-  const summaryLogMap = await loadSummaryLogMap(
-    summaryLogsRepository,
-    org.id,
-    registration.id
-  )
-
-  const entriesSorted = [...entries].sort(sortEntriesByAccreditationId)
-
-  for (const { ledgerId, summaryLogId } of entriesSorted) {
-    // The Accredited columns and the reclassification read the partition's own
-    // accreditation, resolved active-only (approved/suspended) as of export
-    // time — not the registration's current link. Rows submitted under a
-    // since-cancelled accreditation or a registered-only period render as not
-    // accredited but are still exported.
-    const accreditation = resolveAccreditation(
-      { accreditationId: ledgerId.accreditationId },
-      org
+  const context = {
+    org,
+    registration,
+    dataFieldColumns,
+    overseasSites: buildOverseasSitesContext(registration, sitesById),
+    summaryLogMap: await loadSummaryLogMap(
+      summaryLogsRepository,
+      org.id,
+      registration.id
     )
-
-    const rowStates =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
-        ledgerId,
-        summaryLogId
-      )
-    if (rowStates.length === 0) {
-      continue
-    }
-
-    const summaryLogEntry = summaryLogMap.get(summaryLogId) ?? null
-
-    const rowStatesSorted = [...rowStates].sort(sortRowStates)
-
-    for (const rowState of rowStatesSorted) {
-      // The waste-balance columns answer as of the same moment as the
-      // Accredited and OSR columns beside them, which read the accreditation
-      // and the registration's overseas sites as they stand at export time.
-      const { classification } = reclassifyWasteRecordState(
-        toWasteRecordState(rowState),
-        { accreditation, overseasSites }
-      )
-
-      yield await encodeRow(
-        buildDataRow({
-          org,
-          registration,
-          accreditation,
-          data: coerceForExport(rowState),
-          wasteRecordType: rowState.wasteRecordType,
-          rowId: rowState.rowId,
-          classification,
-          summaryLogEntry,
-          overseasSites,
-          dataFieldColumns
-        })
-      )
-    }
   }
+
+  if (summaryLogFileId) {
+    yield* streamSubmissionRows({
+      ...context,
+      summaryLogFileId,
+      summaryLogRowStatesRepository
+    })
+    return
+  }
+
+  yield* streamLatestSubmissionRows({
+    ...context,
+    entries,
+    summaryLogRowStatesRepository
+  })
 }
 
 /**
@@ -211,14 +374,20 @@ export async function* streamCsvExport(deps) {
     summaryLogsRepository,
     overseasSitesRepository,
     organisationId,
-    registrationId
+    registrationId,
+    summaryLogFileId
   } = deps
 
-  const [allSites, observedKeys, latestSubmittedEntries] = await Promise.all([
+  const [allSites, observedKeys] = await Promise.all([
     overseasSitesRepository.findAll(),
-    summaryLogRowStatesRepository.findDistinctDataKeys(),
-    ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
+    summaryLogRowStatesRepository.findDistinctDataKeys()
   ])
+
+  // A named submission is generally not the latest, so the latest-per-ledger
+  // query cannot answer it: the file-id path reads the rows directly instead.
+  const latestSubmittedEntries = summaryLogFileId
+    ? []
+    : await ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
 
   const sitesById = new Map(allSites.map((s) => [s.id, s]))
   const dataFieldColumns = buildDataFieldColumns(observedKeys)
@@ -238,6 +407,7 @@ export async function* streamCsvExport(deps) {
         entries:
           entriesByRegistration.get(registrationKey(org.id, registration.id)) ??
           [],
+        summaryLogFileId,
         sitesById,
         dataFieldColumns,
         summaryLogRowStatesRepository,

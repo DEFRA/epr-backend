@@ -213,9 +213,12 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
         seeds: [{ rows: [receivedRowState()] }],
         summaryLogs: [
           {
-            id: 'sl-1',
+            // The ledger records the submission by its file id, so the
+            // document's own id is deliberately something else.
+            id: 'sl-doc-1',
             version: 1,
             summaryLog: summaryLogFactory.submitted({
+              file: { id: DEFAULT_SUMMARY_LOG_ID },
               submittedAt: '2026-04-15T09:00:00Z'
             })
           }

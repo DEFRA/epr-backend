@@ -10,6 +10,7 @@ import {
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
+import { buildDownloadDisposition } from './download-disposition.js'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
 import {
@@ -321,22 +322,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
-const ISO_SECONDS_LENGTH = 19
-
-/**
- * Down to the second: a rejected log is often resubmitted the same day.
- * @param {string} registrationNumber
- * @param {string} submittedAt
- * @returns {string}
- */
-const downloadDisposition = (registrationNumber, submittedAt) => {
-  const submitted = submittedAt
-    .slice(0, ISO_SECONDS_LENGTH)
-    .replace('T', '-')
-    .replaceAll(':', '')
-
-  return `attachment; filename="${registrationNumber}-${submitted}.xlsx"`
-}
+const XLSX_EXTENSION = 'xlsx'
 
 const signDownload =
   (db, s3Client, preSignedUrlExpiry) =>
@@ -352,9 +338,10 @@ const signDownload =
       Bucket,
       Key,
       ...(registrationNumber && {
-        ResponseContentDisposition: downloadDisposition(
+        ResponseContentDisposition: buildDownloadDisposition(
           registrationNumber,
-          doc.submittedAt
+          doc.submittedAt,
+          XLSX_EXTENSION
         )
       })
     })

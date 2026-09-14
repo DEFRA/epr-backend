@@ -140,7 +140,22 @@ const approvedAccreditation = (overrides = {}) => ({
   ...overrides
 })
 
-const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
+// The ledger records a submission by its file id, and that is the id a row
+// state's membership holds — deliberately unlike the summary log document's
+// own id, so a lookup keyed by the wrong one misses.
+const DEFAULT_SUMMARY_LOG_FILE_ID = 'file-1'
+
+/**
+ * A summary log document as `findAllByOrgReg` returns it: its own id, and the
+ * file id the submission is addressed by.
+ *
+ * @param {string} fileId
+ * @param {string} [submittedAt]
+ */
+const summaryLogDocument = (fileId, submittedAt) => ({
+  id: `doc-${fileId}`,
+  summaryLog: { file: { id: fileId }, ...(submittedAt && { submittedAt }) }
+})
 
 /**
  * Build export deps backed by the real in-memory ledger and row-state
@@ -154,7 +169,8 @@ const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
  *   summaryLogs?: Record<string, any[]>,
  *   sites?: OverseasSite[],
  *   organisationId?: string,
- *   registrationId?: string
+ *   registrationId?: string,
+ *   summaryLogFileId?: string
  * }} [options]
  */
 const buildDeps = async ({
@@ -163,16 +179,19 @@ const buildDeps = async ({
   summaryLogs = {},
   sites = [],
   organisationId,
-  registrationId
+  registrationId,
+  summaryLogFileId
 } = {}) => {
   const ledgerEvents = seeds.map((seed) =>
     buildLedgerEvent({
       organisationId: seed.organisationId ?? 'org-1',
       registrationId: seed.registrationId ?? 'reg-1',
       accreditationId: seed.accreditationId ?? null,
-      number: 1,
+      // A partition seeded twice needs ascending numbers so the later
+      // submission is the one the latest-per-ledger query resolves.
+      number: seed.number ?? 1,
       payload: {
-        summaryLogId: seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID,
+        summaryLogId: seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_FILE_ID,
         creditTotal: 0
       }
     })
@@ -191,7 +210,7 @@ const buildDeps = async ({
         accreditationId: seed.accreditationId ?? null
       },
       seed.rows ?? [],
-      seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID
+      seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_FILE_ID
     )
   }
 
@@ -209,7 +228,8 @@ const buildDeps = async ({
       findAll: async () => sites
     },
     organisationId,
-    registrationId
+    registrationId,
+    summaryLogFileId
   }
 }
 
@@ -233,10 +253,10 @@ describe('streamCsvExport', () => {
       seeds: [{ rows: [receivedRowState()] }],
       summaryLogs: {
         'org-1/reg-1': [
-          {
-            id: DEFAULT_SUMMARY_LOG_ID,
-            summaryLog: { submittedAt: '2026-04-15T09:00:00Z' }
-          }
+          summaryLogDocument(
+            DEFAULT_SUMMARY_LOG_FILE_ID,
+            '2026-04-15T09:00:00Z'
+          )
         ]
       }
     })
@@ -1260,6 +1280,268 @@ describe('streamCsvExport', () => {
       Promise.reject(new Error('cursor died'))
 
     await expect(collect(streamCsvExport(deps))).rejects.toThrow('cursor died')
+  })
+})
+
+describe('streamCsvExport scoped to one submission', () => {
+  const scopedToFile = (options) =>
+    buildDeps({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      ...options
+    })
+
+  it('emits the same header as the unscoped export', async () => {
+    const fixture = {
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          summaryLogId: 'file-old',
+          rows: [
+            receivedRowState({ data: { A_COLUMN_ONLY_THIS_ROW_HAS: 'x' } })
+          ]
+        }
+      ]
+    }
+
+    const unscoped = await collect(streamCsvExport(await buildDeps(fixture)))
+    const scoped = await collect(
+      streamCsvExport(
+        await scopedToFile({ ...fixture, summaryLogFileId: 'file-old' })
+      )
+    )
+
+    expect(scoped[0]).toBe(unscoped[0])
+  })
+
+  it('emits the rows of the submission asked for and no others', async () => {
+    const deps = await scopedToFile({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          summaryLogId: 'file-old',
+          number: 1,
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          summaryLogId: 'file-new',
+          number: 2,
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ],
+      summaryLogFileId: 'file-old'
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(2)
+    expect(out[1].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('1001')
+  })
+
+  it('emits every row of a submission that reported several, in row order', async () => {
+    const deps = await scopedToFile({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          summaryLogId: 'file-old',
+          rows: [
+            receivedRowState({ rowId: '10' }),
+            receivedRowState({ rowId: '9' }),
+            receivedRowState({ rowId: '1001' })
+          ]
+        }
+      ],
+      summaryLogFileId: 'file-old'
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    // Natural ordering, so '9' precedes '10' rather than sorting as text.
+    expect(
+      out
+        .slice(1)
+        .map((row) => row.trim().split(',')[METADATA_COL_INDEX['Row ID']])
+    ).toEqual(['9', '10', '1001'])
+  })
+
+  it('answers for a submission the latest-per-ledger query cannot reach', async () => {
+    const deps = await scopedToFile({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [
+        {
+          summaryLogId: 'file-old',
+          number: 1,
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          summaryLogId: 'file-new',
+          number: 2,
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ],
+      summaryLogFileId: 'file-old'
+    })
+    const findLatest = vi.spyOn(
+      deps.ledgerRepository,
+      'findLatestSubmittedSummaryLogPerLedger'
+    )
+
+    await collect(streamCsvExport(deps))
+
+    expect(findLatest).not.toHaveBeenCalled()
+  })
+
+  it('dates the rows from the summary log carrying that file', async () => {
+    const deps = await scopedToFile({
+      orgs: [baseOrg({ registrations: [baseRegistration()] })],
+      seeds: [{ summaryLogId: 'file-old', rows: [receivedRowState()] }],
+      summaryLogs: {
+        'org-1/reg-1': [
+          summaryLogDocument('file-old', '2026-04-15T09:00:00Z'),
+          summaryLogDocument('file-new', '2026-07-15T10:00:00Z')
+        ]
+      },
+      summaryLogFileId: 'file-old'
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out[1].trim().split(',')[METADATA_COL_INDEX['Submitted At']]).toBe(
+      '2026-04-15T09:00:00Z'
+    )
+  })
+
+  it('resolves the accreditation from the partition the rows carry, not the current link', async () => {
+    const org = baseOrg({
+      accreditations: [
+        approvedAccreditation({
+          id: 'acc-old',
+          accreditationNumber: 'ACC-OLD'
+        }),
+        approvedAccreditation({ id: 'acc-new', accreditationNumber: 'ACC-NEW' })
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-new' })
+      ]
+    })
+    const deps = await scopedToFile({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-old',
+          summaryLogId: 'file-old',
+          rows: [receivedRowState({ rowId: '1001' })]
+        }
+      ],
+      summaryLogFileId: 'file-old'
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(
+      out[1].trim().split(',')[METADATA_COL_INDEX['Accreditation Number']]
+    ).toBe('ACC-OLD')
+  })
+
+  it('orders the partitions of one submission registered-only first, then by accreditation id', async () => {
+    const org = baseOrg({
+      accreditations: [
+        approvedAccreditation({ id: 'acc-a' }),
+        approvedAccreditation({ id: 'acc-b' })
+      ],
+      registrations: [
+        baseRegistration({ accreditation: null, accreditationId: 'acc-b' })
+      ]
+    })
+    const deps = await scopedToFile({
+      orgs: [org],
+      seeds: [
+        {
+          accreditationId: 'acc-b',
+          summaryLogId: 'file-1',
+          rows: [receivedRowState({ rowId: '3003' })]
+        },
+        {
+          accreditationId: null,
+          summaryLogId: 'file-1',
+          rows: [receivedRowState({ rowId: '1001' })]
+        },
+        {
+          accreditationId: 'acc-a',
+          summaryLogId: 'file-1',
+          rows: [receivedRowState({ rowId: '2002' })]
+        }
+      ],
+      summaryLogFileId: 'file-1'
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    const rowIds = out
+      .slice(1)
+      .map((line) => line.trim().split(',')[METADATA_COL_INDEX['Row ID']])
+    expect(rowIds).toEqual(['1001', '2002', '3003'])
+  })
+
+  describe('when the stamped classification and a fresh one disagree', () => {
+    // A row that counted toward the balance under an accreditation the
+    // organisation no longer holds: `resolveAccreditation` answers null at
+    // export time, so recomputing would exclude it.
+    const withCancelledAccreditation = (options) => ({
+      orgs: [
+        baseOrg({
+          accreditations: [],
+          registrations: [
+            baseRegistration({ accreditation: null, accreditationId: 'acc-1' })
+          ]
+        })
+      ],
+      seeds: [
+        {
+          accreditationId: 'acc-1',
+          summaryLogId: 'file-1',
+          rows: [
+            receivedRowState({
+              rowId: '1001',
+              data: completeReceivedData(),
+              classification: {
+                outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+                reasons: [],
+                transactionAmount: 50.5
+              }
+            })
+          ]
+        }
+      ],
+      ...options
+    })
+
+    it('reports what the submission committed', async () => {
+      const deps = await scopedToFile(
+        withCancelledAccreditation({ summaryLogFileId: 'file-1' })
+      )
+
+      const cells = (await collect(streamCsvExport(deps)))[1].trim().split(',')
+
+      expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe(
+        'true'
+      )
+      expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('50.5')
+      expect(cells[METADATA_COL_INDEX['Waste Balance Exclusion Reason']]).toBe(
+        ''
+      )
+    })
+
+    it('leaves the unscoped export recomputing against the present', async () => {
+      const deps = await buildDeps(withCancelledAccreditation())
+
+      const cells = (await collect(streamCsvExport(deps)))[1].trim().split(',')
+
+      // No active accreditation to classify against, so the recomputed answer
+      // is that the row cannot contribute at all.
+      expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+      expect(cells[METADATA_COL_INDEX['Waste Balance Tonnage']]).toBe('')
+    })
   })
 })
 
