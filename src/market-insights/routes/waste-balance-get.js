@@ -3,8 +3,10 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
+import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
+import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 import { CADENCE } from '#reports/domain/cadence.js'
-import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
+import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
@@ -19,7 +21,8 @@ export const marketInsightsWasteBalancePath =
 /**
  * The reporting months from January up to the requested period. A period that
  * has not ended is rejected, which is what keeps the month still running out
- * of the aggregate.
+ * of the aggregate. Ended is judged on the UK calendar, not UTC, because the
+ * page asking for the month just gone reads a UK clock.
  *
  * @param {number} year
  * @param {number} period
@@ -27,8 +30,9 @@ export const marketInsightsWasteBalancePath =
  * @returns {string[]} `YYYY-MM` keys, in order
  */
 const publishedMonthsThrough = (year, period, now) => {
-  const ended = generateReportingPeriods(CADENCE.monthly, year, now).filter(
-    (p) => p.period <= period
+  const ukMonthNow = toYearMonth(formatLocalDateTime(now, UK_TIME_ZONE))
+  const ended = generateAllPeriodsForYear(CADENCE.monthly, year).filter(
+    (p) => p.period <= period && toYearMonth(p.endDate) < ukMonthNow
   )
   if (ended.length < period) {
     throw badRequest(

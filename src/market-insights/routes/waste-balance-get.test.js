@@ -103,9 +103,9 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects the month still running, to its last moment', async () => {
+    it('rejects the month still running, to its last UK moment', async () => {
       vi.useFakeTimers({ toFake: ['Date'] })
-      vi.setSystemTime(new Date('2026-06-30T23:59:59.999Z'))
+      vi.setSystemTime(new Date('2026-06-30T22:59:59.999Z'))
 
       const response = await injectTable(
         server,
@@ -121,9 +121,9 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
       })
     })
 
-    it('serves the month that has just ended', async () => {
+    it('serves the month that has just ended in UK time, while UTC is still in it', async () => {
       vi.useFakeTimers({ toFake: ['Date'] })
-      vi.setSystemTime(new Date('2026-07-01T00:00:00.000Z'))
+      vi.setSystemTime(new Date('2026-06-30T23:30:00.000Z'))
 
       const response = await injectTable(
         server,
