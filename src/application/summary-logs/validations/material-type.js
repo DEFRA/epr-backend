@@ -82,7 +82,7 @@ export const validateMaterialType = ({
 }) => {
   const issues = createValidationIssues()
 
-  const { material } = registration
+  const { material: appliedForMaterial } = registration
 
   const materialField = extractMetaField(
     parsed,
@@ -108,14 +108,14 @@ export const validateMaterialType = ({
     return issues
   }
 
-  if (!VALID_REGISTRATION_MATERIALS.includes(material)) {
+  if (!VALID_REGISTRATION_MATERIALS.includes(appliedForMaterial)) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Invalid summary log: registration has invalid material',
       VALIDATION_CODE.MATERIAL_DATA_INVALID,
       {
         expected: VALID_REGISTRATION_MATERIALS,
-        actual: material
+        actual: appliedForMaterial
       }
     )
     return issues
@@ -123,7 +123,7 @@ export const validateMaterialType = ({
 
   const expectedMaterial = MATERIAL_MAP[spreadsheetMaterial]
 
-  if (expectedMaterial !== material) {
+  if (expectedMaterial !== appliedForMaterial) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Material does not match registration material',
@@ -131,7 +131,7 @@ export const validateMaterialType = ({
       {
         location,
         expected: expectedMaterial,
-        actual: material
+        actual: appliedForMaterial
       }
     )
     return issues
@@ -145,7 +145,7 @@ export const validateMaterialType = ({
   })
 
   logValidationSuccess(
-    `Validated material: ${loggingContext}, spreadsheetMaterial=${spreadsheetMaterial}, registrationMaterial=${material}`
+    `Validated material: ${loggingContext}, spreadsheetMaterial=${spreadsheetMaterial}, appliedForMaterial=${appliedForMaterial}`
   )
 
   return issues
