@@ -48,7 +48,7 @@ import {
  * @param {Accreditation} accreditation
  * @returns {CalendarDate | undefined}
  */
-const cancelledOn = (accreditation) => {
+const dateCancelled = (accreditation) => {
   const cancellation = getStatusHistoryDateTimes(
     accreditation.statusHistory
   ).find((entry) => entry.status === ACCREDITATION_STATUS.CANCELLED)
@@ -78,7 +78,7 @@ const obligation = (accreditation) => {
   if (ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)) {
     return window
   }
-  const cancelled = cancelledOn(accreditation)
+  const cancelled = dateCancelled(accreditation)
   return cancelled === undefined ? null : { ...window, cancelledOn: cancelled }
 }
 

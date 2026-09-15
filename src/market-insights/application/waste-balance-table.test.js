@@ -761,16 +761,6 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
-  it('has no figures for an unsplit glass material', () => {
-    /** @type {Partial<import('./waste-balance-table.js').FiguresByMaterial>} */
-    const figures = {
-      // @ts-expect-error plain glass is not a material the publication prints
-      [MATERIAL.GLASS]: { reprocessor: NO_ACTIVITY, exporter: NO_ACTIVITY }
-    }
-
-    expect(Object.keys(figures)).toEqual([MATERIAL.GLASS])
-  })
-
   it('publishes a glass registration the split reached under its process', async () => {
     const operator = makeOperator({
       orgId: 500013,

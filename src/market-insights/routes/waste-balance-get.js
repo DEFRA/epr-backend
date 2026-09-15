@@ -32,7 +32,8 @@ export const marketInsightsWasteBalancePath =
 const publishedMonthsThrough = (year, period, now) => {
   const ukMonthNow = toYearMonth(formatLocalDateTime(now, UK_TIME_ZONE))
   const ended = generateAllPeriodsForYear(CADENCE.monthly, year).filter(
-    (p) => p.period <= period && toYearMonth(p.endDate) < ukMonthNow
+    (p) =>
+      p.period <= period && toYearMonth(p.endDate).localeCompare(ukMonthNow) < 0
   )
   if (ended.length < period) {
     throw badRequest(
