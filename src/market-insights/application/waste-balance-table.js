@@ -80,12 +80,12 @@ import { countMonthlyReports } from '#market-insights/application/monthly-report
  * @template {string} K
  * @template V
  * @param {readonly K[]} keys
- * @param {(key: K) => V} valueOf
+ * @param {(key: K) => V} valueFor
  * @returns {Record<K, V>}
  */
-const recordOf = (keys, valueOf) =>
+const recordOf = (keys, valueFor) =>
   /** @type {Record<K, V>} */ (
-    Object.fromEntries(keys.map((key) => [key, valueOf(key)]))
+    Object.fromEntries(keys.map((key) => [key, valueFor(key)]))
   )
 
 /**
