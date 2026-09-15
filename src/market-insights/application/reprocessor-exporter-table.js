@@ -101,15 +101,15 @@ const foldIntoCell = (cells, registration, month, report) => {
 
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {string} registrationKey
+ * @param {string} key
  */
-const warnAboutUnmatchedReport = (logger, registrationKey) => {
+const warnAboutUnmatchedReport = (logger, key) => {
   logger.warn({
-    message: `Market insights reprocessor and exporter figures left out a periodic report whose registration no longer resolves: ${registrationKey}. Everything it reported is absent from the publication.`,
+    message: `Market insights reprocessor and exporter figures left out a periodic report whose registration no longer resolves: ${key}. Everything it reported is absent from the publication.`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: 'market_insights_report_unmatched',
-      reference: registrationKey
+      reference: key
     }
   })
 }
@@ -177,21 +177,35 @@ export const buildReprocessorExporterTable = async ({
       .filter((org) => TEST_ORGANISATIONS.has(org.orgId))
       .map((org) => org.id)
   )
-  const served = new Set(months)
-  /** @type {Map<string, Measures>} */
-  const cells = new Map()
-
-  for (const periodicReport of periodicReports) {
+  /**
+   * The registration a periodic report belongs to, when it holds a live
+   * accreditation. A report whose registration does not resolve is logged
+   * unless a test organisation filed it.
+   *
+   * @param {import('#reports/repository/port.js').PeriodicReport} periodicReport
+   * @returns {ReportableRegistration | undefined}
+   */
+  const accreditedRegistrationFor = (periodicReport) => {
     const key = registrationKey(periodicReport)
     const entry = registrations.get(key)
     if (entry === undefined) {
       if (!testOrganisationIds.has(periodicReport.organisationId)) {
         warnAboutUnmatchedReport(logger, key)
       }
-      continue
+      return undefined
     }
-    const { org, registration } = entry
-    if (resolveAccreditation(registration, org) === null) {
+    return resolveAccreditation(entry.registration, entry.org) === null
+      ? undefined
+      : entry.registration
+  }
+
+  const served = new Set(months)
+  /** @type {Map<string, Measures>} */
+  const cells = new Map()
+
+  for (const periodicReport of periodicReports) {
+    const registration = accreditedRegistrationFor(periodicReport)
+    if (registration === undefined) {
       continue
     }
     for (const [period, slot] of Object.entries(
