@@ -11,6 +11,25 @@ import { logger } from './logging/logger.js'
  */
 
 /**
+ * Builds CloudWatch dimensions from raw values: stringifies and lowercases,
+ * omitting undefined/null/empty-string values (CloudWatch rejects an empty
+ * dimension value).
+ * @param {Record<string, string|number|boolean|undefined|null>} dimensions
+ * @returns {Dimensions}
+ */
+const buildDimensions = (dimensions) => {
+  /** @type {Dimensions} */
+  const result = {}
+  for (const [key, value] of Object.entries(dimensions)) {
+    if (value === undefined || value === null || value === '') {
+      continue
+    }
+    result[key] = String(value).toLowerCase()
+  }
+  return result
+}
+
+/**
  * Records a metric to AWS CloudWatch
  * @param {string} metricName - The name of the metric
  * @param {number} value - The value to record
@@ -69,4 +88,4 @@ const timed = async (metricName, dimensions, fn) => {
   }
 }
 
-export { incrementCounter, recordDuration, timed }
+export { buildDimensions, incrementCounter, recordDuration, timed }

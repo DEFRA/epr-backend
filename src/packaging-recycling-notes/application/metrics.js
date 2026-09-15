@@ -1,7 +1,8 @@
-import { incrementCounter } from '#common/helpers/metrics.js'
+import { buildDimensions, incrementCounter } from '#common/helpers/metrics.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
+ * @typedef {import('#domain/summary-logs/meta-fields.js').ProcessingType} ProcessingType
  */
 
 /**
@@ -10,24 +11,16 @@ import { incrementCounter } from '#common/helpers/metrics.js'
  * @property {PrnStatus} toStatus - The status transitioning to
  * @property {string} [material] - The material type (e.g. 'paper', 'plastic')
  * @property {boolean} [isExport] - Whether this is a PERN (export) or PRN
+ * @property {boolean} isDecemberWaste - The PRN's statutory December-waste disclosure (ADR-0049)
+ * @property {boolean} isAcceptedIntoNextObligationYear - True when the PRN's obligationYear is the accreditation year plus one
  */
 
 /**
- * Builds CloudWatch dimensions object, converting values to lowercase
- * and omitting undefined values
- * @param {Record<string, string|boolean|undefined>} dimensions
- * @returns {Record<string, string>}
+ * @typedef {Object} CreatedDimensions
+ * @property {string} [material] - The material type (e.g. 'paper', 'plastic')
+ * @property {boolean} isDecemberWaste - The PRN's statutory December-waste disclosure (ADR-0049)
+ * @property {ProcessingType} processingType - The accreditation's processing type (exporter, reprocessor input/output)
  */
-const buildDimensions = (dimensions) => {
-  /** @type {Record<string, string>} */
-  const result = {}
-  for (const [key, value] of Object.entries(dimensions)) {
-    if (value !== undefined && value !== null) {
-      result[key] = String(value).toLowerCase()
-    }
-  }
-  return result
-}
 
 /**
  * Records a PRN status transition metric
@@ -37,20 +30,42 @@ async function recordStatusTransition({
   fromStatus,
   toStatus,
   material,
-  isExport
+  isExport,
+  isDecemberWaste,
+  isAcceptedIntoNextObligationYear
 }) {
   await incrementCounter(
     'prn.statusTransition',
-    buildDimensions({ fromStatus, toStatus, material, isExport })
+    buildDimensions({
+      fromStatus,
+      toStatus,
+      material,
+      isExport,
+      isDecemberWaste,
+      isAcceptedIntoNextObligationYear
+    })
+  )
+}
+
+/**
+ * Records a PRN creation metric
+ * @param {CreatedDimensions} dimensions
+ */
+async function recordCreated({ material, isDecemberWaste, processingType }) {
+  await incrementCounter(
+    'prn.created',
+    buildDimensions({ material, isDecemberWaste, processingType })
   )
 }
 
 /**
  * @typedef {Object} PrnMetrics
  * @property {(dimensions: StatusTransitionDimensions) => Promise<void>} recordStatusTransition - Records a PRN status transition metric
+ * @property {(dimensions: CreatedDimensions) => Promise<void>} recordCreated - Records a PRN creation metric
  */
 
 /** @type {PrnMetrics} */
 export const prnMetrics = {
-  recordStatusTransition
+  recordStatusTransition,
+  recordCreated
 }

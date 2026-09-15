@@ -66,6 +66,8 @@ const buildPrn = (overrides = {}) => ({
   },
   tonnage: 100,
   isExport: false,
+  isDecemberWaste: false,
+  obligationYear: 2026,
   status: {
     currentStatus: PRN_STATUS.DRAFT,
     currentStatusAt: EVENT_AT,
@@ -589,6 +591,48 @@ describe('updatePrnStatus', () => {
     })
   })
 
+  describe('accepting a PRN (awaiting acceptance to accepted)', () => {
+    it('carries a December PRN into the following obligation year when accepted with that override', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 75,
+          isExport: true,
+          isDecemberWaste: true,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+            history: []
+          }
+        }),
+        balance: {
+          amount: 1000,
+          availableAmount: 1000,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
+        },
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.ACCEPTED,
+        actor: PRN_ACTOR.PRODUCER,
+        obligationYear: 2027
+      })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.obligationYear).toBe(2027)
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        fromStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        toStatus: PRN_STATUS.ACCEPTED,
+        material: 'plastic',
+        isExport: true,
+        isDecemberWaste: true,
+        isAcceptedIntoNextObligationYear: true
+      })
+    })
+  })
+
   describe('discarding a draft PRN', () => {
     it('discards at the provided timestamp without touching the balance', async () => {
       const explicitTimestamp = new Date('2026-01-15T12:00:00Z')
@@ -878,6 +922,15 @@ describe('updatePrnStatus', () => {
         prnId: PRN_ID,
         amount: 100,
         pool: POOL.DECEMBER
+      })
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        fromStatus: PRN_STATUS.DRAFT,
+        toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        material: 'plastic',
+        isExport: true,
+        isDecemberWaste: true,
+        isAcceptedIntoNextObligationYear: false
       })
     })
 
@@ -1386,7 +1439,9 @@ describe('updatePrnStatus', () => {
         fromStatus: PRN_STATUS.DRAFT,
         toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         material: 'plastic',
-        isExport: false
+        isExport: false,
+        isDecemberWaste: false,
+        isAcceptedIntoNextObligationYear: false
       })
     })
   })
