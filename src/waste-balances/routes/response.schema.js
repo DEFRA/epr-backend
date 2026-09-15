@@ -5,7 +5,9 @@ const wasteBalanceSchema = Joi.object({
   availableAmount: Joi.number().required(),
   // Present only when the accreditation holds a separate December portion.
   decemberAmount: Joi.number(),
-  decemberAvailableAmount: Joi.number()
+  decemberAvailableAmount: Joi.number(),
+  // Present only when the accreditation holds a separate December portion.
+  nonDecemberAvailableAmount: Joi.number()
 })
 
 export const wasteBalanceResponseSchema = Joi.object().pattern(

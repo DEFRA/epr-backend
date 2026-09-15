@@ -6,7 +6,6 @@ import {
 } from '#domain/organisations/model.js'
 import {
   assertDecemberWasteDeclarable,
-  declaresDecemberWasteManually,
   DECEMBER_WASTE_NOT_DECLARABLE_CODE,
   isWithinDecemberWasteWindow
 } from './december-waste-window.js'
@@ -95,20 +94,6 @@ describe('isWithinDecemberWasteWindow', () => {
         widened
       )
     ).toBe(false)
-  })
-})
-
-describe('declaresDecemberWasteManually', () => {
-  it('is true for a reprocessor on output', () => {
-    expect(declaresDecemberWasteManually(outputReprocessor)).toBe(true)
-  })
-
-  it('is false for a reprocessor on input', () => {
-    expect(declaresDecemberWasteManually(inputReprocessor)).toBe(false)
-  })
-
-  it('is false for an exporter', () => {
-    expect(declaresDecemberWasteManually(exporter)).toBe(false)
   })
 })
 
