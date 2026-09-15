@@ -19,6 +19,7 @@ import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
+import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
 
 // .vite/setup-files.js configures 999999 as a test organisation.
@@ -33,7 +34,7 @@ const JANUARY_TO_JUNE_2026 = [
   '2026-04',
   '2026-05',
   '2026-06'
-]
+].map(toYearMonth)
 
 const ACCREDITED_FROM = '2026-01-01'
 const ACCREDITED_TO = '2026-12-31'
@@ -322,7 +323,7 @@ const monthlyReport = ({ ledgerId }, period) => ({
  *   reports?: MonthlyReportRef[],
  *   unsubmittedReports?: MonthlyReportRef[],
  *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
- *   months?: string[],
+ *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
  *   now?: Date
  * }} options
  */
@@ -579,6 +580,7 @@ describe('buildWasteBalanceTable', () => {
         organisations: [operator.organisation],
         submissions: [],
         reports: [monthlyReport(operator, 2)],
+        // @ts-expect-error a served month is minted by toYearMonth, never a bare string
         months: ['2026-01']
       })
 

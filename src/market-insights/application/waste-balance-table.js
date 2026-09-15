@@ -23,6 +23,7 @@ import { countMonthlyReports } from '#market-insights/application/monthly-report
  * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#market-insights/application/monthly-reports.js').MonthlyReportCounts} MonthlyReportCounts
+ * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceFigures} WasteBalanceFigures
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} PublishedWasteBalanceFigures
@@ -81,7 +82,7 @@ const cellKey = ({ material, accreditationType, month }) =>
  * The publication prints every combination, so one nothing reported into is
  * still a row.
  *
- * @param {string[]} months
+ * @param {YearMonth[]} months
  * @returns {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>[]}
  */
 const publishedGrid = (months) =>
@@ -286,7 +287,7 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {string[]} params.months - the `YYYY-MM` reporting months to publish
+ * @param {YearMonth[]} params.months - the reporting months to publish
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<WasteBalanceTable>}
  */
@@ -320,6 +321,7 @@ export const buildWasteBalanceTable = async ({
     .filter((entry) => partitions.has(partitionKey(entry.ledgerId)))
     .map((entry) => entry.summaryLogId)
 
+  /** @type {Set<string>} */
   const publishedMonths = new Set(months)
   const into = {
     /** @type {Map<string, WasteBalanceCell>} */

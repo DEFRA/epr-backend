@@ -27,7 +27,7 @@ export const marketInsightsWasteBalancePath =
  * @param {number} year
  * @param {number} period
  * @param {Date} now
- * @returns {string[]} `YYYY-MM` keys, in order
+ * @returns {import('#common/helpers/dates/year-month.js').YearMonth[]} in order
  */
 const publishedMonthsThrough = (year, period, now) => {
   const ukMonthNow = toYearMonth(formatLocalDateTime(now, UK_TIME_ZONE))

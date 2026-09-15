@@ -23,6 +23,8 @@ import {
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
+/** @import { AccreditationWindow } from '#common/helpers/dates/accreditation.js' */
+/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -36,7 +38,7 @@ import {
  * How close each month served is to publication, and the period as a whole.
  *
  * @typedef {Object} MonthlyReportCounts
- * @property {Record<string, ReportCount>} byMonth - keyed by month served, `YYYY-MM`
+ * @property {Record<YearMonth, ReportCount>} byMonth - keyed by month served
  * @property {ReportCount} total - summed across every month served
  */
 
@@ -54,10 +56,9 @@ const cancelledOn = (accreditation) => {
 }
 
 /**
- * @typedef {Object} Obligation
- * @property {CalendarDate} validFrom
- * @property {CalendarDate} validTo
- * @property {CalendarDate} [cancelledOn] - cuts the obligation short
+ * An accreditation's validity window, cut short by its cancellation if any.
+ *
+ * @typedef {AccreditationWindow & { cancelledOn?: CalendarDate }} Obligation
  */
 
 /**
@@ -86,7 +87,7 @@ const obligation = (accreditation) => {
  * obligation. The caller has already settled which months have ended, on the
  * UK calendar, so no clock is consulted here.
  *
- * @param {Set<string>} served - `YYYY-MM` keys
+ * @param {Set<YearMonth>} served
  * @param {number[]} years
  * @param {Obligation} obligation
  */
@@ -111,7 +112,7 @@ const owedPeriods = (served, years, { validFrom, validTo, cancelledOn }) =>
  * @param {Object} params
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
- * @param {string[]} params.months - the `YYYY-MM` reporting months served
+ * @param {YearMonth[]} params.months - the reporting months served
  * @returns {MonthlyReportCounts}
  */
 export const countMonthlyReports = ({
@@ -123,7 +124,7 @@ export const countMonthlyReports = ({
   const years = [...new Set(months.map((month) => Number(month.slice(0, 4))))]
   const reportsByRegistration = groupByRegistration(periodicReports)
 
-  /** @type {Map<string, ReportCount>} */
+  /** @type {Map<YearMonth, ReportCount>} */
   const counts = new Map(
     months.map((month) => [month, { expected: 0, submitted: 0 }])
   )
