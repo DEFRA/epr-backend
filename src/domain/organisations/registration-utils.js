@@ -7,7 +7,7 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 
 /** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
-/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Accreditation, AccreditationApproved } from '#domain/organisations/accreditation.js' */
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
@@ -120,6 +120,13 @@ export function resolveMaterial(record) {
 }
 
 /**
+ * @param {Accreditation} accreditation
+ * @returns {accreditation is AccreditationApproved}
+ */
+const isActiveAccreditation = (accreditation) =>
+  ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)
+
+/**
  * Returns the active Accreditation object for a registration by looking up
  * accreditationId in org.accreditations. Only approved/suspended accreditations
  * are returned. Returns null when accreditationId is absent, no match is found,
@@ -127,19 +134,18 @@ export function resolveMaterial(record) {
  *
  * @param {{ accreditationId?: string | null }} registration
  * @param {{ accreditations: Array<{ id: string; status: AccreditationStatus } & Accreditation> }} org
- * @returns {Accreditation | null}
+ * @returns {AccreditationApproved | null}
  */
 export function resolveAccreditation(registration, org) {
   if (!registration.accreditationId) {
     return null
   }
-  return (
-    org.accreditations.find(
-      (a) =>
-        a.id === registration.accreditationId &&
-        ACTIVE_ACCREDITATION_STATUSES.has(a.status)
-    ) ?? null
+  const accreditation = org.accreditations.find(
+    (a) => a.id === registration.accreditationId
   )
+  return accreditation !== undefined && isActiveAccreditation(accreditation)
+    ? accreditation
+    : null
 }
 
 /**

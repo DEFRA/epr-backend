@@ -16,6 +16,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
@@ -234,10 +235,15 @@ const registeredOnly = ({ organisation }) => ({
 })
 
 /**
+ * @typedef {Pick<import('#reports/repository/port.js').CreateReportParams, 'organisationId' | 'registrationId' | 'year' | 'cadence' | 'period'>} MonthlyReportRef
+ */
+
+/**
  * The monthly report an operator submitted for one period of 2026.
  *
  * @param {ReturnType<typeof makeOperator>} operator
  * @param {number} period
+ * @returns {MonthlyReportRef}
  */
 const monthlyReport = ({ ledgerId }, period) => ({
   organisationId: ledgerId.organisationId,
@@ -255,7 +261,8 @@ const monthlyReport = ({ ledgerId }, period) => ({
  * @param {{
  *   organisations: any[],
  *   submissions: any[],
- *   reports?: ReturnType<typeof monthlyReport>[],
+ *   reports?: MonthlyReportRef[],
+ *   unsubmittedReports?: MonthlyReportRef[],
  *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
  *   months?: string[],
  *   now?: Date
@@ -265,6 +272,7 @@ const run = async ({
   organisations,
   submissions,
   reports = [],
+  unsubmittedReports = [],
   overseasSites = [],
   months = JANUARY_TO_JUNE_2026,
   now = NOW
@@ -272,6 +280,9 @@ const run = async ({
   const reportsRepository = createInMemoryReportsRepository()()
   for (const report of reports) {
     await buildSubmittedReport(reportsRepository, report)
+  }
+  for (const report of unsubmittedReports) {
+    await buildUnsubmittedReport(reportsRepository, report)
   }
 
   const summaryLogRowStatesRepository =
@@ -373,6 +384,36 @@ describe('buildWasteBalanceTable', () => {
       expect(table.meta.monthlyReports).toEqual({
         expected: 6,
         submitted: 2
+      })
+    })
+
+    it('still counts a report that was submitted and then unsubmitted, as the public register does', async () => {
+      const operator = makeOperator({ orgId: 500026 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        unsubmittedReports: [monthlyReport(operator, 1)]
+      })
+
+      expect(table.meta.monthlyReports).toEqual({
+        expected: 6,
+        submitted: 1
+      })
+    })
+
+    it('counts every month served, including one UTC has not yet left', async () => {
+      const operator = makeOperator({ orgId: 500027 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        now: new Date('2026-06-30T23:30:00.000Z')
+      })
+
+      expect(table.meta.monthlyReports).toEqual({
+        expected: 6,
+        submitted: 0
       })
     })
 

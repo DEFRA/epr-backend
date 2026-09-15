@@ -353,8 +353,7 @@ export const buildWasteBalanceTable = async ({
       monthlyReports: countMonthlyReports({
         organisations,
         periodicReports,
-        months,
-        now
+        months
       })
     },
     data
