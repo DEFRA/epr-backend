@@ -8,9 +8,21 @@ import {
 } from '#reports/domain/merge-reporting-periods.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
 import {
-  getReportableRegistrations,
-  resolveAccreditation
+  accreditationsForRegistration,
+  getReportableRegistrations
 } from '#domain/organisations/registration-utils.js'
+import {
+  accreditationWindow,
+  getStatusHistoryDateTimes
+} from '#common/helpers/dates/accreditation.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
+import {
+  ACCREDITATION_STATUS,
+  ACTIVE_ACCREDITATION_STATUSES
+} from '#domain/organisations/model.js'
+
+/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -29,28 +41,72 @@ import {
  */
 
 /**
- * The monthly periods an accreditation owes among the months served: those
- * within its validity. The caller has already settled which months have
- * ended, on the UK calendar, so no clock is consulted here.
+ * The day an accreditation was cancelled, read from its status history.
+ *
+ * @param {Accreditation} accreditation
+ * @returns {CalendarDate | undefined}
+ */
+const cancelledOn = (accreditation) => {
+  const cancellation = getStatusHistoryDateTimes(
+    accreditation.statusHistory
+  ).find((entry) => entry.status === ACCREDITATION_STATUS.CANCELLED)
+  return cancellation && toCalendarDate(new Date(cancellation.updatedAt))
+}
+
+/**
+ * @typedef {Object} Obligation
+ * @property {CalendarDate} validFrom
+ * @property {CalendarDate} validTo
+ * @property {CalendarDate} [cancelledOn] - cuts the obligation short
+ */
+
+/**
+ * The days an accreditation owed monthly reports for: its validity window,
+ * cut short by a cancellation. A suspended accreditation keeps reporting. One
+ * that is neither live nor cancelled owes nothing, whether it was never
+ * granted or had its approval reverted.
+ *
+ * @param {Accreditation} accreditation
+ * @returns {Obligation | null}
+ */
+const obligation = (accreditation) => {
+  const window = accreditationWindow(accreditation)
+  if (window === null) {
+    return null
+  }
+  if (ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)) {
+    return window
+  }
+  const cancelled = cancelledOn(accreditation)
+  return cancelled === undefined ? null : { ...window, cancelledOn: cancelled }
+}
+
+/**
+ * The monthly periods owed among the months served: those overlapping the
+ * obligation. The caller has already settled which months have ended, on the
+ * UK calendar, so no clock is consulted here.
  *
  * @param {Set<string>} served - `YYYY-MM` keys
  * @param {number[]} years
- * @param {{ validFrom: string, validTo: string }} accreditation
+ * @param {Obligation} obligation
  */
-const owedPeriods = (served, years, { validFrom, validTo }) =>
+const owedPeriods = (served, years, { validFrom, validTo, cancelledOn }) =>
   filterPeriodsFromDate(
-    years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
+    filterPeriodsFromDate(
+      years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
+      validFrom,
+      validTo
+    ),
     validFrom,
-    validTo
+    cancelledOn
   ).filter((period) => served.has(toYearMonth(period.startDate)))
 
 /**
- * Count, for each month served, the monthly reports owed and those submitted.
- * Only an accredited registration reports monthly, so a registered-only
- * operator counts for nothing, and only an accreditation the public register
- * lists as active is counted. The figures themselves are drawn from every
- * partition the ledger holds, so tonnage a since-cancelled accreditation
- * submitted stays in the figures while it counts for no report.
+ * Count, for each month served, the monthly reports that were required and
+ * those submitted. Only an accredited registration reports monthly, so a
+ * registered-only operator counts for nothing. A cancelled accreditation owed
+ * every month up to its cancellation and none after, so it is counted for
+ * those months and the reports it filed for them.
  *
  * @param {Object} params
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
@@ -73,11 +129,12 @@ export const countMonthlyReports = ({
   for (const { org, registration } of getReportableRegistrations(
     organisations
   )) {
-    const accreditation = resolveAccreditation(registration, org)
-    if (accreditation === null) {
+    const [accreditation] = accreditationsForRegistration(registration, org)
+    const owes = accreditation && obligation(accreditation)
+    if (!owes) {
       continue
     }
-    const owed = owedPeriods(served, years, accreditation)
+    const owed = owedPeriods(served, years, owes)
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
     const reports =
       reportsByRegistration.get(`${org.id}::${registration.id}`) ?? []

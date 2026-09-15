@@ -239,6 +239,64 @@ const registeredOnly = ({ organisation }) => ({
  */
 
 /**
+ * The same operator with its accreditation cancelled on the given day. The
+ * validity window is kept, as a cancellation leaves it.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ * @param {string} cancelledOn - `YYYY-MM-DD`
+ */
+const cancelledOn = ({ organisation }, cancelledOn) => ({
+  ...organisation,
+  accreditations: organisation.accreditations.map((accreditation) => ({
+    ...accreditation,
+    status: ACCREDITATION_STATUS.CANCELLED,
+    statusHistory: [
+      ...accreditation.statusHistory,
+      { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: cancelledOn },
+      {
+        status: ACCREDITATION_STATUS.CANCELLED,
+        updatedAt: `${cancelledOn}T09:00:00.000Z`
+      }
+    ]
+  }))
+})
+
+/**
+ * The same operator whose accreditation was never granted, so it holds no
+ * validity window.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ */
+const neverAccredited = ({ organisation }) => ({
+  ...organisation,
+  accreditations: organisation.accreditations.map(
+    ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) => ({
+      ...accreditation,
+      status: ACCREDITATION_STATUS.CREATED,
+      statusHistory: [approvedHistory[0]]
+    })
+  )
+})
+
+/**
+ * The same operator whose approval was reverted, which leaves the validity
+ * window on the record.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ */
+const approvalReverted = ({ organisation }) => ({
+  ...organisation,
+  accreditations: organisation.accreditations.map((accreditation) => ({
+    ...accreditation,
+    status: ACCREDITATION_STATUS.CREATED,
+    statusHistory: [
+      ...accreditation.statusHistory,
+      { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
+    ]
+  }))
+})
+
+/**
  * The monthly report an operator submitted for one period of 2026.
  *
  * @param {ReturnType<typeof makeOperator>} operator
@@ -469,6 +527,46 @@ describe('buildWasteBalanceTable', () => {
 
       expect(table.meta.monthlyReports).toEqual(
         perMonth([1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects reports up to the month the accreditation was cancelled, and counts those it filed', async () => {
+      const operator = makeOperator({ orgId: 500027 })
+
+      const { table } = await run({
+        organisations: [cancelledOn(operator, '2026-03-20')],
+        submissions: [],
+        reports: [monthlyReport(operator, 1), monthlyReport(operator, 4)]
+      })
+
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([1, 1, 1, 0, 0, 0], [1, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects nothing of an accreditation whose approval was reverted', async () => {
+      const operator = makeOperator({ orgId: 500029 })
+
+      const { table } = await run({
+        organisations: [approvalReverted(operator)],
+        submissions: []
+      })
+
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects nothing of an accreditation that was never granted', async () => {
+      const operator = makeOperator({ orgId: 500028 })
+
+      const { table } = await run({
+        organisations: [neverAccredited(operator)],
+        submissions: []
+      })
+
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
       )
     })
 
