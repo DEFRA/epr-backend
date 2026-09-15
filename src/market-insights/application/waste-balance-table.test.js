@@ -435,6 +435,24 @@ describe('buildWasteBalanceTable', () => {
       })
     })
 
+    it('expects no report after the accreditation ends', async () => {
+      const operator = makeOperator({
+        orgId: 500026,
+        validFrom: '2026-01-01',
+        validTo: '2026-03-31'
+      })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: []
+      })
+
+      expect(table.meta.monthlyReports).toEqual({
+        expected: 3,
+        submitted: 0
+      })
+    })
+
     it('counts only the months served', async () => {
       const operator = makeOperator({ orgId: 500024 })
 

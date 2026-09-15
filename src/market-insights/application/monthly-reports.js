@@ -22,25 +22,28 @@ import {
  */
 
 /**
- * The monthly periods an accreditation owes among the months served. The
- * caller has already settled which months have ended, on the UK calendar, so
- * no clock is consulted here.
+ * The monthly periods an accreditation owes among the months served: those
+ * within its validity. The caller has already settled which months have
+ * ended, on the UK calendar, so no clock is consulted here.
  *
  * @param {Set<string>} served - `YYYY-MM` keys
  * @param {number[]} years
- * @param {string} validFrom
+ * @param {{ validFrom: string, validTo: string }} accreditation
  */
-const owedPeriods = (served, years, validFrom) =>
+const owedPeriods = (served, years, { validFrom, validTo }) =>
   filterPeriodsFromDate(
     years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
-    validFrom
+    validFrom,
+    validTo
   ).filter((period) => served.has(toYearMonth(period.startDate)))
 
 /**
  * Count the monthly reports owed for the months served and those submitted.
- * Only an accredited registration reports monthly and only an accredited
- * partition is published, so a registered-only operator counts for nothing.
- * Obligations start with the accreditation, as the public register has them.
+ * Only an accredited registration reports monthly, so a registered-only
+ * operator counts for nothing, and only an accreditation the public register
+ * lists as active is counted. The figures themselves are drawn from every
+ * partition the ledger holds, so tonnage a since-cancelled accreditation
+ * submitted stays in the figures while it counts for no report.
  *
  * @param {Object} params
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
@@ -65,11 +68,13 @@ export const countMonthlyReports = ({
     if (accreditation === null) {
       continue
     }
-    const owed = owedPeriods(served, years, accreditation.validFrom)
+    const owed = owedPeriods(served, years, accreditation)
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
     const reports =
       reportsByRegistration.get(`${org.id}::${registration.id}`) ?? []
 
+    // The merge also appends any report the operator submitted for a month it
+    // does not owe, and those count for nothing.
     for (const period of mergeReportingPeriods(
       owed,
       reports,
