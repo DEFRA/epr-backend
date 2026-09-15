@@ -10,3 +10,4 @@
  */
 
 export { marketInsightsWasteBalanceGet } from './routes/waste-balance-get.js'
+export { marketInsightsReprocessorExporterFiguresGet } from './routes/reprocessor-exporter-figures-get.js'
