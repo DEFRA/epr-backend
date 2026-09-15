@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   accreditationWindow,
   deriveAccreditationYear,
   getStatusHistoryDateTimes,
   isSuspendedOrCancelledAtDate,
   isAccreditedAtDates,
-  isCancelledThroughout,
   isWithinAccreditationDateRange
 } from './accreditation.js'
 
@@ -397,82 +395,6 @@ describe('accreditation date helpers', () => {
       expect(
         isSuspendedOrCancelledAtDate('2025-05-01T00:00:00.000Z', statusHistory)
       ).toBe(false)
-    })
-  })
-
-  describe('isCancelledThroughout', () => {
-    /**
-     * @param {string} start - `YYYY-MM-DD`
-     * @param {string} end - `YYYY-MM-DD`
-     * @param {[AccreditationStatus, string][]} entries - status and when it took effect
-     */
-    const cancelledThroughout = (start, end, entries) =>
-      isCancelledThroughout(
-        calendarDate(start),
-        calendarDate(end),
-        getStatusHistoryDateTimes(
-          entries.map(([status, updatedAt]) => ({ status, updatedAt }))
-        )
-      )
-
-    it('is not cancelled with no history', () => {
-      expect(cancelledThroughout('2025-06-01', '2025-06-30', [])).toBe(false)
-    })
-
-    it('is not cancelled before the first entry', () => {
-      expect(
-        cancelledThroughout('2025-06-01', '2025-06-30', [
-          ['approved', '2025-09-01']
-        ])
-      ).toBe(false)
-    })
-
-    it('is not cancelled while suspended', () => {
-      expect(
-        cancelledThroughout('2025-06-01', '2025-06-30', [
-          ['approved', '2025-03-01'],
-          ['suspended', '2025-05-01']
-        ])
-      ).toBe(false)
-    })
-
-    it('is cancelled once a cancellation stands', () => {
-      expect(
-        cancelledThroughout('2025-06-01', '2025-06-30', [
-          ['approved', '2025-03-01'],
-          ['suspended', '2025-05-01'],
-          ['cancelled', '2025-05-20T09:00:00.000Z']
-        ])
-      ).toBe(true)
-    })
-
-    it('is not cancelled across a range the cancellation falls inside', () => {
-      expect(
-        cancelledThroughout('2025-05-01', '2025-05-31', [
-          ['approved', '2025-03-01'],
-          ['cancelled', '2025-05-20T09:00:00.000Z']
-        ])
-      ).toBe(false)
-    })
-
-    it('is not cancelled across a range the reinstatement falls inside, even on its last day', () => {
-      expect(
-        cancelledThroughout('2025-06-01', '2025-06-30', [
-          ['approved', '2025-03-01'],
-          ['cancelled', '2025-04-01'],
-          ['approved', '2025-06-30T15:00:00.000Z']
-        ])
-      ).toBe(false)
-    })
-
-    it('is cancelled throughout the gap between a cancellation and a reinstatement', () => {
-      expect(
-        cancelledThroughout('2025-05-01', '2025-05-31', [
-          ['approved', '2025-03-01'],
-          ['cancelled', '2025-04-01'],
-          ['approved', '2025-06-01']
-        ])
-      ).toBe(true)
     })
   })
 

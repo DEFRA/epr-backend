@@ -14,12 +14,15 @@ import {
 import {
   accreditationWindow,
   getStatusHistoryDateTimes,
-  isCancelledThroughout
+  statusHeldAt
 } from '#common/helpers/dates/accreditation.js'
-import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
+/** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -36,6 +39,36 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * @property {Record<YearMonth, ReportCount>} byMonth - keyed by month served
  * @property {ReportCount} total - summed across every month served
  */
+
+/**
+ * Every day of a reporting period, as the bare dates a load can carry.
+ *
+ * @param {{ startDate: CalendarDate, endDate: CalendarDate }} period
+ * @returns {CalendarDate[]}
+ */
+const daysOf = ({ startDate, endDate }) => {
+  const days = []
+  for (
+    const day = new Date(startDate);
+    toCalendarDate(day).localeCompare(endDate) <= 0;
+    day.setUTCDate(day.getUTCDate() + 1)
+  ) {
+    days.push(toCalendarDate(day))
+  }
+  return days
+}
+
+/**
+ * Whether the accreditation stood cancelled on every day of the period, read
+ * from its history exactly as the figures read it for a load dated that day.
+ *
+ * @param {{ startDate: CalendarDate, endDate: CalendarDate }} period
+ * @param {StatusHistoryDateTime[]} history
+ */
+const isCancelledThroughout = (period, history) =>
+  daysOf(period).every(
+    (day) => statusHeldAt(day, history) === ACCREDITATION_STATUS.CANCELLED
+  )
 
 /**
  * The monthly periods an accreditation owed among the months served: those
@@ -61,11 +94,7 @@ const owedPeriods = (served, years, accreditation) => {
   ).filter(
     (period) =>
       served.has(toYearMonth(period.startDate)) &&
-      !isCancelledThroughout(
-        calendarDate(period.startDate),
-        calendarDate(period.endDate),
-        history
-      )
+      !isCancelledThroughout(period, history)
   )
 }
 

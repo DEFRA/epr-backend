@@ -97,57 +97,37 @@ export function isWithinAccreditationDateRange(date, window) {
 }
 
 /**
- * Checks whether an accreditation was suspended or cancelled at a given date by
- * examining the status history. Finds the most recent status change on or before
- * the date and checks whether that status excludes the date from the
- * accreditation period.
+ * The status an accreditation held on a date, read from its history: each
+ * entry holds from its `updatedAt` until the next. Before the first entry
+ * there is none, so a date there is left to the validity window alone.
  *
- * Suspension is temporary and cancellation is terminal, but both take effect
- * from their status-history `updatedAt`, so a date before the change is
- * unaffected and still counts. The validity window itself (validFrom/validTo)
- * is never altered by these transitions.
+ * @param {string|Date} date
+ * @param {StatusHistoryDateTime[]} statusHistory - descending
+ * @returns {AccreditationStatus | undefined}
+ */
+export function statusHeldAt(date, statusHistory) {
+  return statusHistory.find(
+    (entry) => entry.updatedAt <= new Date(date).getTime()
+  )?.status
+}
+
+/**
+ * Whether the accreditation's history excludes a date from its validity
+ * window. Suspension is temporary and cancellation is terminal, but both take
+ * effect from their status-history `updatedAt`, so a date before the change is
+ * unaffected and still counts. The window itself (validFrom/validTo) is never
+ * altered by these transitions.
  *
  * @param {string|Date} date - The date to check
  * @param {StatusHistoryDateTime[]} statusHistory - Accreditation status history in descending date order
  * @returns {boolean} True if the accreditation was suspended or cancelled at the given date
  */
 export function isSuspendedOrCancelledAtDate(date, statusHistory) {
-  const status = statusHistory.find(
-    (entry) => entry.updatedAt <= new Date(date).getTime()
-  )?.status
+  const status = statusHeldAt(date, statusHistory)
   return (
     status === ACCREDITATION_STATUS.SUSPENDED ||
     status === ACCREDITATION_STATUS.CANCELLED
   )
-}
-
-/**
- * Whether the accreditation stood cancelled on every day from `start` to `end`
- * inclusive. Each entry in the history holds from its own day until the next,
- * so an accreditation cancelled and later reinstated was cancelled throughout
- * the gap and on neither side of it. As in `isSuspendedOrCancelledAtDate`, the
- * history only ever removes days from the validity window: a day before any
- * entry is not cancelled.
- *
- * @param {CalendarDate} start
- * @param {CalendarDate} end
- * @param {StatusHistoryDateTime[]} statusHistory - descending
- * @returns {boolean}
- */
-export function isCancelledThroughout(start, end, statusHistory) {
-  /** @type {AccreditationStatus[]} */
-  const held = []
-  for (const entry of statusHistory) {
-    const day = toCalendarDate(new Date(entry.updatedAt))
-    if (day.localeCompare(end) > 0) {
-      continue
-    }
-    held.push(entry.status)
-    if (day.localeCompare(start) <= 0) {
-      return held.every((status) => status === ACCREDITATION_STATUS.CANCELLED)
-    }
-  }
-  return false
 }
 
 /**
