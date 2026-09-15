@@ -6,6 +6,7 @@ import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import {
   getReportableRegistrations,
+  resolveAccreditation,
   resolveMaterial
 } from '#domain/organisations/registration-utils.js'
 import {
@@ -135,11 +136,12 @@ const publishedFigures = (cells, month) =>
 
 /**
  * Aggregate the published UK reprocessor and exporter figures for the given
- * reporting months: the latest monthly submission of every reportable
- * registration, summed by material and accreditation type within each month.
- * A month's figures are what the operator reported for that month, so an
- * accreditation cancelled since still counts for the months it filed.
- * Quarterly reports belong to registered-only operators and are left out.
+ * reporting months: the latest monthly submission of every registration
+ * holding a live accreditation, summed by material and accreditation type
+ * within each month. An accreditation cancelled since loses the months it
+ * filed, as the regulator's workbooks and the report-submissions extract drop
+ * them. Quarterly reports belong to registered-only operators and are left
+ * out.
  *
  * @param {Object} params
  * @param {OrganisationsRepository} params.organisationsRepository
@@ -162,12 +164,12 @@ export const buildReprocessorExporterTable = async ({
   ])
 
   const registrations = new Map(
-    getReportableRegistrations(organisations).map(({ org, registration }) => [
+    getReportableRegistrations(organisations).map((entry) => [
       registrationKey({
-        organisationId: org.id,
-        registrationId: registration.id
+        organisationId: entry.org.id,
+        registrationId: entry.registration.id
       }),
-      registration
+      entry
     ])
   )
   const testOrganisationIds = new Set(
@@ -181,11 +183,15 @@ export const buildReprocessorExporterTable = async ({
 
   for (const periodicReport of periodicReports) {
     const key = registrationKey(periodicReport)
-    const registration = registrations.get(key)
-    if (registration === undefined) {
+    const entry = registrations.get(key)
+    if (entry === undefined) {
       if (!testOrganisationIds.has(periodicReport.organisationId)) {
         warnAboutUnmatchedReport(logger, key)
       }
+      continue
+    }
+    const { org, registration } = entry
+    if (resolveAccreditation(registration, org) === null) {
       continue
     }
     for (const [period, slot] of Object.entries(

@@ -46,7 +46,7 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess[],
  *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
  *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').RegistrationStatus, updatedAt: string }[]
- *   accreditationStatus?: import('#domain/organisations/model.js').AccreditationStatus
+ *   accreditationStatusHistory?: { status: import('#domain/organisations/model.js').AccreditationStatus, updatedAt: string }[]
  * }} options
  */
 const makeOperator = ({
@@ -55,7 +55,7 @@ const makeOperator = ({
   glassRecyclingProcess,
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   registrationStatusHistory = approvedHistory,
-  accreditationStatus = ACCREDITATION_STATUS.APPROVED
+  accreditationStatusHistory = approvedHistory
 }) => {
   const id = objectIdFor('a', orgId)
   const registrationId = objectIdFor('b', orgId)
@@ -80,8 +80,8 @@ const makeOperator = ({
       {
         id: accreditationId,
         accreditationNumber: `ACC-${orgId}`,
-        status: accreditationStatus,
-        statusHistory: approvedHistory,
+        status: accreditationStatusHistory.at(-1)?.status,
+        statusHistory: accreditationStatusHistory,
         validFrom: '2026-01-01',
         validTo: '2026-12-31',
         material,
@@ -489,17 +489,21 @@ describe('buildReprocessorExporterTable', () => {
     expect(reported(table)).toEqual([])
   })
 
-  it('counts the months an accreditation filed before it was cancelled', async () => {
+  it('leaves out the months of an accreditation since cancelled, as the regulator does', async () => {
     const operator = makeOperator({
       orgId: 1,
-      accreditationStatus: ACCREDITATION_STATUS.CANCELLED
+      accreditationStatusHistory: [
+        ...approvedHistory,
+        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-03-01' }
+      ]
     })
-    const { table } = await run({
+    const { table, logger } = await run({
       organisations: [operator],
       reports: [monthlyReport(operator, 1, { prn: prn(10, 0, 1000) })]
     })
 
-    expect(reported(table)).toHaveLength(1)
+    expect(reported(table)).toEqual([])
+    expect(logger.warn).not.toHaveBeenCalled()
   })
 
   it('names the report it left out when the registration no longer resolves', async () => {
