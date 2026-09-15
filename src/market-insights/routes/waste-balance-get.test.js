@@ -153,7 +153,7 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
     })
     expect(body.meta).toEqual({
       generatedAt: expect.any(String),
-      monthlyReports: { expected: 0, submitted: 0 }
+      monthlyReports: [{ month: '2026-01', expected: 0, submitted: 0 }]
     })
   })
 })

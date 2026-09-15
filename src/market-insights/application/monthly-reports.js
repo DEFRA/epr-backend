@@ -13,10 +13,11 @@ import {
 } from '#domain/organisations/registration-utils.js'
 
 /**
- * How complete the figures are: the monthly reports owed across the months
- * served, and how many of them have been submitted.
+ * How close a month is to publication: the monthly reports owed for it, and
+ * how many of them have been submitted.
  *
  * @typedef {Object} MonthlyReportCount
+ * @property {string} month - `YYYY-MM`
  * @property {number} expected
  * @property {number} submitted
  */
@@ -38,7 +39,7 @@ const owedPeriods = (served, years, { validFrom, validTo }) =>
   ).filter((period) => served.has(toYearMonth(period.startDate)))
 
 /**
- * Count the monthly reports owed for the months served and those submitted.
+ * Count, for each month served, the monthly reports owed and those submitted.
  * Only an accredited registration reports monthly, so a registered-only
  * operator counts for nothing, and only an accreditation the public register
  * lists as active is counted. The figures themselves are drawn from every
@@ -49,7 +50,7 @@ const owedPeriods = (served, years, { validFrom, validTo }) =>
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {string[]} params.months - the `YYYY-MM` reporting months served
- * @returns {MonthlyReportCount}
+ * @returns {MonthlyReportCount[]} one per month served, in the order given
  */
 export const countMonthlyReports = ({
   organisations,
@@ -60,7 +61,9 @@ export const countMonthlyReports = ({
   const years = [...new Set(months.map((month) => Number(month.slice(0, 4))))]
   const reportsByRegistration = groupByRegistration(periodicReports)
 
-  const count = { expected: 0, submitted: 0 }
+  const counts = new Map(
+    months.map((month) => [month, { month, expected: 0, submitted: 0 }])
+  )
   for (const { org, registration } of getReportableRegistrations(
     organisations
   )) {
@@ -80,7 +83,8 @@ export const countMonthlyReports = ({
       reports,
       CADENCE.monthly
     )) {
-      if (!owedMonths.has(toYearMonth(period.startDate))) {
+      const count = counts.get(toYearMonth(period.startDate))
+      if (count === undefined || !owedMonths.has(count.month)) {
         continue
       }
       count.expected += 1
@@ -93,5 +97,5 @@ export const countMonthlyReports = ({
       }
     }
   }
-  return count
+  return [...counts.values()]
 }

@@ -59,7 +59,7 @@ import { countMonthlyReports } from '#market-insights/application/monthly-report
 
 /**
  * @typedef {Object} WasteBalanceTable
- * @property {{ generatedAt: string, monthlyReports: MonthlyReportCount }} meta
+ * @property {{ generatedAt: string, monthlyReports: MonthlyReportCount[] }} meta
  * @property {WasteBalanceTableRow[]} data
  */
 
@@ -276,7 +276,7 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * months, summed by material, accreditation type and reporting month. A row
  * dated outside those months is held back, which is what keeps a mis-keyed
  * future date from being published as supply. The count of monthly reports
- * owed and submitted across those months says how complete the figures are.
+ * owed and submitted for each month says how close it is to publication.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository

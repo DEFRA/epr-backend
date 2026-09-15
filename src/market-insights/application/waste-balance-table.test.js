@@ -352,11 +352,28 @@ describe('buildWasteBalanceTable', () => {
 
     expect(table.meta).toStrictEqual({
       generatedAt: NOW.toISOString(),
-      monthlyReports: { expected: 0, submitted: 0 }
+      monthlyReports: JANUARY_TO_JUNE_2026.map((month) => ({
+        month,
+        expected: 0,
+        submitted: 0
+      }))
     })
   })
 
   describe('the monthly reports the figures include', () => {
+    /**
+     * One pair of counts per month of the first half of 2026.
+     *
+     * @param {number[]} expected
+     * @param {number[]} submitted
+     */
+    const perMonth = (expected, submitted) =>
+      JANUARY_TO_JUNE_2026.map((month, i) => ({
+        month,
+        expected: expected[i],
+        submitted: submitted[i]
+      }))
+
     it('expects one report per accredited registration for every month served', async () => {
       const first = makeOperator({ orgId: 500020 })
       const second = makeOperator({ orgId: 500021 })
@@ -366,10 +383,9 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual({
-        expected: 12,
-        submitted: 0
-      })
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([2, 2, 2, 2, 2, 2], [0, 0, 0, 0, 0, 0])
+      )
     })
 
     it('counts the reports that were submitted', async () => {
@@ -381,10 +397,9 @@ describe('buildWasteBalanceTable', () => {
         reports: [monthlyReport(operator, 1), monthlyReport(operator, 2)]
       })
 
-      expect(table.meta.monthlyReports).toEqual({
-        expected: 6,
-        submitted: 2
-      })
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([1, 1, 1, 1, 1, 1], [1, 1, 0, 0, 0, 0])
+      )
     })
 
     it('still counts a report that was submitted and then unsubmitted, as the public register does', async () => {
@@ -396,10 +411,9 @@ describe('buildWasteBalanceTable', () => {
         unsubmittedReports: [monthlyReport(operator, 1)]
       })
 
-      expect(table.meta.monthlyReports).toEqual({
-        expected: 6,
-        submitted: 1
-      })
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([1, 1, 1, 1, 1, 1], [1, 0, 0, 0, 0, 0])
+      )
     })
 
     it('counts every month served, including one UTC has not yet left', async () => {
@@ -411,10 +425,9 @@ describe('buildWasteBalanceTable', () => {
         now: new Date('2026-06-30T23:30:00.000Z')
       })
 
-      expect(table.meta.monthlyReports).toEqual({
-        expected: 6,
-        submitted: 0
-      })
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+      )
     })
 
     it('expects reports only from the month the accreditation began', async () => {
@@ -429,10 +442,9 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual({
-        expected: 2,
-        submitted: 0
-      })
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
+      )
     })
 
     it('expects no report after the accreditation ends', async () => {
@@ -447,10 +459,9 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual({
-        expected: 3,
-        submitted: 0
-      })
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
     })
 
     it('counts only the months served', async () => {
@@ -463,10 +474,9 @@ describe('buildWasteBalanceTable', () => {
         months: ['2026-01']
       })
 
-      expect(table.meta.monthlyReports).toEqual({
-        expected: 1,
-        submitted: 0
-      })
+      expect(table.meta.monthlyReports).toEqual([
+        { month: '2026-01', expected: 1, submitted: 0 }
+      ])
     })
 
     it('expects nothing of a registered-only operator, which reports quarterly', async () => {
@@ -477,10 +487,9 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual({
-        expected: 0,
-        submitted: 0
-      })
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
     })
 
     it('expects nothing of a test organisation', async () => {
@@ -492,10 +501,9 @@ describe('buildWasteBalanceTable', () => {
         reports: [monthlyReport(operator, 1)]
       })
 
-      expect(table.meta.monthlyReports).toEqual({
-        expected: 0,
-        submitted: 0
-      })
+      expect(table.meta.monthlyReports).toEqual(
+        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
     })
   })
 
