@@ -8,6 +8,10 @@ import {
   withPublishedFigures
 } from './reprocessor-exporter-figures.js'
 
+/**
+ * @param {Partial<import('#reports/repository/port.js').ReportSummary>} overrides
+ * @returns {import('#reports/repository/port.js').ReportSummary}
+ */
 const submittedReport = (overrides) => ({
   id: 'report-1',
   status: 'submitted',

@@ -4,8 +4,7 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-
-const REPORTING_MONTH = /^\d{4}-\d{2}$/
+import { byReportingMonth, metaSchema, recordOf } from './response-schema.js'
 
 const reportCountSchema = Joi.object({
   expected: Joi.number().integer().min(0).required(),
@@ -18,18 +17,6 @@ const publishedFiguresSchema = Joi.object({
   sentOnDeductions: Joi.number().required(),
   netCredit: Joi.number().required()
 })
-
-/**
- * Every key the publication prints is required, so a material or
- * accreditation type nothing reported into is still served, at zero.
- *
- * @param {readonly string[]} keys
- * @param {Joi.Schema} valueSchema
- */
-const recordOf = (keys, valueSchema) =>
-  Joi.object(
-    Object.fromEntries(keys.map((key) => [key, valueSchema.required()]))
-  )
 
 const figuresByMaterialSchema = recordOf(
   TONNAGE_MONITORING_MATERIALS,
@@ -44,19 +31,14 @@ const figuresByMaterialSchema = recordOf(
  * and the period carries the sum.
  */
 export const wasteBalanceResponseSchema = Joi.object({
-  meta: Joi.object({
-    generatedAt: Joi.string().isoDate().required()
-  }).required(),
+  meta: metaSchema,
   data: Joi.object({
-    months: Joi.object()
-      .pattern(
-        REPORTING_MONTH,
-        Joi.object({
-          reports: reportCountSchema.required(),
-          figures: figuresByMaterialSchema.required()
-        }).required()
-      )
-      .required(),
+    months: byReportingMonth(
+      Joi.object({
+        reports: reportCountSchema.required(),
+        figures: figuresByMaterialSchema.required()
+      })
+    ),
     period: Joi.object({ reports: reportCountSchema.required() }).required()
   }).required()
 })

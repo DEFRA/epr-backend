@@ -1,20 +1,10 @@
 import Joi from 'joi'
 
-import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
-
-const REPORTING_MONTH = /^\d{4}-\d{2}$/
-
-/**
- * Every key the publication prints is required, so a material or measure
- * nothing reported into is still served, at zero.
- *
- * @param {readonly string[]} keys
- * @param {Joi.Schema} valueSchema
- */
-const recordOf = (keys, valueSchema) =>
-  Joi.object(
-    Object.fromEntries(keys.map((key) => [key, valueSchema.required()]))
-  )
+import {
+  TONNAGE_MONITORING_MATERIALS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
+import { byReportingMonth, metaSchema, recordOf } from './response-schema.js'
 
 const figure = Joi.number()
 
@@ -49,8 +39,8 @@ const exporterFiguresSchema = recordOf(
 const figuresByMaterialSchema = recordOf(
   TONNAGE_MONITORING_MATERIALS,
   Joi.object({
-    reprocessor: reprocessorFiguresSchema.required(),
-    exporter: exporterFiguresSchema.required()
+    [WASTE_PROCESSING_TYPE.REPROCESSOR]: reprocessorFiguresSchema.required(),
+    [WASTE_PROCESSING_TYPE.EXPORTER]: exporterFiguresSchema.required()
   })
 )
 
@@ -60,15 +50,10 @@ const figuresByMaterialSchema = recordOf(
  * type carrying the measures its own table prints.
  */
 export const reprocessorExporterFiguresResponseSchema = Joi.object({
-  meta: Joi.object({
-    generatedAt: Joi.string().isoDate().required()
-  }).required(),
+  meta: metaSchema,
   data: Joi.object({
-    months: Joi.object()
-      .pattern(
-        REPORTING_MONTH,
-        Joi.object({ figures: figuresByMaterialSchema.required() }).required()
-      )
-      .required()
+    months: byReportingMonth(
+      Joi.object({ figures: figuresByMaterialSchema.required() })
+    )
   }).required()
 })

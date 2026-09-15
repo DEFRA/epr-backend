@@ -35,9 +35,17 @@ import { recordOf } from '#market-insights/domain/record-of.js'
  */
 
 /**
+ * One reporting month as published: the figures for every material and
+ * accreditation type.
+ *
+ * @typedef {Object} PublishedMonth
+ * @property {FiguresByMaterial} figures
+ */
+
+/**
  * @typedef {Object} ReprocessorExporterTable
  * @property {{ generatedAt: string }} meta
- * @property {{ months: Record<YearMonth, { figures: FiguresByMaterial }> }} data
+ * @property {{ months: Record<YearMonth, PublishedMonth> }} data
  */
 
 /**

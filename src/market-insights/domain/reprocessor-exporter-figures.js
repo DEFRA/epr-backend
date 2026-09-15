@@ -65,15 +65,19 @@ const tonnage = (value) => roundToTwoDecimalPlaces(value)
  * @param {ReportSummary} report
  * @returns {SharedMeasures}
  */
-const sharedMeasuresOf = ({ recyclingActivity, wasteSent, prn }) => ({
-  tonnageReceived: tonnage(recyclingActivity?.totalTonnageReceived),
-  tonnageSentOnToReprocessor: tonnage(wasteSent?.tonnageSentToReprocessor),
-  tonnageSentOnToExporter: tonnage(wasteSent?.tonnageSentToExporter),
-  tonnageSentOnToOtherFacilities: tonnage(wasteSent?.tonnageSentToAnotherSite),
-  revisedTonnageIssued: tonnage(
-    subtract(prn?.issuedTonnage ?? 0, prn?.freeTonnage ?? 0)
+const sharedMeasuresOf = (report) => ({
+  tonnageReceived: tonnage(report.recyclingActivity?.totalTonnageReceived),
+  tonnageSentOnToReprocessor: tonnage(
+    report.wasteSent?.tonnageSentToReprocessor
   ),
-  totalRevenue: tonnage(prn?.totalRevenue)
+  tonnageSentOnToExporter: tonnage(report.wasteSent?.tonnageSentToExporter),
+  tonnageSentOnToOtherFacilities: tonnage(
+    report.wasteSent?.tonnageSentToAnotherSite
+  ),
+  revisedTonnageIssued: tonnage(
+    subtract(report.prn?.issuedTonnage ?? 0, report.prn?.freeTonnage ?? 0)
+  ),
+  totalRevenue: tonnage(report.prn?.totalRevenue)
 })
 
 /**
@@ -118,14 +122,14 @@ export const measuresOf = (report, accreditationType) =>
     : exporterMeasuresOf(report)
 
 /** @type {ReportSummary} */
-const EMPTY_REPORT = {
+const EMPTY_REPORT = Object.freeze({
   id: '',
   status: 'submitted',
   submissionNumber: 0,
   submittedAt: null,
   submittedBy: null,
   resubmissionRequired: null
-}
+})
 
 /**
  * Every measure of the accreditation type, at zero.

@@ -39,10 +39,10 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *
  * @param {{
  *   orgId: number,
- *   material?: string,
- *   glassRecyclingProcess?: string[],
- *   wasteProcessingType?: string,
- *   registrationStatusHistory?: { status: string, updatedAt: string }[]
+ *   material?: import('#domain/organisations/model.js').AppliedForMaterial,
+ *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess[],
+ *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
+ *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').RegistrationStatus, updatedAt: string }[]
  * }} options
  */
 const makeOperator = ({
@@ -87,21 +87,24 @@ const makeOperator = ({
 }
 
 /**
- * The PRN figures an operator submits, with the average price the operator's
- * own report carries.
+ * The PRN figures an operator submits. The average price is whatever the
+ * operator's own report carries; the published figures never read it.
  *
  * @param {number} issuedTonnage
  * @param {number} freeTonnage
  * @param {number} totalRevenue
+ * @param {number} [averagePricePerTonne]
  */
-const prn = (issuedTonnage, freeTonnage, totalRevenue) => ({
+const prn = (
   issuedTonnage,
   freeTonnage,
   totalRevenue,
-  averagePricePerTonne:
-    issuedTonnage - freeTonnage > 0
-      ? totalRevenue / (issuedTonnage - freeTonnage)
-      : 0
+  averagePricePerTonne = 999999
+) => ({
+  issuedTonnage,
+  freeTonnage,
+  totalRevenue,
+  averagePricePerTonne
 })
 
 /**
@@ -400,8 +403,8 @@ describe('buildReprocessorExporterTable', () => {
     const table = await run({
       organisations: [bigOperator, smallOperator],
       reports: [
-        monthlyReport(bigOperator, 1, { prn: prn(900, 0, 90000) }),
-        monthlyReport(smallOperator, 1, { prn: prn(100, 0, 30000) })
+        monthlyReport(bigOperator, 1, { prn: prn(900, 0, 90000, 100) }),
+        monthlyReport(smallOperator, 1, { prn: prn(100, 0, 30000, 300) })
       ]
     })
 

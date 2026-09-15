@@ -15,7 +15,11 @@ import {
   asServiceMaintainerRead
 } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  MATERIAL,
+  TONNAGE_MONITORING_MATERIALS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { marketInsightsReprocessorExporterFiguresPath } from './reprocessor-exporter-figures-get.js'
 
 const pathFor = (year, cadence, period) =>
@@ -132,7 +136,9 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
     expect(body.meta).toEqual({ generatedAt: expect.any(String) })
     expect(Object.keys(body.data.months)).toEqual(['2026-01'])
     const january = body.data.months['2026-01']
-    expect(Object.keys(january.figures)).toHaveLength(8)
+    expect(Object.keys(january.figures)).toEqual([
+      ...TONNAGE_MONITORING_MATERIALS
+    ])
     expect(
       january.figures[MATERIAL.WOOD][WASTE_PROCESSING_TYPE.REPROCESSOR]
     ).toEqual({
