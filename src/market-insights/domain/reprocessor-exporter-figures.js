@@ -56,28 +56,26 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
  */
 
 /**
- * @param {import('#common/helpers/decimal-utils.js').DecimalValue | null | undefined} value
- * @returns {number}
- */
-const tonnage = (value) => roundToTwoDecimalPlaces(value)
-
-/**
  * @param {ReportSummary} report
  * @returns {SharedMeasures}
  */
 const sharedMeasuresOf = (report) => ({
-  tonnageReceived: tonnage(report.recyclingActivity?.totalTonnageReceived),
-  tonnageSentOnToReprocessor: tonnage(
+  tonnageReceived: roundToTwoDecimalPlaces(
+    report.recyclingActivity?.totalTonnageReceived
+  ),
+  tonnageSentOnToReprocessor: roundToTwoDecimalPlaces(
     report.wasteSent?.tonnageSentToReprocessor
   ),
-  tonnageSentOnToExporter: tonnage(report.wasteSent?.tonnageSentToExporter),
-  tonnageSentOnToOtherFacilities: tonnage(
+  tonnageSentOnToExporter: roundToTwoDecimalPlaces(
+    report.wasteSent?.tonnageSentToExporter
+  ),
+  tonnageSentOnToOtherFacilities: roundToTwoDecimalPlaces(
     report.wasteSent?.tonnageSentToAnotherSite
   ),
-  revisedTonnageIssued: tonnage(
+  revisedTonnageIssued: roundToTwoDecimalPlaces(
     subtract(report.prn?.issuedTonnage ?? 0, report.prn?.freeTonnage ?? 0)
   ),
-  totalRevenue: tonnage(report.prn?.totalRevenue)
+  totalRevenue: roundToTwoDecimalPlaces(report.prn?.totalRevenue)
 })
 
 /**
@@ -86,8 +84,10 @@ const sharedMeasuresOf = (report) => ({
  */
 const reprocessorMeasuresOf = (report) => ({
   ...sharedMeasuresOf(report),
-  tonnageRecycled: tonnage(report.recyclingActivity?.tonnageRecycled),
-  tonnageReceivedButNotRecycled: tonnage(
+  tonnageRecycled: roundToTwoDecimalPlaces(
+    report.recyclingActivity?.tonnageRecycled
+  ),
+  tonnageReceivedButNotRecycled: roundToTwoDecimalPlaces(
     report.recyclingActivity?.tonnageNotRecycled
   )
 })
@@ -98,13 +98,21 @@ const reprocessorMeasuresOf = (report) => ({
  */
 const exporterMeasuresOf = (report) => ({
   ...sharedMeasuresOf(report),
-  tonnageExported: tonnage(report.exportActivity?.totalTonnageExported),
-  tonnageReceivedButNotExported: tonnage(
+  tonnageExported: roundToTwoDecimalPlaces(
+    report.exportActivity?.totalTonnageExported
+  ),
+  tonnageReceivedButNotExported: roundToTwoDecimalPlaces(
     report.exportActivity?.tonnageReceivedNotExported
   ),
-  tonnageStopped: tonnage(report.exportActivity?.tonnageStoppedDuringExport),
-  tonnageRefused: tonnage(report.exportActivity?.tonnageRefusedAtDestination),
-  tonnageRepatriated: tonnage(report.exportActivity?.tonnageRepatriated)
+  tonnageStopped: roundToTwoDecimalPlaces(
+    report.exportActivity?.tonnageStoppedDuringExport
+  ),
+  tonnageRefused: roundToTwoDecimalPlaces(
+    report.exportActivity?.tonnageRefusedAtDestination
+  ),
+  tonnageRepatriated: roundToTwoDecimalPlaces(
+    report.exportActivity?.tonnageRepatriated
+  )
 })
 
 /**

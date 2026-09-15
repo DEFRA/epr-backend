@@ -37,12 +37,14 @@ export const marketInsightsReprocessorExporterFiguresGet = {
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository, reportsRepository, params } = request
+    const { organisationsRepository, reportsRepository, logger, params } =
+      request
 
     const now = new Date()
     const table = await buildReprocessorExporterTable({
       organisationsRepository,
       reportsRepository,
+      logger,
       months: publishedMonthsThrough(
         params,
         now,

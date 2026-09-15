@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
   GLASS_RECYCLING_PROCESS,
@@ -20,6 +20,9 @@ import { buildReprocessorExporterTable } from './reprocessor-exporter-table.js'
 const NOW = new Date('2026-04-15T12:00:00.000Z')
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
+
+// .vite/setup-files.js configures 999999 as a test organisation.
+const TEST_ORG_ID = 999999
 
 const approvedHistory = [
   { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
@@ -43,6 +46,7 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess[],
  *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
  *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').RegistrationStatus, updatedAt: string }[]
+ *   accreditationStatus?: import('#domain/organisations/model.js').AccreditationStatus
  * }} options
  */
 const makeOperator = ({
@@ -50,7 +54,8 @@ const makeOperator = ({
   material = MATERIAL.PLASTIC,
   glassRecyclingProcess,
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
-  registrationStatusHistory = approvedHistory
+  registrationStatusHistory = approvedHistory,
+  accreditationStatus = ACCREDITATION_STATUS.APPROVED
 }) => {
   const id = objectIdFor('a', orgId)
   const registrationId = objectIdFor('b', orgId)
@@ -75,7 +80,7 @@ const makeOperator = ({
       {
         id: accreditationId,
         accreditationNumber: `ACC-${orgId}`,
-        status: ACCREDITATION_STATUS.APPROVED,
+        status: accreditationStatus,
         statusHistory: approvedHistory,
         validFrom: '2026-01-01',
         validTo: '2026-12-31',
@@ -149,14 +154,17 @@ const run = async ({
     await seedInFlightResubmission(reportsRepository, report)
   }
 
-  return buildReprocessorExporterTable({
+  const logger = { info: vi.fn(), warn: vi.fn() }
+  const table = await buildReprocessorExporterTable({
     organisationsRepository: createInMemoryOrganisationsRepository(
       organisations.map((organisation) => partialMock(organisation))
     )(),
     reportsRepository,
+    logger: partialMock(logger),
     months,
     now: NOW
   })
+  return { table, logger }
 }
 
 const NO_REPROCESSOR_ACTIVITY = {
@@ -196,7 +204,7 @@ const reported = (table) =>
 
 describe('buildReprocessorExporterTable', () => {
   it('serves every month asked for, with every material and both accreditation types at zero when nothing was submitted', async () => {
-    const table = await run({ organisations: [] })
+    const { table } = await run({ organisations: [] })
 
     expect(table.meta).toEqual({ generatedAt: NOW.toISOString() })
     expect(Object.keys(table.data.months)).toEqual(JANUARY_TO_MARCH_2026)
@@ -213,7 +221,7 @@ describe('buildReprocessorExporterTable', () => {
 
   it('publishes a single submission as the figures of its material, type and month', async () => {
     const operator = makeOperator({ orgId: 1 })
-    const table = await run({
+    const { table } = await run({
       organisations: [operator],
       reports: [
         monthlyReport(operator, 2, {
@@ -260,12 +268,10 @@ describe('buildReprocessorExporterTable', () => {
       glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER],
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
     })
-    const table = await run({
+    const { table } = await run({
       organisations: [operator],
       reports: [
         monthlyReport(operator, 1, {
-          material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
           recyclingActivity: {
             suppliers: [],
             totalTonnageReceived: 200,
@@ -311,7 +317,7 @@ describe('buildReprocessorExporterTable', () => {
 
   it('counts a resubmitted period once, at its latest submission', async () => {
     const operator = makeOperator({ orgId: 1 })
-    const table = await run({
+    const { table } = await run({
       organisations: [operator],
       reports: [
         monthlyReport(operator, 1, { prn: prn(80, 5, 40000) }),
@@ -333,7 +339,7 @@ describe('buildReprocessorExporterTable', () => {
 
   it('takes the highest submission number of a period submitted three times, whatever order they were stored in', async () => {
     const operator = makeOperator({ orgId: 1 })
-    const table = await run({
+    const { table } = await run({
       organisations: [operator],
       reports: [
         monthlyReport(operator, 1, {
@@ -360,7 +366,7 @@ describe('buildReprocessorExporterTable', () => {
 
   it('keeps the last submitted figures while a resubmission draft is in flight', async () => {
     const operator = makeOperator({ orgId: 1 })
-    const table = await run({
+    const { table } = await run({
       organisations: [operator],
       inFlightResubmissions: [
         monthlyReport(operator, 1, { prn: prn(80, 5, 40000) })
@@ -378,7 +384,7 @@ describe('buildReprocessorExporterTable', () => {
 
   it('answers zero for a material nobody reported into, beside one somebody did', async () => {
     const operator = makeOperator({ orgId: 1, material: MATERIAL.STEEL })
-    const table = await run({
+    const { table } = await run({
       organisations: [operator],
       reports: [monthlyReport(operator, 1, { prn: prn(10, 0, 1000) })]
     })
@@ -400,7 +406,7 @@ describe('buildReprocessorExporterTable', () => {
   it('averages by summing revenue and tonnage across operators before dividing, not by averaging their averages', async () => {
     const bigOperator = makeOperator({ orgId: 1 })
     const smallOperator = makeOperator({ orgId: 2 })
-    const table = await run({
+    const { table } = await run({
       organisations: [bigOperator, smallOperator],
       reports: [
         monthlyReport(bigOperator, 1, { prn: prn(900, 0, 90000, 100) }),
@@ -422,7 +428,7 @@ describe('buildReprocessorExporterTable', () => {
   it('sums operators of one material and type within a month, and keeps months apart', async () => {
     const first = makeOperator({ orgId: 1 })
     const second = makeOperator({ orgId: 2 })
-    const table = await run({
+    const { table } = await run({
       organisations: [first, second],
       reports: [
         monthlyReport(first, 1, {
@@ -460,7 +466,7 @@ describe('buildReprocessorExporterTable', () => {
 
   it('leaves out a month not asked for', async () => {
     const operator = makeOperator({ orgId: 1 })
-    const table = await run({
+    const { table } = await run({
       organisations: [operator],
       reports: [monthlyReport(operator, 4, { prn: prn(10, 0, 1000) })]
     })
@@ -470,7 +476,7 @@ describe('buildReprocessorExporterTable', () => {
 
   it('leaves out a quarterly report, which a registered-only operator files', async () => {
     const operator = makeOperator({ orgId: 1 })
-    const table = await run({
+    const { table } = await run({
       organisations: [operator],
       reports: [
         {
@@ -483,18 +489,52 @@ describe('buildReprocessorExporterTable', () => {
     expect(reported(table)).toEqual([])
   })
 
-  it('leaves out a report whose registration is no longer reportable', async () => {
+  it('counts the months an accreditation filed before it was cancelled', async () => {
+    const operator = makeOperator({
+      orgId: 1,
+      accreditationStatus: ACCREDITATION_STATUS.CANCELLED
+    })
+    const { table } = await run({
+      organisations: [operator],
+      reports: [monthlyReport(operator, 1, { prn: prn(10, 0, 1000) })]
+    })
+
+    expect(reported(table)).toHaveLength(1)
+  })
+
+  it('names the report it left out when the registration no longer resolves', async () => {
     const operator = makeOperator({
       orgId: 1,
       registrationStatusHistory: [
         { status: REGISTRATION_STATUS.CREATED, updatedAt: '2025-11-01' }
       ]
     })
-    const table = await run({
+    const { table, logger } = await run({
       organisations: [operator],
       reports: [monthlyReport(operator, 1, { prn: prn(10, 0, 1000) })]
     })
 
     expect(reported(table)).toEqual([])
+    const registrationKey = `${operator.id}::${operator.registrations[0].id}`
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(registrationKey),
+        event: expect.objectContaining({
+          action: 'market_insights_report_unmatched',
+          reference: registrationKey
+        })
+      })
+    )
+  })
+
+  it('leaves out a test organisation without remarking on it', async () => {
+    const operator = makeOperator({ orgId: TEST_ORG_ID })
+    const { table, logger } = await run({
+      organisations: [operator],
+      reports: [monthlyReport(operator, 1, { prn: prn(10, 0, 1000) })]
+    })
+
+    expect(reported(table)).toEqual([])
+    expect(logger.warn).not.toHaveBeenCalled()
   })
 })
