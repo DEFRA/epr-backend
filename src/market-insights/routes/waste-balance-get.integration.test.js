@@ -268,10 +268,13 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
     expect(
       payload.data.filter(({ totalCredited }) => totalCredited !== 0)
     ).toHaveLength(1)
-    expect(payload.meta.monthlyReports).toEqual([
-      { month: '2026-01', expected: 1, submitted: 1 },
-      { month: '2026-02', expected: 1, submitted: 0 }
-    ])
+    expect(payload.meta.monthlyReports).toEqual({
+      byMonth: [
+        { month: '2026-01', expected: 1, submitted: 1 },
+        { month: '2026-02', expected: 1, submitted: 0 }
+      ],
+      total: { expected: 2, submitted: 1 }
+    })
   })
 
   it('refuses a caller holding no market-data.read', async ({ server }) => {

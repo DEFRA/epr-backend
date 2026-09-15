@@ -13,13 +13,19 @@ import {
 } from '#domain/organisations/registration-utils.js'
 
 /**
- * How close a month is to publication: the monthly reports owed for it, and
- * how many of them have been submitted.
+ * The monthly reports owed and how many of them have been submitted.
  *
- * @typedef {Object} MonthlyReportCount
- * @property {string} month - `YYYY-MM`
+ * @typedef {Object} ReportCount
  * @property {number} expected
  * @property {number} submitted
+ */
+
+/**
+ * How close each month served is to publication, and the period as a whole.
+ *
+ * @typedef {Object} MonthlyReportCounts
+ * @property {Array<ReportCount & { month: string }>} byMonth - one per month served, in the order given, `YYYY-MM`
+ * @property {ReportCount} total - summed across every month served
  */
 
 /**
@@ -50,7 +56,7 @@ const owedPeriods = (served, years, { validFrom, validTo }) =>
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {string[]} params.months - the `YYYY-MM` reporting months served
- * @returns {MonthlyReportCount[]} one per month served, in the order given
+ * @returns {MonthlyReportCounts}
  */
 export const countMonthlyReports = ({
   organisations,
@@ -97,5 +103,11 @@ export const countMonthlyReports = ({
       }
     }
   }
-  return [...counts.values()]
+  const byMonth = [...counts.values()]
+  const total = { expected: 0, submitted: 0 }
+  for (const { expected, submitted } of byMonth) {
+    total.expected += expected
+    total.submitted += submitted
+  }
+  return { byMonth, total }
 }

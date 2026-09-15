@@ -22,7 +22,7 @@ import { countMonthlyReports } from '#market-insights/application/monthly-report
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
- * @typedef {import('#market-insights/application/monthly-reports.js').MonthlyReportCount} MonthlyReportCount
+ * @typedef {import('#market-insights/application/monthly-reports.js').MonthlyReportCounts} MonthlyReportCounts
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceFigures} WasteBalanceFigures
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} PublishedWasteBalanceFigures
@@ -59,7 +59,7 @@ import { countMonthlyReports } from '#market-insights/application/monthly-report
 
 /**
  * @typedef {Object} WasteBalanceTable
- * @property {{ generatedAt: string, monthlyReports: MonthlyReportCount[] }} meta
+ * @property {{ generatedAt: string, monthlyReports: MonthlyReportCounts }} meta
  * @property {WasteBalanceTableRow[]} data
  */
 
@@ -276,7 +276,8 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * months, summed by material, accreditation type and reporting month. A row
  * dated outside those months is held back, which is what keeps a mis-keyed
  * future date from being published as supply. The count of monthly reports
- * owed and submitted for each month says how close it is to publication.
+ * owed and submitted, for each month and for the period, says how close the
+ * figures are to publication.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository

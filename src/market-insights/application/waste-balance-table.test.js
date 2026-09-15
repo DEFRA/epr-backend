@@ -352,27 +352,35 @@ describe('buildWasteBalanceTable', () => {
 
     expect(table.meta).toStrictEqual({
       generatedAt: NOW.toISOString(),
-      monthlyReports: JANUARY_TO_JUNE_2026.map((month) => ({
-        month,
-        expected: 0,
-        submitted: 0
-      }))
+      monthlyReports: {
+        byMonth: JANUARY_TO_JUNE_2026.map((month) => ({
+          month,
+          expected: 0,
+          submitted: 0
+        })),
+        total: { expected: 0, submitted: 0 }
+      }
     })
   })
 
   describe('the monthly reports the figures include', () => {
+    const sum = (/** @type {number[]} */ counts) =>
+      counts.reduce((total, count) => total + count, 0)
+
     /**
-     * One pair of counts per month of the first half of 2026.
+     * One pair of counts per month of the first half of 2026, and their sum.
      *
      * @param {number[]} expected
      * @param {number[]} submitted
      */
-    const perMonth = (expected, submitted) =>
-      JANUARY_TO_JUNE_2026.map((month, i) => ({
+    const perMonth = (expected, submitted) => ({
+      byMonth: JANUARY_TO_JUNE_2026.map((month, i) => ({
         month,
         expected: expected[i],
         submitted: submitted[i]
-      }))
+      })),
+      total: { expected: sum(expected), submitted: sum(submitted) }
+    })
 
     it('expects one report per accredited registration for every month served', async () => {
       const first = makeOperator({ orgId: 500020 })
@@ -474,9 +482,10 @@ describe('buildWasteBalanceTable', () => {
         months: ['2026-01']
       })
 
-      expect(table.meta.monthlyReports).toEqual([
-        { month: '2026-01', expected: 1, submitted: 0 }
-      ])
+      expect(table.meta.monthlyReports).toEqual({
+        byMonth: [{ month: '2026-01', expected: 1, submitted: 0 }],
+        total: { expected: 1, submitted: 0 }
+      })
     })
 
     it('expects nothing of a registered-only operator, which reports quarterly', async () => {
