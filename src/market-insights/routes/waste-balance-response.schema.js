@@ -4,9 +4,7 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { requiredRecordOf } from './required-record.schema.js'
-
-const REPORTING_MONTH = /^\d{4}-\d{2}$/
+import { monthsOf, requiredRecordOf } from './publication.schema.js'
 
 const reportCountSchema = Joi.object({
   expected: Joi.number().integer().min(0).required(),
@@ -37,15 +35,12 @@ export const wasteBalanceResponseSchema = Joi.object({
     generatedAt: Joi.string().isoDate().required()
   }).required(),
   data: Joi.object({
-    months: Joi.object()
-      .pattern(
-        REPORTING_MONTH,
-        Joi.object({
-          reports: reportCountSchema.required(),
-          figures: figuresByMaterialSchema.required()
-        }).required()
-      )
-      .required(),
+    months: monthsOf(
+      Joi.object({
+        reports: reportCountSchema.required(),
+        figures: figuresByMaterialSchema.required()
+      })
+    ),
     period: Joi.object({ reports: reportCountSchema.required() }).required()
   }).required()
 })

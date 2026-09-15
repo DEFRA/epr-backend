@@ -20,20 +20,36 @@ import {
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS
 } from '#domain/organisations/model.js'
+import { assertPresent } from '#test/type-helpers.js'
+import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { marketInsightsOutstandingReturnsPath } from './outstanding-returns-get.js'
 
+/** @import { TestServer } from '#test/create-test-server.js' */
+/** @import { OutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js' */
+
+/**
+ * @param {number} year
+ * @param {string} cadence
+ * @param {number} period
+ */
 const pathFor = (year, cadence, period) =>
   marketInsightsOutstandingReturnsPath
     .replace('{year}', String(year))
     .replace('{cadence}', cadence)
     .replace('{period}', String(period))
 
+/**
+ * @param {TestServer} server
+ * @param {object} credentials - auth options for server.inject()
+ * @param {string} [url]
+ */
 const inject = (server, credentials, url = pathFor(2026, 'monthly', 1)) =>
   server.inject({ method: 'GET', url, ...credentials })
 
 describe(`GET ${marketInsightsOutstandingReturnsPath}`, () => {
   setupAuthContext()
 
+  /** @type {TestServer} */
   let server
 
   beforeAll(async () => {
@@ -129,10 +145,12 @@ describe(`GET ${marketInsightsOutstandingReturnsPath}`, () => {
     const response = await inject(server, asRegulator())
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+    /** @type {OutstandingReturnsTable} */
     const body = JSON.parse(response.payload)
     expect(body.meta).toEqual({ generatedAt: expect.any(String) })
     expect(Object.keys(body.data.months)).toEqual(['2026-01'])
-    const january = body.data.months['2026-01']
+    const january = body.data.months[toYearMonth('2026-01')]
+    assertPresent(january)
     expect(Object.keys(january)).toEqual(TONNAGE_MONITORING_MATERIALS)
     expect(january[MATERIAL.WOOD]).toEqual({
       [TONNAGE_BAND.UP_TO_500]: 0,

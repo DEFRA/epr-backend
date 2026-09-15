@@ -4,9 +4,7 @@ import {
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS
 } from '#domain/organisations/model.js'
-import { requiredRecordOf } from './required-record.schema.js'
-
-const REPORTING_MONTH = /^\d{4}-\d{2}$/
+import { monthsOf, requiredRecordOf } from './publication.schema.js'
 
 const outstandingByMaterialSchema = requiredRecordOf(
   TONNAGE_MONITORING_MATERIALS,
@@ -24,8 +22,6 @@ export const outstandingReturnsResponseSchema = Joi.object({
     generatedAt: Joi.string().isoDate().required()
   }).required(),
   data: Joi.object({
-    months: Joi.object()
-      .pattern(REPORTING_MONTH, outstandingByMaterialSchema.required())
-      .required()
+    months: monthsOf(outstandingByMaterialSchema)
   }).required()
 })

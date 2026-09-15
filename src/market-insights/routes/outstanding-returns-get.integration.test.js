@@ -147,8 +147,10 @@ describe(`GET ${marketInsightsOutstandingReturnsPath} (integration)`, () => {
     const payload = JSON.parse(response.payload)
 
     const { months } = payload.data
-    expect(months['2026-01'].plastic.over_10000).toBe(0)
-    expect(months['2026-02'].plastic.over_10000).toBe(1)
+    expect(months).toMatchObject({
+      '2026-01': { plastic: { over_10000: 0 } },
+      '2026-02': { plastic: { over_10000: 1 } }
+    })
     expect(
       Object.values(months).flatMap((byMaterial) =>
         Object.values(byMaterial).flatMap((byBand) =>
