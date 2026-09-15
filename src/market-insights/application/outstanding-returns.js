@@ -28,9 +28,10 @@ const cellKey = (month, material, tonnageBand) =>
 /**
  * Count, for each month served, the monthly returns owed and not submitted,
  * by material and tonnage band. One return is owed per accredited
- * registration, so an operator with two sites counts twice. Every material
- * and band is served for every month, at zero where nothing is outstanding,
- * so the publication's grid never loses a row.
+ * registration, so an operator with two sites counts twice, and a suspended
+ * accreditation still owes its returns, so one that has not submitted is
+ * outstanding. Every material and band is served for every month, at zero
+ * where nothing is outstanding, so the publication's grid never loses a row.
  *
  * @param {Parameters<typeof owedMonthlyReports>[0]} params
  * @returns {Record<YearMonth, OutstandingByMaterial>}
