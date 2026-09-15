@@ -97,24 +97,33 @@ export function isWithinAccreditationDateRange(date, window) {
 }
 
 /**
- * Checks whether an accreditation was suspended or cancelled at a given date by
- * examining the status history. Finds the most recent status change on or before
- * the date and checks whether that status excludes the date from the
- * accreditation period.
+ * The status an accreditation held on a date, read from its history: each
+ * entry holds from its `updatedAt` until the next. Before the first entry
+ * there is none, so a date there is left to the validity window alone.
  *
- * Suspension is temporary and cancellation is terminal, but both take effect
- * from their status-history `updatedAt`, so a date before the change is
- * unaffected and still counts. The validity window itself (validFrom/validTo)
- * is never altered by these transitions.
+ * @param {string|Date} date
+ * @param {StatusHistoryDateTime[]} statusHistory - descending
+ * @returns {AccreditationStatus | undefined}
+ */
+export function statusHeldAt(date, statusHistory) {
+  return statusHistory.find(
+    (entry) => entry.updatedAt <= new Date(date).getTime()
+  )?.status
+}
+
+/**
+ * Whether the accreditation's history excludes a date from its validity
+ * window. Suspension is temporary and cancellation is terminal, but both take
+ * effect from their status-history `updatedAt`, so a date before the change is
+ * unaffected and still counts. The window itself (validFrom/validTo) is never
+ * altered by these transitions.
  *
  * @param {string|Date} date - The date to check
  * @param {StatusHistoryDateTime[]} statusHistory - Accreditation status history in descending date order
  * @returns {boolean} True if the accreditation was suspended or cancelled at the given date
  */
 export function isSuspendedOrCancelledAtDate(date, statusHistory) {
-  const status = statusHistory.find(
-    (entry) => entry.updatedAt <= new Date(date).getTime()
-  )?.status
+  const status = statusHeldAt(date, statusHistory)
   return (
     status === ACCREDITATION_STATUS.SUSPENDED ||
     status === ACCREDITATION_STATUS.CANCELLED

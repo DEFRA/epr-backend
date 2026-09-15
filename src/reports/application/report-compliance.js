@@ -69,7 +69,7 @@ function originalSubmittedDate(mergedPeriod) {
  * @param {import('#reports/repository/port.js').PeriodicReport[]} allPeriodicReports
  * @returns {Map<string, import('#reports/repository/port.js').PeriodicReport[]>}
  */
-function groupByRegistration(allPeriodicReports) {
+export function groupByRegistration(allPeriodicReports) {
   return allPeriodicReports.reduce((map, pr) => {
     const key = `${pr.organisationId}::${pr.registrationId}`
     const existing = map.get(key) ?? []

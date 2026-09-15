@@ -9,12 +9,14 @@ import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-m
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
+import { createReportsRepository } from '#reports/repository/mongodb.js'
+import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
-  ACCREDITATION_STATUS,
   MATERIAL,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
@@ -23,7 +25,6 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildAccreditation,
-  buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -44,7 +45,8 @@ const januaryToFebruary2026 = marketInsightsWasteBalancePath
  *     ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
  *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *     overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
- *     summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository
+ *     summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
+ *     reportsRepository: import('#reports/repository/port.js').ReportsRepository
  *   }
  * }} TestServerWithRealDb
  */
@@ -53,8 +55,8 @@ const januaryToFebruary2026 = marketInsightsWasteBalancePath
  * A server whose every repository this route reads through is the MongoDB
  * adapter, over one in-memory Mongo that the test also seeds. The shared
  * `server-with-real-db` fixture wires only `db` and the ledger, which suits a
- * route that queries mongo directly; this route reads through four ports and
- * has to exercise all four adapters.
+ * route that queries mongo directly; this route reads through five ports and
+ * has to exercise all five adapters.
  */
 const it =
   /** @type {import('vitest').TestAPI<{ server: TestServerWithRealDb }>} */ (
@@ -74,7 +76,8 @@ const it =
               )(),
               summaryLogRowStatesRepository: (
                 await createMongoSummaryLogRowStatesRepository(mongoDb)
-              )()
+              )(),
+              reportsRepository: (await createReportsRepository(mongoDb))()
             }
             const server = await createTestServer({ db: mongoDb, repositories })
 
@@ -96,49 +99,41 @@ const it =
 
 const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
 
-const approvedHistory = [
-  { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
-  { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
-]
-
 const summaryLogId = 'sl-REG-001'
 
 /**
- * An accredited plastic reprocessor built from the organisations fixture, so
- * the document the route reads back is one the write schema accepts.
+ * An approved plastic reprocessor accredited for 2026, written through the
+ * organisations fixture so the document the route reads back is one the write
+ * schema accepts.
+ *
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
  */
-const buildAccreditedOperator = () => {
+const insertAccreditedOperator = async (organisationsRepository) => {
   const accreditationId = new ObjectId().toString()
   const registration = buildRegistration({
     accreditationId,
     material: MATERIAL.PLASTIC,
     wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
     reprocessingType: REPROCESSING_TYPE.INPUT,
-    glassRecyclingProcess: null,
-    statusHistory: approvedHistory
+    glassRecyclingProcess: null
   })
   const accreditation = buildAccreditation({
     id: accreditationId,
     material: MATERIAL.PLASTIC,
     wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
     reprocessingType: REPROCESSING_TYPE.INPUT,
-    validFrom: '2026-01-01',
-    validTo: '2026-12-31',
-    glassRecyclingProcess: null,
-    statusHistory: approvedHistory
+    glassRecyclingProcess: null
   })
-  const organisation = buildOrganisation({
-    registrations: [registration],
-    accreditations: [accreditation]
-  })
+  const organisation = await buildApprovedOrg(
+    organisationsRepository,
+    { registrations: [registration], accreditations: [accreditation] },
+    { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
+  )
 
   return {
-    organisation,
-    ledgerId: {
-      organisationId: organisation.id,
-      registrationId: registration.id,
-      accreditationId
-    }
+    organisationId: organisation.id,
+    registrationId: registration.id,
+    accreditationId
   }
 }
 
@@ -188,15 +183,24 @@ const sentOnRow = (rowId, tonnage) => ({
 
 /**
  * Seed one submission through the write side of the same adapters the route
- * reads back through, so no test builds a stored document by hand.
+ * reads back through, so no test builds a stored document by hand. The
+ * operator has submitted its January report and no other.
  *
  * @param {TestServerWithRealDb['repositories']} repositories
  * @param {import('#waste-records/repository/schema.js').SummaryLogRowStateEntry[]} rows
  */
 const submit = async (repositories, rows) => {
-  const { organisation, ledgerId } = buildAccreditedOperator()
+  const ledgerId = await insertAccreditedOperator(
+    repositories.organisationsRepository
+  )
 
-  await repositories.organisationsRepository.insert(organisation)
+  await buildSubmittedReport(repositories.reportsRepository, {
+    organisationId: ledgerId.organisationId,
+    registrationId: ledgerId.registrationId,
+    year: 2026,
+    cadence: 'monthly',
+    period: 1
+  })
   await repositories.summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     ledgerId,
     rows,
@@ -243,27 +247,31 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
     /** @type {import('#market-insights/application/waste-balance-table.js').WasteBalanceTable} */
     const payload = JSON.parse(response.payload)
 
-    expect(payload.data).toContainEqual({
-      material: MATERIAL.PLASTIC,
-      accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-      month: '2026-02',
+    const { months, period } = payload.data
+    expect(months['2026-02'].figures.plastic.reprocessor).toEqual({
       totalCredited: 100,
       eligibleForWasteBalance: 100,
       sentOnDeductions: 30,
       netCredit: 70
     })
-    expect(payload.data).toContainEqual({
-      material: MATERIAL.WOOD,
-      accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-      month: '2026-02',
+    expect(months['2026-02'].figures.wood.exporter).toEqual({
       totalCredited: 0,
       eligibleForWasteBalance: 0,
       sentOnDeductions: 0,
       netCredit: 0
     })
     expect(
-      payload.data.filter(({ totalCredited }) => totalCredited !== 0)
+      Object.values(months).flatMap(({ figures }) =>
+        Object.values(figures).flatMap((byAccreditationType) =>
+          Object.values(byAccreditationType).filter(
+            ({ totalCredited }) => totalCredited !== 0
+          )
+        )
+      )
     ).toHaveLength(1)
+    expect(months['2026-01'].reports).toEqual({ expected: 1, submitted: 1 })
+    expect(months['2026-02'].reports).toEqual({ expected: 1, submitted: 0 })
+    expect(period).toEqual({ reports: { expected: 2, submitted: 1 } })
   })
 
   it('refuses a caller holding no market-data.read', async ({ server }) => {

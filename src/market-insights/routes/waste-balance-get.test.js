@@ -141,16 +141,21 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const body = JSON.parse(response.payload)
-    expect(body.data).toHaveLength(16)
-    expect(body.data).toContainEqual({
-      material: MATERIAL.WOOD,
-      accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-      month: '2026-01',
+    expect(body.meta).toEqual({ generatedAt: expect.any(String) })
+    expect(Object.keys(body.data.months)).toEqual(['2026-01'])
+    const january = body.data.months['2026-01']
+    expect(january.reports).toEqual({ expected: 0, submitted: 0 })
+    expect(Object.keys(january.figures)).toHaveLength(8)
+    expect(
+      january.figures[MATERIAL.WOOD][WASTE_PROCESSING_TYPE.EXPORTER]
+    ).toEqual({
       totalCredited: 0,
       eligibleForWasteBalance: 0,
       sentOnDeductions: 0,
       netCredit: 0
     })
-    expect(body.meta).toEqual({ generatedAt: expect.any(String) })
+    expect(body.data.period).toEqual({
+      reports: { expected: 0, submitted: 0 }
+    })
   })
 })

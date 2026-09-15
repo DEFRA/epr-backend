@@ -14,12 +14,16 @@ import {
   NO_FIGURES,
   withNetCredit
 } from '#market-insights/domain/waste-balance-figures.js'
+import { countMonthlyReports } from '#market-insights/application/monthly-reports.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
+ * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
+ * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
+ * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceFigures} WasteBalanceFigures
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} PublishedWasteBalanceFigures
@@ -51,14 +55,38 @@ import {
  */
 
 /**
- * @typedef {{ material: Material, accreditationType: string, month: string } & PublishedWasteBalanceFigures} WasteBalanceTableRow
+ * @typedef {Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures>} FiguresByAccreditationType
+ * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
+ */
+
+/**
+ * One reporting month as published: the reports it was owed and how many of
+ * them arrived, and the figures for every material and accreditation type.
+ *
+ * @typedef {Object} PublishedMonth
+ * @property {ReportCount} reports
+ * @property {FiguresByMaterial} figures
  */
 
 /**
  * @typedef {Object} WasteBalanceTable
  * @property {{ generatedAt: string }} meta
- * @property {WasteBalanceTableRow[]} data
+ * @property {{ months: Record<YearMonth, PublishedMonth>, period: { reports: ReportCount } }} data
  */
+
+/**
+ * A record holding a value for every one of the given keys, and no other.
+ *
+ * @template {string} K
+ * @template V
+ * @param {readonly K[]} keys
+ * @param {(key: K) => V} valueFor
+ * @returns {Record<K, V>}
+ */
+const recordOf = (keys, valueFor) =>
+  /** @type {Record<K, V>} */ (
+    Object.fromEntries(keys.map((key) => [key, valueFor(key)]))
+  )
 
 /**
  * @param {{ organisationId: string, registrationId: string, accreditationId: string | null }} ledgerId
@@ -75,28 +103,22 @@ const cellKey = ({ material, accreditationType, month }) =>
   `${material}::${accreditationType}::${month}`
 
 /**
- * The publication prints every combination, so one nothing reported into is
- * still a row.
+ * The publication prints every material and accreditation type, so one
+ * nothing reported into is still served, at zero.
  *
- * @param {string[]} months
- * @returns {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>[]}
+ * @param {Map<string, WasteBalanceCell>} cells
+ * @param {YearMonth} month
+ * @returns {FiguresByMaterial}
  */
-const publishedGrid = (months) =>
-  TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
-    Object.values(WASTE_PROCESSING_TYPE).flatMap((accreditationType) =>
-      months.map((month) => ({ material, accreditationType, month }))
+const publishedFigures = (cells, month) =>
+  recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
+      withNetCredit(
+        cells.get(cellKey({ material, accreditationType, month }))?.figures ??
+          NO_FIGURES
+      )
     )
   )
-
-/**
- * @param {WasteBalanceTableRow} a
- * @param {WasteBalanceTableRow} b
- * @returns {number}
- */
-const compareRows = (a, b) =>
-  a.material.localeCompare(b.material) ||
-  a.accreditationType.localeCompare(b.accreditationType) ||
-  a.month.localeCompare(b.month)
 
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
@@ -270,17 +292,20 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
 
 /**
  * Aggregate the published UK Waste Balance figures for the given reporting
- * months, summed by material, accreditation type and reporting month. A row
+ * months, summed by material and accreditation type within each month. A row
  * dated outside those months is held back, which is what keeps a mis-keyed
- * future date from being published as supply.
+ * future date from being published as supply. Each month also carries the
+ * count of monthly reports it was owed and how many were submitted, and the
+ * period carries the sum, which says how close the figures are to publication.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {string[]} params.months - the `YYYY-MM` reporting months to publish
+ * @param {YearMonth[]} params.months - the reporting months to publish
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<WasteBalanceTable>}
  */
@@ -289,15 +314,19 @@ export const buildWasteBalanceTable = async ({
   summaryLogRowStatesRepository,
   organisationsRepository,
   overseasSitesRepository,
+  reportsRepository,
   logger,
   months,
   now
 }) => {
-  const [entries, organisations, allSites] = await Promise.all([
-    ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
-    organisationsRepository.findAll(),
-    overseasSitesRepository.findAll()
-  ])
+  const [entries, organisations, allSites, periodicReports] = await Promise.all(
+    [
+      ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
+      organisationsRepository.findAll(),
+      overseasSitesRepository.findAll(),
+      reportsRepository.findAllPeriodicReports()
+    ]
+  )
 
   const partitions = resolvePublishedPartitions(
     entries,
@@ -310,6 +339,7 @@ export const buildWasteBalanceTable = async ({
     .filter((entry) => partitions.has(partitionKey(entry.ledgerId)))
     .map((entry) => entry.summaryLogId)
 
+  /** @type {Set<string>} */
   const publishedMonths = new Set(months)
   const into = {
     /** @type {Map<string, WasteBalanceCell>} */
@@ -331,15 +361,20 @@ export const buildWasteBalanceTable = async ({
 
   warnAboutUndatedRows(logger, into.undated)
 
-  const data = publishedGrid(months)
-    .map((cell) => ({
-      ...cell,
-      ...withNetCredit(into.cells.get(cellKey(cell))?.figures ?? NO_FIGURES)
-    }))
-    .sort(compareRows)
+  const reports = countMonthlyReports({
+    organisations,
+    periodicReports,
+    months
+  })
 
   return {
     meta: { generatedAt: now.toISOString() },
-    data
+    data: {
+      months: recordOf(months, (month) => ({
+        reports: reports.byMonth[month],
+        figures: publishedFigures(into.cells, month)
+      })),
+      period: { reports: reports.total }
+    }
   }
 }

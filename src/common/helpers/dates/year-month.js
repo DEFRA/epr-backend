@@ -1,13 +1,21 @@
 /**
+ * A `YYYY-MM` reporting month. Branded so that only `toYearMonth` produces
+ * one, the same way `CalendarDate` is only ever minted by `calendarDate`.
+ *
+ * @typedef {string & { readonly __brand: 'YearMonth' }} YearMonth
+ */
+
+export const YEAR_MONTH_LENGTH = 7
+
+/**
  * Extracts the year-month portion from an ISO date string.
  * e.g. '2026-03-01' → '2026-03'
  *
  * @param {string} isoDate - An ISO date string (YYYY-MM-DD or longer)
- * @returns {string} Year-month in YYYY-MM format
+ * @returns {YearMonth}
  */
-export const YEAR_MONTH_LENGTH = 7
-
-export const toYearMonth = (isoDate) => isoDate.slice(0, YEAR_MONTH_LENGTH)
+export const toYearMonth = (isoDate) =>
+  /** @type {YearMonth} */ (isoDate.slice(0, YEAR_MONTH_LENGTH))
 
 /** @type {Map<string, Intl.DateTimeFormat>} */
 const monthKeyFormatters = new Map()

@@ -14,9 +14,16 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
+import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
+
+/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 
 // .vite/setup-files.js configures 999999 as a test organisation.
 const TEST_ORG_ID = 999999
@@ -30,7 +37,7 @@ const JANUARY_TO_JUNE_2026 = [
   '2026-04',
   '2026-05',
   '2026-06'
-]
+].map(toYearMonth)
 
 const ACCREDITED_FROM = '2026-01-01'
 const ACCREDITED_TO = '2026-12-31'
@@ -39,6 +46,14 @@ const approvedHistory = [
   { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
   { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
 ]
+
+/**
+ * A 24-hex id the reports store accepts, distinct per prefix and operator.
+ *
+ * @param {string} prefix - one hex character
+ * @param {number} orgId
+ */
+const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
 
 /**
  * An accredited operator with one registration, plus the ledger entry naming
@@ -65,8 +80,8 @@ const makeOperator = ({
   validFrom = ACCREDITED_FROM,
   validTo = ACCREDITED_TO
 }) => {
-  const id = `org-uuid-${orgId}`
-  const registrationId = `reg-${orgId}`
+  const id = objectIdFor('a', orgId)
+  const registrationId = objectIdFor('b', orgId)
   const accreditationId = `acc-${orgId}`
 
   return {
@@ -209,6 +224,123 @@ const sentOnRow = (rowId, date, tonnage) => ({
 })
 
 /**
+ * The same operator holding only a registration, so it reports quarterly and
+ * publishes nothing.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ */
+const registeredOnly = ({ organisation }) => ({
+  ...organisation,
+  registrations: organisation.registrations.map((registration) => ({
+    ...registration,
+    accreditationId: null
+  })),
+  accreditations: []
+})
+
+/**
+ * @typedef {Pick<import('#reports/repository/port.js').CreateReportParams, 'organisationId' | 'registrationId' | 'year' | 'cadence' | 'period'>} MonthlyReportRef
+ */
+
+/**
+ * The organisation with its accreditation moved to the given status, the
+ * transitions appended to its history.
+ *
+ * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
+ * @param {Organisation} organisation
+ * @param {AccreditationStatus} status
+ * @param {StatusHistoryEntry[]} transitions
+ */
+const withAccreditationStatus = (organisation, status, transitions) => ({
+  ...organisation,
+  accreditations: organisation.accreditations.map((accreditation) => ({
+    ...accreditation,
+    status,
+    statusHistory: [...accreditation.statusHistory, ...transitions]
+  }))
+})
+
+/**
+ * The organisation with its accreditation cancelled on the given day. The
+ * validity window is kept, as a cancellation leaves it.
+ *
+ * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
+ * @param {Organisation} organisation
+ * @param {string} day - `YYYY-MM-DD`
+ */
+const cancelledOn = (organisation, day) =>
+  withAccreditationStatus(organisation, ACCREDITATION_STATUS.CANCELLED, [
+    { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: day },
+    {
+      status: ACCREDITATION_STATUS.CANCELLED,
+      updatedAt: `${day}T09:00:00.000Z`
+    }
+  ])
+
+/**
+ * The organisation with its cancelled accreditation approved again on the
+ * given day.
+ *
+ * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
+ * @param {Organisation} organisation
+ * @param {string} day - `YYYY-MM-DD`
+ */
+const reinstatedOn = (organisation, day) =>
+  withAccreditationStatus(organisation, ACCREDITATION_STATUS.APPROVED, [
+    { status: ACCREDITATION_STATUS.APPROVED, updatedAt: day }
+  ])
+
+/**
+ * The same operator whose accreditation was never granted, so it holds no
+ * validity window.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ */
+const neverAccredited = ({ organisation }) => ({
+  ...organisation,
+  accreditations: organisation.accreditations.map(
+    ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) => ({
+      ...accreditation,
+      status: ACCREDITATION_STATUS.CREATED,
+      statusHistory: [approvedHistory[0]]
+    })
+  )
+})
+
+/**
+ * The same operator whose approval was reverted, which leaves the validity
+ * window on the record.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ */
+const approvalReverted = ({ organisation }) => ({
+  ...organisation,
+  accreditations: organisation.accreditations.map((accreditation) => ({
+    ...accreditation,
+    status: ACCREDITATION_STATUS.CREATED,
+    statusHistory: [
+      ...accreditation.statusHistory,
+      { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
+    ]
+  }))
+})
+
+/**
+ * The monthly report an operator submitted for one period of 2026.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ * @param {number} period
+ * @returns {MonthlyReportRef}
+ */
+const monthlyReport = ({ ledgerId }, period) => ({
+  organisationId: ledgerId.organisationId,
+  registrationId: ledgerId.registrationId,
+  year: 2026,
+  cadence: 'monthly',
+  period
+})
+
+/**
  * Run the aggregation over in-memory adapters seeded with the given
  * submissions. Each submission names the ledger partition that wrote it, so a
  * test can put two partitions behind one summary log.
@@ -216,18 +348,30 @@ const sentOnRow = (rowId, date, tonnage) => ({
  * @param {{
  *   organisations: any[],
  *   submissions: any[],
+ *   reports?: MonthlyReportRef[],
+ *   unsubmittedReports?: MonthlyReportRef[],
  *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
- *   months?: string[],
+ *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
  *   now?: Date
  * }} options
  */
 const run = async ({
   organisations,
   submissions,
+  reports = [],
+  unsubmittedReports = [],
   overseasSites = [],
   months = JANUARY_TO_JUNE_2026,
   now = NOW
 }) => {
+  const reportsRepository = createInMemoryReportsRepository()()
+  for (const report of reports) {
+    await buildSubmittedReport(reportsRepository, report)
+  }
+  for (const report of unsubmittedReports) {
+    await buildUnsubmittedReport(reportsRepository, report)
+  }
+
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
 
@@ -261,6 +405,7 @@ const run = async ({
     )(),
     overseasSitesRepository:
       createInMemoryOverseasSitesRepository(overseasSites)(),
+    reportsRepository,
     logger: partialMock(logger),
     months,
     now
@@ -278,15 +423,40 @@ const NO_ACTIVITY = {
 }
 
 /**
- * The rows something was reported into. The table carries a zero row for
- * every other combination, which these tests are not about.
+ * The cells something was reported into, flattened to one row each. The table
+ * carries a zero cell for every other combination, which these tests are not
+ * about.
  *
  * @param {import('./waste-balance-table.js').WasteBalanceTable} table
  */
 const reported = (table) =>
-  table.data.filter(
-    (row) => row.totalCredited !== 0 || row.sentOnDeductions !== 0
+  Object.entries(table.data.months).flatMap(([month, { figures }]) =>
+    Object.entries(figures).flatMap(([material, byAccreditationType]) =>
+      Object.entries(byAccreditationType)
+        .filter(
+          ([, cell]) => cell.totalCredited !== 0 || cell.sentOnDeductions !== 0
+        )
+        .map(([accreditationType, cell]) => ({
+          material,
+          accreditationType,
+          month,
+          ...cell
+        }))
+    )
   )
+
+/**
+ * The monthly report counts the table carries, one pair per month served and
+ * one for the period.
+ *
+ * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ */
+const monthlyReports = ({ data: { months, period } }) => ({
+  byMonth: Object.fromEntries(
+    Object.entries(months).map(([month, { reports }]) => [month, reports])
+  ),
+  period: period.reports
+})
 
 describe('buildWasteBalanceTable', () => {
   it('stamps the clock it was given', async () => {
@@ -295,28 +465,253 @@ describe('buildWasteBalanceTable', () => {
     expect(table.meta).toStrictEqual({ generatedAt: NOW.toISOString() })
   })
 
+  describe('the monthly reports the figures include', () => {
+    const sum = (/** @type {number[]} */ counts) =>
+      counts.reduce((total, count) => total + count, 0)
+
+    /**
+     * One pair of counts per month of the first half of 2026, and their sum.
+     *
+     * @param {number[]} expected
+     * @param {number[]} submitted
+     */
+    const perMonth = (expected, submitted) => ({
+      byMonth: Object.fromEntries(
+        JANUARY_TO_JUNE_2026.map((month, i) => [
+          month,
+          { expected: expected[i], submitted: submitted[i] }
+        ])
+      ),
+      period: { expected: sum(expected), submitted: sum(submitted) }
+    })
+
+    it('expects one report per accredited registration for every month served', async () => {
+      const first = makeOperator({ orgId: 500020 })
+      const second = makeOperator({ orgId: 500021 })
+
+      const { table } = await run({
+        organisations: [first.organisation, second.organisation],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([2, 2, 2, 2, 2, 2], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('counts the reports that were submitted', async () => {
+      const operator = makeOperator({ orgId: 500022 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        reports: [monthlyReport(operator, 1), monthlyReport(operator, 2)]
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 1, 1, 1, 1], [1, 1, 0, 0, 0, 0])
+      )
+    })
+
+    it('still counts a report that was submitted and then unsubmitted, as the public register does', async () => {
+      const operator = makeOperator({ orgId: 500026 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        unsubmittedReports: [monthlyReport(operator, 1)]
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 1, 1, 1, 1], [1, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('counts every month served, including one UTC has not yet left', async () => {
+      const operator = makeOperator({ orgId: 500027 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        now: new Date('2026-06-30T23:30:00.000Z')
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects reports only from the month the accreditation began', async () => {
+      const operator = makeOperator({
+        orgId: 500023,
+        validFrom: '2026-05-01',
+        validTo: '2026-12-31'
+      })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects no report after the accreditation ends', async () => {
+      const operator = makeOperator({
+        orgId: 500026,
+        validFrom: '2026-01-01',
+        validTo: '2026-03-31'
+      })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects reports up to the month the accreditation was cancelled, and counts those it filed', async () => {
+      const operator = makeOperator({ orgId: 500027 })
+
+      const { table } = await run({
+        organisations: [cancelledOn(operator.organisation, '2026-03-20')],
+        submissions: [],
+        reports: [monthlyReport(operator, 1), monthlyReport(operator, 4)]
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 1, 0, 0, 0], [1, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects nothing of the months between a cancellation and a reinstatement', async () => {
+      const operator = makeOperator({ orgId: 500031 })
+
+      const { table } = await run({
+        organisations: [
+          reinstatedOn(
+            cancelledOn(operator.organisation, '2026-02-10'),
+            '2026-05-01'
+          )
+        ],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('trims at each cancellation when an accreditation has had two', async () => {
+      const operator = makeOperator({ orgId: 500032 })
+
+      const { table } = await run({
+        organisations: [
+          cancelledOn(
+            reinstatedOn(
+              cancelledOn(operator.organisation, '2026-02-10'),
+              '2026-04-01'
+            ),
+            '2026-06-15'
+          )
+        ],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 0, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('keeps expecting reports across the window after an approval is reverted, as the figures keep its loads', async () => {
+      const operator = makeOperator({ orgId: 500029 })
+
+      const { table } = await run({
+        organisations: [approvalReverted(operator)],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects nothing of an accreditation that was never granted', async () => {
+      const operator = makeOperator({ orgId: 500028 })
+
+      const { table } = await run({
+        organisations: [neverAccredited(operator)],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('counts only the months served', async () => {
+      const operator = makeOperator({ orgId: 500024 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        reports: [monthlyReport(operator, 2)],
+        // @ts-expect-error a served month is minted by toYearMonth, never a bare string
+        months: ['2026-01']
+      })
+
+      expect(monthlyReports(table)).toEqual({
+        byMonth: { '2026-01': { expected: 1, submitted: 0 } },
+        period: { expected: 1, submitted: 0 }
+      })
+    })
+
+    it('expects nothing of a registered-only operator, which reports quarterly', async () => {
+      const operator = makeOperator({ orgId: 500025 })
+
+      const { table } = await run({
+        organisations: [registeredOnly(operator)],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects nothing of a test organisation', async () => {
+      const operator = makeOperator({ orgId: TEST_ORG_ID })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        reports: [monthlyReport(operator, 1)]
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
+    })
+  })
+
   describe('the published grid', () => {
-    it('carries a row for every material, accreditation type and month, whatever was reported', async () => {
+    it('carries a cell for every month, material and accreditation type, whatever was reported', async () => {
       const { table } = await run({ organisations: [], submissions: [] })
 
-      const grid = TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
-        Object.values(WASTE_PROCESSING_TYPE).flatMap((accreditationType) =>
-          JANUARY_TO_JUNE_2026.map((month) => ({
-            material,
-            accreditationType,
-            month
-          }))
-        )
-      )
-
-      expect(
-        table.data.map(({ material, accreditationType, month }) => ({
-          material,
-          accreditationType,
-          month
-        }))
-      ).toEqual(expect.arrayContaining(grid))
-      expect(table.data).toHaveLength(96)
+      expect(Object.keys(table.data.months)).toEqual(JANUARY_TO_JUNE_2026)
+      for (const { figures } of Object.values(table.data.months)) {
+        expect(Object.keys(figures)).toEqual(TONNAGE_MONITORING_MATERIALS)
+        for (const byAccreditationType of Object.values(figures)) {
+          expect(Object.keys(byAccreditationType)).toEqual(
+            Object.values(WASTE_PROCESSING_TYPE)
+          )
+        }
+      }
     })
 
     it('serves zeroes for a combination the ledger holds nothing for', async () => {
@@ -329,45 +724,11 @@ describe('buildWasteBalanceTable', () => {
         ]
       })
 
-      expect(
-        table.data.filter(
-          ({ material, accreditationType }) =>
-            material === MATERIAL.WOOD &&
-            accreditationType === WASTE_PROCESSING_TYPE.EXPORTER
+      for (const month of JANUARY_TO_JUNE_2026) {
+        expect(table.data.months[month].figures.wood.exporter).toEqual(
+          NO_ACTIVITY
         )
-      ).toEqual(
-        JANUARY_TO_JUNE_2026.map((month) => ({
-          material: MATERIAL.WOOD,
-          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-          month,
-          ...NO_ACTIVITY
-        }))
-      )
-    })
-
-    it('orders the grid by material, accreditation type and month', async () => {
-      const { table } = await run({ organisations: [], submissions: [] })
-
-      expect(table.data.slice(0, 3)).toEqual([
-        {
-          material: MATERIAL.ALUMINIUM,
-          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-          month: '2026-01',
-          ...NO_ACTIVITY
-        },
-        {
-          material: MATERIAL.ALUMINIUM,
-          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-          month: '2026-02',
-          ...NO_ACTIVITY
-        },
-        {
-          material: MATERIAL.ALUMINIUM,
-          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-          month: '2026-03',
-          ...NO_ACTIVITY
-        }
-      ])
+      }
     })
   })
 
@@ -465,22 +826,6 @@ describe('buildWasteBalanceTable', () => {
         netCredit: 70
       }
     ])
-  })
-
-  it('will not type a published row against an unsplit glass material', () => {
-    /** @type {import('./waste-balance-table.js').WasteBalanceTableRow} */
-    const row = {
-      // @ts-expect-error plain glass is not a material a published row can carry
-      material: MATERIAL.GLASS,
-      accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-      month: '2026-03',
-      totalCredited: 0,
-      eligibleForWasteBalance: 0,
-      sentOnDeductions: 0,
-      netCredit: 0
-    }
-
-    expect(row.material).toBe(MATERIAL.GLASS)
   })
 
   it('publishes a glass registration the split reached under its process', async () => {
@@ -647,7 +992,7 @@ describe('buildWasteBalanceTable', () => {
     })
   })
 
-  it('separates materials and accreditation types into their own cells, ordered', async () => {
+  it('separates materials and accreditation types into their own cells', async () => {
     const plasticReprocessor = makeOperator({ orgId: 500005 })
     const plasticExporter = makeOperator({
       orgId: 500006,
@@ -683,29 +1028,11 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(
-      reported(table).map(({ material, accreditationType, totalCredited }) => ({
-        material,
-        accreditationType,
-        totalCredited
-      }))
-    ).toEqual([
-      {
-        material: MATERIAL.PAPER,
-        accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        totalCredited: 10
-      },
-      {
-        material: MATERIAL.PLASTIC,
-        accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-        totalCredited: 30
-      },
-      {
-        material: MATERIAL.PLASTIC,
-        accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        totalCredited: 20
-      }
-    ])
+    const { figures } = table.data.months[toYearMonth('2026-02')]
+    expect(figures.paper.reprocessor.totalCredited).toBe(10)
+    expect(figures.plastic.exporter.totalCredited).toBe(30)
+    expect(figures.plastic.reprocessor.totalCredited).toBe(20)
+    expect(reported(table)).toHaveLength(3)
   })
 
   it('leaves out a month before the window', async () => {
