@@ -61,6 +61,9 @@ const daysOf = ({ startDate, endDate }) => {
 /**
  * Whether the accreditation stood cancelled on every day of the period, read
  * from its history exactly as the figures read it for a load dated that day.
+ * Asking day by day rather than at each history entry keeps that one answer
+ * shared, and costs a year of the register a few hundred thousand lookups
+ * over histories of a handful of entries.
  *
  * @param {{ startDate: CalendarDate, endDate: CalendarDate }} period
  * @param {StatusHistoryDateTime[]} history
