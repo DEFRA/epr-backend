@@ -160,7 +160,7 @@ jobs:
           fail-on-severity: moderate
 
   test-journey:
-    name: Run Journey Tests (waste-record-states=${{ matrix.waste-record-states }})
+    name: Run Journey Tests (december-scope=${{ matrix.december-scope }})
     runs-on: ubuntu-latest
     needs: pr-prep
     if: needs.pr-prep.outputs.docs-only != 'true'
@@ -171,7 +171,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        waste-record-states: [true]
+        include:
+          - december-scope: exclude
+          - december-scope: only
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -195,13 +197,18 @@ jobs:
         id: test-timer
         run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
 
-      - name: Run journey tests on ${{ steps.journey-branch.outputs.ref }}
-        uses: DEFRA/epr-re-ex-journey-tests/run-journey-tests@main
+      # TODO(PAE-1922): hardcoded to this PR's branch as a stopgap so CI can
+      # exercise december-scope/artifact-suffix before journey-tests PR #193
+      # merges - uses: resolves before any step runs, so it can't read
+      # journey-branch's output (that made CI fail outright when tried).
+      # Revert to @main once #193 merges to epr-re-ex-journey-tests.
+      - name: Run journey tests on PAE-1922-dec-balance-debit
+        uses: DEFRA/epr-re-ex-journey-tests/run-journey-tests@PAE-1922-dec-balance-debit
         with:
           epr-backend: ${{github.sha}}
           branch: ${{ steps.journey-branch.outputs.ref }}
-          waste-record-states: ${{ matrix.waste-record-states }}
-          artifact-suffix: -waste-record-states-${{ matrix.waste-record-states }}
+          artifact-suffix: -${{ matrix.december-scope }}
+          december-scope: ${{ matrix.december-scope }}
           test-scope: all
 
       - name: Write journey test summary

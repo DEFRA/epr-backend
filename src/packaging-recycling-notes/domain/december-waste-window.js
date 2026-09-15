@@ -3,10 +3,6 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { LOGGING_EVENT_ACTIONS } from '#common/enums/index.js'
-import {
-  WASTE_PROCESSING_TYPE,
-  REPROCESSING_TYPE
-} from '#domain/organisations/model.js'
 import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/relevant-year.js'
 
 /**
@@ -45,32 +41,6 @@ export function isWithinDecemberWasteWindow(
   // `YYYY-MM-DDTHH:mm` and sort chronologically as strings - that is the
   // whole point of the format, see formatLocalDateTime.
   return stamp >= start && isBeforeEndOfRelevantYear(relevantYear, now)
-}
-
-/**
- * Whether an accreditation must declare its December Waste manually, rather than
- * have it derived from a December balance: true only for a reprocessor on
- * output. An output accreditation accrues no December balance (see
- * `december-credit-total.js`, which zeroes `REPROCESSOR_OUTPUT` rows), so it has
- * no tonnage to derive the marker from and the operator self-declares it for
- * disclosure. Input reprocessors and exporters do accrue a December balance
- * (PAE-1922), so they stay false here and their pool routing is decided by
- * `resolvePool` in `resolve-pool.js` instead.
- *
- * This is now only the disclosure signal (does the operator declare manually),
- * not a proxy for "has no December balance": that distinction moved to
- * `accruesDecember`. The `december-eligibility` route consumes it to decide
- * whether to prompt for a manual declaration.
- *
- * @param {{ wasteProcessingType: string, reprocessingType?: string }} accreditation
- * @returns {boolean}
- */
-export function declaresDecemberWasteManually(accreditation) {
-  if (accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
-    return false
-  }
-
-  return accreditation.reprocessingType === REPROCESSING_TYPE.OUTPUT
 }
 
 export const DECEMBER_WASTE_NOT_DECLARABLE_CODE =

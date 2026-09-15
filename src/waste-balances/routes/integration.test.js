@@ -226,7 +226,8 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
       amount: 1000,
       availableAmount: 750,
       decemberAmount: 400,
-      decemberAvailableAmount: 250
+      decemberAvailableAmount: 250,
+      nonDecemberAvailableAmount: 500
     })
   })
 

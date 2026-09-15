@@ -1,24 +1,31 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
+import { availableForPool } from '#waste-balances/domain/pool-balances.js'
+import { POOL } from '#waste-balances/repository/ledger-schema.js'
 import { wasteBalanceResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseObject, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { LedgerBalanceSnapshot } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
- * The separate December portion of a balance, surfaced only when the
- * accreditation holds one. A drained in-window pool still reports `0`; an
- * accreditation with no December portion omits the fields entirely.
+ * The separate December portion of a balance, plus the derived non-December
+ * remainder of `availableAmount`, surfaced only when the accreditation holds
+ * a December portion. A drained in-window pool still reports `0`s; an
+ * accreditation with no December portion omits all three fields entirely -
+ * its whole `availableAmount` already IS the only balance, so there is no
+ * meaningful non-December split to report.
  *
- * @param {{ decemberAmount?: number, decemberAvailableAmount?: number } | null} [balance]
- * @returns {{ decemberAmount?: number, decemberAvailableAmount?: number }}
+ * @param {LedgerBalanceSnapshot | null} [balance]
+ * @returns {{ decemberAmount?: number, decemberAvailableAmount?: number, nonDecemberAvailableAmount?: number }}
  */
 const decemberFields = (balance) => ({
   ...(balance?.decemberAmount !== undefined && {
     decemberAmount: balance.decemberAmount
   }),
   ...(balance?.decemberAvailableAmount !== undefined && {
-    decemberAvailableAmount: balance.decemberAvailableAmount
+    decemberAvailableAmount: balance.decemberAvailableAmount,
+    nonDecemberAvailableAmount: availableForPool(balance, POOL.GENERAL)
   })
 })
 
@@ -111,7 +118,8 @@ export const wasteBalanceGet = {
      *   amount: number,
      *   availableAmount: number,
      *   decemberAmount?: number,
-     *   decemberAvailableAmount?: number
+     *   decemberAvailableAmount?: number,
+     *   nonDecemberAvailableAmount?: number
      * }>}
      */
     const balanceMap = {}

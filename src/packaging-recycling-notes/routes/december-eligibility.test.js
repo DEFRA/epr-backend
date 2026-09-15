@@ -71,7 +71,7 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual({
-      declaresDecemberWasteManually: true,
+      mode: 'manual',
       windowOpen: true
     })
   })
@@ -87,7 +87,7 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual({
-      declaresDecemberWasteManually: true,
+      mode: 'manual',
       windowOpen: false
     })
   })
@@ -103,7 +103,7 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual({
-      declaresDecemberWasteManually: true,
+      mode: 'manual',
       windowOpen: true
     })
   })
@@ -119,12 +119,12 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual({
-      declaresDecemberWasteManually: true,
+      mode: 'manual',
       windowOpen: false
     })
   })
 
-  it('returns declaresDecemberWasteManually: false for an input reprocessor, even when the window is open', async () => {
+  it('returns mode: pool for an input reprocessor, even when the window is open', async () => {
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
     organisationsRepository.findAccreditationById.mockResolvedValueOnce({
       id: accreditationId,
@@ -142,12 +142,12 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual({
-      declaresDecemberWasteManually: false,
+      mode: 'pool',
       windowOpen: true
     })
   })
 
-  it('returns declaresDecemberWasteManually: false for an exporter, even when the window is open', async () => {
+  it('returns mode: pool for an exporter, even when the window is open', async () => {
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
     organisationsRepository.findAccreditationById.mockResolvedValueOnce({
       id: accreditationId,
@@ -164,7 +164,7 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual({
-      declaresDecemberWasteManually: false,
+      mode: 'pool',
       windowOpen: true
     })
   })
