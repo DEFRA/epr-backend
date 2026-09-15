@@ -26,15 +26,11 @@ import { recordOf } from '#market-insights/domain/record-of.js'
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#domain/organisations/registration.js').ReportableRegistration} ReportableRegistration
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').Measures} Measures
- * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedReprocessorFigures} PublishedReprocessorFigures
- * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedExporterFigures} PublishedExporterFigures
+ * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedFigures} PublishedFigures
  */
 
 /**
- * @typedef {{
- *   reprocessor: PublishedReprocessorFigures,
- *   exporter: PublishedExporterFigures
- * }} FiguresByAccreditationType
+ * @typedef {Record<WasteProcessingTypeValue, PublishedFigures>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
  */
 
@@ -101,18 +97,14 @@ const foldIntoCell = (cells, registration, month, report) => {
  * @returns {FiguresByMaterial}
  */
 const publishedFigures = (cells, month) =>
-  recordOf(TONNAGE_MONITORING_MATERIALS, (material) => {
-    /** @param {WasteProcessingTypeValue} accreditationType */
-    const figuresFor = (accreditationType) =>
+  recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
       withPublishedFigures(
         cells.get(cellKey({ material, accreditationType, month })) ??
           noMeasures(accreditationType)
       )
-    return /** @type {FiguresByAccreditationType} */ ({
-      reprocessor: figuresFor(WASTE_PROCESSING_TYPE.REPROCESSOR),
-      exporter: figuresFor(WASTE_PROCESSING_TYPE.EXPORTER)
-    })
-  })
+    )
+  )
 
 /**
  * Aggregate the published UK reprocessor and exporter figures for the given

@@ -52,8 +52,7 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
  * to, and the average price per tonne.
  *
  * @typedef {{ tonnageSentOnTotal: number, averagePricePerTonne: number }} PublishedExtras
- * @typedef {ReprocessorMeasures & PublishedExtras} PublishedReprocessorFigures
- * @typedef {ExporterMeasures & PublishedExtras} PublishedExporterFigures
+ * @typedef {Measures & PublishedExtras} PublishedFigures
  */
 
 /**
