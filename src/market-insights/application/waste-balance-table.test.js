@@ -22,6 +22,9 @@ import { partialMock } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
 
+/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
+
 // .vite/setup-files.js configures 999999 as a test organisation.
 const TEST_ORG_ID = 999999
 
@@ -240,27 +243,52 @@ const registeredOnly = ({ organisation }) => ({
  */
 
 /**
- * The same operator with its accreditation cancelled on the given day. The
- * validity window is kept, as a cancellation leaves it.
+ * The organisation with its accreditation moved to the given status, the
+ * transitions appended to its history.
  *
- * @param {ReturnType<typeof makeOperator>} operator
- * @param {string} cancelledOn - `YYYY-MM-DD`
+ * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
+ * @param {Organisation} organisation
+ * @param {AccreditationStatus} status
+ * @param {StatusHistoryEntry[]} transitions
  */
-const cancelledOn = ({ organisation }, cancelledOn) => ({
+const withAccreditationStatus = (organisation, status, transitions) => ({
   ...organisation,
   accreditations: organisation.accreditations.map((accreditation) => ({
     ...accreditation,
-    status: ACCREDITATION_STATUS.CANCELLED,
-    statusHistory: [
-      ...accreditation.statusHistory,
-      { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: cancelledOn },
-      {
-        status: ACCREDITATION_STATUS.CANCELLED,
-        updatedAt: `${cancelledOn}T09:00:00.000Z`
-      }
-    ]
+    status,
+    statusHistory: [...accreditation.statusHistory, ...transitions]
   }))
 })
+
+/**
+ * The organisation with its accreditation cancelled on the given day. The
+ * validity window is kept, as a cancellation leaves it.
+ *
+ * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
+ * @param {Organisation} organisation
+ * @param {string} day - `YYYY-MM-DD`
+ */
+const cancelledOn = (organisation, day) =>
+  withAccreditationStatus(organisation, ACCREDITATION_STATUS.CANCELLED, [
+    { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: day },
+    {
+      status: ACCREDITATION_STATUS.CANCELLED,
+      updatedAt: `${day}T09:00:00.000Z`
+    }
+  ])
+
+/**
+ * The organisation with its cancelled accreditation approved again on the
+ * given day.
+ *
+ * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
+ * @param {Organisation} organisation
+ * @param {string} day - `YYYY-MM-DD`
+ */
+const reinstatedOn = (organisation, day) =>
+  withAccreditationStatus(organisation, ACCREDITATION_STATUS.APPROVED, [
+    { status: ACCREDITATION_STATUS.APPROVED, updatedAt: day }
+  ])
 
 /**
  * The same operator whose accreditation was never granted, so it holds no
@@ -551,7 +579,7 @@ describe('buildWasteBalanceTable', () => {
       const operator = makeOperator({ orgId: 500027 })
 
       const { table } = await run({
-        organisations: [cancelledOn(operator, '2026-03-20')],
+        organisations: [cancelledOn(operator.organisation, '2026-03-20')],
         submissions: [],
         reports: [monthlyReport(operator, 1), monthlyReport(operator, 4)]
       })
@@ -561,7 +589,46 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('expects nothing of an accreditation whose approval was reverted', async () => {
+    it('expects nothing of the months between a cancellation and a reinstatement', async () => {
+      const operator = makeOperator({ orgId: 500031 })
+
+      const { table } = await run({
+        organisations: [
+          reinstatedOn(
+            cancelledOn(operator.organisation, '2026-02-10'),
+            '2026-05-01'
+          )
+        ],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('trims at each cancellation when an accreditation has had two', async () => {
+      const operator = makeOperator({ orgId: 500032 })
+
+      const { table } = await run({
+        organisations: [
+          cancelledOn(
+            reinstatedOn(
+              cancelledOn(operator.organisation, '2026-02-10'),
+              '2026-04-01'
+            ),
+            '2026-06-15'
+          )
+        ],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 0, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('keeps expecting reports across the window after an approval is reverted, as the figures keep its loads', async () => {
       const operator = makeOperator({ orgId: 500029 })
 
       const { table } = await run({
@@ -570,7 +637,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+        perMonth([1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
       )
     })
 

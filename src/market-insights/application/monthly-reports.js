@@ -13,17 +13,12 @@ import {
 } from '#domain/organisations/registration-utils.js'
 import {
   accreditationWindow,
-  getStatusHistoryDateTimes
+  getStatusHistoryDateTimes,
+  isCancelledThroughout
 } from '#common/helpers/dates/accreditation.js'
-import { toCalendarDate } from '#common/helpers/date-formatter.js'
-import {
-  ACCREDITATION_STATUS,
-  ACTIVE_ACCREDITATION_STATUSES
-} from '#domain/organisations/model.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
-/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
-/** @import { AccreditationWindow } from '#common/helpers/dates/accreditation.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 
 /**
@@ -43,71 +38,44 @@ import {
  */
 
 /**
- * The day an accreditation was cancelled, read from its status history.
- *
- * @param {Accreditation} accreditation
- * @returns {CalendarDate | undefined}
- */
-const dateCancelled = (accreditation) => {
-  const cancellation = getStatusHistoryDateTimes(
-    accreditation.statusHistory
-  ).find((entry) => entry.status === ACCREDITATION_STATUS.CANCELLED)
-  return cancellation && toCalendarDate(new Date(cancellation.updatedAt))
-}
-
-/**
- * An accreditation's validity window, cut short by its cancellation if any.
- *
- * @typedef {AccreditationWindow & { cancelledOn?: CalendarDate }} Obligation
- */
-
-/**
- * The days an accreditation owed monthly reports for: its validity window,
- * cut short by a cancellation. A suspended accreditation keeps reporting. One
- * that is neither live nor cancelled owes nothing, whether it was never
- * granted or had its approval reverted.
- *
- * @param {Accreditation} accreditation
- * @returns {Obligation | null}
- */
-const obligation = (accreditation) => {
-  const window = accreditationWindow(accreditation)
-  if (window === null) {
-    return null
-  }
-  if (ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)) {
-    return window
-  }
-  const cancelled = dateCancelled(accreditation)
-  return cancelled === undefined ? null : { ...window, cancelledOn: cancelled }
-}
-
-/**
- * The monthly periods owed among the months served: those overlapping the
- * obligation. The caller has already settled which months have ended, on the
- * UK calendar, so no clock is consulted here.
+ * The monthly periods an accreditation owed among the months served: those
+ * within its validity window that it did not stand cancelled throughout. A
+ * suspended accreditation keeps reporting; a cancelled one stops, and starts
+ * again if reinstated. The caller has already settled which months have
+ * ended, on the UK calendar, so no clock is consulted here.
  *
  * @param {Set<YearMonth>} served
  * @param {number[]} years
- * @param {Obligation} obligation
+ * @param {Accreditation} accreditation
  */
-const owedPeriods = (served, years, { validFrom, validTo, cancelledOn }) =>
-  filterPeriodsFromDate(
-    filterPeriodsFromDate(
-      years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
-      validFrom,
-      validTo
-    ),
-    validFrom,
-    cancelledOn
-  ).filter((period) => served.has(toYearMonth(period.startDate)))
+const owedPeriods = (served, years, accreditation) => {
+  const window = accreditationWindow(accreditation)
+  if (window === null) {
+    return []
+  }
+  const history = getStatusHistoryDateTimes(accreditation.statusHistory)
+  return filterPeriodsFromDate(
+    years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
+    window.validFrom,
+    window.validTo
+  ).filter(
+    (period) =>
+      served.has(toYearMonth(period.startDate)) &&
+      !isCancelledThroughout(
+        calendarDate(period.startDate),
+        calendarDate(period.endDate),
+        history
+      )
+  )
+}
 
 /**
  * Count, for each month served, the monthly reports that were required and
  * those submitted. Only an accredited registration reports monthly, so a
- * registered-only operator counts for nothing. A cancelled accreditation owed
- * every month up to its cancellation and none after, so it is counted for
- * those months and the reports it filed for them.
+ * registered-only operator counts for nothing. An accreditation owed a report
+ * for every month of its window it was not cancelled for, so one since
+ * cancelled is counted for the months before its cancellation and the reports
+ * it filed for them.
  *
  * @param {Object} params
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
@@ -132,11 +100,10 @@ export const countMonthlyReports = ({
     organisations
   )) {
     const [accreditation] = accreditationsForRegistration(registration, org)
-    const owes = accreditation && obligation(accreditation)
-    if (!owes) {
+    if (accreditation === undefined) {
       continue
     }
-    const owed = owedPeriods(served, years, owes)
+    const owed = owedPeriods(served, years, accreditation)
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
     const reports =
       reportsByRegistration.get(`${org.id}::${registration.id}`) ?? []

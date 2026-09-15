@@ -122,6 +122,35 @@ export function isSuspendedOrCancelledAtDate(date, statusHistory) {
 }
 
 /**
+ * Whether the accreditation stood cancelled on every day from `start` to `end`
+ * inclusive. Each entry in the history holds from its own day until the next,
+ * so an accreditation cancelled and later reinstated was cancelled throughout
+ * the gap and on neither side of it. As in `isSuspendedOrCancelledAtDate`, the
+ * history only ever removes days from the validity window: a day before any
+ * entry is not cancelled.
+ *
+ * @param {CalendarDate} start
+ * @param {CalendarDate} end
+ * @param {StatusHistoryDateTime[]} statusHistory - descending
+ * @returns {boolean}
+ */
+export function isCancelledThroughout(start, end, statusHistory) {
+  /** @type {AccreditationStatus[]} */
+  const held = []
+  for (const entry of statusHistory) {
+    const day = toCalendarDate(new Date(entry.updatedAt))
+    if (day > end) {
+      continue
+    }
+    held.push(entry.status)
+    if (day <= start) {
+      return held.every((status) => status === ACCREDITATION_STATUS.CANCELLED)
+    }
+  }
+  return false
+}
+
+/**
  * The relevant year an accreditation's `validFrom` names. Approved
  * accreditations always carry `validFrom`; a missing value here means the
  * caller reached this on a path that should never have — every relevant-year
