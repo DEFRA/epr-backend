@@ -22,7 +22,7 @@ import { countMonthlyReports } from '#market-insights/application/monthly-report
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
- * @typedef {import('#market-insights/application/monthly-reports.js').MonthlyReportCounts} MonthlyReportCounts
+ * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
  * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceFigures} WasteBalanceFigures
@@ -55,14 +55,38 @@ import { countMonthlyReports } from '#market-insights/application/monthly-report
  */
 
 /**
- * @typedef {{ material: Material, accreditationType: string, month: string } & PublishedWasteBalanceFigures} WasteBalanceTableRow
+ * @typedef {Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures>} FiguresByAccreditationType
+ * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
+ */
+
+/**
+ * One reporting month as published: the reports it was owed and how many of
+ * them arrived, and the figures for every material and accreditation type.
+ *
+ * @typedef {Object} PublishedMonth
+ * @property {ReportCount} reports
+ * @property {FiguresByMaterial} figures
  */
 
 /**
  * @typedef {Object} WasteBalanceTable
- * @property {{ generatedAt: string, monthlyReports: MonthlyReportCounts }} meta
- * @property {WasteBalanceTableRow[]} data
+ * @property {{ generatedAt: string }} meta
+ * @property {{ months: Record<YearMonth, PublishedMonth>, period: { reports: ReportCount } }} data
  */
+
+/**
+ * A record holding a value for every one of the given keys, and no other.
+ *
+ * @template {string} K
+ * @template V
+ * @param {readonly K[]} keys
+ * @param {(key: K) => V} valueOf
+ * @returns {Record<K, V>}
+ */
+const recordOf = (keys, valueOf) =>
+  /** @type {Record<K, V>} */ (
+    Object.fromEntries(keys.map((key) => [key, valueOf(key)]))
+  )
 
 /**
  * @param {{ organisationId: string, registrationId: string, accreditationId: string | null }} ledgerId
@@ -79,28 +103,22 @@ const cellKey = ({ material, accreditationType, month }) =>
   `${material}::${accreditationType}::${month}`
 
 /**
- * The publication prints every combination, so one nothing reported into is
- * still a row.
+ * The publication prints every material and accreditation type, so one
+ * nothing reported into is still served, at zero.
  *
- * @param {YearMonth[]} months
- * @returns {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>[]}
+ * @param {Map<string, WasteBalanceCell>} cells
+ * @param {YearMonth} month
+ * @returns {FiguresByMaterial}
  */
-const publishedGrid = (months) =>
-  TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
-    Object.values(WASTE_PROCESSING_TYPE).flatMap((accreditationType) =>
-      months.map((month) => ({ material, accreditationType, month }))
+const publishedFigures = (cells, month) =>
+  recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
+      withNetCredit(
+        cells.get(cellKey({ material, accreditationType, month }))?.figures ??
+          NO_FIGURES
+      )
     )
   )
-
-/**
- * @param {WasteBalanceTableRow} a
- * @param {WasteBalanceTableRow} b
- * @returns {number}
- */
-const compareRows = (a, b) =>
-  a.material.localeCompare(b.material) ||
-  a.accreditationType.localeCompare(b.accreditationType) ||
-  a.month.localeCompare(b.month)
 
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
@@ -274,11 +292,11 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
 
 /**
  * Aggregate the published UK Waste Balance figures for the given reporting
- * months, summed by material, accreditation type and reporting month. A row
+ * months, summed by material and accreditation type within each month. A row
  * dated outside those months is held back, which is what keeps a mis-keyed
- * future date from being published as supply. The count of monthly reports
- * owed and submitted, for each month and for the period, says how close the
- * figures are to publication.
+ * future date from being published as supply. Each month also carries the
+ * count of monthly reports it was owed and how many were submitted, and the
+ * period carries the sum, which says how close the figures are to publication.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
@@ -343,22 +361,20 @@ export const buildWasteBalanceTable = async ({
 
   warnAboutUndatedRows(logger, into.undated)
 
-  const data = publishedGrid(months)
-    .map((cell) => ({
-      ...cell,
-      ...withNetCredit(into.cells.get(cellKey(cell))?.figures ?? NO_FIGURES)
-    }))
-    .sort(compareRows)
+  const reports = countMonthlyReports({
+    organisations,
+    periodicReports,
+    months
+  })
 
   return {
-    meta: {
-      generatedAt: now.toISOString(),
-      monthlyReports: countMonthlyReports({
-        organisations,
-        periodicReports,
-        months
-      })
-    },
-    data
+    meta: { generatedAt: now.toISOString() },
+    data: {
+      months: recordOf(months, (month) => ({
+        reports: reports.byMonth[month],
+        figures: publishedFigures(into.cells, month)
+      })),
+      period: { reports: reports.total }
+    }
   }
 }

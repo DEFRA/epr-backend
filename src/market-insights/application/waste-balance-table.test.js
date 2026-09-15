@@ -395,32 +395,46 @@ const NO_ACTIVITY = {
 }
 
 /**
- * The rows something was reported into. The table carries a zero row for
- * every other combination, which these tests are not about.
+ * The cells something was reported into, flattened to one row each. The table
+ * carries a zero cell for every other combination, which these tests are not
+ * about.
  *
  * @param {import('./waste-balance-table.js').WasteBalanceTable} table
  */
 const reported = (table) =>
-  table.data.filter(
-    (row) => row.totalCredited !== 0 || row.sentOnDeductions !== 0
+  Object.entries(table.data.months).flatMap(([month, { figures }]) =>
+    Object.entries(figures).flatMap(([material, byAccreditationType]) =>
+      Object.entries(byAccreditationType)
+        .filter(
+          ([, cell]) => cell.totalCredited !== 0 || cell.sentOnDeductions !== 0
+        )
+        .map(([accreditationType, cell]) => ({
+          material,
+          accreditationType,
+          month,
+          ...cell
+        }))
+    )
   )
+
+/**
+ * The monthly report counts the table carries, one pair per month served and
+ * one for the period.
+ *
+ * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ */
+const monthlyReports = ({ data: { months, period } }) => ({
+  byMonth: Object.fromEntries(
+    Object.entries(months).map(([month, { reports }]) => [month, reports])
+  ),
+  period: period.reports
+})
 
 describe('buildWasteBalanceTable', () => {
   it('stamps the clock it was given', async () => {
     const { table } = await run({ organisations: [], submissions: [] })
 
-    expect(table.meta).toStrictEqual({
-      generatedAt: NOW.toISOString(),
-      monthlyReports: {
-        byMonth: Object.fromEntries(
-          JANUARY_TO_JUNE_2026.map((month) => [
-            month,
-            { expected: 0, submitted: 0 }
-          ])
-        ),
-        total: { expected: 0, submitted: 0 }
-      }
-    })
+    expect(table.meta).toStrictEqual({ generatedAt: NOW.toISOString() })
   })
 
   describe('the monthly reports the figures include', () => {
@@ -440,7 +454,7 @@ describe('buildWasteBalanceTable', () => {
           { expected: expected[i], submitted: submitted[i] }
         ])
       ),
-      total: { expected: sum(expected), submitted: sum(submitted) }
+      period: { expected: sum(expected), submitted: sum(submitted) }
     })
 
     it('expects one report per accredited registration for every month served', async () => {
@@ -452,7 +466,7 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([2, 2, 2, 2, 2, 2], [0, 0, 0, 0, 0, 0])
       )
     })
@@ -466,7 +480,7 @@ describe('buildWasteBalanceTable', () => {
         reports: [monthlyReport(operator, 1), monthlyReport(operator, 2)]
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([1, 1, 1, 1, 1, 1], [1, 1, 0, 0, 0, 0])
       )
     })
@@ -480,7 +494,7 @@ describe('buildWasteBalanceTable', () => {
         unsubmittedReports: [monthlyReport(operator, 1)]
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([1, 1, 1, 1, 1, 1], [1, 0, 0, 0, 0, 0])
       )
     })
@@ -494,7 +508,7 @@ describe('buildWasteBalanceTable', () => {
         now: new Date('2026-06-30T23:30:00.000Z')
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
       )
     })
@@ -511,7 +525,7 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
       )
     })
@@ -528,7 +542,7 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0])
       )
     })
@@ -542,7 +556,7 @@ describe('buildWasteBalanceTable', () => {
         reports: [monthlyReport(operator, 1), monthlyReport(operator, 4)]
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([1, 1, 1, 0, 0, 0], [1, 0, 0, 0, 0, 0])
       )
     })
@@ -555,7 +569,7 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
       )
     })
@@ -568,7 +582,7 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
       )
     })
@@ -584,9 +598,9 @@ describe('buildWasteBalanceTable', () => {
         months: ['2026-01']
       })
 
-      expect(table.meta.monthlyReports).toEqual({
+      expect(monthlyReports(table)).toEqual({
         byMonth: { '2026-01': { expected: 1, submitted: 0 } },
-        total: { expected: 1, submitted: 0 }
+        period: { expected: 1, submitted: 0 }
       })
     })
 
@@ -598,7 +612,7 @@ describe('buildWasteBalanceTable', () => {
         submissions: []
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
       )
     })
@@ -612,34 +626,25 @@ describe('buildWasteBalanceTable', () => {
         reports: [monthlyReport(operator, 1)]
       })
 
-      expect(table.meta.monthlyReports).toEqual(
+      expect(monthlyReports(table)).toEqual(
         perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
       )
     })
   })
 
   describe('the published grid', () => {
-    it('carries a row for every material, accreditation type and month, whatever was reported', async () => {
+    it('carries a cell for every month, material and accreditation type, whatever was reported', async () => {
       const { table } = await run({ organisations: [], submissions: [] })
 
-      const grid = TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
-        Object.values(WASTE_PROCESSING_TYPE).flatMap((accreditationType) =>
-          JANUARY_TO_JUNE_2026.map((month) => ({
-            material,
-            accreditationType,
-            month
-          }))
-        )
-      )
-
-      expect(
-        table.data.map(({ material, accreditationType, month }) => ({
-          material,
-          accreditationType,
-          month
-        }))
-      ).toEqual(expect.arrayContaining(grid))
-      expect(table.data).toHaveLength(96)
+      expect(Object.keys(table.data.months)).toEqual(JANUARY_TO_JUNE_2026)
+      for (const { figures } of Object.values(table.data.months)) {
+        expect(Object.keys(figures)).toEqual(TONNAGE_MONITORING_MATERIALS)
+        for (const byAccreditationType of Object.values(figures)) {
+          expect(Object.keys(byAccreditationType)).toEqual(
+            Object.values(WASTE_PROCESSING_TYPE)
+          )
+        }
+      }
     })
 
     it('serves zeroes for a combination the ledger holds nothing for', async () => {
@@ -652,45 +657,11 @@ describe('buildWasteBalanceTable', () => {
         ]
       })
 
-      expect(
-        table.data.filter(
-          ({ material, accreditationType }) =>
-            material === MATERIAL.WOOD &&
-            accreditationType === WASTE_PROCESSING_TYPE.EXPORTER
+      for (const month of JANUARY_TO_JUNE_2026) {
+        expect(table.data.months[month].figures.wood.exporter).toEqual(
+          NO_ACTIVITY
         )
-      ).toEqual(
-        JANUARY_TO_JUNE_2026.map((month) => ({
-          material: MATERIAL.WOOD,
-          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-          month,
-          ...NO_ACTIVITY
-        }))
-      )
-    })
-
-    it('orders the grid by material, accreditation type and month', async () => {
-      const { table } = await run({ organisations: [], submissions: [] })
-
-      expect(table.data.slice(0, 3)).toEqual([
-        {
-          material: MATERIAL.ALUMINIUM,
-          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-          month: '2026-01',
-          ...NO_ACTIVITY
-        },
-        {
-          material: MATERIAL.ALUMINIUM,
-          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-          month: '2026-02',
-          ...NO_ACTIVITY
-        },
-        {
-          material: MATERIAL.ALUMINIUM,
-          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-          month: '2026-03',
-          ...NO_ACTIVITY
-        }
-      ])
+      }
     })
   })
 
@@ -790,20 +761,14 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
-  it('will not type a published row against an unsplit glass material', () => {
-    /** @type {import('./waste-balance-table.js').WasteBalanceTableRow} */
-    const row = {
-      // @ts-expect-error plain glass is not a material a published row can carry
-      material: MATERIAL.GLASS,
-      accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-      month: '2026-03',
-      totalCredited: 0,
-      eligibleForWasteBalance: 0,
-      sentOnDeductions: 0,
-      netCredit: 0
+  it('has no figures for an unsplit glass material', () => {
+    /** @type {Partial<import('./waste-balance-table.js').FiguresByMaterial>} */
+    const figures = {
+      // @ts-expect-error plain glass is not a material the publication prints
+      [MATERIAL.GLASS]: { reprocessor: NO_ACTIVITY, exporter: NO_ACTIVITY }
     }
 
-    expect(row.material).toBe(MATERIAL.GLASS)
+    expect(Object.keys(figures)).toEqual([MATERIAL.GLASS])
   })
 
   it('publishes a glass registration the split reached under its process', async () => {
@@ -970,7 +935,7 @@ describe('buildWasteBalanceTable', () => {
     })
   })
 
-  it('separates materials and accreditation types into their own cells, ordered', async () => {
+  it('separates materials and accreditation types into their own cells', async () => {
     const plasticReprocessor = makeOperator({ orgId: 500005 })
     const plasticExporter = makeOperator({
       orgId: 500006,
@@ -1006,29 +971,11 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(
-      reported(table).map(({ material, accreditationType, totalCredited }) => ({
-        material,
-        accreditationType,
-        totalCredited
-      }))
-    ).toEqual([
-      {
-        material: MATERIAL.PAPER,
-        accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        totalCredited: 10
-      },
-      {
-        material: MATERIAL.PLASTIC,
-        accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-        totalCredited: 30
-      },
-      {
-        material: MATERIAL.PLASTIC,
-        accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        totalCredited: 20
-      }
-    ])
+    const { figures } = table.data.months[toYearMonth('2026-02')]
+    expect(figures.paper.reprocessor.totalCredited).toBe(10)
+    expect(figures.plastic.exporter.totalCredited).toBe(30)
+    expect(figures.plastic.reprocessor.totalCredited).toBe(20)
+    expect(reported(table)).toHaveLength(3)
   })
 
   it('leaves out a month before the window', async () => {

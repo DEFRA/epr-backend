@@ -247,34 +247,31 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
     /** @type {import('#market-insights/application/waste-balance-table.js').WasteBalanceTable} */
     const payload = JSON.parse(response.payload)
 
-    expect(payload.data).toContainEqual({
-      material: MATERIAL.PLASTIC,
-      accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-      month: '2026-02',
+    const { months, period } = payload.data
+    expect(months['2026-02'].figures.plastic.reprocessor).toEqual({
       totalCredited: 100,
       eligibleForWasteBalance: 100,
       sentOnDeductions: 30,
       netCredit: 70
     })
-    expect(payload.data).toContainEqual({
-      material: MATERIAL.WOOD,
-      accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-      month: '2026-02',
+    expect(months['2026-02'].figures.wood.exporter).toEqual({
       totalCredited: 0,
       eligibleForWasteBalance: 0,
       sentOnDeductions: 0,
       netCredit: 0
     })
     expect(
-      payload.data.filter(({ totalCredited }) => totalCredited !== 0)
+      Object.values(months).flatMap(({ figures }) =>
+        Object.values(figures).flatMap((byAccreditationType) =>
+          Object.values(byAccreditationType).filter(
+            ({ totalCredited }) => totalCredited !== 0
+          )
+        )
+      )
     ).toHaveLength(1)
-    expect(payload.meta.monthlyReports).toEqual({
-      byMonth: {
-        '2026-01': { expected: 1, submitted: 1 },
-        '2026-02': { expected: 1, submitted: 0 }
-      },
-      total: { expected: 2, submitted: 1 }
-    })
+    expect(months['2026-01'].reports).toEqual({ expected: 1, submitted: 1 })
+    expect(months['2026-02'].reports).toEqual({ expected: 1, submitted: 0 })
+    expect(period).toEqual({ reports: { expected: 2, submitted: 1 } })
   })
 
   it('refuses a caller holding no market-data.read', async ({ server }) => {
