@@ -15,6 +15,7 @@ import {
   asServiceMaintainerRead
 } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
 
 const pathFor = (year, cadence, period) =>
@@ -135,12 +136,21 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
     })
   })
 
-  it('answers with an empty table when nothing has been submitted', async () => {
+  it('answers with the full grid at zero when nothing has been submitted', async () => {
     const response = await injectTable(server, asRegulator())
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const body = JSON.parse(response.payload)
-    expect(body.data).toEqual([])
+    expect(body.data).toHaveLength(16)
+    expect(body.data).toContainEqual({
+      material: MATERIAL.WOOD,
+      accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
+      month: '2026-01',
+      totalCredited: 0,
+      eligibleForWasteBalance: 0,
+      sentOnDeductions: 0,
+      netCredit: 0
+    })
     expect(body.meta).toEqual({ generatedAt: expect.any(String) })
   })
 })

@@ -4,6 +4,7 @@ import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REPROCESSING_TYPE,
+  TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -268,13 +269,105 @@ const run = async ({
   return { table, logger }
 }
 
+/** @type {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} */
+const NO_ACTIVITY = {
+  totalCredited: 0,
+  eligibleForWasteBalance: 0,
+  sentOnDeductions: 0,
+  netCredit: 0
+}
+
+/**
+ * The rows something was reported into. The table carries a zero row for
+ * every other combination, which these tests are not about.
+ *
+ * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ */
+const reported = (table) =>
+  table.data.filter(
+    (row) => row.totalCredited !== 0 || row.sentOnDeductions !== 0
+  )
+
 describe('buildWasteBalanceTable', () => {
   it('stamps the clock it was given', async () => {
     const { table } = await run({ organisations: [], submissions: [] })
 
-    expect(table).toStrictEqual({
-      meta: { generatedAt: NOW.toISOString() },
-      data: []
+    expect(table.meta).toStrictEqual({ generatedAt: NOW.toISOString() })
+  })
+
+  describe('the published grid', () => {
+    it('carries a row for every material, accreditation type and month, whatever was reported', async () => {
+      const { table } = await run({ organisations: [], submissions: [] })
+
+      const grid = TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
+        Object.values(WASTE_PROCESSING_TYPE).flatMap((accreditationType) =>
+          JANUARY_TO_JUNE_2026.map((month) => ({
+            material,
+            accreditationType,
+            month
+          }))
+        )
+      )
+
+      expect(
+        table.data.map(({ material, accreditationType, month }) => ({
+          material,
+          accreditationType,
+          month
+        }))
+      ).toEqual(expect.arrayContaining(grid))
+      expect(table.data).toHaveLength(96)
+    })
+
+    it('serves zeroes for a combination the ledger holds nothing for', async () => {
+      const operator = makeOperator({ orgId: 500014 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [
+          { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
+        ]
+      })
+
+      expect(
+        table.data.filter(
+          ({ material, accreditationType }) =>
+            material === MATERIAL.WOOD &&
+            accreditationType === WASTE_PROCESSING_TYPE.EXPORTER
+        )
+      ).toEqual(
+        JANUARY_TO_JUNE_2026.map((month) => ({
+          material: MATERIAL.WOOD,
+          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
+          month,
+          ...NO_ACTIVITY
+        }))
+      )
+    })
+
+    it('orders the grid by material, accreditation type and month', async () => {
+      const { table } = await run({ organisations: [], submissions: [] })
+
+      expect(table.data.slice(0, 3)).toEqual([
+        {
+          material: MATERIAL.ALUMINIUM,
+          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
+          month: '2026-01',
+          ...NO_ACTIVITY
+        },
+        {
+          material: MATERIAL.ALUMINIUM,
+          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
+          month: '2026-02',
+          ...NO_ACTIVITY
+        },
+        {
+          material: MATERIAL.ALUMINIUM,
+          accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
+          month: '2026-03',
+          ...NO_ACTIVITY
+        }
+      ])
     })
   })
 
@@ -290,7 +383,7 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data).toEqual([
+    expect(reported(table)).toEqual([
       {
         material: MATERIAL.PLASTIC,
         accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -323,7 +416,7 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data).toEqual([
+    expect(reported(table)).toEqual([
       {
         material: MATERIAL.PLASTIC,
         accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -361,7 +454,7 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data).toEqual([
+    expect(reported(table)).toEqual([
       {
         material: MATERIAL.PLASTIC,
         accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -404,7 +497,7 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data.map(({ material }) => material)).toEqual([
+    expect(reported(table).map(({ material }) => material)).toEqual([
       GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
     ])
   })
@@ -425,7 +518,7 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data).toEqual([
+    expect(reported(table)).toEqual([
       {
         material: MATERIAL.PLASTIC,
         accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -459,7 +552,7 @@ describe('buildWasteBalanceTable', () => {
     it('leaves it out of the deductions', async () => {
       const { table } = await withUndatedDeduction()
 
-      expect(table.data).toEqual([
+      expect(reported(table)).toEqual([
         {
           material: MATERIAL.PLASTIC,
           accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -503,7 +596,7 @@ describe('buildWasteBalanceTable', () => {
         submissions: [{ ...operator, rows: [receivedRow('row-1', '', 100)] }]
       })
 
-      expect(table.data).toEqual([])
+      expect(reported(table)).toEqual([])
       expect(logger.warn).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining('1 crediting row(s) totalling 100')
@@ -540,7 +633,7 @@ describe('buildWasteBalanceTable', () => {
         ]
       })
 
-      expect(table.data).toEqual([
+      expect(reported(table)).toEqual([
         {
           material: MATERIAL.PLASTIC,
           accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -591,7 +684,7 @@ describe('buildWasteBalanceTable', () => {
     })
 
     expect(
-      table.data.map(({ material, accreditationType, totalCredited }) => ({
+      reported(table).map(({ material, accreditationType, totalCredited }) => ({
         material,
         accreditationType,
         totalCredited
@@ -635,7 +728,7 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data.map((row) => row.month)).toEqual(['2026-01'])
+    expect(reported(table).map((row) => row.month)).toEqual(['2026-01'])
   })
 
   it('leaves out a test organisation without remarking on it', async () => {
@@ -648,7 +741,7 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data).toEqual([])
+    expect(reported(table)).toEqual([])
     expect(logger.warn).not.toHaveBeenCalled()
   })
 
@@ -662,7 +755,7 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data).toEqual([])
+    expect(reported(table)).toEqual([])
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining('acc-500009'),
@@ -689,7 +782,7 @@ describe('buildWasteBalanceTable', () => {
       ]
     })
 
-    expect(table.data).toEqual([
+    expect(reported(table)).toEqual([
       {
         material: MATERIAL.PLASTIC,
         accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,

@@ -5,6 +5,10 @@ import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-bala
 import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
+  TONNAGE_MONITORING_MATERIALS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
+import {
   addFigures,
   monthlyContribution,
   NO_FIGURES,
@@ -69,6 +73,20 @@ const partitionKey = ({ organisationId, registrationId, accreditationId }) =>
  */
 const cellKey = ({ material, accreditationType, month }) =>
   `${material}::${accreditationType}::${month}`
+
+/**
+ * The publication prints every combination, so one nothing reported into is
+ * still a row.
+ *
+ * @param {string[]} months
+ * @returns {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>[]}
+ */
+const publishedGrid = (months) =>
+  TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
+    Object.values(WASTE_PROCESSING_TYPE).flatMap((accreditationType) =>
+      months.map((month) => ({ material, accreditationType, month }))
+    )
+  )
 
 /**
  * @param {WasteBalanceTableRow} a
@@ -313,8 +331,11 @@ export const buildWasteBalanceTable = async ({
 
   warnAboutUndatedRows(logger, into.undated)
 
-  const data = [...into.cells.values()]
-    .map(({ figures, ...cell }) => ({ ...cell, ...withNetCredit(figures) }))
+  const data = publishedGrid(months)
+    .map((cell) => ({
+      ...cell,
+      ...withNetCredit(into.cells.get(cellKey(cell))?.figures ?? NO_FIGURES)
+    }))
     .sort(compareRows)
 
   return {
