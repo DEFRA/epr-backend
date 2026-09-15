@@ -89,7 +89,8 @@ describe('syncFromSummaryLog', () => {
       findAccreditationById: vi.fn().mockResolvedValue({
         id: 'acc-default',
         validFrom: '2023-01-01',
-        validTo: '2023-12-31'
+        validTo: '2023-12-31',
+        statusHistory: []
       })
     }
     overseasSitesRepository = {
@@ -301,7 +302,8 @@ describe('syncFromSummaryLog', () => {
         accreditation: {
           id: 'acc-default',
           validFrom: '2023-01-01',
-          validTo: '2023-12-31'
+          validTo: '2023-12-31',
+          statusHistory: []
         },
         overseasSites: {},
         summaryLogId: fileId
@@ -406,7 +408,11 @@ describe('syncFromSummaryLog', () => {
         TEST_USER
       )
 
-      expect(result).toEqual({ created: 2, updated: 0 })
+      expect(result).toEqual({
+        created: 2,
+        updated: 0,
+        hasDecemberWaste: false
+      })
     })
 
     it('counts a changed row as updated and a fresh row as created', async () => {
@@ -428,7 +434,11 @@ describe('syncFromSummaryLog', () => {
         TEST_USER
       )
 
-      expect(result).toEqual({ created: 1, updated: 1 })
+      expect(result).toEqual({
+        created: 1,
+        updated: 1,
+        hasDecemberWaste: false
+      })
     })
 
     it('does not count unchanged rows', async () => {
@@ -448,7 +458,11 @@ describe('syncFromSummaryLog', () => {
         TEST_USER
       )
 
-      expect(result).toEqual({ created: 0, updated: 0 })
+      expect(result).toEqual({
+        created: 0,
+        updated: 0,
+        hasDecemberWaste: false
+      })
     })
   })
 })

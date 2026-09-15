@@ -4,6 +4,8 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import { summaryLogMetrics } from './metrics.js'
 
 /**
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
@@ -45,6 +47,11 @@ export const markAsValidationFailed = async (
       version,
       transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATION_FAILED)
     )
+
+    await summaryLogMetrics.recordStatusTransition({
+      status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+      processingType: summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
+    })
   } catch (err) {
     logger.error({
       err,
@@ -88,6 +95,11 @@ export const markAsSubmissionFailed = async (
       version,
       transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
     )
+
+    await summaryLogMetrics.recordStatusTransition({
+      status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED,
+      processingType: summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
+    })
   } catch (err) {
     logger.error({
       err,

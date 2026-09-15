@@ -1,4 +1,5 @@
 import {
+  buildDimensions,
   incrementCounter,
   recordDuration,
   timed
@@ -17,11 +18,13 @@ import {
  * @typedef {Object} StatusTransitionDimensions
  * @property {SummaryLogStatus} status
  * @property {ProcessingType} [processingType]
+ * @property {boolean} [hasDecemberWaste] - Whether the submission carries December-attributable tonnage (ADR-0049)
  */
 
 /**
  * @typedef {Object} ProcessingTypeDimensions
  * @property {ProcessingType} [processingType]
+ * @property {boolean} [hasDecemberWaste] - Whether the submission carries December-attributable tonnage (ADR-0049)
  */
 
 /**
@@ -38,38 +41,17 @@ import {
  */
 
 /**
- * Maps enum values to lowercase dimension values
- * @param {string|null|undefined} value
- * @returns {string|undefined}
- */
-const toDimension = (value) => value?.toLowerCase()
-
-/**
- * Builds CloudWatch dimensions object, converting values to lowercase
- * and omitting undefined values
- * @param {Record<string, string|undefined>} dimensions
- * @returns {Record<string, string>}
- */
-const buildDimensions = (dimensions) => {
-  /** @type {Record<string, string>} */
-  const result = {}
-  for (const [key, value] of Object.entries(dimensions)) {
-    const dimensionValue = toDimension(value)
-    if (dimensionValue) {
-      result[key] = dimensionValue
-    }
-  }
-  return result
-}
-
-/**
  * Records a summary log status transition metric
  * @param {StatusTransitionDimensions} dimensions
  */
-async function recordStatusTransition({ status, processingType }) {
+async function recordStatusTransition({
+  status,
+  processingType,
+  hasDecemberWaste
+}) {
   await incrementCounter(
     'summaryLog.statusTransition',
-    buildDimensions({ status, processingType })
+    buildDimensions({ status, processingType, hasDecemberWaste })
   )
 }
 
@@ -78,10 +60,13 @@ async function recordStatusTransition({ status, processingType }) {
  * @param {ProcessingTypeDimensions} dimensions
  * @param {number} count - The number of records created
  */
-async function recordWasteRecordsCreated({ processingType }, count) {
+async function recordWasteRecordsCreated(
+  { processingType, hasDecemberWaste },
+  count
+) {
   await incrementCounter(
     'summaryLog.wasteRecords',
-    buildDimensions({ operation: 'created', processingType }),
+    buildDimensions({ operation: 'created', processingType, hasDecemberWaste }),
     count
   )
 }
@@ -91,10 +76,13 @@ async function recordWasteRecordsCreated({ processingType }, count) {
  * @param {ProcessingTypeDimensions} dimensions
  * @param {number} count - The number of records updated
  */
-async function recordWasteRecordsUpdated({ processingType }, count) {
+async function recordWasteRecordsUpdated(
+  { processingType, hasDecemberWaste },
+  count
+) {
   await incrementCounter(
     'summaryLog.wasteRecords',
-    buildDimensions({ operation: 'updated', processingType }),
+    buildDimensions({ operation: 'updated', processingType, hasDecemberWaste }),
     count
   )
 }
