@@ -2,9 +2,8 @@ import Joi from 'joi'
 
 import { materialSchema } from '#common/validation/material-schema.js'
 
-const reportingMonthSchema = Joi.string()
-  .pattern(/^\d{4}-\d{2}$/)
-  .required()
+const REPORTING_MONTH = /^\d{4}-\d{2}$/
+const reportingMonthSchema = Joi.string().pattern(REPORTING_MONTH).required()
 
 const reportCountSchema = Joi.object({
   expected: Joi.number().integer().min(0).required(),
@@ -22,8 +21,8 @@ export const wasteBalanceResponseSchema = Joi.object({
   meta: Joi.object({
     generatedAt: Joi.string().isoDate().required(),
     monthlyReports: Joi.object({
-      byMonth: Joi.array()
-        .items(reportCountSchema.keys({ month: reportingMonthSchema }))
+      byMonth: Joi.object()
+        .pattern(REPORTING_MONTH, reportCountSchema.required())
         .required(),
       total: reportCountSchema.required()
     }).required()

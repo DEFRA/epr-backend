@@ -411,11 +411,12 @@ describe('buildWasteBalanceTable', () => {
     expect(table.meta).toStrictEqual({
       generatedAt: NOW.toISOString(),
       monthlyReports: {
-        byMonth: JANUARY_TO_JUNE_2026.map((month) => ({
-          month,
-          expected: 0,
-          submitted: 0
-        })),
+        byMonth: Object.fromEntries(
+          JANUARY_TO_JUNE_2026.map((month) => [
+            month,
+            { expected: 0, submitted: 0 }
+          ])
+        ),
         total: { expected: 0, submitted: 0 }
       }
     })
@@ -432,11 +433,12 @@ describe('buildWasteBalanceTable', () => {
      * @param {number[]} submitted
      */
     const perMonth = (expected, submitted) => ({
-      byMonth: JANUARY_TO_JUNE_2026.map((month, i) => ({
-        month,
-        expected: expected[i],
-        submitted: submitted[i]
-      })),
+      byMonth: Object.fromEntries(
+        JANUARY_TO_JUNE_2026.map((month, i) => [
+          month,
+          { expected: expected[i], submitted: submitted[i] }
+        ])
+      ),
       total: { expected: sum(expected), submitted: sum(submitted) }
     })
 
@@ -581,7 +583,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(table.meta.monthlyReports).toEqual({
-        byMonth: [{ month: '2026-01', expected: 1, submitted: 0 }],
+        byMonth: { '2026-01': { expected: 1, submitted: 0 } },
         total: { expected: 1, submitted: 0 }
       })
     })

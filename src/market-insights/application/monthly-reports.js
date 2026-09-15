@@ -36,7 +36,7 @@ import {
  * How close each month served is to publication, and the period as a whole.
  *
  * @typedef {Object} MonthlyReportCounts
- * @property {Array<ReportCount & { month: string }>} byMonth - one per month served, in the order given, `YYYY-MM`
+ * @property {Record<string, ReportCount>} byMonth - keyed by month served, `YYYY-MM`
  * @property {ReportCount} total - summed across every month served
  */
 
@@ -123,8 +123,9 @@ export const countMonthlyReports = ({
   const years = [...new Set(months.map((month) => Number(month.slice(0, 4))))]
   const reportsByRegistration = groupByRegistration(periodicReports)
 
+  /** @type {Map<string, ReportCount>} */
   const counts = new Map(
-    months.map((month) => [month, { month, expected: 0, submitted: 0 }])
+    months.map((month) => [month, { expected: 0, submitted: 0 }])
   )
   for (const { org, registration } of getReportableRegistrations(
     organisations
@@ -146,8 +147,9 @@ export const countMonthlyReports = ({
       reports,
       CADENCE.monthly
     )) {
-      const count = counts.get(toYearMonth(period.startDate))
-      if (count === undefined || !owedMonths.has(count.month)) {
+      const month = toYearMonth(period.startDate)
+      const count = counts.get(month)
+      if (count === undefined || !owedMonths.has(month)) {
         continue
       }
       count.expected += 1
@@ -160,11 +162,10 @@ export const countMonthlyReports = ({
       }
     }
   }
-  const byMonth = [...counts.values()]
   const total = { expected: 0, submitted: 0 }
-  for (const { expected, submitted } of byMonth) {
+  for (const { expected, submitted } of counts.values()) {
     total.expected += expected
     total.submitted += submitted
   }
-  return { byMonth, total }
+  return { byMonth: Object.fromEntries(counts), total }
 }
