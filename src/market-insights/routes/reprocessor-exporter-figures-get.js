@@ -1,20 +1,20 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { buildWasteBalanceTable } from '#market-insights/application/waste-balance-table.js'
+import { buildReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js'
 import {
   monthlyPeriodParamsSchema,
   publishedMonthsThrough
 } from './published-months.js'
-import { wasteBalanceResponseSchema } from './waste-balance-response.schema.js'
+import { reprocessorExporterFiguresResponseSchema } from './reprocessor-exporter-figures-response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
-export const marketInsightsWasteBalancePath =
-  '/v1/market-insights/{year}/{cadence}/{period}/waste-balance'
+export const marketInsightsReprocessorExporterFiguresPath =
+  '/v1/market-insights/{year}/{cadence}/{period}/reprocessor-exporter-figures'
 
-export const marketInsightsWasteBalanceGet = {
+export const marketInsightsReprocessorExporterFiguresGet = {
   method: 'GET',
-  path: marketInsightsWasteBalancePath,
+  path: marketInsightsReprocessorExporterFiguresPath,
   options: {
     auth: {
       scope: [SCOPES.marketDataRead]
@@ -24,44 +24,29 @@ export const marketInsightsWasteBalanceGet = {
       params: monthlyPeriodParamsSchema
     },
     response: {
-      schema: wasteBalanceResponseSchema
+      schema: reprocessorExporterFiguresResponseSchema
     }
   },
   /**
    * @param {HapiRequest & {
    *   params: { year: number, cadence: 'monthly', period: number },
-   *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
-   *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
    *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
-   *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
-    const {
-      ledgerRepository,
-      summaryLogRowStatesRepository,
-      organisationsRepository,
-      overseasSitesRepository,
-      reportsRepository,
-      logger,
-      params
-    } = request
+    const { organisationsRepository, reportsRepository, params } = request
 
     const now = new Date()
-    const table = await buildWasteBalanceTable({
-      ledgerRepository,
-      summaryLogRowStatesRepository,
+    const table = await buildReprocessorExporterTable({
       organisationsRepository,
-      overseasSitesRepository,
       reportsRepository,
-      logger,
       months: publishedMonthsThrough(
         params,
         now,
-        'market_insights_waste_balance'
+        'market_insights_reprocessor_exporter_figures'
       ),
       now
     })
