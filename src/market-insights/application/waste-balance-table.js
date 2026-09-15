@@ -14,12 +14,15 @@ import {
   NO_FIGURES,
   withNetCredit
 } from '#market-insights/domain/waste-balance-figures.js'
+import { countMonthlyReports } from '#market-insights/application/monthly-reports.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
+ * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
+ * @typedef {import('#market-insights/application/monthly-reports.js').MonthlyReportCount} MonthlyReportCount
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceFigures} WasteBalanceFigures
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} PublishedWasteBalanceFigures
@@ -56,7 +59,7 @@ import {
 
 /**
  * @typedef {Object} WasteBalanceTable
- * @property {{ generatedAt: string }} meta
+ * @property {{ generatedAt: string, monthlyReports: MonthlyReportCount }} meta
  * @property {WasteBalanceTableRow[]} data
  */
 
@@ -272,13 +275,15 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * Aggregate the published UK Waste Balance figures for the given reporting
  * months, summed by material, accreditation type and reporting month. A row
  * dated outside those months is held back, which is what keeps a mis-keyed
- * future date from being published as supply.
+ * future date from being published as supply. The count of monthly reports
+ * owed and submitted across those months says how complete the figures are.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {string[]} params.months - the `YYYY-MM` reporting months to publish
  * @param {Date} params.now - clock reading supplied by the caller
@@ -289,15 +294,19 @@ export const buildWasteBalanceTable = async ({
   summaryLogRowStatesRepository,
   organisationsRepository,
   overseasSitesRepository,
+  reportsRepository,
   logger,
   months,
   now
 }) => {
-  const [entries, organisations, allSites] = await Promise.all([
-    ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
-    organisationsRepository.findAll(),
-    overseasSitesRepository.findAll()
-  ])
+  const [entries, organisations, allSites, periodicReports] = await Promise.all(
+    [
+      ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
+      organisationsRepository.findAll(),
+      overseasSitesRepository.findAll(),
+      reportsRepository.findAllPeriodicReports()
+    ]
+  )
 
   const partitions = resolvePublishedPartitions(
     entries,
@@ -339,7 +348,15 @@ export const buildWasteBalanceTable = async ({
     .sort(compareRows)
 
   return {
-    meta: { generatedAt: now.toISOString() },
+    meta: {
+      generatedAt: now.toISOString(),
+      monthlyReports: countMonthlyReports({
+        organisations,
+        periodicReports,
+        months,
+        now
+      })
+    },
     data
   }
 }

@@ -14,6 +14,8 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
@@ -41,6 +43,14 @@ const approvedHistory = [
 ]
 
 /**
+ * A 24-hex id the reports store accepts, distinct per prefix and operator.
+ *
+ * @param {string} prefix - one hex character
+ * @param {number} orgId
+ */
+const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
+
+/**
  * An accredited operator with one registration, plus the ledger entry naming
  * the summary log it last submitted.
  *
@@ -65,8 +75,8 @@ const makeOperator = ({
   validFrom = ACCREDITED_FROM,
   validTo = ACCREDITED_TO
 }) => {
-  const id = `org-uuid-${orgId}`
-  const registrationId = `reg-${orgId}`
+  const id = objectIdFor('a', orgId)
+  const registrationId = objectIdFor('b', orgId)
   const accreditationId = `acc-${orgId}`
 
   return {
@@ -209,6 +219,35 @@ const sentOnRow = (rowId, date, tonnage) => ({
 })
 
 /**
+ * The same operator holding only a registration, so it reports quarterly and
+ * publishes nothing.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ */
+const registeredOnly = ({ organisation }) => ({
+  ...organisation,
+  registrations: organisation.registrations.map((registration) => ({
+    ...registration,
+    accreditationId: null
+  })),
+  accreditations: []
+})
+
+/**
+ * The monthly report an operator submitted for one period of 2026.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ * @param {number} period
+ */
+const monthlyReport = ({ ledgerId }, period) => ({
+  organisationId: ledgerId.organisationId,
+  registrationId: ledgerId.registrationId,
+  year: 2026,
+  cadence: 'monthly',
+  period
+})
+
+/**
  * Run the aggregation over in-memory adapters seeded with the given
  * submissions. Each submission names the ledger partition that wrote it, so a
  * test can put two partitions behind one summary log.
@@ -216,6 +255,7 @@ const sentOnRow = (rowId, date, tonnage) => ({
  * @param {{
  *   organisations: any[],
  *   submissions: any[],
+ *   reports?: ReturnType<typeof monthlyReport>[],
  *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
  *   months?: string[],
  *   now?: Date
@@ -224,10 +264,16 @@ const sentOnRow = (rowId, date, tonnage) => ({
 const run = async ({
   organisations,
   submissions,
+  reports = [],
   overseasSites = [],
   months = JANUARY_TO_JUNE_2026,
   now = NOW
 }) => {
+  const reportsRepository = createInMemoryReportsRepository()()
+  for (const report of reports) {
+    await buildSubmittedReport(reportsRepository, report)
+  }
+
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
 
@@ -261,6 +307,7 @@ const run = async ({
     )(),
     overseasSitesRepository:
       createInMemoryOverseasSitesRepository(overseasSites)(),
+    reportsRepository,
     logger: partialMock(logger),
     months,
     now
@@ -292,7 +339,105 @@ describe('buildWasteBalanceTable', () => {
   it('stamps the clock it was given', async () => {
     const { table } = await run({ organisations: [], submissions: [] })
 
-    expect(table.meta).toStrictEqual({ generatedAt: NOW.toISOString() })
+    expect(table.meta).toStrictEqual({
+      generatedAt: NOW.toISOString(),
+      monthlyReports: { expected: 0, submitted: 0 }
+    })
+  })
+
+  describe('the monthly reports the figures include', () => {
+    it('expects one report per accredited registration for every month served', async () => {
+      const first = makeOperator({ orgId: 500020 })
+      const second = makeOperator({ orgId: 500021 })
+
+      const { table } = await run({
+        organisations: [first.organisation, second.organisation],
+        submissions: []
+      })
+
+      expect(table.meta.monthlyReports).toEqual({
+        expected: 12,
+        submitted: 0
+      })
+    })
+
+    it('counts the reports that were submitted', async () => {
+      const operator = makeOperator({ orgId: 500022 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        reports: [monthlyReport(operator, 1), monthlyReport(operator, 2)]
+      })
+
+      expect(table.meta.monthlyReports).toEqual({
+        expected: 6,
+        submitted: 2
+      })
+    })
+
+    it('expects reports only from the month the accreditation began', async () => {
+      const operator = makeOperator({
+        orgId: 500023,
+        validFrom: '2026-05-01',
+        validTo: '2026-12-31'
+      })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: []
+      })
+
+      expect(table.meta.monthlyReports).toEqual({
+        expected: 2,
+        submitted: 0
+      })
+    })
+
+    it('counts only the months served', async () => {
+      const operator = makeOperator({ orgId: 500024 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        reports: [monthlyReport(operator, 2)],
+        months: ['2026-01']
+      })
+
+      expect(table.meta.monthlyReports).toEqual({
+        expected: 1,
+        submitted: 0
+      })
+    })
+
+    it('expects nothing of a registered-only operator, which reports quarterly', async () => {
+      const operator = makeOperator({ orgId: 500025 })
+
+      const { table } = await run({
+        organisations: [registeredOnly(operator)],
+        submissions: []
+      })
+
+      expect(table.meta.monthlyReports).toEqual({
+        expected: 0,
+        submitted: 0
+      })
+    })
+
+    it('expects nothing of a test organisation', async () => {
+      const operator = makeOperator({ orgId: TEST_ORG_ID })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [],
+        reports: [monthlyReport(operator, 1)]
+      })
+
+      expect(table.meta.monthlyReports).toEqual({
+        expected: 0,
+        submitted: 0
+      })
+    })
   })
 
   describe('the published grid', () => {

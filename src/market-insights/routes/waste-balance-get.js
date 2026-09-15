@@ -79,7 +79,8 @@ export const marketInsightsWasteBalanceGet = {
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
    *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
-   *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository
+   *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
+   *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
@@ -90,6 +91,7 @@ export const marketInsightsWasteBalanceGet = {
       summaryLogRowStatesRepository,
       organisationsRepository,
       overseasSitesRepository,
+      reportsRepository,
       logger,
       params: { year, period }
     } = request
@@ -100,6 +102,7 @@ export const marketInsightsWasteBalanceGet = {
       summaryLogRowStatesRepository,
       organisationsRepository,
       overseasSitesRepository,
+      reportsRepository,
       logger,
       months: publishedMonthsThrough(year, period, now),
       now
