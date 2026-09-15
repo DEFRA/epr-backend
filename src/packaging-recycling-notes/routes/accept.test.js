@@ -133,7 +133,30 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
   afterEach(async () => {
     await server.stop()
     config.reset('packagingRecyclingNotesExternalApi.clientId')
+    vi.useRealTimers()
     vi.clearAllMocks()
+  })
+
+  it('accepts a December PRN against the following year after 31 January (reg 40(4))', async () => {
+    vi.setSystemTime(new Date('2027-02-15T12:00:00.000Z'))
+    await startServer(
+      buildPrn(PRN_STATUS.AWAITING_ACCEPTANCE, { isDecemberWaste: true })
+    )
+
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      // Minted after the clock is faked, so the token is valid at that time
+      headers: {
+        authorization: `Bearer ${generateExternalApiToken(externalApiClientId)}`
+      },
+      payload: { obligationYear: 2027 }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+    const stored = await packagingRecyclingNotesRepository.findById(prnId)
+    expect(stored?.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
+    expect(stored?.obligationYear).toBe(2027)
   })
 
   it('persists ACCEPTED, appends a balance-neutral PRN_ACCEPTED event attributed to RPD, and audits', async () => {
