@@ -63,3 +63,42 @@ export const countOutstandingReturns = (params) => {
     )
   )
 }
+
+/**
+ * @typedef {Object} OutstandingReturnsTable
+ * @property {{ generatedAt: string }} meta
+ * @property {{ months: Record<YearMonth, OutstandingByMaterial> }} data
+ */
+
+/**
+ * The outstanding returns for the given reporting months, read from the
+ * register and the monthly reports as they stand.
+ *
+ * @param {Object} params
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} params.organisationsRepository
+ * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
+ * @param {YearMonth[]} params.months - the reporting months to publish
+ * @param {Date} params.now - clock reading supplied by the caller
+ * @returns {Promise<OutstandingReturnsTable>}
+ */
+export const buildOutstandingReturnsTable = async ({
+  organisationsRepository,
+  reportsRepository,
+  months,
+  now
+}) => {
+  const [organisations, periodicReports] = await Promise.all([
+    organisationsRepository.findAll(),
+    reportsRepository.findAllPeriodicReports()
+  ])
+  return {
+    meta: { generatedAt: now.toISOString() },
+    data: {
+      months: countOutstandingReturns({
+        organisations,
+        periodicReports,
+        months
+      })
+    }
+  }
+}

@@ -3,23 +3,23 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
-import { buildWasteBalanceTable } from '#market-insights/application/waste-balance-table.js'
-import { wasteBalanceResponseSchema } from './waste-balance-response.schema.js'
+import { buildOutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js'
+import { outstandingReturnsResponseSchema } from './outstanding-returns-response.schema.js'
 import { publishedMonthsThrough } from './published-months.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
-export const marketInsightsWasteBalancePath =
-  '/v1/market-insights/{year}/{cadence}/{period}/waste-balance'
+export const marketInsightsOutstandingReturnsPath =
+  '/v1/market-insights/{year}/{cadence}/{period}/outstanding-returns'
 
-const WASTE_BALANCE = {
-  name: 'waste balance',
-  action: 'market_insights_waste_balance'
+const OUTSTANDING_RETURNS = {
+  name: 'outstanding returns',
+  action: 'market_insights_outstanding_returns'
 }
 
-export const marketInsightsWasteBalanceGet = {
+export const marketInsightsOutstandingReturnsGet = {
   method: 'GET',
-  path: marketInsightsWasteBalancePath,
+  path: marketInsightsOutstandingReturnsPath,
   options: {
     auth: {
       scope: [SCOPES.marketDataRead]
@@ -31,16 +31,13 @@ export const marketInsightsWasteBalanceGet = {
       })
     },
     response: {
-      schema: wasteBalanceResponseSchema
+      schema: outstandingReturnsResponseSchema
     }
   },
   /**
    * @param {HapiRequest & {
    *   params: { year: number, cadence: 'monthly', period: number },
-   *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
-   *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
    *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
-   *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
@@ -48,24 +45,16 @@ export const marketInsightsWasteBalanceGet = {
    */
   handler: async (request, h) => {
     const {
-      ledgerRepository,
-      summaryLogRowStatesRepository,
       organisationsRepository,
-      overseasSitesRepository,
       reportsRepository,
-      logger,
       params: { year, period }
     } = request
 
     const now = new Date()
-    const table = await buildWasteBalanceTable({
-      ledgerRepository,
-      summaryLogRowStatesRepository,
+    const table = await buildOutstandingReturnsTable({
       organisationsRepository,
-      overseasSitesRepository,
       reportsRepository,
-      logger,
-      months: publishedMonthsThrough(WASTE_BALANCE, year, period, now),
+      months: publishedMonthsThrough(OUTSTANDING_RETURNS, year, period, now),
       now
     })
 

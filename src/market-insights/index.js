@@ -10,3 +10,4 @@
  */
 
 export { marketInsightsWasteBalanceGet } from './routes/waste-balance-get.js'
+export { marketInsightsOutstandingReturnsGet } from './routes/outstanding-returns-get.js'

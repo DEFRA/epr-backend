@@ -4,6 +4,7 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { requiredRecordOf } from './required-record.schema.js'
 
 const REPORTING_MONTH = /^\d{4}-\d{2}$/
 
@@ -19,21 +20,9 @@ const publishedFiguresSchema = Joi.object({
   netCredit: Joi.number().required()
 })
 
-/**
- * Every key the publication prints is required, so a material or
- * accreditation type nothing reported into is still served, at zero.
- *
- * @param {readonly string[]} keys
- * @param {Joi.Schema} valueSchema
- */
-const recordOf = (keys, valueSchema) =>
-  Joi.object(
-    Object.fromEntries(keys.map((key) => [key, valueSchema.required()]))
-  )
-
-const figuresByMaterialSchema = recordOf(
+const figuresByMaterialSchema = requiredRecordOf(
   TONNAGE_MONITORING_MATERIALS,
-  recordOf(Object.values(WASTE_PROCESSING_TYPE), publishedFiguresSchema)
+  requiredRecordOf(Object.values(WASTE_PROCESSING_TYPE), publishedFiguresSchema)
 )
 
 /**
