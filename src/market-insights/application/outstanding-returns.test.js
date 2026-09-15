@@ -10,6 +10,8 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
+import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { countOutstandingReturns } from './outstanding-returns.js'
 
@@ -103,24 +105,47 @@ const registeredOnly = ({ organisation }) => ({
 })
 
 /**
- * Count over the given operators, with each listed submission written through
- * the reports store so a resubmission carries its submission number.
+ * @typedef {{ operator: ReturnType<typeof makeOperator>, period: number, submissionNumber?: number }} MonthlyReportRef
+ */
+
+/**
+ * @param {MonthlyReportRef} ref
+ */
+const reportParams = ({ operator, period, submissionNumber }) => ({
+  ...operator.reportRef,
+  year: 2026,
+  cadence: 'monthly',
+  period,
+  submissionNumber
+})
+
+/**
+ * Count over the given operators, with every report written through the
+ * reports store: submissions (a resubmission carries its submission number),
+ * drafts never submitted, and reports submitted and then unsubmitted.
  *
  * @param {{
  *   operators: Organisation[],
- *   submissions?: { operator: ReturnType<typeof makeOperator>, period: number, submissionNumber?: number }[]
+ *   submissions?: MonthlyReportRef[],
+ *   drafts?: MonthlyReportRef[],
+ *   unsubmissions?: MonthlyReportRef[]
  * }} options
  */
-const count = async ({ operators, submissions = [] }) => {
+const count = async ({
+  operators,
+  submissions = [],
+  drafts = [],
+  unsubmissions = []
+}) => {
   const reportsRepository = createInMemoryReportsRepository()()
-  for (const { operator, period, submissionNumber } of submissions) {
-    await buildSubmittedReport(reportsRepository, {
-      ...operator.reportRef,
-      year: 2026,
-      cadence: 'monthly',
-      period,
-      submissionNumber
-    })
+  for (const ref of submissions) {
+    await buildSubmittedReport(reportsRepository, reportParams(ref))
+  }
+  for (const ref of drafts) {
+    await buildDraftReport(reportsRepository, reportParams(ref))
+  }
+  for (const ref of unsubmissions) {
+    await buildUnsubmittedReport(reportsRepository, reportParams(ref))
   }
   return countOutstandingReturns({
     organisations: operators,
@@ -199,6 +224,53 @@ describe('countOutstandingReturns', () => {
     })
 
     expect(outstanding(counts)).toEqual([
+      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
+    ])
+  })
+
+  it('still counts a month whose report is a draft never submitted', async () => {
+    const operator = makeOperator({ orgId: 500039 })
+
+    const counts = await count({
+      operators: [operator.organisation],
+      drafts: [{ operator, period: 1 }]
+    })
+
+    expect(outstanding(counts)).toEqual([
+      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
+    ])
+  })
+
+  it('does not count a month whose report was submitted and then unsubmitted, as the public register does', async () => {
+    const operator = makeOperator({ orgId: 500040 })
+
+    const counts = await count({
+      operators: [operator.organisation],
+      unsubmissions: [{ operator, period: 1 }]
+    })
+
+    expect(outstanding(counts)).toEqual([
+      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
+    ])
+  })
+
+  it('still counts an accreditation suspended throughout the period, since a suspended accreditation owes its reports', async () => {
+    const operator = makeOperator({
+      orgId: 500041,
+      statusHistory: [
+        ...approvedHistory,
+        { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2025-12-15' }
+      ]
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([
+      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
       { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
       { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
     ])

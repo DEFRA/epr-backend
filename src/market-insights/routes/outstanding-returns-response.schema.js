@@ -14,8 +14,8 @@ const outstandingByMaterialSchema = requiredRecordOf(
 /**
  * Response contract for the count of outstanding monthly returns. Keyed by
  * reporting month, then material, then the accreditation's tonnage band as
- * stored, with the count of accredited operators that owed a report for that
- * month and have not submitted one.
+ * stored, with the number of returns owed for that month and not submitted,
+ * one per accredited registration.
  */
 export const outstandingReturnsResponseSchema = Joi.object({
   meta: Joi.object({
