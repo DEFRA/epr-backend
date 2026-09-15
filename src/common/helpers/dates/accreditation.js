@@ -139,11 +139,11 @@ export function isCancelledThroughout(start, end, statusHistory) {
   const held = []
   for (const entry of statusHistory) {
     const day = toCalendarDate(new Date(entry.updatedAt))
-    if (day > end) {
+    if (day.localeCompare(end) > 0) {
       continue
     }
     held.push(entry.status)
-    if (day <= start) {
+    if (day.localeCompare(start) <= 0) {
       return held.every((status) => status === ACCREDITATION_STATUS.CANCELLED)
     }
   }
