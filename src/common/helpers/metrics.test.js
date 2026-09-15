@@ -1,7 +1,12 @@
 import { StorageResolution, Unit } from 'aws-embedded-metrics'
 
 import { config } from '#root/config.js'
-import { incrementCounter, recordDuration, timed } from './metrics.js'
+import {
+  buildDimensions,
+  incrementCounter,
+  recordDuration,
+  timed
+} from './metrics.js'
 
 const mockPutMetric = vi.fn()
 const mockPutDimensions = vi.fn()
@@ -32,6 +37,50 @@ vi.mock('./logging/logger.js', () => ({
 const mockMetricsName = 'mock-metrics-name'
 
 describe('#metrics', () => {
+  describe('#buildDimensions', () => {
+    test('Should stringify and lowercase boolean true', () => {
+      expect(buildDimensions({ flag: true })).toEqual({ flag: 'true' })
+    })
+
+    test('Should stringify and lowercase boolean false', () => {
+      expect(buildDimensions({ flag: false })).toEqual({ flag: 'false' })
+    })
+
+    test('Should lowercase string values', () => {
+      expect(buildDimensions({ status: 'Validated' })).toEqual({
+        status: 'validated'
+      })
+    })
+
+    test('Should stringify number values', () => {
+      expect(buildDimensions({ count: 42 })).toEqual({ count: '42' })
+    })
+
+    test('Should omit undefined values', () => {
+      expect(
+        buildDimensions({ status: 'validated', material: undefined })
+      ).toEqual({
+        status: 'validated'
+      })
+    })
+
+    test('Should omit null values', () => {
+      expect(buildDimensions({ status: 'validated', material: null })).toEqual({
+        status: 'validated'
+      })
+    })
+
+    test('Should omit empty string values', () => {
+      expect(buildDimensions({ status: 'validated', material: '' })).toEqual({
+        status: 'validated'
+      })
+    })
+
+    test('Should return an empty object when given no dimensions', () => {
+      expect(buildDimensions({})).toEqual({})
+    })
+  })
+
   describe('#incrementCounter', () => {
     describe('When metrics is not enabled', () => {
       beforeEach(async () => {

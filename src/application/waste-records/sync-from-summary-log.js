@@ -4,6 +4,8 @@ import { writeSummaryLogRowStates } from '#waste-records/application/write-summa
 import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
+import { decemberCreditTotalFor } from '#waste-balances/application/december-credit-total.js'
+import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
 import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
@@ -189,6 +191,42 @@ const updateWasteBalances = async ({
 }
 
 /**
+ * Whether the submission carries any December-attributable tonnage
+ * (ADR-0049), for observability metrics. Reuses the canonical
+ * `decemberCreditTotalFor` classifier — the same one the ledger update uses —
+ * so this can never disagree with the balance the submission actually moves.
+ * `false` for registered-only submissions (`accreditation` is `null`), before
+ * any row is classified: `decemberCreditTotalFor` needs an accreditation year
+ * to place "which December", and registered-only streams raise no PRNs
+ * against a December pool.
+ *
+ * A resubmission's December delta can be negative (tonnage moved out of
+ * December), which is still December activity worth surfacing, so this
+ * checks non-zero rather than positive.
+ *
+ * @param {ValidatedWasteRecord[]} wasteRecords
+ * @param {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @returns {boolean}
+ */
+const hasDecemberWasteFor = (wasteRecords, accreditation, overseasSites) => {
+  if (accreditation === null) {
+    return false
+  }
+
+  const classifiedRows = wasteRecords.map(({ record }) =>
+    classifyWasteRecord(
+      record,
+      record.data?.processingType,
+      accreditation,
+      overseasSites
+    )
+  )
+
+  return decemberCreditTotalFor(classifiedRows, accreditation) !== 0
+}
+
+/**
  * Counts how the submission's rows changed against the registration's latest
  * committed submission — the same comparison the check-page classification
  * runs — for observability metrics. Added rows count as created, adjusted rows
@@ -202,7 +240,7 @@ const updateWasteBalances = async ({
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @returns {Promise<{ created: number, updated: number }>}
+ * @returns {Promise<{ created: number, updated: number, hasDecemberWaste: boolean }>}
  */
 const countRecordChanges = async ({
   wasteRecords,
@@ -236,7 +274,12 @@ const countRecordChanges = async ({
   return {
     created: changes.filter((change) => change === RECORD_CHANGE.ADDED).length,
     updated: changes.filter((change) => change === RECORD_CHANGE.ADJUSTED)
-      .length
+      .length,
+    hasDecemberWaste: hasDecemberWasteFor(
+      wasteRecords,
+      accreditation,
+      overseasSites
+    )
   }
 }
 
@@ -348,7 +391,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - The optional accreditation ID
    * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
-   * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
+   * @returns {Promise<{created: number, updated: number, hasDecemberWaste: boolean}>} Counts of created and updated waste records, and whether the submission carries December-attributable tonnage
    */
   return async (summaryLog, user) => {
     // 1. Extract/parse the summary log

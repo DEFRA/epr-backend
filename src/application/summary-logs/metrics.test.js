@@ -102,6 +102,46 @@ describe('summaryLogMetrics', () => {
       })
     })
 
+    it('records hasDecemberWaste dimension when true', async () => {
+      await summaryLogMetrics.recordStatusTransition({
+        status: 'submitted',
+        processingType: PROCESSING_TYPES.EXPORTER,
+        hasDecemberWaste: true
+      })
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        status: 'submitted',
+        processingType: 'exporter',
+        hasDecemberWaste: 'true'
+      })
+    })
+
+    it('records hasDecemberWaste dimension when false', async () => {
+      await summaryLogMetrics.recordStatusTransition({
+        status: 'submitted',
+        processingType: PROCESSING_TYPES.EXPORTER,
+        hasDecemberWaste: false
+      })
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        status: 'submitted',
+        processingType: 'exporter',
+        hasDecemberWaste: 'false'
+      })
+    })
+
+    it('omits hasDecemberWaste dimension when not provided', async () => {
+      await summaryLogMetrics.recordStatusTransition({
+        status: 'validation_failed',
+        processingType: PROCESSING_TYPES.EXPORTER
+      })
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        status: 'validation_failed',
+        processingType: 'exporter'
+      })
+    })
+
     it('omits processingType dimension for early lifecycle states', async () => {
       await summaryLogMetrics.recordStatusTransition({ status: 'validating' })
 
@@ -199,6 +239,22 @@ describe('summaryLogMetrics', () => {
       expect(mockFlush).toHaveBeenCalled()
     })
 
+    it('records hasDecemberWaste dimension when true', async () => {
+      await summaryLogMetrics.recordWasteRecordsCreated(
+        {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+          hasDecemberWaste: true
+        },
+        42
+      )
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        operation: 'created',
+        processingType: 'reprocessor_input',
+        hasDecemberWaste: 'true'
+      })
+    })
+
     it('records zero when no records created', async () => {
       await summaryLogMetrics.recordWasteRecordsCreated(
         { processingType: PROCESSING_TYPES.EXPORTER },
@@ -248,6 +304,22 @@ describe('summaryLogMetrics', () => {
         StorageResolution.Standard
       )
       expect(mockFlush).toHaveBeenCalled()
+    })
+
+    it('records hasDecemberWaste dimension when true', async () => {
+      await summaryLogMetrics.recordWasteRecordsUpdated(
+        {
+          processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+          hasDecemberWaste: true
+        },
+        15
+      )
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        operation: 'updated',
+        processingType: 'reprocessor_output',
+        hasDecemberWaste: 'true'
+      })
     })
 
     it('records zero when no records updated', async () => {

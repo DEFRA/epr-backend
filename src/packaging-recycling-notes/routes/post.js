@@ -18,7 +18,9 @@ import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { processingTypeFor } from '#waste-balances/domain/credited-tonnage.js'
 import { availableForPool } from '#waste-balances/domain/pool-balances.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
@@ -307,6 +309,16 @@ export const packagingRecyclingNotesCreate = {
         now
       })
       const prn = await packagingRecyclingNotesRepository.create(prnData)
+
+      await prnMetrics.recordCreated({
+        material: accreditation.material,
+        isDecemberWaste: payload.isDecemberWaste,
+        processingType: processingTypeFor(
+          /** @type {import('#waste-balances/domain/credited-tonnage.js').AccreditationContext} */ (
+            accreditation
+          )
+        )
+      })
 
       logger.info({
         message: `PRN created: id=${prn.id}`,
