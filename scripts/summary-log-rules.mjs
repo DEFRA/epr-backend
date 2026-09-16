@@ -54,7 +54,7 @@ const MAX_LISTED_VALUES = 6
 // contribution reason excludes the row. This is the one stable outcome fact the
 // generator relies on rather than deriving.
 const IGNORED_REASON = 'OUTSIDE_ACCREDITATION_PERIOD'
-const REASON_ORDER = [
+export const REASON_ORDER = [
   'MISSING_REQUIRED_FIELD',
   'OUTSIDE_ACCREDITATION_PERIOD',
   'WASTE_STOPPED',

@@ -1,12 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import {
   describeRule,
   describeTrigger,
   contributionReasons,
   requiredForBalance,
   generateDocument,
-  TEMPLATE_ORDER
+  TEMPLATE_ORDER,
+  REASON_ORDER
 } from './summary-log-rules.mjs'
 
 describe('TEMPLATE_ORDER', () => {
@@ -14,6 +16,19 @@ describe('TEMPLATE_ORDER', () => {
     expect(new Set(TEMPLATE_ORDER.map(([type]) => type))).toEqual(
       new Set(Object.values(PROCESSING_TYPES))
     )
+  })
+})
+
+describe('REASON_ORDER', () => {
+  it('accounts for every classification reason, so a new one cannot be omitted', () => {
+    // Every reason is either ordered for the contribution list or is the
+    // by-design non-contributing marker handled separately.
+    expect(
+      new Set([
+        ...REASON_ORDER,
+        CLASSIFICATION_REASON.TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE
+      ])
+    ).toEqual(new Set(Object.values(CLASSIFICATION_REASON)))
   })
 })
 
