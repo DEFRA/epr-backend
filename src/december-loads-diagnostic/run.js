@@ -45,7 +45,7 @@ const runDiagnostic = async (server) => {
   }
 
   logger.info({
-    message: `December loads diagnostic: scannedAccreditations=${summary.scannedAccreditations} accreditationsWithDecember=${summary.accreditationsWithDecember} mismatchedAccreditations=${summary.mismatchedAccreditations}`
+    message: `December loads diagnostic: scannedAccreditations=${summary.scannedAccreditations} accreditationsWithDecemberBalance=${summary.accreditationsWithDecemberBalance} mismatchedAccreditations=${summary.mismatchedAccreditations}`
   })
 }
 

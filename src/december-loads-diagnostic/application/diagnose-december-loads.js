@@ -35,7 +35,7 @@ import { accreditationDecemberKey } from '#december-loads-diagnostic/domain/dece
 /**
  * @typedef {Object} DecemberLoadsSummary
  * @property {number} scannedAccreditations - accredited submissions matched and scanned
- * @property {number} accreditationsWithDecember - scanned submissions with nonzero expected December tonnage
+ * @property {number} accreditationsWithDecemberBalance - scanned submissions with nonzero expected December tonnage
  * @property {number} mismatchedAccreditations - scanned submissions whose ledger December disagrees with expected
  */
 
@@ -180,7 +180,7 @@ export const buildDecemberLoadsReport = async ({
   /** @type {DecemberLoadRow[]} */
   const reports = []
   let scannedAccreditations = 0
-  let accreditationsWithDecember = 0
+  let accreditationsWithDecemberBalance = 0
 
   for (const { ledgerId, summaryLogId } of accreditedEntries) {
     const accreditationId = /** @type {string} */ (ledgerId.accreditationId)
@@ -208,7 +208,7 @@ export const buildDecemberLoadsReport = async ({
       ledgerRepository
     })
     if (hasDecember) {
-      accreditationsWithDecember += 1
+      accreditationsWithDecemberBalance += 1
     }
     if (row) {
       reports.push(row)
@@ -221,7 +221,7 @@ export const buildDecemberLoadsReport = async ({
     reports,
     summary: {
       scannedAccreditations,
-      accreditationsWithDecember,
+      accreditationsWithDecemberBalance,
       mismatchedAccreditations: reports.length
     }
   }

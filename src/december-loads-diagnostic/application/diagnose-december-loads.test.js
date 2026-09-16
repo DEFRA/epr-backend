@@ -201,7 +201,7 @@ describe('buildDecemberLoadsReport', () => {
     ])
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecember: 1,
+      accreditationsWithDecemberBalance: 1,
       mismatchedAccreditations: 1
     })
   })
@@ -227,7 +227,7 @@ describe('buildDecemberLoadsReport', () => {
     })
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecember: 1,
+      accreditationsWithDecemberBalance: 1,
       mismatchedAccreditations: 1
     })
   })
@@ -270,7 +270,7 @@ describe('buildDecemberLoadsReport', () => {
     expect(report.reports).toEqual([])
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecember: 1,
+      accreditationsWithDecemberBalance: 1,
       mismatchedAccreditations: 0
     })
   })
@@ -291,7 +291,7 @@ describe('buildDecemberLoadsReport', () => {
     expect(report.reports).toEqual([])
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecember: 0,
+      accreditationsWithDecemberBalance: 0,
       mismatchedAccreditations: 0
     })
     expect(findLatestInLedger).not.toHaveBeenCalled()
@@ -311,7 +311,7 @@ describe('buildDecemberLoadsReport', () => {
     })
 
     expect(report.reports).toEqual([])
-    expect(report.summary.accreditationsWithDecember).toBe(0)
+    expect(report.summary.accreditationsWithDecemberBalance).toBe(0)
     expect(findLatestInLedger).not.toHaveBeenCalled()
   })
 
@@ -333,7 +333,7 @@ describe('buildDecemberLoadsReport', () => {
     expect(report.reports).toEqual([])
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecember: 0,
+      accreditationsWithDecemberBalance: 0,
       mismatchedAccreditations: 0
     })
   })
@@ -524,7 +524,7 @@ describe('buildDecemberLoadsReport', () => {
     ])
     expect(report.summary).toEqual({
       scannedAccreditations: 2,
-      accreditationsWithDecember: 2,
+      accreditationsWithDecemberBalance: 2,
       mismatchedAccreditations: 2
     })
   })

@@ -31,7 +31,7 @@ const emptyReport = {
   reports: [],
   summary: {
     scannedAccreditations: 0,
-    accreditationsWithDecember: 0,
+    accreditationsWithDecemberBalance: 0,
     mismatchedAccreditations: 0
   }
 }
@@ -99,7 +99,7 @@ describe('runDecemberLoadsDiagnostic', () => {
       ],
       summary: {
         scannedAccreditations: 42,
-        accreditationsWithDecember: 5,
+        accreditationsWithDecemberBalance: 5,
         mismatchedAccreditations: 1
       }
     })
@@ -112,7 +112,7 @@ describe('runDecemberLoadsDiagnostic', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'December loads diagnostic: scannedAccreditations=42 accreditationsWithDecember=5 mismatchedAccreditations=1'
+        'December loads diagnostic: scannedAccreditations=42 accreditationsWithDecemberBalance=5 mismatchedAccreditations=1'
     })
     expect(mockLock.free).toHaveBeenCalled()
   })
@@ -133,7 +133,7 @@ describe('runDecemberLoadsDiagnostic', () => {
       ],
       summary: {
         scannedAccreditations: 1,
-        accreditationsWithDecember: 1,
+        accreditationsWithDecemberBalance: 1,
         mismatchedAccreditations: 1
       }
     })
