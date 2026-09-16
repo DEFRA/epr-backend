@@ -375,6 +375,11 @@
  */
 
 /**
+ * @typedef {Object} FindPeriodicReportsForYearParams
+ * @property {number} year - the reporting year
+ */
+
+/**
  * @typedef {Object} ReportsRepository
  * @property {(params: CreateReportParams) => Promise<Report>} createReport
  * @property {(params: UpdateReportParams) => Promise<Report>} updateReport
@@ -382,6 +387,9 @@
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
+ * @property {(params: FindPeriodicReportsForYearParams) => Promise<PeriodicReport[]>} findPeriodicReportsForYear
+ *   The periodic reports of every org/registration for one reporting year, shaped
+ *   as findAllPeriodicReports shapes them.
  * @property {(reportId: string) => Promise<Report>} findReportById
  * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
  *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,

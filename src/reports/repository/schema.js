@@ -231,6 +231,10 @@ export const findPeriodicReportsSchema = Joi.object({
   registrationId: MONGO_ID_SCHEMA
 })
 
+export const findPeriodicReportsForYearSchema = Joi.object({
+  year: YEAR_SCHEMA
+})
+
 export const findReportByIdSchema = Joi.string()
   .guid({ version: 'uuidv4' })
   .required()

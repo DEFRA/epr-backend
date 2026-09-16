@@ -6,6 +6,7 @@ import {
   validateCreateReport,
   validateDeleteReportParams,
   validateFindPeriodicReports,
+  validateFindPeriodicReportsForYear,
   validateFindReportById,
   validateUpdateReport,
   validateUpdateReportStatus
@@ -326,55 +327,70 @@ const performFindPeriodicReports = async (db, params) => {
 }
 
 /**
- * Returns all periodic reports across every org/registration, with
+ * The periodic reports of every org/registration matching the filter, with
  * submittedAt/submittedBy embedded in each ReportSummary.
  *
  * @param {Db} db
+ * @param {import('mongodb').Filter<import('mongodb').Document>} filter
  * @returns {Promise<PeriodicReport[]>}
  */
-const performFindAllPeriodicReports = async (db) => {
+const performFindPeriodicReportsMatching = async (db, filter) => {
   const docs = await reportsCollection(db)
-    .find(
-      {},
-      {
-        projection: {
-          _id: 0,
-          id: 1,
-          submissionNumber: 1,
-          year: 1,
-          cadence: 1,
-          period: 1,
-          startDate: 1,
-          endDate: 1,
-          dueDate: 1,
-          organisationId: 1,
-          registrationId: 1,
-          'status.currentStatus': 1,
-          'status.created': 1,
-          'status.submitted': 1,
-          resubmissionRequired: 1,
-          'recyclingActivity.totalTonnageReceived': 1,
-          'recyclingActivity.tonnageRecycled': 1,
-          'recyclingActivity.tonnageNotRecycled': 1,
-          'exportActivity.totalTonnageExported': 1,
-          'exportActivity.tonnageReceivedNotExported': 1,
-          'exportActivity.tonnageRefusedAtDestination': 1,
-          'exportActivity.tonnageStoppedDuringExport': 1,
-          'exportActivity.tonnageRepatriated': 1,
-          'wasteSent.tonnageSentToReprocessor': 1,
-          'wasteSent.tonnageSentToExporter': 1,
-          'wasteSent.tonnageSentToAnotherSite': 1,
-          'prn.issuedTonnage': 1,
-          'prn.freeTonnage': 1,
-          'prn.totalRevenue': 1,
-          'prn.averagePricePerTonne': 1,
-          supportingInformation: 1
-        }
+    .find(filter, {
+      projection: {
+        _id: 0,
+        id: 1,
+        submissionNumber: 1,
+        year: 1,
+        cadence: 1,
+        period: 1,
+        startDate: 1,
+        endDate: 1,
+        dueDate: 1,
+        organisationId: 1,
+        registrationId: 1,
+        'status.currentStatus': 1,
+        'status.created': 1,
+        'status.submitted': 1,
+        resubmissionRequired: 1,
+        'recyclingActivity.totalTonnageReceived': 1,
+        'recyclingActivity.tonnageRecycled': 1,
+        'recyclingActivity.tonnageNotRecycled': 1,
+        'exportActivity.totalTonnageExported': 1,
+        'exportActivity.tonnageReceivedNotExported': 1,
+        'exportActivity.tonnageRefusedAtDestination': 1,
+        'exportActivity.tonnageStoppedDuringExport': 1,
+        'exportActivity.tonnageRepatriated': 1,
+        'wasteSent.tonnageSentToReprocessor': 1,
+        'wasteSent.tonnageSentToExporter': 1,
+        'wasteSent.tonnageSentToAnotherSite': 1,
+        'prn.issuedTonnage': 1,
+        'prn.freeTonnage': 1,
+        'prn.totalRevenue': 1,
+        'prn.averagePricePerTonne': 1,
+        supportingInformation: 1
       }
-    )
+    })
     .toArray()
 
   return transformToPeriodicReports(docs.map(withBareDates))
+}
+
+/**
+ * @param {Db} db
+ * @returns {Promise<PeriodicReport[]>}
+ */
+const performFindAllPeriodicReports = (db) =>
+  performFindPeriodicReportsMatching(db, {})
+
+/**
+ * @param {Db} db
+ * @param {import('./port.js').FindPeriodicReportsForYearParams} params
+ * @returns {Promise<PeriodicReport[]>}
+ */
+const performFindPeriodicReportsForYear = async (db, params) => {
+  const { year } = validateFindPeriodicReportsForYear(params)
+  return performFindPeriodicReportsMatching(db, { year })
 }
 
 /**
@@ -425,6 +441,8 @@ export const createReportsRepository = async (db) => {
     deleteReport: (params) => performDeleteReport(db, params),
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
     findAllPeriodicReports: () => performFindAllPeriodicReports(db),
+    findPeriodicReportsForYear: (params) =>
+      performFindPeriodicReportsForYear(db, params),
     findReportById: (reportId) => performFindReportById(db, reportId),
     markActiveReportsStaleForSummaryLog: (
       organisationId,

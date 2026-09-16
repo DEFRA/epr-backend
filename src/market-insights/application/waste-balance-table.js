@@ -15,6 +15,7 @@ import {
   withNetCredit
 } from '#market-insights/domain/waste-balance-figures.js'
 import { countMonthlyReports } from '#market-insights/application/monthly-reports.js'
+import { recordOf } from '#common/helpers/record-of.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
@@ -73,20 +74,6 @@ import { countMonthlyReports } from '#market-insights/application/monthly-report
  * @property {{ generatedAt: string }} meta
  * @property {{ months: Record<YearMonth, PublishedMonth>, period: { reports: ReportCount } }} data
  */
-
-/**
- * A record holding a value for every one of the given keys, and no other.
- *
- * @template {string} K
- * @template V
- * @param {readonly K[]} keys
- * @param {(key: K) => V} valueFor
- * @returns {Record<K, V>}
- */
-const recordOf = (keys, valueFor) =>
-  /** @type {Record<K, V>} */ (
-    Object.fromEntries(keys.map((key) => [key, valueFor(key)]))
-  )
 
 /**
  * @param {{ organisationId: string, registrationId: string, accreditationId: string | null }} ledgerId
