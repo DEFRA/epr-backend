@@ -27,6 +27,9 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
  * @typedef {import('#domain/organisations/model.js').Material} Material
+ * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
+ * @typedef {import('#domain/organisations/registration.js').Registration} Registration
+ * @typedef {import('#reports/repository/port.js').PeriodicReport} PeriodicReport
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#domain/organisations/registration.js').ReportableRegistration} ReportableRegistration
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').Measures} Measures
@@ -136,6 +139,88 @@ const publishedFigures = (cells, month) =>
   )
 
 /**
+ * Whether the registration holds a live accreditation. This is the one rule
+ * that decides both what these figures are made of and which months their
+ * coverage count is owed, so the two describe the same operators by sharing it
+ * rather than by agreeing separately.
+ *
+ * @param {{ org: Organisation, registration: Registration }} candidate
+ */
+const hasLiveAccreditation = ({ org, registration }) =>
+  resolveAccreditation(registration, org) !== null
+
+/**
+ * Every periodic report folded into its cell: the latest monthly submission of
+ * each registration holding a live accreditation, summed by material and
+ * accreditation type within each month served. A report whose registration no
+ * longer resolves is logged and left out, unless a test organisation filed it.
+ *
+ * @param {Object} params
+ * @param {Organisation[]} params.organisations
+ * @param {PeriodicReport[]} params.periodicReports
+ * @param {YearMonth[]} params.months - the reporting months to publish
+ * @param {import('#common/hapi-types.js').TypedLogger} params.logger
+ * @returns {Map<string, Measures>}
+ */
+const measuresByCell = ({ organisations, periodicReports, months, logger }) => {
+  const registrations = new Map(
+    getReportableRegistrations(organisations).map((entry) => [
+      registrationKey({
+        organisationId: entry.org.id,
+        registrationId: entry.registration.id
+      }),
+      entry
+    ])
+  )
+  const testOrganisationIds = new Set(
+    organisations
+      .filter((org) => TEST_ORGANISATION_IDS.has(org.orgId))
+      .map((org) => org.id)
+  )
+
+  /**
+   * @param {PeriodicReport} periodicReport
+   * @returns {ReportableRegistration | undefined}
+   */
+  const accreditedRegistrationFor = (periodicReport) => {
+    const key = registrationKey(periodicReport)
+    const entry = registrations.get(key)
+    if (entry === undefined) {
+      if (!testOrganisationIds.has(periodicReport.organisationId)) {
+        warnAboutUnmatchedReport(logger, key)
+      }
+      return undefined
+    }
+    return hasLiveAccreditation(entry) ? entry.registration : undefined
+  }
+
+  const served = new Set(months)
+  /** @type {Map<string, Measures>} */
+  const cells = new Map()
+
+  for (const periodicReport of periodicReports) {
+    const registration = accreditedRegistrationFor(periodicReport)
+    if (registration === undefined) {
+      continue
+    }
+    for (const [period, slot] of Object.entries(
+      periodicReport.reports.monthly ?? {}
+    )) {
+      const month = toYearMonth(
+        periodBounds(CADENCE.monthly, periodicReport.year, Number(period))
+          .startDate
+      )
+      const report = latestSubmission(slot)
+      if (served.has(month) && report !== undefined) {
+        foldIntoCell(cells, registration, month, report)
+      }
+    }
+  }
+
+  return cells
+}
+
+/**
  * Aggregate the published UK reprocessor and exporter figures for the given
  * reporting months: the latest monthly submission of every registration
  * holding a live accreditation, summed by material and accreditation type
@@ -167,76 +252,23 @@ export const buildReprocessorExporterTable = async ({
     reportsRepository.findPeriodicReportsForYear({ year })
   ])
 
-  const registrations = new Map(
-    getReportableRegistrations(organisations).map((entry) => [
-      registrationKey({
-        organisationId: entry.org.id,
-        registrationId: entry.registration.id
-      }),
-      entry
-    ])
-  )
-  const testOrganisationIds = new Set(
-    organisations
-      .filter((org) => TEST_ORGANISATION_IDS.has(org.orgId))
-      .map((org) => org.id)
-  )
-  /**
-   * The registration a periodic report belongs to, when it holds a live
-   * accreditation. A report whose registration does not resolve is logged
-   * unless a test organisation filed it.
-   *
-   * @param {import('#reports/repository/port.js').PeriodicReport} periodicReport
-   * @returns {ReportableRegistration | undefined}
-   */
-  const accreditedRegistrationFor = (periodicReport) => {
-    const key = registrationKey(periodicReport)
-    const entry = registrations.get(key)
-    if (entry === undefined) {
-      if (!testOrganisationIds.has(periodicReport.organisationId)) {
-        warnAboutUnmatchedReport(logger, key)
-      }
-      return undefined
-    }
-    return resolveAccreditation(entry.registration, entry.org) === null
-      ? undefined
-      : entry.registration
-  }
-
-  const served = new Set(months)
-  /** @type {Map<string, Measures>} */
-  const cells = new Map()
-
-  for (const periodicReport of periodicReports) {
-    const registration = accreditedRegistrationFor(periodicReport)
-    if (registration === undefined) {
-      continue
-    }
-    for (const [period, slot] of Object.entries(
-      periodicReport.reports.monthly ?? {}
-    )) {
-      const month = toYearMonth(
-        periodBounds(CADENCE.monthly, periodicReport.year, Number(period))
-          .startDate
-      )
-      const report = latestSubmission(slot)
-      if (served.has(month) && report !== undefined) {
-        foldIntoCell(cells, registration, month, report)
-      }
-    }
-  }
+  const cells = measuresByCell({
+    organisations,
+    periodicReports,
+    months,
+    logger
+  })
 
   // Counted over the registrations the figures cover rather than the whole
-  // register, and by the route the figures themselves resolve, so a month
-  // cannot report coverage for one set of operators beside tonnages for
-  // another. A cancelled accreditation is the case that separates them: its
-  // submissions are absent from the figures, so its months are not owed here.
+  // register, so a month cannot report coverage for one set of operators
+  // beside tonnages for another. A cancelled accreditation is the case that
+  // separates them: its submissions are absent from the figures, so its
+  // months are not owed here.
   const reports = countMonthlyReports({
     organisations,
     periodicReports,
     months,
-    covers: ({ org, registration }) =>
-      resolveAccreditation(registration, org) !== null
+    covers: hasLiveAccreditation
   })
 
   return {
