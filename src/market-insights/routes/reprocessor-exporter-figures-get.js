@@ -53,9 +53,9 @@ const nationPeriodParamsSchema = monthlyPeriodParamsSchema.keys({
  * @param {Object} route
  * @param {string} route.path
  * @param {string} route.action - the logging event action of the route
- * @param {import('joi').ObjectSchema} route.params
+ * @param {import('joi').ObjectSchema} route.paramsSchema
  */
-const reprocessorExporterFiguresRoute = ({ path, action, params }) => ({
+const reprocessorExporterFiguresRoute = ({ path, action, paramsSchema }) => ({
   method: 'GET',
   path,
   options: {
@@ -64,7 +64,7 @@ const reprocessorExporterFiguresRoute = ({ path, action, params }) => ({
     },
     tags: ['api', 'market-insights'],
     validate: {
-      params
+      params: paramsSchema
     },
     response: {
       schema: reprocessorExporterFiguresResponseSchema
@@ -102,12 +102,12 @@ export const marketInsightsReprocessorExporterFiguresGet =
   reprocessorExporterFiguresRoute({
     path: marketInsightsReprocessorExporterFiguresPath,
     action: 'market_insights_reprocessor_exporter_figures',
-    params: monthlyPeriodParamsSchema
+    paramsSchema: monthlyPeriodParamsSchema
   })
 
 export const marketInsightsNationReprocessorExporterFiguresGet =
   reprocessorExporterFiguresRoute({
     path: marketInsightsNationReprocessorExporterFiguresPath,
     action: 'market_insights_nation_reprocessor_exporter_figures',
-    params: nationPeriodParamsSchema
+    paramsSchema: nationPeriodParamsSchema
   })
