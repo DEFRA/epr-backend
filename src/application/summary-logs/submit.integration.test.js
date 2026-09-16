@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
@@ -28,6 +29,23 @@ import { summaryLogRowStatesForRegistration } from '#waste-records/application/r
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
+
+const mockRecordDecemberWasteRows = vi.fn()
+
+vi.mock(
+  import('#application/summary-logs/metrics.js'),
+  async (importOriginal) => {
+    const original = await importOriginal()
+    return {
+      ...original,
+      summaryLogMetrics: {
+        ...original.summaryLogMetrics,
+        recordDecemberWasteRows: (...args) =>
+          mockRecordDecemberWasteRows(...args)
+      }
+    }
+  }
+)
 
 const VALID_FROM = '2025-01-01'
 const VALID_TO = '2025-12-31'
@@ -98,8 +116,9 @@ const buildTestOrg = (organisationId, registrationId) => {
  * @param {object} options
  * @param {import('#reports/repository/port.js').ReportsRepository} options.reportsRepository
  * @param {string} [options.createdAt] - immutable creation timestamp of the log
+ * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
  */
-const setupSubmit = async ({ reportsRepository, createdAt }) => {
+const setupSubmit = async ({ reportsRepository, createdAt, data }) => {
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
   const logger = createMockLogger()
@@ -112,13 +131,14 @@ const setupSubmit = async ({ reportsRepository, createdAt }) => {
   const summaryLog = summaryLogFactory.submitting({
     organisationId,
     registrationId,
+    meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
   const summaryLogId = `submit-${organisationId}`
   await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
   const summaryLogExtractor = createInMemorySummaryLogExtractor({
-    [summaryLog.file.id]: { meta: META, data: RECEIVED_DATA }
+    [summaryLog.file.id]: { meta: META, data: data ?? RECEIVED_DATA }
   })
 
   const ledgerRepository = createInMemoryLedgerRepository()()
@@ -248,5 +268,44 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       2
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+  })
+})
+
+describe('submitSummaryLog December waste metric', () => {
+  it('counts rows that fall in the accreditation-year December', async () => {
+    const reportsRepository = createInMemoryReportsRepository()()
+    const decemberData = {
+      RECEIVED_LOADS_FOR_REPROCESSING: {
+        location: { sheet: 'Received', row: 7, column: 'A' },
+        headers: REPROCESSOR_RECEIVED_HEADERS,
+        rows: [
+          {
+            rowNumber: 8,
+            values: createReprocessorReceivedRowValues({
+              rowId: 1001,
+              dateReceived: '2025-12-15T00:00:00.000Z'
+            })
+          },
+          {
+            rowNumber: 9,
+            values: createReprocessorReceivedRowValues({
+              rowId: 1002,
+              dateReceived: '2025-06-15T00:00:00.000Z'
+            })
+          }
+        ]
+      }
+    }
+    const { deps, summaryLogId } = await setupSubmit({
+      reportsRepository,
+      data: decemberData
+    })
+
+    await submitSummaryLog(summaryLogId, deps)
+
+    expect(mockRecordDecemberWasteRows).toHaveBeenCalledWith(
+      { processingType: 'REPROCESSOR_INPUT' },
+      1
+    )
   })
 })

@@ -125,7 +125,11 @@ export async function updatePrnStatus(request) {
     fromStatus,
     toStatus: newStatus,
     material: updatedPrn.accreditation.material,
-    isExport: updatedPrn.isExport
+    isExport: updatedPrn.isExport,
+    isDecemberWaste: updatedPrn.isDecemberWaste,
+    obligationYearCarriedForward:
+      updatedPrn.obligationYear ===
+      updatedPrn.accreditation.accreditationYear + 1
   })
 
   try {

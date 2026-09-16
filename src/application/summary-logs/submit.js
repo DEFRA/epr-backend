@@ -132,13 +132,17 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     logger
   })
 
-  const { created, updated } = await summaryLogMetrics.timedSubmission(
-    { processingType },
-    () => sync(summaryLog, user)
-  )
+  const { created, updated, decemberWasteRowCount } =
+    await summaryLogMetrics.timedSubmission({ processingType }, () =>
+      sync(summaryLog, user)
+    )
 
   await summaryLogMetrics.recordWasteRecordsCreated({ processingType }, created)
   await summaryLogMetrics.recordWasteRecordsUpdated({ processingType }, updated)
+  await summaryLogMetrics.recordDecemberWasteRows(
+    { processingType },
+    decemberWasteRowCount
+  )
 
   await onSummaryLogUploaded({
     organisationId: summaryLog.organisationId,

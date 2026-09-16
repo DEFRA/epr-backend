@@ -1,4 +1,7 @@
-import { decemberCreditTotalFor } from './december-credit-total.js'
+import {
+  decemberCreditTotalFor,
+  decemberRowCountFor
+} from './december-credit-total.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
@@ -193,5 +196,31 @@ describe('decemberCreditTotalFor', () => {
 
       expect(decemberCreditTotalFor(rows, EXPORTER)).toBe(0.3)
     })
+  })
+})
+
+describe('decemberRowCountFor', () => {
+  it('is 0 for a registered-only submission (accreditation is null)', () => {
+    const rows = [exportedRow('2026-12-05', included(10))]
+
+    expect(decemberRowCountFor(rows, null)).toBe(0)
+  })
+
+  it('is 0 when the December key is undeterminable (no validFrom)', () => {
+    const rows = [exportedRow('2026-12-05', included(10))]
+
+    expect(
+      decemberRowCountFor(rows, { ...EXPORTER, validFrom: undefined })
+    ).toBe(0)
+  })
+
+  it('counts only the December-dated, INCLUDED rows among a mix', () => {
+    const rows = [
+      exportedRow('2026-12-05', included(10)),
+      exportedRow('2026-06-10', included(20)),
+      exportedRow('2026-12-20', excluded())
+    ]
+
+    expect(decemberRowCountFor(rows, EXPORTER)).toBe(1)
   })
 })
