@@ -146,12 +146,21 @@ const run = async ({
   inFlightResubmissions = [],
   months = JANUARY_TO_MARCH_2026
 }) => {
-  const reportsRepository = createInMemoryReportsRepository()()
+  const seededReports = createInMemoryReportsRepository()()
   for (const report of reports) {
-    await buildSubmittedReport(reportsRepository, report)
+    await buildSubmittedReport(seededReports, report)
   }
   for (const report of inFlightResubmissions) {
-    await seedInFlightResubmission(reportsRepository, report)
+    await seedInFlightResubmission(seededReports, report)
+  }
+  /** @type {import('#reports/repository/port.js').ReportsRepository} */
+  const reportsRepository = {
+    ...seededReports,
+    findAllPeriodicReports: async () => {
+      throw new Error(
+        'reprocessor and exporter table read every periodic report'
+      )
+    }
   }
 
   const logger = { info: vi.fn(), warn: vi.fn() }
