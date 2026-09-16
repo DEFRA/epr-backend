@@ -184,7 +184,7 @@ export const buildReprocessorExporterTable = async ({
   /**
    * @param {import('#domain/organisations/accreditation.js').Accreditation} accreditation
    */
-  const isPublished = (accreditation) =>
+  const heldByPublishedRegulator = (accreditation) =>
     regulator === undefined || accreditation.submittedToRegulator === regulator
   /**
    * The registration a periodic report belongs to, when it holds a live
@@ -204,7 +204,7 @@ export const buildReprocessorExporterTable = async ({
       return undefined
     }
     const accreditation = resolveAccreditation(entry.registration, entry.org)
-    return accreditation !== null && isPublished(accreditation)
+    return accreditation !== null && heldByPublishedRegulator(accreditation)
       ? entry.registration
       : undefined
   }

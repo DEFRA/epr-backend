@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { MongoClient, ObjectId } from 'mongodb'
+import { MongoClient } from 'mongodb'
 
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
@@ -8,19 +8,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import {
-  MATERIAL,
-  REGULATOR,
-  REPROCESSING_TYPE,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
-import {
-  buildAccreditation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+import { REGULATOR } from '#domain/organisations/model.js'
 import {
   marketInsightsEnglandReprocessorExporterFiguresPath,
   marketInsightsReprocessorExporterFiguresPath
@@ -89,44 +80,6 @@ const it =
   )
 
 const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
-
-/**
- * An approved plastic reprocessor accredited for 2026, written through the
- * organisations fixture so the document the route reads back is one the write
- * schema accepts.
- *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who holds the accreditation
- */
-const insertAccreditedOperator = async (
-  organisationsRepository,
-  regulator = REGULATOR.EA
-) => {
-  const accreditationId = new ObjectId().toString()
-  const registration = buildRegistration({
-    accreditationId,
-    material: MATERIAL.PLASTIC,
-    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-    reprocessingType: REPROCESSING_TYPE.INPUT,
-    glassRecyclingProcess: null,
-    submittedToRegulator: regulator
-  })
-  const accreditation = buildAccreditation({
-    id: accreditationId,
-    material: MATERIAL.PLASTIC,
-    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-    reprocessingType: REPROCESSING_TYPE.INPUT,
-    glassRecyclingProcess: null,
-    submittedToRegulator: regulator
-  })
-  const organisation = await buildApprovedOrg(
-    organisationsRepository,
-    { registrations: [registration], accreditations: [accreditation] },
-    { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
-  )
-
-  return { organisationId: organisation.id, registrationId: registration.id }
-}
 
 /**
  * Seed one operator's January report, submitted twice, through the write side
