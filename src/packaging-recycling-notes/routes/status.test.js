@@ -15,6 +15,7 @@ import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { ISSUANCE_WINDOW_CLOSED_CODE } from '#packaging-recycling-notes/domain/issuance-window.js'
 import {
   MATERIAL,
   REGULATOR,
@@ -247,6 +248,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          ISSUANCE_WINDOW_CLOSED_CODE
+        )
         expect(
           packagingRecyclingNotesRepository.persistProjection
         ).not.toHaveBeenCalled()
@@ -266,6 +270,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          ISSUANCE_WINDOW_CLOSED_CODE
+        )
         expect(
           packagingRecyclingNotesRepository.persistProjection
         ).not.toHaveBeenCalled()
