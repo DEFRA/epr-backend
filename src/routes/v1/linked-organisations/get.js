@@ -1,10 +1,8 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
 import { linkedOrganisationsResponseSchema } from './response.schema.js'
-
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 

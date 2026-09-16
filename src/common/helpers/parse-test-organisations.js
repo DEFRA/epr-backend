@@ -20,3 +20,5 @@ export function parseTestOrganisationIds() {
 }
 
 export const TEST_ORGANISATION_IDS = parseTestOrganisationIds()
+
+export const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)

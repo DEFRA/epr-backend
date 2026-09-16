@@ -3,13 +3,11 @@ import {
   MATERIAL,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
 
 /** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
-
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /** @type {Set<RegistrationStatus>} */
 const REPORTABLE_STATUSES = new Set([

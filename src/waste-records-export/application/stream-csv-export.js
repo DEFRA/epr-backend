@@ -1,7 +1,7 @@
 import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
 import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -14,8 +14,6 @@ import {
 } from '../domain/csv-columns.js'
 import { buildOverseasSitesContext } from '../domain/overseas-sites-context.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
-
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */

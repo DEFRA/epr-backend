@@ -22,7 +22,7 @@ import {
 } from '#common/helpers/formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
 import { config } from '#root/config.js'
 
 // A registration's own status can never be suspended (suspension is an
@@ -41,7 +41,6 @@ const ACCREDITATION_INCLUDED_STATUSES = new Set([
   ACCREDITATION_STATUS.CANCELLED
 ])
 
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
 function buildReportComplianceFields(periods, registrationReportSubmissions) {

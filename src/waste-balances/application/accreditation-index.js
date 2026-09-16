@@ -1,4 +1,4 @@
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
 
 /**
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
@@ -24,8 +24,6 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
  * @property {Map<string, AccreditationContext>} index
  * @property {Set<string>} testOrgAccreditationIds
  */
-
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /**
  * Index every non-test organisation's accreditations by id, carrying the linked

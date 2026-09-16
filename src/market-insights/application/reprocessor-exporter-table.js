@@ -1,5 +1,5 @@
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
@@ -50,8 +50,6 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @property {{ generatedAt: string }} meta
  * @property {{ months: Record<YearMonth, PublishedMonth> }} data
  */
-
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /**
  * @param {{ material: Material, accreditationType: WasteProcessingTypeValue, month: YearMonth }} cell
