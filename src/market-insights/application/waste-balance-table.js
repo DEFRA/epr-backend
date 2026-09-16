@@ -15,7 +15,7 @@ import {
   withNetCredit
 } from '#market-insights/domain/waste-balance-figures.js'
 import { countMonthlyReports } from '#market-insights/application/monthly-reports.js'
-import { recordOf } from '#market-insights/domain/record-of.js'
+import { recordOf } from '#common/helpers/record-of.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository

@@ -19,7 +19,7 @@ import {
   noMeasures,
   withPublishedFigures
 } from '#market-insights/domain/reprocessor-exporter-figures.js'
-import { recordOf } from '#market-insights/domain/record-of.js'
+import { recordOf } from '#common/helpers/record-of.js'
 
 /**
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
