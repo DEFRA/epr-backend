@@ -24,6 +24,8 @@ import {
 import { recordOf } from '#common/helpers/record-of.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
@@ -42,6 +44,23 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {Object} MonthlyReportCounts
  * @property {Record<YearMonth, ReportCount>} byMonth - keyed by month served
  * @property {ReportCount} total - summed across every month served
+ */
+
+/**
+ * A registration the walk reached, and the accreditation it reports under.
+ *
+ * @typedef {Object} OwedReportCandidate
+ * @property {Organisation} org
+ * @property {Registration} registration
+ * @property {Accreditation} accreditation
+ */
+
+/**
+ * Whether a caller's publication covers the candidate's registration. A caller
+ * publishing figures over part of the register passes one so its count
+ * describes the same operators its figures do.
+ *
+ * @typedef {(candidate: OwedReportCandidate) => boolean} CoversRegistration
  */
 
 /**
@@ -141,12 +160,14 @@ const owedPeriods = (served, years, accreditation) => {
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {YearMonth[]} params.months - the reporting months served
+ * @param {CoversRegistration} [params.covers] - narrows the walk to the registrations a caller publishes
  * @returns {Generator<OwedReport>}
  */
 export function* owedMonthlyReports({
   organisations,
   periodicReports,
-  months
+  months,
+  covers = () => true
 }) {
   const served = new Set(months)
   const years = [...new Set(months.map((month) => Number(month.slice(0, 4))))]
@@ -156,7 +177,11 @@ export function* owedMonthlyReports({
     organisations
   )) {
     const [accreditation] = accreditationsForRegistration(registration, org)
-    if (accreditation === undefined || !hasBeenGranted(accreditation)) {
+    if (
+      accreditation === undefined ||
+      !hasBeenGranted(accreditation) ||
+      !covers({ org, registration, accreditation })
+    ) {
       continue
     }
     const owed = owedPeriods(served, years, accreditation)

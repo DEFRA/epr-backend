@@ -212,6 +212,22 @@ const reported = (table) =>
     )
   )
 
+/**
+ * The reports each month was owed and how many arrived, and the same for the
+ * period.
+ *
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
+ */
+const coverage = (table) => ({
+  byMonth: Object.fromEntries(
+    Object.entries(table.data.months).map(([month, { reports }]) => [
+      month,
+      reports
+    ])
+  ),
+  period: table.data.period.reports
+})
+
 describe('buildReprocessorExporterTable', () => {
   it('serves every month asked for, with every material and both accreditation types at zero when nothing was submitted', async () => {
     const { table } = await run({ organisations: [] })
@@ -539,6 +555,68 @@ describe('buildReprocessorExporterTable', () => {
         })
       })
     )
+  })
+
+  describe('the report coverage', () => {
+    it('counts the monthly reports owed and received, by month and for the period', async () => {
+      const operator = makeOperator({ orgId: 1 })
+      const another = makeOperator({ orgId: 2, material: MATERIAL.WOOD })
+
+      const { table } = await run({
+        organisations: [operator, another],
+        reports: [
+          monthlyReport(operator, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(another, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(operator, 2, { prn: prn(10, 0, 1000) })
+        ]
+      })
+
+      expect(coverage(table)).toEqual({
+        byMonth: {
+          '2026-01': { expected: 2, submitted: 2 },
+          '2026-02': { expected: 2, submitted: 1 },
+          '2026-03': { expected: 2, submitted: 0 }
+        },
+        period: { expected: 6, submitted: 3 }
+      })
+    })
+
+    it('counts the registrations the figures cover and no others', async () => {
+      const published = makeOperator({ orgId: 1 })
+      const cancelled = makeOperator({
+        orgId: 2,
+        material: MATERIAL.WOOD,
+        accreditationStatusHistory: [
+          ...approvedHistory,
+          { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-03-01' }
+        ]
+      })
+      const refused = makeOperator({
+        orgId: 3,
+        material: MATERIAL.STEEL,
+        accreditationStatusHistory: [
+          { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
+          { status: ACCREDITATION_STATUS.REJECTED, updatedAt: '2025-11-20' }
+        ]
+      })
+
+      const { table } = await run({
+        organisations: [published, cancelled, refused],
+        reports: [
+          monthlyReport(published, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(cancelled, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(refused, 1, { prn: prn(10, 0, 1000) })
+        ]
+      })
+
+      expect(reported(table).map(({ material }) => material)).toEqual([
+        MATERIAL.PLASTIC
+      ])
+      expect(coverage(table).byMonth['2026-01']).toEqual({
+        expected: 1,
+        submitted: 1
+      })
+    })
   })
 
   it('leaves out a test organisation without remarking on it', async () => {

@@ -4,12 +4,12 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { byReportingMonth, metaSchema, recordOf } from './response-schema.js'
-
-const reportCountSchema = Joi.object({
-  expected: Joi.number().integer().min(0).required(),
-  submitted: Joi.number().integer().min(0).required()
-})
+import {
+  byReportingMonth,
+  metaSchema,
+  recordOf,
+  reportCountSchema
+} from './response-schema.js'
 
 const publishedFiguresSchema = Joi.object({
   totalCredited: Joi.number().required(),

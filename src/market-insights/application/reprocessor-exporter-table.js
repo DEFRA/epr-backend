@@ -19,6 +19,7 @@ import {
   noMeasures,
   withPublishedFigures
 } from '#market-insights/domain/reprocessor-exporter-figures.js'
+import { countMonthlyReports } from '#market-insights/application/monthly-reports.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /**
@@ -30,6 +31,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#domain/organisations/registration.js').ReportableRegistration} ReportableRegistration
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').Measures} Measures
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedFigures} PublishedFigures
+ * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
  */
 
 /**
@@ -38,17 +40,18 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * One reporting month as published: the figures for every material and
- * accreditation type.
+ * One reporting month as published: the reports it was owed and how many of
+ * them arrived, and the figures for every material and accreditation type.
  *
  * @typedef {Object} PublishedMonth
+ * @property {ReportCount} reports
  * @property {FiguresByMaterial} figures
  */
 
 /**
  * @typedef {Object} ReprocessorExporterTable
  * @property {{ generatedAt: string }} meta
- * @property {{ months: Record<YearMonth, PublishedMonth> }} data
+ * @property {{ months: Record<YearMonth, PublishedMonth>, period: { reports: ReportCount } }} data
  */
 
 /**
@@ -139,7 +142,8 @@ const publishedFigures = (cells, month) =>
  * within each month. An accreditation cancelled since loses the months it
  * filed, as the regulator's workbooks and the report-submissions extract drop
  * them. Quarterly reports belong to registered-only operators and are left
- * out.
+ * out. Each month also carries the count of monthly reports it was owed and
+ * how many were submitted, and the period carries the sum.
  *
  * @param {Object} params
  * @param {OrganisationsRepository} params.organisationsRepository
@@ -222,12 +226,27 @@ export const buildReprocessorExporterTable = async ({
     }
   }
 
+  // Counted over the registrations the figures cover rather than the whole
+  // register, and by the route the figures themselves resolve, so a month
+  // cannot report coverage for one set of operators beside tonnages for
+  // another. A cancelled accreditation is the case that separates them: its
+  // submissions are absent from the figures, so its months are not owed here.
+  const reports = countMonthlyReports({
+    organisations,
+    periodicReports,
+    months,
+    covers: ({ org, registration }) =>
+      resolveAccreditation(registration, org) !== null
+  })
+
   return {
     meta: { generatedAt: now.toISOString() },
     data: {
       months: recordOf(months, (month) => ({
+        reports: reports.byMonth[month],
         figures: publishedFigures(cells, month)
-      }))
+      })),
+      period: { reports: reports.total }
     }
   }
 }
