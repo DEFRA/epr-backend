@@ -1,11 +1,21 @@
 import { describe, it, expect } from 'vitest'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
   describeRule,
   describeTrigger,
   contributionReasons,
   requiredForBalance,
-  generateDocument
+  generateDocument,
+  TEMPLATE_ORDER
 } from './summary-log-rules.mjs'
+
+describe('TEMPLATE_ORDER', () => {
+  it('covers every processing type, so a new template cannot be omitted', () => {
+    expect(new Set(TEMPLATE_ORDER.map(([type]) => type))).toEqual(
+      new Set(Object.values(PROCESSING_TYPES))
+    )
+  })
+})
 
 describe('describeRule', () => {
   it('reports an unvalidated field', () => {

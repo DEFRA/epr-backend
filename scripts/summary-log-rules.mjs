@@ -37,7 +37,7 @@ const TOOL_URL = `https://github.com/${TOOL_REPO}/blob/main/${TOOL_PATH}`
 const CLASSIFICATION_URL = 'summary-log-row-validation-classification.md'
 const REPORT_CREATION_URL = 'report-creation-mandatory-fields.md'
 
-const TEMPLATE_ORDER = [
+export const TEMPLATE_ORDER = [
   [PROCESSING_TYPES.EXPORTER, 'Exporter (accredited)'],
   [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY, 'Exporter (registered only)'],
   [PROCESSING_TYPES.REPROCESSOR_INPUT, 'Reprocessor input (accredited)'],
