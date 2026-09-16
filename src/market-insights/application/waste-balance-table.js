@@ -292,7 +292,8 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {YearMonth[]} params.months - the reporting months to publish
+ * @param {number} params.year - the reporting year
+ * @param {YearMonth[]} params.months - the reporting months of that year to publish
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<WasteBalanceTable>}
  */
@@ -303,6 +304,7 @@ export const buildWasteBalanceTable = async ({
   overseasSitesRepository,
   reportsRepository,
   logger,
+  year,
   months,
   now
 }) => {
@@ -311,7 +313,7 @@ export const buildWasteBalanceTable = async ({
       ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
       organisationsRepository.findAll(),
       overseasSitesRepository.findAll(),
-      reportsRepository.findAllPeriodicReports()
+      reportsRepository.findPeriodicReportsForYear({ year })
     ]
   )
 

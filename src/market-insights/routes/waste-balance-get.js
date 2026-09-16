@@ -58,6 +58,7 @@ export const marketInsightsWasteBalanceGet = {
       overseasSitesRepository,
       reportsRepository,
       logger,
+      year: params.year,
       months: publishedMonthsThrough(
         params,
         now,

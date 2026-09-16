@@ -351,6 +351,7 @@ const monthlyReport = ({ ledgerId }, period) => ({
  *   reports?: MonthlyReportRef[],
  *   unsubmittedReports?: MonthlyReportRef[],
  *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
+ *   year?: number,
  *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
  *   now?: Date
  * }} options
@@ -361,15 +362,23 @@ const run = async ({
   reports = [],
   unsubmittedReports = [],
   overseasSites = [],
+  year = 2026,
   months = JANUARY_TO_JUNE_2026,
   now = NOW
 }) => {
-  const reportsRepository = createInMemoryReportsRepository()()
+  const seededReports = createInMemoryReportsRepository()()
   for (const report of reports) {
-    await buildSubmittedReport(reportsRepository, report)
+    await buildSubmittedReport(seededReports, report)
   }
   for (const report of unsubmittedReports) {
-    await buildUnsubmittedReport(reportsRepository, report)
+    await buildUnsubmittedReport(seededReports, report)
+  }
+  /** The table reads one year, never the whole collection. */
+  const reportsRepository = {
+    ...seededReports,
+    findAllPeriodicReports: () => {
+      throw new Error('waste balance table read every periodic report')
+    }
   }
 
   const summaryLogRowStatesRepository =
@@ -407,6 +416,7 @@ const run = async ({
       createInMemoryOverseasSitesRepository(overseasSites)(),
     reportsRepository,
     logger: partialMock(logger),
+    year,
     months,
     now
   })
