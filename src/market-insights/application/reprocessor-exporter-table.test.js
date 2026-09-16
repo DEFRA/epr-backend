@@ -4,6 +4,7 @@ import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REGISTRATION_STATUS,
+  REGULATOR,
   REPROCESSING_TYPE,
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
@@ -45,6 +46,7 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   material?: import('#domain/organisations/model.js').AppliedForMaterial,
  *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess[],
  *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
+ *   regulator?: import('#domain/organisations/model.js').RegulatorValue,
  *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').RegistrationStatus, updatedAt: string }[]
  *   accreditationStatusHistory?: { status: import('#domain/organisations/model.js').AccreditationStatus, updatedAt: string }[]
  * }} options
@@ -54,6 +56,7 @@ const makeOperator = ({
   material = MATERIAL.PLASTIC,
   glassRecyclingProcess,
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
+  regulator = REGULATOR.EA,
   registrationStatusHistory = approvedHistory,
   accreditationStatusHistory = approvedHistory
 }) => {
@@ -73,7 +76,8 @@ const makeOperator = ({
         material,
         glassRecyclingProcess,
         wasteProcessingType,
-        reprocessingType: REPROCESSING_TYPE.INPUT
+        reprocessingType: REPROCESSING_TYPE.INPUT,
+        submittedToRegulator: regulator
       }
     ],
     accreditations: [
@@ -85,7 +89,8 @@ const makeOperator = ({
         validFrom: '2026-01-01',
         validTo: '2026-12-31',
         material,
-        wasteProcessingType
+        wasteProcessingType,
+        submittedToRegulator: regulator
       }
     ]
   }
@@ -137,14 +142,16 @@ const monthlyReport = (operator, period, figures = {}) => ({
  *   organisations: any[],
  *   reports?: ReturnType<typeof monthlyReport>[],
  *   inFlightResubmissions?: ReturnType<typeof monthlyReport>[],
- *   months?: import('#common/helpers/dates/year-month.js').YearMonth[]
+ *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
+ *   regulator?: import('#domain/organisations/model.js').RegulatorValue
  * }} options
  */
 const run = async ({
   organisations,
   reports = [],
   inFlightResubmissions = [],
-  months = JANUARY_TO_MARCH_2026
+  months = JANUARY_TO_MARCH_2026,
+  regulator
 }) => {
   const seededReports = createInMemoryReportsRepository()()
   for (const report of reports) {
@@ -172,6 +179,7 @@ const run = async ({
     logger: partialMock(logger),
     year: 2026,
     months,
+    regulator,
     now: NOW
   })
   return { table, logger }
@@ -550,5 +558,57 @@ describe('buildReprocessorExporterTable', () => {
 
     expect(reported(table)).toEqual([])
     expect(logger.warn).not.toHaveBeenCalled()
+  })
+
+  describe('restricted to one regulator', () => {
+    it('serves the accreditations of that regulator alone, from the aggregation that serves the UK', async () => {
+      const english = makeOperator({ orgId: 1, regulator: REGULATOR.EA })
+      const welsh = makeOperator({ orgId: 2, regulator: REGULATOR.NRW })
+      const seeded = {
+        organisations: [english, welsh],
+        reports: [
+          monthlyReport(english, 1, { prn: prn(100, 0, 10000) }),
+          monthlyReport(welsh, 1, { prn: prn(50, 0, 5000) })
+        ]
+      }
+
+      const { table: uk } = await run(seeded)
+      const { table: england } = await run({
+        ...seeded,
+        regulator: REGULATOR.EA
+      })
+
+      expect(reported(uk)).toEqual([
+        expect.objectContaining({
+          month: '2026-01',
+          revisedTonnageIssued: 150,
+          totalRevenue: 15000
+        })
+      ])
+      expect(reported(england)).toEqual([
+        expect.objectContaining({
+          month: '2026-01',
+          revisedTonnageIssued: 100,
+          totalRevenue: 10000
+        })
+      ])
+    })
+
+    it('answers the full grid at zero when that regulator has no activity', async () => {
+      const welsh = makeOperator({ orgId: 2, regulator: REGULATOR.NRW })
+      const { table } = await run({
+        organisations: [welsh],
+        reports: [monthlyReport(welsh, 1, { prn: prn(50, 0, 5000) })],
+        regulator: REGULATOR.EA
+      })
+
+      expect(reported(table)).toEqual([])
+      expect(Object.keys(table.data.months)).toEqual(JANUARY_TO_MARCH_2026)
+      expect(
+        table.data.months['2026-01'].figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual(NO_REPROCESSOR_ACTIVITY)
+    })
   })
 })

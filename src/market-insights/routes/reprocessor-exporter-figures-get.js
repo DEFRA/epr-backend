@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { REGULATOR } from '#domain/organisations/model.js'
 import { buildReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js'
 import {
   monthlyPeriodParamsSchema,
@@ -12,9 +13,22 @@ import { reprocessorExporterFiguresResponseSchema } from './reprocessor-exporter
 export const marketInsightsReprocessorExporterFiguresPath =
   '/v1/market-insights/{year}/{cadence}/{period}/reprocessor-exporter-figures'
 
-export const marketInsightsReprocessorExporterFiguresGet = {
+/**
+ * The same figures narrowed to the accreditations the Environment Agency
+ * holds. England is the one nation published on its own; the other three
+ * would identify operators, so no other narrowing exists.
+ */
+export const marketInsightsEnglandReprocessorExporterFiguresPath = `${marketInsightsReprocessorExporterFiguresPath}/england`
+
+/**
+ * @param {Object} route
+ * @param {string} route.path
+ * @param {string} route.action - the logging event action of the route
+ * @param {import('#domain/organisations/model.js').RegulatorValue} [route.regulator]
+ */
+const reprocessorExporterFiguresRoute = ({ path, action, regulator }) => ({
   method: 'GET',
-  path: marketInsightsReprocessorExporterFiguresPath,
+  path,
   options: {
     auth: {
       scope: [SCOPES.marketDataRead]
@@ -46,14 +60,24 @@ export const marketInsightsReprocessorExporterFiguresGet = {
       reportsRepository,
       logger,
       year: params.year,
-      months: publishedMonthsThrough(
-        params,
-        now,
-        'market_insights_reprocessor_exporter_figures'
-      ),
+      months: publishedMonthsThrough(params, now, action),
+      regulator,
       now
     })
 
     return h.response(table).code(StatusCodes.OK)
   }
-}
+})
+
+export const marketInsightsReprocessorExporterFiguresGet =
+  reprocessorExporterFiguresRoute({
+    path: marketInsightsReprocessorExporterFiguresPath,
+    action: 'market_insights_reprocessor_exporter_figures'
+  })
+
+export const marketInsightsEnglandReprocessorExporterFiguresGet =
+  reprocessorExporterFiguresRoute({
+    path: marketInsightsEnglandReprocessorExporterFiguresPath,
+    action: 'market_insights_england_reprocessor_exporter_figures',
+    regulator: REGULATOR.EA
+  })
