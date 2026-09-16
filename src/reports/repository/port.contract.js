@@ -4,6 +4,7 @@ import { testUpdateReportStatusBehaviour } from './contract/updateReportStatus.c
 import { testDeleteReportBehaviour } from './contract/deleteReport.contract.js'
 import { testFindPeriodicReportsBehaviour } from './contract/findPeriodicReports.contract.js'
 import { testFindAllPeriodicReportsBehaviour } from './contract/findAllPeriodicReports.contract.js'
+import { testFindPeriodicReportsForYearBehaviour } from './contract/findPeriodicReportsForYear.contract.js'
 import { testFindReportByIdBehaviour } from './contract/findReportById.contract.js'
 import { testMarkActiveReportsStaleForSummaryLogBehaviour } from './contract/markActiveReportsStaleForSummaryLog.contract.js'
 import { testMarkActiveReportsStaleForPrnCancellationBehaviour } from './contract/markActiveReportsStaleForPrnCancellation.contract.js'
@@ -18,6 +19,7 @@ export const testReportsRepositoryContract = (it) => {
   testDeleteReportBehaviour(it)
   testFindPeriodicReportsBehaviour(it)
   testFindAllPeriodicReportsBehaviour(it)
+  testFindPeriodicReportsForYearBehaviour(it)
   testFindReportByIdBehaviour(it)
   testMarkActiveReportsStaleForSummaryLogBehaviour(it)
   testMarkActiveReportsStaleForPrnCancellationBehaviour(it)

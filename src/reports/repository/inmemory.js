@@ -17,6 +17,7 @@ import {
   validateCreateReport,
   validateDeleteReportParams,
   validateFindPeriodicReports,
+  validateFindPeriodicReportsForYear,
   validateFindReportById,
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
@@ -275,6 +276,18 @@ const findPeriodicReports = async (reports, params) => {
 const findAllPeriodicReports = async (reports) => {
   const allDocs = [...reports.values()]
   return transformToPeriodicReports(allDocs)
+}
+
+/**
+ * @param {Map<string, Object>} reports
+ * @param {import('./port.js').FindPeriodicReportsForYearParams} params
+ * @returns {Promise<PeriodicReport[]>}
+ */
+const findPeriodicReportsForYear = async (reports, params) => {
+  const { year } = validateFindPeriodicReportsForYear(params)
+  return transformToPeriodicReports(
+    [...reports.values()].filter((r) => r.year === year)
+  )
 }
 
 /**
@@ -637,6 +650,8 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     findReportById: (reportId) => findReportById(reports, reportId),
     findPeriodicReports: (params) => findPeriodicReports(reports, params),
     findAllPeriodicReports: () => findAllPeriodicReports(reports),
+    findPeriodicReportsForYear: (params) =>
+      findPeriodicReportsForYear(reports, params),
     markActiveReportsStaleForSummaryLog: (
       organisationId,
       registrationId,

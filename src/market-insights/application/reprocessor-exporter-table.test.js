@@ -161,6 +161,7 @@ const run = async ({
     )(),
     reportsRepository,
     logger: partialMock(logger),
+    year: 2026,
     months,
     now: NOW
   })

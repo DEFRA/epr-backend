@@ -45,6 +45,7 @@ export const marketInsightsReprocessorExporterFiguresGet = {
       organisationsRepository,
       reportsRepository,
       logger,
+      year: params.year,
       months: publishedMonthsThrough(
         params,
         now,

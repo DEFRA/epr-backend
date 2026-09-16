@@ -147,7 +147,8 @@ const publishedFigures = (cells, month) =>
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {YearMonth[]} params.months - the reporting months to publish
+ * @param {number} params.year - the reporting year
+ * @param {YearMonth[]} params.months - the reporting months of that year to publish
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<ReprocessorExporterTable>}
  */
@@ -155,12 +156,13 @@ export const buildReprocessorExporterTable = async ({
   organisationsRepository,
   reportsRepository,
   logger,
+  year,
   months,
   now
 }) => {
   const [organisations, periodicReports] = await Promise.all([
     organisationsRepository.findAll(),
-    reportsRepository.findAllPeriodicReports()
+    reportsRepository.findPeriodicReportsForYear({ year })
   ])
 
   const registrations = new Map(
