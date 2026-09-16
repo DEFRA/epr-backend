@@ -39,6 +39,7 @@ const januaryToFebruary2026 = januaryToFebruary2026For(
 
 /** @import { Db } from 'mongodb' */
 /** @import { TestServer } from '#test/create-test-server.js' */
+/** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 
 /**
  * @typedef {TestServer & {
@@ -195,7 +196,7 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath} (integration)`, ()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    /** @type {import('#market-insights/application/reprocessor-exporter-table.js').ReprocessorExporterTable} */
+    /** @type {ReprocessorExporterTable} */
     const payload = JSON.parse(response.payload)
 
     const { months } = payload.data
@@ -277,15 +278,20 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath} (integratio
     )
 
     expect(england.statusCode).toBe(StatusCodes.OK)
-    const englandJanuary = JSON.parse(england.payload).data.months['2026-01']
-    expect(englandJanuary.figures.plastic.reprocessor).toEqual(
+    /** @type {ReprocessorExporterTable} */
+    const englandPayload = JSON.parse(england.payload)
+    /** @type {ReprocessorExporterTable} */
+    const ukPayload = JSON.parse(uk.payload)
+    expect(
+      englandPayload.data.months['2026-01'].figures.plastic.reprocessor
+    ).toEqual(
       expect.objectContaining({
         revisedTonnageIssued: 112,
         totalRevenue: 60000
       })
     )
     expect(
-      JSON.parse(uk.payload).data.months['2026-01'].figures.plastic.reprocessor
+      ukPayload.data.months['2026-01'].figures.plastic.reprocessor
     ).toEqual(
       expect.objectContaining({
         revisedTonnageIssued: 1112,

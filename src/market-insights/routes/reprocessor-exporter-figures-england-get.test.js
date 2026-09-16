@@ -28,6 +28,8 @@ import {
   marketInsightsReprocessorExporterFiguresPath
 } from './reprocessor-exporter-figures-get.js'
 
+/** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
+
 /**
  * @param {string} path
  * @param {number} year
@@ -188,7 +190,11 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath}`, () => {
     ])
 
     expect(england.statusCode).toBe(StatusCodes.OK)
-    const january = JSON.parse(england.payload).data.months['2026-01']
+    /** @type {ReprocessorExporterTable} */
+    const englandPayload = JSON.parse(england.payload)
+    /** @type {ReprocessorExporterTable} */
+    const ukPayload = JSON.parse(uk.payload)
+    const january = englandPayload.data.months['2026-01']
     expect(Object.keys(january.figures)).toEqual([
       ...TONNAGE_MONITORING_MATERIALS
     ])
@@ -201,7 +207,7 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath}`, () => {
       })
     )
     expect(
-      JSON.parse(uk.payload).data.months['2026-01'].figures[MATERIAL.PLASTIC][
+      ukPayload.data.months['2026-01'].figures[MATERIAL.PLASTIC][
         WASTE_PROCESSING_TYPE.REPROCESSOR
       ]
     ).toEqual(
@@ -215,7 +221,9 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath}`, () => {
   it('answers zero where England has no activity', async () => {
     const response = await get(asRegulator())
 
-    const january = JSON.parse(response.payload).data.months['2026-01']
+    /** @type {ReprocessorExporterTable} */
+    const payload = JSON.parse(response.payload)
+    const january = payload.data.months['2026-01']
     expect(
       january.figures[MATERIAL.WOOD][WASTE_PROCESSING_TYPE.EXPORTER]
     ).toEqual(
