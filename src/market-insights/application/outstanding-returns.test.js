@@ -41,14 +41,16 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   orgId: number,
  *   material?: AppliedForMaterial,
  *   tonnageBand?: TonnageBand,
- *   statusHistory?: StatusHistoryEntry[]
+ *   statusHistory?: StatusHistoryEntry[],
+ *   validity?: { validFrom?: string, validTo?: string }
  * }} options
  */
 const makeOperator = ({
   orgId,
   material = MATERIAL.PLASTIC,
   tonnageBand = TONNAGE_BAND.UP_TO_500,
-  statusHistory = approvedHistory
+  statusHistory = approvedHistory,
+  validity = { validFrom: '2026-01-01', validTo: '2026-12-31' }
 }) => {
   const id = objectIdFor('a', orgId)
   const registrationId = objectIdFor('b', orgId)
@@ -77,8 +79,7 @@ const makeOperator = ({
             id: accreditationId,
             status: statusHistory.at(-1)?.status,
             statusHistory,
-            validFrom: '2026-01-01',
-            validTo: '2026-12-31',
+            ...validity,
             material,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             reprocessingType: REPROCESSING_TYPE.INPUT,
@@ -297,6 +298,21 @@ describe('countOutstandingReturns', () => {
         { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
         { status: ACCREDITATION_STATUS.REJECTED, updatedAt: '2025-11-20' }
       ]
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([])
+  })
+
+  it('counts nothing for an approved accreditation since reverted to draft and stripped of its dates', async () => {
+    const operator = makeOperator({
+      orgId: 500045,
+      statusHistory: [
+        ...approvedHistory,
+        { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
+      ],
+      validity: {}
     })
 
     const counts = await count({ operators: [operator.organisation] })
