@@ -371,6 +371,7 @@ const run = async ({
   for (const report of unsubmittedReports) {
     await buildUnsubmittedReport(seededReports, report)
   }
+  /** @type {import('#reports/repository/port.js').ReportsRepository} */
   const reportsRepository = {
     ...seededReports,
     findAllPeriodicReports: () => {
