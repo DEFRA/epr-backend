@@ -174,7 +174,7 @@ describe('csv-columns', () => {
       prnIssuance: {
         incomeBusinessPlan: [],
         signatories: [],
-        tonnageBand: '500'
+        tonnageBand: 'up_to_500'
       },
       samplingInspectionPlanPart2FileUploads: [],
       submittedToRegulator: 'ea',

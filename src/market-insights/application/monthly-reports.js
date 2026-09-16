@@ -18,6 +18,7 @@ import {
 } from '#common/helpers/dates/accreditation.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { recordOf } from '#common/helpers/record-of.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
@@ -102,32 +103,38 @@ const owedPeriods = (served, years, accreditation) => {
 }
 
 /**
- * Count, for each month served, the monthly reports that were required and
- * those submitted. Only an accredited registration reports monthly, so a
- * registered-only operator counts for nothing. An accreditation owed a report
+ * One monthly report an accreditation owed for a month served, and whether it
+ * has been submitted.
+ *
+ * @typedef {Object} OwedReport
+ * @property {YearMonth} month
+ * @property {import('#domain/organisations/registration.js').Registration} registration
+ * @property {Accreditation} accreditation
+ * @property {boolean} submitted
+ */
+
+/**
+ * Every monthly report owed among the months served, one per accredited
+ * registration and month. Only an accredited registration reports monthly, so
+ * a registered-only operator yields nothing. An accreditation owed a report
  * for every month of its window it was not cancelled for, so one since
- * cancelled is counted for the months before its cancellation and the reports
- * it filed for them.
+ * cancelled yields the months before its cancellation.
  *
  * @param {Object} params
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {YearMonth[]} params.months - the reporting months served
- * @returns {MonthlyReportCounts}
+ * @returns {Generator<OwedReport>}
  */
-export const countMonthlyReports = ({
+export function* owedMonthlyReports({
   organisations,
   periodicReports,
   months
-}) => {
+}) {
   const served = new Set(months)
   const years = [...new Set(months.map((month) => Number(month.slice(0, 4))))]
   const reportsByRegistration = groupByRegistration(periodicReports)
 
-  /** @type {Map<YearMonth, ReportCount>} */
-  const counts = new Map(
-    months.map((month) => [month, { expected: 0, submitted: 0 }])
-  )
   for (const { org, registration } of getReportableRegistrations(
     organisations
   )) {
@@ -148,24 +155,43 @@ export const countMonthlyReports = ({
       CADENCE.monthly
     )) {
       const month = toYearMonth(period.startDate)
-      const count = counts.get(month)
-      if (count === undefined || !owedMonths.has(month)) {
+      if (!owedMonths.has(month)) {
         continue
       }
-      count.expected += 1
       const submissions = selectSubmittedReports({
         current: period.report,
         previousSubmissions: period.previousSubmissions
       })
-      if (submissions.length > 0) {
-        count.submitted += 1
+      yield {
+        month,
+        registration,
+        accreditation,
+        submitted: submissions.length > 0
       }
     }
   }
+}
+
+/**
+ * Count, for each month served, the monthly reports that were required and
+ * those submitted.
+ *
+ * @param {Parameters<typeof owedMonthlyReports>[0]} params
+ * @returns {MonthlyReportCounts}
+ */
+export const countMonthlyReports = (params) => {
+  const owed = Map.groupBy(owedMonthlyReports(params), ({ month }) => month)
+  const byMonth = recordOf(params.months, (month) => {
+    const reports = owed.get(month) ?? []
+    return {
+      expected: reports.length,
+      submitted: reports.filter(({ submitted }) => submitted).length
+    }
+  })
   const total = { expected: 0, submitted: 0 }
-  for (const { expected, submitted } of counts.values()) {
+  for (const { expected, submitted } of Object.values(byMonth)) {
     total.expected += expected
     total.submitted += submitted
   }
-  return { byMonth: Object.fromEntries(counts), total }
+  return { byMonth, total }
 }
