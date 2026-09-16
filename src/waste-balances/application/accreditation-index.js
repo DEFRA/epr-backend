@@ -1,4 +1,4 @@
-import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
 /**
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
@@ -42,7 +42,7 @@ export const indexAccreditations = (organisations) => {
   /** @type {Set<string>} */
   const testOrgAccreditationIds = new Set()
   for (const organisation of organisations) {
-    if (TEST_ORGANISATIONS.has(organisation.orgId)) {
+    if (TEST_ORGANISATION_IDS.has(organisation.orgId)) {
       for (const accreditation of organisation.accreditations) {
         testOrgAccreditationIds.add(accreditation.id)
       }

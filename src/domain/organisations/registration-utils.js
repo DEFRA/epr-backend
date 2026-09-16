@@ -3,7 +3,7 @@ import {
   MATERIAL,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
-import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
 /** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
@@ -23,7 +23,7 @@ const REPORTABLE_STATUSES = new Set([
  */
 export function getReportableRegistrations(orgs) {
   return orgs
-    .filter((org) => !TEST_ORGANISATIONS.has(org.orgId))
+    .filter((org) => !TEST_ORGANISATION_IDS.has(org.orgId))
     .flatMap((org) =>
       org.registrations
         .filter((registration) => REPORTABLE_STATUSES.has(registration.status))

@@ -1,5 +1,5 @@
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
-import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
@@ -174,7 +174,7 @@ export const buildReprocessorExporterTable = async ({
   )
   const testOrganisationIds = new Set(
     organisations
-      .filter((org) => TEST_ORGANISATIONS.has(org.orgId))
+      .filter((org) => TEST_ORGANISATION_IDS.has(org.orgId))
       .map((org) => org.id)
   )
   /**

@@ -18,7 +18,7 @@ export const buildEffectiveMaterialStages = () => [
       }
     }
   },
-  { $match: { orgId: { $nin: TEST_ORGANISATION_IDS } } },
+  { $match: { orgId: { $nin: [...TEST_ORGANISATION_IDS] } } },
   { $match: { material: { $ne: null } } },
   {
     $addFields: {

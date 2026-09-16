@@ -1,7 +1,7 @@
 import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
-import { TEST_ORGANISATIONS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -466,7 +466,9 @@ async function resolveOrgs(organisationsRepository, organisationId) {
   }
 
   const orgs = await organisationsRepository.findAll()
-  return orgs.filter((org) => !TEST_ORGANISATIONS.has(org.orgId)).sort(sortById)
+  return orgs
+    .filter((org) => !TEST_ORGANISATION_IDS.has(org.orgId))
+    .sort(sortById)
 }
 
 /**
