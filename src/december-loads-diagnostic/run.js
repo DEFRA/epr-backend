@@ -19,8 +19,8 @@ const formatCandidateLine = (r) =>
     `accreditationNumber=${r.accreditationNumber}`,
     `processingType=${r.processingType}`,
     `decemberMonth=${r.decemberKey}`,
-    `expectedDecember=${r.expectedDecember}`,
-    `ledgerDecember=${r.ledgerDecember ?? 'absent'}`
+    `summaryLogDecemberTonnage=${r.summaryLogDecemberTonnage}`,
+    `ledgerDecemberBalance=${r.ledgerDecemberBalance ?? 'absent'}`
   ].join(' ')
 
 /** @param {StartedServer} server */

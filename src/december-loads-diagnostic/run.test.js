@@ -93,8 +93,8 @@ describe('runDecemberLoadsDiagnostic', () => {
           accreditationNumber: 'A26ER5000000001PL',
           processingType: 'REPROCESSOR_INPUT',
           decemberKey: '2026-12',
-          expectedDecember: 30,
-          ledgerDecember: 12
+          summaryLogDecemberTonnage: 30,
+          ledgerDecemberBalance: 12
         }
       ],
       summary: {
@@ -108,7 +108,7 @@ describe('runDecemberLoadsDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'December balance mismatch: organisationId=org-1 organisationReference=500123 accreditationId=acc-1 accreditationNumber=A26ER5000000001PL processingType=REPROCESSOR_INPUT decemberMonth=2026-12 expectedDecember=30 ledgerDecember=12'
+        'December balance mismatch: organisationId=org-1 organisationReference=500123 accreditationId=acc-1 accreditationNumber=A26ER5000000001PL processingType=REPROCESSOR_INPUT decemberMonth=2026-12 summaryLogDecemberTonnage=30 ledgerDecemberBalance=12'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -127,8 +127,8 @@ describe('runDecemberLoadsDiagnostic', () => {
           accreditationNumber: 'A26ER5000000002PL',
           processingType: 'EXPORTER',
           decemberKey: '2026-12',
-          expectedDecember: 20,
-          ledgerDecember: null
+          summaryLogDecemberTonnage: 20,
+          ledgerDecemberBalance: null
         }
       ],
       summary: {
@@ -142,7 +142,7 @@ describe('runDecemberLoadsDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'December balance mismatch: organisationId=org-2 organisationReference=500124 accreditationId=acc-2 accreditationNumber=A26ER5000000002PL processingType=EXPORTER decemberMonth=2026-12 expectedDecember=20 ledgerDecember=absent'
+        'December balance mismatch: organisationId=org-2 organisationReference=500124 accreditationId=acc-2 accreditationNumber=A26ER5000000002PL processingType=EXPORTER decemberMonth=2026-12 summaryLogDecemberTonnage=20 ledgerDecemberBalance=absent'
     })
   })
 

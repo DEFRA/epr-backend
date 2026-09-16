@@ -195,8 +195,8 @@ describe('buildDecemberLoadsReport', () => {
         accreditationNumber: 'ACC-500001',
         processingType: 'EXPORTER',
         decemberKey: '2026-12',
-        expectedDecember: 30,
-        ledgerDecember: 12
+        summaryLogDecemberTonnage: 30,
+        ledgerDecemberBalance: 12
       }
     ])
     expect(report.summary).toEqual({
@@ -222,8 +222,8 @@ describe('buildDecemberLoadsReport', () => {
 
     expect(report.reports[0]).toMatchObject({
       accreditationId,
-      expectedDecember: 20,
-      ledgerDecember: null
+      summaryLogDecemberTonnage: 20,
+      ledgerDecemberBalance: null
     })
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
@@ -247,8 +247,8 @@ describe('buildDecemberLoadsReport', () => {
 
     expect(report.reports[0]).toMatchObject({
       accreditationId,
-      expectedDecember: 20,
-      ledgerDecember: null
+      summaryLogDecemberTonnage: 20,
+      ledgerDecemberBalance: null
     })
     expect(report.summary.mismatchedAccreditations).toBe(1)
   })

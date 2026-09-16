@@ -16,7 +16,7 @@ import { accreditationDecemberKey } from '#december-loads-diagnostic/domain/dece
 
 /**
  * One flagged accreditation: its ledger December portion disagrees with the
- * December tonnage its current summary-log rows compute. `ledgerDecember` is
+ * December tonnage its current summary-log rows compute. `ledgerDecemberBalance` is
  * `null` when the latest closing balance carries no `decemberAmount` — a
  * pre-PAE-1920 submission that has not been resubmitted since, which is itself a
  * mismatch whenever expected December tonnage exists.
@@ -28,8 +28,8 @@ import { accreditationDecemberKey } from '#december-loads-diagnostic/domain/dece
  * @property {string} accreditationNumber
  * @property {string} processingType
  * @property {string} decemberKey - `YYYY-12`
- * @property {number} expectedDecember - December tonnage the current rows compute
- * @property {number | null} ledgerDecember - recorded December portion, `null` when absent
+ * @property {number} summaryLogDecemberTonnage - December tonnage the current rows compute
+ * @property {number | null} ledgerDecemberBalance - recorded December portion, `null` when absent
  */
 
 /**
@@ -113,19 +113,19 @@ const scanAccreditation = async ({
       ledgerId,
       summaryLogId
     )
-  const expectedDecember = decemberCreditTotalFor(
+  const summaryLogDecemberTonnage = decemberCreditTotalFor(
     rowStates.map(withProcessingTypeInData),
     accreditation
   )
 
-  if (expectedDecember === 0) {
+  if (summaryLogDecemberTonnage === 0) {
     return { hasDecember: false, row: null }
   }
 
   const latest = await ledgerRepository.findLatestInLedger(ledgerId)
-  const ledgerDecember = latest?.closingBalance.decemberAmount ?? null
+  const ledgerDecemberBalance = latest?.closingBalance.decemberAmount ?? null
 
-  if (expectedDecember === ledgerDecember) {
+  if (summaryLogDecemberTonnage === ledgerDecemberBalance) {
     return { hasDecember: true, row: null }
   }
 
@@ -140,8 +140,8 @@ const scanAccreditation = async ({
       decemberKey: /** @type {string} */ (
         accreditationDecemberKey(accreditation)
       ),
-      expectedDecember,
-      ledgerDecember
+      summaryLogDecemberTonnage,
+      ledgerDecemberBalance
     }
   }
 }
