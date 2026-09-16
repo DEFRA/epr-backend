@@ -11,3 +11,4 @@
 
 export { marketInsightsWasteBalanceGet } from './routes/waste-balance-get.js'
 export { marketInsightsReprocessorExporterFiguresGet } from './routes/reprocessor-exporter-figures-get.js'
+export { marketInsightsOutstandingReturnsGet } from './routes/outstanding-returns-get.js'

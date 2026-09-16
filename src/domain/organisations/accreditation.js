@@ -1,4 +1,4 @@
-/** @import {AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, User} from '#domain/organisations/model.js' */
+/** @import {AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand, User} from '#domain/organisations/model.js' */
 
 /**
  * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
@@ -52,7 +52,7 @@
  * @typedef {{
  *  incomeBusinessPlan: PrnIncomeBusinessPlan[];
  *  signatories: User[];
- *  tonnageBand: string;
+ *  tonnageBand: TonnageBand;
  * }} PrnIssuance
  */
 
