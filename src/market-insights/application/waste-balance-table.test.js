@@ -19,7 +19,7 @@ import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
-import { toYearMonth } from '#common/helpers/dates/year-month.js'
+import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
 
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
@@ -374,7 +374,7 @@ const run = async ({
   /** @type {import('#reports/repository/port.js').ReportsRepository} */
   const reportsRepository = {
     ...seededReports,
-    findAllPeriodicReports: () => {
+    findAllPeriodicReports: async () => {
       throw new Error('waste balance table read every periodic report')
     }
   }
@@ -414,7 +414,7 @@ const run = async ({
       createInMemoryOverseasSitesRepository(overseasSites)(),
     reportsRepository,
     logger: partialMock(logger),
-    year: 2026,
+    year: yearOf(months[0]),
     months,
     now
   })
