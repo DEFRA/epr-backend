@@ -273,6 +273,23 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
+  it('ends each table with a grand total carrying no average price', async () => {
+    const response = await injectTable(server, asRegulator(), january2026)
+
+    /** @type {ReprocessorExporterTable} */
+    const payload = JSON.parse(response.payload)
+    const { totals } = payload.data.months['2026-01']
+    expect(totals[WASTE_PROCESSING_TYPE.REPROCESSOR]).toEqual(
+      expect.objectContaining({
+        revisedTonnageIssued: 100,
+        totalRevenue: 10000
+      })
+    )
+    expect(totals[WASTE_PROCESSING_TYPE.REPROCESSOR]).not.toHaveProperty(
+      'averagePricePerTonne'
+    )
+  })
+
   it('serves the registrations submitted to the Environment Agency and leaves the other regulators out', async () => {
     const [england, uk] = await Promise.all([
       injectTable(server, asRegulator(), january2026),

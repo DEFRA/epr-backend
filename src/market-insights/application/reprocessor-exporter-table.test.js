@@ -632,4 +632,48 @@ describe('buildReprocessorExporterTable', () => {
       ).toEqual(NO_REPROCESSOR_ACTIVITY)
     })
   })
+
+  describe('the grand total of each table', () => {
+    it('sums every material of its accreditation type, and leaves the average price out', async () => {
+      const aluminium = makeOperator({ orgId: 1, material: MATERIAL.ALUMINIUM })
+      const plastic = makeOperator({ orgId: 2, material: MATERIAL.PLASTIC })
+      const exporter = makeOperator({
+        orgId: 3,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
+      })
+      const { table } = await run({
+        organisations: [aluminium, plastic, exporter],
+        reports: [
+          monthlyReport(aluminium, 1, { prn: prn(100, 0, 10000) }),
+          monthlyReport(plastic, 1, { prn: prn(300, 0, 20000) }),
+          monthlyReport(exporter, 1, { prn: prn(50, 0, 5000) })
+        ]
+      })
+
+      expect(table.data.months['2026-01'].totals).toEqual({
+        [WASTE_PROCESSING_TYPE.REPROCESSOR]: expect.objectContaining({
+          revisedTonnageIssued: 400,
+          totalRevenue: 30000
+        }),
+        [WASTE_PROCESSING_TYPE.EXPORTER]: expect.objectContaining({
+          revisedTonnageIssued: 50,
+          totalRevenue: 5000
+        })
+      })
+      expect(
+        table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.REPROCESSOR]
+      ).not.toHaveProperty('averagePricePerTonne')
+    })
+
+    it('totals a month nothing was reported into at zero', async () => {
+      const { table } = await run({ organisations: [] })
+
+      expect(
+        table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.EXPORTER]
+      ).toEqual({
+        ...noMeasures(WASTE_PROCESSING_TYPE.EXPORTER),
+        tonnageSentOnTotal: 0
+      })
+    })
+  })
 })

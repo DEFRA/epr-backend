@@ -17,7 +17,8 @@ import {
   addMeasures,
   measuresOf,
   noMeasures,
-  withPublishedFigures
+  withPublishedFigures,
+  withSentOnTotal
 } from '#market-insights/domain/reprocessor-exporter-figures.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
@@ -31,19 +32,22 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#domain/organisations/registration.js').ReportableRegistration} ReportableRegistration
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').Measures} Measures
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedFigures} PublishedFigures
+ * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedTotal} PublishedTotal
  */
 
 /**
  * @typedef {Record<WasteProcessingTypeValue, PublishedFigures>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
+ * @typedef {Record<WasteProcessingTypeValue, PublishedTotal>} TotalsByAccreditationType
  */
 
 /**
  * One reporting month as published: the figures for every material and
- * accreditation type.
+ * accreditation type, and each table's grand total.
  *
  * @typedef {Object} PublishedMonth
  * @property {FiguresByMaterial} figures
+ * @property {TotalsByAccreditationType} totals
  */
 
 /**
@@ -114,6 +118,17 @@ const warnAboutUnmatchedReport = (logger, key) => {
 }
 
 /**
+ * @param {Map<string, Measures>} cells
+ * @param {Material} material
+ * @param {WasteProcessingTypeValue} accreditationType
+ * @param {YearMonth} month
+ * @returns {Measures}
+ */
+const measuresFor = (cells, material, accreditationType, month) =>
+  cells.get(cellKey({ material, accreditationType, month })) ??
+  noMeasures(accreditationType)
+
+/**
  * The publication prints every material and both accreditation types for
  * every month, so a combination nothing was reported into is still served, at
  * zero: a row vanishing when a material has no data is the error the work
@@ -127,9 +142,25 @@ const publishedFigures = (cells, month) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
     recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
       withPublishedFigures(
-        cells.get(cellKey({ material, accreditationType, month })) ??
-          noMeasures(accreditationType)
+        measuresFor(cells, material, accreditationType, month)
       )
+    )
+  )
+
+/**
+ * The grand total each published table ends in: every material of that
+ * accreditation type summed, for the month.
+ *
+ * @param {Map<string, Measures>} cells
+ * @param {YearMonth} month
+ * @returns {TotalsByAccreditationType}
+ */
+const publishedTotals = (cells, month) =>
+  recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
+    withSentOnTotal(
+      TONNAGE_MONITORING_MATERIALS.map((material) =>
+        measuresFor(cells, material, accreditationType, month)
+      ).reduce(addMeasures)
     )
   )
 
@@ -241,7 +272,8 @@ export const buildReprocessorExporterTable = async ({
     meta: { generatedAt: now.toISOString() },
     data: {
       months: recordOf(months, (month) => ({
-        figures: publishedFigures(cells, month)
+        figures: publishedFigures(cells, month),
+        totals: publishedTotals(cells, month)
       }))
     }
   }
