@@ -2,7 +2,7 @@ import { processingTypeFor } from '#waste-balances/domain/credited-tonnage.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { decemberCreditTotalFor } from '#waste-balances/application/december-credit-total.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
-import { accreditationDecemberKey } from '#december-loads-diagnostic/domain/december-contributing-rows.js'
+import { decemberKeyForYearOf } from '#common/helpers/dates/year-month.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
@@ -138,7 +138,7 @@ const scanAccreditation = async ({
       accreditationNumber: accreditation.accreditationNumber ?? '',
       processingType,
       decemberKey: /** @type {string} */ (
-        accreditationDecemberKey(accreditation)
+        decemberKeyForYearOf(accreditation.validFrom)
       ),
       summaryLogDecemberTonnage,
       ledgerDecemberBalance
