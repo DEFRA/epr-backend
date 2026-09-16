@@ -18,7 +18,9 @@ import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { processingTypeFor } from '#waste-balances/domain/credited-tonnage.js'
 import { availableForPool } from '#waste-balances/domain/pool-balances.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
@@ -223,6 +225,39 @@ const assertSufficientAvailableBalance = async ({
   }
 }
 
+/**
+ * @param {Object} params
+ * @param {Object} params.accreditation
+ * @param {boolean} params.isDecemberWaste
+ */
+const recordPrnCreatedMetric = async ({ accreditation, isDecemberWaste }) => {
+  await prnMetrics.recordCreated({
+    material: accreditation.material,
+    isDecemberWaste,
+    processingType: processingTypeFor(
+      /** @type {import('#waste-balances/domain/credited-tonnage.js').AccreditationContext} */ (
+        accreditation
+      )
+    )
+  })
+}
+
+/**
+ * @param {Object} params
+ * @param {string} params.organisationId
+ * @param {Object} params.companyDetails
+ * @param {string} params.companyDetails.name
+ * @param {string} [params.companyDetails.tradingName]
+ */
+const buildOrganisationSnapshot = ({
+  organisationId,
+  companyDetails: { name, tradingName }
+}) => ({
+  id: organisationId,
+  name,
+  ...(tradingName && { tradingName })
+})
+
 export const packagingRecyclingNotesCreate = {
   method: 'POST',
   path: packagingRecyclingNotesCreatePath,
@@ -289,13 +324,10 @@ export const packagingRecyclingNotesCreate = {
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
-      const organisation = {
-        id: organisationId,
-        name: org.companyDetails.name,
-        ...(org.companyDetails.tradingName && {
-          tradingName: org.companyDetails.tradingName
-        })
-      }
+      const organisation = buildOrganisationSnapshot({
+        organisationId,
+        companyDetails: org.companyDetails
+      })
 
       const prnData = buildPrnData({
         organisation,
@@ -307,6 +339,11 @@ export const packagingRecyclingNotesCreate = {
         now
       })
       const prn = await packagingRecyclingNotesRepository.create(prnData)
+
+      await recordPrnCreatedMetric({
+        accreditation,
+        isDecemberWaste: payload.isDecemberWaste
+      })
 
       logger.info({
         message: `PRN created: id=${prn.id}`,

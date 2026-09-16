@@ -281,6 +281,52 @@ describe('summaryLogMetrics', () => {
     })
   })
 
+  describe('recordDecemberWasteRows', () => {
+    it('records metric with count and processingType dimension', async () => {
+      await summaryLogMetrics.recordDecemberWasteRows(
+        { processingType: PROCESSING_TYPES.EXPORTER },
+        3
+      )
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        processingType: 'exporter'
+      })
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.decemberWasteRows',
+        3,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    it('records zero when no rows are December-attributable', async () => {
+      await summaryLogMetrics.recordDecemberWasteRows(
+        { processingType: PROCESSING_TYPES.EXPORTER },
+        0
+      )
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.decemberWasteRows',
+        0,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+    })
+
+    it('does not record metric when metrics disabled', async () => {
+      config.set('isMetricsEnabled', false)
+
+      await summaryLogMetrics.recordDecemberWasteRows(
+        { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+        3
+      )
+
+      expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(mockPutDimensions).not.toHaveBeenCalled()
+    })
+  })
+
   describe('recordValidationDuration', () => {
     it('records duration with processingType dimension', async () => {
       await summaryLogMetrics.recordValidationDuration(

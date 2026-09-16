@@ -4,6 +4,8 @@ import { writeSummaryLogRowStates } from '#waste-records/application/write-summa
 import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
+import { decemberRowCountFor } from '#waste-balances/application/december-credit-total.js'
+import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
 import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
@@ -189,11 +191,46 @@ const updateWasteBalances = async ({
 }
 
 /**
+ * How many of this submission's changed rows (added or adjusted) are
+ * December rows eligible for the waste balance, for observability metrics.
+ * `0` for registered-only submissions (`accreditation` is `null`).
+ *
+ * @param {ValidatedWasteRecord[]} changedRecords
+ * @param {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @returns {number}
+ */
+const decemberWasteRowCountFor = (
+  changedRecords,
+  accreditation,
+  overseasSites
+) => {
+  if (accreditation === null) {
+    return 0
+  }
+
+  const classifiedRows = changedRecords.map(({ record }) =>
+    classifyWasteRecord(
+      record,
+      record.data?.processingType,
+      accreditation,
+      overseasSites
+    )
+  )
+
+  return decemberRowCountFor(classifiedRows, accreditation)
+}
+
+/**
  * Counts how the submission's rows changed against the registration's latest
  * committed submission — the same comparison the check-page classification
  * runs — for observability metrics. Added rows count as created, adjusted rows
  * as updated; unchanged rows do not count. Reads the committed head before the
  * commit, so it reflects the previous submission.
+ *
+ * `decemberWasteRowCount` is scoped to the same added-or-adjusted rows: an
+ * unchanged December row carried over from a prior submission is not this
+ * submission's activity, so it must not inflate the count.
  *
  * @param {object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
@@ -202,7 +239,7 @@ const updateWasteBalances = async ({
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @returns {Promise<{ created: number, updated: number }>}
+ * @returns {Promise<{ created: number, updated: number, decemberWasteRowCount: number }>}
  */
 const countRecordChanges = async ({
   wasteRecords,
@@ -232,11 +269,31 @@ const countRecordChanges = async ({
     overseasSites
   })
 
-  const changes = [...recordChanges.values()]
+  let created = 0
+  let updated = 0
+  const changedRecords = []
+  for (const wasteRecord of wasteRecords) {
+    const change = recordChanges.get(
+      `${wasteRecord.record.type}:${wasteRecord.record.rowId}`
+    )
+    if (change === RECORD_CHANGE.ADDED) {
+      created += 1
+    } else if (change === RECORD_CHANGE.ADJUSTED) {
+      updated += 1
+    } else {
+      continue
+    }
+    changedRecords.push(wasteRecord)
+  }
+
   return {
-    created: changes.filter((change) => change === RECORD_CHANGE.ADDED).length,
-    updated: changes.filter((change) => change === RECORD_CHANGE.ADJUSTED)
-      .length
+    created,
+    updated,
+    decemberWasteRowCount: decemberWasteRowCountFor(
+      changedRecords,
+      accreditation,
+      overseasSites
+    )
   }
 }
 
@@ -348,7 +405,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - The optional accreditation ID
    * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
-   * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
+   * @returns {Promise<{created: number, updated: number, decemberWasteRowCount: number}>} Counts of created and updated waste records, and how many changed rows carry December-attributable tonnage
    */
   return async (summaryLog, user) => {
     // 1. Extract/parse the summary log

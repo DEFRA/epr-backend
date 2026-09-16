@@ -1,4 +1,5 @@
 import {
+  buildDimensions,
   incrementCounter,
   recordDuration,
   timed
@@ -38,31 +39,6 @@ import {
  */
 
 /**
- * Maps enum values to lowercase dimension values
- * @param {string|null|undefined} value
- * @returns {string|undefined}
- */
-const toDimension = (value) => value?.toLowerCase()
-
-/**
- * Builds CloudWatch dimensions object, converting values to lowercase
- * and omitting undefined values
- * @param {Record<string, string|undefined>} dimensions
- * @returns {Record<string, string>}
- */
-const buildDimensions = (dimensions) => {
-  /** @type {Record<string, string>} */
-  const result = {}
-  for (const [key, value] of Object.entries(dimensions)) {
-    const dimensionValue = toDimension(value)
-    if (dimensionValue) {
-      result[key] = dimensionValue
-    }
-  }
-  return result
-}
-
-/**
  * Records a summary log status transition metric
  * @param {StatusTransitionDimensions} dimensions
  */
@@ -95,6 +71,20 @@ async function recordWasteRecordsUpdated({ processingType }, count) {
   await incrementCounter(
     'summaryLog.wasteRecords',
     buildDimensions({ operation: 'updated', processingType }),
+    count
+  )
+}
+
+/**
+ * Records how many of this submission's changed rows carry
+ * December-attributable tonnage
+ * @param {ProcessingTypeDimensions} dimensions
+ * @param {number} count - The number of December-attributable changed rows
+ */
+async function recordDecemberWasteRows({ processingType }, count) {
+  await incrementCounter(
+    'summaryLog.decemberWasteRows',
+    buildDimensions({ processingType }),
     count
   )
 }
@@ -161,6 +151,7 @@ async function recordRowOutcome({ outcome, processingType }, count) {
  * @property {(dimensions: StatusTransitionDimensions) => Promise<void>} recordStatusTransition - Records a status transition metric
  * @property {(dimensions: ProcessingTypeDimensions, count: number) => Promise<void>} recordWasteRecordsCreated - Records count of waste records created
  * @property {(dimensions: ProcessingTypeDimensions, count: number) => Promise<void>} recordWasteRecordsUpdated - Records count of waste records updated
+ * @property {(dimensions: ProcessingTypeDimensions, count: number) => Promise<void>} recordDecemberWasteRows - Records count of December-attributable changed rows
  * @property {(dimensions: ProcessingTypeDimensions, durationMs: number) => Promise<void>} recordValidationDuration - Records validation duration metric
  * @property {<T>(dimensions: ProcessingTypeDimensions, fn: () => Promise<T> | T) => Promise<T>} timedSubmission - Executes function and records submission duration
  * @property {(dimensions: ValidationIssueDimensions, count: number) => Promise<void>} recordValidationIssues - Records validation issues metric
@@ -172,6 +163,7 @@ export const summaryLogMetrics = {
   recordStatusTransition,
   recordWasteRecordsCreated,
   recordWasteRecordsUpdated,
+  recordDecemberWasteRows,
   recordValidationDuration,
   timedSubmission,
   recordValidationIssues,

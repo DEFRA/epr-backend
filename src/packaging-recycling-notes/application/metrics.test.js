@@ -2,6 +2,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { StorageResolution, Unit } from 'aws-embedded-metrics'
 import { config } from '#root/config.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 /** @import { MetricsLogger } from 'aws-embedded-metrics' */
 
@@ -43,15 +44,19 @@ describe('prnMetrics', () => {
   })
 
   describe('recordStatusTransition', () => {
-    it('records metric with fromStatus and toStatus dimensions', async () => {
+    it('records metric with fromStatus, toStatus and isDecemberWaste dimensions', async () => {
       await prnMetrics.recordStatusTransition({
         fromStatus: PRN_STATUS.DRAFT,
-        toStatus: PRN_STATUS.AWAITING_AUTHORISATION
+        toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        isDecemberWaste: false,
+        obligationYearCarriedForward: false
       })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         fromStatus: 'draft',
-        toStatus: 'awaiting_authorisation'
+        toStatus: 'awaiting_authorisation',
+        isDecemberWaste: 'false',
+        obligationYearCarriedForward: 'false'
       })
       expect(mockPutMetric).toHaveBeenCalledWith(
         'prn.statusTransition',
@@ -67,40 +72,64 @@ describe('prnMetrics', () => {
         fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         toStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         material: 'paper',
-        isExport: false
+        isDecemberWaste: true,
+        obligationYearCarriedForward: false
       })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         fromStatus: 'awaiting_authorisation',
         toStatus: 'awaiting_acceptance',
         material: 'paper',
-        isExport: 'false'
-      })
-    })
-
-    it('records metric with export flag as string dimension', async () => {
-      await prnMetrics.recordStatusTransition({
-        fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        toStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        isExport: true
-      })
-
-      expect(mockPutDimensions).toHaveBeenCalledWith({
-        fromStatus: 'awaiting_authorisation',
-        toStatus: 'awaiting_acceptance',
-        isExport: 'true'
+        isDecemberWaste: 'true',
+        obligationYearCarriedForward: 'false'
       })
     })
 
     it('omits optional dimensions when not provided', async () => {
       await prnMetrics.recordStatusTransition({
         fromStatus: PRN_STATUS.DRAFT,
-        toStatus: PRN_STATUS.AWAITING_AUTHORISATION
+        toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        isDecemberWaste: false,
+        obligationYearCarriedForward: false
       })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         fromStatus: 'draft',
-        toStatus: 'awaiting_authorisation'
+        toStatus: 'awaiting_authorisation',
+        isDecemberWaste: 'false',
+        obligationYearCarriedForward: 'false'
+      })
+    })
+
+    it('records isDecemberWaste as true when the PRN is December waste', async () => {
+      await prnMetrics.recordStatusTransition({
+        fromStatus: PRN_STATUS.DRAFT,
+        toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        isDecemberWaste: true,
+        obligationYearCarriedForward: false
+      })
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        fromStatus: 'draft',
+        toStatus: 'awaiting_authorisation',
+        isDecemberWaste: 'true',
+        obligationYearCarriedForward: 'false'
+      })
+    })
+
+    it('records obligationYearCarriedForward as true when the PRN obligationYear is the following obligation year', async () => {
+      await prnMetrics.recordStatusTransition({
+        fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        toStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        isDecemberWaste: true,
+        obligationYearCarriedForward: true
+      })
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        fromStatus: 'awaiting_authorisation',
+        toStatus: 'awaiting_acceptance',
+        isDecemberWaste: 'true',
+        obligationYearCarriedForward: 'true'
       })
     })
 
@@ -128,12 +157,16 @@ describe('prnMetrics', () => {
         vi.clearAllMocks()
         await prnMetrics.recordStatusTransition({
           fromStatus: from,
-          toStatus: to
+          toStatus: to,
+          isDecemberWaste: false,
+          obligationYearCarriedForward: false
         })
 
         expect(mockPutDimensions).toHaveBeenCalledWith({
           fromStatus: from,
-          toStatus: to
+          toStatus: to,
+          isDecemberWaste: 'false',
+          obligationYearCarriedForward: 'false'
         })
         expect(mockPutMetric).toHaveBeenCalledWith(
           'prn.statusTransition',
@@ -149,7 +182,9 @@ describe('prnMetrics', () => {
 
       await prnMetrics.recordStatusTransition({
         fromStatus: PRN_STATUS.DRAFT,
-        toStatus: PRN_STATUS.AWAITING_AUTHORISATION
+        toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        isDecemberWaste: false,
+        obligationYearCarriedForward: false
       })
 
       expect(mockPutMetric).not.toHaveBeenCalled()
@@ -163,13 +198,65 @@ describe('prnMetrics', () => {
 
       await prnMetrics.recordStatusTransition({
         fromStatus: PRN_STATUS.DRAFT,
-        toStatus: PRN_STATUS.AWAITING_AUTHORISATION
+        toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        isDecemberWaste: false,
+        obligationYearCarriedForward: false
       })
 
       expect(mockLoggerError).toHaveBeenCalledWith({
         message: 'flush failed',
         err: mockError
       })
+    })
+  })
+
+  describe('recordCreated', () => {
+    it('records metric with isDecemberWaste and processingType dimensions', async () => {
+      await prnMetrics.recordCreated({
+        material: 'paper',
+        isDecemberWaste: true,
+        processingType: PROCESSING_TYPES.EXPORTER
+      })
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        material: 'paper',
+        isDecemberWaste: 'true',
+        processingType: 'exporter'
+      })
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'prn.created',
+        1,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    it('records isDecemberWaste as false for a non-December PRN', async () => {
+      await prnMetrics.recordCreated({
+        material: 'plastic',
+        isDecemberWaste: false,
+        processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
+      })
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        material: 'plastic',
+        isDecemberWaste: 'false',
+        processingType: 'reprocessor_output'
+      })
+    })
+
+    it('does not record metric when metrics disabled', async () => {
+      config.set('isMetricsEnabled', false)
+
+      await prnMetrics.recordCreated({
+        isDecemberWaste: false,
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+      })
+
+      expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(mockPutDimensions).not.toHaveBeenCalled()
+      expect(mockFlush).not.toHaveBeenCalled()
     })
   })
 })
