@@ -55,6 +55,9 @@ const figuresByMaterialSchema = recordOf(
  * type carrying the measures its own table prints. Each month says how many
  * monthly reports it was owed and how many have been submitted, and the
  * period carries the sum, so a page can say how complete the figures are.
+ * That count covers the registrations these figures cover, those holding a
+ * live accreditation, which is a narrower population than the waste balance
+ * counts over.
  */
 export const reprocessorExporterFiguresResponseSchema = Joi.object({
   meta: metaSchema,

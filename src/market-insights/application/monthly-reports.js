@@ -52,7 +52,6 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {Object} OwedReportCandidate
  * @property {Organisation} org
  * @property {Registration} registration
- * @property {Accreditation} accreditation
  */
 
 /**
@@ -180,7 +179,7 @@ export function* owedMonthlyReports({
     if (
       accreditation === undefined ||
       !hasBeenGranted(accreditation) ||
-      !covers({ org, registration, accreditation })
+      !covers({ org, registration })
     ) {
       continue
     }
