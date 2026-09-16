@@ -222,6 +222,15 @@ const reported = (table) =>
     )
   )
 
+/**
+ * The PRN tonnage the January reprocessor table totals to.
+ *
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
+ */
+const januaryIssued = (table) =>
+  table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.REPROCESSOR]
+    .revisedTonnageIssued
+
 describe('buildReprocessorExporterTable', () => {
   it('serves every month asked for, with every material and both accreditation types at zero when nothing was submitted', async () => {
     const { table } = await run({ organisations: [] })
@@ -613,6 +622,36 @@ describe('buildReprocessorExporterTable', () => {
       expect(reported(table)).toEqual([
         expect.objectContaining({ month: '2026-01', revisedTonnageIssued: 10 })
       ])
+    })
+
+    it('serves four nations that add back up to the UK figures', async () => {
+      const operators = Object.values(REGULATOR).map((regulator, index) =>
+        makeOperator({
+          orgId: index + 1,
+          regulator,
+          accreditationRegulator: REGULATOR.EA
+        })
+      )
+      const seeded = {
+        organisations: operators,
+        reports: operators.map((operator, index) =>
+          monthlyReport(operator, 1, {
+            prn: prn((index + 1) * 10, 0, (index + 1) * 1000)
+          })
+        )
+      }
+
+      const { table: uk } = await run(seeded)
+      const nations = await Promise.all(
+        Object.values(REGULATOR).map(async (regulator) =>
+          run({ ...seeded, regulator })
+        )
+      )
+
+      expect(
+        nations.reduce((total, { table }) => total + januaryIssued(table), 0)
+      ).toBe(januaryIssued(uk))
+      expect(januaryIssued(uk)).toBe(100)
     })
 
     it('answers the full grid at zero when that regulator has no activity', async () => {

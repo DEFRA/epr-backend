@@ -1,6 +1,7 @@
+import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { REGULATOR } from '#domain/organisations/model.js'
+import { REGULATOR_FOR_NATION } from '#domain/organisations/model.js'
 import { buildReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js'
 import {
   monthlyPeriodParamsSchema,
@@ -14,19 +15,47 @@ export const marketInsightsReprocessorExporterFiguresPath =
   '/v1/market-insights/{year}/{cadence}/{period}/reprocessor-exporter-figures'
 
 /**
- * The same figures narrowed to the registrations submitted to the Environment
- * Agency. England is the one nation published on its own; the other three
- * would identify operators, so no other narrowing exists.
+ * The same figures narrowed to one nation. A nation is served from the
+ * regulator its operators registered with, which is the field the analysts
+ * filter the published England tab on.
  */
-export const marketInsightsEnglandReprocessorExporterFiguresPath = `${marketInsightsReprocessorExporterFiguresPath}/england`
+export const marketInsightsNationReprocessorExporterFiguresPath = `${marketInsightsReprocessorExporterFiguresPath}/{nation}`
+
+/**
+ * The regulator each nation's path segment stands for. Every path under market
+ * insights hyphenates, so the segment is the hyphenated spelling of the nation.
+ */
+const REGULATOR_FOR_NATION_SEGMENT = Object.freeze(
+  Object.fromEntries(
+    Object.entries(REGULATOR_FOR_NATION).map(([nation, regulator]) => [
+      nation.replaceAll('_', '-'),
+      regulator
+    ])
+  )
+)
+
+/**
+ * The regulator a nation's figures are drawn from. The UK figures name no
+ * nation, and are drawn from every regulator.
+ *
+ * @param {string} [nation] - the nation's path segment
+ */
+const regulatorForNation = (nation) =>
+  nation === undefined ? undefined : REGULATOR_FOR_NATION_SEGMENT[nation]
+
+const nationPeriodParamsSchema = monthlyPeriodParamsSchema.keys({
+  nation: Joi.string()
+    .valid(...Object.keys(REGULATOR_FOR_NATION_SEGMENT))
+    .required()
+})
 
 /**
  * @param {Object} route
  * @param {string} route.path
  * @param {string} route.action - the logging event action of the route
- * @param {import('#domain/organisations/model.js').RegulatorValue} [route.regulator]
+ * @param {import('joi').ObjectSchema} route.params
  */
-const reprocessorExporterFiguresRoute = ({ path, action, regulator }) => ({
+const reprocessorExporterFiguresRoute = ({ path, action, params }) => ({
   method: 'GET',
   path,
   options: {
@@ -35,7 +64,7 @@ const reprocessorExporterFiguresRoute = ({ path, action, regulator }) => ({
     },
     tags: ['api', 'market-insights'],
     validate: {
-      params: monthlyPeriodParamsSchema
+      params
     },
     response: {
       schema: reprocessorExporterFiguresResponseSchema
@@ -43,7 +72,7 @@ const reprocessorExporterFiguresRoute = ({ path, action, regulator }) => ({
   },
   /**
    * @param {HapiRequest & {
-   *   params: { year: number, cadence: 'monthly', period: number },
+   *   params: { year: number, cadence: 'monthly', period: number, nation?: string },
    *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
@@ -61,7 +90,7 @@ const reprocessorExporterFiguresRoute = ({ path, action, regulator }) => ({
       logger,
       year: params.year,
       months: publishedMonthsThrough(params, now, action),
-      regulator,
+      regulator: regulatorForNation(params.nation),
       now
     })
 
@@ -72,12 +101,13 @@ const reprocessorExporterFiguresRoute = ({ path, action, regulator }) => ({
 export const marketInsightsReprocessorExporterFiguresGet =
   reprocessorExporterFiguresRoute({
     path: marketInsightsReprocessorExporterFiguresPath,
-    action: 'market_insights_reprocessor_exporter_figures'
+    action: 'market_insights_reprocessor_exporter_figures',
+    params: monthlyPeriodParamsSchema
   })
 
-export const marketInsightsEnglandReprocessorExporterFiguresGet =
+export const marketInsightsNationReprocessorExporterFiguresGet =
   reprocessorExporterFiguresRoute({
-    path: marketInsightsEnglandReprocessorExporterFiguresPath,
-    action: 'market_insights_england_reprocessor_exporter_figures',
-    regulator: REGULATOR.EA
+    path: marketInsightsNationReprocessorExporterFiguresPath,
+    action: 'market_insights_nation_reprocessor_exporter_figures',
+    params: nationPeriodParamsSchema
   })

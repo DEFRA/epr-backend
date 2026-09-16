@@ -11,9 +11,9 @@ import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { REGULATOR } from '#domain/organisations/model.js'
+import { NATION, REGULATOR } from '#domain/organisations/model.js'
 import {
-  marketInsightsEnglandReprocessorExporterFiguresPath,
+  marketInsightsNationReprocessorExporterFiguresPath,
   marketInsightsReprocessorExporterFiguresPath
 } from './reprocessor-exporter-figures-get.js'
 
@@ -185,7 +185,13 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath} (integration)`, ()
   })
 })
 
-describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath} (integration)`, () => {
+const englandFiguresPath =
+  marketInsightsNationReprocessorExporterFiguresPath.replace(
+    '{nation}',
+    NATION.ENGLAND
+  )
+
+describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath} (integration)`, () => {
   setupAuthContext()
 
   beforeEach(
@@ -218,15 +224,13 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath} (integratio
     })
 
     const [england, uk] = await Promise.all(
-      [
-        marketInsightsEnglandReprocessorExporterFiguresPath,
-        marketInsightsReprocessorExporterFiguresPath
-      ].map((path) =>
-        server.inject({
-          method: 'GET',
-          url: januaryToFebruary2026For(path),
-          headers: { Authorization: `Bearer ${regulatorToken}` }
-        })
+      [englandFiguresPath, marketInsightsReprocessorExporterFiguresPath].map(
+        (path) =>
+          server.inject({
+            method: 'GET',
+            url: januaryToFebruary2026For(path),
+            headers: { Authorization: `Bearer ${regulatorToken}` }
+          })
       )
     )
 

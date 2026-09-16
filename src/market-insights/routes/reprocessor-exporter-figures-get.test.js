@@ -26,7 +26,7 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
 import {
-  marketInsightsEnglandReprocessorExporterFiguresPath,
+  marketInsightsNationReprocessorExporterFiguresPath,
   marketInsightsReprocessorExporterFiguresPath
 } from './reprocessor-exporter-figures-get.js'
 
@@ -49,7 +49,19 @@ const pathFor =
       .replace('{period}', String(period))
 
 const ukPath = pathFor(marketInsightsReprocessorExporterFiguresPath)
-const englandPath = pathFor(marketInsightsEnglandReprocessorExporterFiguresPath)
+
+/**
+ * @param {string} nation
+ */
+const nationPath = (nation) =>
+  pathFor(
+    marketInsightsNationReprocessorExporterFiguresPath.replace(
+      '{nation}',
+      nation
+    )
+  )
+
+const englandPath = nationPath('england')
 
 const injectTable = (server, credentials, url = ukPath(2026, 'monthly', 1)) =>
   server.inject({ method: 'GET', url, ...credentials })
@@ -213,7 +225,24 @@ const januaryPrns = (operator, issuedTonnage) => ({
   }
 })
 
-describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath}`, () => {
+/**
+ * The four nations the route serves, each spelled as its path segment. The
+ * spelling is the contract a client depends on, so it is written out here
+ * rather than derived the way the route derives it.
+ */
+const NATIONS = [
+  { segment: 'england', regulator: REGULATOR.EA, issuedTonnage: 100 },
+  { segment: 'wales', regulator: REGULATOR.NRW, issuedTonnage: 50 },
+  { segment: 'scotland', regulator: REGULATOR.SEPA, issuedTonnage: 20 },
+  { segment: 'northern-ireland', regulator: REGULATOR.NIEA, issuedTonnage: 10 }
+]
+
+const UK_ISSUED_TONNAGE = NATIONS.reduce(
+  (total, { issuedTonnage }) => total + issuedTonnage,
+  0
+)
+
+describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath}`, () => {
   setupAuthContext()
 
   /** @type {import('#test/create-test-server.js').TestServer} */
@@ -222,16 +251,16 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath}`, () => {
   beforeAll(async () => {
     const organisationsRepository = createInMemoryOrganisationsRepository()()
     const reportsRepository = createInMemoryReportsRepository()()
-    const english = await insertAccreditedOperator(
-      organisationsRepository,
-      REGULATOR.EA
-    )
-    const welsh = await insertAccreditedOperator(
-      organisationsRepository,
-      REGULATOR.NRW
-    )
-    await buildSubmittedReport(reportsRepository, januaryPrns(english, 100))
-    await buildSubmittedReport(reportsRepository, januaryPrns(welsh, 50))
+    for (const { regulator, issuedTonnage } of NATIONS) {
+      const operator = await insertAccreditedOperator(
+        organisationsRepository,
+        regulator
+      )
+      await buildSubmittedReport(
+        reportsRepository,
+        januaryPrns(operator, issuedTonnage)
+      )
+    }
     server = await createTestServer({
       repositories: { organisationsRepository, reportsRepository }
     })
@@ -281,8 +310,8 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath}`, () => {
     const { totals } = payload.data.months['2026-01']
     expect(totals[WASTE_PROCESSING_TYPE.REPROCESSOR]).toEqual(
       expect.objectContaining({
-        revisedTonnageIssued: 100,
-        totalRevenue: 10000
+        revisedTonnageIssued: NATIONS[0].issuedTonnage,
+        totalRevenue: NATIONS[0].issuedTonnage * 100
       })
     )
     expect(totals[WASTE_PROCESSING_TYPE.REPROCESSOR]).not.toHaveProperty(
@@ -290,38 +319,65 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath}`, () => {
     )
   })
 
-  it('serves the registrations submitted to the Environment Agency and leaves the other regulators out', async () => {
-    const [england, uk] = await Promise.all([
-      injectTable(server, asRegulator(), january2026),
+  it('rejects a nation outside the four the domain knows', async () => {
+    const response = await injectTable(
+      server,
+      asRegulator(),
+      nationPath('cornwall')(2026, 'monthly', 1)
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  it.each(NATIONS)(
+    'serves $segment the registrations submitted to its own regulator',
+    async ({ segment, issuedTonnage }) => {
+      const response = await injectTable(
+        server,
+        asRegulator(),
+        nationPath(segment)(2026, 'monthly', 1)
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      /** @type {ReprocessorExporterTable} */
+      const payload = JSON.parse(response.payload)
+      const january = payload.data.months['2026-01']
+      expect(Object.keys(january.figures)).toEqual([
+        ...TONNAGE_MONITORING_MATERIALS
+      ])
+      expect(
+        january.figures[MATERIAL.PLASTIC][WASTE_PROCESSING_TYPE.REPROCESSOR]
+      ).toEqual(
+        expect.objectContaining({
+          revisedTonnageIssued: issuedTonnage,
+          totalRevenue: issuedTonnage * 100
+        })
+      )
+    }
+  )
+
+  it('serves four nations that add back up to the UK figures', async () => {
+    const responses = await Promise.all([
+      ...NATIONS.map(({ segment }) =>
+        injectTable(
+          server,
+          asRegulator(),
+          nationPath(segment)(2026, 'monthly', 1)
+        )
+      ),
       injectTable(server, asRegulator(), ukPath(2026, 'monthly', 1))
     ])
 
-    expect(england.statusCode).toBe(StatusCodes.OK)
-    /** @type {ReprocessorExporterTable} */
-    const englandPayload = JSON.parse(england.payload)
-    /** @type {ReprocessorExporterTable} */
-    const ukPayload = JSON.parse(uk.payload)
-    const january = englandPayload.data.months['2026-01']
-    expect(Object.keys(january.figures)).toEqual([
-      ...TONNAGE_MONITORING_MATERIALS
-    ])
-    expect(
-      january.figures[MATERIAL.PLASTIC][WASTE_PROCESSING_TYPE.REPROCESSOR]
-    ).toEqual(
-      expect.objectContaining({
-        revisedTonnageIssued: 100,
-        totalRevenue: 10000
-      })
-    )
-    expect(
-      ukPayload.data.months['2026-01'].figures[MATERIAL.PLASTIC][
+    const issued = responses.map((response) => {
+      /** @type {ReprocessorExporterTable} */
+      const payload = JSON.parse(response.payload)
+      return payload.data.months['2026-01'].totals[
         WASTE_PROCESSING_TYPE.REPROCESSOR
-      ]
-    ).toEqual(
-      expect.objectContaining({
-        revisedTonnageIssued: 150,
-        totalRevenue: 15000
-      })
-    )
+      ].revisedTonnageIssued
+    })
+    const uk = issued.pop()
+
+    expect(issued.reduce((total, nation) => total + nation, 0)).toBe(uk)
+    expect(uk).toBe(UK_ISSUED_TONNAGE)
   })
 })
