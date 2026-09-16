@@ -17,7 +17,10 @@ import {
   statusHeldAt
 } from '#common/helpers/dates/accreditation.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
-import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  ACTIVE_ACCREDITATION_STATUSES
+} from '#domain/organisations/model.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
@@ -40,6 +43,20 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @property {Record<YearMonth, ReportCount>} byMonth - keyed by month served
  * @property {ReportCount} total - summed across every month served
  */
+
+/**
+ * Whether the accreditation has ever been granted, read from its history
+ * rather than from the status it holds now. Only a granted accreditation owes
+ * monthly reports, and the schema makes the validity dates optional rather
+ * than absent for an accreditation still created or since rejected, so one
+ * that carries dates must not be walked as though it were live. Reading the
+ * history keeps an approval since reverted to draft, and a cancellation, on
+ * the months they held, which `owedPeriods` then bounds.
+ *
+ * @param {Accreditation} accreditation
+ */
+const hasBeenGranted = ({ statusHistory }) =>
+  statusHistory.some(({ status }) => ACTIVE_ACCREDITATION_STATUSES.has(status))
 
 /**
  * Every day of a reporting period, as the bare dates a load can carry.
@@ -139,7 +156,7 @@ export function* owedMonthlyReports({
     organisations
   )) {
     const [accreditation] = accreditationsForRegistration(registration, org)
-    if (accreditation === undefined) {
+    if (accreditation === undefined || !hasBeenGranted(accreditation)) {
       continue
     }
     const owed = owedPeriods(served, years, accreditation)
