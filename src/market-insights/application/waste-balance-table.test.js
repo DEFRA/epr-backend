@@ -351,7 +351,6 @@ const monthlyReport = ({ ledgerId }, period) => ({
  *   reports?: MonthlyReportRef[],
  *   unsubmittedReports?: MonthlyReportRef[],
  *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
- *   year?: number,
  *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
  *   now?: Date
  * }} options
@@ -362,7 +361,6 @@ const run = async ({
   reports = [],
   unsubmittedReports = [],
   overseasSites = [],
-  year = 2026,
   months = JANUARY_TO_JUNE_2026,
   now = NOW
 }) => {
@@ -373,7 +371,6 @@ const run = async ({
   for (const report of unsubmittedReports) {
     await buildUnsubmittedReport(seededReports, report)
   }
-  /** The table reads one year, never the whole collection. */
   const reportsRepository = {
     ...seededReports,
     findAllPeriodicReports: () => {
@@ -416,7 +413,7 @@ const run = async ({
       createInMemoryOverseasSitesRepository(overseasSites)(),
     reportsRepository,
     logger: partialMock(logger),
-    year,
+    year: 2026,
     months,
     now
   })
