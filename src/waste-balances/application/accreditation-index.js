@@ -25,8 +25,6 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
  * @property {Set<string>} testOrgAccreditationIds
  */
 
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
-
 /**
  * Index every non-test organisation's accreditations by id, carrying the linked
  * registration and owning organisation. No status filtering: suspended and
@@ -44,7 +42,7 @@ export const indexAccreditations = (organisations) => {
   /** @type {Set<string>} */
   const testOrgAccreditationIds = new Set()
   for (const organisation of organisations) {
-    if (TEST_ORGANISATIONS.has(organisation.orgId)) {
+    if (TEST_ORGANISATION_IDS.has(organisation.orgId)) {
       for (const accreditation of organisation.accreditations) {
         testOrgAccreditationIds.add(accreditation.id)
       }

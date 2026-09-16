@@ -19,4 +19,4 @@ export function parseTestOrganisationIds() {
   return parsed.map(Number).filter((n) => Number.isFinite(n) && n > 0)
 }
 
-export const TEST_ORGANISATION_IDS = parseTestOrganisationIds()
+export const TEST_ORGANISATION_IDS = new Set(parseTestOrganisationIds())

@@ -9,8 +9,6 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
-
 /** @type {Set<RegistrationStatus>} */
 const REPORTABLE_STATUSES = new Set([
   REGISTRATION_STATUS.APPROVED,
@@ -25,7 +23,7 @@ const REPORTABLE_STATUSES = new Set([
  */
 export function getReportableRegistrations(orgs) {
   return orgs
-    .filter((org) => !TEST_ORGANISATIONS.has(org.orgId))
+    .filter((org) => !TEST_ORGANISATION_IDS.has(org.orgId))
     .flatMap((org) =>
       org.registrations
         .filter((registration) => REPORTABLE_STATUSES.has(registration.status))

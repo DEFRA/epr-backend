@@ -19,7 +19,7 @@ import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
-import { toYearMonth } from '#common/helpers/dates/year-month.js'
+import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
 
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
@@ -364,12 +364,19 @@ const run = async ({
   months = JANUARY_TO_JUNE_2026,
   now = NOW
 }) => {
-  const reportsRepository = createInMemoryReportsRepository()()
+  const seededReports = createInMemoryReportsRepository()()
   for (const report of reports) {
-    await buildSubmittedReport(reportsRepository, report)
+    await buildSubmittedReport(seededReports, report)
   }
   for (const report of unsubmittedReports) {
-    await buildUnsubmittedReport(reportsRepository, report)
+    await buildUnsubmittedReport(seededReports, report)
+  }
+  /** @type {import('#reports/repository/port.js').ReportsRepository} */
+  const reportsRepository = {
+    ...seededReports,
+    findAllPeriodicReports: async () => {
+      throw new Error('waste balance table read every periodic report')
+    }
   }
 
   const summaryLogRowStatesRepository =
@@ -407,6 +414,7 @@ const run = async ({
       createInMemoryOverseasSitesRepository(overseasSites)(),
     reportsRepository,
     logger: partialMock(logger),
+    year: yearOf(months[0]),
     months,
     now
   })

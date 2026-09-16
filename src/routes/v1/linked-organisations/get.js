@@ -4,8 +4,6 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { linkedOrganisationsResponseSchema } from './response.schema.js'
 
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
-
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 export const linkedOrganisationsGetAllPath = '/v1/linked-organisations'
@@ -40,7 +38,7 @@ export const linkedOrganisationsGetAll = {
     const organisations =
       await request.organisationsRepository.findAllLinked(filter)
     const filtered = organisations.filter(
-      (org) => !TEST_ORGANISATIONS.has(org.orgId)
+      (org) => !TEST_ORGANISATION_IDS.has(org.orgId)
     )
 
     return h.response(filtered).code(StatusCodes.OK)

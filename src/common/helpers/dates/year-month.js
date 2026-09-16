@@ -75,6 +75,14 @@ const DECEMBER = '12'
 const YEAR_LENGTH = 4
 
 /**
+ * The calendar year a reporting month falls in.
+ *
+ * @param {YearMonth} yearMonth
+ * @returns {number}
+ */
+export const yearOf = (yearMonth) => Number(yearMonth.slice(0, YEAR_LENGTH))
+
+/**
  * The `YYYY-12` month key of the year an ISO date string falls in: the December
  * a calendar-year window (such as an accreditation year) accrues its waste
  * against. Null when the value is not a string long enough to carry a year, so a

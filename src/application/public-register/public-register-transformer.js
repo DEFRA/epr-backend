@@ -41,7 +41,6 @@ const ACCREDITATION_INCLUDED_STATUSES = new Set([
   ACCREDITATION_STATUS.CANCELLED
 ])
 
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
 function buildReportComplianceFields(periods, registrationReportSubmissions) {
@@ -132,7 +131,7 @@ function isAccreditationInPublishableState(item) {
 }
 
 function isTestOrg(org) {
-  return TEST_ORGANISATIONS.has(org.orgId)
+  return TEST_ORGANISATION_IDS.has(org.orgId)
 }
 
 /**

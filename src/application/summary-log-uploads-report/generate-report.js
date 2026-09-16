@@ -14,7 +14,6 @@ import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 const BATCH_SIZE = Number(config.get('summaryLogReport.batchSize'))
 
 /**
@@ -61,7 +60,7 @@ function getLinkedAccreditation(registration, accreditations) {
 }
 
 function isTestOrg(org) {
-  return TEST_ORGANISATIONS.has(org.orgId)
+  return TEST_ORGANISATION_IDS.has(org.orgId)
 }
 
 /**

@@ -14,7 +14,7 @@ export const packagingRecyclingNotesRepositoryPlugin = {
     const db = options?.db ?? server.db
 
     const { excludeOrganisationIds } = await createPrnVisibilityFilter(db, {
-      testOrganisationIds: TEST_ORGANISATION_IDS
+      testOrganisationIds: [...TEST_ORGANISATION_IDS]
     })
 
     const createRepository = await createPackagingRecyclingNotesRepository(

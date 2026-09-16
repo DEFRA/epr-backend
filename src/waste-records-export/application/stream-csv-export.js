@@ -15,8 +15,6 @@ import {
 import { buildOverseasSitesContext } from '../domain/overseas-sites-context.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
-
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
@@ -468,7 +466,9 @@ async function resolveOrgs(organisationsRepository, organisationId) {
   }
 
   const orgs = await organisationsRepository.findAll()
-  return orgs.filter((org) => !TEST_ORGANISATIONS.has(org.orgId)).sort(sortById)
+  return orgs
+    .filter((org) => !TEST_ORGANISATION_IDS.has(org.orgId))
+    .sort(sortById)
 }
 
 /**

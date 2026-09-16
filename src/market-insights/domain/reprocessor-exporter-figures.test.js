@@ -8,23 +8,9 @@ import {
   withPublishedFigures
 } from './reprocessor-exporter-figures.js'
 
-/**
- * @param {Partial<import('#reports/repository/port.js').ReportSummary>} overrides
- * @returns {import('#reports/repository/port.js').ReportSummary}
- */
-const submittedReport = (overrides) => ({
-  id: 'report-1',
-  status: 'submitted',
-  submissionNumber: 1,
-  submittedAt: '2026-02-03T10:00:00.000Z',
-  submittedBy: null,
-  resubmissionRequired: null,
-  ...overrides
-})
-
 describe('measuresOf', () => {
   it('reads the reprocessor measures a report carries, with revised tonnage as issued less self-issued', () => {
-    const report = submittedReport({
+    const report = {
       recyclingActivity: {
         totalTonnageReceived: 100.5,
         tonnageRecycled: 80.25,
@@ -41,7 +27,7 @@ describe('measuresOf', () => {
         totalRevenue: 40000,
         averagePricePerTonne: 533.33
       }
-    })
+    }
 
     expect(measuresOf(report, WASTE_PROCESSING_TYPE.REPROCESSOR)).toEqual({
       tonnageReceived: 100.5,
@@ -56,7 +42,7 @@ describe('measuresOf', () => {
   })
 
   it('reads the exporter measures a report carries', () => {
-    const report = submittedReport({
+    const report = {
       recyclingActivity: {
         totalTonnageReceived: 200,
         tonnageRecycled: null,
@@ -80,7 +66,7 @@ describe('measuresOf', () => {
         totalRevenue: 30000,
         averagePricePerTonne: 200
       }
-    })
+    }
 
     expect(measuresOf(report, WASTE_PROCESSING_TYPE.EXPORTER)).toEqual({
       tonnageReceived: 200,
@@ -98,19 +84,29 @@ describe('measuresOf', () => {
   })
 
   it('reads zero for every measure a report has not filled in', () => {
-    expect(
-      measuresOf(submittedReport({}), WASTE_PROCESSING_TYPE.EXPORTER)
-    ).toEqual(noMeasures(WASTE_PROCESSING_TYPE.EXPORTER))
+    expect(measuresOf({}, WASTE_PROCESSING_TYPE.EXPORTER)).toEqual({
+      tonnageReceived: 0,
+      tonnageSentOnToReprocessor: 0,
+      tonnageSentOnToExporter: 0,
+      tonnageSentOnToOtherFacilities: 0,
+      revisedTonnageIssued: 0,
+      totalRevenue: 0,
+      tonnageExported: 0,
+      tonnageReceivedButNotExported: 0,
+      tonnageStopped: 0,
+      tonnageRefused: 0,
+      tonnageRepatriated: 0
+    })
     expect(
       measuresOf(
-        submittedReport({
+        {
           recyclingActivity: {
             totalTonnageReceived: 10,
             tonnageRecycled: null,
             tonnageNotRecycled: null
           },
           prn: { issuedTonnage: 10 }
-        }),
+        },
         WASTE_PROCESSING_TYPE.REPROCESSOR
       )
     ).toEqual({

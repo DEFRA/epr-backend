@@ -51,8 +51,6 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @property {{ months: Record<YearMonth, PublishedMonth> }} data
  */
 
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
-
 /**
  * @param {{ material: Material, accreditationType: WasteProcessingTypeValue, month: YearMonth }} cell
  */
@@ -176,7 +174,7 @@ export const buildReprocessorExporterTable = async ({
   )
   const testOrganisationIds = new Set(
     organisations
-      .filter((org) => TEST_ORGANISATIONS.has(org.orgId))
+      .filter((org) => TEST_ORGANISATION_IDS.has(org.orgId))
       .map((org) => org.id)
   )
   /**
