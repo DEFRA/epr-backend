@@ -628,7 +628,7 @@ describe('updatePrnStatus', () => {
         material: 'plastic',
         isExport: true,
         isDecemberWaste: true,
-        isAcceptedIntoNextObligationYear: true
+        obligationYearCarriedForward: true
       })
     })
   })
@@ -930,7 +930,7 @@ describe('updatePrnStatus', () => {
         material: 'plastic',
         isExport: true,
         isDecemberWaste: true,
-        isAcceptedIntoNextObligationYear: false
+        obligationYearCarriedForward: false
       })
     })
 
@@ -1441,7 +1441,7 @@ describe('updatePrnStatus', () => {
         material: 'plastic',
         isExport: false,
         isDecemberWaste: false,
-        isAcceptedIntoNextObligationYear: false
+        obligationYearCarriedForward: false
       })
     })
   })

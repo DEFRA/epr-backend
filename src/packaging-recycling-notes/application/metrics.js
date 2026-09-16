@@ -12,7 +12,7 @@ import { buildDimensions, incrementCounter } from '#common/helpers/metrics.js'
  * @property {string} [material] - The material type (e.g. 'paper', 'plastic')
  * @property {boolean} [isExport] - Whether this is a PERN (export) or PRN
  * @property {boolean} isDecemberWaste - The PRN's statutory December-waste disclosure (ADR-0049)
- * @property {boolean} isAcceptedIntoNextObligationYear - True when the PRN's obligationYear is the accreditation year plus one
+ * @property {boolean} obligationYearCarriedForward - True while the PRN's obligationYear is the accreditation year plus one
  */
 
 /**
@@ -32,7 +32,7 @@ async function recordStatusTransition({
   material,
   isExport,
   isDecemberWaste,
-  isAcceptedIntoNextObligationYear
+  obligationYearCarriedForward
 }) {
   await incrementCounter(
     'prn.statusTransition',
@@ -42,7 +42,7 @@ async function recordStatusTransition({
       material,
       isExport,
       isDecemberWaste,
-      isAcceptedIntoNextObligationYear
+      obligationYearCarriedForward
     })
   )
 }

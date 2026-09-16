@@ -49,14 +49,14 @@ describe('prnMetrics', () => {
         fromStatus: PRN_STATUS.DRAFT,
         toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         isDecemberWaste: false,
-        isAcceptedIntoNextObligationYear: false
+        obligationYearCarriedForward: false
       })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         fromStatus: 'draft',
         toStatus: 'awaiting_authorisation',
         isDecemberWaste: 'false',
-        isAcceptedIntoNextObligationYear: 'false'
+        obligationYearCarriedForward: 'false'
       })
       expect(mockPutMetric).toHaveBeenCalledWith(
         'prn.statusTransition',
@@ -73,7 +73,7 @@ describe('prnMetrics', () => {
         toStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         material: 'paper',
         isDecemberWaste: true,
-        isAcceptedIntoNextObligationYear: false
+        obligationYearCarriedForward: false
       })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
@@ -81,7 +81,7 @@ describe('prnMetrics', () => {
         toStatus: 'awaiting_acceptance',
         material: 'paper',
         isDecemberWaste: 'true',
-        isAcceptedIntoNextObligationYear: 'false'
+        obligationYearCarriedForward: 'false'
       })
     })
 
@@ -90,14 +90,14 @@ describe('prnMetrics', () => {
         fromStatus: PRN_STATUS.DRAFT,
         toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         isDecemberWaste: false,
-        isAcceptedIntoNextObligationYear: false
+        obligationYearCarriedForward: false
       })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         fromStatus: 'draft',
         toStatus: 'awaiting_authorisation',
         isDecemberWaste: 'false',
-        isAcceptedIntoNextObligationYear: 'false'
+        obligationYearCarriedForward: 'false'
       })
     })
 
@@ -106,30 +106,30 @@ describe('prnMetrics', () => {
         fromStatus: PRN_STATUS.DRAFT,
         toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         isDecemberWaste: true,
-        isAcceptedIntoNextObligationYear: false
+        obligationYearCarriedForward: false
       })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         fromStatus: 'draft',
         toStatus: 'awaiting_authorisation',
         isDecemberWaste: 'true',
-        isAcceptedIntoNextObligationYear: 'false'
+        obligationYearCarriedForward: 'false'
       })
     })
 
-    it('records isAcceptedIntoNextObligationYear as true when the PRN is accepted into the following obligation year', async () => {
+    it('records obligationYearCarriedForward as true when the PRN obligationYear is the following obligation year', async () => {
       await prnMetrics.recordStatusTransition({
         fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         toStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         isDecemberWaste: true,
-        isAcceptedIntoNextObligationYear: true
+        obligationYearCarriedForward: true
       })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         fromStatus: 'awaiting_authorisation',
         toStatus: 'awaiting_acceptance',
         isDecemberWaste: 'true',
-        isAcceptedIntoNextObligationYear: 'true'
+        obligationYearCarriedForward: 'true'
       })
     })
 
@@ -159,14 +159,14 @@ describe('prnMetrics', () => {
           fromStatus: from,
           toStatus: to,
           isDecemberWaste: false,
-          isAcceptedIntoNextObligationYear: false
+          obligationYearCarriedForward: false
         })
 
         expect(mockPutDimensions).toHaveBeenCalledWith({
           fromStatus: from,
           toStatus: to,
           isDecemberWaste: 'false',
-          isAcceptedIntoNextObligationYear: 'false'
+          obligationYearCarriedForward: 'false'
         })
         expect(mockPutMetric).toHaveBeenCalledWith(
           'prn.statusTransition',
@@ -184,7 +184,7 @@ describe('prnMetrics', () => {
         fromStatus: PRN_STATUS.DRAFT,
         toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         isDecemberWaste: false,
-        isAcceptedIntoNextObligationYear: false
+        obligationYearCarriedForward: false
       })
 
       expect(mockPutMetric).not.toHaveBeenCalled()
@@ -200,7 +200,7 @@ describe('prnMetrics', () => {
         fromStatus: PRN_STATUS.DRAFT,
         toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         isDecemberWaste: false,
-        isAcceptedIntoNextObligationYear: false
+        obligationYearCarriedForward: false
       })
 
       expect(mockLoggerError).toHaveBeenCalledWith({

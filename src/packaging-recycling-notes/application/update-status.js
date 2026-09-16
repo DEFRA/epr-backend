@@ -127,7 +127,7 @@ export async function updatePrnStatus(request) {
     material: updatedPrn.accreditation.material,
     isExport: updatedPrn.isExport,
     isDecemberWaste: updatedPrn.isDecemberWaste,
-    isAcceptedIntoNextObligationYear:
+    obligationYearCarriedForward:
       updatedPrn.obligationYear ===
       updatedPrn.accreditation.accreditationYear + 1
   })
