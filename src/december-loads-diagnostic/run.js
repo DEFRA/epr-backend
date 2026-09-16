@@ -20,7 +20,7 @@ const formatCandidateLine = (r) =>
     `processingType=${r.processingType}`,
     `decemberMonth=${r.decemberKey}`,
     `summaryLogDecemberTonnage=${r.summaryLogDecemberTonnage}`,
-    `ledgerDecemberBalance=${r.ledgerDecemberBalance ?? 'absent'}`
+    `ledgerDecemberTonnage=${r.ledgerDecemberTonnage ?? 'absent'}`
   ].join(' ')
 
 /** @param {StartedServer} server */
@@ -45,7 +45,7 @@ const runDiagnostic = async (server) => {
   }
 
   logger.info({
-    message: `December loads diagnostic: scannedAccreditations=${summary.scannedAccreditations} accreditationsWithDecemberBalance=${summary.accreditationsWithDecemberBalance} mismatchedAccreditations=${summary.mismatchedAccreditations}`
+    message: `December loads diagnostic: scannedAccreditations=${summary.scannedAccreditations} accreditationsWithDecemberTonnage=${summary.accreditationsWithDecemberTonnage} mismatchedAccreditations=${summary.mismatchedAccreditations}`
   })
 }
 

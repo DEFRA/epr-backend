@@ -110,8 +110,27 @@ const processedRow = (date, amount = 10) => ({
   classification: included(amount)
 })
 
-/** @param {number} [decemberAmount] */
-const ledgerEvent = (decemberAmount) => ({
+/**
+ * The latest `summary-log-submitted` event: only its payload's
+ * `decemberCreditTotal` is read (absent on a pre-PAE-1920 submission).
+ *
+ * @param {number} [decemberCreditTotal]
+ */
+const submissionEvent = (decemberCreditTotal) => ({
+  payload: {
+    summaryLogId: 'log',
+    creditTotal: 100,
+    ...(decemberCreditTotal !== undefined && { decemberCreditTotal })
+  }
+})
+
+/**
+ * The latest event of any kind, carrying the running closing balance. Only the
+ * PRN-drawdown regression test wires it, to prove the diagnostic never reads it.
+ *
+ * @param {number} [decemberAmount]
+ */
+const closingEvent = (decemberAmount) => ({
   closingBalance: {
     amount: 100,
     availableAmount: 100,
@@ -124,23 +143,30 @@ const ledgerEvent = (decemberAmount) => ({
  *   organisations: any[],
  *   entries: any[],
  *   rowStatesByAccreditationId?: Record<string, any[]>,
- *   ledgerByAccreditationId?: Record<string, any>
+ *   submissionByAccreditationId?: Record<string, any>,
+ *   latestByAccreditationId?: Record<string, any>
  * }} options
  */
 const run = async ({
   organisations,
   entries,
   rowStatesByAccreditationId = {},
-  ledgerByAccreditationId = {}
+  submissionByAccreditationId = {},
+  latestByAccreditationId = {}
 }) => {
   const logger = { info: vi.fn(), warn: vi.fn() }
+  const findLatestInLedgerByKind = vi.fn(
+    async (/** @type {{ accreditationId: string }} */ ledgerId) =>
+      submissionByAccreditationId[ledgerId.accreditationId] ?? null
+  )
   const findLatestInLedger = vi.fn(
     async (/** @type {{ accreditationId: string }} */ ledgerId) =>
-      ledgerByAccreditationId[ledgerId.accreditationId] ?? null
+      latestByAccreditationId[ledgerId.accreditationId] ?? null
   )
   const ledgerRepository = {
     findLatestSubmittedSummaryLogPerLedger: async () => entries,
-    findLatestInLedger
+    findLatestInLedger,
+    findLatestInLedgerByKind
   }
   const summaryLogRowStatesRepository = {
     findRowStatesForSummaryLog: async (
@@ -152,6 +178,7 @@ const run = async ({
   return {
     logger,
     findLatestInLedger,
+    findLatestInLedgerByKind,
     report: await buildDecemberLoadsReport({
       ledgerRepository: /** @type {WasteBalanceLedgerRepository} */ (
         /** @type {unknown} */ (ledgerRepository)
@@ -169,7 +196,7 @@ const run = async ({
 }
 
 describe('buildDecemberLoadsReport', () => {
-  it('flags an exporter whose ledger December disagrees with its December exported loads', async () => {
+  it('flags an exporter whose recorded December credit disagrees with its December exported loads', async () => {
     const { organisation, accreditationId, entry } = makeAccreditation({
       orgId: 500001,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
@@ -184,7 +211,7 @@ describe('buildDecemberLoadsReport', () => {
           exportedRow('2026-06-01', 99)
         ]
       },
-      ledgerByAccreditationId: { [accreditationId]: ledgerEvent(12) }
+      submissionByAccreditationId: { [accreditationId]: submissionEvent(12) }
     })
 
     expect(report.reports).toEqual([
@@ -196,17 +223,17 @@ describe('buildDecemberLoadsReport', () => {
         processingType: 'EXPORTER',
         decemberKey: '2026-12',
         summaryLogDecemberTonnage: 30,
-        ledgerDecemberBalance: 12
+        ledgerDecemberTonnage: 12
       }
     ])
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecemberBalance: 1,
+      accreditationsWithDecemberTonnage: 1,
       mismatchedAccreditations: 1
     })
   })
 
-  it('flags a reprocessor-input accreditation whose ledger records no December portion', async () => {
+  it('flags a reprocessor-input accreditation whose latest submission recorded no December credit', async () => {
     const { organisation, accreditationId, entry } = makeAccreditation({
       orgId: 500002
     })
@@ -217,22 +244,24 @@ describe('buildDecemberLoadsReport', () => {
       rowStatesByAccreditationId: {
         [accreditationId]: [receivedRow('2026-12-01', 20)]
       },
-      ledgerByAccreditationId: { [accreditationId]: ledgerEvent(undefined) }
+      submissionByAccreditationId: {
+        [accreditationId]: submissionEvent(undefined)
+      }
     })
 
     expect(report.reports[0]).toMatchObject({
       accreditationId,
       summaryLogDecemberTonnage: 20,
-      ledgerDecemberBalance: null
+      ledgerDecemberTonnage: null
     })
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecemberBalance: 1,
+      accreditationsWithDecemberTonnage: 1,
       mismatchedAccreditations: 1
     })
   })
 
-  it('flags an accreditation whose ledger holds no events at all', async () => {
+  it('flags an accreditation with no recorded summary-log-submitted event', async () => {
     const { organisation, accreditationId, entry } = makeAccreditation({
       orgId: 500011
     })
@@ -248,12 +277,12 @@ describe('buildDecemberLoadsReport', () => {
     expect(report.reports[0]).toMatchObject({
       accreditationId,
       summaryLogDecemberTonnage: 20,
-      ledgerDecemberBalance: null
+      ledgerDecemberTonnage: null
     })
     expect(report.summary.mismatchedAccreditations).toBe(1)
   })
 
-  it('does not flag an accreditation whose ledger December equals expected', async () => {
+  it('does not flag an accreditation whose recorded December credit equals expected', async () => {
     const { organisation, accreditationId, entry } = makeAccreditation({
       orgId: 500003
     })
@@ -264,15 +293,37 @@ describe('buildDecemberLoadsReport', () => {
       rowStatesByAccreditationId: {
         [accreditationId]: [receivedRow('2026-12-01', 20)]
       },
-      ledgerByAccreditationId: { [accreditationId]: ledgerEvent(20) }
+      submissionByAccreditationId: { [accreditationId]: submissionEvent(20) }
     })
 
     expect(report.reports).toEqual([])
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecemberBalance: 1,
+      accreditationsWithDecemberTonnage: 1,
       mismatchedAccreditations: 0
     })
+  })
+
+  it('reads the recorded submission credit, not the drawn-down running balance', async () => {
+    const { organisation, accreditationId, entry } = makeAccreditation({
+      orgId: 500012
+    })
+
+    const { report, findLatestInLedger } = await run({
+      organisations: [organisation],
+      entries: [entry],
+      rowStatesByAccreditationId: {
+        [accreditationId]: [receivedRow('2026-12-01', 30)]
+      },
+      submissionByAccreditationId: { [accreditationId]: submissionEvent(30) },
+      // A December PRN has drawn the running December pool down to 20; the
+      // diagnostic must ignore it and compare against the recorded credit of 30.
+      latestByAccreditationId: { [accreditationId]: closingEvent(20) }
+    })
+
+    expect(report.reports).toEqual([])
+    expect(report.summary.mismatchedAccreditations).toBe(0)
+    expect(findLatestInLedger).not.toHaveBeenCalled()
   })
 
   it('skips an accreditation with no December tonnage without reading the ledger', async () => {
@@ -280,7 +331,7 @@ describe('buildDecemberLoadsReport', () => {
       orgId: 500004
     })
 
-    const { report, findLatestInLedger } = await run({
+    const { report, findLatestInLedgerByKind } = await run({
       organisations: [organisation],
       entries: [entry],
       rowStatesByAccreditationId: {
@@ -291,10 +342,10 @@ describe('buildDecemberLoadsReport', () => {
     expect(report.reports).toEqual([])
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecemberBalance: 0,
+      accreditationsWithDecemberTonnage: 0,
       mismatchedAccreditations: 0
     })
-    expect(findLatestInLedger).not.toHaveBeenCalled()
+    expect(findLatestInLedgerByKind).not.toHaveBeenCalled()
   })
 
   it('excludes December sent-on loads from the expected December portion', async () => {
@@ -302,7 +353,7 @@ describe('buildDecemberLoadsReport', () => {
       orgId: 500005
     })
 
-    const { report, findLatestInLedger } = await run({
+    const { report, findLatestInLedgerByKind } = await run({
       organisations: [organisation],
       entries: [entry],
       rowStatesByAccreditationId: {
@@ -311,8 +362,8 @@ describe('buildDecemberLoadsReport', () => {
     })
 
     expect(report.reports).toEqual([])
-    expect(report.summary.accreditationsWithDecemberBalance).toBe(0)
-    expect(findLatestInLedger).not.toHaveBeenCalled()
+    expect(report.summary.accreditationsWithDecemberTonnage).toBe(0)
+    expect(findLatestInLedgerByKind).not.toHaveBeenCalled()
   })
 
   it('never flags a reprocessor-output accreditation, even with December processed loads', async () => {
@@ -327,13 +378,15 @@ describe('buildDecemberLoadsReport', () => {
       rowStatesByAccreditationId: {
         [accreditationId]: [processedRow('2026-12-05', 50)]
       },
-      ledgerByAccreditationId: { [accreditationId]: ledgerEvent(undefined) }
+      submissionByAccreditationId: {
+        [accreditationId]: submissionEvent(undefined)
+      }
     })
 
     expect(report.reports).toEqual([])
     expect(report.summary).toEqual({
       scannedAccreditations: 1,
-      accreditationsWithDecemberBalance: 0,
+      accreditationsWithDecemberTonnage: 0,
       mismatchedAccreditations: 0
     })
   })
@@ -390,7 +443,9 @@ describe('buildDecemberLoadsReport', () => {
       rowStatesByAccreditationId: {
         [accreditationId]: [receivedRow('2026-12-01', 20)]
       },
-      ledgerByAccreditationId: { [accreditationId]: ledgerEvent(undefined) }
+      submissionByAccreditationId: {
+        [accreditationId]: submissionEvent(undefined)
+      }
     })
 
     expect(report.reports).toEqual([])
@@ -416,7 +471,9 @@ describe('buildDecemberLoadsReport', () => {
       rowStatesByAccreditationId: {
         [accreditationId]: [receivedRow('2026-12-01', 20)]
       },
-      ledgerByAccreditationId: { [accreditationId]: ledgerEvent(undefined) }
+      submissionByAccreditationId: {
+        [accreditationId]: submissionEvent(undefined)
+      }
     })
 
     expect(report.reports).toHaveLength(1)
@@ -485,9 +542,9 @@ describe('buildDecemberLoadsReport', () => {
         'acc-a-500009': [receivedRow('2026-12-01', 20)],
         'acc-b-500009': [receivedRow('2026-12-02', 20)]
       },
-      ledgerByAccreditationId: {
-        'acc-a-500009': ledgerEvent(undefined),
-        'acc-b-500009': ledgerEvent(undefined)
+      submissionByAccreditationId: {
+        'acc-a-500009': submissionEvent(undefined),
+        'acc-b-500009': submissionEvent(undefined)
       }
     })
 
@@ -512,9 +569,9 @@ describe('buildDecemberLoadsReport', () => {
           sentOnRow('2026-12-02', 40)
         ]
       },
-      ledgerByAccreditationId: {
-        [a.accreditationId]: ledgerEvent(undefined),
-        [b.accreditationId]: ledgerEvent(undefined)
+      submissionByAccreditationId: {
+        [a.accreditationId]: submissionEvent(undefined),
+        [b.accreditationId]: submissionEvent(undefined)
       }
     })
 
@@ -524,7 +581,7 @@ describe('buildDecemberLoadsReport', () => {
     ])
     expect(report.summary).toEqual({
       scannedAccreditations: 2,
-      accreditationsWithDecemberBalance: 2,
+      accreditationsWithDecemberTonnage: 2,
       mismatchedAccreditations: 2
     })
   })

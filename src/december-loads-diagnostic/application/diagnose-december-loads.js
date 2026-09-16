@@ -3,9 +3,11 @@ import { indexAccreditations } from '#waste-balances/application/accreditation-i
 import { decemberCreditTotalFor } from '#waste-balances/application/december-credit-total.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { decemberKeyForYearOf } from '#common/helpers/dates/year-month.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').SummaryLogSubmittedPayload} SummaryLogSubmittedPayload
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
  * @typedef {import('#waste-records/repository/schema.js').SummaryLogRowState} SummaryLogRowState
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
@@ -15,11 +17,17 @@ import { decemberKeyForYearOf } from '#common/helpers/dates/year-month.js'
  */
 
 /**
- * One flagged accreditation: its ledger December portion disagrees with the
- * December tonnage its current summary-log rows compute. `ledgerDecemberBalance` is
- * `null` when the latest closing balance carries no `decemberAmount` — a
- * pre-PAE-1920 submission that has not been resubmitted since, which is itself a
- * mismatch whenever expected December tonnage exists.
+ * One flagged accreditation: the December credit the ledger recorded for its
+ * latest submission disagrees with the December tonnage its current summary-log
+ * rows compute. `ledgerDecemberTonnage` is `null` when that submission recorded
+ * no `decemberCreditTotal` — a pre-PAE-1920 submission that has not been
+ * resubmitted since, which is itself a mismatch whenever the rows compute
+ * December tonnage.
+ *
+ * The recorded figure is read from the latest `summary-log-submitted` event's
+ * payload, not from the running closing balance: the closing balance's
+ * `decemberAmount` is drawn down as December PRNs are issued, so it would
+ * diverge from the rows' gross figure even when nothing needs a backfill.
  *
  * @typedef {Object} DecemberLoadRow
  * @property {string} organisationId - internal id
@@ -29,13 +37,13 @@ import { decemberKeyForYearOf } from '#common/helpers/dates/year-month.js'
  * @property {string} processingType
  * @property {string} decemberKey - `YYYY-12`
  * @property {number} summaryLogDecemberTonnage - December tonnage the current rows compute
- * @property {number | null} ledgerDecemberBalance - recorded December portion, `null` when absent
+ * @property {number | null} ledgerDecemberTonnage - December credit the latest submission recorded, `null` when absent
  */
 
 /**
  * @typedef {Object} DecemberLoadsSummary
  * @property {number} scannedAccreditations - accredited submissions matched and scanned
- * @property {number} accreditationsWithDecemberBalance - scanned submissions with nonzero expected December tonnage
+ * @property {number} accreditationsWithDecemberTonnage - scanned submissions with nonzero expected December tonnage
  * @property {number} mismatchedAccreditations - scanned submissions whose ledger December disagrees with expected
  */
 
@@ -79,11 +87,11 @@ const withProcessingTypeInData = (rowState) => ({
 })
 
 /**
- * Compare one accreditation's ledger December portion against the December
- * tonnage its current submission's rows compute, reading its row states at the
- * submitted head. Returns nothing to flag when the rows compute no December
- * tonnage (the ledger is not read), and a flagged row only when the recorded
- * portion disagrees with what the rows compute.
+ * Compare the December credit the ledger recorded for an accreditation's latest
+ * submission against the December tonnage its current rows compute, reading its
+ * row states at the submitted head. Returns nothing to flag when the rows
+ * compute no December tonnage (the ledger is not read), and a flagged row only
+ * when the recorded credit disagrees with what the rows compute.
  *
  * @param {Object} params
  * @param {AccreditationContext} params.context
@@ -122,10 +130,17 @@ const scanAccreditation = async ({
     return { hasDecember: false, row: null }
   }
 
-  const latest = await ledgerRepository.findLatestInLedger(ledgerId)
-  const ledgerDecemberBalance = latest?.closingBalance.decemberAmount ?? null
+  const latestSubmission = await ledgerRepository.findLatestInLedgerByKind(
+    ledgerId,
+    LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+  )
+  const submissionPayload =
+    /** @type {SummaryLogSubmittedPayload | undefined} */ (
+      latestSubmission?.payload
+    )
+  const ledgerDecemberTonnage = submissionPayload?.decemberCreditTotal ?? null
 
-  if (summaryLogDecemberTonnage === ledgerDecemberBalance) {
+  if (summaryLogDecemberTonnage === ledgerDecemberTonnage) {
     return { hasDecember: true, row: null }
   }
 
@@ -141,7 +156,7 @@ const scanAccreditation = async ({
         decemberKeyForYearOf(accreditation.validFrom)
       ),
       summaryLogDecemberTonnage,
-      ledgerDecemberBalance
+      ledgerDecemberTonnage
     }
   }
 }
@@ -180,7 +195,7 @@ export const buildDecemberLoadsReport = async ({
   /** @type {DecemberLoadRow[]} */
   const reports = []
   let scannedAccreditations = 0
-  let accreditationsWithDecemberBalance = 0
+  let accreditationsWithDecemberTonnage = 0
 
   for (const { ledgerId, summaryLogId } of accreditedEntries) {
     const accreditationId = /** @type {string} */ (ledgerId.accreditationId)
@@ -208,7 +223,7 @@ export const buildDecemberLoadsReport = async ({
       ledgerRepository
     })
     if (hasDecember) {
-      accreditationsWithDecemberBalance += 1
+      accreditationsWithDecemberTonnage += 1
     }
     if (row) {
       reports.push(row)
@@ -221,7 +236,7 @@ export const buildDecemberLoadsReport = async ({
     reports,
     summary: {
       scannedAccreditations,
-      accreditationsWithDecemberBalance,
+      accreditationsWithDecemberTonnage,
       mismatchedAccreditations: reports.length
     }
   }

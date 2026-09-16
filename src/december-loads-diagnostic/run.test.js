@@ -31,7 +31,7 @@ const emptyReport = {
   reports: [],
   summary: {
     scannedAccreditations: 0,
-    accreditationsWithDecemberBalance: 0,
+    accreditationsWithDecemberTonnage: 0,
     mismatchedAccreditations: 0
   }
 }
@@ -94,12 +94,12 @@ describe('runDecemberLoadsDiagnostic', () => {
           processingType: 'REPROCESSOR_INPUT',
           decemberKey: '2026-12',
           summaryLogDecemberTonnage: 30,
-          ledgerDecemberBalance: 12
+          ledgerDecemberTonnage: 12
         }
       ],
       summary: {
         scannedAccreditations: 42,
-        accreditationsWithDecemberBalance: 5,
+        accreditationsWithDecemberTonnage: 5,
         mismatchedAccreditations: 1
       }
     })
@@ -108,11 +108,11 @@ describe('runDecemberLoadsDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'December balance mismatch: organisationId=org-1 organisationReference=500123 accreditationId=acc-1 accreditationNumber=A26ER5000000001PL processingType=REPROCESSOR_INPUT decemberMonth=2026-12 summaryLogDecemberTonnage=30 ledgerDecemberBalance=12'
+        'December balance mismatch: organisationId=org-1 organisationReference=500123 accreditationId=acc-1 accreditationNumber=A26ER5000000001PL processingType=REPROCESSOR_INPUT decemberMonth=2026-12 summaryLogDecemberTonnage=30 ledgerDecemberTonnage=12'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'December loads diagnostic: scannedAccreditations=42 accreditationsWithDecemberBalance=5 mismatchedAccreditations=1'
+        'December loads diagnostic: scannedAccreditations=42 accreditationsWithDecemberTonnage=5 mismatchedAccreditations=1'
     })
     expect(mockLock.free).toHaveBeenCalled()
   })
@@ -128,12 +128,12 @@ describe('runDecemberLoadsDiagnostic', () => {
           processingType: 'EXPORTER',
           decemberKey: '2026-12',
           summaryLogDecemberTonnage: 20,
-          ledgerDecemberBalance: null
+          ledgerDecemberTonnage: null
         }
       ],
       summary: {
         scannedAccreditations: 1,
-        accreditationsWithDecemberBalance: 1,
+        accreditationsWithDecemberTonnage: 1,
         mismatchedAccreditations: 1
       }
     })
@@ -142,7 +142,7 @@ describe('runDecemberLoadsDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'December balance mismatch: organisationId=org-2 organisationReference=500124 accreditationId=acc-2 accreditationNumber=A26ER5000000002PL processingType=EXPORTER decemberMonth=2026-12 summaryLogDecemberTonnage=20 ledgerDecemberBalance=absent'
+        'December balance mismatch: organisationId=org-2 organisationReference=500124 accreditationId=acc-2 accreditationNumber=A26ER5000000002PL processingType=EXPORTER decemberMonth=2026-12 summaryLogDecemberTonnage=20 ledgerDecemberTonnage=absent'
     })
   })
 
