@@ -9,8 +9,14 @@ import {
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
- * @typedef {import('#reports/repository/port.js').ReportSummary} ReportSummary
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
+ */
+
+/**
+ * The parts of a submitted report the figures are read from.
+ *
+ * @typedef {Pick<import('#reports/repository/port.js').ReportSummary,
+ *   'recyclingActivity' | 'exportActivity' | 'wasteSent' | 'prn'>} ReportedActivity
  */
 
 /**
@@ -56,7 +62,7 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
  */
 
 /**
- * @param {ReportSummary} report
+ * @param {ReportedActivity} report
  * @returns {SharedMeasures}
  */
 const sharedMeasuresOf = (report) => ({
@@ -79,7 +85,7 @@ const sharedMeasuresOf = (report) => ({
 })
 
 /**
- * @param {ReportSummary} report
+ * @param {ReportedActivity} report
  * @returns {ReprocessorMeasures}
  */
 const reprocessorMeasuresOf = (report) => ({
@@ -93,7 +99,7 @@ const reprocessorMeasuresOf = (report) => ({
 })
 
 /**
- * @param {ReportSummary} report
+ * @param {ReportedActivity} report
  * @returns {ExporterMeasures}
  */
 const exporterMeasuresOf = (report) => ({
@@ -120,7 +126,7 @@ const exporterMeasuresOf = (report) => ({
  * accreditation's type reports them. A measure the report has not filled in
  * contributes zero.
  *
- * @param {ReportSummary} report
+ * @param {ReportedActivity} report
  * @param {WasteProcessingTypeValue} accreditationType
  * @returns {Measures}
  */
@@ -129,16 +135,6 @@ export const measuresOf = (report, accreditationType) =>
     ? reprocessorMeasuresOf(report)
     : exporterMeasuresOf(report)
 
-/** @type {ReportSummary} */
-const EMPTY_REPORT = Object.freeze({
-  id: '',
-  status: 'submitted',
-  submissionNumber: 0,
-  submittedAt: null,
-  submittedBy: null,
-  resubmissionRequired: null
-})
-
 /**
  * Every measure of the accreditation type, at zero.
  *
@@ -146,7 +142,7 @@ const EMPTY_REPORT = Object.freeze({
  * @returns {Measures}
  */
 export const noMeasures = (accreditationType) =>
-  measuresOf(EMPTY_REPORT, accreditationType)
+  measuresOf({}, accreditationType)
 
 /**
  * @template {Measures} T
