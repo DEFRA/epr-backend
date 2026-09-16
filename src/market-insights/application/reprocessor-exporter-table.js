@@ -158,9 +158,14 @@ const publishedFigures = (cells, month) =>
 const publishedTotals = (cells, month) =>
   recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
     withSentOnTotal(
-      TONNAGE_MONITORING_MATERIALS.map((material) =>
-        measuresFor(cells, material, accreditationType, month)
-      ).reduce(addMeasures)
+      TONNAGE_MONITORING_MATERIALS.reduce(
+        (total, material) =>
+          addMeasures(
+            total,
+            measuresFor(cells, material, accreditationType, month)
+          ),
+        noMeasures(accreditationType)
+      )
     )
   )
 
