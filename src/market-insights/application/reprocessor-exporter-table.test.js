@@ -47,6 +47,7 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess[],
  *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
  *   regulator?: import('#domain/organisations/model.js').RegulatorValue,
+ *   accreditationRegulator?: import('#domain/organisations/model.js').RegulatorValue,
  *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').RegistrationStatus, updatedAt: string }[]
  *   accreditationStatusHistory?: { status: import('#domain/organisations/model.js').AccreditationStatus, updatedAt: string }[]
  * }} options
@@ -57,6 +58,7 @@ const makeOperator = ({
   glassRecyclingProcess,
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   regulator = REGULATOR.EA,
+  accreditationRegulator = regulator,
   registrationStatusHistory = approvedHistory,
   accreditationStatusHistory = approvedHistory
 }) => {
@@ -90,7 +92,7 @@ const makeOperator = ({
         validTo: '2026-12-31',
         material,
         wasteProcessingType,
-        submittedToRegulator: regulator
+        submittedToRegulator: accreditationRegulator
       }
     ]
   }
@@ -561,7 +563,7 @@ describe('buildReprocessorExporterTable', () => {
   })
 
   describe('restricted to one regulator', () => {
-    it('serves the accreditations of that regulator alone, from the aggregation that serves the UK', async () => {
+    it('serves the registrations submitted to that regulator alone, from the aggregation that serves the UK', async () => {
       const english = makeOperator({ orgId: 1, regulator: REGULATOR.EA })
       const welsh = makeOperator({ orgId: 2, regulator: REGULATOR.NRW })
       const seeded = {
@@ -591,6 +593,25 @@ describe('buildReprocessorExporterTable', () => {
           revisedTonnageIssued: 100,
           totalRevenue: 10000
         })
+      ])
+    })
+
+    it('reads the regulator off the registration, as the report-submissions extract does', async () => {
+      const registeredWithEa = makeOperator({
+        orgId: 1,
+        regulator: REGULATOR.EA,
+        accreditationRegulator: REGULATOR.NRW
+      })
+      const { table } = await run({
+        organisations: [registeredWithEa],
+        reports: [
+          monthlyReport(registeredWithEa, 1, { prn: prn(10, 0, 1000) })
+        ],
+        regulator: REGULATOR.EA
+      })
+
+      expect(reported(table)).toEqual([
+        expect.objectContaining({ month: '2026-01', revisedTonnageIssued: 10 })
       ])
     })
 

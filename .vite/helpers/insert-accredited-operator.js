@@ -17,7 +17,7 @@ import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
  * accepts.
  *
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who holds the accreditation
+ * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
  * @returns {Promise<{ organisationId: string, registrationId: string }>}
  */
 export const insertAccreditedOperator = async (

@@ -273,7 +273,7 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
-  it('serves the accreditations the Environment Agency holds and leaves the other regulators out', async () => {
+  it('serves the registrations submitted to the Environment Agency and leaves the other regulators out', async () => {
     const [england, uk] = await Promise.all([
       injectTable(server, asRegulator(), january2026),
       injectTable(server, asRegulator(), ukPath(2026, 'monthly', 1))

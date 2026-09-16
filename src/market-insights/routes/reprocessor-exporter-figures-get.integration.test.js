@@ -196,7 +196,7 @@ describe(`GET ${marketInsightsEnglandReprocessorExporterFiguresPath} (integratio
     }
   )
 
-  it('serves the Environment Agency accreditations alone, from the documents the UK figures read', async ({
+  it('serves the registrations submitted to the Environment Agency alone, from the documents the UK figures read', async ({
     server
   }) => {
     await submitJanuaryTwice(server.repositories)

@@ -140,7 +140,7 @@ const publishedFigures = (cells, month) =>
  * within each month. An accreditation cancelled since loses the months it
  * filed, as the regulator's workbooks and the report-submissions extract drop
  * them. Quarterly reports belong to registered-only operators and are left
- * out. Every regulator's accreditations make the UK figures; one regulator's
+ * out. Every regulator's registrations make the UK figures; one regulator's
  * make that nation's.
  *
  * @param {Object} params
@@ -149,7 +149,7 @@ const publishedFigures = (cells, month) =>
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {number} params.year - the reporting year
  * @param {YearMonth[]} params.months - the reporting months of that year to publish
- * @param {RegulatorValue} [params.regulator] - publish only the accreditations this regulator holds; every regulator when absent
+ * @param {RegulatorValue} [params.regulator] - publish only the registrations submitted to this regulator; every regulator when absent
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<ReprocessorExporterTable>}
  */
@@ -182,14 +182,19 @@ export const buildReprocessorExporterTable = async ({
       .map((org) => org.id)
   )
   /**
-   * @param {import('#domain/organisations/accreditation.js').Accreditation} accreditation
+   * The regulator a registration was submitted to is the one the
+   * report-submissions extract prints, and so the one the England tab is
+   * filtered on.
+   *
+   * @param {ReportableRegistration} registration
    */
-  const heldByPublishedRegulator = (accreditation) =>
-    regulator === undefined || accreditation.submittedToRegulator === regulator
+  const heldByPublishedRegulator = (registration) =>
+    regulator === undefined || registration.submittedToRegulator === regulator
   /**
    * The registration a periodic report belongs to, when it holds a live
-   * accreditation the publication covers. A report whose registration does
-   * not resolve is logged unless a test organisation filed it.
+   * accreditation and the publication covers its regulator. A report whose
+   * registration does not resolve is logged unless a test organisation filed
+   * it.
    *
    * @param {import('#reports/repository/port.js').PeriodicReport} periodicReport
    * @returns {ReportableRegistration | undefined}
@@ -203,8 +208,8 @@ export const buildReprocessorExporterTable = async ({
       }
       return undefined
     }
-    const accreditation = resolveAccreditation(entry.registration, entry.org)
-    return accreditation !== null && heldByPublishedRegulator(accreditation)
+    return resolveAccreditation(entry.registration, entry.org) !== null &&
+      heldByPublishedRegulator(entry.registration)
       ? entry.registration
       : undefined
   }

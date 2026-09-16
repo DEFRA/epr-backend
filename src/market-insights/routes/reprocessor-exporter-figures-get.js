@@ -14,8 +14,8 @@ export const marketInsightsReprocessorExporterFiguresPath =
   '/v1/market-insights/{year}/{cadence}/{period}/reprocessor-exporter-figures'
 
 /**
- * The same figures narrowed to the accreditations the Environment Agency
- * holds. England is the one nation published on its own; the other three
+ * The same figures narrowed to the registrations submitted to the Environment
+ * Agency. England is the one nation published on its own; the other three
  * would identify operators, so no other narrowing exists.
  */
 export const marketInsightsEnglandReprocessorExporterFiguresPath = `${marketInsightsReprocessorExporterFiguresPath}/england`
