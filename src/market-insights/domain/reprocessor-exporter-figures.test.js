@@ -84,9 +84,19 @@ describe('measuresOf', () => {
   })
 
   it('reads zero for every measure a report has not filled in', () => {
-    expect(measuresOf({}, WASTE_PROCESSING_TYPE.EXPORTER)).toEqual(
-      noMeasures(WASTE_PROCESSING_TYPE.EXPORTER)
-    )
+    expect(measuresOf({}, WASTE_PROCESSING_TYPE.EXPORTER)).toEqual({
+      tonnageReceived: 0,
+      tonnageSentOnToReprocessor: 0,
+      tonnageSentOnToExporter: 0,
+      tonnageSentOnToOtherFacilities: 0,
+      revisedTonnageIssued: 0,
+      totalRevenue: 0,
+      tonnageExported: 0,
+      tonnageReceivedButNotExported: 0,
+      tonnageStopped: 0,
+      tonnageRefused: 0,
+      tonnageRepatriated: 0
+    })
     expect(
       measuresOf(
         {
