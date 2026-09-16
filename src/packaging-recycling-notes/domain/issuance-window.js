@@ -57,6 +57,28 @@ export function issuanceWindowRefusal(
 }
 
 /**
+ * The 409 a closed issuance window surfaces as, wherever it is hit: the
+ * operator-facing copy and the machine-readable `code` the frontend
+ * discriminates on, stated once so the create route and the status
+ * transitions cannot drift apart.
+ *
+ * @param {string} accreditationId
+ */
+export function issuanceWindowClosedError(accreditationId) {
+  return conflict(
+    'The issuance window for this accreditation year has closed',
+    ISSUANCE_WINDOW_CLOSED_CODE,
+    {
+      event: {
+        action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
+        reason: `accreditationId=${accreditationId} rejected=${ISSUANCE_WINDOW_CLOSED_CODE}`
+      },
+      payload: { code: ISSUANCE_WINDOW_CLOSED_CODE }
+    }
+  )
+}
+
+/**
  * Asserts the issuance window is open at PRN draft creation, whatever the
  * payload declares: after 31 January no note of any kind may be raised against
  * the prior year's accreditation.
@@ -74,15 +96,5 @@ export function assertIssuanceWindowOpen({ accreditation, now }) {
     return
   }
 
-  throw conflict(
-    'The issuance window for this accreditation year has closed',
-    ISSUANCE_WINDOW_CLOSED_CODE,
-    {
-      event: {
-        action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
-        reason: `accreditationId=${accreditation.id} rejected=${ISSUANCE_WINDOW_CLOSED_CODE}`
-      },
-      payload: { code: ISSUANCE_WINDOW_CLOSED_CODE }
-    }
-  )
+  throw issuanceWindowClosedError(accreditation.id)
 }
