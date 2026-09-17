@@ -17,8 +17,10 @@ import {
   addMeasures,
   measuresOf,
   noMeasures,
-  withPublishedFigures
+  withPublishedFigures,
+  withSentOnTotal
 } from '#market-insights/domain/reprocessor-exporter-figures.js'
+import { countMonthlyReports } from '#market-insights/application/monthly-reports.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /**
@@ -26,29 +28,40 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
  * @typedef {import('#domain/organisations/model.js').Material} Material
+ * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
+ * @typedef {import('#domain/organisations/model.js').RegulatorValue} RegulatorValue
+ * @typedef {import('#domain/organisations/registration.js').Registration} Registration
+ * @typedef {import('#reports/repository/port.js').PeriodicReport} PeriodicReport
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#domain/organisations/registration.js').ReportableRegistration} ReportableRegistration
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').Measures} Measures
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedFigures} PublishedFigures
+ * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedTotal} PublishedTotal
+ * @typedef {import('#market-insights/application/monthly-reports.js').CoversRegistration} CoversRegistration
+ * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
  */
 
 /**
  * @typedef {Record<WasteProcessingTypeValue, PublishedFigures>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
+ * @typedef {Record<WasteProcessingTypeValue, PublishedTotal>} TotalsByAccreditationType
  */
 
 /**
- * One reporting month as published: the figures for every material and
- * accreditation type.
+ * One reporting month as published: the reports it was owed and how many of
+ * them arrived, the figures for every material and accreditation type, and
+ * each table's grand total.
  *
  * @typedef {Object} PublishedMonth
+ * @property {ReportCount} reports
  * @property {FiguresByMaterial} figures
+ * @property {TotalsByAccreditationType} totals
  */
 
 /**
  * @typedef {Object} ReprocessorExporterTable
  * @property {{ generatedAt: string }} meta
- * @property {{ months: Record<YearMonth, PublishedMonth> }} data
+ * @property {{ months: Record<YearMonth, PublishedMonth>, period: { reports: ReportCount } }} data
  */
 
 /**
@@ -113,6 +126,17 @@ const warnAboutUnmatchedReport = (logger, key) => {
 }
 
 /**
+ * @param {Map<string, Measures>} cells
+ * @param {Material} material
+ * @param {WasteProcessingTypeValue} accreditationType
+ * @param {YearMonth} month
+ * @returns {Measures}
+ */
+const measuresFor = (cells, material, accreditationType, month) =>
+  cells.get(cellKey({ material, accreditationType, month })) ??
+  noMeasures(accreditationType)
+
+/**
  * The publication prints every material and both accreditation types for
  * every month, so a combination nothing was reported into is still served, at
  * zero: a row vanishing when a material has no data is the error the work
@@ -126,43 +150,73 @@ const publishedFigures = (cells, month) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
     recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
       withPublishedFigures(
-        cells.get(cellKey({ material, accreditationType, month })) ??
-          noMeasures(accreditationType)
+        measuresFor(cells, material, accreditationType, month)
       )
     )
   )
 
 /**
- * Aggregate the published UK reprocessor and exporter figures for the given
- * reporting months: the latest monthly submission of every registration
- * holding a live accreditation, summed by material and accreditation type
- * within each month. An accreditation cancelled since loses the months it
- * filed, as the regulator's workbooks and the report-submissions extract drop
- * them. Quarterly reports belong to registered-only operators and are left
- * out.
+ * The grand total each published table ends in: every material of that
+ * accreditation type summed, for the month.
+ *
+ * @param {Map<string, Measures>} cells
+ * @param {YearMonth} month
+ * @returns {TotalsByAccreditationType}
+ */
+const publishedTotals = (cells, month) =>
+  recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
+    withSentOnTotal(
+      TONNAGE_MONITORING_MATERIALS.reduce(
+        (total, material) =>
+          addMeasures(
+            total,
+            measuresFor(cells, material, accreditationType, month)
+          ),
+        noMeasures(accreditationType)
+      )
+    )
+  )
+
+/**
+ * Whether the registration holds a live accreditation and was submitted to the
+ * regulator being published. The regulator a registration was submitted to is
+ * the one the report-submissions extract prints, and so the one the England
+ * tab is filtered on.
+ *
+ * This is the one rule that decides both what these figures are made of and
+ * which months their coverage count is owed, so the two describe the same
+ * operators by sharing it rather than by agreeing separately.
+ *
+ * @param {RegulatorValue} [regulator] - every regulator when absent
+ * @returns {CoversRegistration}
+ */
+const publicationCovers =
+  (regulator) =>
+  ({ org, registration }) =>
+    resolveAccreditation(registration, org) !== null &&
+    (regulator === undefined || registration.submittedToRegulator === regulator)
+
+/**
+ * Every periodic report folded into its cell: the latest monthly submission of
+ * each registration the publication covers, summed by material and
+ * accreditation type within each month served. A report whose registration no
+ * longer resolves is logged and left out, unless a test organisation filed it.
  *
  * @param {Object} params
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {ReportsRepository} params.reportsRepository
+ * @param {Organisation[]} params.organisations
+ * @param {PeriodicReport[]} params.periodicReports
+ * @param {YearMonth[]} params.months - the reporting months to publish
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {number} params.year - the reporting year
- * @param {YearMonth[]} params.months - the reporting months of that year to publish
- * @param {Date} params.now - clock reading supplied by the caller
- * @returns {Promise<ReprocessorExporterTable>}
+ * @param {CoversRegistration} params.covers - which registrations the publication covers
+ * @returns {Map<string, Measures>}
  */
-export const buildReprocessorExporterTable = async ({
-  organisationsRepository,
-  reportsRepository,
-  logger,
-  year,
+const measuresByCell = ({
+  organisations,
+  periodicReports,
   months,
-  now
+  logger,
+  covers
 }) => {
-  const [organisations, periodicReports] = await Promise.all([
-    organisationsRepository.findAll(),
-    reportsRepository.findPeriodicReportsForYear({ year })
-  ])
-
   const registrations = new Map(
     getReportableRegistrations(organisations).map((entry) => [
       registrationKey({
@@ -177,12 +231,9 @@ export const buildReprocessorExporterTable = async ({
       .filter((org) => TEST_ORGANISATION_IDS.has(org.orgId))
       .map((org) => org.id)
   )
+
   /**
-   * The registration a periodic report belongs to, when it holds a live
-   * accreditation. A report whose registration does not resolve is logged
-   * unless a test organisation filed it.
-   *
-   * @param {import('#reports/repository/port.js').PeriodicReport} periodicReport
+   * @param {PeriodicReport} periodicReport
    * @returns {ReportableRegistration | undefined}
    */
   const accreditedRegistrationFor = (periodicReport) => {
@@ -194,9 +245,7 @@ export const buildReprocessorExporterTable = async ({
       }
       return undefined
     }
-    return resolveAccreditation(entry.registration, entry.org) === null
-      ? undefined
-      : entry.registration
+    return covers(entry) ? entry.registration : undefined
   }
 
   const served = new Set(months)
@@ -222,12 +271,74 @@ export const buildReprocessorExporterTable = async ({
     }
   }
 
+  return cells
+}
+
+/**
+ * Aggregate the published reprocessor and exporter figures for the given
+ * reporting months: the latest monthly submission of every registration
+ * holding a live accreditation, summed by material and accreditation type
+ * within each month. An accreditation cancelled since loses the months it
+ * filed, as the regulator's workbooks and the report-submissions extract drop
+ * them. Quarterly reports belong to registered-only operators and are left
+ * out. Every regulator's registrations make the UK figures; one regulator's
+ * make that nation's. Each month also carries the count of monthly reports it
+ * was owed and how many were submitted, and the period carries the sum.
+ *
+ * @param {Object} params
+ * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {ReportsRepository} params.reportsRepository
+ * @param {import('#common/hapi-types.js').TypedLogger} params.logger
+ * @param {number} params.year - the reporting year
+ * @param {YearMonth[]} params.months - the reporting months of that year to publish
+ * @param {RegulatorValue} [params.regulator] - publish only the registrations submitted to this regulator; every regulator when absent
+ * @param {Date} params.now - clock reading supplied by the caller
+ * @returns {Promise<ReprocessorExporterTable>}
+ */
+export const buildReprocessorExporterTable = async ({
+  organisationsRepository,
+  reportsRepository,
+  logger,
+  year,
+  months,
+  regulator,
+  now
+}) => {
+  const [organisations, periodicReports] = await Promise.all([
+    organisationsRepository.findAll(),
+    reportsRepository.findPeriodicReportsForYear({ year })
+  ])
+
+  const covers = publicationCovers(regulator)
+  const cells = measuresByCell({
+    organisations,
+    periodicReports,
+    months,
+    logger,
+    covers
+  })
+
+  // Counted over the registrations the figures cover rather than the whole
+  // register, so a month cannot report coverage for one set of operators
+  // beside tonnages for another. A cancelled accreditation is the case that
+  // separates them: its submissions are absent from the figures, so its
+  // months are not owed here.
+  const reports = countMonthlyReports({
+    organisations,
+    periodicReports,
+    months,
+    covers
+  })
+
   return {
     meta: { generatedAt: now.toISOString() },
     data: {
       months: recordOf(months, (month) => ({
-        figures: publishedFigures(cells, month)
-      }))
+        reports: reports.byMonth[month],
+        figures: publishedFigures(cells, month),
+        totals: publishedTotals(cells, month)
+      })),
+      period: { reports: reports.total }
     }
   }
 }

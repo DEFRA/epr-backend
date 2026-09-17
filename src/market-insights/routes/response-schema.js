@@ -22,6 +22,14 @@ export const recordOf = (keys, valueSchema) =>
 export const byReportingMonth = (monthSchema) =>
   Joi.object().pattern(REPORTING_MONTH, monthSchema.required()).required()
 
+/**
+ * The monthly reports a publication was owed and how many of them arrived.
+ */
+export const reportCountSchema = Joi.object({
+  expected: Joi.number().integer().min(0).required(),
+  submitted: Joi.number().integer().min(0).required()
+})
+
 export const metaSchema = Joi.object({
   generatedAt: Joi.string().isoDate().required()
 }).required()

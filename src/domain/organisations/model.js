@@ -115,6 +115,16 @@ export const NATION = Object.freeze({
   NORTHERN_IRELAND: 'northern_ireland'
 })
 
+/**
+ * The regulator the operators of each nation register and accredit with.
+ */
+export const REGULATOR_FOR_NATION = Object.freeze({
+  [NATION.ENGLAND]: REGULATOR.EA,
+  [NATION.WALES]: REGULATOR.NRW,
+  [NATION.SCOTLAND]: REGULATOR.SEPA,
+  [NATION.NORTHERN_IRELAND]: REGULATOR.NIEA
+})
+
 export const BUSINESS_TYPE = Object.freeze({
   INDIVIDUAL: 'individual',
   UNINCORPORATED: 'unincorporated',

@@ -4,12 +4,12 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { byReportingMonth, metaSchema, recordOf } from './response-schema.js'
-
-const reportCountSchema = Joi.object({
-  expected: Joi.number().integer().min(0).required(),
-  submitted: Joi.number().integer().min(0).required()
-})
+import {
+  byReportingMonth,
+  metaSchema,
+  recordOf,
+  reportCountSchema
+} from './response-schema.js'
 
 const publishedFiguresSchema = Joi.object({
   totalCredited: Joi.number().required(),
@@ -28,7 +28,9 @@ const figuresByMaterialSchema = recordOf(
  * reporting month, then material, then accreditation type, with the net credit
  * the publication prints alongside the figures it is derived from. Each month
  * says how many monthly reports it was owed and how many have been submitted,
- * and the period carries the sum.
+ * and the period carries the sum. That count covers every accredited
+ * registration on the register, whatever status its accreditation holds now,
+ * matching the loads this table keeps.
  */
 export const wasteBalanceResponseSchema = Joi.object({
   meta: metaSchema,

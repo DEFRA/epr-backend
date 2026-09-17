@@ -17,18 +17,53 @@ import {
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
   MATERIAL,
+  REGULATOR,
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { marketInsightsReprocessorExporterFiguresPath } from './reprocessor-exporter-figures-get.js'
-
-const pathFor = (year, cadence, period) =>
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
+import {
+  marketInsightsNationReprocessorExporterFiguresPath,
   marketInsightsReprocessorExporterFiguresPath
-    .replace('{year}', String(year))
-    .replace('{cadence}', cadence)
-    .replace('{period}', String(period))
+} from './reprocessor-exporter-figures-get.js'
 
-const injectTable = (server, credentials, url = pathFor(2026, 'monthly', 1)) =>
+/** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
+
+/**
+ * @param {string} path
+ */
+const pathFor =
+  (path) =>
+  /**
+   * @param {number} year
+   * @param {string} cadence
+   * @param {number} period
+   */
+  (year, cadence, period) =>
+    path
+      .replace('{year}', String(year))
+      .replace('{cadence}', cadence)
+      .replace('{period}', String(period))
+
+const ukPath = pathFor(marketInsightsReprocessorExporterFiguresPath)
+
+/**
+ * @param {string} nation
+ */
+const nationPath = (nation) =>
+  pathFor(
+    marketInsightsNationReprocessorExporterFiguresPath.replace(
+      '{nation}',
+      nation
+    )
+  )
+
+const englandPath = nationPath('england')
+
+const injectTable = (server, credentials, url = ukPath(2026, 'monthly', 1)) =>
   server.inject({ method: 'GET', url, ...credentials })
 
 describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
@@ -52,7 +87,7 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
     it('returns 401 when unauthenticated', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: pathFor(2026, 'monthly', 1)
+        url: ukPath(2026, 'monthly', 1)
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -82,7 +117,7 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
       const response = await injectTable(
         server,
         asRegulator(),
-        pathFor(2026, 'quarterly', 1)
+        ukPath(2026, 'quarterly', 1)
       )
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -95,7 +130,7 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
       const response = await injectTable(
         server,
         asRegulator(),
-        pathFor(2026, 'monthly', 6)
+        ukPath(2026, 'monthly', 6)
       )
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
@@ -113,7 +148,7 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
       const response = await injectTable(
         server,
         asRegulator(),
-        pathFor(2026, 'monthly', 6)
+        ukPath(2026, 'monthly', 6)
       )
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -170,5 +205,179 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
       totalRevenue: 0,
       averagePricePerTonne: 0
     })
+  })
+})
+
+/**
+ * @param {{ organisationId: string, registrationId: string }} operator
+ * @param {number} issuedTonnage
+ */
+const januaryPrns = (operator, issuedTonnage) => ({
+  ...operator,
+  year: 2026,
+  cadence: 'monthly',
+  period: 1,
+  prn: {
+    issuedTonnage,
+    freeTonnage: 0,
+    totalRevenue: issuedTonnage * 100,
+    averagePricePerTonne: 100
+  }
+})
+
+/**
+ * The four nations the route serves, each spelled as its path segment. The
+ * spelling is the contract a client depends on, so it is written out here
+ * rather than derived the way the route derives it.
+ */
+const NATIONS = [
+  { segment: 'england', regulator: REGULATOR.EA, issuedTonnage: 100 },
+  { segment: 'wales', regulator: REGULATOR.NRW, issuedTonnage: 50 },
+  { segment: 'scotland', regulator: REGULATOR.SEPA, issuedTonnage: 20 },
+  { segment: 'northern-ireland', regulator: REGULATOR.NIEA, issuedTonnage: 10 }
+]
+
+const UK_ISSUED_TONNAGE = NATIONS.reduce(
+  (total, { issuedTonnage }) => total + issuedTonnage,
+  0
+)
+
+describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath}`, () => {
+  setupAuthContext()
+
+  /** @type {import('#test/create-test-server.js').TestServer} */
+  let server
+
+  beforeAll(async () => {
+    const organisationsRepository = createInMemoryOrganisationsRepository()()
+    const reportsRepository = createInMemoryReportsRepository()()
+    for (const { regulator, issuedTonnage } of NATIONS) {
+      const operator = await insertAccreditedOperator(
+        organisationsRepository,
+        regulator
+      )
+      await buildSubmittedReport(
+        reportsRepository,
+        januaryPrns(operator, issuedTonnage)
+      )
+    }
+    server = await createTestServer({
+      repositories: { organisationsRepository, reportsRepository }
+    })
+  })
+
+  afterAll(async () => {
+    await server.stop()
+  })
+
+  const january2026 = englandPath(2026, 'monthly', 1)
+
+  describe('access control', () => {
+    it('returns 401 when unauthenticated', async () => {
+      const response = await server.inject({ method: 'GET', url: january2026 })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    })
+
+    it('returns 403 for an operator, who holds no market-data.read', async () => {
+      const response = await injectTable(server, asOperator(), january2026)
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
+    it('returns 200 for a regulator, who holds market-data.read', async () => {
+      const response = await injectTable(server, asRegulator(), january2026)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+  })
+
+  it('rejects a quarterly period, as the UK figures do', async () => {
+    const response = await injectTable(
+      server,
+      asRegulator(),
+      englandPath(2026, 'quarterly', 1)
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  it('ends each table with a grand total carrying no average price', async () => {
+    const response = await injectTable(server, asRegulator(), january2026)
+
+    /** @type {ReprocessorExporterTable} */
+    const payload = JSON.parse(response.payload)
+    const { totals } = payload.data.months['2026-01']
+    expect(totals[WASTE_PROCESSING_TYPE.REPROCESSOR]).toEqual(
+      expect.objectContaining({
+        revisedTonnageIssued: NATIONS[0].issuedTonnage,
+        totalRevenue: NATIONS[0].issuedTonnage * 100
+      })
+    )
+    expect(totals[WASTE_PROCESSING_TYPE.REPROCESSOR]).not.toHaveProperty(
+      'averagePricePerTonne'
+    )
+  })
+
+  it('rejects a nation outside the four the domain knows', async () => {
+    const response = await injectTable(
+      server,
+      asRegulator(),
+      nationPath('cornwall')(2026, 'monthly', 1)
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  it.each(NATIONS)(
+    'serves $segment the registrations submitted to its own regulator',
+    async ({ segment, issuedTonnage }) => {
+      const response = await injectTable(
+        server,
+        asRegulator(),
+        nationPath(segment)(2026, 'monthly', 1)
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      /** @type {ReprocessorExporterTable} */
+      const payload = JSON.parse(response.payload)
+      const january = payload.data.months['2026-01']
+      expect(Object.keys(january.figures)).toEqual([
+        ...TONNAGE_MONITORING_MATERIALS
+      ])
+      expect(
+        january.figures[MATERIAL.PLASTIC][WASTE_PROCESSING_TYPE.REPROCESSOR]
+      ).toEqual(
+        expect.objectContaining({
+          revisedTonnageIssued: issuedTonnage,
+          totalRevenue: issuedTonnage * 100
+        })
+      )
+    }
+  )
+
+  it('serves four nations that add back up to the UK figures', async () => {
+    const responses = await Promise.all([
+      ...NATIONS.map(({ segment }) =>
+        injectTable(
+          server,
+          asRegulator(),
+          nationPath(segment)(2026, 'monthly', 1)
+        )
+      ),
+      injectTable(server, asRegulator(), ukPath(2026, 'monthly', 1))
+    ])
+
+    const issued = responses.map((response) => {
+      /** @type {ReprocessorExporterTable} */
+      const payload = JSON.parse(response.payload)
+      return payload.data.months['2026-01'].totals[
+        WASTE_PROCESSING_TYPE.REPROCESSOR
+      ].revisedTonnageIssued
+    })
+    const uk = issued.pop()
+
+    expect(issued.reduce((total, nation) => total + nation, 0)).toBe(uk)
+    expect(uk).toBe(UK_ISSUED_TONNAGE)
   })
 })
