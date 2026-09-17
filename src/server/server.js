@@ -44,6 +44,7 @@ import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consume
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
+import { runReportDataCompletenessDiagnostic } from '#server/run-report-data-completeness-diagnostic.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runStreamTransitionDiagnostic } from '#stream-transition-diagnostic/run.js'
 import { runDecemberLoadsDiagnostic } from '#december-loads-diagnostic/run.js'
@@ -223,6 +224,7 @@ async function createServer(options = {}) {
     runReconcileStalePrnProjections(startedServer)
     runStreamTransitionDiagnostic(startedServer)
     runDecemberLoadsDiagnostic(startedServer)
+    runReportDataCompletenessDiagnostic(startedServer)
   })
 
   return server
