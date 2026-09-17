@@ -2,17 +2,17 @@ import Boom from '@hapi/boom'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { metaText } from '#domain/summary-logs/stored-meta.js'
 import { buildDownloadDisposition } from '#repositories/summary-logs/download-disposition.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
-import { streamCsvExportToReadable } from '#waste-records-export/application/stream-csv-export.js'
+import { streamSubmissionCsvToReadable } from '#waste-records-export/application/stream-submission-csv.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository, SummaryLogWithId } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
-/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 export const summaryLogRecordsCsvPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/files/{fileId}/records.csv'
@@ -20,20 +20,20 @@ export const summaryLogRecordsCsvPath =
 const CSV_EXTENSION = 'csv'
 
 /**
- * The moment the submission carrying `fileId` completed, or undefined when
- * this registration never submitted it. `findAllByOrgReg` also returns the
- * failed uploads, which hold a file but committed no rows.
+ * The submission carrying `fileId`, or undefined when this registration never
+ * submitted it. `findAllByOrgReg` also returns the failed uploads, which hold a
+ * file but committed no rows.
  *
  * @param {SummaryLogWithId[]} summaryLogs
  * @param {string} fileId
- * @returns {string | undefined}
+ * @returns {SummaryLog | undefined}
  */
-const submittedAtForFile = (summaryLogs, fileId) =>
+const submittedSummaryLogForFile = (summaryLogs, fileId) =>
   summaryLogs.find(
     ({ summaryLog }) =>
       summaryLog.file.id === fileId &&
       summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
-  )?.summaryLog.submittedAt
+  )?.summaryLog
 
 /**
  * The service's own record of one submission, in the admin export's format.
@@ -55,33 +55,38 @@ export const summaryLogRecordsCsv = {
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
    *   systemLogsRepository: SystemLogsRepository,
-   *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
-   *   ledgerRepository: WasteBalanceLedgerRepository,
-   *   overseasSitesRepository: OverseasSitesRepository
+   *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
    * }} request
    * @param {*} h
    */
   handler: async (request, h) => {
     const { organisationId, registrationId, fileId } = request.params
 
-    // Decides the 404 as well as the name — once the handler has returned a
-    // Readable the status is already sent.
-    const submittedAt = submittedAtForFile(
+    // Every read happens here: once the handler has returned a Readable the
+    // status is already sent.
+    const summaryLog = submittedSummaryLogForFile(
       await request.summaryLogsRepository.findAllByOrgReg(
         organisationId,
         registrationId
       ),
       fileId
     )
-    if (!submittedAt) {
+    if (!summaryLog?.submittedAt) {
       throw Boom.notFound('Summary log file not found')
     }
 
-    // Names the download only, so a failed lookup costs the name, not the file.
-    const registrationNumber = await request.organisationsRepository
-      .findRegistrationById(organisationId, registrationId)
-      .then((registration) => registration.registrationNumber)
-      .catch(() => undefined)
+    const [org, registration, rowStates] = await Promise.all([
+      request.organisationsRepository.findById(organisationId),
+      request.organisationsRepository.findRegistrationById(
+        organisationId,
+        registrationId
+      ),
+      request.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+        organisationId,
+        registrationId,
+        fileId
+      )
+    ])
 
     await auditSummaryLogDownload(request, {
       summaryLogId: fileId,
@@ -91,25 +96,24 @@ export const summaryLogRecordsCsv = {
 
     const response = h
       .response(
-        streamCsvExportToReadable({
-          organisationsRepository: request.organisationsRepository,
-          summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
-          ledgerRepository: request.ledgerRepository,
-          summaryLogsRepository: request.summaryLogsRepository,
-          overseasSitesRepository: request.overseasSitesRepository,
-          organisationId,
-          registrationId,
-          summaryLogFileId: fileId
+        streamSubmissionCsvToReadable({
+          org,
+          registration,
+          meta: summaryLog.meta,
+          submittedAt: summaryLog.submittedAt,
+          rowStates
         })
       )
       .type('text/csv; charset=utf-8')
+
+    const registrationNumber = metaText(summaryLog.meta?.REGISTRATION_NUMBER)
 
     return registrationNumber
       ? response.header(
           'Content-Disposition',
           buildDownloadDisposition(
             registrationNumber,
-            submittedAt,
+            summaryLog.submittedAt,
             CSV_EXTENSION
           )
         )

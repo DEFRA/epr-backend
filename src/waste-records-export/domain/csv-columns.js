@@ -1,5 +1,9 @@
 import { uppercaseString } from '#common/helpers/formatters.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
+import {
+  materialFromSpreadsheet,
+  metaText
+} from '#domain/summary-logs/stored-meta.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 import * as exporter from '#domain/summary-logs/table-schemas/exporter/fields.js'
@@ -12,6 +16,7 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 /** @import {RowClassification} from '#waste-records/repository/schema.js' */
 
@@ -160,6 +165,17 @@ const buildWasteBalanceCells = (classification) => {
 }
 
 /**
+ * @param {Record<string, any>} data
+ * @param {string[]} dataFieldColumns
+ * @returns {(string | number)[]}
+ */
+const buildDataCells = (data, dataFieldColumns) =>
+  dataFieldColumns.map((field) => {
+    const value = data[field]
+    return value === null || value === undefined ? '' : value
+  })
+
+/**
  * @typedef {Object} BuildDataRowInput
  * @property {Organisation} org
  * @property {Registration} registration
@@ -226,10 +242,84 @@ export const buildDataRow = ({
     orsDetails?.siteName ?? ''
   ]
 
-  const dataCells = dataFieldColumns.map((field) => {
-    const value = data[field]
-    return value === null || value === undefined ? '' : value
-  })
+  return [...metadata, ...buildDataCells(data, dataFieldColumns)].map(
+    sanitiseFormulaInjection
+  )
+}
 
-  return [...metadata, ...dataCells].map(sanitiseFormulaInjection)
+/**
+ * The metadata prefix of a historical submission's CSV: only columns that
+ * read what the submission stored, or the organisation.
+ */
+export const SUBMISSION_METADATA_COLUMNS = Object.freeze([
+  'Regulator',
+  'Organisation Name',
+  'Registration Number',
+  'Material',
+  'Operator Processing Type',
+  'Accreditation Number',
+  'Waste Record Type',
+  'Submitted At',
+  'Included in Waste Balance',
+  'Waste Balance Exclusion Reason',
+  'Waste Balance Tonnage',
+  'Row ID'
+])
+
+/**
+ * @param {string[]} dataFieldColumns
+ * @returns {string[]}
+ */
+export const buildSubmissionHeaderRow = (dataFieldColumns) => [
+  ...SUBMISSION_METADATA_COLUMNS,
+  ...dataFieldColumns
+]
+
+/**
+ * @typedef {Object} BuildSubmissionDataRowInput
+ * @property {Organisation} org
+ * @property {Registration} registration
+ * @property {SummaryLogMeta | undefined} meta - The submission's stored cover sheet.
+ * @property {string} submittedAt
+ * @property {Record<string, any>} data - Coerced committed row data, carrying `processingType`.
+ * @property {WasteRecordType} wasteRecordType
+ * @property {string} rowId
+ * @property {RowClassification} classification - The classification stamped at submission.
+ * @property {string[]} dataFieldColumns
+ */
+
+/**
+ * Build a single CSV data row in the column order of
+ * `buildSubmissionHeaderRow(dataFieldColumns)`.
+ *
+ * @param {BuildSubmissionDataRowInput} input
+ * @returns {(string | number)[]}
+ */
+export const buildSubmissionDataRow = ({
+  org,
+  registration,
+  meta,
+  submittedAt,
+  data,
+  wasteRecordType,
+  rowId,
+  classification,
+  dataFieldColumns
+}) => {
+  const metadata = [
+    uppercaseString(registration.submittedToRegulator),
+    org.companyDetails.name,
+    metaText(meta?.REGISTRATION_NUMBER),
+    materialFromSpreadsheet(meta?.MATERIAL) ?? '',
+    data.processingType,
+    metaText(meta?.ACCREDITATION_NUMBER),
+    wasteRecordType,
+    submittedAt,
+    ...buildWasteBalanceCells(classification),
+    String(rowId)
+  ]
+
+  return [...metadata, ...buildDataCells(data, dataFieldColumns)].map(
+    sanitiseFormulaInjection
+  )
 }
