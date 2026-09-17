@@ -12,14 +12,15 @@ const LOCK_NAME = 'december-loads-diagnostic'
 /** @param {DecemberLoadRow} r */
 const formatCandidateLine = (r) =>
   [
-    'December-dated load:',
+    'December balance mismatch:',
     `organisationId=${r.organisationId}`,
     `organisationReference=${r.organisationReference}`,
     `accreditationId=${r.accreditationId}`,
     `accreditationNumber=${r.accreditationNumber}`,
     `processingType=${r.processingType}`,
     `decemberMonth=${r.decemberKey}`,
-    `decemberRowCount=${r.decemberRowCount}`
+    `summaryLogDecemberTonnage=${r.summaryLogDecemberTonnage}`,
+    `ledgerDecemberTonnage=${r.ledgerDecemberTonnage ?? 'absent'}`
   ].join(' ')
 
 /** @param {StartedServer} server */
@@ -44,17 +45,18 @@ const runDiagnostic = async (server) => {
   }
 
   logger.info({
-    message: `December loads diagnostic: scannedAccreditations=${summary.scannedAccreditations} affectedAccreditations=${summary.affectedAccreditations} totalDecemberRows=${summary.totalDecemberRows}`
+    message: `December loads diagnostic: scannedAccreditations=${summary.scannedAccreditations} accreditationsWithDecemberTonnage=${summary.accreditationsWithDecemberTonnage} mismatchedAccreditations=${summary.mismatchedAccreditations}`
   })
 }
 
 /**
- * Read-only startup diagnostic for PAE-1920: checks whether any operator's
- * latest submitted summary log already holds December-dated loads — rows whose
- * balance-affecting date falls in the accreditation-year December (exporter and
- * reprocessor-input; reprocessor-output never accrues December). December of the
- * current accreditation year has not happened, so such a row is almost certainly
- * misdated. It reports them so they can be checked; it writes nothing.
+ * Read-only startup diagnostic for PAE-1920: checks whether each accreditation's
+ * recorded ledger December portion agrees with the December tonnage its current
+ * summary-log rows compute (exporter and reprocessor-input; reprocessor-output
+ * never accrues December). A disagreement — including a ledger that records no
+ * December portion where tonnage exists — flags an accreditation whose December
+ * portion needs a backfill. It reports them so they can be checked; it writes
+ * nothing.
  *
  * A one-off sweep, run unconditionally on startup like the other read-only
  * sweeps, then removed once the check has run. The Mongo lock keeps a single pod
