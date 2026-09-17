@@ -259,6 +259,47 @@ const buildOrganisationSnapshot = ({
   ...(tradingName && { tradingName })
 })
 
+/**
+ * The guards a create must pass, in refusal-precedence order: a cancelled
+ * accreditation (403), the reg 92(1)(c) issuance window, the December Waste
+ * declaration window, then the balance pre-check (all 409s).
+ *
+ * @param {Object} params
+ * @param {Object} params.accreditation
+ * @param {PackagingRecyclingNotesCreatePayload} params.payload
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
+ * @param {Date} params.now
+ */
+const assertCreatePermitted = async ({
+  accreditation,
+  payload,
+  ledgerRepository,
+  ledgerId,
+  now
+}) => {
+  if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
+    throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
+  }
+
+  assertIssuanceWindowOpen({ accreditation, now })
+
+  assertDecemberWasteDeclarable({
+    accreditation,
+    isDecemberWaste: payload.isDecemberWaste,
+    now,
+    config: config.get('decemberWaste')
+  })
+
+  await assertSufficientAvailableBalance({
+    ledgerRepository,
+    ledgerId,
+    tonnage: payload.tonnage,
+    isDecemberWaste: payload.isDecemberWaste,
+    accreditation
+  })
+}
+
 export const packagingRecyclingNotesCreate = {
   method: 'POST',
   path: packagingRecyclingNotesCreatePath,
@@ -303,25 +344,12 @@ export const packagingRecyclingNotesCreate = {
         organisationsRepository.findById(organisationId)
       ])
 
-      if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
-        throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
-      }
-
-      assertIssuanceWindowOpen({ accreditation, now })
-
-      assertDecemberWasteDeclarable({
+      await assertCreatePermitted({
         accreditation,
-        isDecemberWaste: payload.isDecemberWaste,
-        now,
-        config: config.get('decemberWaste')
-      })
-
-      await assertSufficientAvailableBalance({
+        payload,
         ledgerRepository,
         ledgerId: { organisationId, registrationId, accreditationId },
-        tonnage: payload.tonnage,
-        isDecemberWaste: payload.isDecemberWaste,
-        accreditation
+        now
       })
 
       const isExport =
