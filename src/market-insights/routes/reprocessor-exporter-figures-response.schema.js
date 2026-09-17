@@ -4,7 +4,12 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { byReportingMonth, metaSchema, recordOf } from './response-schema.js'
+import {
+  byReportingMonth,
+  metaSchema,
+  recordOf,
+  reportCountSchema
+} from './response-schema.js'
 
 const figure = Joi.number()
 
@@ -57,16 +62,22 @@ const totalsSchema = byAccreditationType(TOTALLED_MEASURES)
  * Response contract for the published UK reprocessor and exporter tables.
  * Keyed by reporting month, then material, then accreditation type, each
  * type carrying the measures its own table prints, plus the grand total each
- * table ends in.
+ * table ends in. Each month says how many monthly reports it was owed and how
+ * many have been submitted, and the period carries the sum, so a page can say
+ * how complete the figures are. That count covers the registrations these
+ * figures cover, those holding a live accreditation, which is a narrower
+ * population than the waste balance counts over.
  */
 export const reprocessorExporterFiguresResponseSchema = Joi.object({
   meta: metaSchema,
   data: Joi.object({
     months: byReportingMonth(
       Joi.object({
+        reports: reportCountSchema.required(),
         figures: figuresByMaterialSchema.required(),
         totals: totalsSchema.required()
       })
-    )
+    ),
+    period: Joi.object({ reports: reportCountSchema.required() }).required()
   }).required()
 })

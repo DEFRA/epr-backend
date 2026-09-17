@@ -17,10 +17,15 @@ import {
   statusHeldAt
 } from '#common/helpers/dates/accreditation.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
-import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  ACTIVE_ACCREDITATION_STATUSES
+} from '#domain/organisations/model.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
@@ -40,6 +45,36 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @property {Record<YearMonth, ReportCount>} byMonth - keyed by month served
  * @property {ReportCount} total - summed across every month served
  */
+
+/**
+ * A registration the walk reached, and the accreditation it reports under.
+ *
+ * @typedef {Object} OwedReportCandidate
+ * @property {Organisation} org
+ * @property {Registration} registration
+ */
+
+/**
+ * Whether a caller's publication covers the candidate's registration. A caller
+ * publishing figures over part of the register passes one so its count
+ * describes the same operators its figures do.
+ *
+ * @typedef {(candidate: OwedReportCandidate) => boolean} CoversRegistration
+ */
+
+/**
+ * Whether the accreditation has ever been granted, read from its history
+ * rather than from the status it holds now. Only a granted accreditation owes
+ * monthly reports, and the schema makes the validity dates optional rather
+ * than absent for an accreditation still created or since rejected, so one
+ * that carries dates must not be walked as though it were live. Reading the
+ * history keeps an approval since reverted to draft, and a cancellation, on
+ * the months they held, which `owedPeriods` then bounds.
+ *
+ * @param {Accreditation} accreditation
+ */
+const hasBeenGranted = ({ statusHistory }) =>
+  statusHistory.some(({ status }) => ACTIVE_ACCREDITATION_STATUSES.has(status))
 
 /**
  * Every day of a reporting period, as the bare dates a load can carry.
@@ -124,12 +159,14 @@ const owedPeriods = (served, years, accreditation) => {
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {YearMonth[]} params.months - the reporting months served
+ * @param {CoversRegistration} [params.covers] - narrows the walk to the registrations a caller publishes
  * @returns {Generator<OwedReport>}
  */
 export function* owedMonthlyReports({
   organisations,
   periodicReports,
-  months
+  months,
+  covers = () => true
 }) {
   const served = new Set(months)
   const years = [...new Set(months.map((month) => Number(month.slice(0, 4))))]
@@ -139,7 +176,11 @@ export function* owedMonthlyReports({
     organisations
   )) {
     const [accreditation] = accreditationsForRegistration(registration, org)
-    if (accreditation === undefined) {
+    if (
+      accreditation === undefined ||
+      !hasBeenGranted(accreditation) ||
+      !covers({ org, registration })
+    ) {
       continue
     }
     const owed = owedPeriods(served, years, accreditation)

@@ -41,14 +41,16 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   orgId: number,
  *   material?: AppliedForMaterial,
  *   tonnageBand?: TonnageBand,
- *   statusHistory?: StatusHistoryEntry[]
+ *   statusHistory?: StatusHistoryEntry[],
+ *   validity?: { validFrom?: string, validTo?: string }
  * }} options
  */
 const makeOperator = ({
   orgId,
   material = MATERIAL.PLASTIC,
   tonnageBand = TONNAGE_BAND.UP_TO_500,
-  statusHistory = approvedHistory
+  statusHistory = approvedHistory,
+  validity = { validFrom: '2026-01-01', validTo: '2026-12-31' }
 }) => {
   const id = objectIdFor('a', orgId)
   const registrationId = objectIdFor('b', orgId)
@@ -77,8 +79,7 @@ const makeOperator = ({
             id: accreditationId,
             status: statusHistory.at(-1)?.status,
             statusHistory,
-            validFrom: '2026-01-01',
-            validTo: '2026-12-31',
+            ...validity,
             material,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             reprocessingType: REPROCESSING_TYPE.INPUT,
@@ -288,6 +289,64 @@ describe('countOutstandingReturns', () => {
     const counts = await count({ operators: [operator.organisation] })
 
     expect(outstanding(counts)).toEqual([])
+  })
+
+  it('counts nothing for an accreditation rejected before the period, though it carries validity dates', async () => {
+    const operator = makeOperator({
+      orgId: 500042,
+      statusHistory: [
+        { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
+        { status: ACCREDITATION_STATUS.REJECTED, updatedAt: '2025-11-20' }
+      ]
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([])
+  })
+
+  it('counts nothing for an approved accreditation since reverted to draft and stripped of its dates', async () => {
+    const operator = makeOperator({
+      orgId: 500045,
+      statusHistory: [
+        ...approvedHistory,
+        { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
+      ],
+      validity: {}
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([])
+  })
+
+  it('counts nothing for an accreditation still awaiting a decision, though it carries validity dates', async () => {
+    const operator = makeOperator({
+      orgId: 500043,
+      statusHistory: [
+        { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' }
+      ]
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([])
+  })
+
+  it('still counts the months an accreditation held before its cancellation', async () => {
+    const operator = makeOperator({
+      orgId: 500044,
+      statusHistory: [
+        ...approvedHistory,
+        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-01' }
+      ]
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([
+      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
+    ])
   })
 
   it('counts nothing for a registered-only operator, which reports quarterly', async () => {

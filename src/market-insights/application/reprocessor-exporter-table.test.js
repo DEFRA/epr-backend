@@ -223,6 +223,22 @@ const reported = (table) =>
   )
 
 /**
+ * The reports each month was owed and how many arrived, and the same for the
+ * period.
+ *
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
+ */
+const coverage = (table) => ({
+  byMonth: Object.fromEntries(
+    Object.entries(table.data.months).map(([month, { reports }]) => [
+      month,
+      reports
+    ])
+  ),
+  period: table.data.period.reports
+})
+
+/**
  * The PRN tonnage the January reprocessor table totals to.
  *
  * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
@@ -560,6 +576,68 @@ describe('buildReprocessorExporterTable', () => {
     )
   })
 
+  describe('the report coverage', () => {
+    it('counts the monthly reports owed and received, by month and for the period', async () => {
+      const operator = makeOperator({ orgId: 1 })
+      const another = makeOperator({ orgId: 2, material: MATERIAL.WOOD })
+
+      const { table } = await run({
+        organisations: [operator, another],
+        reports: [
+          monthlyReport(operator, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(another, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(operator, 2, { prn: prn(10, 0, 1000) })
+        ]
+      })
+
+      expect(coverage(table)).toEqual({
+        byMonth: {
+          '2026-01': { expected: 2, submitted: 2 },
+          '2026-02': { expected: 2, submitted: 1 },
+          '2026-03': { expected: 2, submitted: 0 }
+        },
+        period: { expected: 6, submitted: 3 }
+      })
+    })
+
+    it('counts the registrations the figures cover and no others', async () => {
+      const published = makeOperator({ orgId: 1 })
+      const cancelled = makeOperator({
+        orgId: 2,
+        material: MATERIAL.WOOD,
+        accreditationStatusHistory: [
+          ...approvedHistory,
+          { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-03-01' }
+        ]
+      })
+      const refused = makeOperator({
+        orgId: 3,
+        material: MATERIAL.STEEL,
+        accreditationStatusHistory: [
+          { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
+          { status: ACCREDITATION_STATUS.REJECTED, updatedAt: '2025-11-20' }
+        ]
+      })
+
+      const { table } = await run({
+        organisations: [published, cancelled, refused],
+        reports: [
+          monthlyReport(published, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(cancelled, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(refused, 1, { prn: prn(10, 0, 1000) })
+        ]
+      })
+
+      expect(reported(table).map(({ material }) => material)).toEqual([
+        MATERIAL.PLASTIC
+      ])
+      expect(coverage(table).byMonth['2026-01']).toEqual({
+        expected: 1,
+        submitted: 1
+      })
+    })
+  })
+
   it('leaves out a test organisation without remarking on it', async () => {
     const operator = makeOperator({ orgId: TEST_ORG_ID })
     const { table, logger } = await run({
@@ -652,6 +730,34 @@ describe('buildReprocessorExporterTable', () => {
         nations.reduce((total, { table }) => total + januaryIssued(table), 0)
       ).toBe(januaryIssued(uk))
       expect(januaryIssued(uk)).toBe(100)
+    })
+
+    it('counts the report coverage of that regulator alone', async () => {
+      const english = makeOperator({ orgId: 1, regulator: REGULATOR.EA })
+      const welsh = makeOperator({ orgId: 2, regulator: REGULATOR.NRW })
+      const seeded = {
+        organisations: [english, welsh],
+        reports: [
+          monthlyReport(english, 1, { prn: prn(100, 0, 10000) }),
+          monthlyReport(welsh, 1, { prn: prn(50, 0, 5000) })
+        ]
+      }
+
+      const { table: uk } = await run(seeded)
+      const { table: england } = await run({
+        ...seeded,
+        regulator: REGULATOR.EA
+      })
+
+      expect(coverage(uk).byMonth['2026-01']).toEqual({
+        expected: 2,
+        submitted: 2
+      })
+      expect(coverage(england).byMonth['2026-01']).toEqual({
+        expected: 1,
+        submitted: 1
+      })
+      expect(coverage(england).period).toEqual({ expected: 3, submitted: 1 })
     })
 
     it('answers the full grid at zero when that regulator has no activity', async () => {
