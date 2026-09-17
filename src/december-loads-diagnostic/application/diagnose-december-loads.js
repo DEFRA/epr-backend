@@ -1,14 +1,15 @@
 import { processingTypeFor } from '#waste-balances/domain/credited-tonnage.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
+import { decemberCreditTotalFor } from '#waste-balances/application/december-credit-total.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
-import {
-  accreditationDecemberKey,
-  countDecemberContributingRows
-} from '#december-loads-diagnostic/domain/december-contributing-rows.js'
+import { decemberKeyForYearOf } from '#common/helpers/dates/year-month.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').SummaryLogSubmittedPayload} SummaryLogSubmittedPayload
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
+ * @typedef {import('#waste-records/repository/schema.js').SummaryLogRowState} SummaryLogRowState
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationContext} AccreditationContext
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
@@ -16,8 +17,17 @@ import {
  */
 
 /**
- * One affected summary log: an accreditation whose current submission already
- * holds December-dated loads that contribute to the balance.
+ * One flagged accreditation: the December credit the ledger recorded for its
+ * latest submission disagrees with the December tonnage its current summary-log
+ * rows compute. `ledgerDecemberTonnage` is `null` when that submission recorded
+ * no `decemberCreditTotal` — a pre-PAE-1920 submission that has not been
+ * resubmitted since, which is itself a mismatch whenever the rows compute
+ * December tonnage.
+ *
+ * The recorded figure is read from the latest `summary-log-submitted` event's
+ * payload, not from the running closing balance: the closing balance's
+ * `decemberAmount` is drawn down as December PRNs are issued, so it would
+ * diverge from the rows' gross figure even when nothing needs a backfill.
  *
  * @typedef {Object} DecemberLoadRow
  * @property {string} organisationId - internal id
@@ -26,14 +36,15 @@ import {
  * @property {string} accreditationNumber
  * @property {string} processingType
  * @property {string} decemberKey - `YYYY-12`
- * @property {number} decemberRowCount
+ * @property {number} summaryLogDecemberTonnage - December tonnage the current rows compute
+ * @property {number | null} ledgerDecemberTonnage - December credit the latest submission recorded, `null` when absent
  */
 
 /**
  * @typedef {Object} DecemberLoadsSummary
  * @property {number} scannedAccreditations - accredited submissions matched and scanned
- * @property {number} affectedAccreditations - scanned submissions with a nonzero count
- * @property {number} totalDecemberRows - sum of December-affecting rows across the affected set
+ * @property {number} accreditationsWithDecemberTonnage - scanned submissions with nonzero expected December tonnage
+ * @property {number} mismatchedAccreditations - scanned submissions whose ledger December disagrees with expected
  */
 
 /**
@@ -43,7 +54,13 @@ import {
  */
 
 /**
- * Sort affected rows by organisation reference (numerically) then accreditation
+ * @typedef {Object} AccreditationScan
+ * @property {boolean} hasDecember - the current rows compute nonzero December tonnage
+ * @property {DecemberLoadRow | null} row - a flagged row when ledger disagrees, else null
+ */
+
+/**
+ * Sort flagged rows by organisation reference (numerically) then accreditation
  * id, so a diagnostic run reads in a stable order.
  *
  * @param {DecemberLoadRow} a
@@ -55,21 +72,41 @@ const compareRows = (a, b) =>
   a.accreditationId.localeCompare(b.accreditationId)
 
 /**
- * Count the December-affecting rows an accreditation's current submission holds,
- * reading its row states at the submitted head.
+ * Fold a stored row state's hoisted `processingType` back into its `data`, the
+ * shape `decemberCreditTotalFor` reads it from. Storage lifts `processingType`
+ * to a top-level field (project-summary-log-row-state.js), but the December
+ * credit computation reads `data.processingType`, exactly as the write path fed
+ * it — so the diagnostic reconstructs the ledger's figure faithfully.
+ *
+ * @param {SummaryLogRowState} rowState
+ * @returns {SummaryLogRowState}
+ */
+const withProcessingTypeInData = (rowState) => ({
+  ...rowState,
+  data: { ...rowState.data, processingType: rowState.processingType }
+})
+
+/**
+ * Compare the December credit the ledger recorded for an accreditation's latest
+ * submission against the December tonnage its current rows compute, reading its
+ * row states at the submitted head. Returns nothing to flag when the rows
+ * compute no December tonnage (the ledger is not read), and a flagged row only
+ * when the recorded credit disagrees with what the rows compute.
  *
  * @param {Object} params
  * @param {AccreditationContext} params.context
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {string} params.summaryLogId
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @returns {Promise<DecemberLoadRow | null>}
+ * @param {WasteBalanceLedgerRepository} params.ledgerRepository
+ * @returns {Promise<AccreditationScan>}
  */
 const scanAccreditation = async ({
   context,
   ledgerId,
   summaryLogId,
-  summaryLogRowStatesRepository
+  summaryLogRowStatesRepository,
+  ledgerRepository
 }) => {
   const { organisation, registration, accreditation } = context
   const processingType = processingTypeFor({
@@ -78,40 +115,59 @@ const scanAccreditation = async ({
     ),
     reprocessingType: registration.reprocessingType
   })
-  const decemberKey = accreditationDecemberKey(accreditation)
 
   const rowStates =
     await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
       ledgerId,
       summaryLogId
     )
-  const decemberRowCount = countDecemberContributingRows(
-    rowStates,
-    processingType,
-    decemberKey
+  const summaryLogDecemberTonnage = decemberCreditTotalFor(
+    rowStates.map(withProcessingTypeInData),
+    accreditation
   )
 
-  if (decemberRowCount === 0) {
-    return null
+  if (summaryLogDecemberTonnage === 0) {
+    return { hasDecember: false, row: null }
+  }
+
+  const latestSubmission = await ledgerRepository.findLatestInLedgerByKind(
+    ledgerId,
+    LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+  )
+  const submissionPayload =
+    /** @type {SummaryLogSubmittedPayload | undefined} */ (
+      latestSubmission?.payload
+    )
+  const ledgerDecemberTonnage = submissionPayload?.decemberCreditTotal ?? null
+
+  if (summaryLogDecemberTonnage === ledgerDecemberTonnage) {
+    return { hasDecember: true, row: null }
   }
 
   return {
-    organisationId: organisation.id,
-    organisationReference: String(organisation.orgId),
-    accreditationId: accreditation.id,
-    accreditationNumber: accreditation.accreditationNumber ?? '',
-    processingType,
-    decemberKey: /** @type {string} */ (decemberKey),
-    decemberRowCount
+    hasDecember: true,
+    row: {
+      organisationId: organisation.id,
+      organisationReference: String(organisation.orgId),
+      accreditationId: accreditation.id,
+      accreditationNumber: accreditation.accreditationNumber ?? '',
+      processingType,
+      decemberKey: /** @type {string} */ (
+        decemberKeyForYearOf(accreditation.validFrom)
+      ),
+      summaryLogDecemberTonnage,
+      ledgerDecemberTonnage
+    }
   }
 }
 
 /**
- * Sweep every accreditation's latest submitted summary log and report those
- * that already hold December-dated loads: rows whose balance-affecting date
- * lands in the accreditation-year December and contribute to the balance.
- * Read-only: it counts, it does not write. Reprocessor-output
- * submissions never accrue December, so they are scanned but never reported.
+ * Sweep every accreditation's latest submitted summary log and flag those whose
+ * recorded ledger December portion disagrees with the December tonnage their
+ * current rows compute. Read-only: it compares, it does not write. Only
+ * accreditations that compute nonzero December tonnage are read against the
+ * ledger; reprocessor-output submissions never accrue December, so they compute
+ * nothing and are never flagged.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
@@ -139,6 +195,7 @@ export const buildDecemberLoadsReport = async ({
   /** @type {DecemberLoadRow[]} */
   const reports = []
   let scannedAccreditations = 0
+  let accreditationsWithDecemberTonnage = 0
 
   for (const { ledgerId, summaryLogId } of accreditedEntries) {
     const accreditationId = /** @type {string} */ (ledgerId.accreditationId)
@@ -158,12 +215,16 @@ export const buildDecemberLoadsReport = async ({
     }
 
     scannedAccreditations += 1
-    const row = await scanAccreditation({
+    const { hasDecember, row } = await scanAccreditation({
       context,
       ledgerId,
       summaryLogId,
-      summaryLogRowStatesRepository
+      summaryLogRowStatesRepository,
+      ledgerRepository
     })
+    if (hasDecember) {
+      accreditationsWithDecemberTonnage += 1
+    }
     if (row) {
       reports.push(row)
     }
@@ -175,8 +236,8 @@ export const buildDecemberLoadsReport = async ({
     reports,
     summary: {
       scannedAccreditations,
-      affectedAccreditations: reports.length,
-      totalDecemberRows: reports.reduce((sum, r) => sum + r.decemberRowCount, 0)
+      accreditationsWithDecemberTonnage,
+      mismatchedAccreditations: reports.length
     }
   }
 }
