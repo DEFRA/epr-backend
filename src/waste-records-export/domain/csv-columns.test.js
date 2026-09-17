@@ -6,7 +6,10 @@ import {
   OSR_NAME_REVISED,
   buildDataFieldColumns,
   buildHeaderRow,
-  buildDataRow
+  buildDataRow,
+  SUBMISSION_METADATA_COLUMNS,
+  buildSubmissionHeaderRow,
+  buildSubmissionDataRow
 } from './csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -17,6 +20,60 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 /** @import {Registration} from '#domain/organisations/registration.js' */
 
 describe('csv-columns', () => {
+  const userFixture = {
+    fullName: 'Test User',
+    email: 'test@example.com',
+    phone: '01234567890'
+  }
+
+  /** @type {Organisation} */
+  const orgFixture = {
+    id: 'org-1',
+    orgId: 500001,
+    accreditations: [],
+    registrations: [],
+    companyDetails: { name: 'Acme Ltd' },
+    formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
+    schemaVersion: 1,
+    status: 'active',
+    statusHistory: [{ status: 'approved', updatedAt: new Date('2026-01-01') }],
+    submittedToRegulator: 'ea',
+    submitterContactDetails: userFixture,
+    users: [],
+    version: 1,
+    wasteProcessingTypes: []
+  }
+
+  /** @type {Registration} */
+  const regFixture = {
+    id: 'reg-1',
+    accreditation: null,
+    applicationContactDetails: userFixture,
+    approvedPersons: [],
+    formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
+    material: 'plastic',
+    orgName: 'Acme Ltd',
+    site: { address: {}, gridReference: 'TQ123456', siteCapacity: [] },
+    submittedToRegulator: 'ea',
+    submitterContactDetails: userFixture,
+    suppliers: 'Local authority kerbside collections',
+    wasteProcessingType: 'reprocessor',
+    registrationNumber: 'REG-001',
+    samplingInspectionPlanPart1FileUploads: [],
+    status: 'approved',
+    statusHistory: [],
+    validFrom: '2026-01-01'
+  }
+
+  // Coerced committed row data, carrying its `processingType`, as the
+  // application layer hands it to the row builders.
+  const dataFixture = {
+    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+    DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+    GROSS_WEIGHT: 10,
+    TONNAGE_RECEIVED_FOR_RECYCLING: 9
+  }
+
   describe('METADATA_COLUMNS', () => {
     it('starts with the fixed metadata prefix in the documented order', () => {
       expect(METADATA_COLUMNS).toEqual([
@@ -117,53 +174,6 @@ describe('csv-columns', () => {
     const dataCol = (name) =>
       METADATA_COLUMNS.length + dataFieldColumns.indexOf(name)
 
-    const userFixture = {
-      fullName: 'Test User',
-      email: 'test@example.com',
-      phone: '01234567890'
-    }
-
-    /** @type {Organisation} */
-    const orgFixture = {
-      id: 'org-1',
-      orgId: 500001,
-      accreditations: [],
-      registrations: [],
-      companyDetails: { name: 'Acme Ltd' },
-      formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
-      schemaVersion: 1,
-      status: 'active',
-      statusHistory: [
-        { status: 'approved', updatedAt: new Date('2026-01-01') }
-      ],
-      submittedToRegulator: 'ea',
-      submitterContactDetails: userFixture,
-      users: [],
-      version: 1,
-      wasteProcessingTypes: []
-    }
-
-    /** @type {Registration} */
-    const regFixture = {
-      id: 'reg-1',
-      accreditation: null,
-      applicationContactDetails: userFixture,
-      approvedPersons: [],
-      formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
-      material: 'plastic',
-      orgName: 'Acme Ltd',
-      site: { address: {}, gridReference: 'TQ123456', siteCapacity: [] },
-      submittedToRegulator: 'ea',
-      submitterContactDetails: userFixture,
-      suppliers: 'Local authority kerbside collections',
-      wasteProcessingType: 'reprocessor',
-      registrationNumber: 'REG-001',
-      samplingInspectionPlanPart1FileUploads: [],
-      status: 'approved',
-      statusHistory: [],
-      validFrom: '2026-01-01'
-    }
-
     /** @type {Accreditation} */
     const accreditationFixture = {
       id: 'acc-1',
@@ -184,15 +194,6 @@ describe('csv-columns', () => {
       status: 'approved',
       validFrom: '2026-01-01',
       validTo: '2026-12-31'
-    }
-
-    // Coerced committed row data, carrying its `processingType`, as the
-    // application layer hands it to `buildDataRow`.
-    const dataFixture = {
-      processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-      DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
-      GROSS_WEIGHT: 10,
-      TONNAGE_RECEIVED_FOR_RECYCLING: 9
     }
 
     /** @returns {Registration} */
@@ -442,6 +443,203 @@ describe('csv-columns', () => {
         expect(row[countryIdx]).toBe('')
         expect(row[nameIdx]).toBe('')
       })
+    })
+  })
+
+  describe('SUBMISSION_METADATA_COLUMNS', () => {
+    it('lists only the columns a submission stored, in the documented order', () => {
+      expect(SUBMISSION_METADATA_COLUMNS).toEqual([
+        'Regulator',
+        'Organisation Name',
+        'Registration Number',
+        'Material',
+        'Operator Processing Type',
+        'Accreditation Number',
+        'Waste Record Type',
+        'Submitted At',
+        'Included in Waste Balance',
+        'Waste Balance Exclusion Reason',
+        'Waste Balance Tonnage',
+        'Row ID'
+      ])
+    })
+  })
+
+  describe('buildSubmissionHeaderRow', () => {
+    it('returns the submission metadata columns followed by the supplied data field columns', () => {
+      expect(buildSubmissionHeaderRow(['ALPHA', 'BETA'])).toEqual([
+        ...SUBMISSION_METADATA_COLUMNS,
+        'ALPHA',
+        'BETA'
+      ])
+    })
+  })
+
+  describe('buildSubmissionDataRow', () => {
+    const dataFieldColumns = buildDataFieldColumns([])
+    const col = (name) =>
+      buildSubmissionHeaderRow(dataFieldColumns).indexOf(name)
+
+    const baseInput = {
+      org: orgFixture,
+      registration: regFixture,
+      meta: {
+        REGISTRATION_NUMBER: 'REG-001',
+        ACCREDITATION_NUMBER: 'ACC-001',
+        MATERIAL: 'Plastic'
+      },
+      submittedAt: '2026-04-15T09:00:00Z',
+      data: dataFixture,
+      wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+      rowId: '1001',
+      classification: {
+        outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: 9
+      },
+      dataFieldColumns
+    }
+
+    it('produces a row as long as the submission header', () => {
+      const row = buildSubmissionDataRow(baseInput)
+      expect(row.length).toBe(buildSubmissionHeaderRow(dataFieldColumns).length)
+    })
+
+    it('fills the metadata prefix in header order', () => {
+      const row = buildSubmissionDataRow(baseInput)
+      expect(row.slice(0, SUBMISSION_METADATA_COLUMNS.length)).toEqual([
+        'EA',
+        'Acme Ltd',
+        'REG-001',
+        'plastic',
+        'REPROCESSOR_INPUT',
+        'ACC-001',
+        'received',
+        '2026-04-15T09:00:00Z',
+        'true',
+        '',
+        9,
+        '1001'
+      ])
+    })
+
+    it('reads the registration and accreditation numbers from meta, trimmed', () => {
+      const row = buildSubmissionDataRow({
+        ...baseInput,
+        meta: {
+          ...baseInput.meta,
+          REGISTRATION_NUMBER: '  REG-001 ',
+          ACCREDITATION_NUMBER: ' ACC-001  '
+        }
+      })
+      expect(row[col('Registration Number')]).toBe('REG-001')
+      expect(row[col('Accreditation Number')]).toBe('ACC-001')
+    })
+
+    it('renders numeric meta numbers as their text', () => {
+      const row = buildSubmissionDataRow({
+        ...baseInput,
+        meta: /** @type {any} */ ({
+          ...baseInput.meta,
+          REGISTRATION_NUMBER: 12345,
+          ACCREDITATION_NUMBER: 67890
+        })
+      })
+      expect(row[col('Registration Number')]).toBe('12345')
+      expect(row[col('Accreditation Number')]).toBe('67890')
+    })
+
+    it('carries meta values when the registration has since changed', () => {
+      const row = buildSubmissionDataRow({
+        ...baseInput,
+        registration: {
+          ...regFixture,
+          registrationNumber: 'REG-CHANGED',
+          material: 'wood'
+        }
+      })
+      expect(row[col('Registration Number')]).toBe('REG-001')
+      expect(row[col('Material')]).toBe('plastic')
+    })
+
+    it('maps a glass meta material to its recycling process', () => {
+      const row = buildSubmissionDataRow({
+        ...baseInput,
+        meta: { ...baseInput.meta, MATERIAL: 'Glass_remelt' }
+      })
+      expect(row[col('Material')]).toBe('glass_re_melt')
+    })
+
+    it('leaves the meta columns blank when the submission stored no meta', () => {
+      const row = buildSubmissionDataRow({ ...baseInput, meta: undefined })
+      expect(row[col('Registration Number')]).toBe('')
+      expect(row[col('Accreditation Number')]).toBe('')
+      expect(row[col('Material')]).toBe('')
+    })
+
+    it('leaves Accreditation Number blank for registered-only meta', () => {
+      const row = buildSubmissionDataRow({
+        ...baseInput,
+        meta: { REGISTRATION_NUMBER: 'REG-001', MATERIAL: 'Plastic' }
+      })
+      expect(row[col('Accreditation Number')]).toBe('')
+    })
+
+    it.each([
+      [
+        'INCLUDED',
+        {
+          outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+          reasons: [],
+          transactionAmount: 9
+        },
+        ['true', '', 9]
+      ],
+      [
+        'EXCLUDED',
+        {
+          outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
+          reasons: [
+            { code: 'PRN_ISSUED' },
+            { code: 'MISSING_REQUIRED_FIELD', field: 'EWC_CODE' }
+          ],
+          transactionAmount: 0
+        },
+        ['false', 'PRN_ISSUED; MISSING_REQUIRED_FIELD: EWC_CODE', '']
+      ],
+      [
+        'NOT_APPLICABLE',
+        {
+          outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
+          reasons: [],
+          transactionAmount: 0
+        },
+        ['NA', '', '']
+      ]
+    ])(
+      'renders the waste balance cells of a stamped %s classification',
+      (_outcome, classification, cells) => {
+        const row = buildSubmissionDataRow({ ...baseInput, classification })
+        expect([
+          row[col('Included in Waste Balance')],
+          row[col('Waste Balance Exclusion Reason')],
+          row[col('Waste Balance Tonnage')]
+        ]).toEqual(cells)
+      }
+    )
+
+    it('fills data cells, blank where the row has no value', () => {
+      const row = buildSubmissionDataRow(baseInput)
+      expect(row[col('GROSS_WEIGHT')]).toBe(10)
+      expect(row[col('CONTAINER_NUMBER')]).toBe('')
+    })
+
+    it('apostrophe-prefixes the organisation name when it begins with a formula trigger', () => {
+      const row = buildSubmissionDataRow({
+        ...baseInput,
+        org: { ...orgFixture, companyDetails: { name: '=cmd' } }
+      })
+      expect(row[col('Organisation Name')]).toBe("'=cmd")
     })
   })
 })

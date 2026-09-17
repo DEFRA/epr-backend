@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
@@ -6,16 +7,17 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import {
+  buildDataFieldColumns,
+  buildSubmissionHeaderRow
+} from '#waste-records-export/domain/csv-columns.js'
+import { encodeRow } from '#waste-records-export/application/stream-csv-export.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { summaryLogRecordsCsv, summaryLogRecordsCsvPath } from './get.js'
-
-/** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
 const mockAuditSummaryLogDownload = vi.fn()
 
@@ -56,36 +58,51 @@ const receivedRowState = (overrides = {}) => ({
   ...overrides
 })
 
-const submittedLog = (fileId, submittedAt) => ({
+const SUBMITTED_META = {
+  REGISTRATION_NUMBER: 'R26ER5000000002PA',
+  MATERIAL: 'Plastic'
+}
+
+const submittedLog = (fileId, submittedAt, meta = SUBMITTED_META) => ({
   id: `doc-${fileId}`,
   version: 1,
   summaryLog: summaryLogFactory.submitted({
     file: { id: fileId },
-    submittedAt
+    submittedAt,
+    meta
   })
 })
 
 /**
- * Stand up a server whose export reads from the real in-memory ledger and
- * row-state adapters, so the route's own wiring is what is under test.
+ * Stand up a server whose export reads from the real in-memory row-state
+ * adapter, so the route's own wiring is what is under test. The organisation
+ * the mocks return is shared by reference, so a test can change it between
+ * requests.
  *
  * @param {{
  *   summaryLogs?: any[],
  *   rows?: any[],
+ *   accreditationId?: string | null,
+ *   accreditations?: any[],
  *   registration?: any,
+ *   findById?: () => Promise<any>,
  *   findRegistrationById?: () => Promise<any>
  * }} [options]
  */
 const createServer = async ({
   summaryLogs = [submittedLog(FILE_ID, SUBMITTED_AT)],
   rows = [receivedRowState()],
+  accreditationId = null,
+  accreditations = [],
   registration = buildRegistration(),
+  findById,
   findRegistrationById = () => Promise.resolve(registration)
 } = {}) => {
   const organisation = buildReadOrganisation({
     id: ORGANISATION_ID,
     companyDetails: { name: 'Acme Ltd' },
     submittedToRegulator: 'ea',
+    accreditations,
     registrations: [registration]
   })
 
@@ -95,39 +112,26 @@ const createServer = async ({
     {
       organisationId: ORGANISATION_ID,
       registrationId: REGISTRATION_ID,
-      accreditationId: null
+      accreditationId
     },
     rows,
     FILE_ID
   )
 
-  return createTestServer({
+  const server = await createTestServer({
     repositories: {
       organisationsRepository: () => ({
-        findAll: vi.fn().mockResolvedValue([organisation]),
-        findById: vi.fn().mockResolvedValue(organisation),
+        findById: vi.fn(findById ?? (() => Promise.resolve(organisation))),
         findRegistrationById: vi.fn(findRegistrationById)
       }),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
-      ledgerRepository: () =>
-        createInMemoryLedgerRepository(
-          /** @type {LedgerEvent[]} */ ([
-            buildLedgerEvent({
-              organisationId: ORGANISATION_ID,
-              registrationId: REGISTRATION_ID,
-              accreditationId: null,
-              payload: { summaryLogId: FILE_ID, creditTotal: 0 }
-            })
-          ])
-        )(),
       summaryLogsRepository: () => ({
         findAllByOrgReg: vi.fn().mockResolvedValue(summaryLogs)
-      }),
-      overseasSitesRepository: () => ({
-        findAll: vi.fn().mockResolvedValue([])
       })
     }
   })
+
+  return { server, organisation, summaryLogRowStatesRepository }
 }
 
 const urlFor = (fileId = FILE_ID) =>
@@ -149,7 +153,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
   })
 
   it('streams the submission as CSV', async () => {
-    const server = await createServer()
+    const { server } = await createServer()
 
     const response = await server.inject({
       method: 'GET',
@@ -162,13 +166,15 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
 
     const lines = response.payload.split('\n').filter((line) => line !== '')
     expect(lines).toHaveLength(2)
-    expect(lines[0]).toContain('Organisation Name')
+    expect(`${lines[0]}\n`).toBe(
+      await encodeRow(buildSubmissionHeaderRow(buildDataFieldColumns([])))
+    )
     expect(lines[1]).toContain('Acme Ltd')
     expect(lines[1]).toContain('1001')
   })
 
   it('names the download by registration number and the moment of submission', async () => {
-    const server = await createServer()
+    const { server } = await createServer()
 
     const response = await server.inject({
       method: 'GET',
@@ -181,9 +187,36 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     )
   })
 
-  it('serves the download unnamed when the registration number cannot be read', async () => {
-    const server = await createServer({
-      findRegistrationById: () => Promise.reject(new Error('no registration'))
+  it('names the download by the registration number the submission stored, not the current one', async () => {
+    const { server } = await createServer({
+      registration: buildRegistration({
+        registrationNumber: 'R26ER5999999999PA'
+      })
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: urlFor(),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.headers['content-disposition']).toBe(
+      'attachment; filename="R26ER5000000002PA-2026-09-11-091542.csv"'
+    )
+  })
+
+  it('serves the download unnamed when the submission stored no meta', async () => {
+    const { server } = await createServer({
+      summaryLogs: [
+        {
+          id: `doc-${FILE_ID}`,
+          version: 1,
+          summaryLog: summaryLogFactory.submitted({
+            file: { id: FILE_ID },
+            submittedAt: SUBMITTED_AT
+          })
+        }
+      ]
     })
 
     const response = await server.inject({
@@ -197,8 +230,96 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     expect(response.payload).toContain('Acme Ltd')
   })
 
+  it.each([
+    ['organisation', { findById: () => Promise.reject(Boom.notFound()) }],
+    [
+      'registration',
+      { findRegistrationById: () => Promise.reject(Boom.notFound()) }
+    ]
+  ])(
+    'returns 404 and does not audit when the %s is missing',
+    async (_, options) => {
+      const { server } = await createServer(options)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: urlFor(),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(mockAuditSummaryLogDownload).not.toHaveBeenCalled()
+    }
+  )
+
+  it('serves the same file after the organisation and other submissions change', async () => {
+    const { server, organisation, summaryLogRowStatesRepository } =
+      await createServer({
+        accreditationId: 'acc-1',
+        accreditations: [
+          {
+            ...buildReadOrganisation().accreditations[0],
+            id: 'acc-1',
+            status: 'approved',
+            accreditationNumber: 'A26ER5000000002PA'
+          }
+        ],
+        registration: buildRegistration({
+          accreditationId: 'acc-1',
+          overseasSites: { '001': { overseasSiteId: 'site-1' } }
+        }),
+        summaryLogs: [
+          submittedLog(FILE_ID, SUBMITTED_AT, {
+            ...SUBMITTED_META,
+            ACCREDITATION_NUMBER: 'A26ER5000000002PA'
+          })
+        ],
+        rows: [
+          receivedRowState({
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+              OSR_ID: '001'
+            },
+            classification: {
+              outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
+              reasons: [],
+              transactionAmount: 50.5
+            }
+          })
+        ]
+      })
+    const download = () =>
+      server.inject({ method: 'GET', url: urlFor(), ...asServiceMaintainer() })
+
+    const before = await download()
+
+    const [registration] = organisation.registrations
+    registration.registrationNumber = 'R26ER5999999999PA'
+    registration.material = 'wood'
+    registration.overseasSites = { '001': { overseasSiteId: 'site-2' } }
+    organisation.accreditations[0].status = 'cancelled'
+    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
+      {
+        organisationId: ORGANISATION_ID,
+        registrationId: 'reg-other',
+        accreditationId: null
+      },
+      [receivedRowState({ data: { A_KEY_ADDED_LATER: 'x' } })],
+      'file-other'
+    )
+
+    const after = await download()
+
+    expect(before.statusCode).toBe(StatusCodes.OK)
+    expect(before.payload).toContain('A26ER5000000002PA')
+    expect(after.payload).toBe(before.payload)
+    expect(after.headers['content-disposition']).toBe(
+      before.headers['content-disposition']
+    )
+  })
+
   it('audits the download', async () => {
-    const server = await createServer()
+    const { server } = await createServer()
 
     await server.inject({
       method: 'GET',
@@ -218,7 +339,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
 
   describe('when this registration never submitted that file', () => {
     it('returns 404 rather than an empty CSV', async () => {
-      const server = await createServer()
+      const { server } = await createServer()
 
       const response = await server.inject({
         method: 'GET',
@@ -231,7 +352,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     })
 
     it('returns 404 for a file that was uploaded but never submitted', async () => {
-      const server = await createServer({
+      const { server } = await createServer({
         summaryLogs: [
           {
             id: `doc-${FILE_ID}`,
@@ -251,7 +372,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     })
 
     it('does not audit a download it refused', async () => {
-      const server = await createServer()
+      const { server } = await createServer()
 
       await server.inject({
         method: 'GET',
@@ -265,7 +386,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
 
   describe('authorisation', () => {
     it('returns 401 when not authenticated', async () => {
-      const server = await createServer()
+      const { server } = await createServer()
 
       const response = await server.inject({ method: 'GET', url: urlFor() })
 
@@ -273,7 +394,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     })
 
     it('returns 403 when the caller holds neither scope', async () => {
-      const server = await createServer()
+      const { server } = await createServer()
 
       const response = await server.inject({
         method: 'GET',
@@ -288,7 +409,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
       ['summary-log.read alone', ['summary-log.read']],
       ['organisation.read alone', ['organisation.read']]
     ])('returns 403 for a caller holding %s', async (_, scope) => {
-      const server = await createServer()
+      const { server } = await createServer()
 
       const response = await server.inject({
         method: 'GET',
@@ -300,7 +421,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     })
 
     it('serves a caller holding both scopes and no admin scope', async () => {
-      const server = await createServer()
+      const { server } = await createServer()
 
       const response = await server.inject({
         method: 'GET',
