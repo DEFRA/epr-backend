@@ -62,6 +62,14 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
  */
 
 /**
+ * A grand total row as published. It carries no average price: the work
+ * instruction tells the analysts not to calculate one for a total, and the
+ * published workbook prints a dash there in every table and month.
+ *
+ * @typedef {Measures & { tonnageSentOnTotal: number }} PublishedTotal
+ */
+
+/**
  * @param {ReportedActivity} report
  * @returns {SharedMeasures}
  */
@@ -182,9 +190,9 @@ export const averagePricePerTonne = (totalRevenue, revisedTonnageIssued) =>
 /**
  * @template {Measures} T
  * @param {T} measures
- * @returns {T & PublishedExtras}
+ * @returns {T & { tonnageSentOnTotal: number }}
  */
-export const withPublishedFigures = (measures) => ({
+export const withSentOnTotal = (measures) => ({
   ...measures,
   tonnageSentOnTotal: toNumber(
     [
@@ -192,7 +200,16 @@ export const withPublishedFigures = (measures) => ({
       measures.tonnageSentOnToExporter,
       measures.tonnageSentOnToOtherFacilities
     ].reduce((sum, split) => addRounded(sum, split, 2), toDecimal(0))
-  ),
+  )
+})
+
+/**
+ * @template {Measures} T
+ * @param {T} measures
+ * @returns {T & PublishedExtras}
+ */
+export const withPublishedFigures = (measures) => ({
+  ...withSentOnTotal(measures),
   averagePricePerTonne: averagePricePerTonne(
     measures.totalRevenue,
     measures.revisedTonnageIssued

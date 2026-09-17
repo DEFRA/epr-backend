@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { MongoClient, ObjectId } from 'mongodb'
+import { MongoClient } from 'mongodb'
 
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
@@ -8,27 +8,29 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { NATION, REGULATOR } from '#domain/organisations/model.js'
 import {
-  MATERIAL,
-  REPROCESSING_TYPE,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
-import {
-  buildAccreditation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
-import { marketInsightsReprocessorExporterFiguresPath } from './reprocessor-exporter-figures-get.js'
+  marketInsightsNationReprocessorExporterFiguresPath,
+  marketInsightsReprocessorExporterFiguresPath
+} from './reprocessor-exporter-figures-get.js'
 
-const januaryToFebruary2026 = marketInsightsReprocessorExporterFiguresPath
-  .replace('{year}', '2026')
-  .replace('{cadence}', 'monthly')
-  .replace('{period}', '2')
+/** @param {string} path */
+const januaryToFebruary2026For = (path) =>
+  path
+    .replace('{year}', '2026')
+    .replace('{cadence}', 'monthly')
+    .replace('{period}', '2')
+
+const januaryToFebruary2026 = januaryToFebruary2026For(
+  marketInsightsReprocessorExporterFiguresPath
+)
 
 /** @import { Db } from 'mongodb' */
 /** @import { TestServer } from '#test/create-test-server.js' */
+/** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 
 /**
  * @typedef {TestServer & {
@@ -78,38 +80,6 @@ const it =
   )
 
 const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
-
-/**
- * An approved plastic reprocessor accredited for 2026, written through the
- * organisations fixture so the document the route reads back is one the write
- * schema accepts.
- *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- */
-const insertAccreditedOperator = async (organisationsRepository) => {
-  const accreditationId = new ObjectId().toString()
-  const registration = buildRegistration({
-    accreditationId,
-    material: MATERIAL.PLASTIC,
-    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-    reprocessingType: REPROCESSING_TYPE.INPUT,
-    glassRecyclingProcess: null
-  })
-  const accreditation = buildAccreditation({
-    id: accreditationId,
-    material: MATERIAL.PLASTIC,
-    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-    reprocessingType: REPROCESSING_TYPE.INPUT,
-    glassRecyclingProcess: null
-  })
-  const organisation = await buildApprovedOrg(
-    organisationsRepository,
-    { registrations: [registration], accreditations: [accreditation] },
-    { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
-  )
-
-  return { organisationId: organisation.id, registrationId: registration.id }
-}
 
 /**
  * Seed one operator's January report, submitted twice, through the write side
@@ -179,7 +149,7 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath} (integration)`, ()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    /** @type {import('#market-insights/application/reprocessor-exporter-table.js').ReprocessorExporterTable} */
+    /** @type {ReprocessorExporterTable} */
     const payload = JSON.parse(response.payload)
 
     const { months } = payload.data
@@ -212,5 +182,78 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath} (integration)`, ()
     })
 
     expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+  })
+})
+
+const englandFiguresPath =
+  marketInsightsNationReprocessorExporterFiguresPath.replace(
+    '{nation}',
+    NATION.ENGLAND
+  )
+
+describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath} (integration)`, () => {
+  setupAuthContext()
+
+  beforeEach(
+    async (/** @type {{ server: TestServerWithRealDb }} */ { server }) => {
+      for (const { name } of await server.db.listCollections().toArray()) {
+        await server.db.collection(name).deleteMany({})
+      }
+    }
+  )
+
+  it('serves the registrations submitted to the Environment Agency alone, from the documents the UK figures read', async ({
+    server
+  }) => {
+    await submitJanuaryTwice(server.repositories)
+    const welsh = await insertAccreditedOperator(
+      server.repositories.organisationsRepository,
+      REGULATOR.NRW
+    )
+    await buildSubmittedReport(server.repositories.reportsRepository, {
+      ...welsh,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      prn: {
+        issuedTonnage: 1000,
+        freeTonnage: 0,
+        totalRevenue: 100000,
+        averagePricePerTonne: 100
+      }
+    })
+
+    const [england, uk] = await Promise.all(
+      [englandFiguresPath, marketInsightsReprocessorExporterFiguresPath].map(
+        (path) =>
+          server.inject({
+            method: 'GET',
+            url: januaryToFebruary2026For(path),
+            headers: { Authorization: `Bearer ${regulatorToken}` }
+          })
+      )
+    )
+
+    expect(england.statusCode).toBe(StatusCodes.OK)
+    /** @type {ReprocessorExporterTable} */
+    const englandPayload = JSON.parse(england.payload)
+    /** @type {ReprocessorExporterTable} */
+    const ukPayload = JSON.parse(uk.payload)
+    expect(
+      englandPayload.data.months['2026-01'].figures.plastic.reprocessor
+    ).toEqual(
+      expect.objectContaining({
+        revisedTonnageIssued: 112,
+        totalRevenue: 60000
+      })
+    )
+    expect(
+      ukPayload.data.months['2026-01'].figures.plastic.reprocessor
+    ).toEqual(
+      expect.objectContaining({
+        revisedTonnageIssued: 1112,
+        totalRevenue: 160000
+      })
+    )
   })
 })
