@@ -46,7 +46,7 @@ export const materialFromSpreadsheet = (spreadsheetMaterial) =>
 /**
  * A stored meta value as the upload checks compare it: trimmed text, or blank.
  *
- * @param {unknown} value
+ * @param {string | number | null | undefined} value
  * @returns {string}
  */
 export const metaText = (value) => (isNil(value) ? '' : String(value).trim())
