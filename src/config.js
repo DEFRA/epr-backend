@@ -377,6 +377,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_STREAM_TRANSITION_DIAGNOSTIC'
+    },
+    resubmissionFiguresDiagnostic: {
+      doc: 'Feature Flag: Run the startup diagnostic sizing how many closed-period resubmissions produced figures identical to the previous submission (PAE-1985)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_RESUBMISSION_FIGURES_DIAGNOSTIC'
     }
   },
   formSubmissionOverrides: {
