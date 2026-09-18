@@ -6,7 +6,7 @@ import {
   PRN_ACTOR,
   isValidTransition,
   transitionRefusal,
-  issuanceRefusal,
+  accreditationStatusRefusal,
   AccreditationStatusError,
   StatusConflictError,
   UnauthorisedTransitionError
@@ -186,7 +186,7 @@ describe('transitionRefusal', () => {
   })
 })
 
-describe('issuanceRefusal', () => {
+describe('accreditationStatusRefusal', () => {
   /** @type {AccreditationStatus[]} */
   const issuableStatuses = ['approved', 'created', 'rejected']
 
@@ -197,7 +197,7 @@ describe('issuanceRefusal', () => {
     'is undefined when accreditation is %s',
     (status) => {
       expect(
-        issuanceRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, { status })
+        accreditationStatusRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, { status })
       ).toBeUndefined()
     }
   )
@@ -206,28 +206,31 @@ describe('issuanceRefusal', () => {
     'is an AccreditationStatusError when accreditation is %s',
     (status) => {
       expect(
-        issuanceRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, { status })
+        accreditationStatusRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, { status })
       ).toBeInstanceOf(AccreditationStatusError)
     }
   )
 
   it('is undefined when accreditation is missing', () => {
     expect(
-      issuanceRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, null)
+      accreditationStatusRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, null)
     ).toBeUndefined()
   })
 
   it.each(blockedStatuses)(
     'has no view on a transition that is not issuance, even when accreditation is %s',
     (status) => {
-      expect(issuanceRefusal(PRN_STATUS.ACCEPTED, { status })).toBeUndefined()
+      expect(
+        accreditationStatusRefusal(PRN_STATUS.ACCEPTED, { status })
+      ).toBeUndefined()
     }
   )
 
   it('describes the action and status in the refusal message', () => {
     expect(
-      issuanceRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, { status: 'suspended' })
-        ?.message
+      accreditationStatusRefusal(PRN_STATUS.AWAITING_ACCEPTANCE, {
+        status: 'suspended'
+      })?.message
     ).toBe('Cannot issue a PRN on a suspended accreditation')
   })
 })

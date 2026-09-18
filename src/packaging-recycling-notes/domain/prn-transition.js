@@ -9,7 +9,11 @@ import {
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
 } from '#waste-balances/domain/commands.js'
-import { PRN_STATUS, transitionRefusal, issuanceRefusal } from './model.js'
+import {
+  PRN_STATUS,
+  transitionRefusal,
+  accreditationStatusRefusal
+} from './model.js'
 import { cancellationRefusal } from './cancellation.js'
 import { issuanceWindowRefusal } from './issuance-window.js'
 
@@ -198,7 +202,7 @@ const ruleTransition = ({
 }) =>
   transitionRefusal(fromStatus, newStatus, actor) ??
   cancellationRefusal(fromStatus, newStatus, accreditationYear, now) ??
-  issuanceRefusal(newStatus, accreditation) ??
+  accreditationStatusRefusal(newStatus, accreditation) ??
   issuanceWindowRefusal(fromStatus, newStatus, accreditationYear, now)
 
 /**
