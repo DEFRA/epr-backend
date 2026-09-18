@@ -29,34 +29,25 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
  */
 
 /**
- * The transitions that debit a balance pool: the ringfence (draft →
- * awaiting_authorisation) and the issue (awaiting_authorisation →
- * awaiting_acceptance). A December-declared one resolves its pool from the
- * accreditation and records it on the event, so a later reversal can read it
- * back (ADR-0049).
- *
- * @type {Set<PrnStatus>}
- */
-const RAISE_TARGET_STATUSES = new Set([
-  PRN_STATUS.AWAITING_AUTHORISATION,
-  PRN_STATUS.AWAITING_ACCEPTANCE
-])
-
-/**
- * The transitions that credit a balance pool back: the delete (→ deleted) and
- * the cancel (→ cancelled). A December-declared one resolves its pool by reading
- * it off the PRN's raise event rather than the accreditation, so it restores the
+ * The transitions that resolve their pool by reading the PRN's raise event
+ * rather than the accreditation: the issue (awaiting_authorisation →
+ * awaiting_acceptance), the delete (→ deleted) and the cancel (→ cancelled).
+ * The ringfence resolves the pool from the accreditation and records it on the
+ * raise event; every later movement of the PRN reads it back, so it moves the
  * pool the raise actually drew even if the accreditation has since changed
- * (ADR-0049).
+ * (ADR-0049). Re-deriving on issue let a processing-type change between raise
+ * and issue debit a different pool from the raise's, after which the
+ * cancellation credited December tonnage that was never debited (PAE-1977).
  *
  * Keyed on target status alone, which is sound only because these targets are
- * currently reached by exactly one transition each, all balance-crediting. A
- * future transition reusing `deleted`/`cancelled` as a target from a state that
- * moves no balance would need this gate to key on the `(from, to)` pair instead.
+ * currently reached by exactly one transition each, all pool-moving. A future
+ * transition reusing one as a target from a state that moves no balance would
+ * need this gate to key on the `(from, to)` pair instead.
  *
  * @type {Set<PrnStatus>}
  */
-const REVERSAL_TARGET_STATUSES = new Set([
+const FOLLOW_RAISE_POOL_STATUSES = new Set([
+  PRN_STATUS.AWAITING_ACCEPTANCE,
   PRN_STATUS.DELETED,
   PRN_STATUS.CANCELLED
 ])
@@ -277,15 +268,16 @@ async function gatherTransitionState(ctx) {
   const prn = await loadPrn(ctx)
 
   // The accreditation is read when the transition needs it: always on issue
-  // (which stamps the PRN number from it), and on a raise of a December-declared
-  // PRN, to resolve the pool it debits (PAE-1922). A reversal resolves its pool
-  // from the raise event instead (PAE-1923), so it reads no accreditation; a PRN
-  // that never declared December waste draws the general balance, so it reads
-  // none either. Read after the balance, so nothing the ruling uses predates the
-  // head.
+  // (which stamps the PRN number from it), and on a ringfence of a
+  // December-declared PRN, to resolve the pool it debits (PAE-1922). Every
+  // later movement of that PRN resolves its pool from the raise event instead
+  // (PAE-1923, PAE-1977), so the issue's read serves the number alone and a
+  // reversal reads none; a PRN that never declared December waste draws the
+  // general balance, so it reads none either. Read after the balance, so
+  // nothing the ruling uses predates the head.
   const needsAccreditation =
     newStatus === PRN_STATUS.AWAITING_ACCEPTANCE ||
-    (prn.isDecemberWaste && RAISE_TARGET_STATUSES.has(newStatus))
+    (prn.isDecemberWaste && newStatus === PRN_STATUS.AWAITING_AUTHORISATION)
   const accreditation = needsAccreditation
     ? await organisationsRepository.findAccreditationById(
         ledgerId.organisationId,
@@ -305,11 +297,10 @@ async function gatherTransitionState(ctx) {
 
 /**
  * The pool a transition's balance movement draws on, or `undefined` when it
- * touches none. A raise re-derives it from the accreditation — safe because both
- * inputs are immutable (`accruesDecember` reads only the processing type,
- * `isDecemberWaste` is fixed on the PRN). A reversal reads it off the PRN's raise
- * event, so it restores the pool the raise actually drew even if the
- * accreditation has since changed, which is what ADR-0049 mandates.
+ * touches none. Only the ringfence derives it from the accreditation; the issue
+ * and the reversals read it off the PRN's raise event, so every movement of the
+ * PRN draws the pool the raise recorded even if the accreditation has since
+ * changed, which is what ADR-0049 mandates (PAE-1977).
  *
  * @param {PrnTransitionContext} ctx
  * @param {Object} gathered
@@ -321,7 +312,7 @@ async function resolveTransitionPool(
   { service, ledgerId, newStatus },
   { prn, accreditation }
 ) {
-  if (prn.isDecemberWaste && REVERSAL_TARGET_STATUSES.has(newStatus)) {
+  if (prn.isDecemberWaste && FOLLOW_RAISE_POOL_STATUSES.has(newStatus)) {
     return readRaisePool(service, ledgerId, prn.id)
   }
   return accreditation !== undefined
@@ -332,11 +323,12 @@ async function resolveTransitionPool(
 /**
  * The pool the PRN's raise recorded, read off its `prn-created` event. The whole
  * PRN history is scanned from the start rather than the read watermark, because
- * the raise is the earliest event and the reversal must find it whatever the
+ * the raise is the earliest event and its followers must find it whatever the
  * projection has folded. An absent pool means only a raise recorded before the
  * pool dimension existed; a current general raise states `general` explicitly
- * (`resolvePool` never returns `undefined`). Either routes to the general
- * credit, as the closing-balance reader coalesces an absent pool to general.
+ * (`resolvePool` never returns `undefined`). Either routes the movement to the
+ * general pool, as the closing-balance reader coalesces an absent pool to
+ * general.
  *
  * @param {WasteBalanceService} service
  * @param {WasteBalanceLedgerId & { accreditationId: string }} ledgerId
@@ -397,8 +389,9 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
  * that passes that check, so it is refused by name.
  *
  * The pool is written only where `resolveTransitionPool` genuinely resolved one
- * — on the raises (from the accreditation) and the December reversals (off the
- * raise event) — and omitted where it did not, rather than guessed. A transition
+ * — on the ringfence (from the accreditation) and the December issues and
+ * reversals (off the raise event) — and omitted where it did not, rather than
+ * guessed. A transition
  * that moves no pool (accept, reject) resolves none, so its event carries no
  * pool: writing `general` there would be a falsehood on a December PRN, and
  * nothing reads it anyway. A reader coalesces an absent pool to `general`, as it
