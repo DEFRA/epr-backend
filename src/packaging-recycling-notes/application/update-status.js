@@ -269,12 +269,12 @@ async function gatherTransitionState(ctx) {
 
   // The accreditation is read when the transition needs it: always on issue
   // (which stamps the PRN number from it), and on a ringfence of a
-  // December-declared PRN, to resolve the pool it debits (PAE-1922). Every
-  // later movement of that PRN resolves its pool from the raise event instead
-  // (PAE-1923, PAE-1977), so the issue's read serves the number alone and a
-  // reversal reads none; a PRN that never declared December waste draws the
-  // general balance, so it reads none either. Read after the balance, so
-  // nothing the ruling uses predates the head.
+  // December-declared PRN, to resolve the pool it debits. Every later movement
+  // of that PRN resolves its pool from the raise event, so the issue's read
+  // serves the number alone and a reversal reads none; a PRN that never
+  // declared December waste draws the general balance, so it reads none
+  // either. Read after the balance, so nothing the ruling uses predates the
+  // head.
   const needsAccreditation =
     newStatus === PRN_STATUS.AWAITING_ACCEPTANCE ||
     (prn.isDecemberWaste && newStatus === PRN_STATUS.AWAITING_AUTHORISATION)
