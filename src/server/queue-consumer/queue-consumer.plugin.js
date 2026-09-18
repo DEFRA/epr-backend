@@ -9,6 +9,7 @@ import { createReportsService } from '#reports/application/report-service.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
 import { orsImportCommandHandlers } from './ors-import-commands.js'
+import { marketInsightsExportCommandHandlers } from './market-insights-export-commands.js'
 
 /** @import { Consumer } from 'sqs-consumer' */
 
@@ -98,16 +99,30 @@ export const commandQueueConsumerPlugin = {
           }
         : {}
 
+      const marketInsightsExtras = server.app.marketInsightsExportsRepository
+        ? {
+            marketInsightsExportsRepository:
+              server.app.marketInsightsExportsRepository,
+            marketInsightsExportStore: server.app.marketInsightsExportStore,
+            overseasSitesRepository: server.app.overseasSitesRepository
+          }
+        : {}
+
       const deps = {
         sqsClient,
         queueName,
         logger: server.logger,
         ...baseDeps,
-        ...orsExtras
+        ...orsExtras,
+        ...marketInsightsExtras
       }
-      const handlers = server.app.orsImportsRepository
-        ? [...summaryLogCommandHandlers, ...orsImportCommandHandlers]
-        : [...summaryLogCommandHandlers]
+      const handlers = [
+        ...summaryLogCommandHandlers,
+        ...(server.app.orsImportsRepository ? orsImportCommandHandlers : []),
+        ...(server.app.marketInsightsExportsRepository
+          ? marketInsightsExportCommandHandlers
+          : [])
+      ]
 
       consumer = await createCommandQueueConsumer(deps, handlers)
       consumer.start()

@@ -80,6 +80,7 @@
     "@hapi/inert": "7.1.2",
     "@hapi/jwt": "3.2.4",
     "@hapi/vision": "7.0.3",
+    "archiver": "7.0.1",
     "aws-embedded-metrics": "4.2.1",
     "aws4": "1.13.2",
     "convict": "6.2.5",

@@ -2,6 +2,7 @@
  * @typedef {Object} MockSqsCommandExecutorPluginOptions
  * @property {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} [summaryLogsWorker] - Mock executor to use
  * @property {import('#overseas-sites/imports/worker/port.js').OrsImportsCommandExecutor} [orsImportsWorker] - Mock executor to use
+ * @property {import('#market-insights/exports/worker/port.js').MarketInsightsExportsCommandExecutor} [marketInsightsExportsWorker] - Mock executor to use
  */
 
 /** @returns {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} */
@@ -13,6 +14,11 @@ const createNoOpSummaryLogsExecutor = () => ({
 /** @returns {import('#overseas-sites/imports/worker/port.js').OrsImportsCommandExecutor} */
 const createNoOpOrsImportsExecutor = () => ({
   importOverseasSites: async () => {}
+})
+
+/** @returns {import('#market-insights/exports/worker/port.js').MarketInsightsExportsCommandExecutor} */
+const createNoOpMarketInsightsExportsExecutor = () => ({
+  requestExport: async () => {}
 })
 
 // No SQS - runs synchronously for predictable test behaviour.
@@ -28,6 +34,9 @@ export const mockSqsCommandExecutorPlugin = {
       options.summaryLogsWorker ?? createNoOpSummaryLogsExecutor()
     const orsImportsWorker =
       options.orsImportsWorker ?? createNoOpOrsImportsExecutor()
+    const marketInsightsExportsWorker =
+      options.marketInsightsExportsWorker ??
+      createNoOpMarketInsightsExportsExecutor()
 
     server.decorate('request', 'summaryLogsWorker', () => summaryLogsWorker, {
       apply: true
@@ -35,6 +44,12 @@ export const mockSqsCommandExecutorPlugin = {
     server.decorate('request', 'orsImportsWorker', () => orsImportsWorker, {
       apply: true
     })
+    server.decorate(
+      'request',
+      'marketInsightsExportsWorker',
+      () => marketInsightsExportsWorker,
+      { apply: true }
+    )
   }
 }
 

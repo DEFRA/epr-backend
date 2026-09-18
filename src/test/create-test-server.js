@@ -23,6 +23,8 @@ import { getConfig } from '#root/config.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
+import { createInMemoryMarketInsightsExportsRepositoryPlugin } from '#market-insights/exports/repository/inmemory.js'
+import { createInMemoryMarketInsightsExportStorePlugin } from '#market-insights/exports/store/inmemory.js'
 import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
@@ -157,6 +159,14 @@ const repositoryConfigs = [
   {
     name: 'orsImportsRepository',
     createDefault: createInMemoryOrsImportsRepositoryPlugin
+  },
+  {
+    name: 'marketInsightsExportsRepository',
+    createDefault: createInMemoryMarketInsightsExportsRepositoryPlugin
+  },
+  {
+    name: 'marketInsightsExportStore',
+    createDefault: createInMemoryMarketInsightsExportStorePlugin
   }
 ]
 

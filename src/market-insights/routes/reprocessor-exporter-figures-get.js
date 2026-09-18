@@ -1,8 +1,8 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { REGULATOR_FOR_NATION } from '#domain/organisations/model.js'
 import { buildReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js'
+import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-segment.js'
 import {
   monthlyPeriodParamsSchema,
   publishedMonthsThrough
@@ -20,19 +20,6 @@ export const marketInsightsReprocessorExporterFiguresPath =
  * filter the published England tab on.
  */
 export const marketInsightsNationReprocessorExporterFiguresPath = `${marketInsightsReprocessorExporterFiguresPath}/{nation}`
-
-/**
- * The regulator each nation's path segment stands for. Every path under market
- * insights hyphenates, so the segment is the hyphenated spelling of the nation.
- */
-const REGULATOR_FOR_NATION_SEGMENT = Object.freeze(
-  Object.fromEntries(
-    Object.entries(REGULATOR_FOR_NATION).map(([nation, regulator]) => [
-      nation.replaceAll('_', '-'),
-      regulator
-    ])
-  )
-)
 
 /**
  * The regulator a nation's figures are drawn from. The UK figures name no

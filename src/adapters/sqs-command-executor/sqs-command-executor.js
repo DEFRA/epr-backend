@@ -7,12 +7,14 @@ import {
 } from '#common/enums/index.js'
 import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
 import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
+import { MARKET_INSIGHTS_COMMAND } from '#market-insights/domain/export.js'
 import { ORS_IMPORT_COMMAND } from '#overseas-sites/domain/import-status.js'
 
 /**
  * @import { SQSClient } from '@aws-sdk/client-sqs'
  * @import { TypedLogger } from '#common/hapi-types.js'
  * @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js'
+ * @import { MarketInsightsExportsCommandExecutor } from '#market-insights/exports/worker/port.js'
  * @import { OrsImportsCommandExecutor } from '#overseas-sites/imports/worker/port.js'
  */
 
@@ -104,7 +106,7 @@ const sendCommandMessage = async (
  * decouples the HTTP request from long-running operations.
  *
  * @param {ExecutorDependencies} deps
- * @returns {Promise<{summaryLogsWorker: SummaryLogsCommandExecutor, orsImportsWorker: OrsImportsCommandExecutor}>}
+ * @returns {Promise<{summaryLogsWorker: SummaryLogsCommandExecutor, orsImportsWorker: OrsImportsCommandExecutor, marketInsightsExportsWorker: MarketInsightsExportsCommandExecutor}>}
  */
 export const createSqsCommandExecutor = async (deps) => {
   const { sqsClient, queueName, logger } = deps
@@ -149,6 +151,18 @@ export const createSqsCommandExecutor = async (deps) => {
           ORS_IMPORT_COMMAND.IMPORT_OVERSEAS_SITES,
           payload,
           `importId=${importId}`
+        )
+      }
+    },
+    marketInsightsExportsWorker: {
+      requestExport: async (command) => {
+        await sendCommandMessage(
+          queueUrl,
+          sqsClient,
+          logger,
+          MARKET_INSIGHTS_COMMAND.EXPORT,
+          command,
+          `exportId=${command.exportId}`
         )
       }
     }

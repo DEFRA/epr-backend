@@ -15,6 +15,7 @@ vi.mock('#reports/application/summary-log-events.js')
 vi.mock('./consumer.js')
 vi.mock('./summary-log-commands.js')
 vi.mock('./ors-import-commands.js')
+vi.mock('./market-insights-export-commands.js')
 
 const { createSqsClient } = await import('#common/helpers/sqs/sqs-client.js')
 const { createSummaryLogExtractor } =
@@ -24,6 +25,8 @@ const { createOnSummaryLogUploaded } =
 const { createCommandQueueConsumer } = await import('./consumer.js')
 const { summaryLogCommandHandlers } = await import('./summary-log-commands.js')
 const { orsImportCommandHandlers } = await import('./ors-import-commands.js')
+const { marketInsightsExportCommandHandlers } =
+  await import('./market-insights-export-commands.js')
 
 describe('commandQueueConsumerPlugin', () => {
   let server
@@ -212,6 +215,29 @@ describe('commandQueueConsumerPlugin', () => {
           systemLogsRepository: server.app.systemLogsRepository
         }),
         [...summaryLogCommandHandlers, ...orsImportCommandHandlers]
+      )
+    })
+
+    it('includes the market insights export handler and deps when its repository is registered', async () => {
+      server.app.marketInsightsExportsRepository = { markBuilding: vi.fn() }
+      server.app.marketInsightsExportStore = { save: vi.fn() }
+      server.app.overseasSitesRepository = { findAll: vi.fn() }
+
+      await commandQueueConsumerPlugin.register(server, { config })
+
+      const startHandler = server.events.on.mock.calls.find(
+        (call) => call[0] === 'start'
+      )[1]
+      await startHandler()
+
+      expect(createCommandQueueConsumer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          marketInsightsExportsRepository:
+            server.app.marketInsightsExportsRepository,
+          marketInsightsExportStore: server.app.marketInsightsExportStore,
+          overseasSitesRepository: server.app.overseasSitesRepository
+        }),
+        [...summaryLogCommandHandlers, ...marketInsightsExportCommandHandlers]
       )
     })
   })
