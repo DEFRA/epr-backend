@@ -22,6 +22,7 @@
     "#overseas-sites/*": "./src/overseas-sites/*",
     "#packaging-recycling-notes/*": "./src/packaging-recycling-notes/*",
     "#plugins/*": "./src/plugins/*",
+    "#report-resubmission-figures-diagnostic/*": "./src/report-resubmission-figures-diagnostic/*",
     "#reports/*": "./src/reports/*",
     "#repositories/*": "./src/repositories/*",
     "#root/*": "./src/*",
