@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   PRN_STATUS,
   PRN_ACTOR,
+  PRN_STATUS_TRANSITIONS,
   StatusConflictError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
+import { PRN_TRANSITION_EFFECTS } from '#packaging-recycling-notes/domain/prn-transition.js'
 import { REGULATOR, ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import {
   LEDGER_EVENT_KIND,
@@ -38,7 +40,8 @@ vi.mock('./metrics.js', () => ({
   }
 }))
 
-const { updatePrnStatus } = await import('./update-status.js')
+const { updatePrnStatus, FOLLOW_RAISE_POOL_STATUSES } =
+  await import('./update-status.js')
 
 const ORG_ID = '507f1f77bcf86cd799439aaa'
 const ACC_ID = 'acc-456'
@@ -1688,6 +1691,94 @@ describe('updatePrnStatus', () => {
       const balance = await readBalance(repositories.wasteBalanceService)
       expect(balance).toMatchObject({ amount: 900, availableAmount: 900 })
       expect(balance?.decemberAmount).toBeUndefined()
+    })
+
+    it('debits the general pool when the raise predates the pool dimension', async () => {
+      // A raise recorded before ADR-0049 carries no pool on its event. The
+      // issue coalesces that to general, exactly as the reversals and the
+      // closing-balance reader do, so a pre-pool PRN stays general throughout
+      // its life — even when the current accreditation would resolve December.
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          isDecemberWaste: true,
+          lastAppliedEventNumber: 2,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        ledgerEvents: [
+          buildOpeningBalanceEvent({
+            amount: 1000,
+            availableAmount: 1000,
+            decemberAmount: 300,
+            decemberAvailableAmount: 300
+          }),
+          buildPrnLedgerEvent({
+            kind: LEDGER_EVENT_KIND.PRN_CREATED,
+            number: 2,
+            amount: 100,
+            openingBalance: {
+              amount: 1000,
+              availableAmount: 1000,
+              decemberAmount: 300,
+              decemberAvailableAmount: 300
+            },
+            closingBalance: {
+              amount: 1000,
+              availableAmount: 900,
+              decemberAmount: 300,
+              decemberAvailableAmount: 300
+            }
+          })
+        ],
+        accreditation: { wasteProcessingType: 'exporter' }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        {
+          amount: 900,
+          availableAmount: 900,
+          decemberAmount: 300,
+          decemberAvailableAmount: 300
+        }
+      )
+
+      const latest =
+        await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
+      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
+      expect(latest?.payload).not.toHaveProperty('pool')
+    })
+
+    it('gates only on targets whose every inbound transition moves the balance', () => {
+      // The pool gate keys on target status alone. That is sound only while
+      // every state-machine transition into one of its targets carries a
+      // balance effect; a future no-balance transition into one would need the
+      // gate keyed on the (from, to) pair instead, and this test is what makes
+      // that change loud rather than a silent misroute.
+      for (const status of FOLLOW_RAISE_POOL_STATUSES) {
+        const inboundFrom = Object.entries(PRN_STATUS_TRANSITIONS)
+          .filter(([, transitions]) =>
+            transitions.some((transition) => transition.status === status)
+          )
+          .map(([from]) => from)
+
+        expect(inboundFrom.length).toBeGreaterThan(0)
+        for (const from of inboundFrom) {
+          expect(
+            PRN_TRANSITION_EFFECTS.some(
+              (effect) => effect.from === from && effect.to === status
+            )
+          ).toBe(true)
+        }
+      }
     })
   })
 
