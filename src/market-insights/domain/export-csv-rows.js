@@ -199,6 +199,7 @@ export const buildManifestRow = ({
     cadence,
     period,
     months[0],
-    months[months.length - 1],
+    // Never empty: a period with no ended month is rejected before this runs.
+    /** @type {string} */ (months.at(-1)),
     generatedAt
   ])

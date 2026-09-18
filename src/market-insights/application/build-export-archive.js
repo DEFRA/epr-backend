@@ -93,6 +93,41 @@ const zip = (files) => {
  */
 
 /**
+ * The figures files, two per scope: the UK drawn from every regulator, and one
+ * scope per nation. Two rather than four because the pages have already merged
+ * the PRN and PERN measures into each accreditation type's table.
+ *
+ * @param {Pick<BuildExportArchiveParams, 'organisationsRepository' | 'reportsRepository' | 'logger' | 'year' | 'months' | 'now'>} params
+ * @returns {Promise<ExportFile[]>}
+ */
+const reprocessorExporterFiles = async (params) => {
+  /** @type {ExportFile[]} */
+  const files = []
+
+  for (const scope of EXPORT_SCOPES) {
+    const table = await buildReprocessorExporterTable({
+      ...params,
+      regulator: scope.regulator
+    })
+
+    files.push(
+      await csvFile(
+        `${scope.name}-reprocessor.csv`,
+        REPROCESSOR_COLUMNS,
+        buildReprocessorRows(table)
+      ),
+      await csvFile(
+        `${scope.name}-exporter.csv`,
+        EXPORTER_COLUMNS,
+        buildExporterRows(table)
+      )
+    )
+  }
+
+  return files
+}
+
+/**
  * Every figure behind the market insights pages, as a zip of CSVs.
  *
  * The builders are called directly rather than over HTTP so that one `now`
@@ -145,30 +180,16 @@ export const buildMarketInsightsExportArchive = async ({
     )
   ]
 
-  for (const scope of EXPORT_SCOPES) {
-    const table = await buildReprocessorExporterTable({
+  files.push(
+    ...(await reprocessorExporterFiles({
       organisationsRepository,
       reportsRepository,
       logger,
       year,
       months,
-      regulator: scope.regulator,
       now
-    })
-
-    files.push(
-      await csvFile(
-        `${scope.name}-reprocessor.csv`,
-        REPROCESSOR_COLUMNS,
-        buildReprocessorRows(table)
-      ),
-      await csvFile(
-        `${scope.name}-exporter.csv`,
-        EXPORTER_COLUMNS,
-        buildExporterRows(table)
-      )
-    )
-  }
+    }))
+  )
 
   files.push(
     await csvFile(
