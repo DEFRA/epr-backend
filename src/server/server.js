@@ -16,8 +16,6 @@ import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
-import { marketInsightsExportsRepositoryPlugin } from '#market-insights/exports/repository/mongodb.plugin.js'
-import { s3MarketInsightsExportStorePlugin } from '#market-insights/exports/store/s3.plugin.js'
 import { nonProdDataResetPlugin } from '#non-prod-data-reset/mongodb.plugin.js'
 import {
   orsImportsRepositoryPlugin,
@@ -137,8 +135,6 @@ function getProductionPlugins(config) {
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
     orsImportsRepositoryPlugin,
-    marketInsightsExportsRepositoryPlugin,
-    s3MarketInsightsExportStorePlugin,
     mongoSummaryLogRowStatesRepositoryPlugin
   ]
 

@@ -37,7 +37,7 @@ export const sqsCommandExecutorPlugin = {
       }
     })
 
-    const { summaryLogsWorker, orsImportsWorker, marketInsightsExportsWorker } =
+    const { summaryLogsWorker, orsImportsWorker } =
       await createSqsCommandExecutor({
         sqsClient,
         queueName,
@@ -50,12 +50,6 @@ export const sqsCommandExecutorPlugin = {
     server.decorate('request', 'orsImportsWorker', () => orsImportsWorker, {
       apply: true
     })
-    server.decorate(
-      'request',
-      'marketInsightsExportsWorker',
-      () => marketInsightsExportsWorker,
-      { apply: true }
-    )
 
     // Clean up SQS client on server stop
     server.events.on('stop', () => {

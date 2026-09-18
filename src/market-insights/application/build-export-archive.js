@@ -1,4 +1,5 @@
 import archiver from 'archiver'
+import { Readable } from 'node:stream'
 import { writeToString } from '@fast-csv/format'
 
 import { buildOutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js'
@@ -53,27 +54,27 @@ const csvFile = async (name, columns, rows) => ({
 })
 
 /**
+ * The archive is returned part-written: `finalize` is deliberately not awaited,
+ * so the caller can pipe it out while archiver is still compressing.
+ *
+ * Adapted to a Node `Readable` because archiver is built on the userland
+ * `readable-stream`, which Hapi does not recognise as a response source.
+ * `objectMode: false` keeps each chunk an HTTP body chunk rather than a value.
+ *
  * @param {ExportFile[]} files
- * @returns {Promise<Buffer>}
+ * @returns {Readable}
  */
-const zip = async (files) => {
+const zip = (files) => {
   const archive = archiver('zip', { zlib: { level: 9 } })
-  /** @type {Buffer[]} */
-  const chunks = []
-  archive.on('data', (chunk) => chunks.push(chunk))
-
-  const written = new Promise((resolve, reject) => {
-    archive.on('end', resolve)
-    archive.on('error', reject)
-  })
 
   for (const { name, contents } of files) {
     archive.append(contents, { name })
   }
-  await archive.finalize()
-  await written
+  // A failure while compressing tears the stream down, so the response errors
+  // rather than truncating silently.
+  archive.finalize().catch((error) => archive.destroy(error))
 
-  return Buffer.concat(chunks)
+  return Readable.from(archive, { objectMode: false })
 }
 
 /**
@@ -101,8 +102,12 @@ const zip = async (files) => {
  * The per-month repetition the pages render collapses into a `month` column, so
  * the file count does not grow as the reporting period lengthens.
  *
+ * Every dataset is assembled before the archive is returned, so a repository
+ * failure surfaces as a thrown error rather than part-way through a response
+ * already being written.
+ *
  * @param {BuildExportArchiveParams} params
- * @returns {Promise<{ body: Buffer, generatedAt: string }>}
+ * @returns {Promise<Readable>}
  */
 export const buildMarketInsightsExportArchive = async ({
   ledgerRepository,
@@ -184,5 +189,5 @@ export const buildMarketInsightsExportArchive = async ({
     ])
   )
 
-  return { body: await zip(files), generatedAt }
+  return zip(files)
 }

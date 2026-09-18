@@ -431,20 +431,6 @@ const baseConfig = {
       env: 'COMMAND_QUEUE_SQS_QUEUE_NAME'
     }
   },
-  marketInsightsExport: {
-    s3Bucket: {
-      doc: 'S3 bucket the market insights export zip is written to. Shares the summary logs bucket, under its own key prefix, because a new bucket needs provisioning outside this team',
-      format: String,
-      default: 're-ex-summary-logs',
-      env: 'MARKET_INSIGHTS_EXPORT_S3_BUCKET'
-    },
-    preSignedUrlExpiry: {
-      doc: 'Expiry time in seconds for the market insights export download URL',
-      format: String,
-      default: '3600',
-      env: 'MARKET_INSIGHTS_EXPORT_URL_EXPIRY'
-    }
-  },
   publicRegister: {
     batchSize: {
       doc: 'Public register generation batch size. This is used for yielding back to event loop',

@@ -15,6 +15,21 @@ const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 const MATERIAL_COUNT = TONNAGE_MONITORING_MATERIALS.length
 
 /**
+ * Drain the archive the way the route's response does.
+ *
+ * @param {import('stream').Readable} archive
+ * @returns {Promise<Buffer>}
+ */
+const collect = async (archive) => {
+  /** @type {Buffer[]} */
+  const chunks = []
+  for await (const chunk of archive) {
+    chunks.push(chunk)
+  }
+  return Buffer.concat(chunks)
+}
+
+/**
  * @param {Buffer} body
  * @returns {Promise<Map<string, string>>}
  */
@@ -57,11 +72,11 @@ const run = async (months = JANUARY_TO_MARCH_2026) =>
     now: NOW
   })
 
+const zipOf = async (months) => readZip(await collect(await run(months)))
+
 describe('building the market insights export archive', () => {
   it('holds one file per logical table, with a month column rather than a table per month', async () => {
-    const { body } = await run()
-
-    expect([...(await readZip(body)).keys()].sort()).toEqual([
+    expect([...(await zipOf()).keys()].sort()).toEqual([
       'england-exporter.csv',
       'england-reprocessor.csv',
       'manifest.csv',
@@ -79,19 +94,14 @@ describe('building the market insights export archive', () => {
   })
 
   it('records the reporting period and the moment the figures were taken', async () => {
-    const { body, generatedAt } = await run()
-
-    expect(generatedAt).toBe('2026-09-18T14:15:30.000Z')
-    expect((await readZip(body)).get('manifest.csv')).toBe(
+    expect((await zipOf()).get('manifest.csv')).toBe(
       'reporting_year,cadence,period,period_start,period_end,generated_at\n' +
         '2026,monthly,3,2026-01,2026-03,2026-09-18T14:15:30.000Z\n'
     )
   })
 
   it('collapses the per-month repetition into a month column', async () => {
-    const files = await readZip((await run()).body)
-
-    const ukReprocessor = linesOf(files, 'uk-reprocessor.csv')
+    const ukReprocessor = linesOf(await zipOf(), 'uk-reprocessor.csv')
     expect(ukReprocessor[0]).toBe(
       'month,material,tonnage_received,tonnage_recycled,tonnage_received_but_not_recycled,tonnage_sent_on_total,tonnage_sent_on_to_reprocessor,tonnage_sent_on_to_exporter,tonnage_sent_on_to_other_facilities,revised_tonnage_issued,total_revenue,average_price_per_tonne'
     )
@@ -101,8 +111,8 @@ describe('building the market insights export archive', () => {
   })
 
   it('does not lengthen the file list as the reporting period lengthens', async () => {
-    const short = await readZip((await run([toYearMonth('2026-01')])).body)
-    const long = await readZip((await run()).body)
+    const short = await zipOf([toYearMonth('2026-01')])
+    const long = await zipOf()
 
     expect(short.size).toBe(long.size)
     expect(linesOf(short, 'waste-balance.csv')).toHaveLength(
@@ -117,12 +127,7 @@ describe('building the market insights export archive', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2027-01-01T00:00:00.000Z'))
 
-    const { body, generatedAt } = await run()
-
-    expect(generatedAt).toBe(NOW.toISOString())
-    expect((await readZip(body)).get('manifest.csv')).toContain(
-      NOW.toISOString()
-    )
+    expect((await zipOf()).get('manifest.csv')).toContain(NOW.toISOString())
     vi.useRealTimers()
   })
 })

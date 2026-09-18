@@ -4,4 +4,4 @@ export {
   marketInsightsReprocessorExporterFiguresGet
 } from './reprocessor-exporter-figures-get.js'
 export { marketInsightsOutstandingReturnsGet } from './outstanding-returns-get.js'
-export { marketInsightsExportGet } from './export-get.js'
+export { marketInsightsExportZipGet } from './export-zip-get.js'

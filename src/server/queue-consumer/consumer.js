@@ -10,11 +10,14 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
-import { COMMAND_TIMEOUT_MS } from '#server/queue-consumer/command-timeout.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
 /** @typedef {import('./summary-log-commands.js').CommandHandler} CommandHandler */
+
+const ONE_MINUTE = 60_000
+const COMMAND_TIMEOUT_MINUTES = 5
+const COMMAND_TIMEOUT_MS = COMMAND_TIMEOUT_MINUTES * ONE_MINUTE
 
 /**
  * @typedef {object} ConsumerDependencies

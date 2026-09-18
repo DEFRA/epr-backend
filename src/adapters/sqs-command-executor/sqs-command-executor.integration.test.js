@@ -293,55 +293,6 @@ describe('SQS command executor integration', () => {
     )
   })
 
-  describe('requestExport', () => {
-    it(
-      'sends market-insights-export command message to queue',
-      { timeout: TEST_TIMEOUT },
-      async ({ sqsClient }) => {
-        const executor = await createSqsCommandExecutor({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger
-        })
-
-        const exportId = `export-test-${Date.now()}`
-        const buildToken = `build-${Date.now()}`
-        await executor.marketInsightsExportsWorker.requestExport({
-          exportId,
-          buildToken,
-          year: 2026,
-          cadence: 'monthly',
-          period: 3,
-          months: ['2026-01', '2026-02', '2026-03']
-        })
-
-        const { QueueUrl: queueUrl } = await sqsClient.send(
-          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
-        )
-
-        const response = await sqsClient.send(
-          new ReceiveMessageCommand({
-            QueueUrl: queueUrl,
-            WaitTimeSeconds: 5
-          })
-        )
-
-        expect(response.Messages).toHaveLength(1)
-
-        const message = parseSingleMessageBody(response)
-        expect(message).toEqual({
-          command: 'market-insights-export',
-          exportId,
-          buildToken,
-          year: 2026,
-          cadence: 'monthly',
-          period: 3,
-          months: ['2026-01', '2026-02', '2026-03']
-        })
-      }
-    )
-  })
-
   describe('queue connection', () => {
     it(
       'resolves queue URL and logs it',
