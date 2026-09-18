@@ -53,7 +53,7 @@ export const OSR_NAME_REVISED = 'OSR Name Revised'
  * @param {string | number} cell
  * @returns {string | number}
  */
-const sanitiseFormulaInjection = (cell) =>
+export const sanitiseFormulaInjection = (cell) =>
   typeof cell === 'string' && FORMULA_INJECTION_PREFIX.test(cell)
     ? `'${cell}`
     : cell

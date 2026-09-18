@@ -15,3 +15,4 @@ export {
   marketInsightsReprocessorExporterFiguresGet
 } from './routes/reprocessor-exporter-figures-get.js'
 export { marketInsightsOutstandingReturnsGet } from './routes/outstanding-returns-get.js'
+export { marketInsightsExportZipGet } from './routes/export-zip-get.js'
