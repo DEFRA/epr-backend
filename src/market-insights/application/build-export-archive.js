@@ -177,10 +177,7 @@ export const buildMarketInsightsExportArchive = async ({
           now
         })
       )
-    )
-  ]
-
-  files.push(
+    ),
     ...(await reprocessorExporterFiles({
       organisationsRepository,
       reportsRepository,
@@ -188,10 +185,7 @@ export const buildMarketInsightsExportArchive = async ({
       year,
       months,
       now
-    }))
-  )
-
-  files.push(
+    })),
     await csvFile(
       'outstanding-returns.csv',
       OUTSTANDING_RETURNS_COLUMNS,
@@ -208,7 +202,7 @@ export const buildMarketInsightsExportArchive = async ({
     await csvFile('manifest.csv', MANIFEST_COLUMNS, [
       buildManifestRow({ year, cadence, period, months, generatedAt })
     ])
-  )
+  ]
 
   return zip(files)
 }
