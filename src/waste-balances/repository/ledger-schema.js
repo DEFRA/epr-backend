@@ -94,10 +94,12 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 /**
  * `pool` is the balance the PRN draws on (ADR-0049), resolved from the PRN's
  * `isDecemberWaste` and whether the accreditation accrues December. Optional: it
- * is written only where it was resolved from a loaded accreditation - the raises
- * that debit a pool, and the December reversals - and omitted on transitions
- * that load none (accept, reject) rather than guessed. A reader coalesces an
- * absent pool to `general`, as it does a pre-feature event.
+ * is written on every raise - from the accreditation for a December declaration
+ * that accrues one, the constant `general` otherwise - and read back off the
+ * raise onto every issue and reversal, so all of a PRN's balance-moving events
+ * agree on one pool. It is omitted on the transitions that move none (accept,
+ * reject) and on events whose raise predates the pool dimension. A reader
+ * coalesces an absent pool to `general`, as it does a pre-feature event.
  *
  * @typedef {{ prnId: string, amount: number, pool?: Pool }} PrnPayload
  */

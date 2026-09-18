@@ -12,7 +12,10 @@ import {
 import { decidePrnTransition } from '#packaging-recycling-notes/domain/prn-transition.js'
 import { selectObligationYearForAcceptance } from '#packaging-recycling-notes/domain/obligation-year.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
-import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import {
+  LEDGER_EVENT_KIND,
+  POOL
+} from '#waste-balances/repository/ledger-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
@@ -299,10 +302,13 @@ async function gatherTransitionState(ctx) {
 
 /**
  * The pool a transition's balance movement draws on, or `undefined` when it
- * touches none. Only the ringfence derives it from the accreditation; the issue
- * and the reversals read it off the PRN's raise event, so every movement of the
- * PRN draws the pool the raise recorded even if the accreditation has since
- * changed, which is what ADR-0049 mandates (PAE-1977).
+ * touches none. The ringfence resolves it for every PRN and records it on the
+ * raise: from the accreditation for a December declaration that accrues one,
+ * the constant `general` otherwise — which needs no accreditation, so a
+ * non-December raise reads none. The issue and the reversals read it back off
+ * the PRN's raise event, so every movement of the PRN draws the pool the raise
+ * recorded even if the accreditation has since changed, which is what ADR-0049
+ * mandates (PAE-1977). Accept and reject move no balance, so they resolve none.
  *
  * @param {PrnTransitionContext} ctx
  * @param {Object} gathered
@@ -314,12 +320,15 @@ async function resolveTransitionPool(
   { service, ledgerId, newStatus },
   { prn, accreditation }
 ) {
-  if (prn.isDecemberWaste && FOLLOW_RAISE_POOL_STATUSES.has(newStatus)) {
+  if (FOLLOW_RAISE_POOL_STATUSES.has(newStatus)) {
     return readRaisePool(service, ledgerId, prn.id)
   }
-  return accreditation !== undefined
-    ? resolvePool({ isDecemberWaste: prn.isDecemberWaste, accreditation })
-    : undefined
+  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
+    return prn.isDecemberWaste && accreditation !== undefined
+      ? resolvePool({ isDecemberWaste: true, accreditation })
+      : POOL.GENERAL
+  }
+  return undefined
 }
 
 /**
@@ -390,15 +399,15 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
  * slipping past the deciders' `<` sufficiency check. `NaN` is the only value
  * that passes that check, so it is refused by name.
  *
- * The pool is written only where `resolveTransitionPool` genuinely resolved one
- * — from the accreditation on a December-declared ringfence and on any
- * non-December issue, off the raise event on a December-declared PRN's issue
- * and reversals — and omitted where it did not, rather than guessed. A transition
- * that moves no pool (accept, reject) resolves none, so its event carries no
- * pool: writing `general` there would be a falsehood on a December PRN, and
- * nothing reads it anyway. A reader coalesces an absent pool to `general`, as it
- * does a pre-feature event, so an omitted general is read exactly as the flag's
- * absence was (ADR-0049).
+ * The pool is written wherever `resolveTransitionPool` resolved one: on every
+ * raise — from the accreditation for a December declaration that accrues one,
+ * the constant `general` otherwise — and read back off the raise event onto
+ * every issue and reversal. It is omitted where none was resolved: on a
+ * transition that moves no pool (accept, reject), and on an issue or reversal
+ * whose raise predates the pool dimension. Writing `general` on an accept or
+ * reject would be a falsehood on a December PRN, and nothing reads it anyway. A
+ * reader coalesces an absent pool to `general`, as it does a pre-feature event,
+ * so an omitted general is read exactly as the flag's absence was (ADR-0049).
  *
  * @param {PackagingRecyclingNote} prn
  * @param {number} [obligationYear]
