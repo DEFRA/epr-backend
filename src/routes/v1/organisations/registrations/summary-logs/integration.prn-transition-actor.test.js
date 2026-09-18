@@ -10,7 +10,10 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import {
+  LEDGER_EVENT_KIND,
+  POOL
+} from '#waste-balances/repository/ledger-schema.js'
 
 import {
   asOperator,
@@ -186,7 +189,12 @@ describe('PRN transition actor on the waste-balance stream', () => {
     })
     assert(latest)
     expect(latest.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
-    expect(latest.payload).toEqual({ prnId: prn.id, amount: 50 })
+    // A general raise now records its pool explicitly (PAE-1977).
+    expect(latest.payload).toEqual({
+      prnId: prn.id,
+      amount: 50,
+      pool: POOL.GENERAL
+    })
     expect(latest.createdBy).toEqual({
       id: SIGNATORY.id,
       name: SIGNATORY.name,
