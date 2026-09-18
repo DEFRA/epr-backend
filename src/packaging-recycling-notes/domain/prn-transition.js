@@ -9,8 +9,13 @@ import {
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
 } from '#waste-balances/domain/commands.js'
-import { PRN_STATUS, transitionRefusal, issuanceRefusal } from './model.js'
+import {
+  PRN_STATUS,
+  transitionRefusal,
+  accreditationStatusRefusal
+} from './model.js'
 import { cancellationRefusal } from './cancellation.js'
+import { issuanceWindowRefusal } from './issuance-window.js'
 
 /**
  * @import {PrnStatus, PrnActor} from './model.js'
@@ -169,10 +174,14 @@ export class PrnLedgerRejectionError extends Error {
  */
 
 /**
- * The three rules a PRN transition must satisfy, composed. Each returns the
+ * The four rules a PRN transition must satisfy, composed. Each returns the
  * refusal it found or `undefined`, so the first refusal short-circuits the rest
  * and the caller gets one answer as data. Every refusal is one of the classes
  * the routes already map, so the application throws exactly what it was handed.
+ *
+ * The accreditation-status refusal outranks the issuance window: when both
+ * apply, the suspension or cancellation is the more specific ruling on this
+ * accreditation than the calendar is.
  *
  * @param {Object} params
  * @param {PrnStatus} params.fromStatus
@@ -193,7 +202,8 @@ const ruleTransition = ({
 }) =>
   transitionRefusal(fromStatus, newStatus, actor) ??
   cancellationRefusal(fromStatus, newStatus, accreditationYear, now) ??
-  issuanceRefusal(newStatus, accreditation)
+  accreditationStatusRefusal(newStatus, accreditation) ??
+  issuanceWindowRefusal(fromStatus, newStatus, accreditationYear, now)
 
 /**
  * Phase 2 of a PRN status write — decide. Rule on the transition and say what
