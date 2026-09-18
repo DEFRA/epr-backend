@@ -39,14 +39,16 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
  * and issue debit a different pool from the raise's, after which the
  * cancellation credited December tonnage that was never debited (PAE-1977).
  *
- * Keyed on target status alone, which is sound only because these targets are
- * currently reached by exactly one transition each, all pool-moving. A future
- * transition reusing one as a target from a state that moves no balance would
- * need this gate to key on the `(from, to)` pair instead.
+ * Keyed on target status alone, which is sound only because every transition
+ * currently reaching these targets moves the balance pool — the table test
+ * against `PRN_TRANSITION_EFFECTS` pins that, which is why this set is
+ * exported. A future transition reusing one as a target from a state that
+ * moves no balance would need this gate to key on the `(from, to)` pair
+ * instead.
  *
  * @type {Set<PrnStatus>}
  */
-const FOLLOW_RAISE_POOL_STATUSES = new Set([
+export const FOLLOW_RAISE_POOL_STATUSES = new Set([
   PRN_STATUS.AWAITING_ACCEPTANCE,
   PRN_STATUS.DELETED,
   PRN_STATUS.CANCELLED
@@ -389,9 +391,9 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
  * that passes that check, so it is refused by name.
  *
  * The pool is written only where `resolveTransitionPool` genuinely resolved one
- * — on the ringfence (from the accreditation) and the December issues and
- * reversals (off the raise event) — and omitted where it did not, rather than
- * guessed. A transition
+ * — from the accreditation on a December-declared ringfence and on any
+ * non-December issue, off the raise event on a December-declared PRN's issue
+ * and reversals — and omitted where it did not, rather than guessed. A transition
  * that moves no pool (accept, reject) resolves none, so its event carries no
  * pool: writing `general` there would be a falsehood on a December PRN, and
  * nothing reads it anyway. A reader coalesces an absent pool to `general`, as it
