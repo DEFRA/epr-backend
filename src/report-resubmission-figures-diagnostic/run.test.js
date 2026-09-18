@@ -23,10 +23,9 @@ const emptyResult = {
   summary: {
     resubmittedPeriods: 0,
     resubmissionPairs: 0,
-    identicalPairs: 0,
-    identicalIncludingOrder: 0,
-    identicalOnlyAfterReorder: 0,
-    changedPairs: 0
+    autoEnforcedResubmissions: 0,
+    identicalResubmissions: 0,
+    changedResubmissions: 0
   }
 }
 
@@ -87,7 +86,7 @@ describe('runResubmissionFiguresDiagnostic', () => {
     })
   })
 
-  it('logs one line per identical resubmission plus the summary', async () => {
+  it('logs one line per pointless resubmission plus the summary', async () => {
     vi.mocked(diagnoseResubmissionFigures).mockReturnValue({
       reports: [
         {
@@ -97,17 +96,15 @@ describe('runResubmissionFiguresDiagnostic', () => {
           cadence: 'monthly',
           period: 3,
           fromSubmissionNumber: 1,
-          toSubmissionNumber: 2,
-          reorderOnly: true
+          toSubmissionNumber: 2
         }
       ],
       summary: {
         resubmittedPeriods: 5,
         resubmissionPairs: 6,
-        identicalPairs: 4,
-        identicalIncludingOrder: 3,
-        identicalOnlyAfterReorder: 1,
-        changedPairs: 2
+        autoEnforcedResubmissions: 4,
+        identicalResubmissions: 3,
+        changedResubmissions: 1
       }
     })
     mockQuery.mockResolvedValue({ scanned: 1234, groups: [{}] })
@@ -116,11 +113,11 @@ describe('runResubmissionFiguresDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Identical resubmission: organisationId=org-1 registrationId=reg-1 year=2025 cadence=monthly period=3 fromSubmissionNumber=1 toSubmissionNumber=2 reorderOnly=true'
+        'Pointless resubmission: organisationId=org-1 registrationId=reg-1 year=2025 cadence=monthly period=3 fromSubmissionNumber=1 toSubmissionNumber=2'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Resubmission figures diagnostic: scannedSubmittedReports=1234 resubmittedPeriods=5 resubmissionPairs=6 identicalPairs=4 identicalIncludingOrder=3 identicalOnlyAfterReorder=1 changedPairs=2'
+        'Resubmission figures diagnostic: scannedSubmittedReports=1234 resubmittedPeriods=5 resubmissionPairs=6 autoEnforcedResubmissions=4 identicalResubmissions=3 changedResubmissions=1'
     })
   })
 

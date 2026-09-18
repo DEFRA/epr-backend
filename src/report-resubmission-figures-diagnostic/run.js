@@ -12,15 +12,14 @@ const LOCK_NAME = 'report-resubmission-figures-diagnostic'
 /** @param {IdenticalResubmissionRow} r */
 const formatIdenticalLine = (r) =>
   [
-    'Identical resubmission:',
+    'Pointless resubmission:',
     `organisationId=${r.organisationId}`,
     `registrationId=${r.registrationId}`,
     `year=${r.year}`,
     `cadence=${r.cadence}`,
     `period=${r.period}`,
     `fromSubmissionNumber=${r.fromSubmissionNumber}`,
-    `toSubmissionNumber=${r.toSubmissionNumber}`,
-    `reorderOnly=${r.reorderOnly}`
+    `toSubmissionNumber=${r.toSubmissionNumber}`
   ].join(' ')
 
 /** @param {StartedServer} server */
@@ -35,7 +34,7 @@ const runDiagnostic = async (server) => {
   }
 
   logger.info({
-    message: `Resubmission figures diagnostic: scannedSubmittedReports=${scanned} resubmittedPeriods=${summary.resubmittedPeriods} resubmissionPairs=${summary.resubmissionPairs} identicalPairs=${summary.identicalPairs} identicalIncludingOrder=${summary.identicalIncludingOrder} identicalOnlyAfterReorder=${summary.identicalOnlyAfterReorder} changedPairs=${summary.changedPairs}`
+    message: `Resubmission figures diagnostic: scannedSubmittedReports=${scanned} resubmittedPeriods=${summary.resubmittedPeriods} resubmissionPairs=${summary.resubmissionPairs} autoEnforcedResubmissions=${summary.autoEnforcedResubmissions} identicalResubmissions=${summary.identicalResubmissions} changedResubmissions=${summary.changedResubmissions}`
   })
 }
 

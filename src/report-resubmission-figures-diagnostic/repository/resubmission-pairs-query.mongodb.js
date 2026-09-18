@@ -31,6 +31,7 @@ const RESUBMISSION_PAIRS_PIPELINE = [
       submissions: {
         $push: {
           submissionNumber: '$submissionNumber',
+          resubmissionRequired: '$resubmissionRequired',
           recyclingActivity: '$recyclingActivity',
           exportActivity: '$exportActivity',
           wasteSent: '$wasteSent',

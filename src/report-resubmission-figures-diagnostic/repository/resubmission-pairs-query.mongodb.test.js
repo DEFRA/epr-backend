@@ -49,7 +49,8 @@ const insertReport = async (collection, overrides = {}) => {
     recyclingActivity = {
       suppliers: [{ supplierName: 'Acme', tonnageReceived: 10 }],
       totalTonnageReceived: 10
-    }
+    },
+    ...blocks
   } = overrides
 
   await collection.insertOne({
@@ -61,7 +62,8 @@ const insertReport = async (collection, overrides = {}) => {
     period,
     submissionNumber,
     status: { currentStatus },
-    recyclingActivity
+    recyclingActivity,
+    ...blocks
   })
 }
 
@@ -113,6 +115,57 @@ describe('createResubmissionPairsQuery', () => {
 
     expect(scanned).toBe(1)
     expect(groups).toEqual([])
+  })
+
+  it('projects the resubmission flag and every figure block per submission', async (/** @type {*} */ {
+    reports,
+    query
+  }) => {
+    const resubmissionRequired = {
+      closedPeriodRestated: {
+        uploadedAt: '2025-04-01T00:00:00.000Z',
+        summaryLogId: 'sl-1'
+      }
+    }
+    const exportActivity = {
+      overseasSites: [{ orsId: 'ors-1', tonnageExported: 8 }],
+      unapprovedOverseasSites: [],
+      totalTonnageExported: 8,
+      tonnageRefusedAtDestination: 0,
+      tonnageStoppedDuringExport: 0,
+      totalTonnageRefusedOrStopped: 0,
+      tonnageRepatriated: 0
+    }
+    const wasteSent = {
+      tonnageSentToReprocessor: 3,
+      tonnageSentToExporter: 0,
+      tonnageSentToAnotherSite: 0,
+      finalDestinations: [{ recipientName: 'Dest', tonnageSentOn: 3 }]
+    }
+    const prn = { issuedTonnage: 40, averagePricePerTonne: 12 }
+
+    await insertReport(reports, {
+      submissionNumber: 1,
+      resubmissionRequired,
+      exportActivity,
+      wasteSent,
+      prn
+    })
+    await insertReport(reports, { submissionNumber: 2 })
+
+    const { groups } = await query()
+    const first = groups[0].submissions.find((s) => s.submissionNumber === 1)
+
+    expect(first).toMatchObject({
+      resubmissionRequired,
+      recyclingActivity: {
+        suppliers: [{ supplierName: 'Acme', tonnageReceived: 10 }],
+        totalTonnageReceived: 10
+      },
+      exportActivity,
+      wasteSent,
+      prn
+    })
   })
 
   it('keeps distinct periods in separate groups', async (/** @type {*} */ {
