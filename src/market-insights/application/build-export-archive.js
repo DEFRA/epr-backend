@@ -9,11 +9,13 @@ import {
   buildExporterRows,
   buildManifestRow,
   buildOutstandingReturnsRows,
+  buildReportCoverageRows,
   buildReprocessorRows,
   buildWasteBalanceRows,
   EXPORTER_COLUMNS,
   MANIFEST_COLUMNS,
   OUTSTANDING_RETURNS_COLUMNS,
+  REPORTS_COLUMNS,
   REPROCESSOR_COLUMNS,
   WASTE_BALANCE_COLUMNS
 } from '#market-insights/domain/export-csv-rows.js'
@@ -93,46 +95,56 @@ const zip = (files) => {
  */
 
 /**
- * The figures files, two per scope: the UK drawn from every regulator, and one
- * scope per nation. Two rather than four because the pages have already merged
- * the PRN and PERN measures into each accreditation type's table.
+ * Runs the read once and hands the same promise to everyone who asks.
  *
- * @param {Pick<BuildExportArchiveParams, 'organisationsRepository' | 'reportsRepository' | 'logger' | 'year' | 'months' | 'now'>} params
- * @returns {Promise<ExportFile[]>}
+ * @template T
+ * @param {() => Promise<T>} read
+ * @returns {() => Promise<T>}
  */
-const reprocessorExporterFiles = async (params) => {
-  /** @type {ExportFile[]} */
-  const files = []
+const readOnce = (read) => {
+  /** @type {Promise<T> | undefined} */
+  let reading
+  return () => (reading ??= read())
+}
 
-  for (const scope of EXPORT_SCOPES) {
-    const table = await buildReprocessorExporterTable({
-      ...params,
-      regulator: scope.regulator
-    })
-
-    files.push(
-      await csvFile(
-        `${scope.name}-reprocessor.csv`,
-        REPROCESSOR_COLUMNS,
-        buildReprocessorRows(table)
-      ),
-      await csvFile(
-        `${scope.name}-exporter.csv`,
-        EXPORTER_COLUMNS,
-        buildExporterRows(table)
-      )
+/**
+ * The repositories as this export reads them: every builder sees the same
+ * organisations and the same periodic reports, read once.
+ *
+ * That is what makes the files agree with each other. Sharing a clock reading
+ * never did: seven builders reading in turn would each see the register as it
+ * stood when they got to it, so a report submitted mid-build would land in some
+ * nation's file and not another's.
+ *
+ * The memo is scoped to one call, and every builder here is given the same
+ * `year`, so the ignored argument cannot hide a different question.
+ *
+ * @param {Pick<BuildExportArchiveParams, 'organisationsRepository' | 'reportsRepository'>} repositories
+ * @param {number} year
+ */
+const asReadOnceForThisExport = (
+  { organisationsRepository, reportsRepository },
+  year
+) => ({
+  organisationsRepository: {
+    ...organisationsRepository,
+    findAll: readOnce(() => organisationsRepository.findAll())
+  },
+  reportsRepository: {
+    ...reportsRepository,
+    findPeriodicReportsForYear: readOnce(() =>
+      reportsRepository.findPeriodicReportsForYear({ year })
     )
   }
-
-  return files
-}
+})
 
 /**
  * Every figure behind the market insights pages, as a zip of CSVs.
  *
- * The builders are called directly rather than over HTTP so that one `now`
- * stamps all of them: five calls to the figures endpoint would give five
- * `generatedAt` values and five chances for the data to move between them.
+ * The builders are called directly rather than over HTTP so that they can be
+ * given one reading of the register between them, which is what makes the files
+ * agree with each other. They run concurrently, so the wall time is the longest
+ * build rather than the sum of seven.
  *
  * The per-month repetition the pages render collapses into a `month` column, so
  * the file count does not grow as the reporting period lengthens.
@@ -157,52 +169,66 @@ export const buildMarketInsightsExportArchive = async ({
   months,
   now
 }) => {
-  const generatedAt = now.toISOString()
+  const shared = asReadOnceForThisExport(
+    { organisationsRepository, reportsRepository },
+    year
+  )
+  const common = { ...shared, logger, year, months, now }
 
-  /** @type {ExportFile[]} */
-  const files = [
-    await csvFile(
+  const [wasteBalance, scopeTables, outstandingReturns] = await Promise.all([
+    buildWasteBalanceTable({
+      ...common,
+      ledgerRepository,
+      summaryLogRowStatesRepository,
+      overseasSitesRepository
+    }),
+    Promise.all(
+      EXPORT_SCOPES.map((scope) =>
+        buildReprocessorExporterTable({ ...common, regulator: scope.regulator })
+      )
+    ),
+    buildOutstandingReturnsTable(common)
+  ])
+
+  const files = await Promise.all([
+    csvFile(
       'waste-balance.csv',
       WASTE_BALANCE_COLUMNS,
-      buildWasteBalanceRows(
-        await buildWasteBalanceTable({
-          ledgerRepository,
-          summaryLogRowStatesRepository,
-          organisationsRepository,
-          overseasSitesRepository,
-          reportsRepository,
-          logger,
-          year,
-          months,
-          now
-        })
-      )
+      buildWasteBalanceRows(wasteBalance)
     ),
-    ...(await reprocessorExporterFiles({
-      organisationsRepository,
-      reportsRepository,
-      logger,
-      year,
-      months,
-      now
-    })),
-    await csvFile(
+    ...scopeTables.flatMap((table, index) => [
+      csvFile(
+        `${EXPORT_SCOPES[index].name}-reprocessor.csv`,
+        REPROCESSOR_COLUMNS,
+        buildReprocessorRows(table)
+      ),
+      csvFile(
+        `${EXPORT_SCOPES[index].name}-exporter.csv`,
+        EXPORTER_COLUMNS,
+        buildExporterRows(table)
+      )
+    ]),
+    csvFile(
       'outstanding-returns.csv',
       OUTSTANDING_RETURNS_COLUMNS,
-      buildOutstandingReturnsRows(
-        await buildOutstandingReturnsTable({
-          organisationsRepository,
-          reportsRepository,
-          year,
-          months,
-          now
-        })
-      )
+      buildOutstandingReturnsRows(outstandingReturns)
     ),
-    await csvFile('manifest.csv', MANIFEST_COLUMNS, [
-      buildManifestRow({ year, cadence, period, months, generatedAt })
+    csvFile('reports.csv', REPORTS_COLUMNS, [
+      ...buildReportCoverageRows('waste-balance', wasteBalance),
+      ...scopeTables.flatMap((table, index) =>
+        buildReportCoverageRows(EXPORT_SCOPES[index].name, table)
+      )
+    ]),
+    csvFile('manifest.csv', MANIFEST_COLUMNS, [
+      buildManifestRow({
+        year,
+        cadence,
+        period,
+        months,
+        generatedAt: now.toISOString()
+      })
     ])
-  ]
+  ])
 
   return zip(files)
 }

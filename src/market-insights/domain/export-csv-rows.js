@@ -72,6 +72,13 @@ export const OUTSTANDING_RETURNS_COLUMNS = Object.freeze([
   'outstanding_count'
 ])
 
+export const REPORTS_COLUMNS = Object.freeze([
+  'month',
+  'scope',
+  'reports_expected',
+  'reports_submitted'
+])
+
 export const MANIFEST_COLUMNS = Object.freeze([
   'reporting_year',
   'cadence',
@@ -173,6 +180,25 @@ export const buildOutstandingReturnsRows = ({ data }) =>
         row([month, material, tonnageBand, figures[material][tonnageBand]])
       )
     )
+  )
+
+/**
+ * How many monthly returns each month was owed and how many arrived, as the
+ * pages print above every table. Without it a reader cannot tell whether a
+ * month's tonnage came from forty returns out of forty or three.
+ *
+ * The scope names where the count came from rather than merging the counts:
+ * the waste balance counts every accredited registration on the register,
+ * while the figures count only those holding a live accreditation, so a single
+ * merged number would be a count of nothing in particular.
+ *
+ * @param {string} scope
+ * @param {{ data: { months: Record<string, { reports: { expected: number, submitted: number } }> } }} table
+ * @returns {CsvRow[]}
+ */
+export const buildReportCoverageRows = (scope, { data }) =>
+  Object.entries(data.months).map(([month, { reports }]) =>
+    row([month, scope, reports.expected, reports.submitted])
   )
 
 /**

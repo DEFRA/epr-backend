@@ -14,11 +14,13 @@ import {
   buildExporterRows,
   buildManifestRow,
   buildOutstandingReturnsRows,
+  buildReportCoverageRows,
   buildReprocessorRows,
   buildWasteBalanceRows,
   EXPORTER_COLUMNS,
   MANIFEST_COLUMNS,
   OUTSTANDING_RETURNS_COLUMNS,
+  REPORTS_COLUMNS,
   REPROCESSOR_COLUMNS,
   WASTE_BALANCE_COLUMNS
 } from './export-csv-rows.js'
@@ -295,6 +297,46 @@ describe('market insights export CSV rows', () => {
           (count) => count === 0
         )
       ).toHaveLength(2 * MATERIAL_COUNT * TONNAGE_BANDS.length - 1)
+    })
+  })
+
+  describe('report coverage', () => {
+    it('says how many returns each month was owed and how many arrived', () => {
+      const rows = buildReportCoverageRows('uk', {
+        data: {
+          months: {
+            '2026-01': { reports: { expected: 40, submitted: 3 } },
+            '2026-02': { reports: { expected: 40, submitted: 40 } }
+          }
+        }
+      })
+
+      expect(REPORTS_COLUMNS).toEqual([
+        'month',
+        'scope',
+        'reports_expected',
+        'reports_submitted'
+      ])
+      expect(rows).toEqual([
+        ['2026-01', 'uk', 40, 3],
+        ['2026-02', 'uk', 40, 40]
+      ])
+    })
+
+    it('names the scope, so counts over different populations stay apart', () => {
+      const table = {
+        data: {
+          months: { '2026-01': { reports: { expected: 9, submitted: 9 } } }
+        }
+      }
+
+      expect([
+        ...buildReportCoverageRows('waste-balance', table),
+        ...buildReportCoverageRows('wales', table)
+      ]).toEqual([
+        ['2026-01', 'waste-balance', 9, 9],
+        ['2026-01', 'wales', 9, 9]
+      ])
     })
   })
 

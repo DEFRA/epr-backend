@@ -56,7 +56,7 @@ const linesOf = (files, name) => {
   return contents.trim().split('\n')
 }
 
-const run = async (months = JANUARY_TO_MARCH_2026) =>
+const run = async (months = JANUARY_TO_MARCH_2026, overrides = {}) =>
   buildMarketInsightsExportArchive({
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
@@ -69,7 +69,8 @@ const run = async (months = JANUARY_TO_MARCH_2026) =>
     cadence: 'monthly',
     period: 3,
     months,
-    now: NOW
+    now: NOW,
+    ...overrides
   })
 
 const zipOf = async (months) => readZip(await collect(await run(months)))
@@ -83,6 +84,7 @@ describe('building the market insights export archive', () => {
       'northern-ireland-exporter.csv',
       'northern-ireland-reprocessor.csv',
       'outstanding-returns.csv',
+      'reports.csv',
       'scotland-exporter.csv',
       'scotland-reprocessor.csv',
       'uk-exporter.csv',
@@ -121,6 +123,39 @@ describe('building the market insights export archive', () => {
     expect(linesOf(long, 'waste-balance.csv')).toHaveLength(
       1 + 3 * MATERIAL_COUNT * 2
     )
+  })
+
+  it('says how many returns each month was owed and how many arrived, per scope', async () => {
+    const reports = linesOf(await zipOf(), 'reports.csv')
+
+    expect(reports[0]).toBe('month,scope,reports_expected,reports_submitted')
+    // The waste balance and the five figures scopes each count their own
+    // population, so each gets its own rows for every month.
+    expect(reports).toHaveLength(1 + 6 * 3)
+    expect(reports).toContain('2026-01,waste-balance,0,0')
+    expect(reports).toContain('2026-03,northern-ireland,0,0')
+  })
+
+  it('reads the register once and gives every builder the same reading', async () => {
+    const organisationsRepository = createInMemoryOrganisationsRepository([])()
+    const reportsRepository = createInMemoryReportsRepository()()
+    const findAll = vi.spyOn(organisationsRepository, 'findAll')
+    const findReports = vi.spyOn(
+      reportsRepository,
+      'findPeriodicReportsForYear'
+    )
+
+    await collect(
+      await run(JANUARY_TO_MARCH_2026, {
+        organisationsRepository,
+        reportsRepository
+      })
+    )
+
+    // Seven builders, one read each way: the files agree because they were
+    // built from the same data, not merely stamped with the same clock.
+    expect(findAll).toHaveBeenCalledOnce()
+    expect(findReports).toHaveBeenCalledOnce()
   })
 
   it('takes every file from the one moment the caller supplied, not from the clock as it moves', async () => {

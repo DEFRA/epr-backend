@@ -82,6 +82,7 @@ describe(`GET ${marketInsightsExportZipPath}`, () => {
       'northern-ireland-exporter.csv',
       'northern-ireland-reprocessor.csv',
       'outstanding-returns.csv',
+      'reports.csv',
       'scotland-exporter.csv',
       'scotland-reprocessor.csv',
       'uk-exporter.csv',
