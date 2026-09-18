@@ -35,9 +35,7 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
  * The ringfence resolves the pool from the accreditation and records it on the
  * raise event; every later movement of the PRN reads it back, so it moves the
  * pool the raise actually drew even if the accreditation has since changed
- * (ADR-0049). Re-deriving on issue let a processing-type change between raise
- * and issue debit a different pool from the raise's, after which the
- * cancellation credited December tonnage that was never debited (PAE-1977).
+ * (ADR-0049).
  *
  * Keyed on target status alone, which is sound only because every transition
  * currently reaching these targets moves the balance pool — the table test
