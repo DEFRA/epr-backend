@@ -267,9 +267,11 @@ async function gatherTransitionState(ctx) {
 
   const prn = await loadPrn(ctx)
 
-  // The accreditation is read when the transition needs it: always on issue
-  // (which stamps the PRN number from it), and on a ringfence of a
-  // December-declared PRN, to resolve the pool it debits. Every later movement
+  // The accreditation is read when the transition needs it, keyed on the
+  // transition's target status: `awaiting_acceptance` is the issue, which
+  // stamps the PRN number from it, and `awaiting_authorisation` is the
+  // ringfence (its only route in is from `draft`), read there solely for a
+  // December-declared PRN to resolve the pool it debits. Every later movement
   // of that PRN resolves its pool from the raise event, so the issue's read
   // serves the number alone and a reversal reads none; a PRN that never
   // declared December waste draws the general balance, so it reads none
