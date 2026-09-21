@@ -107,6 +107,9 @@ const extractFigures = (submission) => ({
   prn: submission.prn ? { issuedTonnage: submission.prn.issuedTonnage } : null
 })
 
+/** @param {string} a @param {string} b */
+const byString = (a, b) => a.localeCompare(b)
+
 /**
  * Recursively serialises a value to a stable string with object keys sorted and
  * array elements ordered by their own serialisation, so the result is
@@ -117,11 +120,11 @@ const extractFigures = (submission) => ({
  */
 const canonicalise = (value) => {
   if (Array.isArray(value)) {
-    return `[${value.map(canonicalise).sort().join(',')}]`
+    return `[${value.map(canonicalise).sort(byString).join(',')}]`
   }
   if (value !== null && typeof value === 'object') {
     const entries = Object.keys(value)
-      .sort()
+      .sort(byString)
       .map((key) => `${JSON.stringify(key)}:${canonicalise(value[key])}`)
     return `{${entries.join(',')}}`
   }
@@ -172,26 +175,23 @@ const scanPeriod = (periodGroup, reports, summary) => {
     const current = ordered[index]
 
     summary.resubmissionPairs += 1
-    if (!isAutoEnforced(previous)) {
-      continue
+    if (isAutoEnforced(previous)) {
+      summary.autoEnforcedResubmissions += 1
+      if (figuresAreEquivalent(previous, current)) {
+        summary.identicalResubmissions += 1
+        reports.push({
+          organisationId: periodGroup.organisationId,
+          registrationId: periodGroup.registrationId,
+          year: periodGroup.year,
+          cadence: periodGroup.cadence,
+          period: periodGroup.period,
+          fromSubmissionNumber: previous.submissionNumber,
+          toSubmissionNumber: current.submissionNumber
+        })
+      } else {
+        summary.changedResubmissions += 1
+      }
     }
-
-    summary.autoEnforcedResubmissions += 1
-    if (!figuresAreEquivalent(previous, current)) {
-      summary.changedResubmissions += 1
-      continue
-    }
-
-    summary.identicalResubmissions += 1
-    reports.push({
-      organisationId: periodGroup.organisationId,
-      registrationId: periodGroup.registrationId,
-      year: periodGroup.year,
-      cadence: periodGroup.cadence,
-      period: periodGroup.period,
-      fromSubmissionNumber: previous.submissionNumber,
-      toSubmissionNumber: current.submissionNumber
-    })
   }
 }
 
