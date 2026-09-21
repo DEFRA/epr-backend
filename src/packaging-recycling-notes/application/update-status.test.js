@@ -1786,7 +1786,7 @@ describe('updatePrnStatus', () => {
     // A general (non-December) PRN's ledger events used to disagree on the pool
     // key: absent on the raise, an accidental explicit general on the issue (the
     // accreditation was in hand for the number stamp), absent on the reversals.
-    // The raise now resolves general as a constant — no accreditation read — and
+    // The raise now resolves general as a constant (no accreditation read) and
     // writes it, and every later movement reads it back, so the whole life of a
     // general PRN carries `pool: general` uniformly. A historical raise that
     // predates the pool dimension stays bare and coalesces to general, so no
@@ -1825,7 +1825,7 @@ describe('updatePrnStatus', () => {
       // A general PRN whose raise predates the pool dimension carries no pool.
       // The issue reads that absent pool off the raise and stays bare, rather
       // than re-deriving general from the accreditation it loads for the number
-      // stamp — so the issue mirrors its raise exactly.
+      // stamp, so the issue mirrors its raise exactly.
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,

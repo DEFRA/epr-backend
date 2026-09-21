@@ -304,7 +304,7 @@ async function gatherTransitionState(ctx) {
  * The pool a transition's balance movement draws on, or `undefined` when it
  * touches none. The ringfence resolves it for every PRN and records it on the
  * raise: from the accreditation for a December declaration that accrues one,
- * the constant `general` otherwise — which needs no accreditation, so a
+ * the constant `general` otherwise, which needs no accreditation, so a
  * non-December raise reads none. The issue and the reversals read it back off
  * the PRN's raise event, so every movement of the PRN draws the pool the raise
  * recorded even if the accreditation has since changed, which is what ADR-0049
@@ -400,8 +400,8 @@ async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
  * that passes that check, so it is refused by name.
  *
  * The pool is written wherever `resolveTransitionPool` resolved one: on every
- * raise — from the accreditation for a December declaration that accrues one,
- * the constant `general` otherwise — and read back off the raise event onto
+ * raise (from the accreditation for a December declaration that accrues one,
+ * the constant `general` otherwise) and read back off the raise event onto
  * every issue and reversal. It is omitted where none was resolved: on a
  * transition that moves no pool (accept, reject), and on an issue or reversal
  * whose raise predates the pool dimension. Writing `general` on an accept or
