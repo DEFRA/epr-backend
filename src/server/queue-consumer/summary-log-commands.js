@@ -69,80 +69,86 @@ const userSchema = Joi.object({
  * @property {(payload: any) => string} describe - Returns logging context
  */
 
+/** @type {CommandHandler} */
+export const validateSummaryLogCommand = {
+  command: SUMMARY_LOG_COMMAND.VALIDATE,
+  payloadSchema: Joi.object({
+    summaryLogId: Joi.string().required()
+  }),
+  execute: async (
+    /** @type {ValidateCommandPayload} */ payload,
+    /** @type {SummaryLogHandlerDeps} */ deps
+  ) => {
+    const {
+      logger,
+      summaryLogsRepository,
+      organisationsRepository,
+      summaryLogRowStatesRepository,
+      ledgerRepository,
+      reportsService,
+      overseasSitesRepository,
+      summaryLogExtractor
+    } = deps
+
+    const validateSummaryLog = createSummaryLogsValidator({
+      logger,
+      summaryLogsRepository,
+      organisationsRepository,
+      summaryLogRowStatesRepository,
+      ledgerRepository,
+      reportsService,
+      overseasSitesRepository,
+      summaryLogExtractor
+    })
+
+    await validateSummaryLog(payload.summaryLogId)
+  },
+  onFailure: async (
+    /** @type {ValidateCommandPayload} */ payload,
+    /** @type {SummaryLogHandlerDeps} */ deps
+  ) => {
+    await markAsValidationFailed(
+      payload.summaryLogId,
+      deps.summaryLogsRepository,
+      deps.logger
+    )
+  },
+  describe: (/** @type {ValidateCommandPayload} */ payload) =>
+    `summaryLogId=${payload.summaryLogId}`
+}
+
+/** @type {CommandHandler} */
+export const submitSummaryLogCommand = {
+  command: SUMMARY_LOG_COMMAND.SUBMIT,
+  payloadSchema: Joi.object({
+    summaryLogId: Joi.string().required(),
+    user: userSchema.required()
+  }),
+  execute: async (
+    /** @type {SubmitCommandPayload} */ payload,
+    /** @type {SummaryLogHandlerDeps} */ deps
+  ) => {
+    await submitSummaryLog(payload.summaryLogId, {
+      ...deps,
+      user: payload.user
+    })
+  },
+  onFailure: async (
+    /** @type {SubmitCommandPayload} */ payload,
+    /** @type {SummaryLogHandlerDeps} */ deps
+  ) => {
+    await markAsSubmissionFailed(
+      payload.summaryLogId,
+      deps.summaryLogsRepository,
+      deps.logger
+    )
+  },
+  describe: (/** @type {SubmitCommandPayload} */ payload) =>
+    `summaryLogId=${payload.summaryLogId}`
+}
+
 /** @type {CommandHandler[]} */
 export const summaryLogCommandHandlers = [
-  {
-    command: SUMMARY_LOG_COMMAND.VALIDATE,
-    payloadSchema: Joi.object({
-      summaryLogId: Joi.string().required()
-    }),
-    execute: async (
-      /** @type {ValidateCommandPayload} */ payload,
-      /** @type {SummaryLogHandlerDeps} */ deps
-    ) => {
-      const {
-        logger,
-        summaryLogsRepository,
-        organisationsRepository,
-        summaryLogRowStatesRepository,
-        ledgerRepository,
-        reportsService,
-        overseasSitesRepository,
-        summaryLogExtractor
-      } = deps
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        logger,
-        summaryLogsRepository,
-        organisationsRepository,
-        summaryLogRowStatesRepository,
-        ledgerRepository,
-        reportsService,
-        overseasSitesRepository,
-        summaryLogExtractor
-      })
-
-      await validateSummaryLog(payload.summaryLogId)
-    },
-    onFailure: async (
-      /** @type {ValidateCommandPayload} */ payload,
-      /** @type {SummaryLogHandlerDeps} */ deps
-    ) => {
-      await markAsValidationFailed(
-        payload.summaryLogId,
-        deps.summaryLogsRepository,
-        deps.logger
-      )
-    },
-    describe: (/** @type {ValidateCommandPayload} */ payload) =>
-      `summaryLogId=${payload.summaryLogId}`
-  },
-  {
-    command: SUMMARY_LOG_COMMAND.SUBMIT,
-    payloadSchema: Joi.object({
-      summaryLogId: Joi.string().required(),
-      user: userSchema.required()
-    }),
-    execute: async (
-      /** @type {SubmitCommandPayload} */ payload,
-      /** @type {SummaryLogHandlerDeps} */ deps
-    ) => {
-      await submitSummaryLog(payload.summaryLogId, {
-        ...deps,
-        user: payload.user
-      })
-    },
-    onFailure: async (
-      /** @type {SubmitCommandPayload} */ payload,
-      /** @type {SummaryLogHandlerDeps} */ deps
-    ) => {
-      await markAsSubmissionFailed(
-        payload.summaryLogId,
-        deps.summaryLogsRepository,
-        deps.logger
-      )
-    },
-    describe: (/** @type {SubmitCommandPayload} */ payload) =>
-      `summaryLogId=${payload.summaryLogId}`
-  }
+  validateSummaryLogCommand,
+  submitSummaryLogCommand
 ]

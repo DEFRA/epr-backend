@@ -616,7 +616,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   organisationId = new ObjectId().toString(),
   registrationId = new ObjectId().toString(),
   reportsRepository = createInMemoryReportsRepository()(),
-  accredited = true
+  accredited = true,
+  config = undefined
 } = {}) => {
   const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -721,6 +722,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     packagingRecyclingNotesRepositoryFactory(mockLogger)
 
   const server = await createTestServer({
+    config,
     repositories: {
       summaryLogsRepository: () => summaryLogsRepository,
       uploadsRepository,
